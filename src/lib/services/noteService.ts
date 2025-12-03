@@ -24,6 +24,8 @@ class NoteService {
       createdAt?: string;
       modifiedAt?: string;
       pinned?: boolean;
+      wordWrap?: boolean;
+      syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
     }
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
@@ -44,6 +46,8 @@ class NoteService {
       createdAt: options?.createdAt || now,
       modifiedAt: options?.modifiedAt || now,
       pinned: options?.pinned || false,
+      wordWrap: options?.wordWrap ?? true,
+      syntaxLanguage: options?.syntaxLanguage || 'plain',
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
       attachments: [],

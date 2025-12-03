@@ -120,6 +120,8 @@ export interface ExportNote {
   tags: string[]; // Decrypted
   attachments: ExportAttachment[];
   pinned: boolean;
+  wordWrap?: boolean;
+  syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
 }
 
 /**

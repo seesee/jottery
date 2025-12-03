@@ -71,7 +71,17 @@
     if (!$selectedNote) return;
     try {
       await noteService.togglePin($selectedNote.id);
-      // Refresh would happen via store update in real implementation
+
+      // Reload all notes to refresh the UI
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
+
+      // Re-select current note to update selectedNote store
+      const updatedNote = allNotes.find(n => n.id === $selectedNote.id);
+      if (updatedNote) {
+        selectedNote.set(updatedNote);
+      }
     } catch (error) {
       console.error('Failed to toggle pin:', error);
     }
@@ -83,7 +93,11 @@
       try {
         await noteService.deleteNote($selectedNote.id);
         clearSelection();
-        // Refresh would happen via store update
+
+        // Reload all notes to refresh the UI
+        const allNotes = await noteService.getAllNotes($settings.sortOrder);
+        notes.set(allNotes);
+        searchService.indexNotes(allNotes);
       } catch (error) {
         console.error('Failed to delete note:', error);
       }

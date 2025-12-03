@@ -103,6 +103,8 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
     tags,
     attachments: exportAttachments,
     pinned: note.pinned,
+    wordWrap: note.wordWrap,
+    syntaxLanguage: note.syntaxLanguage,
   };
 }
 
@@ -148,11 +150,13 @@ export async function importNotes(
         // For 'merge', we'll import with a new ID
       }
 
-      // Create new note with imported content, preserving timestamps
+      // Create new note with imported content, preserving timestamps and settings
       await noteService.createNote(exportNote.content, exportNote.tags, {
         createdAt: exportNote.createdAt,
         modifiedAt: exportNote.modifiedAt,
         pinned: exportNote.pinned,
+        wordWrap: exportNote.wordWrap,
+        syntaxLanguage: exportNote.syntaxLanguage,
       });
       imported++;
     } catch (error) {
