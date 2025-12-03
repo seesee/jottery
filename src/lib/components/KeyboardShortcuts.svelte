@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, filteredNotes, selectedNoteId, selectNote, clearSelection } from '../stores/appStore';
-  import { lock } from '../services';
-  import { noteService } from '../services';
+  import { isLocked, filteredNotes, selectedNoteId, selectNote, clearSelection, notes, settings } from '../stores/appStore';
+  import { lock, noteService, searchService } from '../services';
 
   export let onNewNote: () => void;
   export let onOpenSettings: () => void;
@@ -118,7 +117,11 @@
       try {
         await noteService.deleteNote($selectedNoteId);
         clearSelection();
-        // Notes will be reloaded by the app
+
+        // Reload all notes to refresh the UI
+        const allNotes = await noteService.getAllNotes($settings.sortOrder);
+        notes.set(allNotes);
+        searchService.indexNotes(allNotes);
       } catch (error) {
         console.error('Failed to delete note:', error);
       }
@@ -129,7 +132,11 @@
     if (!$selectedNoteId) return;
     try {
       await noteService.togglePin($selectedNoteId);
-      // Notes will be reloaded by the app
+
+      // Reload all notes to refresh the UI
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
     } catch (error) {
       console.error('Failed to toggle pin:', error);
     }
