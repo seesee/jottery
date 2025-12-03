@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { searchQuery } from '../stores/appStore';
-  import { noteService } from '../services';
-  import { lock } from '../services';
+  import { searchQuery, isLocked } from '../stores/appStore';
+  import { noteService, lock } from '../services';
 
   async function handleNewNote() {
     try {
@@ -15,7 +14,7 @@
   function handleLock() {
     if (confirm('Lock the application? Unsaved changes will be lost.')) {
       lock();
-      // Refresh would happen via parent component
+      isLocked.set(true);
     }
   }
 </script>

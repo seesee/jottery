@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isInitialized as isInitializedStore } from '../stores/appStore';
+  import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
   import { initialize, unlock, isInitialized } from '../services';
 
   let password = '';
@@ -35,7 +35,10 @@
         await unlock(password);
       }
 
-      // Success - will be handled by parent component
+      // Update store to trigger UI change
+      isLocked.set(false);
+
+      // Clear password fields
       password = '';
       confirmPassword = '';
     } catch (err) {
