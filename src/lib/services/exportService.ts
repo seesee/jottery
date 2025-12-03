@@ -166,7 +166,7 @@ export async function importNotes(
             // Encrypt file data
             const encryptedData = await cryptoService.encryptBinary(
               fileData,
-              masterKey.cryptoKey
+              masterKey.key
             );
 
             // Store encrypted file data
@@ -178,7 +178,7 @@ export async function importNotes(
             // Encrypt filename
             const encryptedFilename = await cryptoService.encryptText(
               exportAttachment.filename,
-              masterKey.cryptoKey
+              masterKey.key
             );
 
             // Create attachment metadata

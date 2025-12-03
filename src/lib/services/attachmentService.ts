@@ -142,7 +142,7 @@ class AttachmentService {
     // Encrypt file data
     const encryptedData = await cryptoService.encryptBinary(
       fileData,
-      masterKey.cryptoKey
+      masterKey.key
     );
 
     // Store encrypted file data
@@ -159,7 +159,7 @@ class AttachmentService {
         if (thumbnailData) {
           const encryptedThumbnail = await cryptoService.encryptBinary(
             thumbnailData,
-            masterKey.cryptoKey
+            masterKey.key
           );
           const thumbnailBlob = new TextEncoder().encode(
             JSON.stringify(encryptedThumbnail)
@@ -176,7 +176,7 @@ class AttachmentService {
     // Encrypt filename
     const encryptedFilename = await cryptoService.encryptText(
       file.name,
-      masterKey.cryptoKey
+      masterKey.key
     );
 
     // Create attachment metadata
@@ -214,7 +214,7 @@ class AttachmentService {
     // Decrypt data
     const decryptedData = await cryptoService.decryptBinary(
       encryptedData,
-      masterKey.cryptoKey
+      masterKey.key
     );
 
     // Get decrypted filename
@@ -253,7 +253,7 @@ class AttachmentService {
       // Decrypt thumbnail
       const decryptedThumbnail = await cryptoService.decryptBinary(
         encryptedThumbnail,
-        masterKey.cryptoKey
+        masterKey.key
       );
 
       // Convert to data URL
@@ -278,7 +278,7 @@ class AttachmentService {
       const encryptedFilename = JSON.parse(attachment.filename);
       return await cryptoService.decryptText(
         encryptedFilename,
-        masterKey.cryptoKey
+        masterKey.key
       );
     } catch (error) {
       console.error('Failed to decrypt filename:', error);
