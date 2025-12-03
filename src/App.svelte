@@ -7,9 +7,25 @@
   import NoteList from './lib/components/NoteList.svelte';
   import EditorPane from './lib/components/EditorPane.svelte';
   import SettingsModal from './lib/components/SettingsModal.svelte';
+  import KeyboardShortcuts from './lib/components/KeyboardShortcuts.svelte';
 
   let initialized = false;
   let showSettings = false;
+
+  function handleNewNote() {
+    // This will be passed to Header and KeyboardShortcuts
+    const header = document.querySelector('header button[title*="Create"]') as HTMLButtonElement;
+    header?.click();
+  }
+
+  function handleOpenSettings() {
+    showSettings = true;
+  }
+
+  function handleFocusSearch() {
+    const input = document.getElementById('search-input') as HTMLInputElement;
+    input?.focus();
+  }
 
   function applyTheme(theme: 'light' | 'dark' | 'auto') {
     if (theme === 'dark') {
@@ -73,9 +89,7 @@
   }
 
   async function performSearch() {
-    console.log('performSearch called:', { query: $searchQuery, notesCount: $notes.length });
     const results = await searchService.searchNotes($searchQuery, $notes);
-    console.log('search results:', results.length, 'notes');
     filteredNotes.set(results);
   }
 
@@ -111,7 +125,10 @@
 {:else}
   <div class="h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div class="flex h-full flex-col">
-      <Header onOpenSettings={() => showSettings = true} />
+      <Header
+        onOpenSettings={handleOpenSettings}
+        onNewNote={handleNewNote}
+      />
 
       <main class="flex-1 overflow-hidden flex">
         <!-- Note List Sidebar -->
@@ -130,6 +147,13 @@
     <SettingsModal
       show={showSettings}
       onClose={() => showSettings = false}
+    />
+
+    <!-- Keyboard Shortcuts Handler -->
+    <KeyboardShortcuts
+      onNewNote={handleNewNote}
+      onOpenSettings={handleOpenSettings}
+      onFocusSearch={handleFocusSearch}
     />
   </div>
 {/if}

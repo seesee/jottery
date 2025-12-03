@@ -146,11 +146,8 @@ export async function searchNotes(
   query: string,
   allNotes: DecryptedNote[]
 ): Promise<DecryptedNote[]> {
-  console.log('searchNotes called:', { query, allNotesCount: allNotes.length });
-
   // Parse query
   const parsed = parseSearchQuery(query);
-  console.log('parsed query:', parsed);
 
   // If query is empty, return all notes
   if (
@@ -158,7 +155,6 @@ export async function searchNotes(
     (!parsed.tags || parsed.tags.length === 0) &&
     (!parsed.orTags || parsed.orTags.length === 0)
   ) {
-    console.log('empty query, returning all notes');
     return allNotes;
   }
 
@@ -166,12 +162,10 @@ export async function searchNotes(
 
   // Full-text search using FlexSearch
   if (parsed.text) {
-    console.log('performing text search for:', parsed.text);
     const searchResults = await index.searchAsync(parsed.text, {
       limit: 1000,
       enrich: true,
     });
-    console.log('FlexSearch results:', searchResults);
 
     const matchingIds = new Set<string>();
     if (Array.isArray(searchResults)) {
@@ -187,10 +181,8 @@ export async function searchNotes(
         }
       });
     }
-    console.log('matching IDs:', matchingIds);
 
     results = results.filter((note) => matchingIds.has(note.id));
-    console.log('filtered results:', results.length);
   }
 
   // Filter by tags (AND logic)
