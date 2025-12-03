@@ -31,19 +31,18 @@ export const selectedNote = derived(
   }
 );
 
-export const filteredNotes = derived(
-  [notes, searchQuery],
-  ([$notes, $searchQuery]) => {
-    if (!$searchQuery) return $notes;
+// Filtered notes using search service (will be populated when search is performed)
+export const filteredNotes = writable<DecryptedNote[]>([]);
 
-    const query = $searchQuery.toLowerCase();
-    return $notes.filter(note => {
-      const contentMatch = note.content.toLowerCase().includes(query);
-      const tagsMatch = note.tags.some(tag => tag.toLowerCase().includes(query));
-      return contentMatch || tagsMatch;
-    });
+// Update filtered notes when search query or notes change
+export function updateFilteredNotes(allNotes: DecryptedNote[], query: string) {
+  if (!query.trim()) {
+    filteredNotes.set(allNotes);
+  } else {
+    // Will use searchService in App.svelte
+    filteredNotes.set(allNotes);
   }
-);
+}
 
 // Actions
 export function selectNote(noteId: string | null) {

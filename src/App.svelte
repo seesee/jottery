@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { isLocked, notes, settings } from './lib/stores/appStore';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked } from './lib/services';
+  import { isLocked, notes, settings, searchQuery, filteredNotes } from './lib/stores/appStore';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService } from './lib/services';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
@@ -36,9 +36,20 @@
     try {
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
       notes.set(allNotes);
+
+      // Index notes for search
+      searchService.indexNotes(allNotes);
+
+      // Update filtered notes
+      performSearch();
     } catch (error) {
       console.error('Failed to load notes:', error);
     }
+  }
+
+  async function performSearch() {
+    const results = await searchService.searchNotes($searchQuery, $notes);
+    filteredNotes.set(results);
   }
 
   // Reload notes when lock status changes
@@ -46,6 +57,12 @@
     loadNotes();
   } else if ($isLocked) {
     notes.set([]);
+    filteredNotes.set([]);
+  }
+
+  // Perform search when query changes
+  $: if ($notes.length > 0) {
+    performSearch();
   }
 </script>
 

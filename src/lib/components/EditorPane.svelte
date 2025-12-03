@@ -1,34 +1,36 @@
 <script lang="ts">
-  import { selectedNote, clearSelection } from '../stores/appStore';
-  import { noteService } from '../services';
+  import { selectedNote, clearSelection, notes } from '../stores/appStore';
+  import { noteService, tagService } from '../services';
+  import CodeEditor from './CodeEditor.svelte';
+  import TagInput from './TagInput.svelte';
 
   let content = '';
-  let tags = '';
+  let tags: string[] = [];
   let isEditing = false;
   let saveTimeout: number | null = null;
+  let language: 'javascript' | 'python' | 'markdown' | 'plain' = 'plain';
+  let availableTags: string[] = [];
+
+  // Update available tags when notes change
+  $: availableTags = tagService.getAllTags($notes);
 
   $: if ($selectedNote) {
     content = $selectedNote.content;
-    tags = $selectedNote.tags.join(', ');
+    tags = [...$selectedNote.tags];
     isEditing = true;
   } else {
     content = '';
-    tags = '';
+    tags = [];
     isEditing = false;
   }
 
   async function handleSave() {
     if (!$selectedNote) return;
 
-    const tagArray = tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
-
     try {
       await noteService.updateNote($selectedNote.id, {
         content,
-        tags: tagArray,
+        tags: tags,
       });
     } catch (error) {
       console.error('Failed to save note:', error);
@@ -94,24 +96,28 @@
     </div>
 
     <!-- Tags Input -->
-    <div class="border-b border-gray-200 dark:border-gray-700 p-3">
-      <input
-        type="text"
-        bind:value={tags}
-        on:input={handleInput}
-        placeholder="Tags (comma-separated)"
-        class="w-full text-sm bg-transparent border-none focus:outline-none text-gray-700 dark:text-gray-300"
+    <div class="border-b border-gray-200 dark:border-gray-700 p-2">
+      <TagInput
+        bind:tags
+        onChange={(newTags) => {
+          tags = newTags;
+          handleInput();
+        }}
+        {availableTags}
+        placeholder="Add tags..."
       />
     </div>
 
-    <!-- Content Editor (basic textarea for now, will be replaced with CodeMirror) -->
-    <div class="flex-1 overflow-hidden">
-      <textarea
-        bind:value={content}
-        on:input={handleInput}
-        placeholder="Start writing..."
-        class="w-full h-full p-4 bg-transparent border-none focus:outline-none resize-none text-gray-900 dark:text-gray-100 font-mono"
-      ></textarea>
+    <!-- Content Editor with CodeMirror -->
+    <div class="flex-1 overflow-hidden bg-white dark:bg-gray-900">
+      <CodeEditor
+        value={content}
+        onChange={(newValue) => {
+          content = newValue;
+          handleInput();
+        }}
+        {language}
+      />
     </div>
 
     <!-- Metadata Footer -->

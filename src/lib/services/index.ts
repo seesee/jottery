@@ -19,3 +19,5 @@ export { encryptionRepository } from './encryptionRepository';
 export { noteService } from './noteService';
 export { isInitialized, initialize, unlock, lock, isLocked, changePassword } from './initService';
 export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFile } from './exportService';
+export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';
+export { tagService, getAllTags, getTagStats, getPopularTags, getNotesByTag, getNotesByTags, normalizeTag, isValidTag, parseTagString } from './tagService';
