@@ -2,15 +2,18 @@
   import { onMount } from 'svelte';
   import { isLocked, notes, settings, searchQuery, filteredNotes } from './lib/stores/appStore';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService } from './lib/services';
+  import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
   import EditorPane from './lib/components/EditorPane.svelte';
   import SettingsModal from './lib/components/SettingsModal.svelte';
   import KeyboardShortcuts from './lib/components/KeyboardShortcuts.svelte';
+  import RecycleBin from './lib/components/RecycleBin.svelte';
 
   let initialized = false;
   let showSettings = false;
+  let showRecycleBin = false;
 
   function handleNewNote() {
     // This will be passed to Header and KeyboardShortcuts
@@ -20,6 +23,10 @@
 
   function handleOpenSettings() {
     showSettings = true;
+  }
+
+  function handleOpenRecycleBin() {
+    showRecycleBin = true;
   }
 
   function handleFocusSearch() {
@@ -71,6 +78,18 @@
   // Watch lock status and load notes when unlocked
   $: if (!$isLocked && initialized) {
     loadNotes();
+    // Start auto-lock when unlocked
+    startAutoLock($settings.autoLockTimeout);
+  }
+
+  // Stop auto-lock when locked
+  $: if ($isLocked) {
+    stopAutoLock();
+  }
+
+  // Update auto-lock timeout when settings change
+  $: if (!$isLocked && $settings.autoLockTimeout) {
+    updateAutoLockTimeout($settings.autoLockTimeout);
   }
 
   async function loadNotes() {
@@ -128,6 +147,7 @@
       <Header
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
+        onOpenRecycleBin={handleOpenRecycleBin}
       />
 
       <main class="flex-1 overflow-hidden flex">
@@ -147,6 +167,12 @@
     <SettingsModal
       show={showSettings}
       onClose={() => showSettings = false}
+    />
+
+    <!-- Recycle Bin Modal -->
+    <RecycleBin
+      show={showRecycleBin}
+      onClose={() => showRecycleBin = false}
     />
 
     <!-- Keyboard Shortcuts Handler -->

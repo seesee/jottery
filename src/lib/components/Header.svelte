@@ -5,6 +5,7 @@
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
+  export let onOpenRecycleBin: () => void = () => {};
 
   let fileInput: HTMLInputElement;
 
@@ -116,6 +117,14 @@
         title="Import notes"
       >
         📥 Import
+      </button>
+
+      <button
+        on:click={onOpenRecycleBin}
+        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
+        title="Recycle Bin"
+      >
+        🗑️ Recycle Bin
       </button>
 
       <button
