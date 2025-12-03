@@ -3,20 +3,27 @@
   import { noteService, lock, searchService } from '../services';
 
   async function handleNewNote() {
+    console.log('handleNewNote called');
     try {
+      console.log('Creating note...');
       const newNote = await noteService.createNote('', []);
+      console.log('Note created:', newNote);
 
       // Reload all notes
+      console.log('Reloading notes...');
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      console.log('Notes loaded:', allNotes.length);
       notes.set(allNotes);
 
       // Re-index for search
       searchService.indexNotes(allNotes);
 
       // Select the newly created note
+      console.log('Selecting note:', newNote.id);
       selectNote(newNote.id);
     } catch (error) {
       console.error('Failed to create note:', error);
+      alert('Failed to create note: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
