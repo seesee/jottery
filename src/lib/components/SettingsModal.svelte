@@ -6,6 +6,7 @@
 
   export let show = false;
   export let onClose: () => void = () => {};
+  export let onOpenShortcutsHelp: () => void = () => {};
 
   let theme: Theme = $settings.theme;
   let autoLockTimeout = $settings.autoLockTimeout;
@@ -222,6 +223,21 @@
               Export notes as decrypted JSON. Import will merge notes with existing data.
             </p>
           </div>
+        </div>
+
+        <!-- Help & Resources -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Help & Resources</h3>
+
+          <button
+            on:click={onOpenShortcutsHelp}
+            class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+          >
+            ⌨️ Keyboard Shortcuts
+          </button>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            View all available keyboard shortcuts
+          </p>
         </div>
 
         <!-- Danger Zone -->

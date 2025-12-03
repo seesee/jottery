@@ -178,7 +178,9 @@ class NoteService {
    * Soft delete a note
    */
   async deleteNote(id: string): Promise<void> {
+    console.log('[noteService] deleteNote called with ID:', id);
     await noteRepository.softDelete(id);
+    console.log('[noteService] deleteNote completed');
   }
 
   /**

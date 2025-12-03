@@ -25,14 +25,23 @@
     <h1 class="text-xl font-bold text-gray-900 dark:text-white">Jottery</h1>
 
     <!-- Search Bar -->
-    <div class="flex-1 max-w-md">
+    <div class="flex-1 max-w-md relative">
       <input
         id="search-input"
         type="text"
         bind:value={$searchQuery}
         placeholder="Search notes..."
-        class="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+        class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
       />
+      {#if $searchQuery}
+        <button
+          on:click={() => searchQuery.set('')}
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          title="Clear search"
+        >
+          ✕
+        </button>
+      {/if}
     </div>
 
     <!-- Actions -->

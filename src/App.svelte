@@ -10,10 +10,12 @@
   import SettingsModal from './lib/components/SettingsModal.svelte';
   import KeyboardShortcuts from './lib/components/KeyboardShortcuts.svelte';
   import RecycleBin from './lib/components/RecycleBin.svelte';
+  import KeyboardShortcutsHelp from './lib/components/KeyboardShortcutsHelp.svelte';
 
   let initialized = false;
   let showSettings = false;
   let showRecycleBin = false;
+  let showShortcutsHelp = false;
 
   async function handleNewNote() {
     try {
@@ -40,6 +42,10 @@
 
   function handleOpenRecycleBin() {
     showRecycleBin = true;
+  }
+
+  function handleOpenShortcutsHelp() {
+    showShortcutsHelp = true;
   }
 
   function handleFocusSearch() {
@@ -180,12 +186,19 @@
     <SettingsModal
       show={showSettings}
       onClose={() => showSettings = false}
+      onOpenShortcutsHelp={handleOpenShortcutsHelp}
     />
 
     <!-- Recycle Bin Modal -->
     <RecycleBin
       show={showRecycleBin}
       onClose={() => showRecycleBin = false}
+    />
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <KeyboardShortcutsHelp
+      show={showShortcutsHelp}
+      onClose={() => showShortcutsHelp = false}
     />
 
     <!-- Keyboard Shortcuts Handler -->
