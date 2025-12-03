@@ -1,78 +1,20 @@
 <script lang="ts">
-  import { searchQuery, isLocked, notes, settings, selectNote } from '../stores/appStore';
-  import { noteService, lock, searchService } from '../services';
-  import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
+  import { searchQuery, isLocked } from '../stores/appStore';
+  import { lock } from '../services';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
 
-  let fileInput: HTMLInputElement;
-
-  async function handleNewNoteClick() {
-    try {
-      const newNote = await noteService.createNote('', []);
-
-      // Reload all notes
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
-
-      // Re-index for search
-      searchService.indexNotes(allNotes);
-
-      // Select the newly created note
-      selectNote(newNote.id);
-
-      // Call parent handler if provided
-      if (onNewNote) onNewNote();
-    } catch (error) {
-      console.error('Failed to create note:', error);
-      alert('Failed to create note: ' + (error instanceof Error ? error.message : String(error)));
-    }
+  function handleNewNoteClick() {
+    // Call parent handler
+    onNewNote();
   }
 
   function handleLock() {
     if (confirm('Lock the application? Unsaved changes will be lost.')) {
       lock();
       isLocked.set(true);
-    }
-  }
-
-  async function handleExport() {
-    try {
-      const data = await exportAllNotes();
-      await downloadExport(data);
-    } catch (error) {
-      console.error('Failed to export notes:', error);
-      alert('Failed to export notes: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  }
-
-  async function handleImport() {
-    fileInput.click();
-  }
-
-  async function handleFileSelect(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (!file) return;
-
-    try {
-      const data = await parseImportFile(file);
-      const result = await importNotes(data, 'merge');
-
-      alert(`Import complete!\nImported: ${result.imported}\nSkipped: ${result.skipped}\n${result.errors.length > 0 ? 'Errors: ' + result.errors.join('\n') : ''}`);
-
-      // Reload notes
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
-    } catch (error) {
-      console.error('Failed to import notes:', error);
-      alert('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      // Clear file input
-      target.value = '';
     }
   }
 </script>
@@ -104,22 +46,6 @@
       </button>
 
       <button
-        on:click={handleExport}
-        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
-        title="Export all notes"
-      >
-        📤 Export
-      </button>
-
-      <button
-        on:click={handleImport}
-        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
-        title="Import notes"
-      >
-        📥 Import
-      </button>
-
-      <button
         on:click={onOpenRecycleBin}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
         title="Recycle Bin"
@@ -144,13 +70,4 @@
       </button>
     </div>
   </div>
-
-  <!-- Hidden file input for import -->
-  <input
-    bind:this={fileInput}
-    type="file"
-    accept=".json"
-    on:change={handleFileSelect}
-    class="hidden"
-  />
 </header>

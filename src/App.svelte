@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { isLocked, notes, settings, searchQuery, filteredNotes } from './lib/stores/appStore';
+  import { isLocked, notes, settings, searchQuery, filteredNotes, selectNote } from './lib/stores/appStore';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
@@ -15,10 +15,23 @@
   let showSettings = false;
   let showRecycleBin = false;
 
-  function handleNewNote() {
-    // This will be passed to Header and KeyboardShortcuts
-    const header = document.querySelector('header button[title*="Create"]') as HTMLButtonElement;
-    header?.click();
+  async function handleNewNote() {
+    try {
+      const newNote = await noteService.createNote('', []);
+
+      // Reload all notes
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+
+      // Re-index for search
+      searchService.indexNotes(allNotes);
+
+      // Select the newly created note
+      selectNote(newNote.id);
+    } catch (error) {
+      console.error('Failed to create note:', error);
+      alert('Failed to create note: ' + (error instanceof Error ? error.message : String(error)));
+    }
   }
 
   function handleOpenSettings() {

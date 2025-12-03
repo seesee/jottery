@@ -17,7 +17,15 @@ class NoteService {
   /**
    * Create a new note
    */
-  async createNote(content: string, tags: string[] = []): Promise<Note> {
+  async createNote(
+    content: string,
+    tags: string[] = [],
+    options?: {
+      createdAt?: string;
+      modifiedAt?: string;
+      pinned?: boolean;
+    }
+  ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked. Please unlock to create notes.');
@@ -33,8 +41,9 @@ class NoteService {
     const note: Note = {
       ...DEFAULT_NOTE,
       id,
-      createdAt: now,
-      modifiedAt: now,
+      createdAt: options?.createdAt || now,
+      modifiedAt: options?.modifiedAt || now,
+      pinned: options?.pinned || false,
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
       attachments: [],

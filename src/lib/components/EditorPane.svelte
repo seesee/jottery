@@ -1,6 +1,6 @@
 <script lang="ts">
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { noteService, tagService } from '../services';
+  import { noteService, tagService, searchService } from '../services';
   import CodeEditor from './CodeEditor.svelte';
   import TagInput from './TagInput.svelte';
 
@@ -43,6 +43,19 @@
         syntaxLanguage: language,
         wordWrap,
       });
+
+      // Reload all notes to refresh the store and UI
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+
+      // Re-index notes for search
+      searchService.indexNotes(allNotes);
+
+      // Re-select current note to update selectedNote store
+      const updatedNote = allNotes.find(n => n.id === $selectedNote.id);
+      if (updatedNote) {
+        selectedNote.set(updatedNote);
+      }
     } catch (error) {
       console.error('Failed to save note:', error);
     }

@@ -148,8 +148,12 @@ export async function importNotes(
         // For 'merge', we'll import with a new ID
       }
 
-      // Create new note with imported content
-      await noteService.createNote(exportNote.content, exportNote.tags);
+      // Create new note with imported content, preserving timestamps
+      await noteService.createNote(exportNote.content, exportNote.tags, {
+        createdAt: exportNote.createdAt,
+        modifiedAt: exportNote.modifiedAt,
+        pinned: exportNote.pinned,
+      });
       imported++;
     } catch (error) {
       errors.push(

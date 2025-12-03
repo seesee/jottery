@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { settings, isLocked } from '../stores/appStore';
-  import { settingsRepository, deleteDB } from '../services';
+  import { settings, isLocked, notes } from '../stores/appStore';
+  import { settingsRepository, deleteDB, noteService, searchService } from '../services';
+  import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import type { Theme } from '../types';
 
   export let show = false;
@@ -10,6 +11,7 @@
   let autoLockTimeout = $settings.autoLockTimeout;
   let sortOrder = $settings.sortOrder;
   let saving = false;
+  let fileInput: HTMLInputElement;
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -82,6 +84,44 @@
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
       onClose();
+    }
+  }
+
+  async function handleExport() {
+    try {
+      const data = await exportAllNotes();
+      await downloadExport(data);
+    } catch (error) {
+      console.error('Failed to export notes:', error);
+      alert('Failed to export notes: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  async function handleImport() {
+    fileInput.click();
+  }
+
+  async function handleFileSelect(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await parseImportFile(file);
+      const result = await importNotes(data, 'merge');
+
+      alert(`Import complete!\nImported: ${result.imported}\nSkipped: ${result.skipped}\n${result.errors.length > 0 ? 'Errors: ' + result.errors.join('\n') : ''}`);
+
+      // Reload notes
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
+    } catch (error) {
+      console.error('Failed to import notes:', error);
+      alert('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      // Clear file input
+      target.value = '';
     }
   }
 </script>
@@ -159,6 +199,31 @@
           </select>
         </div>
 
+        <!-- Import/Export -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Import/Export</h3>
+
+          <div class="space-y-3">
+            <div class="flex gap-2">
+              <button
+                on:click={handleExport}
+                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                📤 Export All Notes
+              </button>
+              <button
+                on:click={handleImport}
+                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                📥 Import Notes
+              </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Export notes as decrypted JSON. Import will merge notes with existing data.
+            </p>
+          </div>
+        </div>
+
         <!-- Danger Zone -->
         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
           <h3 class="text-lg font-medium text-red-600 dark:text-red-400 mb-4">Danger Zone</h3>
@@ -197,5 +262,14 @@
         </button>
       </div>
     </div>
+
+    <!-- Hidden file input for import -->
+    <input
+      bind:this={fileInput}
+      type="file"
+      accept=".json"
+      on:change={handleFileSelect}
+      class="hidden"
+    />
   </div>
 {/if}
