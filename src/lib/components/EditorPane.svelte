@@ -51,11 +51,7 @@
       // Re-index notes for search
       searchService.indexNotes(allNotes);
 
-      // Re-select current note to update selectedNote store
-      const updatedNote = allNotes.find(n => n.id === $selectedNote.id);
-      if (updatedNote) {
-        selectedNote.set(updatedNote);
-      }
+      // selectedNote will automatically update from the derived store
     } catch (error) {
       console.error('Failed to save note:', error);
     }
@@ -77,11 +73,7 @@
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
 
-      // Re-select current note to update selectedNote store
-      const updatedNote = allNotes.find(n => n.id === $selectedNote.id);
-      if (updatedNote) {
-        selectedNote.set(updatedNote);
-      }
+      // selectedNote will automatically update from the derived store
     } catch (error) {
       console.error('Failed to toggle pin:', error);
     }
