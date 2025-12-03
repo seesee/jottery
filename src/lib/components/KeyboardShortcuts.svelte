@@ -113,18 +113,16 @@
 
   async function handleDelete() {
     if (!$selectedNoteId) return;
-    if (confirm('Move this note to recycle bin?')) {
-      try {
-        await noteService.deleteNote($selectedNoteId);
-        clearSelection();
+    try {
+      await noteService.deleteNote($selectedNoteId);
+      clearSelection();
 
-        // Reload all notes to refresh the UI
-        const allNotes = await noteService.getAllNotes($settings.sortOrder);
-        notes.set(allNotes);
-        searchService.indexNotes(allNotes);
-      } catch (error) {
-        console.error('Failed to delete note:', error);
-      }
+      // Reload all notes to refresh the UI
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
+    } catch (error) {
+      console.error('Failed to delete note:', error);
     }
   }
 

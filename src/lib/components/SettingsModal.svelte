@@ -3,6 +3,7 @@
   import { settingsRepository, deleteDB, noteService, searchService } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import type { Theme } from '../types';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   export let show = false;
   export let onClose: () => void = () => {};
@@ -13,6 +14,7 @@
   let sortOrder = $settings.sortOrder;
   let saving = false;
   let fileInput: HTMLInputElement;
+  let showDeleteConfirm = false;
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -60,25 +62,22 @@
     }
   }
 
-  async function handleDeleteDatabase() {
-    const confirmation = prompt(
-      'Are you sure you want to delete ALL data? This cannot be undone!\n\nType "DELETE" to confirm:'
-    );
+  function handleDeleteDatabase() {
+    showDeleteConfirm = true;
+  }
 
-    if (confirmation === 'DELETE') {
-      try {
-        // Close database and delete
-        await deleteDB();
+  async function confirmDeleteDatabase() {
+    showDeleteConfirm = false;
+    try {
+      // Close database and delete
+      await deleteDB();
 
-        // Lock the app and reload
-        isLocked.set(true);
-        window.location.reload();
-      } catch (error) {
-        console.error('Failed to delete database:', error);
-        alert('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
-      }
-    } else if (confirmation !== null) {
-      alert('Database deletion cancelled. You must type exactly "DELETE" to confirm.');
+      // Lock the app and reload
+      isLocked.set(true);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete database:', error);
+      alert('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -288,4 +287,17 @@
       class="hidden"
     />
   </div>
+
+  <!-- Delete Database Confirmation Modal -->
+  <ConfirmModal
+    show={showDeleteConfirm}
+    title="Delete All Data"
+    message="This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone.{'\n\n'}Type DELETE to confirm:"
+    confirmText="Delete Everything"
+    cancelText="Cancel"
+    confirmClass="bg-red-600 hover:bg-red-700"
+    requireTextMatch="DELETE"
+    onConfirm={confirmDeleteDatabase}
+    onCancel={() => showDeleteConfirm = false}
+  />
 {/if}

@@ -2,12 +2,16 @@
   import { onMount } from 'svelte';
   import { noteService } from '../services';
   import type { DecryptedNote } from '../types';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   export let show: boolean = false;
   export let onClose: () => void;
 
   let deletedNotes: DecryptedNote[] = [];
   let loading = false;
+  let showPermanentDeleteConfirm = false;
+  let showEmptyBinConfirm = false;
+  let noteToDelete: string | null = null;
 
   async function loadDeletedNotes() {
     loading = true;
@@ -31,30 +35,41 @@
     }
   }
 
-  async function handlePermanentDelete(noteId: string) {
-    if (confirm('Permanently delete this note? This cannot be undone!')) {
-      try {
-        await noteService.permanentlyDeleteNote(noteId);
-        // Reload deleted notes
-        await loadDeletedNotes();
-      } catch (error) {
-        console.error('Failed to delete note:', error);
-        alert('Failed to delete note: ' + (error instanceof Error ? error.message : String(error)));
-      }
+  function handlePermanentDelete(noteId: string) {
+    noteToDelete = noteId;
+    showPermanentDeleteConfirm = true;
+  }
+
+  async function confirmPermanentDelete() {
+    if (!noteToDelete) return;
+    showPermanentDeleteConfirm = false;
+
+    try {
+      await noteService.permanentlyDeleteNote(noteToDelete);
+      noteToDelete = null;
+      // Reload deleted notes
+      await loadDeletedNotes();
+    } catch (error) {
+      console.error('Failed to delete note:', error);
+      alert('Failed to delete note: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
-  async function handleEmptyRecycleBin() {
-    if (confirm(`Permanently delete all ${deletedNotes.length} notes in recycle bin? This cannot be undone!`)) {
-      try {
-        for (const note of deletedNotes) {
-          await noteService.permanentlyDeleteNote(note.id);
-        }
-        deletedNotes = [];
-      } catch (error) {
-        console.error('Failed to empty recycle bin:', error);
-        alert('Failed to empty recycle bin: ' + (error instanceof Error ? error.message : String(error)));
+  function handleEmptyRecycleBin() {
+    showEmptyBinConfirm = true;
+  }
+
+  async function confirmEmptyRecycleBin() {
+    showEmptyBinConfirm = false;
+
+    try {
+      for (const note of deletedNotes) {
+        await noteService.permanentlyDeleteNote(note.id);
       }
+      deletedNotes = [];
+    } catch (error) {
+      console.error('Failed to empty recycle bin:', error);
+      alert('Failed to empty recycle bin: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -186,4 +201,28 @@
       {/if}
     </div>
   </div>
+
+  <!-- Permanent Delete Confirmation Modal -->
+  <ConfirmModal
+    show={showPermanentDeleteConfirm}
+    title="Permanently Delete Note"
+    message="This will permanently delete this note. This cannot be undone!"
+    confirmText="Delete Forever"
+    cancelText="Cancel"
+    confirmClass="bg-red-600 hover:bg-red-700"
+    onConfirm={confirmPermanentDelete}
+    onCancel={() => showPermanentDeleteConfirm = false}
+  />
+
+  <!-- Empty Recycle Bin Confirmation Modal -->
+  <ConfirmModal
+    show={showEmptyBinConfirm}
+    title="Empty Recycle Bin"
+    message="Permanently delete all {deletedNotes.length} {deletedNotes.length === 1 ? 'note' : 'notes'} in recycle bin? This cannot be undone!"
+    confirmText="Empty Bin"
+    cancelText="Cancel"
+    confirmClass="bg-red-600 hover:bg-red-700"
+    onConfirm={confirmEmptyRecycleBin}
+    onCancel={() => showEmptyBinConfirm = false}
+  />
 {/if}

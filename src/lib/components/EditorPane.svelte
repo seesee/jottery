@@ -95,26 +95,21 @@
     }
     console.log('[EditorPane] Selected note ID:', $selectedNote.id);
 
-    if (confirm('Move this note to recycle bin?')) {
-      console.log('[EditorPane] User confirmed deletion');
-      try {
-        console.log('[EditorPane] Calling noteService.deleteNote...');
-        await noteService.deleteNote($selectedNote.id);
-        console.log('[EditorPane] Delete successful, clearing selection...');
-        clearSelection();
+    try {
+      console.log('[EditorPane] Calling noteService.deleteNote...');
+      await noteService.deleteNote($selectedNote.id);
+      console.log('[EditorPane] Delete successful, clearing selection...');
+      clearSelection();
 
-        // Reload all notes to refresh the UI
-        console.log('[EditorPane] Reloading notes...');
-        const allNotes = await noteService.getAllNotes($settings.sortOrder);
-        console.log('[EditorPane] Loaded notes count:', allNotes.length);
-        notes.set(allNotes);
-        searchService.indexNotes(allNotes);
-        console.log('[EditorPane] Delete operation complete');
-      } catch (error) {
-        console.error('[EditorPane] Failed to delete note:', error);
-      }
-    } else {
-      console.log('[EditorPane] User cancelled deletion');
+      // Reload all notes to refresh the UI
+      console.log('[EditorPane] Reloading notes...');
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      console.log('[EditorPane] Loaded notes count:', allNotes.length);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
+      console.log('[EditorPane] Delete operation complete');
+    } catch (error) {
+      console.error('[EditorPane] Failed to delete note:', error);
     }
   }
 
