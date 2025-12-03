@@ -85,9 +85,15 @@
     filteredNotes.set([]);
   }
 
-  // Perform search when query or notes change
-  $: if ($notes.length > 0 || $searchQuery) {
-    performSearch();
+  // Perform search when query or notes change (only if we have notes)
+  $: {
+    // Reference both to make this block reactive to changes in either
+    $searchQuery;
+    if ($notes.length > 0) {
+      performSearch();
+    } else {
+      filteredNotes.set([]);
+    }
   }
 </script>
 
