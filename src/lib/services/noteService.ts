@@ -3,7 +3,7 @@
  * This is the main business logic layer for notes
  */
 
-import type { Note, DecryptedNote, SortOrder } from '../types';
+import type { Note, DecryptedNote, SortOrder, Attachment } from '../types';
 import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -26,6 +26,7 @@ class NoteService {
       pinned?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+      attachments?: Attachment[];
     }
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
@@ -50,7 +51,7 @@ class NoteService {
       syntaxLanguage: options?.syntaxLanguage || 'plain',
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
-      attachments: [],
+      attachments: options?.attachments || [],
     };
 
     return await noteRepository.create(note);

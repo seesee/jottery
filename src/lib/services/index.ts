@@ -17,6 +17,7 @@ export { encryptionRepository } from './encryptionRepository';
 
 // Business logic services
 export { noteService } from './noteService';
+export { attachmentService } from './attachmentService';
 export { isInitialized, initialize, unlock, lock, isLocked, changePassword } from './initService';
 export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFile } from './exportService';
 export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';

@@ -2,7 +2,7 @@
  * Export/Import service for notes data
  */
 
-import type { ExportData, ExportNote, ExportAttachment, Note } from '../types';
+import type { ExportData, ExportNote, ExportAttachment, Note, Attachment } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { noteService } from './noteService';
@@ -77,16 +77,18 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
   // Decrypt and export attachments
   const exportAttachments: ExportAttachment[] = [];
   for (const attachment of note.attachments) {
-    const blob = await attachmentRepository.getBlob(attachment.id);
-    if (!blob) continue;
+    // Get encrypted blob from storage
+    const encryptedBlob = await attachmentRepository.getBlob(attachment.data);
+    if (!encryptedBlob) continue;
 
     // Decrypt attachment filename
     const filenameEncrypted = JSON.parse(attachment.filename);
     const filename = await cryptoService.decryptText(filenameEncrypted, key);
 
     // Decrypt attachment data
-    const dataEncrypted = JSON.parse(attachment.data);
-    const decryptedData = await cryptoService.decryptBinary(dataEncrypted, key);
+    const encryptedDataJson = new TextDecoder().decode(encryptedBlob);
+    const encryptedData = JSON.parse(encryptedDataJson);
+    const decryptedData = await cryptoService.decryptBinary(encryptedData, key);
 
     exportAttachments.push({
       filename,
@@ -150,6 +152,50 @@ export async function importNotes(
         // For 'merge', we'll import with a new ID
       }
 
+      // Process attachments: re-encrypt and store
+      const attachments: Attachment[] = [];
+      if (exportNote.attachments && exportNote.attachments.length > 0) {
+        for (const exportAttachment of exportNote.attachments) {
+          try {
+            // Generate new attachment ID
+            const attachmentId = cryptoService.generateUUID();
+
+            // Convert base64 to ArrayBuffer
+            const fileData = base64ToArrayBuffer(exportAttachment.data);
+
+            // Encrypt file data
+            const encryptedData = await cryptoService.encryptBinary(
+              fileData,
+              masterKey.cryptoKey
+            );
+
+            // Store encrypted file data
+            const dataBlob = new TextEncoder().encode(
+              JSON.stringify(encryptedData)
+            ).buffer;
+            await attachmentRepository.storeBlob(attachmentId, dataBlob);
+
+            // Encrypt filename
+            const encryptedFilename = await cryptoService.encryptText(
+              exportAttachment.filename,
+              masterKey.cryptoKey
+            );
+
+            // Create attachment metadata
+            attachments.push({
+              id: attachmentId,
+              filename: JSON.stringify(encryptedFilename),
+              mimeType: exportAttachment.mimeType,
+              size: fileData.byteLength,
+              data: attachmentId, // Reference to blob storage
+            });
+          } catch (attachmentError) {
+            console.error('Failed to import attachment:', attachmentError);
+            // Continue with other attachments
+          }
+        }
+      }
+
       // Create new note with imported content, preserving timestamps and settings
       await noteService.createNote(exportNote.content, exportNote.tags, {
         createdAt: exportNote.createdAt,
@@ -157,6 +203,7 @@ export async function importNotes(
         pinned: exportNote.pinned,
         wordWrap: exportNote.wordWrap,
         syntaxLanguage: exportNote.syntaxLanguage,
+        attachments: attachments,
       });
       imported++;
     } catch (error) {
@@ -227,4 +274,16 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+/**
+ * Helper: Convert Base64 to ArrayBuffer
+ */
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
 }

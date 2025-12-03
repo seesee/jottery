@@ -1,16 +1,21 @@
 <script lang="ts">
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { noteService, tagService, searchService } from '../services';
+  import { noteService, tagService, searchService, attachmentService } from '../services';
+  import type { Attachment } from '../types';
   import CodeEditor from './CodeEditor.svelte';
   import TagInput from './TagInput.svelte';
+  import AttachmentList from './AttachmentList.svelte';
+  import FileUpload from './FileUpload.svelte';
 
   let content = '';
   let tags: string[] = [];
+  let attachments: Attachment[] = [];
   let isEditing = false;
   let saveTimeout: number | null = null;
   let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' = 'plain';
   let wordWrap: boolean = true;
   let availableTags: string[] = [];
+  let isUploading: boolean = false;
 
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
@@ -22,12 +27,14 @@
   $: if ($selectedNote) {
     content = $selectedNote.content;
     tags = [...$selectedNote.tags];
+    attachments = [...$selectedNote.attachments];
     language = $selectedNote.syntaxLanguage || 'plain';
     wordWrap = $selectedNote.wordWrap ?? true;
     isEditing = true;
   } else {
     content = '';
     tags = [];
+    attachments = [];
     language = 'plain';
     wordWrap = true;
     isEditing = false;
@@ -40,6 +47,7 @@
       await noteService.updateNote($selectedNote.id, {
         content,
         tags: tags,
+        attachments: attachments,
         syntaxLanguage: language,
         wordWrap,
       });
@@ -114,6 +122,56 @@
   function handleWordWrapToggle() {
     wordWrap = !wordWrap;
     handleInput();
+  }
+
+  async function handleFileUpload(files: FileList) {
+    if (!files || files.length === 0) return;
+
+    isUploading = true;
+
+    try {
+      const newAttachments: Attachment[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        // Validate file
+        const validation = attachmentService.validateFile(file);
+        if (!validation.valid) {
+          alert(`${file.name}: ${validation.error}`);
+          continue;
+        }
+
+        try {
+          const attachment = await attachmentService.addAttachment(file);
+          newAttachments.push(attachment);
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error);
+          alert(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
+      if (newAttachments.length > 0) {
+        attachments = [...attachments, ...newAttachments];
+        handleInput(); // Trigger auto-save
+      }
+    } finally {
+      isUploading = false;
+    }
+  }
+
+  async function handleDeleteAttachment(attachment: Attachment) {
+    try {
+      // Remove from attachments array
+      attachments = attachments.filter(a => a.id !== attachment.id);
+
+      // Delete from storage (this will happen when the note is saved)
+      // We'll add cleanup in the noteService
+      handleInput(); // Trigger auto-save
+    } catch (error) {
+      console.error('Failed to delete attachment:', error);
+      alert(`Failed to delete attachment: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 </script>
 
@@ -200,6 +258,36 @@
         {wordWrap}
         {isDark}
       />
+    </div>
+
+    <!-- Attachments Section -->
+    <div class="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800/50 max-h-64 overflow-y-auto">
+      <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Attachments ({attachments.length})
+      </div>
+
+      <div class="space-y-3">
+        <!-- File Upload -->
+        <FileUpload
+          onUpload={handleFileUpload}
+          disabled={isUploading}
+        />
+
+        <!-- Attachment List -->
+        {#if attachments.length > 0}
+          <AttachmentList
+            {attachments}
+            onDelete={handleDeleteAttachment}
+            readonly={false}
+          />
+        {/if}
+      </div>
+
+      {#if isUploading}
+        <div class="mt-2 text-sm text-blue-600 dark:text-blue-400">
+          Uploading...
+        </div>
+      {/if}
     </div>
 
     <!-- Metadata Footer -->
