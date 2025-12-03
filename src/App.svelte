@@ -85,8 +85,8 @@
     filteredNotes.set([]);
   }
 
-  // Perform search when query changes
-  $: if ($notes.length > 0) {
+  // Perform search when query or notes change
+  $: if ($notes.length > 0 || $searchQuery) {
     performSearch();
   }
 </script>

@@ -96,21 +96,21 @@
   }
 
   // Update language when language prop changes
-  $: if (editorView) {
+  $: if (editorView && language) {
     editorView.dispatch({
       effects: languageCompartment.reconfigure(getLanguageExtension()),
     });
   }
 
   // Update word wrap when wordWrap prop changes
-  $: if (editorView) {
+  $: if (editorView && wordWrap !== undefined) {
     editorView.dispatch({
       effects: wrapCompartment.reconfigure(wordWrap ? EditorView.lineWrapping : []),
     });
   }
 
   // Update theme when isDark prop changes
-  $: if (editorView) {
+  $: if (editorView && isDark !== undefined) {
     editorView.dispatch({
       effects: themeCompartment.reconfigure(isDark ? oneDark : []),
     });
