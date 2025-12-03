@@ -1,11 +1,20 @@
 <script lang="ts">
-  import { searchQuery, isLocked } from '../stores/appStore';
-  import { noteService, lock } from '../services';
+  import { searchQuery, isLocked, notes, settings, selectNote } from '../stores/appStore';
+  import { noteService, lock, searchService } from '../services';
 
   async function handleNewNote() {
     try {
-      await noteService.createNote('', []);
-      // Refresh would happen via store update
+      const newNote = await noteService.createNote('', []);
+
+      // Reload all notes
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+
+      // Re-index for search
+      searchService.indexNotes(allNotes);
+
+      // Select the newly created note
+      selectNote(newNote.id);
     } catch (error) {
       console.error('Failed to create note:', error);
     }
