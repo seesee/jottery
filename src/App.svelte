@@ -73,7 +73,9 @@
   }
 
   async function performSearch() {
+    console.log('performSearch called:', { query: $searchQuery, notesCount: $notes.length });
     const results = await searchService.searchNotes($searchQuery, $notes);
+    console.log('search results:', results.length, 'notes');
     filteredNotes.set(results);
   }
 
