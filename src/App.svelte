@@ -6,8 +6,25 @@
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
   import EditorPane from './lib/components/EditorPane.svelte';
+  import SettingsModal from './lib/components/SettingsModal.svelte';
 
   let initialized = false;
+  let showSettings = false;
+
+  function applyTheme(theme: 'light' | 'dark' | 'auto') {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      // Auto mode - use system preference
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }
 
   onMount(async () => {
     try {
@@ -18,6 +35,9 @@
       const userSettings = await settingsRepository.get();
       settings.set(userSettings);
 
+      // Apply theme
+      applyTheme(userSettings.theme);
+
       // Check lock status
       isLocked.set(checkLocked());
 
@@ -26,6 +46,11 @@
       console.error('Failed to initialize app:', error);
     }
   });
+
+  // Watch for theme changes
+  $: if ($settings) {
+    applyTheme($settings.theme);
+  }
 
   // Watch lock status and load notes when unlocked
   $: if (!$isLocked && initialized) {
@@ -78,7 +103,7 @@
 {:else}
   <div class="h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div class="flex h-full flex-col">
-      <Header />
+      <Header onOpenSettings={() => showSettings = true} />
 
       <main class="flex-1 overflow-hidden flex">
         <!-- Note List Sidebar -->
@@ -92,5 +117,11 @@
         </div>
       </main>
     </div>
+
+    <!-- Settings Modal -->
+    <SettingsModal
+      show={showSettings}
+      onClose={() => showSettings = false}
+    />
   </div>
 {/if}

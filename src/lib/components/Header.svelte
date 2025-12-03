@@ -2,24 +2,20 @@
   import { searchQuery, isLocked, notes, settings, selectNote } from '../stores/appStore';
   import { noteService, lock, searchService } from '../services';
 
+  export let onOpenSettings: () => void = () => {};
+
   async function handleNewNote() {
-    console.log('handleNewNote called');
     try {
-      console.log('Creating note...');
       const newNote = await noteService.createNote('', []);
-      console.log('Note created:', newNote);
 
       // Reload all notes
-      console.log('Reloading notes...');
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      console.log('Notes loaded:', allNotes.length);
       notes.set(allNotes);
 
       // Re-index for search
       searchService.indexNotes(allNotes);
 
       // Select the newly created note
-      console.log('Selecting note:', newNote.id);
       selectNote(newNote.id);
     } catch (error) {
       console.error('Failed to create note:', error);
@@ -58,6 +54,14 @@
         title="Create new note (Ctrl+N)"
       >
         + New
+      </button>
+
+      <button
+        on:click={onOpenSettings}
+        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
+        title="Settings"
+      >
+        ⚙️ Settings
       </button>
 
       <button
