@@ -97,7 +97,13 @@ class NoteService {
    */
   async updateNote(
     id: string,
-    updates: { content?: string; tags?: string[]; pinned?: boolean }
+    updates: {
+      content?: string;
+      tags?: string[];
+      pinned?: boolean;
+      wordWrap?: boolean;
+      syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+    }
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
@@ -127,6 +133,16 @@ class NoteService {
     // Update pinned status if provided
     if (updates.pinned !== undefined) {
       note.pinned = updates.pinned;
+    }
+
+    // Update word wrap if provided
+    if (updates.wordWrap !== undefined) {
+      note.wordWrap = updates.wordWrap;
+    }
+
+    // Update syntax language if provided
+    if (updates.syntaxLanguage !== undefined) {
+      note.syntaxLanguage = updates.syntaxLanguage;
     }
 
     return await noteRepository.update(note);

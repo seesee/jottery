@@ -20,6 +20,8 @@ export interface Note {
   deletedAt?: string; // Deletion timestamp
   syncHash?: string; // Hash for conflict detection
   version: number; // Optimistic locking
+  wordWrap?: boolean; // Word wrap enabled (default: true)
+  syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash'; // Syntax highlighting language
 }
 
 /**
@@ -150,6 +152,8 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   pinned: false,
   deleted: false,
   version: 1,
+  wordWrap: true,
+  syntaxLanguage: 'plain',
 };
 
 /**

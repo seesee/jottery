@@ -1,18 +1,28 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
-  import { EditorState } from '@codemirror/state';
+  import { EditorState, Compartment } from '@codemirror/state';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';
   import { markdown } from '@codemirror/lang-markdown';
+  import { json } from '@codemirror/lang-json';
+  import { html } from '@codemirror/lang-html';
+  import { css } from '@codemirror/lang-css';
+  import { sql } from '@codemirror/lang-sql';
+  import { oneDark } from '@codemirror/theme-one-dark';
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
-  export let language: 'javascript' | 'python' | 'markdown' | 'plain' = 'plain';
+  export let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' = 'plain';
   export let readonly: boolean = false;
+  export let wordWrap: boolean = true;
+  export let isDark: boolean = false;
 
   let editorContainer: HTMLDivElement;
   let editorView: EditorView | null = null;
+  let languageCompartment = new Compartment();
+  let wrapCompartment = new Compartment();
+  let themeCompartment = new Compartment();
 
   // Get language extension based on language prop
   function getLanguageExtension() {
@@ -23,6 +33,17 @@
         return python();
       case 'markdown':
         return markdown();
+      case 'json':
+        return json();
+      case 'html':
+        return html();
+      case 'css':
+        return css();
+      case 'sql':
+        return sql();
+      case 'bash':
+        // Use javascript for bash as @codemirror/lang-bash doesn't exist
+        return javascript();
       default:
         return [];
     }
@@ -31,7 +52,9 @@
   onMount(() => {
     const extensions = [
       basicSetup,
-      getLanguageExtension(),
+      languageCompartment.of(getLanguageExtension()),
+      wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
+      themeCompartment.of(isDark ? oneDark : []),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const newValue = update.state.doc.toString();
@@ -71,6 +94,27 @@
       },
     });
   }
+
+  // Update language when language prop changes
+  $: if (editorView) {
+    editorView.dispatch({
+      effects: languageCompartment.reconfigure(getLanguageExtension()),
+    });
+  }
+
+  // Update word wrap when wordWrap prop changes
+  $: if (editorView) {
+    editorView.dispatch({
+      effects: wrapCompartment.reconfigure(wordWrap ? EditorView.lineWrapping : []),
+    });
+  }
+
+  // Update theme when isDark prop changes
+  $: if (editorView) {
+    editorView.dispatch({
+      effects: themeCompartment.reconfigure(isDark ? oneDark : []),
+    });
+  }
 </script>
 
 <div bind:this={editorContainer} class="h-full w-full"></div>
@@ -78,7 +122,6 @@
 <style>
   :global(.cm-editor) {
     height: 100%;
-    background: transparent;
   }
 
   :global(.cm-scroller) {
@@ -93,44 +136,44 @@
     min-height: 100%;
   }
 
-  :global(.cm-gutters) {
-    background-color: transparent;
-    border-right: 1px solid rgb(229 231 235);
+  /* Light mode styles (when oneDark is not active) */
+  :global(.cm-editor:not(.cm-theme-dark)) {
+    background: white;
   }
 
-  :global(.dark .cm-gutters) {
-    border-right-color: rgb(55 65 81);
+  :global(.dark .cm-editor:not(.cm-theme-dark)) {
+    background: rgb(17 24 39); /* gray-900 */
   }
 
-  :global(.cm-activeLineGutter) {
-    background-color: rgb(243 244 246);
+  :global(.cm-editor:not(.cm-theme-dark) .cm-gutters) {
+    background-color: rgb(249 250 251); /* gray-50 */
+    border-right: 1px solid rgb(229 231 235); /* gray-200 */
+    color: rgb(107 114 128); /* gray-500 */
   }
 
-  :global(.dark .cm-activeLineGutter) {
-    background-color: rgb(31 41 55);
+  :global(.dark .cm-editor:not(.cm-theme-dark) .cm-gutters) {
+    background-color: rgb(17 24 39); /* gray-900 */
+    border-right-color: rgb(55 65 81); /* gray-700 */
+    color: rgb(156 163 175); /* gray-400 */
   }
 
-  :global(.cm-activeLine) {
-    background-color: rgb(249 250 251);
+  :global(.cm-editor:not(.cm-theme-dark) .cm-activeLineGutter) {
+    background-color: rgb(243 244 246); /* gray-100 */
   }
 
-  :global(.dark .cm-activeLine) {
-    background-color: rgb(31 41 55);
+  :global(.dark .cm-editor:not(.cm-theme-dark) .cm-activeLineGutter) {
+    background-color: rgb(31 41 55); /* gray-800 */
   }
 
-  :global(.cm-selectionBackground) {
-    background-color: rgb(191 219 254) !important;
+  :global(.cm-editor:not(.cm-theme-dark) .cm-activeLine) {
+    background-color: rgb(249 250 251); /* gray-50 */
   }
 
-  :global(.dark .cm-selectionBackground) {
-    background-color: rgb(30 64 175) !important;
+  :global(.dark .cm-editor:not(.cm-theme-dark) .cm-activeLine) {
+    background-color: rgb(31 41 55); /* gray-800 */
   }
 
-  :global(.cm-cursor) {
-    border-left-color: rgb(37 99 235);
-  }
-
-  :global(.dark .cm-cursor) {
-    border-left-color: rgb(96 165 250);
+  :global(.dark .cm-editor:not(.cm-theme-dark) .cm-content) {
+    color: rgb(243 244 246); /* gray-100 */
   }
 </style>
