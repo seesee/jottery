@@ -69,11 +69,8 @@ class IndexedDBNoteRepository implements NoteRepository {
    */
   async getAllActive(): Promise<Note[]> {
     const db = getDB();
-    const tx = db.transaction(STORES.NOTES, 'readonly');
-    const index = tx.store.index('deleted');
-    const notes = await index.getAll(0); // 0 = not deleted
-    await tx.done;
-    return notes;
+    const allNotes = await db.getAll(STORES.NOTES);
+    return allNotes.filter(note => !note.deleted);
   }
 
   /**
@@ -81,11 +78,8 @@ class IndexedDBNoteRepository implements NoteRepository {
    */
   async getDeleted(): Promise<Note[]> {
     const db = getDB();
-    const tx = db.transaction(STORES.NOTES, 'readonly');
-    const index = tx.store.index('deleted');
-    const notes = await index.getAll(1); // 1 = deleted
-    await tx.done;
-    return notes;
+    const allNotes = await db.getAll(STORES.NOTES);
+    return allNotes.filter(note => note.deleted);
   }
 
   /**
@@ -93,12 +87,8 @@ class IndexedDBNoteRepository implements NoteRepository {
    */
   async getPinned(): Promise<Note[]> {
     const db = getDB();
-    const tx = db.transaction(STORES.NOTES, 'readonly');
-    const index = tx.store.index('pinned');
-    const notes = await index.getAll(1); // 1 = pinned
-    await tx.done;
-    // Filter out deleted notes
-    return notes.filter(note => !note.deleted);
+    const allNotes = await db.getAll(STORES.NOTES);
+    return allNotes.filter(note => note.pinned && !note.deleted);
   }
 
   /**
@@ -163,45 +153,26 @@ class IndexedDBNoteRepository implements NoteRepository {
    */
   async getAllActiveByModified(): Promise<Note[]> {
     const db = getDB();
-    const tx = db.transaction(STORES.NOTES, 'readonly');
-    const index = tx.store.index('deleted-modifiedAt');
-
-    // Get all non-deleted notes
-    const range = IDBKeyRange.bound([0, ''], [0, '\uffff']);
-    let cursor = await index.openCursor(range, 'prev'); // Descending order
-
-    const notes: Note[] = [];
-    while (cursor) {
-      notes.push(cursor.value);
-      cursor = await cursor.continue();
-    }
-
-    await tx.done;
-    return notes;
+    const allNotes = await db.getAll(STORES.NOTES);
+    return allNotes
+      .filter(note => !note.deleted)
+      .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
   }
 
   /**
    * Count all active notes
    */
   async countActive(): Promise<number> {
-    const db = getDB();
-    const tx = db.transaction(STORES.NOTES, 'readonly');
-    const index = tx.store.index('deleted');
-    const count = await index.count(0);
-    await tx.done;
-    return count;
+    const notes = await this.getAllActive();
+    return notes.length;
   }
 
   /**
    * Count deleted notes
    */
   async countDeleted(): Promise<number> {
-    const db = getDB();
-    const tx = db.transaction(STORES.NOTES, 'readonly');
-    const index = tx.store.index('deleted');
-    const count = await index.count(1);
-    await tx.done;
-    return count;
+    const notes = await this.getDeleted();
+    return notes.length;
   }
 }
 
