@@ -2,10 +2,14 @@
   import { onMount, onDestroy } from 'svelte';
   import { isLocked, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
   import { lock, noteService, searchService } from '../services';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   export let onNewNote: () => void;
   export let onOpenSettings: () => void;
   export let onFocusSearch: () => void;
+  export let onOpenShortcutsHelp: () => void;
+
+  let showLockConfirm = false;
 
   function handleKeydown(event: KeyboardEvent) {
     // Don't trigger shortcuts when typing in inputs/textareas
@@ -30,10 +34,7 @@
 
     if (modifier && event.key === 'l') {
       event.preventDefault();
-      if (confirm('Lock the application? Unsaved changes will be lost.')) {
-        lock();
-        isLocked.set(true);
-      }
+      showLockConfirm = true;
       return;
     }
 
@@ -45,7 +46,7 @@
 
     if (modifier && event.key === '/') {
       event.preventDefault();
-      showShortcutsHelp();
+      onOpenShortcutsHelp();
       return;
     }
 
@@ -173,29 +174,14 @@
     }
   }
 
-  function showShortcutsHelp() {
-    const shortcuts = `
-Keyboard Shortcuts:
+  function handleLockConfirm() {
+    showLockConfirm = false;
+    lock();
+    isLocked.set(true);
+  }
 
-Global:
-  Ctrl/Cmd + K - Focus search
-  Ctrl/Cmd + N - New note
-  Ctrl/Cmd + L - Lock application
-  Ctrl/Cmd + , - Settings
-  Ctrl/Cmd + / - Show this help
-
-Note List:
-  ↑/↓ or J/K - Navigate notes
-  Enter - Open selected note
-  Delete - Delete selected note
-  P - Pin/unpin selected note
-
-Editor:
-  Esc - Close note
-  Ctrl/Cmd + F - Find in note (CodeMirror)
-  Ctrl/Cmd + H - Replace in note (CodeMirror)
-    `;
-    alert(shortcuts);
+  function handleLockCancel() {
+    showLockConfirm = false;
   }
 
   onMount(() => {
@@ -206,3 +192,14 @@ Editor:
     window.removeEventListener('keydown', handleKeydown);
   });
 </script>
+
+<ConfirmModal
+  show={showLockConfirm}
+  title="Lock Application"
+  message="Lock the application? Unsaved changes will be lost."
+  confirmText="Lock"
+  cancelText="Cancel"
+  confirmClass="bg-blue-600 hover:bg-blue-700"
+  onConfirm={handleLockConfirm}
+  onCancel={handleLockCancel}
+/>

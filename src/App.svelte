@@ -206,6 +206,7 @@
       onNewNote={handleNewNote}
       onOpenSettings={handleOpenSettings}
       onFocusSearch={handleFocusSearch}
+      onOpenShortcutsHelp={handleOpenShortcutsHelp}
     />
   </div>
 {/if}

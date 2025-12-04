@@ -1,6 +1,7 @@
 <script lang="ts">
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
   import { initialize, unlock, isInitialized, deleteDB } from '../services';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   let password = '';
   let confirmPassword = '';
@@ -9,6 +10,7 @@
   let needsInit = false;
   let failedAttempts = 0;
   let showDeleteOption = false;
+  let showDeleteConfirm = false;
 
   // Check if needs initialization
   (async () => {
@@ -64,11 +66,12 @@
     }
   }
 
-  async function handleDeleteDatabase() {
-    if (!confirm('⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?')) {
-      return;
-    }
+  function handleDeleteRequest() {
+    showDeleteConfirm = true;
+  }
 
+  async function handleDeleteConfirm() {
+    showDeleteConfirm = false;
     loading = true;
     try {
       await deleteDB();
@@ -78,6 +81,10 @@
       error = 'Failed to delete database: ' + (err instanceof Error ? err.message : 'Unknown error');
       loading = false;
     }
+  }
+
+  function handleDeleteCancel() {
+    showDeleteConfirm = false;
   }
 </script>
 
@@ -149,7 +156,7 @@
         {#if showDeleteOption && !needsInit}
           <button
             type="button"
-            on:click={handleDeleteDatabase}
+            on:click={handleDeleteRequest}
             disabled={loading}
             class="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
           >
@@ -164,3 +171,16 @@
     </div>
   </div>
 </div>
+
+<ConfirmModal
+  show={showDeleteConfirm}
+  title="Delete Database"
+  message="⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!
+
+Are you sure you want to delete the database?"
+  confirmText="Delete Database"
+  cancelText="Cancel"
+  confirmClass="bg-red-600 hover:bg-red-700"
+  onConfirm={handleDeleteConfirm}
+  onCancel={handleDeleteCancel}
+/>

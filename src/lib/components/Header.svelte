@@ -1,21 +1,31 @@
 <script lang="ts">
   import { searchQuery, isLocked } from '../stores/appStore';
   import { lock } from '../services';
+  import ConfirmModal from './ConfirmModal.svelte';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
+
+  let showLockConfirm = false;
 
   function handleNewNoteClick() {
     // Call parent handler
     onNewNote();
   }
 
-  function handleLock() {
-    if (confirm('Lock the application? Unsaved changes will be lost.')) {
-      lock();
-      isLocked.set(true);
-    }
+  function handleLockRequest() {
+    showLockConfirm = true;
+  }
+
+  function handleLockConfirm() {
+    showLockConfirm = false;
+    lock();
+    isLocked.set(true);
+  }
+
+  function handleLockCancel() {
+    showLockConfirm = false;
   }
 </script>
 
@@ -71,7 +81,7 @@
       </button>
 
       <button
-        on:click={handleLock}
+        on:click={handleLockRequest}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
         title="Lock application (Ctrl+L)"
       >
@@ -80,3 +90,14 @@
     </div>
   </div>
 </header>
+
+<ConfirmModal
+  show={showLockConfirm}
+  title="Lock Application"
+  message="Lock the application? Unsaved changes will be lost."
+  confirmText="Lock"
+  cancelText="Cancel"
+  confirmClass="bg-blue-600 hover:bg-blue-700"
+  onConfirm={handleLockConfirm}
+  onCancel={handleLockCancel}
+/>
