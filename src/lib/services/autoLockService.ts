@@ -67,10 +67,10 @@ export function stopAutoLock(): void {
     checkInterval = null;
   }
 
-  // Remove activity listeners
+  // Remove activity listeners (must use same options as when added)
   const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
   events.forEach(event => {
-    document.removeEventListener(event, updateActivity);
+    document.removeEventListener(event, updateActivity, { passive: true } as EventListenerOptions);
   });
 }
 
