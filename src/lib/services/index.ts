@@ -22,3 +22,4 @@ export { isInitialized, initialize, unlock, lock, isLocked, changePassword } fro
 export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFile } from './exportService';
 export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';
 export { tagService, getAllTags, getTagStats, getPopularTags, getNotesByTag, getNotesByTags, normalizeTag, isValidTag, parseTagString } from './tagService';
+export { initI18n, getInitialLocale, AVAILABLE_LOCALES, DEFAULT_LOCALE } from './i18nService';

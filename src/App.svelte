@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { isLocked, notes, settings, searchQuery, filteredNotes, selectNote } from './lib/stores/appStore';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService } from './lib/services';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
+  import { locale } from 'svelte-i18n';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
@@ -77,6 +78,11 @@
       const userSettings = await settingsRepository.get();
       settings.set(userSettings);
 
+      // Initialize i18n with user's language preference
+      const initialLocale = getInitialLocale(userSettings.language);
+      initI18n(initialLocale);
+      locale.set(initialLocale);
+
       // Apply theme
       applyTheme(userSettings.theme);
 
@@ -92,6 +98,11 @@
   // Watch for theme changes
   $: if ($settings) {
     applyTheme($settings.theme);
+  }
+
+  // Watch for language changes
+  $: if ($settings && $settings.language) {
+    locale.set($settings.language);
   }
 
   // Watch lock status and load notes when unlocked

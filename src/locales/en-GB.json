@@ -1,0 +1,130 @@
+{
+  "app": {
+    "name": "Jottery",
+    "tagline": "Privacy-focused • Local-first • Encrypted"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "settings": "Settings",
+    "search": "Search",
+    "error": "Error"
+  },
+  "note": {
+    "new": "New",
+    "create": "Create new note",
+    "delete": "Delete note",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "unpin": "Unpin",
+    "copy": "Copy",
+    "copyContent": "Copy note content",
+    "noNoteSelected": "No note selected",
+    "selectNote": "Select a note from the list or create a new one",
+    "created": "Created",
+    "modified": "Modified",
+    "attachments": "Attachments"
+  },
+  "search": {
+    "placeholder": "Search notes...",
+    "clear": "Clear search"
+  },
+  "editor": {
+    "tags": "Tags",
+    "addTags": "Add tags...",
+    "plainText": "Plain Text",
+    "syntaxHighlight": "Syntax highlighting",
+    "wordWrap": "Wrap",
+    "noWrap": "No Wrap",
+    "toggleWordWrap": "Toggle word wrap"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
+    "autoLockTimeout": "Auto-lock timeout (minutes)",
+    "sortOrder": "Default sort order",
+    "sortRecent": "Most recent",
+    "sortOldest": "Oldest first",
+    "sortAlpha": "Alphabetical",
+    "language": "Language",
+    "saveSettings": "Save Settings",
+    "saving": "Saving...",
+    "exportNotes": "Export Notes",
+    "importNotes": "Import Notes",
+    "deleteDatabase": "Delete Database",
+    "keyboardShortcuts": "Keyboard Shortcuts"
+  },
+  "unlock": {
+    "welcome": "Welcome to Jottery",
+    "enterPassword": "Enter your password to unlock",
+    "setupPassword": "Set up your master password",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "createPassword": "Create Password",
+    "unlock": "Unlock",
+    "processing": "Processing...",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "incorrectPassword": "Incorrect password",
+    "warning": "Important: Your password cannot be recovered. If you lose it, your data will be permanently inaccessible.",
+    "failedAttempts": "Incorrect password. After 3 failed attempts, you may need to delete the database and start over.",
+    "deleteAndStartOver": "Delete Database & Start Over"
+  },
+  "lock": {
+    "title": "Lock Application",
+    "message": "Lock the application? Unsaved changes will be lost.",
+    "confirmButton": "Lock"
+  },
+  "recycleBin": {
+    "title": "Recycle Bin",
+    "empty": "Recycle bin is empty",
+    "restore": "Restore",
+    "deletePermanently": "Delete Permanently",
+    "emptyBin": "Empty Recycle Bin"
+  },
+  "attachments": {
+    "title": "Attachments",
+    "upload": "Upload files",
+    "dropHere": "Drop files here or click to browse",
+    "uploading": "Uploading...",
+    "download": "Download",
+    "validationError": "File validation error"
+  },
+  "keyboard": {
+    "title": "Keyboard Shortcuts",
+    "global": "Global",
+    "noteList": "Note List",
+    "editor": "Editor",
+    "focusSearch": "Focus search",
+    "createNote": "Create new note",
+    "lockApp": "Lock application",
+    "openSettings": "Open settings",
+    "showShortcuts": "Show keyboard shortcuts",
+    "navigateNotes": "Navigate notes",
+    "navigateVim": "Navigate notes (vim-style)",
+    "openNote": "Open selected note",
+    "deleteNote": "Delete selected note",
+    "pinNote": "Pin/unpin selected note",
+    "closeNote": "Close note",
+    "copyNote": "Copy note content",
+    "findInNote": "Find in note (CodeMirror)",
+    "replaceInNote": "Replace in note (CodeMirror)",
+    "macNote": "On macOS, use Cmd instead of Ctrl."
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Delete Database",
+      "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
+      "confirmButton": "Delete Database"
+    }
+  }
+}
