@@ -3,7 +3,7 @@
   import { isLocked, notes, settings, searchQuery, filteredNotes, selectNote } from './lib/stores/appStore';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
-  import { locale } from 'svelte-i18n';
+  import { locale, _ } from 'svelte-i18n';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
@@ -166,7 +166,7 @@
   <div class="h-screen w-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
     <div class="text-center">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p class="text-gray-600 dark:text-gray-400">Loading...</p>
+      <p class="text-gray-600 dark:text-gray-400">{$_('common.loading')}</p>
     </div>
   </div>
 {:else if $isLocked}

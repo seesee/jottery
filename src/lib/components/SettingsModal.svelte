@@ -170,25 +170,22 @@
         <!-- Theme -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Theme
+            {$_('settings.theme')}
           </label>
           <select
             bind:value={theme}
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="auto">Auto (System)</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+            <option value="auto">{$_('settings.themeAuto')}</option>
+            <option value="light">{$_('settings.themeLight')}</option>
+            <option value="dark">{$_('settings.themeDark')}</option>
           </select>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Choose your preferred color scheme
-          </p>
         </div>
 
         <!-- Auto-lock timeout -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Auto-lock timeout (minutes)
+            {$_('settings.autoLockTimeout')}
           </label>
           <input
             type="number"
@@ -197,24 +194,20 @@
             max="1440"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Application will lock after this period of inactivity
-          </p>
         </div>
 
         <!-- Sort order -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Default sort order
+            {$_('settings.sortOrder')}
           </label>
           <select
             bind:value={sortOrder}
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="recent">Most recently modified</option>
-            <option value="oldest">Oldest first</option>
-            <option value="created">Recently created</option>
-            <option value="alpha">Alphabetical</option>
+            <option value="recent">{$_('settings.sortRecent')}</option>
+            <option value="oldest">{$_('settings.sortOldest')}</option>
+            <option value="alpha">{$_('settings.sortAlpha')}</option>
           </select>
         </div>
 
@@ -228,13 +221,13 @@
                 on:click={handleExport}
                 class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
               >
-                📤 Export All Notes
+                📤 {$_('settings.exportNotes')}
               </button>
               <button
                 on:click={handleImport}
                 class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
               >
-                📥 Import Notes
+                📥 {$_('settings.importNotes')}
               </button>
             </div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -251,7 +244,7 @@
             on:click={onOpenShortcutsHelp}
             class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
           >
-            ⌨️ Keyboard Shortcuts
+            ⌨️ {$_('settings.keyboardShortcuts')}
           </button>
           <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
             View all available keyboard shortcuts
@@ -273,7 +266,7 @@
               on:click={handleDeleteDatabase}
               class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors"
             >
-              Delete Entire Database
+              {$_('settings.deleteDatabase')}
             </button>
           </div>
         </div>
@@ -285,14 +278,14 @@
           on:click={onClose}
           class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
         >
-          Cancel
+          {$_('common.cancel')}
         </button>
         <button
           on:click={handleSave}
           disabled={saving}
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? $_('settings.saving') : $_('settings.saveSettings')}
         </button>
       </div>
     </div>

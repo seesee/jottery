@@ -195,10 +195,10 @@
 
 <ConfirmModal
   show={showLockConfirm}
-  title="Lock Application"
-  message="Lock the application? Unsaved changes will be lost."
-  confirmText="Lock"
-  cancelText="Cancel"
+  title={$_('lock.title')}
+  message={$_('lock.message')}
+  confirmText={$_('lock.confirmButton')}
+  cancelText={$_('common.cancel')}
   confirmClass="bg-blue-600 hover:bg-blue-700"
   onConfirm={handleLockConfirm}
   onCancel={handleLockCancel}
