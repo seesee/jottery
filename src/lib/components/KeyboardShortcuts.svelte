@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { isLocked, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
   import { lock, noteService, searchService } from '../services';
+  import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
 
   export let onNewNote: () => void;
