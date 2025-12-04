@@ -114,6 +114,7 @@ class NoteService {
     updates: {
       content?: string;
       tags?: string[];
+      attachments?: Attachment[];
       pinned?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
@@ -142,6 +143,28 @@ class NoteService {
     if (updates.tags !== undefined) {
       const encryptedTags = await encryptStringArray(updates.tags, masterKey.key);
       note.tags = [JSON.stringify(encryptedTags)];
+    }
+
+    // Update attachments if provided
+    if (updates.attachments !== undefined) {
+      // Find removed attachments and clean them up
+      const oldAttachmentIds = new Set(note.attachments.map(a => a.id));
+      const newAttachmentIds = new Set(updates.attachments.map(a => a.id));
+
+      // Delete attachments that were removed
+      for (const oldId of oldAttachmentIds) {
+        if (!newAttachmentIds.has(oldId)) {
+          try {
+            await attachmentRepository.deleteBlob(oldId);
+            // Also try to delete thumbnail if it exists
+            await attachmentRepository.deleteThumbnail(oldId);
+          } catch (error) {
+            console.error(`Failed to delete attachment blob ${oldId}:`, error);
+          }
+        }
+      }
+
+      note.attachments = updates.attachments;
     }
 
     // Update pinned status if provided
