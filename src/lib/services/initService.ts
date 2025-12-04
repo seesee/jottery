@@ -6,6 +6,7 @@
 import type { EncryptionMetadata, MasterKey } from '../types';
 import { encryptionRepository } from './encryptionRepository';
 import { settingsRepository } from './settingsRepository';
+import { noteRepository } from './noteRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 
@@ -68,8 +69,19 @@ export async function unlock(password: string): Promise<void> {
     algorithm: 'PBKDF2',
   });
 
-  // Verify the key is correct by attempting to decrypt a test value
-  // For now, we'll just trust it - could add a verification step later
+  // Verify the key is correct by attempting to decrypt an existing note
+  // This prevents the UI from loading with a wrong password
+  const notes = await noteRepository.getAllActive();
+  if (notes.length > 0) {
+    try {
+      // Try to decrypt the first note's content as a verification
+      const testNote = notes[0];
+      const encryptedContent = JSON.parse(testNote.content);
+      await cryptoService.decryptText(encryptedContent, key);
+    } catch (error) {
+      throw new Error('Incorrect password');
+    }
+  }
 
   // Store the master key
   const masterKey: MasterKey = {

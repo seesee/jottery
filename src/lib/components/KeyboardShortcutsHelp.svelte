@@ -33,6 +33,7 @@
       category: 'Editor',
       items: [
         { keys: ['Esc'], description: 'Close note' },
+        { keys: ['Ctrl/Cmd', 'Shift', 'C'], description: 'Copy note content' },
         { keys: ['Ctrl/Cmd', 'F'], description: 'Find in note (CodeMirror)' },
         { keys: ['Ctrl/Cmd', 'H'], description: 'Replace in note (CodeMirror)' },
       ]

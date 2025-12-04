@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, filteredNotes, selectedNoteId, selectNote, clearSelection, notes, settings } from '../stores/appStore';
+  import { isLocked, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
   import { lock, noteService, searchService } from '../services';
 
   export let onNewNote: () => void;
@@ -46,6 +46,13 @@
     if (modifier && event.key === '/') {
       event.preventDefault();
       showShortcutsHelp();
+      return;
+    }
+
+    // Copy note content
+    if (modifier && event.shiftKey && (event.key === 'C' || event.key === 'c')) {
+      event.preventDefault();
+      handleCopyNote();
       return;
     }
 
@@ -137,6 +144,32 @@
       searchService.indexNotes(allNotes);
     } catch (error) {
       console.error('Failed to toggle pin:', error);
+    }
+  }
+
+  async function handleCopyNote() {
+    if (!$selectedNote) return;
+
+    try {
+      await navigator.clipboard.writeText($selectedNote.content);
+      // Could show a toast notification here
+      console.log('Note content copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy note:', error);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = $selectedNote.content;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        console.log('Note content copied to clipboard (fallback method)');
+      } catch (fallbackError) {
+        console.error('Failed to copy note (fallback):', fallbackError);
+      }
     }
   }
 

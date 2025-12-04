@@ -1,12 +1,14 @@
 <script lang="ts">
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
-  import { initialize, unlock, isInitialized } from '../services';
+  import { initialize, unlock, isInitialized, deleteDB } from '../services';
 
   let password = '';
   let confirmPassword = '';
   let error = '';
   let loading = false;
   let needsInit = false;
+  let failedAttempts = 0;
+  let showDeleteOption = false;
 
   // Check if needs initialization
   (async () => {
@@ -38,12 +40,42 @@
       // Update store to trigger UI change
       isLocked.set(false);
 
-      // Clear password fields
+      // Clear password fields and reset attempts
       password = '';
       confirmPassword = '';
+      failedAttempts = 0;
+      showDeleteOption = false;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to unlock';
+
+      // Track failed attempts (only for unlock, not init)
+      if (!needsInit && error.includes('Incorrect password')) {
+        failedAttempts++;
+        if (failedAttempts >= 3) {
+          showDeleteOption = true;
+          error = 'Incorrect password. After 3 failed attempts, you may need to delete the database and start over.';
+        }
+      }
+
+      // Clear password field on error
+      password = '';
     } finally {
+      loading = false;
+    }
+  }
+
+  async function handleDeleteDatabase() {
+    if (!confirm('⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?')) {
+      return;
+    }
+
+    loading = true;
+    try {
+      await deleteDB();
+      // Reload the page to reinitialize
+      window.location.reload();
+    } catch (err) {
+      error = 'Failed to delete database: ' + (err instanceof Error ? err.message : 'Unknown error');
       loading = false;
     }
   }
@@ -113,6 +145,17 @@
         >
           {loading ? 'Processing...' : needsInit ? 'Create Password' : 'Unlock'}
         </button>
+
+        {#if showDeleteOption && !needsInit}
+          <button
+            type="button"
+            on:click={handleDeleteDatabase}
+            disabled={loading}
+            class="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+          >
+            🗑️ Delete Database & Start Over
+          </button>
+        {/if}
       </form>
 
       <div class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
