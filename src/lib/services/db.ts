@@ -6,7 +6,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata } from '../types';
 
 const DB_NAME = 'jottery';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Object store names
 export const STORES = {
@@ -15,6 +15,7 @@ export const STORES = {
   THUMBNAILS: 'thumbnails',
   SETTINGS: 'settings',
   ENCRYPTION: 'encryption',
+  SYNC_METADATA: 'sync_metadata',
 } as const;
 
 export interface JotteryDB {
@@ -43,6 +44,10 @@ export interface JotteryDB {
   encryption: {
     key: string; // Always 'metadata'
     value: EncryptionMetadata;
+  };
+  sync_metadata: {
+    key: string; // 'metadata' or 'note:<uuid>'
+    value: any; // SyncMetadata | NoteSyncMetadata (will be defined in types/sync.ts)
   };
 }
 
@@ -85,8 +90,10 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
         db.createObjectStore(STORES.ENCRYPTION);
       }
 
-      // Future version upgrades can be added here
-      // if (oldVersion < 2) { ... }
+      // Version 2: Add sync metadata store
+      if (oldVersion < 2) {
+        db.createObjectStore(STORES.SYNC_METADATA);
+      }
     },
     blocked() {
       console.warn(

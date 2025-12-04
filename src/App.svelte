@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { isLocked, notes, settings, searchQuery, filteredNotes, selectNote } from './lib/stores/appStore';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale } from './lib/services';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
@@ -110,11 +110,14 @@
     loadNotes();
     // Start auto-lock when unlocked
     startAutoLock($settings.autoLockTimeout);
+    // Start auto-sync if enabled
+    startAutoSync();
   }
 
-  // Stop auto-lock when locked
+  // Stop auto-lock and auto-sync when locked
   $: if ($isLocked) {
     stopAutoLock();
+    syncService.disableAutoSync();
   }
 
   // Update auto-lock timeout when settings change
@@ -134,6 +137,23 @@
       performSearch();
     } catch (error) {
       console.error('Failed to load notes:', error);
+    }
+  }
+
+  async function startAutoSync() {
+    try {
+      const syncMetadata = await syncRepository.getMetadata();
+      if (syncMetadata?.syncEnabled) {
+        const interval = syncMetadata.autoSyncInterval || 5;
+        console.log(`[App] Starting auto-sync with ${interval} minute interval`);
+        syncService.enableAutoSync(interval);
+
+        // Optional: Trigger initial sync on unlock
+        // Uncomment if you want immediate sync on unlock
+        // syncService.syncNow();
+      }
+    } catch (error) {
+      console.error('Failed to start auto-sync:', error);
     }
   }
 

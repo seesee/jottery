@@ -14,8 +14,10 @@ export { noteRepository } from './noteRepository';
 export { attachmentRepository } from './attachmentRepository';
 export { settingsRepository } from './settingsRepository';
 export { encryptionRepository } from './encryptionRepository';
+export { syncRepository } from './syncRepository';
 
 // Business logic services
+export { syncService } from './syncService';
 export { noteService } from './noteService';
 export { attachmentService } from './attachmentService';
 export { isInitialized, initialize, unlock, lock, isLocked, changePassword } from './initService';

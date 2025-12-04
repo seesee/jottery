@@ -41,3 +41,23 @@ export type {
   KeyManager,
   ConflictResolver,
 } from './crypto';
+
+// Sync types
+export type {
+  SyncMetadata,
+  NoteSyncMetadata,
+  SyncStatus,
+  SyncPushRequest,
+  SyncPushResponse,
+  SyncPullRequest,
+  SyncPullResponse,
+  SyncNote,
+  SyncAttachment,
+  AttachmentRef,
+  SyncAccepted,
+  SyncRejected,
+  SyncDeletion,
+  SyncStatusResponse,
+  AuthRegisterRequest,
+  AuthRegisterResponse,
+} from './sync';
