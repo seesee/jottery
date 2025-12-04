@@ -1,7 +1,8 @@
 <script lang="ts">
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
+  import { locale, _ } from 'svelte-i18n';
   import type { Theme } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
 
@@ -12,6 +13,7 @@
   let theme: Theme = $settings.theme;
   let autoLockTimeout = $settings.autoLockTimeout;
   let sortOrder = $settings.sortOrder;
+  let language = $settings.language;
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -43,6 +45,7 @@
         theme,
         autoLockTimeout,
         sortOrder,
+        language,
       });
 
       // Update store
@@ -51,6 +54,7 @@
         theme,
         autoLockTimeout,
         sortOrder,
+        language,
       }));
 
       onClose();
@@ -148,6 +152,21 @@
 
       <!-- Content -->
       <div class="p-6 space-y-6">
+        <!-- Language -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {$_('settings.language')}
+          </label>
+          <select
+            bind:value={language}
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {#each AVAILABLE_LOCALES as { code, name }}
+              <option value={code}>{name}</option>
+            {/each}
+          </select>
+        </div>
+
         <!-- Theme -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
