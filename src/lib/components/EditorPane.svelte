@@ -1,6 +1,7 @@
 <script lang="ts">
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService } from '../services';
+  import { formatDateTime } from '../utils/dateFormat';
   import type { Attachment } from '../types';
   import CodeEditor from './CodeEditor.svelte';
   import TagInput from './TagInput.svelte';
@@ -326,8 +327,8 @@
     <!-- Metadata Footer -->
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex justify-between">
-        <span>Created: {new Date($selectedNote.createdAt).toLocaleString('en-GB')}</span>
-        <span>Modified: {new Date($selectedNote.modifiedAt).toLocaleString('en-GB')}</span>
+        <span>Created: {formatDateTime($selectedNote.createdAt)}</span>
+        <span>Modified: {formatDateTime($selectedNote.modifiedAt)}</span>
       </div>
     </div>
   </div>

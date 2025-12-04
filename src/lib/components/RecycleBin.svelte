@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { noteService } from '../services';
   import type { DecryptedNote } from '../types';
+  import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
 
   export let show: boolean = false;
@@ -79,16 +80,6 @@
     }
   }
 
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleString('en-GB', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
   function getTitle(note: DecryptedNote): string {
     return note.content.split('\n')[0] || 'Untitled';
   }
@@ -151,7 +142,7 @@
                       {getTitle(note)}
                     </h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      Deleted: {note.deletedAt ? formatDate(note.deletedAt) : 'Unknown'}
+                      Deleted: {note.deletedAt ? formatDate(note.deletedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown'}
                     </p>
                     {#if note.tags.length > 0}
                       <div class="flex gap-1 mt-2">
