@@ -173,6 +173,32 @@
       alert(`Failed to delete attachment: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  async function handleCopy() {
+    if (!content) return;
+
+    try {
+      await navigator.clipboard.writeText(content);
+      // Could show a toast notification here
+      console.log('Note content copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy note:', error);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = content;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        console.log('Note content copied to clipboard (fallback)');
+      } catch (fallbackError) {
+        console.error('Failed to copy note (fallback):', fallbackError);
+      }
+    }
+  }
 </script>
 
 {#if isEditing && $selectedNote}
@@ -193,6 +219,13 @@
           title="Delete"
         >
           🗑️ Delete
+        </button>
+        <button
+          on:click={handleCopy}
+          class="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
+          title="Copy note content"
+        >
+          📋 Copy
         </button>
       </div>
 
