@@ -1,4 +1,5 @@
 mod db;
+mod models;
 
 use anyhow::Result;
 use tracing::info;
