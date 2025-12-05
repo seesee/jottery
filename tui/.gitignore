@@ -1,0 +1,26 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Cargo lock for binaries (we're building a binary)
+# Comment this if you want to commit Cargo.lock
+# Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
