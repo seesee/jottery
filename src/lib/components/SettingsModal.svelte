@@ -129,55 +129,61 @@
   }
 
   async function handleManualConfig() {
-    // For now, we'll use a simplified two-step process to avoid encryption key mismatch
+    // CRITICAL: Must ALWAYS import salt first to ensure master key is correct
+    // This is a two-step process that cannot be combined
+
     if (!manualEncryptionSalt) {
       syncError = 'Please provide the encryption salt from your first device';
       return;
     }
 
-    if (!syncEndpoint || !manualClientId || !manualApiKey) {
-      // If only salt is provided, import it and lock
-      if (manualEncryptionSalt) {
-        try {
-          configuringManual = true;
-          console.log('[SettingsModal] Importing encryption salt...');
-          await encryptionRepository.setMetadata({
-            salt: manualEncryptionSalt,
-            iterations: 100000,
-            createdAt: new Date().toISOString(),
-            algorithm: 'AES-256-GCM',
-          });
-          console.log('[SettingsModal] Salt imported! Locking app...');
-
-          manualEncryptionSalt = '';
-
-          // Lock to re-derive master key with new salt
-          const { lock } = await import('../services');
-          lock();
-          return;
-        } catch (error) {
-          console.error('Failed to import salt:', error);
-          syncError = error instanceof Error ? error.message : 'Failed to import salt';
-          configuringManual = false;
-          return;
-        }
-      }
-      syncError = 'Please provide all credentials';
-      return;
-    }
-
-    // If all fields provided, configure normally (assumes salt is already correct)
     configuringManual = true;
     syncError = '';
+
     try {
-      await syncService.configureCredentials(syncEndpoint, manualClientId, manualApiKey);
-      await loadSyncStatus();
-      syncEndpoint = $settings.syncEndpoint || '';
-      manualClientId = '';
-      manualApiKey = '';
-      manualEncryptionSalt = '';
-      showManualConfig = false;
-      syncError = '';
+      // Check if this is first step (only salt) or second step (all fields)
+      const hasAllFields = syncEndpoint && manualClientId && manualApiKey;
+
+      if (!hasAllFields) {
+        // STEP 1: Import salt and lock
+        console.log('[SettingsModal] Step 1: Importing encryption salt...');
+        await encryptionRepository.setMetadata({
+          salt: manualEncryptionSalt,
+          iterations: 100000,
+          createdAt: new Date().toISOString(),
+          algorithm: 'AES-256-GCM',
+        });
+        console.log('[SettingsModal] Salt imported! Locking app to re-derive master key...');
+
+        // Clear salt field
+        manualEncryptionSalt = '';
+
+        // Lock to force re-derivation of master key with new salt
+        const { lock } = await import('../services');
+        lock();
+      } else {
+        // STEP 2: Configure credentials (salt already imported in step 1)
+        console.log('[SettingsModal] Step 2: Configuring credentials...');
+
+        // Verify the salt matches what's in encryption metadata
+        const encryptionMeta = await encryptionRepository.getMetadata();
+        if (!encryptionMeta || encryptionMeta.salt !== manualEncryptionSalt) {
+          throw new Error('Encryption salt mismatch! You must import the salt first (Step 1), then configure credentials (Step 2).');
+        }
+
+        await syncService.configureCredentials(syncEndpoint, manualClientId, manualApiKey);
+        await loadSyncStatus();
+
+        // Clear all fields
+        syncEndpoint = $settings.syncEndpoint || '';
+        manualClientId = '';
+        manualApiKey = '';
+        manualEncryptionSalt = '';
+        showManualConfig = false;
+        syncError = '';
+
+        console.log('[SettingsModal] Configuration complete!');
+      }
     } catch (error) {
       console.error('Manual configuration failed:', error);
       syncError = error instanceof Error ? error.message : 'Configuration failed';
