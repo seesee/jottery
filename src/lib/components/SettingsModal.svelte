@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { locale, _ } from 'svelte-i18n';
   import type { Theme, SyncStatus } from '../types';
@@ -27,11 +27,13 @@
   let showManualConfig = false;
   let manualClientId = '';
   let manualApiKey = '';
+  let manualEncryptionSalt = '';
   let configuringManual = false;
   let showCredentials = false;
   let decryptedApiKey = '';
   let loadingApiKey = false;
   let registrationApiKey = '';  // Store API key from registration to show to user
+  let encryptionSalt = '';  // Display encryption salt from current device
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -127,8 +129,8 @@
   }
 
   async function handleManualConfig() {
-    if (!syncEndpoint || !manualClientId || !manualApiKey) {
-      syncError = 'Please provide endpoint, client ID, and API key';
+    if (!syncEndpoint || !manualClientId || !manualApiKey || !manualEncryptionSalt) {
+      syncError = 'Please provide endpoint, client ID, API key, and encryption salt';
       return;
     }
 
@@ -137,6 +139,16 @@
     try {
       // Use the configureCredentials method from syncService
       await syncService.configureCredentials(syncEndpoint, manualClientId, manualApiKey);
+
+      // Import encryption salt
+      console.log('[SettingsModal] Importing encryption salt from first device...');
+      await encryptionRepository.setMetadata({
+        salt: manualEncryptionSalt,
+        iterations: 100000,  // Default iterations
+        createdAt: new Date().toISOString(),
+        algorithm: 'AES-256-GCM',
+      });
+      console.log('[SettingsModal] Encryption salt imported successfully');
 
       // Reload status
       await loadSyncStatus();
@@ -147,6 +159,7 @@
       // Clear manual input fields
       manualClientId = '';
       manualApiKey = '';
+      manualEncryptionSalt = '';
       showManualConfig = false;
 
       syncError = '';  // Clear any previous errors
@@ -183,6 +196,20 @@
       syncError = error instanceof Error ? error.message : 'Failed to decrypt API key';
     } finally {
       loadingApiKey = false;
+    }
+  }
+
+  async function handleShowEncryptionSalt() {
+    try {
+      // Get encryption metadata
+      const encryptionMetadata = await encryptionRepository.getMetadata();
+      if (!encryptionMetadata) {
+        throw new Error('Encryption not initialized');
+      }
+      encryptionSalt = encryptionMetadata.salt;
+    } catch (error) {
+      console.error('Failed to get encryption salt:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to get encryption salt';
     }
   }
 
@@ -381,6 +408,71 @@
               </p>
             </div>
 
+            <!-- Manual Configuration (Advanced) -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+              <button
+                on:click={() => showManualConfig = !showManualConfig}
+                class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {showManualConfig ? '▼' : '▶'} Advanced: Use Existing Credentials
+              </button>
+
+              {#if showManualConfig}
+                <div class="mt-3 space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                  <p class="text-xs text-gray-600 dark:text-gray-400">
+                    Use this to sync with the same account on multiple devices. Copy credentials from your first device.
+                  </p>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Client ID
+                    </label>
+                    <input
+                      type="text"
+                      bind:value={manualClientId}
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      bind:value={manualApiKey}
+                      placeholder="64-character hex string"
+                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Encryption Salt
+                    </label>
+                    <input
+                      type="text"
+                      bind:value={manualEncryptionSalt}
+                      placeholder="Paste encryption salt from first device"
+                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                    <p class="mt-1 text-xs text-red-600 dark:text-red-400">
+                      ⚠️ Required! Copy from "Show Credentials" on your first device.
+                    </p>
+                  </div>
+
+                  <button
+                    on:click={handleManualConfig}
+                    disabled={!manualClientId || !manualApiKey || !manualEncryptionSalt || configuringManual}
+                    class="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded transition-colors"
+                  >
+                    {configuringManual ? 'Saving...' : '💾 Save Credentials'}
+                  </button>
+                </div>
+              {/if}
+            </div>
+
             <!-- Sync Status & Actions -->
             {#if syncStatus?.isEnabled}
               <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
@@ -454,12 +546,33 @@
                         </p>
                       {/if}
                     </div>
+                    <div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300 mb-1">Encryption Salt:</div>
+                      {#if encryptionSalt}
+                        <div class="font-mono text-xs text-gray-600 dark:text-gray-400 break-all select-all bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-300 dark:border-blue-700">
+                          {encryptionSalt}
+                        </div>
+                        <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                          Copy this encryption salt - it's needed to decrypt notes on other devices!
+                        </p>
+                      {:else}
+                        <button
+                          on:click={handleShowEncryptionSalt}
+                          class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                        >
+                          🔑 Show Encryption Salt
+                        </button>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          The encryption salt is required to decrypt notes on other devices.
+                        </p>
+                      {/if}
+                    </div>
                     <div class="pt-2 border-t border-gray-300 dark:border-gray-600">
                       <p class="text-gray-500 dark:text-gray-400 text-xs mb-2">
-                        Copy both the Client ID and API Key to sync the same notes on other devices using "Use Existing Credentials" below.
+                        Copy the Client ID, API Key, AND Encryption Salt to sync the same notes on other devices using "Use Existing Credentials" below.
                       </p>
                       <p class="text-red-600 dark:text-red-400 text-xs font-medium">
-                        ⚠️ IMPORTANT: All devices must use the SAME master password! Notes are encrypted with your password and cannot be decrypted if passwords differ.
+                        ⚠️ CRITICAL: All devices must use the SAME master password AND encryption salt! Without both, notes cannot be decrypted.
                       </p>
                     </div>
                   </div>
@@ -480,56 +593,6 @@
                 <p class="text-orange-600 dark:text-orange-400 font-medium">
                   ⚠️ Save the API key shown after registration to sync with other devices!
                 </p>
-              </div>
-
-              <!-- Manual Configuration -->
-              <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                <button
-                  on:click={() => showManualConfig = !showManualConfig}
-                  class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  {showManualConfig ? '▼' : '▶'} Advanced: Use Existing Credentials
-                </button>
-
-                {#if showManualConfig}
-                  <div class="mt-3 space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                      Use this to sync with the same account on multiple devices. Copy credentials from your first device.
-                    </p>
-
-                    <div>
-                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Client ID
-                      </label>
-                      <input
-                        type="text"
-                        bind:value={manualClientId}
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        API Key
-                      </label>
-                      <input
-                        type="password"
-                        bind:value={manualApiKey}
-                        placeholder="64-character hex string"
-                        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      />
-                    </div>
-
-                    <button
-                      on:click={handleManualConfig}
-                      disabled={!manualClientId || !manualApiKey || configuringManual}
-                      class="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded transition-colors"
-                    >
-                      {configuringManual ? 'Saving...' : '💾 Save Credentials'}
-                    </button>
-                  </div>
-                {/if}
               </div>
             {/if}
 

@@ -19,6 +19,8 @@ import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
+import { noteService } from './noteService';
+import { searchService } from './searchService';
 
 const API_VERSION = 'v1';
 
