@@ -46,16 +46,36 @@ sudo cp target/release/jottery /usr/local/bin/
 
 ## Usage
 
+### Interactive Mode
+
 ```bash
-# Start the TUI
+# Start the TUI (creates database in ~/.config/jottery/)
 jottery
 
-# Show help
-jottery --help
+# Use custom database location
+jottery --database /path/to/notes.db
 
 # Enable debug logging
-RUST_LOG=jottery_tui=debug jottery
+jottery --debug
 ```
+
+### Export/Import
+
+```bash
+# Export notes to JSON (decrypted for backup)
+jottery export --output backup.json --password yourpassword
+
+# Import notes from JSON
+jottery import --input backup.json --password yourpassword
+```
+
+### First Run
+
+1. Run `jottery` to start
+2. Enter a password to create encrypted database
+3. Press `n` to create your first note
+4. Press `i` to enter insert mode and start typing
+5. Press `Esc` then `q` to save and return to list
 
 ## Configuration
 
@@ -68,34 +88,57 @@ Database is stored in the same directory as `jottery.db`.
 
 ## Keyboard Shortcuts
 
+### Unlock Screen
 | Key | Action |
 |-----|--------|
-| `?` | Show help |
-| `n` | New note |
-| `e` | Edit note |
-| `d` | Delete note |
-| `/` | Search |
-| `t` | Edit tags |
-| `p` | Toggle pin |
-| `s` | Sync now |
-| `,` | Settings |
-| `q` | Quit |
-| `Esc` | Cancel/Go back |
+| Type | Enter password |
+| `Enter` | Unlock database |
+| `Backspace` | Delete character |
+| `q`/`Esc` | Quit |
+
+### Note List
+| Key | Action |
+|-----|--------|
+| `n` | Create new note |
+| `Enter` | Open selected note |
+| `d` | Delete selected note |
+| `j`/`↓` | Move down |
+| `k`/`↑` | Move up |
+| `Ctrl+q` | Quit application |
+
+### Note Editor
+| Key | Action |
+|-----|--------|
+| `i` | Enter insert mode (start typing) |
+| `Esc` | Exit insert mode |
+| `q` (normal mode) | Save and return to list |
+| Type | Edit note content (insert mode) |
+| `Enter` | New line (insert mode) |
+| `Backspace` | Delete character (insert mode) |
 
 ## Development Status
 
-This is a work in progress. Feature parity with the web application is the goal.
-
-### Completed
+### Completed ✓
 - [x] Project setup
 - [x] Database layer (SQLite + SQLCipher)
+- [x] Data models (Rust structs)
+- [x] Encryption layer (AES-256-GCM + PBKDF2)
+- [x] Repository pattern
+- [x] TUI framework (ratatui)
+- [x] Note management (create, edit, delete, list)
+- [x] Password-based unlocking
+- [x] Import/export (JSON)
 
-### In Progress
-- [ ] Data models
-- [ ] Encryption layer
-- [ ] TUI framework
-- [ ] Note management
+### In Progress / Future
+- [ ] Tag management
+- [ ] Search functionality
+- [ ] Recycle bin (soft delete recovery)
+- [ ] Settings panel
 - [ ] Sync client
+- [ ] Attachment support
+- [ ] Syntax highlighting in editor
+- [ ] Auto-sync
+- [ ] Keyboard shortcuts help screen
 
 ## Architecture
 
