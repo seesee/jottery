@@ -129,41 +129,55 @@
   }
 
   async function handleManualConfig() {
-    if (!syncEndpoint || !manualClientId || !manualApiKey || !manualEncryptionSalt) {
-      syncError = 'Please provide endpoint, client ID, API key, and encryption salt';
+    // For now, we'll use a simplified two-step process to avoid encryption key mismatch
+    if (!manualEncryptionSalt) {
+      syncError = 'Please provide the encryption salt from your first device';
       return;
     }
 
+    if (!syncEndpoint || !manualClientId || !manualApiKey) {
+      // If only salt is provided, import it and lock
+      if (manualEncryptionSalt) {
+        try {
+          configuringManual = true;
+          console.log('[SettingsModal] Importing encryption salt...');
+          await encryptionRepository.setMetadata({
+            salt: manualEncryptionSalt,
+            iterations: 100000,
+            createdAt: new Date().toISOString(),
+            algorithm: 'AES-256-GCM',
+          });
+          console.log('[SettingsModal] Salt imported! Locking app...');
+
+          manualEncryptionSalt = '';
+
+          // Lock to re-derive master key with new salt
+          const { lock } = await import('../services');
+          lock();
+          return;
+        } catch (error) {
+          console.error('Failed to import salt:', error);
+          syncError = error instanceof Error ? error.message : 'Failed to import salt';
+          configuringManual = false;
+          return;
+        }
+      }
+      syncError = 'Please provide all credentials';
+      return;
+    }
+
+    // If all fields provided, configure normally (assumes salt is already correct)
     configuringManual = true;
     syncError = '';
     try {
-      // Use the configureCredentials method from syncService
       await syncService.configureCredentials(syncEndpoint, manualClientId, manualApiKey);
-
-      // Import encryption salt
-      console.log('[SettingsModal] Importing encryption salt from first device...');
-      await encryptionRepository.setMetadata({
-        salt: manualEncryptionSalt,
-        iterations: 100000,  // Default iterations
-        createdAt: new Date().toISOString(),
-        algorithm: 'AES-256-GCM',
-      });
-      console.log('[SettingsModal] Encryption salt imported successfully');
-
-      // Reload status
       await loadSyncStatus();
-
-      // Update local state
       syncEndpoint = $settings.syncEndpoint || '';
-
-      // Clear manual input fields
       manualClientId = '';
       manualApiKey = '';
       manualEncryptionSalt = '';
       showManualConfig = false;
-
-      syncError = '';  // Clear any previous errors
-      // Success will be shown by the sync status UI
+      syncError = '';
     } catch (error) {
       console.error('Manual configuration failed:', error);
       syncError = error instanceof Error ? error.message : 'Configuration failed';
@@ -419,9 +433,17 @@
 
               {#if showManualConfig}
                 <div class="mt-3 space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                  <p class="text-xs text-gray-600 dark:text-gray-400">
-                    Use this to sync with the same account on multiple devices. Copy credentials from your first device.
-                  </p>
+                  <div class="text-xs space-y-1">
+                    <p class="text-gray-600 dark:text-gray-400 font-medium">
+                      Two-Step Setup for Additional Devices:
+                    </p>
+                    <p class="text-gray-500 dark:text-gray-400">
+                      1. Enter ONLY the Encryption Salt below and click Save → App will lock
+                    </p>
+                    <p class="text-gray-500 dark:text-gray-400">
+                      2. After unlocking, enter all three fields (Client ID, API Key, Encryption Salt) and click Save
+                    </p>
+                  </div>
 
                   <div>
                     <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
