@@ -141,7 +141,10 @@
   }
 
   async function handleImportCredentials() {
+    console.log('[Import] Starting credential import...');
+
     if (!importCredentialsText.trim()) {
+      console.error('[Import] No credentials text provided');
       syncError = 'Please paste the credentials';
       return;
     }
@@ -150,47 +153,68 @@
     syncError = '';
 
     try {
-      // Decode base64
+      console.log('[Import] Step 1: Decoding base64...');
       const json = atob(importCredentialsText.trim());
+      console.log('[Import] Base64 decoded, parsing JSON...');
+
       const credentials = JSON.parse(json);
+      console.log('[Import] Credentials parsed:', {
+        hasEndpoint: !!credentials.endpoint,
+        hasClientId: !!credentials.clientId,
+        hasApiKey: !!credentials.apiKey,
+        hasSalt: !!credentials.salt,
+        endpoint: credentials.endpoint,
+        clientId: credentials.clientId,
+      });
 
       // Validate structure
       if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey || !credentials.salt) {
-        throw new Error('Invalid credentials format');
+        console.error('[Import] Invalid credentials structure');
+        throw new Error('Invalid credentials format - missing required fields');
       }
 
-      console.log('[SettingsModal] Importing credentials...');
-
-      // Step 1: Import encryption salt
+      console.log('[Import] Step 2: Storing encryption salt...');
       await encryptionRepository.setMetadata({
         salt: credentials.salt,
         iterations: 100000,
         createdAt: new Date().toISOString(),
         algorithm: 'AES-256-GCM',
       });
-      console.log('[SettingsModal] Encryption salt imported');
+      console.log('[Import] ✓ Encryption salt stored');
 
-      // Step 2: Store sync metadata with PLAINTEXT API key temporarily
-      // It will be encrypted after unlock with the correct master key
+      console.log('[Import] Step 3: Storing sync metadata...');
       await syncRepository.updateMetadata({
         clientId: credentials.clientId,
         syncEndpoint: credentials.endpoint,
-        syncEnabled: false,  // Will be enabled after encrypting API key
-        apiKey: `IMPORT:${credentials.apiKey}`,  // Temporary plaintext marker
+        syncEnabled: false,
+        apiKey: `IMPORT:${credentials.apiKey}`,
       });
+      console.log('[Import] ✓ Sync metadata stored');
 
+      console.log('[Import] Step 4: Updating settings...');
       await settingsRepository.update({
         syncEndpoint: credentials.endpoint,
+        syncEnabled: false,
       });
+      console.log('[Import] ✓ Settings updated');
 
-      console.log('[SettingsModal] Credentials stored. Locking app...');
+      console.log('[Import] Step 5: Locking app and forcing UI update...');
 
-      // Step 3: Lock the app to force re-unlock with new salt
+      // Close the modal first
+      onClose();
+
+      // Lock and update UI state
       lock();
+      isLocked.set(true);
 
-      console.log('[SettingsModal] App locked successfully');
+      console.log('[Import] ✓ Import complete! App locked. Please unlock with your password.');
+
+      // Clear the import text
+      importCredentialsText = '';
+      showImportCredentials = false;
+
     } catch (error) {
-      console.error('Import failed:', error);
+      console.error('[Import] ERROR:', error);
       syncError = error instanceof Error ? error.message : 'Failed to import credentials';
     } finally {
       importing = false;

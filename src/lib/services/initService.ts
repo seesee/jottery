@@ -56,10 +56,16 @@ export async function initialize(password: string): Promise<void> {
  * Unlock the application with a password
  */
 export async function unlock(password: string): Promise<void> {
+  console.log('[Unlock] Starting unlock process...');
+
   const metadata = await encryptionRepository.getMetadata();
   if (!metadata) {
+    console.error('[Unlock] No encryption metadata found!');
     throw new Error('Application not initialized. Please initialize first.');
   }
+
+  console.log('[Unlock] Encryption metadata found, deriving key...');
+  console.log('[Unlock] Salt length:', metadata.salt.length, 'Iterations:', metadata.iterations);
 
   // Derive master key
   const salt = base64ToUint8Array(metadata.salt);
@@ -70,18 +76,27 @@ export async function unlock(password: string): Promise<void> {
     algorithm: 'PBKDF2',
   });
 
+  console.log('[Unlock] ✓ Master key derived');
+
   // Verify the key is correct by attempting to decrypt an existing note
   // This prevents the UI from loading with a wrong password
   const notes = await noteRepository.getAllActive();
+  console.log('[Unlock] Active notes count:', notes.length);
+
   if (notes.length > 0) {
     try {
+      console.log('[Unlock] Verifying password by decrypting first note...');
       // Try to decrypt the first note's content as a verification
       const testNote = notes[0];
       const encryptedContent = JSON.parse(testNote.content);
       await cryptoService.decryptText(encryptedContent, key);
+      console.log('[Unlock] ✓ Password verified (note decrypted successfully)');
     } catch (error) {
+      console.error('[Unlock] Password verification failed:', error);
       throw new Error('Incorrect password');
     }
+  } else {
+    console.log('[Unlock] ⚠️ No notes to verify password against - skipping verification');
   }
 
   // Store the master key
@@ -91,13 +106,17 @@ export async function unlock(password: string): Promise<void> {
   };
 
   keyManager.setMasterKey(masterKey);
+  console.log('[Unlock] ✓ Master key stored in keyManager');
 
   // Handle imported credentials (IMPORT: marker)
+  console.log('[Unlock] Checking for imported credentials...');
   await handleImportedCredentials(key);
 
   // Setup auto-lock
   const settings = await settingsRepository.get();
   setupActivityListeners(settings.autoLockTimeout);
+
+  console.log('[Unlock] ✓ Unlock complete! Auto-lock timeout:', settings.autoLockTimeout, 'minutes');
 }
 
 /**
@@ -106,36 +125,58 @@ export async function unlock(password: string): Promise<void> {
  */
 async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
   try {
+    console.log('[ImportHandler] Fetching sync metadata...');
     const metadata = await syncRepository.getMetadata();
-    if (!metadata || !metadata.apiKey) {
-      return; // No sync configured
+
+    if (!metadata) {
+      console.log('[ImportHandler] No sync metadata found - skipping');
+      return;
     }
+
+    if (!metadata.apiKey) {
+      console.log('[ImportHandler] No API key in metadata - skipping');
+      return;
+    }
+
+    console.log('[ImportHandler] Sync metadata found:', {
+      hasClientId: !!metadata.clientId,
+      hasEndpoint: !!metadata.syncEndpoint,
+      apiKeyPrefix: metadata.apiKey.substring(0, 20) + '...',
+      syncEnabled: metadata.syncEnabled,
+    });
 
     // Check for IMPORT: marker (plaintext API key from import)
     if (metadata.apiKey.startsWith('IMPORT:')) {
-      console.log('[InitService] Detected imported credentials, encrypting API key...');
+      console.log('[ImportHandler] ✓ IMPORT marker detected! Processing imported credentials...');
 
       // Extract plaintext API key
       const plaintextApiKey = metadata.apiKey.substring(7); // Remove "IMPORT:" prefix
+      console.log('[ImportHandler] Plaintext API key length:', plaintextApiKey.length);
 
-      // Encrypt API key with master key
+      console.log('[ImportHandler] Encrypting API key with master key...');
       const encryptedApiKey = await cryptoService.encryptText(plaintextApiKey, masterKey);
+      console.log('[ImportHandler] ✓ API key encrypted');
 
-      // Update metadata with encrypted API key and enable sync
+      console.log('[ImportHandler] Updating sync metadata...');
       await syncRepository.updateMetadata({
         apiKey: JSON.stringify(encryptedApiKey),
         syncEnabled: true,
       });
+      console.log('[ImportHandler] ✓ Sync metadata updated (syncEnabled: true)');
 
-      // Also update settings to persist syncEnabled flag
+      console.log('[ImportHandler] Updating settings repository...');
       await settingsRepository.update({
         syncEnabled: true,
       });
+      console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
 
-      console.log('[InitService] API key encrypted and sync enabled');
+      console.log('[ImportHandler] ✓✓✓ Import credentials processed successfully! Sync is now enabled.');
+    } else {
+      console.log('[ImportHandler] No IMPORT marker - credentials already encrypted');
     }
   } catch (error) {
-    console.error('[InitService] Failed to handle imported credentials:', error);
+    console.error('[ImportHandler] ERROR handling imported credentials:', error);
+    console.error('[ImportHandler] Stack:', error instanceof Error ? error.stack : 'N/A');
     // Don't throw - this shouldn't prevent unlock
   }
 }
