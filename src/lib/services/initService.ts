@@ -7,6 +7,7 @@ import type { EncryptionMetadata, MasterKey } from '../types';
 import { encryptionRepository } from './encryptionRepository';
 import { settingsRepository } from './settingsRepository';
 import { noteRepository } from './noteRepository';
+import { syncRepository } from './syncRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 
@@ -91,9 +92,52 @@ export async function unlock(password: string): Promise<void> {
 
   keyManager.setMasterKey(masterKey);
 
+  // Handle imported credentials (IMPORT: marker)
+  await handleImportedCredentials(key);
+
   // Setup auto-lock
   const settings = await settingsRepository.get();
   setupActivityListeners(settings.autoLockTimeout);
+}
+
+/**
+ * Handle imported credentials after successful unlock
+ * Detects IMPORT: marker, encrypts plaintext API key, enables sync
+ */
+async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
+  try {
+    const metadata = await syncRepository.getMetadata();
+    if (!metadata || !metadata.apiKey) {
+      return; // No sync configured
+    }
+
+    // Check for IMPORT: marker (plaintext API key from import)
+    if (metadata.apiKey.startsWith('IMPORT:')) {
+      console.log('[InitService] Detected imported credentials, encrypting API key...');
+
+      // Extract plaintext API key
+      const plaintextApiKey = metadata.apiKey.substring(7); // Remove "IMPORT:" prefix
+
+      // Encrypt API key with master key
+      const encryptedApiKey = await cryptoService.encryptText(plaintextApiKey, masterKey);
+
+      // Update metadata with encrypted API key and enable sync
+      await syncRepository.updateMetadata({
+        apiKey: JSON.stringify(encryptedApiKey),
+        syncEnabled: true,
+      });
+
+      // Also update settings to persist syncEnabled flag
+      await settingsRepository.update({
+        syncEnabled: true,
+      });
+
+      console.log('[InitService] API key encrypted and sync enabled');
+    }
+  } catch (error) {
+    console.error('[InitService] Failed to handle imported credentials:', error);
+    // Don't throw - this shouldn't prevent unlock
+  }
 }
 
 /**

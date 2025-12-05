@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { locale, _ } from 'svelte-i18n';
   import type { Theme, SyncStatus } from '../types';
@@ -186,8 +186,9 @@
       console.log('[SettingsModal] Credentials stored. Locking app...');
 
       // Step 3: Lock the app to force re-unlock with new salt
-      const { lock } = await import('../services');
       lock();
+
+      console.log('[SettingsModal] App locked successfully');
     } catch (error) {
       console.error('Import failed:', error);
       syncError = error instanceof Error ? error.message : 'Failed to import credentials';
@@ -456,6 +457,16 @@
                   <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
                     Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.
                   </p>
+
+                  <div class="mb-3 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded p-2">
+                    <p class="text-xs text-orange-800 dark:text-orange-200 font-medium">
+                      ⚠️ IMPORTANT: You must use the SAME password on all devices!
+                    </p>
+                    <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                      If you use a different password, notes will not decrypt.
+                    </p>
+                  </div>
+
                   <textarea
                     bind:value={importCredentialsText}
                     placeholder="Paste base64 credentials here..."

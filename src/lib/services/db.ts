@@ -61,7 +61,7 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
     return dbInstance;
   }
 
-  console.log(`[Jottery Client v0.1.10] Opening database. Current version: ${DB_VERSION}`);
+  console.log(`[Jottery Client v0.1.11] Opening database. Current version: ${DB_VERSION}`);
 
   dbInstance = await openDB<JotteryDB>(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion, newVersion) {
