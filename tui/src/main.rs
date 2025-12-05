@@ -1,3 +1,5 @@
+mod db;
+
 use anyhow::Result;
 use tracing::info;
 
@@ -14,6 +16,7 @@ fn main() -> Result<()> {
     info!("Starting application...");
 
     println!("Welcome to Jottery TUI!");
+    println!("Database layer: ✓");
     println!("This is a placeholder - TUI interface coming soon...");
 
     Ok(())

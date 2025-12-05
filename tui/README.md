@@ -15,6 +15,25 @@ Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking a
 
 ## Installation
 
+### Prerequisites
+
+**SQLCipher** is required for database encryption:
+
+**macOS:**
+```bash
+brew install sqlcipher
+```
+
+**Linux (Debian/Ubuntu):**
+```bash
+sudo apt-get install libsqlcipher-dev
+```
+
+**Linux (Fedora):**
+```bash
+sudo dnf install sqlcipher-devel
+```
+
 ### From Source
 
 ```bash
@@ -22,6 +41,8 @@ cd tui
 cargo build --release
 sudo cp target/release/jottery /usr/local/bin/
 ```
+
+**Note:** On macOS, the build is configured to automatically find SQLCipher installed via Homebrew. On Linux, SQLCipher should be in standard system paths.
 
 ## Usage
 
@@ -67,9 +88,10 @@ This is a work in progress. Feature parity with the web application is the goal.
 
 ### Completed
 - [x] Project setup
+- [x] Database layer (SQLite + SQLCipher)
 
 ### In Progress
-- [ ] Database layer
+- [ ] Data models
 - [ ] Encryption layer
 - [ ] TUI framework
 - [ ] Note management

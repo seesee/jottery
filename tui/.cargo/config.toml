@@ -1,0 +1,14 @@
+# Cargo configuration for Jottery TUI
+# Sets up SQLCipher linking for macOS (Homebrew)
+
+[env]
+# SQLCipher library paths for macOS (Homebrew on Apple Silicon)
+SQLCIPHER_LIB_DIR = { value = "/opt/homebrew/opt/sqlcipher/lib", force = false, relative = false }
+SQLCIPHER_INCLUDE_DIR = { value = "/opt/homebrew/opt/sqlcipher/include", force = false, relative = false }
+
+# For Intel Macs, use:
+# SQLCIPHER_LIB_DIR = { value = "/usr/local/opt/sqlcipher/lib", force = false, relative = false }
+# SQLCIPHER_INCLUDE_DIR = { value = "/usr/local/opt/sqlcipher/include", force = false, relative = false }
+
+# For Linux, SQLCipher is typically in standard paths (/usr/lib, /usr/include)
+# No configuration needed on Linux if installed via package manager
