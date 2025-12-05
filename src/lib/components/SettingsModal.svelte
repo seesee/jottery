@@ -24,16 +24,11 @@
   let syncing = false;
   let syncError = '';
   let registering = false;
-  let showManualConfig = false;
-  let manualClientId = '';
-  let manualApiKey = '';
-  let manualEncryptionSalt = '';
-  let configuringManual = false;
-  let showCredentials = false;
-  let decryptedApiKey = '';
-  let loadingApiKey = false;
-  let registrationApiKey = '';  // Store API key from registration to show to user
-  let encryptionSalt = '';  // Display encryption salt from current device
+  let deviceName = 'My Device';
+  let showImportCredentials = false;
+  let importCredentialsText = '';
+  let importing = false;
+  let showCopiedMessage = false;
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -41,15 +36,6 @@
   // Load sync status when modal opens
   $: if (show) {
     loadSyncStatus();
-  } else {
-    // Clear sensitive data when modal closes
-    decryptedApiKey = '';
-  }
-
-  // Clear sensitive API keys when credentials are hidden
-  $: if (!showCredentials) {
-    decryptedApiKey = '';
-    registrationApiKey = '';
   }
 
   function applyTheme(selectedTheme: Theme) {
@@ -83,30 +69,130 @@
       return;
     }
 
+    if (!deviceName.trim()) {
+      syncError = 'Please provide a device name';
+      return;
+    }
+
     registering = true;
     syncError = '';
-    registrationApiKey = '';  // Clear previous registration key
     try {
-      const deviceName = `Jottery Web - ${navigator.platform}`;
-      const response = await syncService.register(syncEndpoint, deviceName);
-
-      // Store the API key to show to the user
-      registrationApiKey = response.apiKey;
+      const response = await syncService.register(syncEndpoint, deviceName.trim());
+      console.log('[SettingsModal] Registration successful');
 
       // Reload status
       await loadSyncStatus();
-
-      // Update local state
       syncEndpoint = $settings.syncEndpoint || '';
-
-      syncError = '';  // Clear any previous errors
-      // Show credentials section automatically after registration
-      showCredentials = true;
+      syncError = '';
     } catch (error) {
       console.error('Registration failed:', error);
       syncError = error instanceof Error ? error.message : 'Registration failed';
     } finally {
       registering = false;
+    }
+  }
+
+  async function handleCopySyncCredentials() {
+    try {
+      // Get all required data
+      const masterKey = keyManager.getMasterKey();
+      if (!masterKey) {
+        throw new Error('Application is locked');
+      }
+
+      const metadata = await syncRepository.getMetadata();
+      if (!metadata || !metadata.apiKey || !metadata.clientId) {
+        throw new Error('Sync not configured');
+      }
+
+      const encryptionMeta = await encryptionRepository.getMetadata();
+      if (!encryptionMeta) {
+        throw new Error('Encryption not initialized');
+      }
+
+      // Decrypt API key
+      const encryptedApiKey = JSON.parse(metadata.apiKey);
+      const apiKey = await cryptoService.decryptText(encryptedApiKey, masterKey.key);
+
+      // Create credentials object
+      const credentials = {
+        endpoint: metadata.syncEndpoint,
+        clientId: metadata.clientId,
+        apiKey: apiKey,
+        salt: encryptionMeta.salt,
+      };
+
+      // Encode as base64
+      const json = JSON.stringify(credentials);
+      const base64 = btoa(json);
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(base64);
+
+      // Show success message
+      showCopiedMessage = true;
+      setTimeout(() => showCopiedMessage = false, 3000);
+
+      console.log('[SettingsModal] Credentials copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy credentials:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to copy credentials';
+    }
+  }
+
+  async function handleImportCredentials() {
+    if (!importCredentialsText.trim()) {
+      syncError = 'Please paste the credentials';
+      return;
+    }
+
+    importing = true;
+    syncError = '';
+
+    try {
+      // Decode base64
+      const json = atob(importCredentialsText.trim());
+      const credentials = JSON.parse(json);
+
+      // Validate structure
+      if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey || !credentials.salt) {
+        throw new Error('Invalid credentials format');
+      }
+
+      console.log('[SettingsModal] Importing credentials...');
+
+      // Step 1: Import encryption salt
+      await encryptionRepository.setMetadata({
+        salt: credentials.salt,
+        iterations: 100000,
+        createdAt: new Date().toISOString(),
+        algorithm: 'AES-256-GCM',
+      });
+      console.log('[SettingsModal] Encryption salt imported');
+
+      // Step 2: Store sync metadata with PLAINTEXT API key temporarily
+      // It will be encrypted after unlock with the correct master key
+      await syncRepository.updateMetadata({
+        clientId: credentials.clientId,
+        syncEndpoint: credentials.endpoint,
+        syncEnabled: false,  // Will be enabled after encrypting API key
+        apiKey: `IMPORT:${credentials.apiKey}`,  // Temporary plaintext marker
+      });
+
+      await settingsRepository.update({
+        syncEndpoint: credentials.endpoint,
+      });
+
+      console.log('[SettingsModal] Credentials stored. Locking app...');
+
+      // Step 3: Lock the app to force re-unlock with new salt
+      const { lock } = await import('../services');
+      lock();
+    } catch (error) {
+      console.error('Import failed:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to import credentials';
+    } finally {
+      importing = false;
     }
   }
 
@@ -128,110 +214,6 @@
     }
   }
 
-  async function handleManualConfig() {
-    // CRITICAL: Must ALWAYS import salt first to ensure master key is correct
-    // This is a two-step process that cannot be combined
-
-    if (!manualEncryptionSalt) {
-      syncError = 'Please provide the encryption salt from your first device';
-      return;
-    }
-
-    configuringManual = true;
-    syncError = '';
-
-    try {
-      // Check if this is first step (only salt) or second step (all fields)
-      const hasAllFields = syncEndpoint && manualClientId && manualApiKey;
-
-      if (!hasAllFields) {
-        // STEP 1: Import salt and lock
-        console.log('[SettingsModal] Step 1: Importing encryption salt...');
-        await encryptionRepository.setMetadata({
-          salt: manualEncryptionSalt,
-          iterations: 100000,
-          createdAt: new Date().toISOString(),
-          algorithm: 'AES-256-GCM',
-        });
-        console.log('[SettingsModal] Salt imported! Locking app to re-derive master key...');
-
-        // Clear salt field
-        manualEncryptionSalt = '';
-
-        // Lock to force re-derivation of master key with new salt
-        const { lock } = await import('../services');
-        lock();
-      } else {
-        // STEP 2: Configure credentials (salt already imported in step 1)
-        console.log('[SettingsModal] Step 2: Configuring credentials...');
-
-        // Verify the salt matches what's in encryption metadata
-        const encryptionMeta = await encryptionRepository.getMetadata();
-        if (!encryptionMeta || encryptionMeta.salt !== manualEncryptionSalt) {
-          throw new Error('Encryption salt mismatch! You must import the salt first (Step 1), then configure credentials (Step 2).');
-        }
-
-        await syncService.configureCredentials(syncEndpoint, manualClientId, manualApiKey);
-        await loadSyncStatus();
-
-        // Clear all fields
-        syncEndpoint = $settings.syncEndpoint || '';
-        manualClientId = '';
-        manualApiKey = '';
-        manualEncryptionSalt = '';
-        showManualConfig = false;
-        syncError = '';
-
-        console.log('[SettingsModal] Configuration complete!');
-      }
-    } catch (error) {
-      console.error('Manual configuration failed:', error);
-      syncError = error instanceof Error ? error.message : 'Configuration failed';
-    } finally {
-      configuringManual = false;
-    }
-  }
-
-  async function handleShowApiKey() {
-    loadingApiKey = true;
-    syncError = '';
-    try {
-      // Get master key
-      const masterKey = keyManager.getMasterKey();
-      if (!masterKey) {
-        throw new Error('Application is locked. Please unlock first.');
-      }
-
-      // Get sync metadata
-      const metadata = await syncRepository.getMetadata();
-      if (!metadata || !metadata.apiKey) {
-        throw new Error('No API key found');
-      }
-
-      // Decrypt API key
-      const encryptedApiKey = JSON.parse(metadata.apiKey);
-      decryptedApiKey = await cryptoService.decryptText(encryptedApiKey, masterKey.key);
-    } catch (error) {
-      console.error('Failed to show API key:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to decrypt API key';
-    } finally {
-      loadingApiKey = false;
-    }
-  }
-
-  async function handleShowEncryptionSalt() {
-    try {
-      // Get encryption metadata
-      const encryptionMetadata = await encryptionRepository.getMetadata();
-      if (!encryptionMetadata) {
-        throw new Error('Encryption not initialized');
-      }
-      encryptionSalt = encryptionMetadata.salt;
-    } catch (error) {
-      console.error('Failed to get encryption salt:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to get encryption salt';
-    }
-  }
 
   async function handleSave() {
     saving = true;
@@ -411,106 +393,94 @@
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Sync</h3>
 
           <div class="space-y-4">
-            <!-- Sync Endpoint -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sync Server Endpoint
-              </label>
-              <input
-                type="url"
-                bind:value={syncEndpoint}
-                placeholder="https://sync.example.com"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={syncStatus?.isEnabled}
-              />
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                URL of your self-hosted Jottery sync server
-              </p>
-            </div>
+            {#if !syncStatus?.isEnabled}
+              <!-- Setup: Endpoint and Device Name -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sync Server Endpoint
+                </label>
+                <input
+                  type="url"
+                  bind:value={syncEndpoint}
+                  placeholder="http://localhost:3030"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  URL of your self-hosted Jottery sync server
+                </p>
+              </div>
 
-            <!-- Manual Configuration (Advanced) -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-              <button
-                on:click={() => showManualConfig = !showManualConfig}
-                class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {showManualConfig ? '▼' : '▶'} Advanced: Use Existing Credentials
-              </button>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Device Name
+                </label>
+                <input
+                  type="text"
+                  bind:value={deviceName}
+                  placeholder="My Laptop"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  A name to identify this device
+                </p>
+              </div>
 
-              {#if showManualConfig}
-                <div class="mt-3 space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
-                  <div class="text-xs space-y-1">
-                    <p class="text-gray-600 dark:text-gray-400 font-medium">
-                      Two-Step Setup for Additional Devices:
-                    </p>
-                    <p class="text-gray-500 dark:text-gray-400">
-                      1. Enter ONLY the Encryption Salt below and click Save → App will lock
-                    </p>
-                    <p class="text-gray-500 dark:text-gray-400">
-                      2. After unlocking, enter all three fields (Client ID, API Key, Encryption Salt) and click Save
-                    </p>
-                  </div>
+              <!-- Setup Buttons -->
+              <div class="flex gap-3">
+                <button
+                  on:click={handleRegister}
+                  disabled={!syncEndpoint || !deviceName.trim() || registering}
+                  class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
+                >
+                  {registering ? 'Registering...' : '🔗 Register New Device'}
+                </button>
+                <button
+                  on:click={() => showImportCredentials = !showImportCredentials}
+                  class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
+                >
+                  📋 Use Existing Credentials
+                </button>
+              </div>
 
-                  <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Client ID
-                    </label>
-                    <input
-                      type="text"
-                      bind:value={manualClientId}
-                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
-                  </div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                <p>• <strong>Register</strong> if this is your first device</p>
+                <p>• <strong>Use Existing</strong> if you already set up sync on another device</p>
+              </div>
 
-                  <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      API Key
-                    </label>
-                    <input
-                      type="password"
-                      bind:value={manualApiKey}
-                      placeholder="64-character hex string"
-                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Encryption Salt
-                    </label>
-                    <input
-                      type="text"
-                      bind:value={manualEncryptionSalt}
-                      placeholder="Paste encryption salt from first device"
-                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                    />
-                    <p class="mt-1 text-xs text-red-600 dark:text-red-400">
-                      ⚠️ Required! Copy from "Show Credentials" on your first device.
-                    </p>
-                  </div>
-
+              <!-- Import Credentials Box -->
+              {#if showImportCredentials}
+                <div class="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                  <h4 class="font-medium text-sm text-gray-900 dark:text-white mb-2">
+                    Import Credentials
+                  </h4>
+                  <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                    Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.
+                  </p>
+                  <textarea
+                    bind:value={importCredentialsText}
+                    placeholder="Paste base64 credentials here..."
+                    rows="4"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
+                  />
                   <button
-                    on:click={handleManualConfig}
-                    disabled={!manualClientId || !manualApiKey || !manualEncryptionSalt || configuringManual}
-                    class="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded transition-colors"
+                    on:click={handleImportCredentials}
+                    disabled={!importCredentialsText.trim() || importing}
+                    class="w-full mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
                   >
-                    {configuringManual ? 'Saving...' : '💾 Save Credentials'}
+                    {importing ? 'Importing...' : '📥 Import and Lock'}
                   </button>
                 </div>
               {/if}
-            </div>
-
-            <!-- Sync Status & Actions -->
-            {#if syncStatus?.isEnabled}
-              <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                <div class="flex items-center justify-between mb-2">
+            {:else}
+              <!-- Sync Enabled - Show Status & Copy Credentials -->
+              <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
+                <div class="flex items-center justify-between">
                   <span class="text-sm font-medium text-green-800 dark:text-green-200">
                     ✓ Sync Enabled
                   </span>
-                  {#if syncStatus.isSyncing}
+                  {#if syncStatus?.isSyncing}
                     <span class="text-xs text-green-600 dark:text-green-400">Syncing...</span>
-                  {:else if syncStatus.lastSyncAt}
+                  {:else if syncStatus?.lastSyncAt}
                     <span class="text-xs text-green-600 dark:text-green-400">
                       Last sync: {new Date(syncStatus.lastSyncAt).toLocaleString()}
                     </span>
@@ -519,108 +489,41 @@
 
                 <button
                   on:click={handleSyncNow}
-                  disabled={syncing || syncStatus.isSyncing}
+                  disabled={syncing || syncStatus?.isSyncing}
                   class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
                 >
-                  {syncing || syncStatus.isSyncing ? 'Syncing...' : '🔄 Sync Now'}
+                  {syncing || syncStatus?.isSyncing ? 'Syncing...' : '🔄 Sync Now'}
                 </button>
 
-                {#if syncStatus.pendingNotes > 0}
-                  <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                {#if syncStatus?.pendingNotes > 0}
+                  <p class="text-xs text-gray-600 dark:text-gray-400">
                     {syncStatus.pendingNotes} note{syncStatus.pendingNotes !== 1 ? 's' : ''} pending sync
                   </p>
                 {/if}
 
-                <!-- Show Credentials -->
-                <button
-                  on:click={() => showCredentials = !showCredentials}
-                  class="w-full mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline text-left"
-                >
-                  {showCredentials ? '▼' : '▶'} Show Credentials (for other devices)
-                </button>
+                <div class="border-t border-green-200 dark:border-green-700 pt-3">
+                  <button
+                    on:click={handleCopySyncCredentials}
+                    class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors"
+                  >
+                    📋 Copy Credentials for Other Devices
+                  </button>
 
-                {#if showCredentials && syncStatus.clientId}
-                  <div class="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs space-y-2">
-                    <div>
-                      <div class="font-medium text-gray-700 dark:text-gray-300">Client ID:</div>
-                      <div class="font-mono text-gray-600 dark:text-gray-400 break-all select-all">
-                        {syncStatus.clientId}
-                      </div>
-                    </div>
-                    <div>
-                      <div class="font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</div>
-                      {#if registrationApiKey || decryptedApiKey}
-                        <div class="font-mono text-xs text-gray-600 dark:text-gray-400 break-all select-all bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-300 dark:border-yellow-700">
-                          {registrationApiKey || decryptedApiKey}
-                        </div>
-                        {#if registrationApiKey}
-                          <p class="mt-1 text-xs text-green-600 dark:text-green-400 font-medium">
-                            ✓ Registration successful! Copy this API key now - it won't be shown in plaintext again.
-                          </p>
-                        {/if}
-                        <p class="mt-1 text-xs text-orange-600 dark:text-orange-400">
-                          ⚠️ Keep this API key secret! Anyone with this key can access your synced notes.
-                        </p>
-                      {:else}
-                        <button
-                          on:click={handleShowApiKey}
-                          disabled={loadingApiKey}
-                          class="px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs rounded transition-colors"
-                        >
-                          {loadingApiKey ? 'Decrypting...' : '🔓 Show API Key'}
-                        </button>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          API key is encrypted. Click to decrypt and display (requires app to be unlocked).
-                        </p>
-                      {/if}
-                    </div>
-                    <div>
-                      <div class="font-medium text-gray-700 dark:text-gray-300 mb-1">Encryption Salt:</div>
-                      {#if encryptionSalt}
-                        <div class="font-mono text-xs text-gray-600 dark:text-gray-400 break-all select-all bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-300 dark:border-blue-700">
-                          {encryptionSalt}
-                        </div>
-                        <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                          Copy this encryption salt - it's needed to decrypt notes on other devices!
-                        </p>
-                      {:else}
-                        <button
-                          on:click={handleShowEncryptionSalt}
-                          class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
-                        >
-                          🔑 Show Encryption Salt
-                        </button>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          The encryption salt is required to decrypt notes on other devices.
-                        </p>
-                      {/if}
-                    </div>
-                    <div class="pt-2 border-t border-gray-300 dark:border-gray-600">
-                      <p class="text-gray-500 dark:text-gray-400 text-xs mb-2">
-                        Copy the Client ID, API Key, AND Encryption Salt to sync the same notes on other devices using "Use Existing Credentials" below.
-                      </p>
-                      <p class="text-red-600 dark:text-red-400 text-xs font-medium">
-                        ⚠️ CRITICAL: All devices must use the SAME master password AND encryption salt! Without both, notes cannot be decrypted.
+                  {#if showCopiedMessage}
+                    <div class="mt-2 bg-green-100 dark:bg-green-800/30 border border-green-300 dark:border-green-600 rounded p-2">
+                      <p class="text-xs text-green-700 dark:text-green-300">
+                        ✓ Credentials copied to clipboard! Paste them in "Use Existing Credentials" on your other device.
                       </p>
                     </div>
-                  </div>
-                {/if}
-              </div>
-            {:else}
-              <button
-                on:click={handleRegister}
-                disabled={!syncEndpoint || registering}
-                class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
-              >
-                {registering ? 'Registering...' : '🔗 Register New Device'}
-              </button>
-              <div class="text-xs space-y-1">
-                <p class="text-gray-500 dark:text-gray-400">
-                  Register this device with your sync server. Auto-sync will be enabled (every 5 minutes).
-                </p>
-                <p class="text-orange-600 dark:text-orange-400 font-medium">
-                  ⚠️ Save the API key shown after registration to sync with other devices!
-                </p>
+                  {/if}
+
+                  <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                    Click to copy all credentials as a single base64 string. Use "Use Existing Credentials" on other devices to import.
+                  </p>
+                  <p class="mt-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
+                    ⚠️ All devices must use the SAME password to decrypt notes!
+                  </p>
+                </div>
               </div>
             {/if}
 
