@@ -21,6 +21,7 @@ import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { noteService } from './noteService';
 import { searchService } from './searchService';
+import { notes, settings } from '../stores/appStore';
 
 const API_VERSION = 'v1';
 
@@ -179,8 +180,11 @@ class SyncService {
 
       // 5. Reload notes into app state and rebuild search index
       console.log('[SyncService] Reloading notes and rebuilding search index...');
-      await noteService.loadAllNotes();
-      await searchService.rebuildIndex();
+      let currentSettings: any;
+      settings.subscribe(s => currentSettings = s)();
+      const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
       console.log('[SyncService] UI refreshed');
 
       return { success: true };

@@ -118,6 +118,20 @@
   $: if ($isLocked) {
     stopAutoLock();
     syncService.disableAutoSync();
+    // Sync on lock to push any changes before going away
+    syncOnLock();
+  }
+
+  async function syncOnLock() {
+    try {
+      const syncMetadata = await syncRepository.getMetadata();
+      if (syncMetadata?.syncEnabled) {
+        console.log('[App] Triggering sync on lock...');
+        await syncService.syncNow();
+      }
+    } catch (error) {
+      console.error('Failed to sync on lock:', error);
+    }
   }
 
   // Update auto-lock timeout when settings change
@@ -148,9 +162,9 @@
         console.log(`[App] Starting auto-sync with ${interval} minute interval`);
         syncService.enableAutoSync(interval);
 
-        // Optional: Trigger initial sync on unlock
-        // Uncomment if you want immediate sync on unlock
-        // syncService.syncNow();
+        // Trigger sync on unlock to get latest changes
+        console.log('[App] Triggering sync on unlock...');
+        syncService.syncNow();
       }
     } catch (error) {
       console.error('Failed to start auto-sync:', error);
