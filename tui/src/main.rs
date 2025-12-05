@@ -1,3 +1,4 @@
+mod crypto;
 mod db;
 mod models;
 
@@ -18,6 +19,8 @@ fn main() -> Result<()> {
 
     println!("Welcome to Jottery TUI!");
     println!("Database layer: ✓");
+    println!("Data models: ✓");
+    println!("Encryption layer: ✓");
     println!("This is a placeholder - TUI interface coming soon...");
 
     Ok(())
