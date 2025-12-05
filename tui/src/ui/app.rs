@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
@@ -62,6 +61,8 @@ pub struct App {
     notes: Vec<Note>,
     /// Selected note index
     selected_note: usize,
+    /// Currently editing note ID (None = creating new note)
+    editing_note_id: Option<String>,
     /// Settings
     settings: UserSettings,
 }
@@ -82,6 +83,7 @@ impl App {
             crypto: CryptoService::new(),
             notes: Vec::new(),
             selected_note: 0,
+            editing_note_id: None,
             settings: UserSettings::default(),
         })
     }
@@ -131,6 +133,7 @@ impl App {
             KeyCode::Char('n') => {
                 // New note
                 self.note_input.clear();
+                self.editing_note_id = None; // Creating new note
                 self.state = AppState::NoteView;
                 self.input_mode = InputMode::Insert;
             }
@@ -139,6 +142,7 @@ impl App {
                 if !self.notes.is_empty() {
                     let note = &self.notes[self.selected_note];
                     self.note_input = note.content.clone();
+                    self.editing_note_id = Some(note.id.clone()); // Editing existing note
                     self.state = AppState::NoteView;
                     self.input_mode = InputMode::Normal;
                 }
@@ -252,21 +256,20 @@ impl App {
         if let (Some(db), Some(key)) = (&self.db, &self.key) {
             let repo = NoteRepository::new(db.connection());
 
-            // Check if we're editing an existing note or creating new one
-            if !self.notes.is_empty()
-                && self.selected_note < self.notes.len()
-                && !self.note_input.is_empty()
-            {
-                // Update existing note
-                let note = &mut self.notes[self.selected_note];
-                note.content = self.note_input.clone();
-                note.touch();
-                repo.update(note, key)?;
-            } else if !self.note_input.is_empty() {
-                // Create new note
-                let mut note = Note::new(self.note_input.clone());
-                repo.create(&note, key)?;
-                self.notes.insert(0, note);
+            if !self.note_input.is_empty() {
+                if let Some(note_id) = &self.editing_note_id {
+                    // Update existing note
+                    if let Some(note) = self.notes.iter_mut().find(|n| &n.id == note_id) {
+                        note.content = self.note_input.clone();
+                        note.touch();
+                        repo.update(note, key)?;
+                    }
+                } else {
+                    // Create new note
+                    let note = Note::new(self.note_input.clone());
+                    repo.create(&note, key)?;
+                    self.notes.insert(0, note);
+                }
             }
         }
         Ok(())
@@ -322,6 +325,13 @@ impl App {
 
         frame.render_widget(block, size);
         frame.render_widget(password, chunks[0]);
+
+        // Show cursor at end of password input
+        // chunks[0] is the password area, +1 for left border, +1 for top border
+        frame.set_cursor_position((
+            chunks[0].x + self.password_input.len() as u16 + 1,
+            chunks[0].y + 1,
+        ));
 
         if let Some(err) = &self.error {
             let error = Paragraph::new(err.clone())
@@ -417,6 +427,23 @@ impl App {
 
         frame.render_widget(text, chunks[0]);
         frame.render_widget(help, chunks[1]);
+
+        // Show cursor when in insert mode
+        if matches!(self.input_mode, InputMode::Insert) {
+            // Calculate cursor position at end of text
+            // Count lines and get position on last line
+            let lines: Vec<&str> = self.note_input.lines().collect();
+            let line_count = if self.note_input.is_empty() { 0 } else { lines.len() };
+            let last_line_len = lines.last().map(|l| l.len()).unwrap_or(0);
+
+            // chunks[0] is the text area with block border, margin is 1
+            // x position: margin + left border + column
+            // y position: margin + top border + line number
+            frame.set_cursor_position((
+                chunks[0].x + last_line_len as u16 + 1,
+                chunks[0].y + line_count as u16 + 1,
+            ));
+        }
     }
 
     /// Check if app should quit

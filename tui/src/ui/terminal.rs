@@ -23,7 +23,7 @@ impl Tui {
     pub fn enter(&mut self) -> Result<()> {
         enable_raw_mode()?;
         execute!(io::stdout(), EnterAlternateScreen)?;
-        self.terminal.hide_cursor()?;
+        // Don't hide cursor - let ratatui manage it via set_cursor()
         self.terminal.clear()?;
         Ok(())
     }
