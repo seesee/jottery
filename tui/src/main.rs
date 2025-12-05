@@ -1,6 +1,7 @@
 mod crypto;
 mod db;
 mod models;
+mod repository;
 
 use anyhow::Result;
 use tracing::info;
@@ -21,6 +22,7 @@ fn main() -> Result<()> {
     println!("Database layer: ✓");
     println!("Data models: ✓");
     println!("Encryption layer: ✓");
+    println!("Repository pattern: ✓");
     println!("This is a placeholder - TUI interface coming soon...");
 
     Ok(())
