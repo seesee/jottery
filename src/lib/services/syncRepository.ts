@@ -12,23 +12,41 @@ class IndexedDBSyncRepository {
    * Get global sync metadata
    */
   async getMetadata(): Promise<SyncMetadata | null> {
+    console.log('[SyncRepo] Getting sync metadata...');
     const db = getDB();
-    const metadata = await db.get(STORES.SYNC_METADATA, METADATA_KEY);
-    return metadata || null;
+    console.log(`[SyncRepo] DB version: ${db.version}, stores: ${[...db.objectStoreNames].join(', ')}`);
+
+    try {
+      const metadata = await db.get(STORES.SYNC_METADATA, METADATA_KEY);
+      console.log('[SyncRepo] Metadata retrieved:', metadata ? 'found' : 'null');
+      return metadata || null;
+    } catch (error) {
+      console.error('[SyncRepo] Error getting metadata:', error);
+      throw error;
+    }
   }
 
   /**
    * Update global sync metadata
    */
   async updateMetadata(metadata: Partial<SyncMetadata>): Promise<SyncMetadata> {
+    console.log('[SyncRepo] Updating sync metadata...', metadata);
     const db = getDB();
     const current = await this.getMetadata() || {
       syncEnabled: false,
       syncEndpoint: '',
     };
     const updated = { ...current, ...metadata };
-    await db.put(STORES.SYNC_METADATA, updated, METADATA_KEY);
-    return updated;
+    console.log('[SyncRepo] Updated metadata:', updated);
+
+    try {
+      await db.put(STORES.SYNC_METADATA, updated, METADATA_KEY);
+      console.log('[SyncRepo] Metadata saved successfully');
+      return updated;
+    } catch (error) {
+      console.error('[SyncRepo] Error updating metadata:', error);
+      throw error;
+    }
   }
 
   /**

@@ -35,6 +35,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Principles
 
+### UI/UX Guidelines
+
+**CRITICAL: NEVER USE NATIVE BROWSER CONTROLS IN WEB APPLICATIONS**
+
+- ❌ **NEVER** use `alert()`, `confirm()`, or `prompt()` - they block the UI thread and provide poor UX
+- ❌ **NEVER** use native `<input type="file">` dialogs without custom styling
+- ❌ **NEVER** use native `<select>` dropdowns without custom styling
+- ✅ **ALWAYS** use inline messages, custom modals, or toast notifications
+- ✅ **ALWAYS** style form controls with Tailwind/CSS to match the application design
+- ✅ **ALWAYS** provide visual feedback through the UI, not through alerts
+
+**Examples:**
+- Instead of `alert('Success!')` → Show a success message in the UI or use a toast component
+- Instead of `confirm('Delete?')` → Use the ConfirmModal component
+- Instead of `prompt('Enter name')` → Create a custom modal with an input field
+
 ### Storage Architecture
 - **Repository Pattern**: Abstract all storage logic behind repository interfaces to enable future backend changes
 - **Separate Object Stores**: Notes metadata, encrypted content, encrypted attachments, user settings, encryption metadata

@@ -33,7 +33,7 @@ async fn main() {
 
     // Load config
     let config = Config::from_env().expect("Failed to load configuration");
-    tracing::info!("Starting Jottery Sync Server v0.1.0");
+    tracing::info!("Starting Jottery Sync Server v{}", env!("CARGO_PKG_VERSION"));
     tracing::info!("Database: {}", config.database_url);
     tracing::info!("Port: {}", config.port);
 

@@ -27,36 +27,55 @@ class SyncService {
   private autoSyncTimer?: number;
 
   /**
+   * Normalize endpoint URL by removing trailing slash
+   */
+  private normalizeEndpoint(endpoint: string): string {
+    return endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+  }
+
+  /**
    * Register a new client with the server
    */
   async register(endpoint: string, deviceName: string): Promise<AuthRegisterResponse> {
+    console.log('[SyncService] Starting registration...', { endpoint, deviceName });
+    endpoint = this.normalizeEndpoint(endpoint);
+    console.log('[SyncService] Normalized endpoint:', endpoint);
+
     const request: AuthRegisterRequest = {
       deviceName,
       deviceType: 'web',
     };
 
+    console.log('[SyncService] Sending registration request...');
     const response = await fetch(`${endpoint}/api/${API_VERSION}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
 
+    console.log('[SyncService] Registration response:', response.status, response.statusText);
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('[SyncService] Registration failed:', errorText);
       throw new Error(`Registration failed: ${response.statusText} - ${errorText}`);
     }
 
     const data: AuthRegisterResponse = await response.json();
+    console.log('[SyncService] Registration successful:', { clientId: data.clientId });
 
     // Encrypt and store API key
+    console.log('[SyncService] Encrypting API key...');
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
     }
 
     const encryptedApiKey = await cryptoService.encryptText(data.apiKey, masterKey.key);
+    console.log('[SyncService] API key encrypted');
 
     // Update sync metadata
+    console.log('[SyncService] Saving sync metadata...');
     await syncRepository.updateMetadata({
       apiKey: JSON.stringify(encryptedApiKey),
       clientId: data.clientId,
@@ -66,12 +85,51 @@ class SyncService {
     });
 
     // Update settings
+    console.log('[SyncService] Updating settings...');
     await settingsRepository.update({
       syncEnabled: true,
       syncEndpoint: endpoint,
     });
 
+    console.log('[SyncService] Registration complete!');
     return data;
+  }
+
+  /**
+   * Configure sync manually with existing credentials
+   */
+  async configureCredentials(endpoint: string, clientId: string, apiKey: string): Promise<void> {
+    console.log('[SyncService] Configuring sync with manual credentials...');
+    endpoint = this.normalizeEndpoint(endpoint);
+
+    // Verify master key is available
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new Error('Application is locked');
+    }
+
+    // Encrypt API key before storing
+    console.log('[SyncService] Encrypting API key...');
+    const encryptedApiKey = await cryptoService.encryptText(apiKey, masterKey.key);
+
+    // Save sync metadata
+    console.log('[SyncService] Saving sync metadata...');
+    await syncRepository.updateMetadata({
+      apiKey: JSON.stringify(encryptedApiKey),
+      clientId: clientId,
+      syncEnabled: true,
+      syncEndpoint: endpoint,
+      autoSyncInterval: 5, // Default: 5 minutes
+    });
+
+    // Update settings
+    console.log('[SyncService] Updating settings...');
+    await settingsRepository.update({
+      syncEnabled: true,
+      syncEndpoint: endpoint,
+    });
+
+    console.log('[SyncService] Manual configuration complete!');
   }
 
   /**
@@ -117,6 +175,12 @@ class SyncService {
         lastSyncAt: new Date().toISOString(),
       });
 
+      // 5. Reload notes into app state and rebuild search index
+      console.log('[SyncService] Reloading notes and rebuilding search index...');
+      await noteService.loadAllNotes();
+      await searchService.rebuildIndex();
+      console.log('[SyncService] UI refreshed');
+
       return { success: true };
     } catch (error) {
       console.error('Sync failed:', error);
@@ -133,6 +197,7 @@ class SyncService {
    * Push local changes to server
    */
   private async push(endpoint: string, apiKey: string): Promise<void> {
+    endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
 
@@ -233,6 +298,7 @@ class SyncService {
    * Pull remote changes from server
    */
   private async pull(endpoint: string, apiKey: string): Promise<void> {
+    endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt;
 
@@ -331,6 +397,7 @@ class SyncService {
     endpoint: string,
     apiKey: string
   ): Promise<SyncStatusResponse> {
+    endpoint = this.normalizeEndpoint(endpoint);
     const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/status`, {
       method: 'GET',
       headers: {
@@ -360,6 +427,8 @@ class SyncService {
       lastSyncAt: metadata?.lastSyncAt,
       pendingNotes: pendingNotes.length,
       conflictCount,
+      clientId: metadata?.clientId,
+      syncEndpoint: metadata?.syncEndpoint,
     };
   }
 

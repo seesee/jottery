@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { locale, _ } from 'svelte-i18n';
   import type { Theme, SyncStatus } from '../types';
@@ -24,6 +24,14 @@
   let syncing = false;
   let syncError = '';
   let registering = false;
+  let showManualConfig = false;
+  let manualClientId = '';
+  let manualApiKey = '';
+  let configuringManual = false;
+  let showCredentials = false;
+  let decryptedApiKey = '';
+  let loadingApiKey = false;
+  let registrationApiKey = '';  // Store API key from registration to show to user
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -31,6 +39,15 @@
   // Load sync status when modal opens
   $: if (show) {
     loadSyncStatus();
+  } else {
+    // Clear sensitive data when modal closes
+    decryptedApiKey = '';
+  }
+
+  // Clear sensitive API keys when credentials are hidden
+  $: if (!showCredentials) {
+    decryptedApiKey = '';
+    registrationApiKey = '';
   }
 
   function applyTheme(selectedTheme: Theme) {
@@ -66,9 +83,13 @@
 
     registering = true;
     syncError = '';
+    registrationApiKey = '';  // Clear previous registration key
     try {
       const deviceName = `Jottery Web - ${navigator.platform}`;
-      await syncService.register(syncEndpoint, deviceName);
+      const response = await syncService.register(syncEndpoint, deviceName);
+
+      // Store the API key to show to the user
+      registrationApiKey = response.apiKey;
 
       // Reload status
       await loadSyncStatus();
@@ -76,7 +97,9 @@
       // Update local state
       syncEndpoint = $settings.syncEndpoint || '';
 
-      alert('Registered successfully! Sync is now enabled.');
+      syncError = '';  // Clear any previous errors
+      // Show credentials section automatically after registration
+      showCredentials = true;
     } catch (error) {
       console.error('Registration failed:', error);
       syncError = error instanceof Error ? error.message : 'Registration failed';
@@ -100,6 +123,66 @@
       syncError = error instanceof Error ? error.message : 'Sync failed';
     } finally {
       syncing = false;
+    }
+  }
+
+  async function handleManualConfig() {
+    if (!syncEndpoint || !manualClientId || !manualApiKey) {
+      syncError = 'Please provide endpoint, client ID, and API key';
+      return;
+    }
+
+    configuringManual = true;
+    syncError = '';
+    try {
+      // Use the configureCredentials method from syncService
+      await syncService.configureCredentials(syncEndpoint, manualClientId, manualApiKey);
+
+      // Reload status
+      await loadSyncStatus();
+
+      // Update local state
+      syncEndpoint = $settings.syncEndpoint || '';
+
+      // Clear manual input fields
+      manualClientId = '';
+      manualApiKey = '';
+      showManualConfig = false;
+
+      syncError = '';  // Clear any previous errors
+      // Success will be shown by the sync status UI
+    } catch (error) {
+      console.error('Manual configuration failed:', error);
+      syncError = error instanceof Error ? error.message : 'Configuration failed';
+    } finally {
+      configuringManual = false;
+    }
+  }
+
+  async function handleShowApiKey() {
+    loadingApiKey = true;
+    syncError = '';
+    try {
+      // Get master key
+      const masterKey = keyManager.getMasterKey();
+      if (!masterKey) {
+        throw new Error('Application is locked. Please unlock first.');
+      }
+
+      // Get sync metadata
+      const metadata = await syncRepository.getMetadata();
+      if (!metadata || !metadata.apiKey) {
+        throw new Error('No API key found');
+      }
+
+      // Decrypt API key
+      const encryptedApiKey = JSON.parse(metadata.apiKey);
+      decryptedApiKey = await cryptoService.decryptText(encryptedApiKey, masterKey.key);
+    } catch (error) {
+      console.error('Failed to show API key:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to decrypt API key';
+    } finally {
+      loadingApiKey = false;
     }
   }
 
@@ -327,6 +410,60 @@
                     {syncStatus.pendingNotes} note{syncStatus.pendingNotes !== 1 ? 's' : ''} pending sync
                   </p>
                 {/if}
+
+                <!-- Show Credentials -->
+                <button
+                  on:click={() => showCredentials = !showCredentials}
+                  class="w-full mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline text-left"
+                >
+                  {showCredentials ? '▼' : '▶'} Show Credentials (for other devices)
+                </button>
+
+                {#if showCredentials && syncStatus.clientId}
+                  <div class="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs space-y-2">
+                    <div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300">Client ID:</div>
+                      <div class="font-mono text-gray-600 dark:text-gray-400 break-all select-all">
+                        {syncStatus.clientId}
+                      </div>
+                    </div>
+                    <div>
+                      <div class="font-medium text-gray-700 dark:text-gray-300 mb-1">API Key:</div>
+                      {#if registrationApiKey || decryptedApiKey}
+                        <div class="font-mono text-xs text-gray-600 dark:text-gray-400 break-all select-all bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-300 dark:border-yellow-700">
+                          {registrationApiKey || decryptedApiKey}
+                        </div>
+                        {#if registrationApiKey}
+                          <p class="mt-1 text-xs text-green-600 dark:text-green-400 font-medium">
+                            ✓ Registration successful! Copy this API key now - it won't be shown in plaintext again.
+                          </p>
+                        {/if}
+                        <p class="mt-1 text-xs text-orange-600 dark:text-orange-400">
+                          ⚠️ Keep this API key secret! Anyone with this key can access your synced notes.
+                        </p>
+                      {:else}
+                        <button
+                          on:click={handleShowApiKey}
+                          disabled={loadingApiKey}
+                          class="px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs rounded transition-colors"
+                        >
+                          {loadingApiKey ? 'Decrypting...' : '🔓 Show API Key'}
+                        </button>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          API key is encrypted. Click to decrypt and display (requires app to be unlocked).
+                        </p>
+                      {/if}
+                    </div>
+                    <div class="pt-2 border-t border-gray-300 dark:border-gray-600">
+                      <p class="text-gray-500 dark:text-gray-400 text-xs mb-2">
+                        Copy both the Client ID and API Key to sync the same notes on other devices using "Use Existing Credentials" below.
+                      </p>
+                      <p class="text-red-600 dark:text-red-400 text-xs font-medium">
+                        ⚠️ IMPORTANT: All devices must use the SAME master password! Notes are encrypted with your password and cannot be decrypted if passwords differ.
+                      </p>
+                    </div>
+                  </div>
+                {/if}
               </div>
             {:else}
               <button
@@ -334,11 +471,66 @@
                 disabled={!syncEndpoint || registering}
                 class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
               >
-                {registering ? 'Registering...' : '🔗 Register & Enable Sync'}
+                {registering ? 'Registering...' : '🔗 Register New Device'}
               </button>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Register this device with your sync server to enable synchronization. Auto-sync will be enabled by default (every 5 minutes).
-              </p>
+              <div class="text-xs space-y-1">
+                <p class="text-gray-500 dark:text-gray-400">
+                  Register this device with your sync server. Auto-sync will be enabled (every 5 minutes).
+                </p>
+                <p class="text-orange-600 dark:text-orange-400 font-medium">
+                  ⚠️ Save the API key shown after registration to sync with other devices!
+                </p>
+              </div>
+
+              <!-- Manual Configuration -->
+              <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                <button
+                  on:click={() => showManualConfig = !showManualConfig}
+                  class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {showManualConfig ? '▼' : '▶'} Advanced: Use Existing Credentials
+                </button>
+
+                {#if showManualConfig}
+                  <div class="mt-3 space-y-3 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                    <p class="text-xs text-gray-600 dark:text-gray-400">
+                      Use this to sync with the same account on multiple devices. Copy credentials from your first device.
+                    </p>
+
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Client ID
+                      </label>
+                      <input
+                        type="text"
+                        bind:value={manualClientId}
+                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        API Key
+                      </label>
+                      <input
+                        type="password"
+                        bind:value={manualApiKey}
+                        placeholder="64-character hex string"
+                        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                    </div>
+
+                    <button
+                      on:click={handleManualConfig}
+                      disabled={!manualClientId || !manualApiKey || configuringManual}
+                      class="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded transition-colors"
+                    >
+                      {configuringManual ? 'Saving...' : '💾 Save Credentials'}
+                    </button>
+                  </div>
+                {/if}
+              </div>
             {/if}
 
             <!-- Error Display -->

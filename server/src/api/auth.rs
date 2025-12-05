@@ -14,6 +14,8 @@ pub async fn register(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterRequest>,
 ) -> AppResult<(StatusCode, Json<RegisterResponse>)> {
+    tracing::info!("Registration request received: device_name={}, device_type={}", req.device_name, req.device_type);
+
     // Generate client ID
     let client_id = Uuid::new_v4().to_string();
 
@@ -46,14 +48,15 @@ pub async fn register(
 
     tracing::info!("Registered new client: {} ({})", client_id, req.device_name);
 
-    Ok((
-        StatusCode::CREATED,
-        Json(RegisterResponse {
-            api_key,
-            client_id,
-            created_at: now,
-        }),
-    ))
+    let response = RegisterResponse {
+        api_key: api_key.clone(),
+        client_id: client_id.clone(),
+        created_at: now.clone(),
+    };
+
+    tracing::debug!("Returning registration response: client_id={}, api_key_len={}", client_id, api_key.len());
+
+    Ok((StatusCode::CREATED, Json(response)))
 }
 
 fn generate_api_key() -> String {

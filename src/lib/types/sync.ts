@@ -32,6 +32,8 @@ export interface SyncStatus {
   lastError?: string;
   pendingNotes: number;
   conflictCount: number;
+  clientId?: string;
+  syncEndpoint?: string;
 }
 
 // Push request payload

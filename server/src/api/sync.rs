@@ -172,6 +172,30 @@ pub async fn push(
                 synced_at: now.clone(),
             });
 
+            // Store attachment metadata for this note
+            for attachment_ref in &note.attachments {
+                sqlx::query!(
+                    r#"
+                    INSERT INTO attachments_meta (id, note_id, filename, mime_type, size, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        filename = excluded.filename,
+                        mime_type = excluded.mime_type,
+                        size = excluded.size
+                    "#,
+                    attachment_ref.id,
+                    note.id,
+                    attachment_ref.filename,
+                    attachment_ref.mime_type,
+                    attachment_ref.size,
+                    now
+                )
+                .execute(&state.pool)
+                .await?;
+
+                tracing::debug!("Stored attachment metadata: {} for note {}", attachment_ref.id, note.id);
+            }
+
             tracing::debug!("Accepted note: {}", note.id);
         } else {
             rejected.push(SyncRejected {
@@ -184,7 +208,7 @@ pub async fn push(
         }
     }
 
-    // Store attachments (simplified - store all provided)
+    // Store attachment data (binary blobs)
     for attachment in push_req.attachments {
         // Decode base64
         let data = base64::engine::general_purpose::STANDARD

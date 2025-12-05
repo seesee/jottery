@@ -61,10 +61,15 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
     return dbInstance;
   }
 
+  console.log(`[Jottery Client v0.1.5] Opening database. Current version: ${DB_VERSION}`);
+
   dbInstance = await openDB<JotteryDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
+    upgrade(db, oldVersion, newVersion) {
+      console.log(`[DB] Upgrading database from v${oldVersion} to v${newVersion}`);
+
       // Version 1: Initial schema
       if (oldVersion < 1) {
+        console.log('[DB] Creating v1 schema...');
         // Notes store
         const notesStore = db.createObjectStore(STORES.NOTES, {
           keyPath: 'id',
@@ -92,8 +97,12 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
 
       // Version 2: Add sync metadata store
       if (oldVersion < 2) {
+        console.log('[DB] Creating v2 schema (sync_metadata store)...');
         db.createObjectStore(STORES.SYNC_METADATA);
+        console.log('[DB] sync_metadata store created successfully');
       }
+
+      console.log('[DB] Upgrade complete');
     },
     blocked() {
       console.warn(
@@ -113,6 +122,22 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
       dbInstance = null;
     },
   });
+
+  console.log(`[DB] Database opened successfully. Version: ${dbInstance.version}`);
+  console.log(`[DB] Available stores: ${[...dbInstance.objectStoreNames].join(', ')}`);
+
+  // Verify sync_metadata store exists (defensive check)
+  if (!dbInstance.objectStoreNames.contains(STORES.SYNC_METADATA)) {
+    console.error(`[DB] ERROR: sync_metadata store is missing! Database is in inconsistent state.`);
+    console.error(`[DB] Please delete the database and reload. Instructions:`);
+    console.error(`[DB] 1. Open DevTools > Application > IndexedDB`);
+    console.error(`[DB] 2. Right-click "${DB_NAME}" and select "Delete database"`);
+    console.error(`[DB] 3. Reload the page`);
+    throw new Error(
+      'Database is in inconsistent state. The sync_metadata store is missing. ' +
+      'Please delete the IndexedDB database and reload the page.'
+    );
+  }
 
   return dbInstance;
 }
