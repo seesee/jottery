@@ -1,6 +1,6 @@
 <script lang="ts">
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService } from '../services';
+  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import type { Attachment } from '../types';
   import CodeEditor from './CodeEditor.svelte';
@@ -17,6 +17,7 @@
   let wordWrap: boolean = true;
   let availableTags: string[] = [];
   let isUploading: boolean = false;
+  let previousNoteId: string | null = null;
 
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
@@ -25,7 +26,15 @@
   $: isDark = $settings.theme === 'dark' ||
     ($settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  // Trigger background sync when switching notes
   $: if ($selectedNote) {
+    // If we're switching from one note to another, trigger background sync
+    if (previousNoteId && previousNoteId !== $selectedNote.id) {
+      console.log('[EditorPane] Switching notes, triggering background sync...');
+      triggerBackgroundSync();
+    }
+    previousNoteId = $selectedNote.id;
+
     content = $selectedNote.content;
     tags = [...$selectedNote.tags];
     attachments = [...$selectedNote.attachments];
@@ -33,12 +42,41 @@
     wordWrap = $selectedNote.wordWrap ?? true;
     isEditing = true;
   } else {
+    // Closing editor - trigger sync if we had a note open
+    if (previousNoteId) {
+      console.log('[EditorPane] Closing editor, triggering background sync...');
+      triggerBackgroundSync();
+    }
+    previousNoteId = null;
+
     content = '';
     tags = [];
     attachments = [];
     language = 'plain';
     wordWrap = true;
     isEditing = false;
+  }
+
+  /**
+   * Trigger background sync without blocking UI
+   */
+  async function triggerBackgroundSync() {
+    try {
+      const metadata = await syncRepository.getMetadata();
+      if (metadata?.syncEnabled) {
+        console.log('[EditorPane] Sync enabled, syncing in background...');
+        // Don't await - let it run in background
+        syncService.syncNow().then(result => {
+          if (result.success) {
+            console.log('[EditorPane] Background sync completed successfully');
+          } else {
+            console.warn('[EditorPane] Background sync failed:', result.error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[EditorPane] Failed to check sync status:', error);
+    }
   }
 
   async function handleSave() {
@@ -59,6 +97,10 @@
 
       // Re-index notes for search
       searchService.indexNotes(allNotes);
+
+      // Trigger background sync after saving
+      console.log('[EditorPane] Note saved, triggering background sync...');
+      triggerBackgroundSync();
 
       // selectedNote will automatically update from the derived store
     } catch (error) {
