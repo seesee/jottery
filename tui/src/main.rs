@@ -1,14 +1,17 @@
 mod crypto;
 mod db;
+mod export;
 mod models;
 mod repository;
 mod ui;
 
-use anyhow::Result;
-use clap::Parser;
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
 
+use crypto::CryptoService;
+use db::Database;
 use ui::{App, EventHandler, Tui};
 
 #[derive(Parser)]
@@ -22,6 +25,33 @@ struct Cli {
     /// Enable debug logging
     #[arg(short, long)]
     debug: bool,
+
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Export notes to JSON file
+    Export {
+        /// Output file path
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Password for decryption
+        #[arg(short, long)]
+        password: String,
+    },
+    /// Import notes from JSON file
+    Import {
+        /// Input file path
+        #[arg(short, long)]
+        input: PathBuf,
+
+        /// Password for encryption
+        #[arg(short, long)]
+        password: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -51,6 +81,39 @@ fn main() -> Result<()> {
     };
 
     info!("Using database: {}", db_path.display());
+
+    // Handle subcommands
+    match cli.command {
+        Some(Commands::Export { output, password }) => {
+            info!("Exporting notes to: {}", output.display());
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let crypto = CryptoService::new();
+            let salt = crypto.generate_salt();
+            let key = crypto.derive_key(&password, &salt, 256_000)?;
+
+            let count = export::export_notes(&db, &key, &output)?;
+            println!("✓ Exported {} notes to {}", count, output.display());
+            return Ok(());
+        }
+        Some(Commands::Import { input, password }) => {
+            info!("Importing notes from: {}", input.display());
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let crypto = CryptoService::new();
+            let salt = crypto.generate_salt();
+            let key = crypto.derive_key(&password, &salt, 256_000)?;
+
+            let count = export::import_notes(&db, &key, &input)?;
+            println!("✓ Imported {} notes from {}", count, input.display());
+            return Ok(());
+        }
+        None => {
+            // Run interactive TUI
+        }
+    }
 
     // Create TUI
     let mut tui = Tui::new()?;
