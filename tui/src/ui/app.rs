@@ -33,6 +33,8 @@ pub enum InputMode {
     Normal,
     /// Insert mode (typing)
     Insert,
+    /// Tag mode (adding tags)
+    Tag,
 }
 
 /// Application
@@ -51,6 +53,10 @@ pub struct App {
     pub password_confirm_focused: bool,
     /// Note content input buffer
     pub note_input: String,
+    /// Tag input buffer (when adding tags)
+    pub tag_input: String,
+    /// Current tags for the note being edited
+    pub current_tags: Vec<String>,
     /// Current error message
     pub error: Option<String>,
     /// Database path
@@ -86,6 +92,8 @@ impl App {
             is_new_database,
             password_confirm_focused: false,
             note_input: String::new(),
+            tag_input: String::new(),
+            current_tags: Vec::new(),
             error: None,
             db_path,
             db: None,
@@ -170,6 +178,7 @@ impl App {
             KeyCode::Char('n') => {
                 // New note
                 self.note_input.clear();
+                self.current_tags.clear();
                 self.editing_note_id = None; // Creating new note
                 self.state = AppState::NoteView;
                 self.input_mode = InputMode::Insert;
@@ -179,6 +188,7 @@ impl App {
                 if !self.notes.is_empty() {
                     let note = &self.notes[self.selected_note];
                     self.note_input = note.content.clone();
+                    self.current_tags = note.tags.clone();
                     self.editing_note_id = Some(note.id.clone()); // Editing existing note
                     self.state = AppState::NoteView;
                     self.input_mode = InputMode::Normal;
@@ -212,6 +222,11 @@ impl App {
                 KeyCode::Char('i') => {
                     self.input_mode = InputMode::Insert;
                 }
+                KeyCode::Char('t') => {
+                    // Enter tag mode
+                    self.tag_input.clear();
+                    self.input_mode = InputMode::Tag;
+                }
                 KeyCode::Char('q') | KeyCode::Esc => {
                     // Save and return to list
                     self.save_note()?;
@@ -232,6 +247,33 @@ impl App {
                 }
                 KeyCode::Enter => {
                     self.note_input.push('\n');
+                }
+                _ => {}
+            },
+            InputMode::Tag => match key.code {
+                KeyCode::Esc => {
+                    // Exit tag mode
+                    self.tag_input.clear();
+                    self.input_mode = InputMode::Normal;
+                }
+                KeyCode::Enter => {
+                    // Add tag
+                    let tag = self.tag_input.trim().to_string();
+                    if !tag.is_empty() && !self.current_tags.contains(&tag) {
+                        self.current_tags.push(tag);
+                    }
+                    self.tag_input.clear();
+                }
+                KeyCode::Char(c) => {
+                    self.tag_input.push(c);
+                }
+                KeyCode::Backspace => {
+                    if self.tag_input.is_empty() && !self.current_tags.is_empty() {
+                        // Remove last tag if input is empty
+                        self.current_tags.pop();
+                    } else {
+                        self.tag_input.pop();
+                    }
                 }
                 _ => {}
             },
@@ -303,12 +345,14 @@ impl App {
                     // Update existing note
                     if let Some(note) = self.notes.iter_mut().find(|n| &n.id == note_id) {
                         note.content = self.note_input.clone();
+                        note.tags = self.current_tags.clone();
                         note.touch();
                         repo.update(note, key)?;
                     }
                 } else {
                     // Create new note
-                    let note = Note::new(self.note_input.clone());
+                    let mut note = Note::new(self.note_input.clone());
+                    note.tags = self.current_tags.clone();
                     repo.create(&note, key)?;
                     self.notes.insert(0, note);
                 }
@@ -508,25 +552,65 @@ impl App {
         let mode_text = match self.input_mode {
             InputMode::Normal => "NORMAL",
             InputMode::Insert => "INSERT",
+            InputMode::Tag => "TAG",
         };
 
         let block = Block::default()
             .title(format!("Note - {}", mode_text))
             .borders(Borders::ALL);
 
+        let constraints = vec![
+            Constraint::Length(2),  // Tags display
+            Constraint::Min(0),     // Note content
+            Constraint::Length(3),  // Help text
+        ];
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Min(0), Constraint::Length(3)])
+            .constraints(constraints)
             .split(size);
 
+        // Render tags
+        let tags_text = if self.current_tags.is_empty() {
+            if matches!(self.input_mode, InputMode::Tag) {
+                format!("Tags: {}_", self.tag_input)
+            } else {
+                "Tags: (none - press 't' to add)".to_string()
+            }
+        } else {
+            if matches!(self.input_mode, InputMode::Tag) {
+                format!("Tags: {} {}_",
+                    self.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" "),
+                    self.tag_input
+                )
+            } else {
+                format!("Tags: {}",
+                    self.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
+                )
+            }
+        };
+
+        let tags_style = if matches!(self.input_mode, InputMode::Tag) {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default().fg(Color::Blue)
+        };
+
+        let tags = Paragraph::new(tags_text)
+            .style(tags_style);
+        frame.render_widget(tags, chunks[0]);
+
+        // Render note content
         let text = Paragraph::new(self.note_input.clone())
             .block(block)
             .wrap(Wrap { trim: false });
+        frame.render_widget(text, chunks[1]);
 
+        // Help text
         let help = match self.input_mode {
             InputMode::Normal => {
-                Paragraph::new("i: insert mode | q/Esc: save & quit")
+                Paragraph::new("i: insert | t: tags | q/Esc: save & quit")
                     .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center)
             }
@@ -535,29 +619,47 @@ impl App {
                     .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center)
             }
+            InputMode::Tag => {
+                Paragraph::new("Type tag name | Enter: add | Backspace: remove last | Esc: exit")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .alignment(Alignment::Center)
+            }
         };
+        frame.render_widget(help, chunks[2]);
 
-        frame.render_widget(text, chunks[0]);
-        frame.render_widget(help, chunks[1]);
+        // Show cursor
+        match self.input_mode {
+            InputMode::Insert => {
+                // Calculate cursor position at end of text
+                let lines: Vec<&str> = self.note_input.lines().collect();
+                let line_count = if self.note_input.is_empty() {
+                    0
+                } else {
+                    lines.len().saturating_sub(1)
+                };
+                let last_line_len = lines.last().map(|l| l.len()).unwrap_or(0);
 
-        // Show cursor when in insert mode
-        if matches!(self.input_mode, InputMode::Insert) {
-            // Calculate cursor position at end of text
-            let lines: Vec<&str> = self.note_input.lines().collect();
-            let line_count = if self.note_input.is_empty() {
-                0
-            } else {
-                lines.len().saturating_sub(1) // Last line index (0-based)
-            };
-            let last_line_len = lines.last().map(|l| l.len()).unwrap_or(0);
+                frame.set_cursor_position((
+                    chunks[1].x + 1 + last_line_len as u16,
+                    chunks[1].y + 1 + line_count as u16,
+                ));
+            }
+            InputMode::Tag => {
+                // Cursor after tag input
+                let tag_prefix_len = if self.current_tags.is_empty() {
+                    "Tags: ".len()
+                } else {
+                    format!("Tags: {} ",
+                        self.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
+                    ).len()
+                };
 
-            // chunks[0] has the block border
-            // x position: block left + border (1) + text column
-            // y position: block top + border (1) + line index
-            frame.set_cursor_position((
-                chunks[0].x + 1 + last_line_len as u16,
-                chunks[0].y + 1 + line_count as u16,
-            ));
+                frame.set_cursor_position((
+                    chunks[0].x + tag_prefix_len as u16 + self.tag_input.len() as u16,
+                    chunks[0].y,
+                ));
+            }
+            _ => {}
         }
     }
 
