@@ -1,5 +1,9 @@
 use anyhow::{Context, Result};
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::{
+    event::{KeyCode, KeyEvent, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
@@ -7,7 +11,13 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
-use std::path::PathBuf;
+use std::{
+    env,
+    io::{self, Write},
+    path::PathBuf,
+    process::Command,
+};
+use tempfile::NamedTempFile;
 
 use crate::{
     crypto::{CryptoService, KeyManager},
@@ -241,6 +251,12 @@ impl App {
                 KeyCode::Char('i') => {
                     self.input_mode = InputMode::Insert;
                 }
+                KeyCode::Char('e') => {
+                    // Edit with external $EDITOR
+                    if let Ok(content) = self.edit_with_external_editor() {
+                        self.note_input = content;
+                    }
+                }
                 KeyCode::Char('t') => {
                     // Enter tag mode
                     self.tag_input.clear();
@@ -415,6 +431,48 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    /// Edit note content with external $EDITOR
+    fn edit_with_external_editor(&self) -> Result<String> {
+        // Create temporary file with current note content
+        let mut temp_file = NamedTempFile::new()
+            .context("Failed to create temporary file")?;
+        temp_file
+            .write_all(self.note_input.as_bytes())
+            .context("Failed to write to temporary file")?;
+        temp_file.flush()?;
+
+        let temp_path = temp_file.path();
+
+        // Suspend TUI
+        disable_raw_mode().context("Failed to disable raw mode")?;
+        execute!(io::stdout(), LeaveAlternateScreen)
+            .context("Failed to leave alternate screen")?;
+
+        // Get editor from environment (default to vi)
+        let editor = env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+
+        // Launch editor
+        let status = Command::new(&editor)
+            .arg(temp_path)
+            .status()
+            .context(format!("Failed to launch editor: {}", editor))?;
+
+        // Resume TUI
+        execute!(io::stdout(), EnterAlternateScreen)
+            .context("Failed to enter alternate screen")?;
+        enable_raw_mode().context("Failed to enable raw mode")?;
+
+        if !status.success() {
+            anyhow::bail!("Editor exited with non-zero status");
+        }
+
+        // Read modified content
+        let content = std::fs::read_to_string(temp_path)
+            .context("Failed to read modified content")?;
+
+        Ok(content)
     }
 
     /// Render the UI
@@ -738,6 +796,7 @@ impl App {
                 Span::styled("NOTE EDITOR - NORMAL MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  i                     Enter insert mode"),
+            Line::from("  e                     Edit with external $EDITOR"),
             Line::from("  t                     Enter tag mode"),
             Line::from("  ?                     Show this help"),
             Line::from("  q / Esc               Save and return to list"),
