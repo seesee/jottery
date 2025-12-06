@@ -79,11 +79,14 @@ impl EncryptionMetadata {
 
 /// Encrypted data structure
 /// Used for storing encrypted content
+/// Compatible with both TUI format (nonce+tag) and web app format (iv only)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedData {
-    pub ciphertext: String, // Base64-encoded encrypted data
-    pub nonce: String,      // Base64-encoded nonce/IV
-    pub tag: String,        // Base64-encoded authentication tag (for GCM)
+    pub ciphertext: String,       // Base64-encoded encrypted data
+    #[serde(alias = "iv")]
+    pub nonce: String,            // Base64-encoded nonce/IV
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub tag: String,              // Base64-encoded authentication tag (for GCM, optional for web compat)
 }
 
 impl EncryptedData {
@@ -106,9 +109,7 @@ impl EncryptedData {
             return Err("Nonce cannot be empty".to_string());
         }
 
-        if self.tag.is_empty() {
-            return Err("Tag cannot be empty".to_string());
-        }
+        // Tag is optional for web app compatibility (Web Crypto API includes tag in ciphertext)
 
         // Validate all fields are valid base64
         if general_purpose::STANDARD.decode(&self.ciphertext).is_err() {
@@ -119,7 +120,7 @@ impl EncryptedData {
             return Err("Nonce must be valid base64".to_string());
         }
 
-        if general_purpose::STANDARD.decode(&self.tag).is_err() {
+        if !self.tag.is_empty() && general_purpose::STANDARD.decode(&self.tag).is_err() {
             return Err("Tag must be valid base64".to_string());
         }
 
