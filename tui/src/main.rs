@@ -8,6 +8,8 @@ mod ui;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use std::fs::OpenOptions;
+use std::sync::{Arc, Mutex};
 use tracing::info;
 
 use crypto::CryptoService;
@@ -25,6 +27,10 @@ struct Cli {
     /// Enable debug logging
     #[arg(short, long)]
     debug: bool,
+
+    /// Debug log file path (for troubleshooting)
+    #[arg(long)]
+    debug_log: Option<PathBuf>,
 
     /// Reset: delete the database and start fresh
     #[arg(long)]
@@ -139,12 +145,24 @@ fn main() -> Result<()> {
         }
     }
 
+    // Open debug log file if specified
+    let debug_log = if let Some(log_path) = cli.debug_log {
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+            .context(format!("Failed to open debug log: {}", log_path.display()))?;
+        Some(Arc::new(Mutex::new(file)))
+    } else {
+        None
+    };
+
     // Create TUI
     let mut tui = Tui::new()?;
     tui.enter()?;
 
     // Create app
-    let mut app = App::new(db_path)?;
+    let mut app = App::new(db_path, debug_log)?;
 
     // Event handler
     let events = EventHandler::default();

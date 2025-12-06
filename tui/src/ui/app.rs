@@ -13,9 +13,11 @@ use ratatui::{
 };
 use std::{
     env,
+    fs::File,
     io::{self, Write},
     path::PathBuf,
     process::Command,
+    sync::{Arc, Mutex},
 };
 use tempfile::NamedTempFile;
 
@@ -110,11 +112,13 @@ pub struct App {
     editing_note_id: Option<String>,
     /// Settings
     settings: UserSettings,
+    /// Debug log file (for troubleshooting)
+    debug_log: Option<Arc<Mutex<File>>>,
 }
 
 impl App {
     /// Create a new app
-    pub fn new(db_path: PathBuf) -> Result<Self> {
+    pub fn new(db_path: PathBuf, debug_log: Option<Arc<Mutex<File>>>) -> Result<Self> {
         let is_new_database = !db_path.exists();
 
         Ok(Self {
@@ -142,7 +146,19 @@ impl App {
             selected_note: 0,
             editing_note_id: None,
             settings: UserSettings::default(),
+            debug_log,
         })
+    }
+
+    /// Write to debug log if enabled
+    fn debug_log(&self, message: &str) {
+        if let Some(log) = &self.debug_log {
+            if let Ok(mut file) = log.lock() {
+                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+                let _ = writeln!(file, "[{}] {}", timestamp, message);
+                let _ = file.flush();
+            }
+        }
     }
 
     /// Handle key events
@@ -342,6 +358,24 @@ impl App {
                 KeyCode::Up | KeyCode::Char('k') => {
                     if self.selected_note > 0 {
                         self.selected_note -= 1;
+                    }
+                }
+                KeyCode::Char('p') => {
+                    // Toggle pin on selected note
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note_id = filtered[self.selected_note].id.clone();
+                        if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
+                            note.pinned = !note.pinned;
+
+                            // Save to database
+                            if let (Some(db), Some(key)) = (&self.db, &self.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    self.error = Some(format!("Failed to update pin status: {}", e));
+                                }
+                            }
+                        }
                     }
                 }
                 KeyCode::Char('d') => {
@@ -595,13 +629,47 @@ impl App {
         };
 
         // Derive encryption key from password and salt
+        self.debug_log(&format!("Unlock - Password length: {} chars", self.password_input.len()));
+        self.debug_log(&format!("Unlock - Password is empty: {}", self.password_input.is_empty()));
+
         let key = self
             .crypto
             .derive_key(&self.password_input, &salt, iterations)?;
 
+        // Debug logging for troubleshooting
+        self.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(&salt)));
+        self.debug_log(&format!("Unlock - Salt length: {} bytes", salt.len()));
+        self.debug_log(&format!("Unlock - Iterations: {}", iterations));
+        self.debug_log(&format!("Unlock - Key (first 8 bytes): {}", hex::encode(&key[0..8])));
+
         self.key_manager.set_master_key(key);
         self.key = Some(key);
         self.db = Some(db);
+
+        // Check if API key needs encryption (from paste credentials flow)
+        if let Some(db) = &self.db {
+            use crate::repository::sync::SyncRepository;
+            let sync_repo = SyncRepository::new(db.connection());
+
+            if let Ok(Some(mut metadata)) = sync_repo.get_metadata() {
+                if let Some(api_key_str) = &metadata.api_key {
+                    // Check if API key is plaintext (prefixed with "PLAINTEXT:")
+                    if let Some(plaintext_key) = api_key_str.strip_prefix("PLAINTEXT:") {
+                        self.debug_log("Unlock - Detected plaintext API key, encrypting with new key");
+
+                        // Encrypt API key with the newly derived key
+                        let encrypted = self.crypto.encrypt_text(plaintext_key, &key)?;
+                        let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+                        // Update metadata with encrypted API key
+                        metadata.api_key = Some(encrypted_api_key);
+                        sync_repo.update_metadata(&metadata)?;
+
+                        self.debug_log("Unlock - API key encrypted and saved");
+                    }
+                }
+            }
+        }
 
         // Load notes
         self.load_notes()?;
@@ -654,61 +722,79 @@ impl App {
         Ok(())
     }
 
-    /// Filter notes based on search query
+    /// Filter notes based on search query and sort (pinned first, then by modified date)
     fn filtered_notes(&self) -> Vec<&Note> {
-        if self.search_input.is_empty() {
-            return self.notes.iter().collect();
-        }
+        let mut notes: Vec<&Note> = if self.search_input.is_empty() {
+            self.notes.iter().collect()
+        } else {
+            let query = self.search_input.to_lowercase();
+            let query_parts: Vec<&str> = query.split_whitespace().collect();
 
-        let query = self.search_input.to_lowercase();
-        let query_parts: Vec<&str> = query.split_whitespace().collect();
+            self.notes
+                .iter()
+                .filter(|note| {
+                    let content_lower = note.content.to_lowercase();
 
-        self.notes
-            .iter()
-            .filter(|note| {
-                let content_lower = note.content.to_lowercase();
-
-                // Check each query part
-                for part in &query_parts {
-                    if part.starts_with('#') {
-                        // Tag search
-                        let tag = &part[1..];
-                        if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                            return false;
-                        }
-                    } else if part.starts_with('-') {
-                        // Negation
-                        let neg_word = &part[1..];
-                        if content_lower.contains(neg_word) {
-                            return false;
-                        }
-                    } else {
-                        // Regular text search
-                        if !content_lower.contains(part) {
-                            return false;
+                    // Check each query part
+                    for part in &query_parts {
+                        if part.starts_with('#') {
+                            // Tag search
+                            let tag = &part[1..];
+                            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
+                                return false;
+                            }
+                        } else if part.starts_with('-') {
+                            // Negation
+                            let neg_word = &part[1..];
+                            if content_lower.contains(neg_word) {
+                                return false;
+                            }
+                        } else {
+                            // Regular text search
+                            if !content_lower.contains(part) {
+                                return false;
+                            }
                         }
                     }
-                }
 
-                true
-            })
-            .collect()
+                    true
+                })
+                .collect()
+        };
+
+        // Sort: pinned first, then by modified_at descending
+        notes.sort_by(|a, b| {
+            match (a.pinned, b.pinned) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => b.modified_at.cmp(&a.modified_at),
+            }
+        });
+
+        notes
     }
 
     /// Trigger manual sync
     fn trigger_sync(&mut self) {
+        self.debug_log("trigger_sync - Called");
+        self.debug_log(&format!("trigger_sync - sync_enabled: {}", self.settings.sync_enabled));
+        self.debug_log(&format!("trigger_sync - sync_endpoint: {:?}", self.settings.sync_endpoint));
+
         // Check if sync is configured
         if !self.settings.sync_enabled {
+            self.debug_log("trigger_sync - Sync not enabled, returning");
             self.sync_status = Some("Sync not enabled. Press 's' to configure in settings.".to_string());
             return;
         }
 
         if self.settings.sync_endpoint.is_none() {
+            self.debug_log("trigger_sync - Sync endpoint not configured, returning");
             self.sync_status = Some("Sync endpoint not configured. Configure in database settings table.".to_string());
             return;
         }
 
         // Perform sync
+        self.debug_log("trigger_sync - Starting sync");
         self.sync_status = Some("Syncing...".to_string());
 
         match self.perform_sync() {
@@ -846,10 +932,22 @@ impl App {
             .context("Failed to parse pull response")?;
 
         // Apply remote changes
+        self.debug_log(&format!("Pull - Received {} notes from server", pull_response.notes.len()));
+
         for remote_note in pull_response.notes {
+            self.debug_log(&format!("Pull - Processing note: {}", remote_note.id));
+
             // Decrypt content and tags from server (they're stored encrypted on server)
+            self.debug_log(&format!("Pull - Encrypted content JSON: {}", &remote_note.content));
+
             let encrypted_content: crate::crypto::EncryptedData = serde_json::from_str(&remote_note.content)?;
+            self.debug_log(&format!("Pull - Encrypted data - ciphertext len: {}, nonce len: {}, tag len: {}",
+                encrypted_content.ciphertext.len(),
+                encrypted_content.nonce.len(),
+                encrypted_content.tag.len()));
+
             let decrypted_content = self.crypto.decrypt_text(&encrypted_content, key)?;
+            self.debug_log(&format!("Pull - Successfully decrypted content, length: {} chars", decrypted_content.len()));
 
             let decrypted_tags: Vec<String> = remote_note.tags.iter()
                 .map(|tag_json| {
@@ -870,6 +968,10 @@ impl App {
                     local_note.deleted = remote_note.deleted;
                     local_note.deleted_at = remote_note.deleted_at;
                     local_note.version = remote_note.version;
+                    local_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
+                    if let Some(lang_str) = &remote_note.syntax_language {
+                        local_note.syntax_language = lang_str.parse().unwrap_or_default();
+                    }
 
                     note_repo.update(local_note, key)?;
                     sync_count += 1;
@@ -885,6 +987,10 @@ impl App {
                 new_note.deleted = remote_note.deleted;
                 new_note.deleted_at = remote_note.deleted_at;
                 new_note.version = remote_note.version;
+                new_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
+                if let Some(lang_str) = &remote_note.syntax_language {
+                    new_note.syntax_language = lang_str.parse().unwrap_or_default();
+                }
 
                 note_repo.create(&new_note, key)?;
                 self.notes.insert(0, new_note);
@@ -1034,72 +1140,75 @@ impl App {
         let creds = SyncCredentials::from_base64(&clipboard_text.trim())
             .context("Invalid sync credentials format")?;
 
-        // Encrypt API key with master key
-        let encrypted_api_key = if let Some(key) = &self.key {
-            let encrypted = self.crypto.encrypt_text(&creds.api_key, key)?;
-            serde_json::to_string(&encrypted)?
-        } else {
-            anyhow::bail!("Database not unlocked");
-        };
+        self.debug_log(&format!("Paste credentials - endpoint: {}", creds.endpoint));
+        self.debug_log(&format!("Paste credentials - client_id: {}", creds.client_id));
+        self.debug_log(&format!("Paste credentials - has salt: {}", creds.salt.is_some()));
 
-        // Save to sync metadata
-        if let Some(db) = &self.db {
-            let sync_repo = SyncRepository::new(db.connection());
+        // Get database
+        let db = self.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
-            // Get or create sync metadata
-            let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+        // If web app salt is provided, update it first
+        // We'll encrypt the API key AFTER the user unlocks with the new salt
+        if let Some(salt_b64) = &creds.salt {
+            use base64::Engine;
+            use crate::repository::encryption::EncryptionRepository;
+            let encryption_repo = EncryptionRepository::new(db.connection());
 
-            // Update with pasted credentials
-            metadata.api_key = Some(encrypted_api_key);
-            metadata.client_id = Some(creds.client_id);
-            metadata.sync_endpoint = creds.endpoint.clone();
-            metadata.sync_enabled = true;
+            // Decode the base64 salt from web app
+            let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
+                .context("Invalid base64 salt from sync credentials")?;
 
-            sync_repo.update_metadata(&metadata)?;
+            self.debug_log(&format!("Paste credentials - Salt (base64): {}", salt_b64));
+            self.debug_log(&format!("Paste credentials - Salt (hex): {}", hex::encode(&salt)));
+            self.debug_log(&format!("Paste credentials - Salt length: {} bytes", salt.len()));
 
-            // If web app salt is provided, update encryption metadata to use the same salt
-            // This ensures both clients derive the same encryption key from the same password
-            if let Some(salt_b64) = creds.salt {
-                use base64::Engine;
-                use crate::repository::encryption::EncryptionRepository;
-                let encryption_repo = EncryptionRepository::new(db.connection());
-
-                // Decode the base64 salt from web app
-                let salt = base64::engine::general_purpose::STANDARD.decode(&salt_b64)
-                    .context("Invalid base64 salt from sync credentials")?;
-
-                // Validate salt length - must be at least 32 bytes (256 bits) for PBKDF2
-                if salt.len() < 32 {
-                    anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes). Web app salt may be incompatible with TUI.", salt.len());
-                }
-
-                // Update encryption metadata with web app's salt AND iteration count
-                // This allows TUI to decrypt notes encrypted by web app
-                // Web app uses 100,000 iterations (DEFAULT_ITERATIONS in crypto.ts)
-                // TUI normally uses 256,000, but we match web app for sync compatibility
-                encryption_repo.save(&salt, 100_000)?;
-
-                // Re-derive the encryption key with the new salt
-                // CRITICAL: We need to update the in-memory key to match the new salt
-
-                // Automatically lock the database to force re-unlock with new salt
-                // This ensures the encryption key is derived with the web app's salt
-                self.key = None;
-                self.notes.clear();
-                self.selected_note = 0;
-                self.password_input.clear();
-                self.password_confirm.clear();
-                self.input_mode = InputMode::Normal;
-                self.state = AppState::Locked;
-
-                // Show message about what happened
-                self.error = Some("Salt synchronized! Please re-enter your password to unlock with the new encryption salt.".to_string());
+            // Validate salt length - must be at least 32 bytes (256 bits) for PBKDF2
+            if salt.len() < 32 {
+                anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes). Web app salt may be incompatible with TUI.", salt.len());
             }
 
-            // Also update settings
-            self.settings.sync_endpoint = Some(creds.endpoint);
-            self.settings.sync_enabled = true;
-            self.save_settings()?;
+            // Update encryption metadata with web app's salt AND iteration count
+            self.debug_log("Paste credentials - Saving salt with 100,000 iterations");
+            encryption_repo.save(&salt, 100_000)?;
+            self.debug_log("Paste credentials - Salt saved successfully");
+        }
+
+        // Save sync metadata with PLAINTEXT API key temporarily
+        // It will be encrypted on next unlock with the new salt
+        let sync_repo = SyncRepository::new(db.connection());
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+
+        // Store API key as plaintext temporarily (will be encrypted on next unlock)
+        // We use a special marker to indicate it needs encryption
+        self.debug_log("Paste credentials - Storing API key (will encrypt on next unlock)");
+        metadata.api_key = Some(format!("PLAINTEXT:{}", creds.api_key));
+        metadata.client_id = Some(creds.client_id);
+        metadata.sync_endpoint = creds.endpoint.clone();
+        metadata.sync_enabled = true;
+
+        sync_repo.update_metadata(&metadata)?;
+
+        // Update settings
+        self.settings.sync_endpoint = Some(creds.endpoint);
+        self.settings.sync_enabled = true;
+        self.save_settings()?;
+
+        // If web app salt was provided, we need to lock and force re-unlock with the new salt
+        // This ensures the user knows the salt was changed and re-enters their password
+        if creds.salt.is_some() {
+            self.debug_log("Paste credentials - Locking database to force re-unlock with new salt");
+
+            // Automatically lock the database
+            self.key = None;
+            self.notes.clear();
+            self.selected_note = 0;
+            self.password_input.clear();
+            self.password_confirm.clear();
+            self.input_mode = InputMode::Normal;
+            self.state = AppState::Locked;
+
+            // Show message about what happened
+            self.error = Some("Salt synchronized! Please re-enter your password to unlock with the new encryption salt.".to_string());
         }
 
         Ok(())
@@ -1333,17 +1442,27 @@ impl App {
     fn render_note_list(&self, frame: &mut Frame) {
         let size = frame.area();
 
-        // Split into left (list) and right (preview) panes
+        // Main layout: content + help at bottom
+        let main_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .split(size);
+
+        let content_area = main_layout[0];
+        let help_area = main_layout[1];
+
+        // Split content into left (list) and right (preview) panes
+        // Notes pane is fixed width (40 chars), preview takes the rest
         let main_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-            .split(size);
+            .constraints([Constraint::Length(42), Constraint::Min(0)])
+            .split(content_area);
 
         // Left pane: note list
         let left_pane = main_chunks[0];
         let right_pane = main_chunks[1];
 
-        // Left pane layout: search bar (optional), list, help
+        // Left pane layout: search bar (optional), list
         let title = if self.search_active {
             "Notes (Search)"
         } else {
@@ -1351,9 +1470,9 @@ impl App {
         };
 
         let left_constraints = if self.search_active {
-            vec![Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)]
+            vec![Constraint::Length(3), Constraint::Min(0)]
         } else {
-            vec![Constraint::Min(0), Constraint::Length(3)]
+            vec![Constraint::Min(0)]
         };
 
         let left_chunks = Layout::default()
@@ -1362,15 +1481,15 @@ impl App {
             .split(left_pane);
 
         // Render search bar if active
-        let (list_chunk, help_chunk) = if self.search_active {
+        let list_chunk = if self.search_active {
             let search_text = format!("Search: {}", self.search_input);
             let search_bar = Paragraph::new(search_text)
                 .style(Style::default().fg(Color::Yellow))
                 .block(Block::default().title("Search").borders(Borders::ALL));
             frame.render_widget(search_bar, left_chunks[0]);
-            (left_chunks[1], left_chunks[2])
+            left_chunks[1]
         } else {
-            (left_chunks[0], left_chunks[1])
+            left_chunks[0]
         };
 
         // Render note list
@@ -1384,11 +1503,24 @@ impl App {
             .enumerate()
             .map(|(i, note)| {
                 let content = note.content.lines().next().unwrap_or("");
-                let preview = if content.len() > 30 {
+                let mut preview = if content.len() > 30 {
                     format!("{}...", &content[..30])
                 } else {
                     content.to_string()
                 };
+
+                // Add indicators for pinned and attachments
+                let mut indicators = String::new();
+                if note.pinned {
+                    indicators.push_str("📌 ");
+                }
+                if !note.attachments.is_empty() {
+                    indicators.push_str(&format!("📎{} ", note.attachments.len()));
+                }
+
+                if !indicators.is_empty() {
+                    preview = format!("{}{}", indicators, preview);
+                }
 
                 let style = if i == self.selected_note {
                     Style::default()
@@ -1405,13 +1537,13 @@ impl App {
         let list = List::new(items).block(list_block);
         frame.render_widget(list, list_chunk);
 
-        // Help text or sync status
+        // Help text (full width at bottom)
         let status_text = if let Some(ref status) = self.sync_status {
             status.clone()
         } else if self.search_active {
             "Type: search | Esc: exit | ↑/↓: navigate".to_string()
         } else {
-            "/: search | y: sync | s: settings | n: new | i: edit".to_string()
+            "/: search | p: pin | y: sync | s: settings | n: new | i: edit".to_string()
         };
         let help = Paragraph::new(status_text)
             .style(if self.sync_status.is_some() {
@@ -1420,7 +1552,7 @@ impl App {
                 Style::default().fg(Color::DarkGray)
             })
             .alignment(Alignment::Center);
-        frame.render_widget(help, help_chunk);
+        frame.render_widget(help, help_area);
 
         // Right pane: note preview
         let preview_block = Block::default()
@@ -1430,14 +1562,30 @@ impl App {
         if !filtered.is_empty() && self.selected_note < filtered.len() {
             let note = filtered[self.selected_note];
 
-            // Show tags if present
-            let tags_line = if !note.tags.is_empty() {
-                format!("Tags: {}\n\n", note.tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" "))
+            // Build metadata line (tags and syntax language)
+            let mut metadata_parts = Vec::new();
+
+            // Show tags (or n/a if none)
+            let tags_str = if !note.tags.is_empty() {
+                note.tags.iter()
+                    .map(|t| format!("#{}", t))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            } else {
+                "n/a".to_string()
+            };
+            metadata_parts.push(format!("Tags: {}", tags_str));
+
+            // Show syntax language
+            metadata_parts.push(format!("Type: {}", note.syntax_language));
+
+            let metadata_line = if !metadata_parts.is_empty() {
+                format!("{}\n\n", metadata_parts.join(" | "))
             } else {
                 String::new()
             };
 
-            let preview_text = format!("{}{}", tags_line, note.content);
+            let preview_text = format!("{}{}", metadata_line, note.content);
             let preview = Paragraph::new(preview_text)
                 .block(preview_block)
                 .wrap(Wrap { trim: false });

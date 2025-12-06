@@ -83,7 +83,7 @@ impl EncryptionMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedData {
     pub ciphertext: String,       // Base64-encoded encrypted data
-    #[serde(alias = "iv")]
+    #[serde(rename = "iv", alias = "nonce")]
     pub nonce: String,            // Base64-encoded nonce/IV
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tag: String,              // Base64-encoded authentication tag (for GCM, optional for web compat)
