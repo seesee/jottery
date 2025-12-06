@@ -704,15 +704,184 @@ impl App {
             return;
         }
 
-        // TODO: Implement actual sync with server
-        // This would:
-        // 1. Collect modified notes since last sync
-        // 2. POST to /api/v1/sync/push with notes
-        // 3. POST to /api/v1/sync/pull to get remote changes
-        // 4. Apply changes with conflict resolution
-        // 5. Update sync metadata
+        // Perform sync
+        self.sync_status = Some("Syncing...".to_string());
 
-        self.sync_status = Some("Sync framework ready. Full implementation coming soon.".to_string());
+        match self.perform_sync() {
+            Ok(result) => {
+                self.sync_status = Some(format!("Sync complete! {} notes synced", result));
+            }
+            Err(e) => {
+                self.error = Some(format!("Sync failed: {}", e));
+                self.sync_status = None;
+            }
+        }
+    }
+
+    /// Perform bidirectional sync with server
+    fn perform_sync(&mut self) -> Result<usize> {
+        use crate::models::sync::{SyncPushRequest, SyncPullRequest, SyncNote, SyncPushResponse, SyncPullResponse};
+        use crate::repository::sync::SyncRepository;
+        use chrono::Utc;
+
+        let db = self.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+        let key = self.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+        let sync_repo = SyncRepository::new(db.connection());
+        let note_repo = NoteRepository::new(db.connection());
+
+        // Get sync metadata
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+
+        // Get API key
+        let encrypted_api_key = metadata.api_key.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
+        let api_key_encrypted: crate::crypto::EncryptedData = serde_json::from_str(encrypted_api_key)?;
+        let api_key = self.crypto.decrypt_text(&api_key_encrypted, key)?;
+
+        let endpoint = metadata.sync_endpoint.clone();
+
+        // PUSH: Send local changes to server
+        let last_sync = metadata.last_sync_at;
+        let notes_to_push = if let Some(last_sync) = last_sync {
+            note_repo.get_modified_after(last_sync, key)?
+        } else {
+            note_repo.list(false, key)?
+        };
+
+        let mut sync_count = 0;
+
+        if !notes_to_push.is_empty() {
+            // Convert notes to sync format
+            let sync_notes: Vec<SyncNote> = notes_to_push.iter().map(|note| {
+                SyncNote {
+                    id: note.id.clone(),
+                    created_at: note.created_at,
+                    modified_at: note.modified_at,
+                    content: note.content.clone(),
+                    tags: note.tags.clone(),
+                    attachments: vec![], // TODO: Handle attachments
+                    pinned: note.pinned,
+                    deleted: note.deleted,
+                    deleted_at: note.deleted_at,
+                    version: note.version,
+                    word_wrap: Some(note.word_wrap),
+                    syntax_language: Some(note.syntax_language.to_string()),
+                }
+            }).collect();
+
+            let push_request = SyncPushRequest {
+                notes: sync_notes,
+                attachments: vec![],
+            };
+
+            // Create HTTP client
+            let client = reqwest::blocking::Client::new();
+            let push_url = format!("{}/api/v1/sync/push", endpoint);
+
+            let response = client
+                .post(&push_url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&push_request)
+                .send()
+                .context("Failed to send push request")?;
+
+            if !response.status().is_success() {
+                let status = response.status();
+                let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+                anyhow::bail!("Push failed: {} - {}", status, error_text);
+            }
+
+            let push_response: SyncPushResponse = response.json()
+                .context("Failed to parse push response")?;
+
+            sync_count += push_response.accepted.len();
+
+            // Update last push timestamp
+            metadata.last_push_at = Some(Utc::now());
+        }
+
+        // PULL: Get changes from server
+        let known_note_ids: Vec<String> = self.notes.iter().map(|n| n.id.clone()).collect();
+
+        let pull_request = SyncPullRequest {
+            last_sync_at: last_sync,
+            known_note_ids,
+        };
+
+        let pull_url = format!("{}/api/v1/sync/pull", endpoint);
+        let client = reqwest::blocking::Client::new();
+
+        let response = client
+            .post(&pull_url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&pull_request)
+            .send()
+            .context("Failed to send pull request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Pull failed: {} - {}", status, error_text);
+        }
+
+        let pull_response: SyncPullResponse = response.json()
+            .context("Failed to parse pull response")?;
+
+        // Apply remote changes
+        for remote_note in pull_response.notes {
+            // Check if we have this note locally
+            if let Some(local_note) = self.notes.iter_mut().find(|n| n.id == remote_note.id) {
+                // Conflict resolution: Last-Write-Wins
+                if remote_note.modified_at > local_note.modified_at {
+                    // Remote is newer, update local
+                    local_note.content = remote_note.content;
+                    local_note.tags = remote_note.tags;
+                    local_note.modified_at = remote_note.modified_at;
+                    local_note.pinned = remote_note.pinned;
+                    local_note.deleted = remote_note.deleted;
+                    local_note.deleted_at = remote_note.deleted_at;
+                    local_note.version = remote_note.version;
+
+                    note_repo.update(local_note, key)?;
+                    sync_count += 1;
+                }
+            } else {
+                // New note from server, add it
+                let mut new_note = Note::new(remote_note.content);
+                new_note.id = remote_note.id;
+                new_note.created_at = remote_note.created_at;
+                new_note.modified_at = remote_note.modified_at;
+                new_note.tags = remote_note.tags;
+                new_note.pinned = remote_note.pinned;
+                new_note.deleted = remote_note.deleted;
+                new_note.deleted_at = remote_note.deleted_at;
+                new_note.version = remote_note.version;
+
+                note_repo.create(&new_note, key)?;
+                self.notes.insert(0, new_note);
+                sync_count += 1;
+            }
+        }
+
+        // Handle deletions
+        for deletion in pull_response.deletions {
+            if let Some(pos) = self.notes.iter().position(|n| n.id == deletion.id) {
+                note_repo.delete(&deletion.id)?;
+                self.notes.remove(pos);
+                sync_count += 1;
+            }
+        }
+
+        // Update sync metadata
+        metadata.last_sync_at = Some(Utc::now());
+        metadata.last_pull_at = Some(Utc::now());
+        sync_repo.update_metadata(&metadata)?;
+
+        // Reload notes to ensure UI is up to date
+        self.load_notes()?;
+
+        Ok(sync_count)
     }
 
     /// Start editing a setting field

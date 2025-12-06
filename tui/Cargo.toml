@@ -32,7 +32,7 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 tokio = { version = "1.40", features = ["full"] }
 
 # HTTP client for sync
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
 
 # Cryptography
 aes-gcm = "0.10"
