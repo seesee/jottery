@@ -14,7 +14,6 @@ path = "src/main.rs"
 default = ["sqlite"]
 sqlite = ["rusqlite/bundled"]              # normal SQLite
 sqlcipher = ["rusqlite/sqlcipher", "native-tls", "openssl", "openssl-sys"]
-pure-rust = ["pbkdf2", "sha2", "hmac"]
 
 [dependencies]
 # TUI Framework
@@ -46,9 +45,8 @@ tokio = { version = "1.40", features = ["full"] }
 
 # Cryptography
 aes-gcm = "0.10"
-pbkdf2 = { version = "0.12", features = ["simple"], optional = true }
-sha2 = { version = "0.10", optional = true }
-hmac = { version = "0.12", optional = true }
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
 base64 = "0.22"
 rand = "0.8"
 hex = "0.4"

@@ -22,6 +22,14 @@ jobs:
           rustup target add aarch64-unknown-linux-gnu
           rustup target add armv7-unknown-linux-gnueabihf
 
+	  - name: Install ARM cross-compilers
+  		run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+          gcc-aarch64-linux-gnu \
+          gcc-arm-linux-gnueabihf \
+          qemu-user-static
+
       - name: Install SQLCipher
         run: sudo apt-get update && sudo apt-get install -y sqlcipher libsqlcipher-dev
 
