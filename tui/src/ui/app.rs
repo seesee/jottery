@@ -1057,6 +1057,22 @@ impl App {
 
             sync_repo.update_metadata(&metadata)?;
 
+            // If web app salt is provided, update encryption metadata to use the same salt
+            // This ensures both clients derive the same encryption key from the same password
+            if let Some(salt_b64) = creds.salt {
+                use base64::Engine;
+                use crate::repository::encryption::EncryptionRepository;
+                let encryption_repo = EncryptionRepository::new(db.connection());
+
+                // Decode the base64 salt from web app
+                let salt = base64::engine::general_purpose::STANDARD.decode(&salt_b64)
+                    .context("Invalid base64 salt from sync credentials")?;
+
+                // Update encryption metadata with web app's salt
+                // This allows TUI to decrypt notes encrypted by web app
+                encryption_repo.save(&salt, 256_000)?;
+            }
+
             // Also update settings
             self.settings.sync_endpoint = Some(creds.endpoint);
             self.settings.sync_enabled = true;
