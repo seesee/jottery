@@ -56,6 +56,8 @@ pub enum InputMode {
     Insert,
     /// Tag mode (adding tags)
     Tag,
+    /// Settings edit mode
+    SettingsEdit,
 }
 
 /// Application
@@ -86,6 +88,10 @@ pub struct App {
     pub sync_status: Option<String>,
     /// Current error message
     pub error: Option<String>,
+    /// Selected settings field (0-5: language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint)
+    pub selected_setting: usize,
+    /// Settings input buffer (for string/number fields)
+    pub setting_input: String,
     /// Database path
     db_path: PathBuf,
     /// Database connection (when unlocked)
@@ -125,6 +131,8 @@ impl App {
             search_active: false,
             sync_status: None,
             error: None,
+            selected_setting: 0,
+            setting_input: String::new(),
             db_path,
             db: None,
             key: None,
@@ -161,6 +169,12 @@ impl App {
     /// Handle key events in locked state
     fn handle_locked_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
+            KeyCode::Esc => {
+                self.state = AppState::Quit;
+            }
+            KeyCode::Char('q') => {
+                self.state = AppState::Quit;
+            }
             KeyCode::Tab if self.is_new_database => {
                 // Switch between password and confirm fields
                 self.password_confirm_focused = !self.password_confirm_focused;
@@ -200,9 +214,6 @@ impl App {
                 } else {
                     self.password_input.pop();
                 }
-            }
-            KeyCode::Esc | KeyCode::Char('q') => {
-                self.state = AppState::Quit;
             }
             _ => {}
         }
@@ -284,6 +295,10 @@ impl App {
                     self.state = AppState::Settings {
                         previous: Box::new(prev),
                     };
+                    self.input_mode = InputMode::Normal;
+                    self.selected_setting = 0;
+                    self.setting_input.clear();
+                    self.error = None;
                 }
                 KeyCode::Char('y') => {
                     // Sync notes
@@ -355,6 +370,11 @@ impl App {
     /// Handle key events in note view state
     fn handle_note_view_key(&mut self, key: KeyEvent) -> Result<()> {
         match self.input_mode {
+            InputMode::SettingsEdit => {
+                // Settings edit mode should not be active in note view
+                // Reset to normal mode if somehow this happens
+                self.input_mode = InputMode::Normal;
+            }
             InputMode::Normal => match key.code {
                 KeyCode::Char('i') => {
                     self.input_mode = InputMode::Insert;
@@ -451,11 +471,82 @@ impl App {
 
     /// Handle key events in settings screen
     fn handle_settings_key(&mut self, key: KeyEvent) -> Result<()> {
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('s') => {
-                // Return to previous state
-                if let AppState::Settings { previous } = std::mem::replace(&mut self.state, AppState::Quit) {
-                    self.state = *previous;
+        match self.input_mode {
+            InputMode::Normal => {
+                // Navigation mode
+                match key.code {
+                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('s') => {
+                        // Return to previous state
+                        if let AppState::Settings { previous } = std::mem::replace(&mut self.state, AppState::Quit) {
+                            self.state = *previous;
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        // Move down through settings fields
+                        if self.selected_setting < 5 {
+                            self.selected_setting += 1;
+                        }
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        // Move up through settings fields
+                        if self.selected_setting > 0 {
+                            self.selected_setting -= 1;
+                        }
+                    }
+                    KeyCode::Enter | KeyCode::Char('i') | KeyCode::Char(' ') => {
+                        // Edit selected field
+                        self.start_editing_setting();
+                    }
+                    _ => {}
+                }
+            }
+            InputMode::SettingsEdit => {
+                // Editing mode
+                match key.code {
+                    KeyCode::Esc => {
+                        // Cancel editing
+                        self.setting_input.clear();
+                        self.input_mode = InputMode::Normal;
+                    }
+                    KeyCode::Enter => {
+                        // Save edited value
+                        if let Err(e) = self.save_setting_value() {
+                            self.error = Some(format!("Failed to save setting: {}", e));
+                        }
+                        self.setting_input.clear();
+                        self.input_mode = InputMode::Normal;
+                    }
+                    KeyCode::Char(c) => {
+                        // For boolean and enum fields, handle cycling
+                        match self.selected_setting {
+                            1 => {
+                                // Theme: cycle through Light/Dark/Auto
+                                self.cycle_theme();
+                                self.input_mode = InputMode::Normal;
+                            }
+                            2 => {
+                                // Sort order: cycle through Recent/Oldest/Alpha/Created
+                                self.cycle_sort_order();
+                                self.input_mode = InputMode::Normal;
+                            }
+                            4 => {
+                                // Sync enabled: toggle
+                                self.settings.sync_enabled = !self.settings.sync_enabled;
+                                if let Err(e) = self.save_settings() {
+                                    self.error = Some(format!("Failed to save settings: {}", e));
+                                }
+                                self.input_mode = InputMode::Normal;
+                            }
+                            _ => {
+                                // String/number fields: type normally
+                                self.setting_input.push(c);
+                            }
+                        }
+                    }
+                    KeyCode::Backspace => {
+                        self.setting_input.pop();
+                    }
+                    _ => {}
                 }
             }
             _ => {}
@@ -606,6 +697,116 @@ impl App {
         // 5. Update sync metadata
 
         self.sync_status = Some("Sync framework ready. Full implementation coming soon.".to_string());
+    }
+
+    /// Start editing a setting field
+    fn start_editing_setting(&mut self) {
+        // Populate input buffer with current value for string/number fields
+        match self.selected_setting {
+            0 => {
+                // Language
+                self.setting_input = self.settings.language.clone();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            1 => {
+                // Theme: cycle immediately, no input needed
+                self.cycle_theme();
+            }
+            2 => {
+                // Sort order: cycle immediately, no input needed
+                self.cycle_sort_order();
+            }
+            3 => {
+                // Auto-lock timeout
+                self.setting_input = self.settings.auto_lock_timeout.to_string();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            4 => {
+                // Sync enabled: toggle immediately
+                self.settings.sync_enabled = !self.settings.sync_enabled;
+                if let Err(e) = self.save_settings() {
+                    self.error = Some(format!("Failed to save settings: {}", e));
+                }
+            }
+            5 => {
+                // Sync endpoint
+                self.setting_input = self.settings.sync_endpoint.clone().unwrap_or_default();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            _ => {}
+        }
+    }
+
+    /// Save edited setting value
+    fn save_setting_value(&mut self) -> Result<()> {
+        match self.selected_setting {
+            0 => {
+                // Language
+                self.settings.language = self.setting_input.clone();
+            }
+            3 => {
+                // Auto-lock timeout
+                if let Ok(timeout) = self.setting_input.parse::<i32>() {
+                    if timeout >= 1 && timeout <= 1440 {
+                        self.settings.auto_lock_timeout = timeout;
+                    } else {
+                        anyhow::bail!("Auto-lock timeout must be between 1 and 1440 minutes");
+                    }
+                } else {
+                    anyhow::bail!("Invalid number");
+                }
+            }
+            5 => {
+                // Sync endpoint
+                if self.setting_input.is_empty() {
+                    self.settings.sync_endpoint = None;
+                } else {
+                    if !self.setting_input.starts_with("http://") && !self.setting_input.starts_with("https://") {
+                        anyhow::bail!("Sync endpoint must start with http:// or https://");
+                    }
+                    self.settings.sync_endpoint = Some(self.setting_input.clone());
+                }
+            }
+            _ => {}
+        }
+
+        self.save_settings()
+    }
+
+    /// Cycle through theme options
+    fn cycle_theme(&mut self) {
+        use crate::models::Theme;
+        self.settings.theme = match self.settings.theme {
+            Theme::Light => Theme::Dark,
+            Theme::Dark => Theme::Auto,
+            Theme::Auto => Theme::Light,
+        };
+        if let Err(e) = self.save_settings() {
+            self.error = Some(format!("Failed to save settings: {}", e));
+        }
+    }
+
+    /// Cycle through sort order options
+    fn cycle_sort_order(&mut self) {
+        use crate::models::SortOrder;
+        self.settings.sort_order = match self.settings.sort_order {
+            SortOrder::Recent => SortOrder::Oldest,
+            SortOrder::Oldest => SortOrder::Alpha,
+            SortOrder::Alpha => SortOrder::Created,
+            SortOrder::Created => SortOrder::Recent,
+        };
+        if let Err(e) = self.save_settings() {
+            self.error = Some(format!("Failed to save settings: {}", e));
+        }
+    }
+
+    /// Save settings to database
+    fn save_settings(&mut self) -> Result<()> {
+        if let Some(db) = &self.db {
+            let settings_repo = SettingsRepository::new(db.connection());
+            settings_repo.update(&self.settings)?;
+        }
+        Ok(())
     }
 
     /// Delete selected note
@@ -917,6 +1118,7 @@ impl App {
             InputMode::Normal => "NORMAL",
             InputMode::Insert => "INSERT",
             InputMode::Tag => "TAG",
+            InputMode::SettingsEdit => "NORMAL", // Should not happen in note view
         };
 
         let block = Block::default()
@@ -973,7 +1175,7 @@ impl App {
 
         // Help text
         let help = match self.input_mode {
-            InputMode::Normal => {
+            InputMode::Normal | InputMode::SettingsEdit => {
                 Paragraph::new("i: insert | t: tags | q/Esc: save & quit")
                     .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center)
@@ -1031,69 +1233,107 @@ impl App {
     fn render_settings(&self, frame: &mut Frame) {
         let size = frame.area();
 
+        let mode_text = match self.input_mode {
+            InputMode::SettingsEdit => " [EDIT]",
+            _ => "",
+        };
+
         let block = Block::default()
-            .title("Settings - Press s or q to close")
+            .title(format!("Settings{} - ↑/↓: navigate | Enter/i: edit | s/q: close", mode_text))
             .borders(Borders::ALL)
             .style(Style::default().fg(Color::Green));
+
+        // Helper to create field line with selection indicator
+        let field_line = |index: usize, label: String, value: String| -> Line {
+            let selected = index == self.selected_setting;
+            let editing = selected && matches!(self.input_mode, InputMode::SettingsEdit);
+
+            let display_value = if editing && (index == 0 || index == 3 || index == 5) {
+                // Show input buffer for editable fields
+                format!("{}_", self.setting_input)
+            } else {
+                value
+            };
+
+            let prefix = if selected { "→ " } else { "  " };
+            let label_style = if selected {
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            let value_style = if editing {
+                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+            } else if selected {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::Yellow)
+            };
+
+            Line::from(vec![
+                Span::styled(prefix, label_style.clone()),
+                Span::styled(label, label_style),
+                Span::styled(display_value, value_style),
+            ])
+        };
 
         let settings_text = vec![
             Line::from(vec![
                 Span::styled("Application Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::raw("Language:              "),
-                Span::styled(&self.settings.language, Style::default().fg(Color::Yellow)),
-            ]),
-            Line::from(vec![
-                Span::raw("Theme:                 "),
-                Span::styled(format!("{}", self.settings.theme), Style::default().fg(Color::Yellow)),
-            ]),
-            Line::from(vec![
-                Span::raw("Sort Order:            "),
-                Span::styled(format!("{}", self.settings.sort_order), Style::default().fg(Color::Yellow)),
-            ]),
-            Line::from(vec![
-                Span::raw("Auto-lock Timeout:     "),
-                Span::styled(format!("{} minutes", self.settings.auto_lock_timeout), Style::default().fg(Color::Yellow)),
-            ]),
+            field_line(0, "Language:              ".to_string(), self.settings.language.clone()),
+            field_line(1, "Theme:                 ".to_string(), format!("{} (press Enter to cycle)", self.settings.theme)),
+            field_line(2, "Sort Order:            ".to_string(), format!("{} (press Enter to cycle)", self.settings.sort_order)),
+            field_line(3, "Auto-lock Timeout:     ".to_string(), format!("{} minutes", self.settings.auto_lock_timeout)),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Sync Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::raw("Sync Enabled:          "),
-                Span::styled(
-                    if self.settings.sync_enabled { "Yes" } else { "No" },
-                    if self.settings.sync_enabled {
-                        Style::default().fg(Color::Green)
-                    } else {
-                        Style::default().fg(Color::Red)
-                    }
-                ),
-            ]),
-            Line::from(vec![
-                Span::raw("Sync Endpoint:         "),
-                Span::styled(
-                    self.settings.sync_endpoint.clone().unwrap_or_else(|| "Not configured".to_string()),
-                    Style::default().fg(Color::Yellow)
-                ),
-            ]),
+            field_line(4, "Sync Enabled:          ".to_string(), format!("{} (press Enter to toggle)", if self.settings.sync_enabled { "Yes" } else { "No" })),
+            field_line(5, "Sync Endpoint:         ".to_string(), self.settings.sync_endpoint.clone().unwrap_or_else(|| "Not configured".to_string())),
             Line::from(""),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Note: ", Style::default().fg(Color::Cyan)),
-                Span::raw("Settings editing via TUI coming soon."),
+                Span::styled("Instructions: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("For now, settings can be modified via the settings table in the database."),
+            Line::from("  • Use ↑/↓ or j/k to navigate between fields"),
+            Line::from("  • Press Enter, i, or Space to edit a field"),
+            Line::from("  • For text fields: type and press Enter to save, Esc to cancel"),
+            Line::from("  • For toggles and cycles: press Enter to change value immediately"),
         ];
 
-        let paragraph = Paragraph::new(settings_text)
+        // Add error message if present
+        let mut all_lines = settings_text;
+        if let Some(err) = &self.error {
+            all_lines.push(Line::from(""));
+            all_lines.push(Line::from(vec![
+                Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(err.clone(), Style::default().fg(Color::Red)),
+            ]));
+        }
+
+        let paragraph = Paragraph::new(all_lines)
             .block(block)
             .wrap(Wrap { trim: false });
 
         frame.render_widget(paragraph, size);
+
+        // Show cursor when editing text fields
+        if matches!(self.input_mode, InputMode::SettingsEdit) && (self.selected_setting == 0 || self.selected_setting == 3 || self.selected_setting == 5) {
+            // Calculate cursor position based on selected field
+            let line_offset = match self.selected_setting {
+                0 => 2,  // Language is on line 2
+                3 => 5,  // Auto-lock timeout is on line 5
+                5 => 10, // Sync endpoint is on line 10
+                _ => 0,
+            };
+
+            let cursor_x = 26 + self.setting_input.len() as u16; // After label
+            let cursor_y = line_offset + 1; // +1 for border
+
+            frame.set_cursor_position((cursor_x, cursor_y));
+        }
     }
 
     /// Render help screen
@@ -1165,6 +1405,15 @@ impl App {
             Line::from("  Backspace (empty)     Remove last tag"),
             Line::from("  Backspace             Delete character from input"),
             Line::from("  Esc                   Exit to normal mode"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("SETTINGS", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  j/k or ↑/↓            Navigate between fields"),
+            Line::from("  Enter / i / Space     Edit selected field"),
+            Line::from("  Enter                 Save text/number fields, cycle/toggle other fields"),
+            Line::from("  Esc                   Cancel editing (text/number fields)"),
+            Line::from("  s / q                 Close settings panel"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("GLOBAL", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
