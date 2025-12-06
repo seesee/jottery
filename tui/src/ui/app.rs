@@ -172,7 +172,7 @@ impl App {
             KeyCode::Esc => {
                 self.state = AppState::Quit;
             }
-            KeyCode::Char('q') => {
+            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.state = AppState::Quit;
             }
             KeyCode::Tab if self.is_new_database => {
@@ -1353,7 +1353,7 @@ impl App {
             Line::from("  Enter                 Unlock database"),
             Line::from("  Tab                   Switch password/confirm (new DB)"),
             Line::from("  Backspace             Delete character"),
-            Line::from("  q / Esc               Quit application"),
+            Line::from("  Ctrl+q / Esc          Quit application"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("NOTE LIST", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
