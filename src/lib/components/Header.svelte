@@ -3,12 +3,15 @@
   import { lock } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
+  import ReleasesModal from './ReleasesModal.svelte';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
+  export let onOpenReleases: () => void = () => {};
 
   let showLockConfirm = false;
+  let showReleasesModal = false;
 
   function handleNewNoteClick() {
     // Call parent handler
@@ -27,6 +30,10 @@
 
   function handleLockCancel() {
     showLockConfirm = false;
+  }
+
+  function handleOpenReleases() {
+    showReleasesModal = true;
   }
 </script>
 
@@ -82,6 +89,14 @@
       </button>
 
       <button
+        on:click={handleOpenReleases}
+        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
+        title={$_('releases.title')}
+      >
+        🚀 {$_('releases.title')}
+      </button>
+
+      <button
         on:click={handleLockRequest}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
         title={$_('keyboard.lockApp')}
@@ -101,4 +116,9 @@
   confirmClass="bg-blue-600 hover:bg-blue-700"
   onConfirm={handleLockConfirm}
   onCancel={handleLockCancel}
+/>
+
+<ReleasesModal
+  show={showReleasesModal}
+  onClose={() => showReleasesModal = false}
 />

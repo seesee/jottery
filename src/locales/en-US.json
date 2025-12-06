@@ -120,11 +120,14 @@
     "replaceInNote": "Replace in note (CodeMirror)",
     "macNote": "On macOS, use Cmd instead of Ctrl."
   },
-  "confirm": {
-    "deleteDatabase": {
-      "title": "Delete Database",
-      "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
-      "confirmButton": "Delete Database"
-    }
-  }
-}
+  "releases": {
+        "title": "Releases",
+        "description": "Download the Jottery TUI for your platform."
+      },
+      "confirm": {
+        "deleteDatabase": {
+          "title": "Delete Database",
+          "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
+          "confirmButton": "Delete Database"
+        }
+      }}
