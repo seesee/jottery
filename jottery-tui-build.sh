@@ -12,11 +12,11 @@ cargo build --release --target x86_64-unknown-linux-gnu --no-default-features --
 cp target/x86_64-unknown-linux-gnu/release/jottery "$RELEASE_DIR/jottery-linux-x64"
 
 echo "=== Linux ARM64 (SQLite only) ==="
-cargo build --release --target aarch64-unknown-linux-gnu --no-default-features --features sqlite
+cargo build --release --target aarch64-unknown-linux-gnu --no-default-features --features sqlite,pure-rust
 cp target/aarch64-unknown-linux-gnu/release/jottery "$RELEASE_DIR/jottery-linux-arm64"
 
 echo "=== Linux ARMv7 (SQLite only) ==="
-cargo build --release --target armv7-unknown-linux-gnueabihf --no-default-features --features sqlite
+cargo build --release --target armv7-unknown-linux-gnueabihf --no-default-features --features sqlite,pure-rust
 cp target/armv7-unknown-linux-gnueabihf/release/jottery "$RELEASE_DIR/jottery-linux-armv7"
 
 echo "Completed Linux builds."
