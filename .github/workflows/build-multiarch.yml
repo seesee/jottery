@@ -6,15 +6,12 @@ on:
       - "v*"
 
 jobs:
-  # ------------------------------------------------------------
-  # LINUX BUILDS (x64, ARM64, ARMv7)
-  # ------------------------------------------------------------
   linux-tui:
     name: Build Linux TUI Binaries
     runs-on: ubuntu-latest
-    secrets: inherit
-    outputs:
-      artifact-name: linux-tui
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -39,15 +36,13 @@ jobs:
           name: linux-tui
           path: releases/*
 
-  # ------------------------------------------------------------
-  # MACOS BUILD
-  # ------------------------------------------------------------
+
   macos-tui:
     name: Build macOS TUI
     runs-on: macos-latest
-    secrets: inherit
-    outputs:
-      artifact-name: macos-tui
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -68,15 +63,13 @@ jobs:
           name: macos-tui
           path: releases/*
 
-  # ------------------------------------------------------------
-  # WINDOWS BUILD
-  # ------------------------------------------------------------
+
   windows-tui:
     name: Build Windows TUI
     runs-on: windows-latest
-    secrets: inherit
-    outputs:
-      artifact-name: windows-tui
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -98,14 +91,14 @@ jobs:
           name: windows-tui
           path: releases/*
 
-  # ------------------------------------------------------------
-  # AGGREGATE ALL TUI BINARIES
-  # ------------------------------------------------------------
+
   collect-tui:
     name: Collect All TUI Binaries
     needs: [linux-tui, macos-tui, windows-tui]
     runs-on: ubuntu-latest
-    secrets: inherit
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -129,14 +122,14 @@ jobs:
           name: all-tui
           path: releases/*
 
-  # ------------------------------------------------------------
-  # BUILD + PUSH MULTI-ARCH DOCKER IMAGE
-  # ------------------------------------------------------------
+
   docker-build:
     name: Build Multi-Arch Docker Image
     needs: collect-tui
     runs-on: ubuntu-latest
-    secrets: inherit
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
