@@ -1074,24 +1074,17 @@ impl App {
 
                 // Re-derive the encryption key with the new salt
                 // CRITICAL: We need to update the in-memory key to match the new salt
-                if self.password_input.is_empty() {
-                    anyhow::bail!("Password not available for key re-derivation");
-                }
 
-                // Ensure salt has correct length (16 bytes for PBKDF2)
-                if salt.len() != 16 {
-                    anyhow::bail!("Invalid salt length: expected 16 bytes, got {}", salt.len());
-                }
+                // Automatically lock the database to force re-unlock with new salt
+                // This ensures the encryption key is derived with the web app's salt
+                self.key = None;
+                self.notes.clear();
+                self.selected_note = 0;
+                self.password_input.clear();
+                self.state = AppState::Locked;
 
-                let mut salt_array = [0u8; 16];
-                salt_array.copy_from_slice(&salt);
-
-                // Re-derive key with new salt
-                let new_key = self.crypto.derive_key(&self.password_input, &salt_array, 256_000)?;
-
-                // Update the in-memory key
-                self.key = Some(new_key);
-                self.key_manager.set_master_key(new_key);
+                // Show message about what happened
+                self.error = Some("Salt synchronized! Please re-enter your password to unlock with the new encryption salt.".to_string());
             }
 
             // Also update settings
