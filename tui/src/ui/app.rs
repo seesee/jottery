@@ -756,14 +756,25 @@ impl App {
         let mut sync_count = 0;
 
         if !notes_to_push.is_empty() {
-            // Convert notes to sync format
-            let sync_notes: Vec<SyncNote> = notes_to_push.iter().map(|note| {
-                SyncNote {
+            // Convert notes to sync format, encrypting content and tags
+            let sync_notes: Result<Vec<SyncNote>> = notes_to_push.iter().map(|note| {
+                // Encrypt content and tags for transmission to server
+                let encrypted_content = self.crypto.encrypt_text(&note.content, key)?;
+                let content_json = serde_json::to_string(&encrypted_content)?;
+
+                let encrypted_tags: Result<Vec<String>> = note.tags.iter()
+                    .map(|tag| {
+                        let encrypted_tag = self.crypto.encrypt_text(tag, key)?;
+                        Ok(serde_json::to_string(&encrypted_tag)?)
+                    })
+                    .collect();
+
+                Ok(SyncNote {
                     id: note.id.clone(),
                     created_at: note.created_at,
                     modified_at: note.modified_at,
-                    content: note.content.clone(),
-                    tags: note.tags.clone(),
+                    content: content_json,
+                    tags: encrypted_tags?,
                     attachments: vec![], // TODO: Handle attachments
                     pinned: note.pinned,
                     deleted: note.deleted,
@@ -771,8 +782,10 @@ impl App {
                     version: note.version,
                     word_wrap: Some(note.word_wrap),
                     syntax_language: Some(note.syntax_language.to_string()),
-                }
+                })
             }).collect();
+
+            let sync_notes = sync_notes?;
 
             let push_request = SyncPushRequest {
                 notes: sync_notes,
@@ -834,13 +847,24 @@ impl App {
 
         // Apply remote changes
         for remote_note in pull_response.notes {
+            // Decrypt content and tags from server (they're stored encrypted on server)
+            let encrypted_content: crate::crypto::EncryptedData = serde_json::from_str(&remote_note.content)?;
+            let decrypted_content = self.crypto.decrypt_text(&encrypted_content, key)?;
+
+            let decrypted_tags: Vec<String> = remote_note.tags.iter()
+                .map(|tag_json| {
+                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json)?;
+                    self.crypto.decrypt_text(&encrypted_tag, key)
+                })
+                .collect::<Result<Vec<_>>>()?;
+
             // Check if we have this note locally
             if let Some(local_note) = self.notes.iter_mut().find(|n| n.id == remote_note.id) {
                 // Conflict resolution: Last-Write-Wins
                 if remote_note.modified_at > local_note.modified_at {
-                    // Remote is newer, update local
-                    local_note.content = remote_note.content;
-                    local_note.tags = remote_note.tags;
+                    // Remote is newer, update local with decrypted content
+                    local_note.content = decrypted_content;
+                    local_note.tags = decrypted_tags;
                     local_note.modified_at = remote_note.modified_at;
                     local_note.pinned = remote_note.pinned;
                     local_note.deleted = remote_note.deleted;
@@ -851,12 +875,12 @@ impl App {
                     sync_count += 1;
                 }
             } else {
-                // New note from server, add it
-                let mut new_note = Note::new(remote_note.content);
+                // New note from server, add it with decrypted content
+                let mut new_note = Note::new(decrypted_content);
                 new_note.id = remote_note.id;
                 new_note.created_at = remote_note.created_at;
                 new_note.modified_at = remote_note.modified_at;
-                new_note.tags = remote_note.tags;
+                new_note.tags = decrypted_tags;
                 new_note.pinned = remote_note.pinned;
                 new_note.deleted = remote_note.deleted;
                 new_note.deleted_at = remote_note.deleted_at;
