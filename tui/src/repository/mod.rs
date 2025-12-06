@@ -5,8 +5,8 @@ pub mod note;
 pub mod settings;
 pub mod attachment;
 pub mod sync;
+pub mod encryption;
 
 pub use note::NoteRepository;
 pub use settings::SettingsRepository;
-pub use attachment::AttachmentRepository;
-pub use sync::SyncRepository;
+pub use encryption::EncryptionRepository;

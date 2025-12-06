@@ -8,5 +8,3 @@ pub mod sync;
 
 pub use note::*;
 pub use settings::*;
-pub use encryption::*;
-pub use sync::*;

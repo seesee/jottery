@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::crypto::{CryptoService, EncryptedData};
-use crate::models::{Attachment, Note, SyntaxLanguage};
+use crate::models::{Attachment, Note};
 
 /// Repository for note operations
 pub struct NoteRepository<'a> {

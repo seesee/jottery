@@ -12,7 +12,7 @@ use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
     models::{Note, UserSettings},
-    repository::{NoteRepository, SettingsRepository},
+    repository::{EncryptionRepository, NoteRepository, SettingsRepository},
 };
 
 /// Application state
@@ -208,19 +208,24 @@ impl App {
         let db = Database::open(&self.db_path, &self.password_input)
             .context("Failed to open database")?;
 
-        // Derive key
-        let salt = if db.is_initialized()? {
-            // Load existing salt
-            // For now, we'll generate a new salt if not initialized
-            self.crypto.generate_salt()
+        let encryption_repo = EncryptionRepository::new(db.connection());
+
+        // Get or create encryption metadata
+        let (salt, iterations) = if let Some(metadata) = encryption_repo.get()? {
+            // Load existing salt from database
+            (metadata.salt, metadata.iterations)
         } else {
-            // Generate new salt for first-time setup
-            self.crypto.generate_salt()
+            // First-time setup: generate new salt and save it
+            let new_salt = self.crypto.generate_salt();
+            let iterations = 256_000;
+            encryption_repo.save(&new_salt, iterations)?;
+            (new_salt.to_vec(), iterations)
         };
 
+        // Derive encryption key from password and salt
         let key = self
             .crypto
-            .derive_key(&self.password_input, &salt, 256_000)?;
+            .derive_key(&self.password_input, &salt, iterations)?;
 
         self.key_manager.set_master_key(key);
         self.key = Some(key);

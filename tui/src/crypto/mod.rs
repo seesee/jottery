@@ -9,4 +9,4 @@ pub use service::*;
 pub use key_manager::*;
 
 // Re-export commonly used types
-pub use crate::models::encryption::{EncryptedData, EncryptionMetadata};
+pub use crate::models::encryption::EncryptedData;
