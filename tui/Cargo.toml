@@ -13,7 +13,7 @@ path = "src/main.rs"
 [features]
 default = ["sqlite"]
 sqlite = ["rusqlite/bundled"]              # normal SQLite
-sqlcipher = ["rusqlite/sqlcipher"]         # optional SQLCipher
+sqlcipher = ["rusqlite/sqlcipher", "native-tls", "openssl", "openssl-sys"]
 
 [dependencies]
 # TUI Framework
@@ -21,7 +21,14 @@ ratatui = "0.29"
 crossterm = "0.28"
 
 # Database
-rusqlite = { version = "0.32", features = [] }
+rusqlite = { version = "0.32.1", features = [] }
+
+native-tls = { version = "0.2", optional = true }
+openssl = { version = "0.10", optional = true }
+openssl-sys = { version = "0.9", optional = true }
+
+# If your TUI uses reqwest:
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
