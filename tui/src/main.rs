@@ -26,6 +26,10 @@ struct Cli {
     #[arg(short, long)]
     debug: bool,
 
+    /// Reset: delete the database and start fresh
+    #[arg(long)]
+    reset: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -81,6 +85,26 @@ fn main() -> Result<()> {
     };
 
     info!("Using database: {}", db_path.display());
+
+    // Handle reset flag
+    if cli.reset {
+        if db_path.exists() {
+            info!("Deleting database: {}", db_path.display());
+            std::fs::remove_file(&db_path)?;
+
+            // Also remove SQLite WAL and SHM files if they exist
+            let wal_path = db_path.with_extension("db-wal");
+            let shm_path = db_path.with_extension("db-shm");
+            let _ = std::fs::remove_file(&wal_path);
+            let _ = std::fs::remove_file(&shm_path);
+
+            println!("✓ Database deleted: {}", db_path.display());
+            println!("You can now start fresh with a new password.");
+        } else {
+            println!("Database does not exist: {}", db_path.display());
+        }
+        return Ok(());
+    }
 
     // Handle subcommands
     match cli.command {

@@ -43,6 +43,12 @@ pub struct App {
     pub input_mode: InputMode,
     /// Password input buffer
     pub password_input: String,
+    /// Password confirmation buffer (for new databases)
+    pub password_confirm: String,
+    /// Whether database is being created (vs unlocked)
+    pub is_new_database: bool,
+    /// Which password field is active (false = password, true = confirm)
+    pub password_confirm_focused: bool,
     /// Note content input buffer
     pub note_input: String,
     /// Current error message
@@ -70,10 +76,15 @@ pub struct App {
 impl App {
     /// Create a new app
     pub fn new(db_path: PathBuf) -> Result<Self> {
+        let is_new_database = !db_path.exists();
+
         Ok(Self {
             state: AppState::Locked,
             input_mode: InputMode::Normal,
             password_input: String::new(),
+            password_confirm: String::new(),
+            is_new_database,
+            password_confirm_focused: false,
             note_input: String::new(),
             error: None,
             db_path,
@@ -102,19 +113,45 @@ impl App {
     /// Handle key events in locked state
     fn handle_locked_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
+            KeyCode::Tab if self.is_new_database => {
+                // Switch between password and confirm fields
+                self.password_confirm_focused = !self.password_confirm_focused;
+            }
             KeyCode::Enter => {
-                // Try to unlock
+                // Try to unlock/create
                 self.error = None;
+
+                // Validate password confirmation for new databases
+                if self.is_new_database {
+                    if self.password_input.is_empty() {
+                        self.error = Some("Password cannot be empty".to_string());
+                        return Ok(());
+                    }
+                    if self.password_input != self.password_confirm {
+                        self.error = Some("Passwords do not match".to_string());
+                        return Ok(());
+                    }
+                }
+
                 if let Err(e) = self.unlock() {
                     self.error = Some(format!("Failed to unlock: {}", e));
                     self.password_input.clear();
+                    self.password_confirm.clear();
                 }
             }
             KeyCode::Char(c) => {
-                self.password_input.push(c);
+                if self.is_new_database && self.password_confirm_focused {
+                    self.password_confirm.push(c);
+                } else {
+                    self.password_input.push(c);
+                }
             }
             KeyCode::Backspace => {
-                self.password_input.pop();
+                if self.is_new_database && self.password_confirm_focused {
+                    self.password_confirm.pop();
+                } else {
+                    self.password_input.pop();
+                }
             }
             KeyCode::Esc | KeyCode::Char('q') => {
                 self.state = AppState::Quit;
@@ -310,39 +347,109 @@ impl App {
     fn render_locked(&self, frame: &mut Frame) {
         let size = frame.area();
 
+        let title = if self.is_new_database {
+            "Jottery TUI - Create Password"
+        } else {
+            "Jottery TUI - Unlock"
+        };
+
         let block = Block::default()
-            .title("Jottery TUI - Unlock")
+            .title(title)
             .borders(Borders::ALL);
+
+        let constraints = if self.is_new_database {
+            vec![
+                Constraint::Length(3),  // Password field
+                Constraint::Length(3),  // Confirm field
+                Constraint::Length(2),  // Help text
+                Constraint::Length(3),  // Error (if any)
+                Constraint::Min(0),     // Remaining space
+            ]
+        } else {
+            vec![
+                Constraint::Length(3),  // Password field
+                Constraint::Length(3),  // Error (if any)
+                Constraint::Min(0),     // Remaining space
+            ]
+        };
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(2)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Min(0),
-            ])
+            .constraints(constraints)
             .split(size);
+
+        frame.render_widget(block, size);
+
+        // Password field
+        let password_style = if self.is_new_database && !self.password_confirm_focused {
+            Style::default().fg(Color::Yellow)
+        } else if !self.is_new_database {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default()
+        };
 
         let password_text = "*".repeat(self.password_input.len());
         let password = Paragraph::new(password_text)
+            .style(password_style)
             .block(Block::default().title("Password").borders(Borders::ALL));
-
-        frame.render_widget(block, size);
         frame.render_widget(password, chunks[0]);
 
-        // Show cursor at end of password input
-        // chunks[0] is the password area, +1 for left border, +1 for top border
-        frame.set_cursor_position((
-            chunks[0].x + self.password_input.len() as u16 + 1,
-            chunks[0].y + 1,
-        ));
+        if self.is_new_database {
+            // Confirm field
+            let confirm_style = if self.password_confirm_focused {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
 
-        if let Some(err) = &self.error {
-            let error = Paragraph::new(err.clone())
-                .style(Style::default().fg(Color::Red))
-                .block(Block::default().title("Error").borders(Borders::ALL));
-            frame.render_widget(error, chunks[1]);
+            let confirm_text = "*".repeat(self.password_confirm.len());
+            let confirm = Paragraph::new(confirm_text)
+                .style(confirm_style)
+                .block(Block::default().title("Confirm Password").borders(Borders::ALL));
+            frame.render_widget(confirm, chunks[1]);
+
+            // Help text
+            let help = Paragraph::new("Tab: switch fields | Enter: create")
+                .style(Style::default().fg(Color::DarkGray))
+                .alignment(Alignment::Center);
+            frame.render_widget(help, chunks[2]);
+
+            // Cursor position
+            if self.password_confirm_focused {
+                frame.set_cursor_position((
+                    chunks[1].x + self.password_confirm.len() as u16 + 1,
+                    chunks[1].y + 1,
+                ));
+            } else {
+                frame.set_cursor_position((
+                    chunks[0].x + self.password_input.len() as u16 + 1,
+                    chunks[0].y + 1,
+                ));
+            }
+
+            // Error (if any)
+            if let Some(err) = &self.error {
+                let error = Paragraph::new(err.clone())
+                    .style(Style::default().fg(Color::Red))
+                    .block(Block::default().title("Error").borders(Borders::ALL));
+                frame.render_widget(error, chunks[3]);
+            }
+        } else {
+            // Show cursor at end of password input
+            frame.set_cursor_position((
+                chunks[0].x + self.password_input.len() as u16 + 1,
+                chunks[0].y + 1,
+            ));
+
+            // Error (if any)
+            if let Some(err) = &self.error {
+                let error = Paragraph::new(err.clone())
+                    .style(Style::default().fg(Color::Red))
+                    .block(Block::default().title("Error").borders(Borders::ALL));
+                frame.render_widget(error, chunks[1]);
+            }
         }
     }
 
