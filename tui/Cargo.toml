@@ -10,13 +10,18 @@ license = "MIT"
 name = "jottery"
 path = "src/main.rs"
 
+[features]
+default = ["sqlite"]
+sqlite = ["rusqlite/bundled"]              # normal SQLite
+sqlcipher = ["rusqlite/sqlcipher"]         # optional SQLCipher
+
 [dependencies]
 # TUI Framework
 ratatui = "0.29"
 crossterm = "0.28"
 
 # Database
-rusqlite = { version = "0.32", features = ["bundled", "sqlcipher"] }
+rusqlite = { version = "0.32", features = [] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
