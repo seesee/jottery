@@ -34,6 +34,11 @@ pub enum AppState {
     NoteList,
     /// Viewing/editing a note
     NoteView,
+    /// Settings panel
+    Settings {
+        /// Previous state to return to
+        previous: Box<AppState>,
+    },
     /// Help screen
     Help {
         /// Previous state to return to
@@ -131,9 +136,12 @@ impl App {
 
     /// Handle key events
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
-        // Handle help screen separately to avoid borrow issues
+        // Handle help and settings screens separately to avoid borrow issues
         if let AppState::Help { .. } = &self.state {
             return self.handle_help_key(key);
+        }
+        if let AppState::Settings { .. } = &self.state {
+            return self.handle_settings_key(key);
         }
 
         match &self.state {
@@ -141,6 +149,7 @@ impl App {
             AppState::NoteList => self.handle_note_list_key(key)?,
             AppState::NoteView => self.handle_note_view_key(key)?,
             AppState::Quit => {}
+            AppState::Settings { .. } => unreachable!(), // Handled above
             AppState::Help { .. } => unreachable!(), // Handled above
         }
         Ok(())
@@ -258,6 +267,13 @@ impl App {
                     // Show help
                     let prev = std::mem::replace(&mut self.state, AppState::Quit);
                     self.state = AppState::Help {
+                        previous: Box::new(prev),
+                    };
+                }
+                KeyCode::Char('s') => {
+                    // Show settings
+                    let prev = std::mem::replace(&mut self.state, AppState::Quit);
+                    self.state = AppState::Settings {
                         previous: Box::new(prev),
                     };
                 }
@@ -413,6 +429,20 @@ impl App {
             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => {
                 // Return to previous state
                 if let AppState::Help { previous } = std::mem::replace(&mut self.state, AppState::Quit) {
+                    self.state = *previous;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Handle key events in settings screen
+    fn handle_settings_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('s') => {
+                // Return to previous state
+                if let AppState::Settings { previous } = std::mem::replace(&mut self.state, AppState::Quit) {
                     self.state = *previous;
                 }
             }
@@ -606,6 +636,7 @@ impl App {
             AppState::Locked => self.render_locked(frame),
             AppState::NoteList => self.render_note_list(frame),
             AppState::NoteView => self.render_note_view(frame),
+            AppState::Settings { .. } => self.render_settings(frame),
             AppState::Help { .. } => self.render_help(frame),
             AppState::Quit => {}
         }
@@ -952,6 +983,75 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    /// Render settings screen
+    fn render_settings(&self, frame: &mut Frame) {
+        let size = frame.area();
+
+        let block = Block::default()
+            .title("Settings - Press s or q to close")
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::Green));
+
+        let settings_text = vec![
+            Line::from(vec![
+                Span::styled("Application Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("Language:              "),
+                Span::styled(&self.settings.language, Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(vec![
+                Span::raw("Theme:                 "),
+                Span::styled(format!("{}", self.settings.theme), Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(vec![
+                Span::raw("Sort Order:            "),
+                Span::styled(format!("{}", self.settings.sort_order), Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(vec![
+                Span::raw("Auto-lock Timeout:     "),
+                Span::styled(format!("{} minutes", self.settings.auto_lock_timeout), Style::default().fg(Color::Yellow)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Sync Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("Sync Enabled:          "),
+                Span::styled(
+                    if self.settings.sync_enabled { "Yes" } else { "No" },
+                    if self.settings.sync_enabled {
+                        Style::default().fg(Color::Green)
+                    } else {
+                        Style::default().fg(Color::Red)
+                    }
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("Sync Endpoint:         "),
+                Span::styled(
+                    self.settings.sync_endpoint.clone().unwrap_or_else(|| "Not configured".to_string()),
+                    Style::default().fg(Color::Yellow)
+                ),
+            ]),
+            Line::from(""),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Note: ", Style::default().fg(Color::Cyan)),
+                Span::raw("Settings editing via TUI coming soon."),
+            ]),
+            Line::from("For now, settings can be modified via the settings table in the database."),
+        ];
+
+        let paragraph = Paragraph::new(settings_text)
+            .block(block)
+            .wrap(Wrap { trim: false });
+
+        frame.render_widget(paragraph, size);
     }
 
     /// Render help screen
