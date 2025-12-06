@@ -287,6 +287,10 @@ impl App {
                 KeyCode::Backspace => {
                     self.note_input.pop();
                 }
+                KeyCode::Delete => {
+                    // For append-only editor, Delete acts like Backspace
+                    self.note_input.pop();
+                }
                 KeyCode::Enter => {
                     self.note_input.push('\n');
                 }
@@ -806,7 +810,7 @@ impl App {
             ]),
             Line::from("  Type                  Edit note content"),
             Line::from("  Enter                 New line"),
-            Line::from("  Backspace             Delete character"),
+            Line::from("  Backspace / Delete    Delete character"),
             Line::from("  Esc                   Exit to normal mode"),
             Line::from(""),
             Line::from(vec![
