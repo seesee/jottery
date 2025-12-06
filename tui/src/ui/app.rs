@@ -1068,8 +1068,14 @@ impl App {
                 let salt = base64::engine::general_purpose::STANDARD.decode(&salt_b64)
                     .context("Invalid base64 salt from sync credentials")?;
 
+                // Validate salt length - must be at least 32 bytes (256 bits) for PBKDF2
+                if salt.len() < 32 {
+                    anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes). Web app salt may be incompatible with TUI.", salt.len());
+                }
+
                 // Update encryption metadata with web app's salt
                 // This allows TUI to decrypt notes encrypted by web app
+                // Note: Iteration count might differ between web app and TUI
                 encryption_repo.save(&salt, 256_000)?;
 
                 // Re-derive the encryption key with the new salt
@@ -1081,6 +1087,8 @@ impl App {
                 self.notes.clear();
                 self.selected_note = 0;
                 self.password_input.clear();
+                self.password_confirm.clear();
+                self.input_mode = InputMode::Normal;
                 self.state = AppState::Locked;
 
                 // Show message about what happened
