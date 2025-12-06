@@ -513,6 +513,10 @@ impl App {
                             self.sync_status = Some("Sync credentials copied to clipboard!".to_string());
                         }
                     }
+                    KeyCode::Char('y') => {
+                        // Trigger manual sync
+                        self.trigger_sync();
+                    }
                     _ => {}
                 }
             }
