@@ -74,9 +74,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SQLCipher
-        run: choco install sqlcipher
-
       - name: Build Windows TUI
         shell: bash
         run: |
