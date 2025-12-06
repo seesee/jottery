@@ -223,8 +223,12 @@ pub struct AuthRegisterResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncCredentials {
     pub endpoint: String,
+    #[serde(rename = "apiKey")]
     pub api_key: String,
+    #[serde(rename = "clientId")]
     pub client_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub salt: Option<String>,  // Optional, may be present from web app
 }
 
 impl SyncCredentials {
@@ -234,6 +238,7 @@ impl SyncCredentials {
             endpoint,
             api_key,
             client_id,
+            salt: None,  // Salt is not needed for TUI (uses database encryption)
         }
     }
 
