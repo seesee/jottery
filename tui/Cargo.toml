@@ -59,6 +59,9 @@ dirs = "5.0"
 # Temporary files for external editor
 tempfile = "3.13"
 
+# Clipboard support
+arboard = "3.4"
+
 [dev-dependencies]
 
 [profile.release]

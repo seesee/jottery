@@ -1,3 +1,4 @@
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -215,4 +216,65 @@ pub struct AuthRegisterResponse {
     pub api_key: String,
     pub client_id: String,
     pub created_at: DateTime<Utc>,
+}
+
+/// Sync credentials payload for clipboard sharing
+/// This is what gets encoded to base64 and shared between devices
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncCredentials {
+    pub endpoint: String,
+    pub api_key: String,
+    pub client_id: String,
+}
+
+impl SyncCredentials {
+    /// Create new sync credentials
+    pub fn new(endpoint: String, api_key: String, client_id: String) -> Self {
+        Self {
+            endpoint,
+            api_key,
+            client_id,
+        }
+    }
+
+    /// Encode credentials to base64 JSON string
+    pub fn to_base64(&self) -> anyhow::Result<String> {
+        let json = serde_json::to_string(self)?;
+        Ok(base64::engine::general_purpose::STANDARD.encode(json.as_bytes()))
+    }
+
+    /// Decode credentials from base64 JSON string
+    pub fn from_base64(encoded: &str) -> anyhow::Result<Self> {
+        let decoded = base64::engine::general_purpose::STANDARD.decode(encoded)?;
+        let json = String::from_utf8(decoded)?;
+        let creds: Self = serde_json::from_str(&json)?;
+        Ok(creds)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_credentials_roundtrip() {
+        let creds = SyncCredentials::new(
+            "https://example.com/api".to_string(),
+            "test-api-key-12345".to_string(),
+            "client-id-abcde".to_string(),
+        );
+
+        let encoded = creds.to_base64().unwrap();
+        let decoded = SyncCredentials::from_base64(&encoded).unwrap();
+
+        assert_eq!(decoded.endpoint, creds.endpoint);
+        assert_eq!(decoded.api_key, creds.api_key);
+        assert_eq!(decoded.client_id, creds.client_id);
+    }
+
+    #[test]
+    fn test_credentials_from_invalid_base64() {
+        let result = SyncCredentials::from_base64("invalid!!!base64");
+        assert!(result.is_err());
+    }
 }

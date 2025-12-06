@@ -22,8 +22,8 @@ use tempfile::NamedTempFile;
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Note, UserSettings},
-    repository::{EncryptionRepository, NoteRepository, SettingsRepository},
+    models::{Note, UserSettings, sync::SyncCredentials},
+    repository::{EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
 };
 
 /// Application state
@@ -497,6 +497,22 @@ impl App {
                         // Edit selected field
                         self.start_editing_setting();
                     }
+                    KeyCode::Char('p') => {
+                        // Paste sync credentials from clipboard
+                        if let Err(e) = self.paste_sync_credentials() {
+                            self.error = Some(format!("Failed to paste credentials: {}", e));
+                        } else {
+                            self.sync_status = Some("Sync credentials pasted successfully!".to_string());
+                        }
+                    }
+                    KeyCode::Char('c') => {
+                        // Copy sync credentials to clipboard
+                        if let Err(e) = self.copy_sync_credentials() {
+                            self.error = Some(format!("Failed to copy credentials: {}", e));
+                        } else {
+                            self.sync_status = Some("Sync credentials copied to clipboard!".to_string());
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -806,6 +822,94 @@ impl App {
             let settings_repo = SettingsRepository::new(db.connection());
             settings_repo.update(&self.settings)?;
         }
+        Ok(())
+    }
+
+    /// Paste sync credentials from clipboard
+    fn paste_sync_credentials(&mut self) -> Result<()> {
+        // Get clipboard content
+        let mut clipboard = arboard::Clipboard::new()
+            .context("Failed to access clipboard")?;
+        let clipboard_text = clipboard.get_text()
+            .context("Failed to read from clipboard")?;
+
+        // Decode credentials
+        let creds = SyncCredentials::from_base64(&clipboard_text.trim())
+            .context("Invalid sync credentials format")?;
+
+        // Encrypt API key with master key
+        let encrypted_api_key = if let Some(key) = &self.key {
+            let encrypted = self.crypto.encrypt_text(&creds.api_key, key)?;
+            serde_json::to_string(&encrypted)?
+        } else {
+            anyhow::bail!("Database not unlocked");
+        };
+
+        // Save to sync metadata
+        if let Some(db) = &self.db {
+            let sync_repo = SyncRepository::new(db.connection());
+
+            // Get or create sync metadata
+            let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+
+            // Update with pasted credentials
+            metadata.api_key = Some(encrypted_api_key);
+            metadata.client_id = Some(creds.client_id);
+            metadata.sync_endpoint = creds.endpoint.clone();
+            metadata.sync_enabled = true;
+
+            sync_repo.update_metadata(&metadata)?;
+
+            // Also update settings
+            self.settings.sync_endpoint = Some(creds.endpoint);
+            self.settings.sync_enabled = true;
+            self.save_settings()?;
+        }
+
+        Ok(())
+    }
+
+    /// Copy sync credentials to clipboard
+    fn copy_sync_credentials(&mut self) -> Result<()> {
+        // Get sync metadata
+        if let Some(db) = &self.db {
+            let sync_repo = SyncRepository::new(db.connection());
+            let metadata = sync_repo.get_metadata()?
+                .ok_or_else(|| anyhow::anyhow!("No sync configuration found"))?;
+
+            // Check if credentials exist
+            let encrypted_api_key = metadata.api_key
+                .ok_or_else(|| anyhow::anyhow!("No API key configured. Enable sync first."))?;
+            let client_id = metadata.client_id
+                .ok_or_else(|| anyhow::anyhow!("No client ID found. Enable sync first."))?;
+
+            // Decrypt API key
+            let api_key = if let Some(key) = &self.key {
+                let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
+                self.crypto.decrypt_text(&encrypted, key)?
+            } else {
+                anyhow::bail!("Database not unlocked");
+            };
+
+            // Create credentials payload
+            let creds = SyncCredentials::new(
+                metadata.sync_endpoint,
+                api_key,
+                client_id,
+            );
+
+            // Encode to base64
+            let encoded = creds.to_base64()?;
+
+            // Copy to clipboard
+            let mut clipboard = arboard::Clipboard::new()
+                .context("Failed to access clipboard")?;
+            clipboard.set_text(&encoded)
+                .context("Failed to write to clipboard")?;
+        } else {
+            anyhow::bail!("Database not available");
+        }
+
         Ok(())
     }
 
@@ -1301,10 +1405,23 @@ impl App {
             Line::from("  • Press Enter, i, or Space to edit a field"),
             Line::from("  • For text fields: type and press Enter to save, Esc to cancel"),
             Line::from("  • For toggles and cycles: press Enter to change value immediately"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Sync Credentials: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  • Press 'p' to paste sync credentials from clipboard"),
+            Line::from("  • Press 'c' to copy sync credentials to clipboard"),
         ];
 
-        // Add error message if present
+        // Add status and error messages if present
         let mut all_lines = settings_text;
+        if let Some(status) = &self.sync_status {
+            all_lines.push(Line::from(""));
+            all_lines.push(Line::from(vec![
+                Span::styled("Status: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::styled(status.clone(), Style::default().fg(Color::Green)),
+            ]));
+        }
         if let Some(err) = &self.error {
             all_lines.push(Line::from(""));
             all_lines.push(Line::from(vec![
@@ -1413,6 +1530,8 @@ impl App {
             Line::from("  Enter / i / Space     Edit selected field"),
             Line::from("  Enter                 Save text/number fields, cycle/toggle other fields"),
             Line::from("  Esc                   Cancel editing (text/number fields)"),
+            Line::from("  p                     Paste sync credentials from clipboard"),
+            Line::from("  c                     Copy sync credentials to clipboard"),
             Line::from("  s / q                 Close settings panel"),
             Line::from(""),
             Line::from(vec![
