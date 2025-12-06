@@ -1073,10 +1073,11 @@ impl App {
                     anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes). Web app salt may be incompatible with TUI.", salt.len());
                 }
 
-                // Update encryption metadata with web app's salt
+                // Update encryption metadata with web app's salt AND iteration count
                 // This allows TUI to decrypt notes encrypted by web app
-                // Note: Iteration count might differ between web app and TUI
-                encryption_repo.save(&salt, 256_000)?;
+                // Web app uses 100,000 iterations (DEFAULT_ITERATIONS in crypto.ts)
+                // TUI normally uses 256,000, but we match web app for sync compatibility
+                encryption_repo.save(&salt, 100_000)?;
 
                 // Re-derive the encryption key with the new salt
                 // CRITICAL: We need to update the in-memory key to match the new salt
