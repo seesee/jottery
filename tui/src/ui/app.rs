@@ -3,6 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
 };
@@ -23,6 +24,11 @@ pub enum AppState {
     NoteList,
     /// Viewing/editing a note
     NoteView,
+    /// Help screen
+    Help {
+        /// Previous state to return to
+        previous: Box<AppState>,
+    },
     /// Quit
     Quit,
 }
@@ -109,11 +115,17 @@ impl App {
 
     /// Handle key events
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        // Handle help screen separately to avoid borrow issues
+        if let AppState::Help { .. } = &self.state {
+            return self.handle_help_key(key);
+        }
+
         match &self.state {
             AppState::Locked => self.handle_locked_key(key)?,
             AppState::NoteList => self.handle_note_list_key(key)?,
             AppState::NoteView => self.handle_note_view_key(key)?,
             AppState::Quit => {}
+            AppState::Help { .. } => unreachable!(), // Handled above
         }
         Ok(())
     }
@@ -175,6 +187,13 @@ impl App {
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.state = AppState::Quit;
             }
+            KeyCode::Char('?') => {
+                // Show help
+                let prev = std::mem::replace(&mut self.state, AppState::Quit);
+                self.state = AppState::Help {
+                    previous: Box::new(prev),
+                };
+            }
             KeyCode::Char('n') => {
                 // New note
                 self.note_input.clear();
@@ -227,6 +246,13 @@ impl App {
                     self.tag_input.clear();
                     self.input_mode = InputMode::Tag;
                 }
+                KeyCode::Char('?') => {
+                    // Show help
+                    let prev = std::mem::replace(&mut self.state, AppState::Quit);
+                    self.state = AppState::Help {
+                        previous: Box::new(prev),
+                    };
+                }
                 KeyCode::Char('q') | KeyCode::Esc => {
                     // Save and return to list
                     self.save_note()?;
@@ -277,6 +303,20 @@ impl App {
                 }
                 _ => {}
             },
+        }
+        Ok(())
+    }
+
+    /// Handle key events in help screen
+    fn handle_help_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => {
+                // Return to previous state
+                if let AppState::Help { previous } = std::mem::replace(&mut self.state, AppState::Quit) {
+                    self.state = *previous;
+                }
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -383,6 +423,7 @@ impl App {
             AppState::Locked => self.render_locked(frame),
             AppState::NoteList => self.render_note_list(frame),
             AppState::NoteView => self.render_note_view(frame),
+            AppState::Help { .. } => self.render_help(frame),
             AppState::Quit => {}
         }
     }
@@ -661,6 +702,74 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    /// Render help screen
+    fn render_help(&self, frame: &mut Frame) {
+        let size = frame.area();
+
+        let block = Block::default()
+            .title("Keyboard Shortcuts - Press ? or q to close")
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::Yellow));
+
+        let help_text = vec![
+            Line::from(vec![
+                Span::styled("UNLOCK SCREEN", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  Type                  Enter password"),
+            Line::from("  Enter                 Unlock database"),
+            Line::from("  Tab                   Switch password/confirm (new DB)"),
+            Line::from("  Backspace             Delete character"),
+            Line::from("  q / Esc               Quit application"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("NOTE LIST", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  n                     Create new note"),
+            Line::from("  Enter                 Open selected note"),
+            Line::from("  d                     Delete selected note"),
+            Line::from("  j / ↓                 Move down"),
+            Line::from("  k / ↑                 Move up"),
+            Line::from("  ?                     Show this help"),
+            Line::from("  Ctrl+q                Quit application"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("NOTE EDITOR - NORMAL MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  i                     Enter insert mode"),
+            Line::from("  t                     Enter tag mode"),
+            Line::from("  ?                     Show this help"),
+            Line::from("  q / Esc               Save and return to list"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("NOTE EDITOR - INSERT MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  Type                  Edit note content"),
+            Line::from("  Enter                 New line"),
+            Line::from("  Backspace             Delete character"),
+            Line::from("  Esc                   Exit to normal mode"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("NOTE EDITOR - TAG MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  Type                  Enter tag name"),
+            Line::from("  Enter                 Add tag"),
+            Line::from("  Backspace (empty)     Remove last tag"),
+            Line::from("  Backspace             Delete character from input"),
+            Line::from("  Esc                   Exit to normal mode"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("GLOBAL", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  ?                     Show this help screen"),
+        ];
+
+        let paragraph = Paragraph::new(help_text)
+            .block(block)
+            .wrap(Wrap { trim: false });
+
+        frame.render_widget(paragraph, size);
     }
 
     /// Check if app should quit
