@@ -82,6 +82,8 @@ pub struct App {
     pub search_input: String,
     /// Whether search mode is active
     pub search_active: bool,
+    /// Sync status message
+    pub sync_status: Option<String>,
     /// Current error message
     pub error: Option<String>,
     /// Database path
@@ -121,6 +123,7 @@ impl App {
             current_tags: Vec::new(),
             search_input: String::new(),
             search_active: false,
+            sync_status: None,
             error: None,
             db_path,
             db: None,
@@ -208,6 +211,11 @@ impl App {
 
     /// Handle key events in note list state
     fn handle_note_list_key(&mut self, key: KeyEvent) -> Result<()> {
+        // Clear sync status on any key (except 'y' which sets it)
+        if key.code != KeyCode::Char('y') {
+            self.sync_status = None;
+        }
+
         // Handle search mode
         if self.search_active {
             match key.code {
@@ -276,6 +284,10 @@ impl App {
                     self.state = AppState::Settings {
                         previous: Box::new(prev),
                     };
+                }
+                KeyCode::Char('y') => {
+                    // Sync notes
+                    self.trigger_sync();
                 }
                 KeyCode::Char('/') => {
                     // Enter search mode
@@ -572,6 +584,30 @@ impl App {
             .collect()
     }
 
+    /// Trigger manual sync
+    fn trigger_sync(&mut self) {
+        // Check if sync is configured
+        if !self.settings.sync_enabled {
+            self.sync_status = Some("Sync not enabled. Press 's' to configure in settings.".to_string());
+            return;
+        }
+
+        if self.settings.sync_endpoint.is_none() {
+            self.sync_status = Some("Sync endpoint not configured. Configure in database settings table.".to_string());
+            return;
+        }
+
+        // TODO: Implement actual sync with server
+        // This would:
+        // 1. Collect modified notes since last sync
+        // 2. POST to /api/v1/sync/push with notes
+        // 3. POST to /api/v1/sync/pull to get remote changes
+        // 4. Apply changes with conflict resolution
+        // 5. Update sync metadata
+
+        self.sync_status = Some("Sync framework ready. Full implementation coming soon.".to_string());
+    }
+
     /// Delete selected note
     fn delete_note(&mut self) -> Result<()> {
         if let Some(db) = &self.db {
@@ -828,14 +864,20 @@ impl App {
         let list = List::new(items).block(list_block);
         frame.render_widget(list, list_chunk);
 
-        // Help text
-        let help_text = if self.search_active {
-            "Type: search | Esc: exit | ↑/↓: navigate"
+        // Help text or sync status
+        let status_text = if let Some(ref status) = self.sync_status {
+            status.clone()
+        } else if self.search_active {
+            "Type: search | Esc: exit | ↑/↓: navigate".to_string()
         } else {
-            "/: search | n: new | i: edit | d: delete"
+            "/: search | y: sync | s: settings | n: new | i: edit".to_string()
         };
-        let help = Paragraph::new(help_text)
-            .style(Style::default().fg(Color::DarkGray))
+        let help = Paragraph::new(status_text)
+            .style(if self.sync_status.is_some() {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default().fg(Color::DarkGray)
+            })
             .alignment(Alignment::Center);
         frame.render_widget(help, help_chunk);
 
@@ -1077,8 +1119,10 @@ impl App {
                 Span::styled("NOTE LIST", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  /                     Enter search mode"),
+            Line::from("  y                     Sync notes (if configured)"),
+            Line::from("  s                     Show settings"),
             Line::from("  n                     Create new note"),
-            Line::from("  Enter                 Open selected note"),
+            Line::from("  i / Enter             Edit selected note"),
             Line::from("  d                     Delete selected note"),
             Line::from("  j / ↓                 Move down"),
             Line::from("  k / ↑                 Move up"),
