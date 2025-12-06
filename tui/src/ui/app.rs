@@ -274,19 +274,25 @@ impl App {
                     self.state = AppState::NoteView;
                     self.input_mode = InputMode::Insert;
                 }
-                KeyCode::Enter => {
-                    // Open selected note
-                    if !self.notes.is_empty() {
-                        let note = &self.notes[self.selected_note];
-                        self.note_input = note.content.clone();
-                        self.current_tags = note.tags.clone();
-                        self.editing_note_id = Some(note.id.clone());
+                KeyCode::Char('i') | KeyCode::Enter => {
+                    // Edit selected note
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        // Clone data before modifying self
+                        let content = filtered[self.selected_note].content.clone();
+                        let tags = filtered[self.selected_note].tags.clone();
+                        let note_id = filtered[self.selected_note].id.clone();
+
+                        self.note_input = content;
+                        self.current_tags = tags;
+                        self.editing_note_id = Some(note_id);
                         self.state = AppState::NoteView;
                         self.input_mode = InputMode::Normal;
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
-                    if !self.notes.is_empty() && self.selected_note < self.notes.len() - 1 {
+                    let note_count = self.filtered_notes().len();
+                    if note_count > 0 && self.selected_note < note_count - 1 {
                         self.selected_note += 1;
                     }
                 }
@@ -297,8 +303,19 @@ impl App {
                 }
                 KeyCode::Char('d') => {
                     // Delete selected note
-                    if !self.notes.is_empty() {
-                        self.delete_note()?;
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        // Find the actual note in the full list
+                        let note_to_delete = filtered[self.selected_note];
+                        if let Some(pos) = self.notes.iter().position(|n| n.id == note_to_delete.id) {
+                            self.selected_note = pos;
+                            self.delete_note()?;
+                            // Adjust selection after delete
+                            let new_count = self.filtered_notes().len();
+                            if self.selected_note >= new_count && self.selected_note > 0 {
+                                self.selected_note -= 1;
+                            }
+                        }
                     }
                 }
                 _ => {}
@@ -704,54 +721,63 @@ impl App {
         }
     }
 
-    /// Render note list
+    /// Render note list (split pane view)
     fn render_note_list(&self, frame: &mut Frame) {
         let size = frame.area();
 
-        // Determine title and constraints based on search mode
-        let (title, constraints) = if self.search_active {
-            (
-                "Jottery - Notes (Search Mode)",
-                vec![Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)]
-            )
+        // Split into left (list) and right (preview) panes
+        let main_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+            .split(size);
+
+        // Left pane: note list
+        let left_pane = main_chunks[0];
+        let right_pane = main_chunks[1];
+
+        // Left pane layout: search bar (optional), list, help
+        let title = if self.search_active {
+            "Notes (Search)"
         } else {
-            (
-                "Jottery - Notes",
-                vec![Constraint::Min(0), Constraint::Length(3)]
-            )
+            "Notes"
         };
 
-        let block = Block::default()
-            .title(title)
-            .borders(Borders::ALL);
+        let left_constraints = if self.search_active {
+            vec![Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)]
+        } else {
+            vec![Constraint::Min(0), Constraint::Length(3)]
+        };
 
-        let chunks = Layout::default()
+        let left_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .margin(1)
-            .constraints(constraints)
-            .split(size);
+            .constraints(left_constraints)
+            .split(left_pane);
 
         // Render search bar if active
         let (list_chunk, help_chunk) = if self.search_active {
             let search_text = format!("Search: {}", self.search_input);
             let search_bar = Paragraph::new(search_text)
                 .style(Style::default().fg(Color::Yellow))
-                .block(Block::default().borders(Borders::ALL));
-            frame.render_widget(search_bar, chunks[0]);
-            (chunks[1], chunks[2])
+                .block(Block::default().title("Search").borders(Borders::ALL));
+            frame.render_widget(search_bar, left_chunks[0]);
+            (left_chunks[1], left_chunks[2])
         } else {
-            (chunks[0], chunks[1])
+            (left_chunks[0], left_chunks[1])
         };
 
-        // Get filtered notes
+        // Render note list
+        let list_block = Block::default()
+            .title(title)
+            .borders(Borders::ALL);
+
         let filtered = self.filtered_notes();
         let items: Vec<ListItem> = filtered
             .iter()
             .enumerate()
             .map(|(i, note)| {
                 let content = note.content.lines().next().unwrap_or("");
-                let preview = if content.len() > 50 {
-                    format!("{}...", &content[..50])
+                let preview = if content.len() > 30 {
+                    format!("{}...", &content[..30])
                 } else {
                     content.to_string()
                 };
@@ -768,19 +794,46 @@ impl App {
             })
             .collect();
 
-        let list = List::new(items).block(block);
+        let list = List::new(items).block(list_block);
+        frame.render_widget(list, list_chunk);
 
+        // Help text
         let help_text = if self.search_active {
-            "Type: search | Enter: open | Esc: exit search | ↑/↓: navigate"
+            "Type: search | Esc: exit | ↑/↓: navigate"
         } else {
-            "/: search | n: new | Enter: open | d: delete | j/k: navigate | Ctrl+q: quit"
+            "/: search | n: new | i: edit | d: delete"
         };
         let help = Paragraph::new(help_text)
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center);
-
-        frame.render_widget(list, list_chunk);
         frame.render_widget(help, help_chunk);
+
+        // Right pane: note preview
+        let preview_block = Block::default()
+            .title("Preview")
+            .borders(Borders::ALL);
+
+        if !filtered.is_empty() && self.selected_note < filtered.len() {
+            let note = filtered[self.selected_note];
+
+            // Show tags if present
+            let tags_line = if !note.tags.is_empty() {
+                format!("Tags: {}\n\n", note.tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" "))
+            } else {
+                String::new()
+            };
+
+            let preview_text = format!("{}{}", tags_line, note.content);
+            let preview = Paragraph::new(preview_text)
+                .block(preview_block)
+                .wrap(Wrap { trim: false });
+            frame.render_widget(preview, right_pane);
+        } else {
+            let preview = Paragraph::new("No notes")
+                .block(preview_block)
+                .alignment(Alignment::Center);
+            frame.render_widget(preview, right_pane);
+        }
     }
 
     /// Render note view
