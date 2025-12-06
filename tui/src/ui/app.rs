@@ -73,6 +73,10 @@ pub struct App {
     pub tag_input: String,
     /// Current tags for the note being edited
     pub current_tags: Vec<String>,
+    /// Search input buffer
+    pub search_input: String,
+    /// Whether search mode is active
+    pub search_active: bool,
     /// Current error message
     pub error: Option<String>,
     /// Database path
@@ -110,6 +114,8 @@ impl App {
             note_input: String::new(),
             tag_input: String::new(),
             current_tags: Vec::new(),
+            search_input: String::new(),
+            search_active: false,
             error: None,
             db_path,
             db: None,
@@ -193,53 +199,110 @@ impl App {
 
     /// Handle key events in note list state
     fn handle_note_list_key(&mut self, key: KeyEvent) -> Result<()> {
-        match key.code {
-            KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.state = AppState::Quit;
+        // Handle search mode
+        if self.search_active {
+            match key.code {
+                KeyCode::Esc => {
+                    self.search_active = false;
+                    self.search_input.clear();
+                    self.selected_note = 0;
+                }
+                KeyCode::Enter => {
+                    // Exit search and open selected note
+                    if !self.filtered_notes().is_empty() {
+                        let filtered = self.filtered_notes();
+                        if self.selected_note < filtered.len() {
+                            // Clone the data we need before modifying self
+                            let content = filtered[self.selected_note].content.clone();
+                            let tags = filtered[self.selected_note].tags.clone();
+                            let note_id = filtered[self.selected_note].id.clone();
+
+                            self.note_input = content;
+                            self.current_tags = tags;
+                            self.editing_note_id = Some(note_id);
+                            self.state = AppState::NoteView;
+                            self.input_mode = InputMode::Normal;
+                            self.search_input.clear();
+                            self.search_active = false;
+                        }
+                    }
+                }
+                KeyCode::Char(c) => {
+                    self.search_input.push(c);
+                    self.selected_note = 0; // Reset selection when search changes
+                }
+                KeyCode::Backspace => {
+                    self.search_input.pop();
+                    self.selected_note = 0;
+                }
+                KeyCode::Down => {
+                    let filtered_count = self.filtered_notes().len();
+                    if filtered_count > 0 && self.selected_note < filtered_count - 1 {
+                        self.selected_note += 1;
+                    }
+                }
+                KeyCode::Up => {
+                    if self.selected_note > 0 {
+                        self.selected_note -= 1;
+                    }
+                }
+                _ => {}
             }
-            KeyCode::Char('?') => {
-                // Show help
-                let prev = std::mem::replace(&mut self.state, AppState::Quit);
-                self.state = AppState::Help {
-                    previous: Box::new(prev),
-                };
-            }
-            KeyCode::Char('n') => {
-                // New note
-                self.note_input.clear();
-                self.current_tags.clear();
-                self.editing_note_id = None; // Creating new note
-                self.state = AppState::NoteView;
-                self.input_mode = InputMode::Insert;
-            }
-            KeyCode::Enter => {
-                // Open selected note
-                if !self.notes.is_empty() {
-                    let note = &self.notes[self.selected_note];
-                    self.note_input = note.content.clone();
-                    self.current_tags = note.tags.clone();
-                    self.editing_note_id = Some(note.id.clone()); // Editing existing note
+        } else {
+            // Normal note list mode
+            match key.code {
+                KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.state = AppState::Quit;
+                }
+                KeyCode::Char('?') => {
+                    // Show help
+                    let prev = std::mem::replace(&mut self.state, AppState::Quit);
+                    self.state = AppState::Help {
+                        previous: Box::new(prev),
+                    };
+                }
+                KeyCode::Char('/') => {
+                    // Enter search mode
+                    self.search_active = true;
+                    self.search_input.clear();
+                }
+                KeyCode::Char('n') => {
+                    // New note
+                    self.note_input.clear();
+                    self.current_tags.clear();
+                    self.editing_note_id = None;
                     self.state = AppState::NoteView;
-                    self.input_mode = InputMode::Normal;
+                    self.input_mode = InputMode::Insert;
                 }
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                if !self.notes.is_empty() && self.selected_note < self.notes.len() - 1 {
-                    self.selected_note += 1;
+                KeyCode::Enter => {
+                    // Open selected note
+                    if !self.notes.is_empty() {
+                        let note = &self.notes[self.selected_note];
+                        self.note_input = note.content.clone();
+                        self.current_tags = note.tags.clone();
+                        self.editing_note_id = Some(note.id.clone());
+                        self.state = AppState::NoteView;
+                        self.input_mode = InputMode::Normal;
+                    }
                 }
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                if self.selected_note > 0 {
-                    self.selected_note -= 1;
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if !self.notes.is_empty() && self.selected_note < self.notes.len() - 1 {
+                        self.selected_note += 1;
+                    }
                 }
-            }
-            KeyCode::Char('d') => {
-                // Delete selected note
-                if !self.notes.is_empty() {
-                    self.delete_note()?;
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if self.selected_note > 0 {
+                        self.selected_note -= 1;
+                    }
                 }
+                KeyCode::Char('d') => {
+                    // Delete selected note
+                    if !self.notes.is_empty() {
+                        self.delete_note()?;
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
         Ok(())
     }
@@ -419,6 +482,47 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    /// Filter notes based on search query
+    fn filtered_notes(&self) -> Vec<&Note> {
+        if self.search_input.is_empty() {
+            return self.notes.iter().collect();
+        }
+
+        let query = self.search_input.to_lowercase();
+        let query_parts: Vec<&str> = query.split_whitespace().collect();
+
+        self.notes
+            .iter()
+            .filter(|note| {
+                let content_lower = note.content.to_lowercase();
+
+                // Check each query part
+                for part in &query_parts {
+                    if part.starts_with('#') {
+                        // Tag search
+                        let tag = &part[1..];
+                        if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
+                            return false;
+                        }
+                    } else if part.starts_with('-') {
+                        // Negation
+                        let neg_word = &part[1..];
+                        if content_lower.contains(neg_word) {
+                            return false;
+                        }
+                    } else {
+                        // Regular text search
+                        if !content_lower.contains(part) {
+                            return false;
+                        }
+                    }
+                }
+
+                true
+            })
+            .collect()
     }
 
     /// Delete selected note
@@ -604,18 +708,44 @@ impl App {
     fn render_note_list(&self, frame: &mut Frame) {
         let size = frame.area();
 
+        // Determine title and constraints based on search mode
+        let (title, constraints) = if self.search_active {
+            (
+                "Jottery - Notes (Search Mode)",
+                vec![Constraint::Length(3), Constraint::Min(0), Constraint::Length(3)]
+            )
+        } else {
+            (
+                "Jottery - Notes",
+                vec![Constraint::Min(0), Constraint::Length(3)]
+            )
+        };
+
         let block = Block::default()
-            .title("Jottery - Notes")
+            .title(title)
             .borders(Borders::ALL);
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Min(0), Constraint::Length(3)])
+            .constraints(constraints)
             .split(size);
 
-        let items: Vec<ListItem> = self
-            .notes
+        // Render search bar if active
+        let (list_chunk, help_chunk) = if self.search_active {
+            let search_text = format!("Search: {}", self.search_input);
+            let search_bar = Paragraph::new(search_text)
+                .style(Style::default().fg(Color::Yellow))
+                .block(Block::default().borders(Borders::ALL));
+            frame.render_widget(search_bar, chunks[0]);
+            (chunks[1], chunks[2])
+        } else {
+            (chunks[0], chunks[1])
+        };
+
+        // Get filtered notes
+        let filtered = self.filtered_notes();
+        let items: Vec<ListItem> = filtered
             .iter()
             .enumerate()
             .map(|(i, note)| {
@@ -640,12 +770,17 @@ impl App {
 
         let list = List::new(items).block(block);
 
-        let help = Paragraph::new("n: new | Enter: open | d: delete | j/k: navigate | Ctrl+q: quit")
+        let help_text = if self.search_active {
+            "Type: search | Enter: open | Esc: exit search | ↑/↓: navigate"
+        } else {
+            "/: search | n: new | Enter: open | d: delete | j/k: navigate | Ctrl+q: quit"
+        };
+        let help = Paragraph::new(help_text)
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center);
 
-        frame.render_widget(list, chunks[0]);
-        frame.render_widget(help, chunks[1]);
+        frame.render_widget(list, list_chunk);
+        frame.render_widget(help, help_chunk);
     }
 
     /// Render note view
@@ -788,6 +923,7 @@ impl App {
             Line::from(vec![
                 Span::styled("NOTE LIST", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
+            Line::from("  /                     Enter search mode"),
             Line::from("  n                     Create new note"),
             Line::from("  Enter                 Open selected note"),
             Line::from("  d                     Delete selected note"),
@@ -795,6 +931,17 @@ impl App {
             Line::from("  k / ↑                 Move up"),
             Line::from("  ?                     Show this help"),
             Line::from("  Ctrl+q                Quit application"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("SEARCH MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  Type                  Enter search query"),
+            Line::from("  #tag                  Search by tag"),
+            Line::from("  -word                 Exclude word (negation)"),
+            Line::from("  word1 word2           Match all words (AND)"),
+            Line::from("  Enter                 Open selected note"),
+            Line::from("  Esc                   Exit search mode"),
+            Line::from("  ↑ / ↓                 Navigate results"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("NOTE EDITOR - NORMAL MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
