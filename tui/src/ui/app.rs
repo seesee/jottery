@@ -431,17 +431,20 @@ impl App {
         // Show cursor when in insert mode
         if matches!(self.input_mode, InputMode::Insert) {
             // Calculate cursor position at end of text
-            // Count lines and get position on last line
             let lines: Vec<&str> = self.note_input.lines().collect();
-            let line_count = if self.note_input.is_empty() { 0 } else { lines.len() };
+            let line_count = if self.note_input.is_empty() {
+                0
+            } else {
+                lines.len().saturating_sub(1) // Last line index (0-based)
+            };
             let last_line_len = lines.last().map(|l| l.len()).unwrap_or(0);
 
-            // chunks[0] is the text area with block border, margin is 1
-            // x position: margin + left border + column
-            // y position: margin + top border + line number
+            // chunks[0] has the block border
+            // x position: block left + border (1) + text column
+            // y position: block top + border (1) + line index
             frame.set_cursor_position((
-                chunks[0].x + last_line_len as u16 + 1,
-                chunks[0].y + line_count as u16 + 1,
+                chunks[0].x + 1 + last_line_len as u16,
+                chunks[0].y + 1 + line_count as u16,
             ));
         }
     }
