@@ -100,6 +100,7 @@ pub struct SyncPushRequest {
 
 /// Note structure for sync (matches server expectations)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncNote {
     pub id: String,
     pub created_at: DateTime<Utc>,
@@ -117,6 +118,7 @@ pub struct SyncNote {
 
 /// Attachment reference (metadata only)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AttachmentRef {
     pub id: String,
     pub filename: String,             // Encrypted
@@ -142,6 +144,7 @@ pub struct SyncPushResponse {
 
 /// Accepted note info
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncAccepted {
     pub id: String,
     pub server_version: i32,
@@ -150,6 +153,7 @@ pub struct SyncAccepted {
 
 /// Rejected note info (conflict)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncRejected {
     pub id: String,
     pub reason: String,
@@ -158,6 +162,7 @@ pub struct SyncRejected {
 
 /// Pull request payload
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncPullRequest {
     pub last_sync_at: Option<DateTime<Utc>>,
     pub known_note_ids: Vec<String>,
@@ -165,6 +170,7 @@ pub struct SyncPullRequest {
 
 /// Pull response from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncPullResponse {
     pub notes: Vec<SyncNote>,
     pub deletions: Vec<SyncDeletion>,
@@ -174,6 +180,7 @@ pub struct SyncPullResponse {
 
 /// Deleted note info
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncDeletion {
     pub id: String,
     pub deleted_at: DateTime<Utc>,
@@ -181,6 +188,7 @@ pub struct SyncDeletion {
 
 /// Server status response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncStatusResponse {
     pub client_id: String,
     pub server_last_modified: DateTime<Utc>,
@@ -190,6 +198,7 @@ pub struct SyncStatusResponse {
 
 /// Authentication/registration types
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthRegisterRequest {
     pub device_name: String,
     pub device_type: DeviceType,
@@ -212,6 +221,7 @@ impl std::fmt::Display for DeviceType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthRegisterResponse {
     pub api_key: String,
     pub client_id: String,
