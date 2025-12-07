@@ -19,6 +19,9 @@ RUN npm run build
 FROM rust:1.85 AS server-builder
 WORKDIR /app/server
 
+# Tell SQLx to run in offline mode during compile
+ENV SQLX_OFFLINE=true
+
 # Copy server source code
 COPY server/ .
 
@@ -41,7 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy server + web client
 # -----------------------------
 COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
-COPY --from=web-builder    /app/web/dist                         ./dist
+COPY --from=web-builder    /app/web/dist ./dist
 
 # -----------------------------
 # Copy TUI binaries (added by GitHub Actions in /releases)

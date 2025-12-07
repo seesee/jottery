@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+env:
+  SQLX_OFFLINE: "true"
+
 jobs:
   linux-tui:
     name: Build Linux TUI Binaries
@@ -145,6 +148,7 @@ jobs:
     env:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      SQLX_OFFLINE: "true"
 
     steps:
       - uses: actions/checkout@v4
