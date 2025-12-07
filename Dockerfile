@@ -16,6 +16,9 @@ COPY tsconfig.json .
 COPY svelte.config.js .
 COPY tailwind.config.js .
 COPY postcss.config.js .
+COPY tsconfig.node.json .
+COPY vite.config.ts .
+
 RUN npm run build
 
 # -----------------------------
