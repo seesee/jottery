@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO attachments_data (id, data, created_at)\n            VALUES (?, ?, ?)\n            ON CONFLICT(id) DO UPDATE SET data = excluded.data\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "1ae90da6cced6a9d288a27e62583b538da0af60f4f450cf4d98a3884fb30256b"
+}

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT modified_at, server_version FROM notes WHERE id = ? AND client_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "modified_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "server_version",
+        "ordinal": 1,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "07bef27d272b0d093e6d584a273f62122dddfe85e058e9299c39bc3ba1a350b8"
+}

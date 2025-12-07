@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE client_id = ? AND server_modified_at > ? ORDER BY server_modified_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "client_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "modified_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "server_modified_at",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "content",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "tags",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "pinned",
+        "ordinal": 7,
+        "type_info": "Int64"
+      },
+      {
+        "name": "deleted",
+        "ordinal": 8,
+        "type_info": "Int64"
+      },
+      {
+        "name": "deleted_at",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "version",
+        "ordinal": 10,
+        "type_info": "Int64"
+      },
+      {
+        "name": "server_version",
+        "ordinal": 11,
+        "type_info": "Int64"
+      },
+      {
+        "name": "word_wrap",
+        "ordinal": 12,
+        "type_info": "Int64"
+      },
+      {
+        "name": "syntax_language",
+        "ordinal": 13,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "dc3e91e58ac4427d16c9b112876c82769645c6c9b0c04265d7d12718cdcd5238"
+}

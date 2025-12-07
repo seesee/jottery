@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT server_modified_at FROM notes WHERE client_id = ? ORDER BY server_modified_at DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "server_modified_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dbd9440a942d27a863fa7cc01067f1dcc9a14054da9b824b4093342b4568de6f"
+}
