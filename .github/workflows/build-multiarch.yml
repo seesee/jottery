@@ -153,11 +153,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare releases directory
+        run: mkdir -p releases
+
       - name: Download TUI bundle
         uses: actions/download-artifact@v4
         with:
           name: all-tui
           path: releases
+
+      - name: Debug workspace
+        run: |
+          echo "=== releases/ content ==="
+          ls -R releases
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
