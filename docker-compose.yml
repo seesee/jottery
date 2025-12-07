@@ -24,7 +24,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - jottery_dist:/app/dist:ro
     depends_on:
-      - jottery
+      jottery:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

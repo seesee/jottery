@@ -50,6 +50,7 @@ COPY --from=web-builder    /app/web/dist ./dist
 # Copy TUI binaries (added by GitHub Actions in /releases)
 # -----------------------------
 COPY releases ./releases
+RUN chmod -R +x /app/releases || true
 
 # -----------------------------
 # Persistent data directory for DB + attachments

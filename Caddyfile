@@ -3,4 +3,10 @@
     file_server
 
     reverse_proxy /api* jottery:3030
+
+    @notStatic {
+        not path /api*
+        not file
+    }
+    rewrite @notStatic /index.html
 }
