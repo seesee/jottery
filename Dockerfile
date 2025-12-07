@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Build the Rust server
-FROM rust:1.78 as server-builder
+FROM rust:1.85 as server-builder
 WORKDIR /app
 COPY server/ ./server/
 WORKDIR /app/server
