@@ -2,16 +2,20 @@
 # Stage 1: Build the Svelte web client
 # -----------------------------
 FROM node:20-slim AS web-builder
-WORKDIR /app/web
+WORKDIR /app
 
 # Only copy web client deps first for caching
-COPY web/package.json web/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm install
 
 # Copy rest of web client source
-COPY web/ .
+COPY src ./src
+COPY public ./public
+COPY tsconfig.json .
+COPY vite.config.js .
+COPY tailwind.config.js .
+COPY postcss.config.js .
 RUN npm run build
-
 
 # -----------------------------
 # Stage 2: Build the Rust server
@@ -44,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy server + web client
 # -----------------------------
 COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
-COPY --from=web-builder    /app/web/dist ./dist
+COPY --from=web-builder    /app/dist ./dist
 
 # -----------------------------
 # Copy TUI binaries (added by GitHub Actions in /releases)
