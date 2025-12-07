@@ -15,6 +15,7 @@ jobs:
     env:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      VERSION: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -50,20 +51,23 @@ jobs:
         run: |
           chmod +x ./jottery-tui-build.sh
           ./jottery-tui-build.sh
+          mkdir -p releases-versioned
+          for f in releases/*; do
+            base=$(basename "$f")
+            cp "$f" "releases-versioned/${base}-${VERSION}"
+          done
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-tui
-          path: releases/*
-
+          path: releases-versioned/*
 
   macos-tui:
     name: Build macOS TUI
     runs-on: macos-latest
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      VERSION: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -75,22 +79,20 @@ jobs:
         run: |
           cd tui
           cargo build --release --features sqlcipher
-          mkdir -p ../releases
-          cp target/release/jottery ../releases/jottery-macos
+          mkdir -p ../releases-versioned
+          cp target/release/jottery ../releases-versioned/jottery-macos-${VERSION}
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-tui
-          path: releases/*
-
+          path: releases-versioned/*
 
   windows-tui:
     name: Build Windows TUI
     runs-on: windows-latest
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      VERSION: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -100,23 +102,21 @@ jobs:
         run: |
           cd tui
           cargo build --release --no-default-features --features sqlite
-          mkdir -p ../releases
-          cp target/release/jottery.exe ../releases/jottery-windows.exe
+          mkdir -p ../releases-versioned
+          cp target/release/jottery.exe ../releases-versioned/jottery-windows-${VERSION}.exe
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-tui
-          path: releases/*
-
+          path: releases-versioned/*
 
   collect-tui:
     name: Collect All TUI Binaries
     needs: [linux-tui, macos-tui, windows-tui]
     runs-on: ubuntu-latest
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      VERSION: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -126,20 +126,31 @@ jobs:
         with:
           path: collected
 
-      - name: Assemble releases folder
+      - name: Combine versioned TUI files
         run: |
           rm -rf releases
           mkdir releases
-          cp collected/linux-tui/* releases/ || true
-          cp collected/macos-tui/* releases/ || true
-          cp collected/windows-tui/* releases/ || true
+          cp collected/linux-tui/* releases/
+          cp collected/macos-tui/* releases/
+          cp collected/windows-tui/* releases/
+
+      - name: Create ZIP bundle
+        run: |
+          zip -r jottery-tui-${VERSION}.zip releases
+          mkdir release-assets
+          mv jottery-tui-${VERSION}.zip release-assets/
+
+      - name: Upload ZIP bundle for Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: tui-release-zip
+          path: release-assets/*
 
       - name: Upload combined TUI folder
         uses: actions/upload-artifact@v4
         with:
           name: all-tui
           path: releases/*
-
 
   docker-build:
     name: Build Multi-Arch Docker Image
@@ -149,6 +160,7 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SQLX_OFFLINE: "true"
+      VERSION: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -163,9 +175,7 @@ jobs:
           path: releases
 
       - name: Debug workspace
-        run: |
-          echo "=== releases/ content ==="
-          ls -R releases
+        run: ls -R releases
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -190,3 +200,27 @@ jobs:
           tags: |
             ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:latest
             ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:${{ github.ref_name }}
+
+  make-release:
+    name: Publish GitHub Release
+    needs: [collect-tui, docker-build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release ZIP and TUI files
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Jottery ${{ github.ref_name }}
+          files: |
+            release-assets/tui-release-zip/*
+            release-assets/all-tui/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
