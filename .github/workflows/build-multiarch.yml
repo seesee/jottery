@@ -19,6 +19,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
 
       - name: Install Rust targets
         run: |
@@ -71,6 +72,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
 
       - name: Install SQLCipher
         run: brew install sqlcipher
@@ -96,6 +98,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
 
       - name: Build Windows TUI
         shell: bash
@@ -197,6 +200,8 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
+          cache-from: type=registry,ref=ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:buildcache,mode=max
           tags: |
             ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:latest
             ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:${{ github.ref_name }}
