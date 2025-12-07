@@ -1,30 +1,67 @@
-# Dockerfile
-
+# -----------------------------
 # Stage 1: Build the Svelte web client
-FROM node:20-slim as web-builder
-WORKDIR /app
-COPY package.json package-lock.json ./
+# -----------------------------
+FROM node:20-slim AS web-builder
+WORKDIR /app/web
+
+# Only copy web client deps first for caching
+COPY web/package.json web/package-lock.json ./
 RUN npm install
-COPY . .
+
+# Copy rest of web client source
+COPY web/ .
 RUN npm run build
 
-# Stage 2: Build the Rust server
-FROM rust:1.85 as server-builder
-WORKDIR /app
-COPY server/ ./server/
-WORKDIR /app/server
-# Create a dummy file for the database to be present during the build
-RUN mkdir -p data
-RUN touch data/jottery.db
-RUN cargo build --release
 
-# Stage 3: Create the final image
+# -----------------------------
+# Stage 2: Build the Rust server
+# -----------------------------
+FROM rust:1.85 AS server-builder
+WORKDIR /app/server
+
+# Copy server source code
+COPY server/ .
+
+# Build server binary
+RUN cargo build --release --bin jottery-server
+
+
+# -----------------------------
+# Stage 3: Final runtime image
+# -----------------------------
 FROM debian:bookworm-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/
-COPY --from=web-builder /app/dist ./dist
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------
+# Copy server + web client
+# -----------------------------
+COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
+COPY --from=web-builder    /app/web/dist                         ./dist
+
+# -----------------------------
+# Copy TUI binaries (added by GitHub Actions in /releases)
+# -----------------------------
+COPY releases ./releases
+
+# -----------------------------
+# Persistent data directory for DB + attachments
+# -----------------------------
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
+
+# -----------------------------
+# Runtime configuration
+# -----------------------------
 ENV ROCKET_ADDRESS=0.0.0.0
-ENV DATABASE_URL=data/jottery.db
-EXPOSE 8000
+ENV ROCKET_PORT=3030
+ENV DATABASE_URL=/app/data/jottery.db
+
+# Expose the sync server's internal port
+EXPOSE 3030
+
 CMD ["/usr/local/bin/jottery-server"]

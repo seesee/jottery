@@ -1,0 +1,6 @@
+:8088 {
+    root * /app/dist
+    file_server
+
+    reverse_proxy /api* jottery:3030
+}
