@@ -30,8 +30,18 @@ jobs:
           gcc-arm-linux-gnueabihf \
           qemu-user-static
 
+      - name: Configure cross toolchains for ring/openssl
+        run: |
+          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+          echo "CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+          echo "AR_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-ar" >> $GITHUB_ENV
+          echo "CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+
       - name: Install SQLCipher
-        run: sudo apt-get update && sudo apt-get install -y sqlcipher libsqlcipher-dev
+        run: sudo apt-get install -y sqlcipher libsqlcipher-dev
 
       - name: Build Linux TUI (all arches)
         run: |
