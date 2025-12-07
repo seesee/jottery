@@ -12,7 +12,7 @@ RUN npm install
 COPY src ./src
 COPY public ./public
 COPY tsconfig.json .
-COPY vite.config.js .
+COPY svelte.config.js .
 COPY tailwind.config.js .
 COPY postcss.config.js .
 RUN npm run build
