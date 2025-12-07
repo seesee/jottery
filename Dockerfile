@@ -11,6 +11,7 @@ RUN npm install
 # Copy rest of web client source
 COPY src ./src
 COPY public ./public
+COPY index.html .
 COPY tsconfig.json .
 COPY svelte.config.js .
 COPY tailwind.config.js .
