@@ -4,30 +4,11 @@ services:
   jottery:
     image: ghcr.io/seesee/jottery:latest
     container_name: jottery
-    expose:
-      - "3030"
-    volumes:
-      - jottery_data:/app/data
-      - jottery_dist:/app/dist-shared
-    # Copy static web files to shared volume, then run server
-    command: >
-      sh -c "cp -r /app/dist/* /app/dist-shared/ &&
-             exec jottery-server"
-    restart: unless-stopped
-
-  jottery-caddy:
-    image: caddy:2
-    container_name: jottery-caddy
     ports:
       - "8088:8088"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - jottery_dist:/app/dist:ro
-    depends_on:
-      jottery:
-        condition: service_started
+      - jottery_data:/app/data
     restart: unless-stopped
 
 volumes:
   jottery_data:
-  jottery_dist:

@@ -99,4 +99,4 @@ EXPOSE 8088
 # -----------------------------
 # Start both jottery-server & Caddy
 # -----------------------------
-CMD ["/bin/sh", "-c", "jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
+CMD ["/bin/sh", "-c", "mkdir -p /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
