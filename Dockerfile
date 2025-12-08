@@ -43,14 +43,9 @@ RUN cargo build --release --bin jottery-server
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Install runtime dependencies + Caddy
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl \
-    && curl -1sLf "https://caddyserver.com/api/download?os=linux&arch=$(dpkg --print-architecture)&p=personal" \
-        -o caddy.tar.gz \
-    && tar xzf caddy.tar.gz -C /usr/bin caddy \
-    && rm caddy.tar.gz \
-    && chmod +x /usr/bin/caddy \
+      ca-certificates \
+      caddy \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
