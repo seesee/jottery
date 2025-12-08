@@ -87,6 +87,7 @@ COPY <<'EOF' /etc/caddy/Caddyfile
     }
     rewrite @notStatic /index.html
 }
+EOF
 
 # -----------------------------
 # Runtime environment
