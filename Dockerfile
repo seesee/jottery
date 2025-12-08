@@ -36,7 +36,6 @@ COPY server/ .
 # Build server binary
 RUN cargo build --release --bin jottery-server
 
-
 # -----------------------------
 # Stage 3: Final unified runtime image (Caddy + Server)
 # -----------------------------
@@ -61,12 +60,9 @@ COPY releases ./releases
 RUN chmod -R +x /app/releases || true
 
 # -----------------------------
-# Create non-root user & prepare data dir
+# Persistent data directory
 # -----------------------------
-RUN groupadd -r jottery && useradd -r -g jottery jottery
-
-RUN mkdir -p /app/data && chown -R jottery:jottery /app
-
+RUN mkdir -p /app/data
 VOLUME ["/app/data"]
 
 # -----------------------------
@@ -81,6 +77,7 @@ COPY <<'EOF' /etc/caddy/Caddyfile
 
     # Strip /api prefix and reverse proxy to jottery-server
     handle_path /api/* {
+        uri strip_prefix /api
         reverse_proxy localhost:3030
     }
 
@@ -103,14 +100,6 @@ ENV DATABASE_URL=/app/data/jottery.db
 EXPOSE 8088
 
 # -----------------------------
-# Switch to jottery user
+# Start both jottery-server & Caddy
 # -----------------------------
-RUN mkdir -p /home/jottery && chown -R jottery:jottery /home/jottery
-ENV HOME=/home/jottery
-
-USER jottery
-
-# -----------------------------
-# Start both jottery-server & Caddy (ensure DB exists as jottery)
-# -----------------------------
-CMD ["/bin/sh", "-c", "mkdir -p /app/data && chown -R jottery:jottery /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
+CMD ["/bin/sh", "-c", "mkdir -p /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
