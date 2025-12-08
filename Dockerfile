@@ -76,7 +76,10 @@ COPY <<'EOF' /etc/caddy/Caddyfile
     root * /app/dist
     file_server
 
-    reverse_proxy /api* localhost:3030
+    # Strip /api prefix and reverse proxy to jottery-server
+    handle_path /api/* {
+        reverse_proxy localhost:3030
+    }
 
     @notStatic {
         not path /api*
@@ -84,7 +87,6 @@ COPY <<'EOF' /etc/caddy/Caddyfile
     }
     rewrite @notStatic /index.html
 }
-EOF
 
 # -----------------------------
 # Runtime environment
