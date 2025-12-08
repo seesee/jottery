@@ -77,7 +77,6 @@ COPY <<'EOF' /etc/caddy/Caddyfile
 
     # Strip /api prefix and reverse proxy to jottery-server
     handle_path /api/* {
-        uri strip_prefix /api
         reverse_proxy localhost:3030
     }
 
