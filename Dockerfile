@@ -38,15 +38,20 @@ RUN cargo build --release --bin jottery-server
 
 
 # -----------------------------
-# Stage 3: Final runtime image
+# Stage 3: Final unified runtime image (Caddy + Server)
 # -----------------------------
 FROM debian:bookworm-slim
 WORKDIR /app
 
-# Install runtime dependencies only
+# Install runtime dependencies + Caddy
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
- && rm -rf /var/lib/apt/lists/*
+      ca-certificates curl \
+    && curl -1sLf "https://caddyserver.com/api/download?os=linux&arch=$(dpkg --print-architecture)&p=personal" \
+        -o caddy.tar.gz \
+    && tar xzf caddy.tar.gz -C /usr/bin caddy \
+    && rm caddy.tar.gz \
+    && chmod +x /usr/bin/caddy \
+    && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
 # Copy server + web client
@@ -61,19 +66,42 @@ COPY releases ./releases
 RUN chmod -R +x /app/releases || true
 
 # -----------------------------
-# Persistent data directory for DB + attachments
+# Persistent data directory
 # -----------------------------
 RUN mkdir -p /app/data
 VOLUME ["/app/data"]
 
 # -----------------------------
-# Runtime configuration
+# Embedded Caddyfile (no external mounts needed)
+# -----------------------------
+RUN mkdir -p /etc/caddy
+
+COPY <<'EOF' /etc/caddy/Caddyfile
+:8088 {
+    root * /app/dist
+    file_server
+
+    reverse_proxy /api* localhost:3030
+
+    @notStatic {
+        not path /api*
+        not file
+    }
+    rewrite @notStatic /index.html
+}
+EOF
+
+# -----------------------------
+# Runtime environment
 # -----------------------------
 ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=3030
 ENV DATABASE_URL=/app/data/jottery.db
 
-# Expose the sync server's internal port
-EXPOSE 3030
+# Expose only the Caddy HTTP port
+EXPOSE 8088
 
-CMD ["/usr/local/bin/jottery-server"]
+# -----------------------------
+# Start both jottery-server & Caddy
+# -----------------------------
+CMD ["/bin/sh", "-c", "jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
