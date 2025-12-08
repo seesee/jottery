@@ -105,9 +105,12 @@ EXPOSE 8088
 # -----------------------------
 # Switch to jottery user
 # -----------------------------
+RUN mkdir -p /home/jottery && chown -R jottery:jottery /home/jottery
+ENV HOME=/home/jottery
+
 USER jottery
 
 # -----------------------------
 # Start both jottery-server & Caddy (ensure DB exists as jottery)
 # -----------------------------
-CMD ["/bin/sh", "-c", "mkdir -p /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
+CMD ["/bin/sh", "-c", "mkdir -p /app/data && chown -R jottery:jottery /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
