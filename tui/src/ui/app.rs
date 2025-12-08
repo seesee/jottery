@@ -46,6 +46,15 @@ pub enum AppState {
         /// Previous state to return to
         previous: Box<AppState>,
     },
+    /// Show sync credentials as text (for manual copy)
+    ShowSyncCredentials {
+        credentials: String,
+        previous: Box<AppState>,
+    },
+    /// Input sync credentials as text (for manual paste)
+    InputSyncCredentials {
+        previous: Box<AppState>,
+    },
     /// Quit
     Quit,
 }
@@ -112,6 +121,8 @@ pub struct App {
     editing_note_id: Option<String>,
     /// Settings
     settings: UserSettings,
+    /// Sync credentials input buffer (for manual paste)
+    credential_input: String,
     /// Debug log file (for troubleshooting)
     debug_log: Option<Arc<Mutex<File>>>,
 }
@@ -146,6 +157,7 @@ impl App {
             selected_note: 0,
             editing_note_id: None,
             settings: UserSettings::default(),
+            credential_input: String::new(),
             debug_log,
         })
     }
@@ -175,6 +187,8 @@ impl App {
             AppState::Locked => self.handle_locked_key(key)?,
             AppState::NoteList => self.handle_note_list_key(key)?,
             AppState::NoteView => self.handle_note_view_key(key)?,
+            AppState::ShowSyncCredentials { .. } => self.handle_show_credentials_key(key)?,
+            AppState::InputSyncCredentials { .. } => self.handle_input_credentials_key(key)?,
             AppState::Quit => {}
             AppState::Settings { .. } => unreachable!(), // Handled above
             AppState::Help { .. } => unreachable!(), // Handled above
@@ -532,19 +546,39 @@ impl App {
                         self.start_editing_setting();
                     }
                     KeyCode::Char('p') => {
-                        // Paste sync credentials from clipboard
-                        if let Err(e) = self.paste_sync_credentials() {
-                            self.error = Some(format!("Failed to paste credentials: {}", e));
-                        } else {
-                            self.sync_status = Some("Sync credentials pasted successfully!".to_string());
+                        // Show text input for sync credentials (try clipboard first as convenience)
+                        // Try clipboard paste as convenience (may fail over SSH)
+                        if let Ok(mut clipboard) = arboard::Clipboard::new() {
+                            if let Ok(text) = clipboard.get_text() {
+                                self.credential_input = text;
+                            }
                         }
+
+                        // Show input modal for manual paste
+                        let prev = std::mem::replace(&mut self.state, AppState::Quit);
+                        self.state = AppState::InputSyncCredentials {
+                            previous: Box::new(prev),
+                        };
+                        self.input_mode = InputMode::Insert;
                     }
                     KeyCode::Char('c') => {
-                        // Copy sync credentials to clipboard
-                        if let Err(e) = self.copy_sync_credentials() {
-                            self.error = Some(format!("Failed to copy credentials: {}", e));
-                        } else {
-                            self.sync_status = Some("Sync credentials copied to clipboard!".to_string());
+                        // Show sync credentials as text (and try clipboard copy)
+                        match self.generate_sync_credentials_text() {
+                            Ok(creds_text) => {
+                                // Try clipboard copy (best effort - may fail over SSH)
+                                let _ = arboard::Clipboard::new()
+                                    .and_then(|mut clip| clip.set_text(&creds_text));
+
+                                // Always show text modal for manual copy
+                                let prev = std::mem::replace(&mut self.state, AppState::Quit);
+                                self.state = AppState::ShowSyncCredentials {
+                                    credentials: creds_text,
+                                    previous: Box::new(prev),
+                                };
+                            }
+                            Err(e) => {
+                                self.error = Some(format!("Failed to generate credentials: {}", e));
+                            }
                         }
                     }
                     KeyCode::Char('y') => {
@@ -1258,6 +1292,186 @@ impl App {
         Ok(())
     }
 
+    /// Generate sync credentials text (base64 encoded)
+    fn generate_sync_credentials_text(&self) -> Result<String> {
+        // Get sync metadata
+        if let Some(db) = &self.db {
+            let sync_repo = SyncRepository::new(db.connection());
+            let metadata = sync_repo.get_metadata()?
+                .ok_or_else(|| anyhow::anyhow!("No sync configuration found"))?;
+
+            // Check if credentials exist
+            let encrypted_api_key = metadata.api_key
+                .ok_or_else(|| anyhow::anyhow!("No API key configured. Enable sync first."))?;
+            let client_id = metadata.client_id
+                .ok_or_else(|| anyhow::anyhow!("No client ID found. Enable sync first."))?;
+
+            // Decrypt API key
+            let api_key = if let Some(key) = &self.key {
+                let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
+                self.crypto.decrypt_text(&encrypted, key)?
+            } else {
+                anyhow::bail!("Database not unlocked");
+            };
+
+            // Get encryption metadata for salt
+            use crate::repository::encryption::EncryptionRepository;
+            let encryption_repo = EncryptionRepository::new(db.connection());
+            let encryption_meta = encryption_repo.get()?
+                .ok_or_else(|| anyhow::anyhow!("Encryption metadata not found"))?;
+
+            // Convert salt to base64 string
+            use base64::Engine;
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
+
+            // Create credentials payload with salt
+            let mut creds = SyncCredentials::new(
+                metadata.sync_endpoint,
+                api_key,
+                client_id,
+            );
+            creds.salt = Some(salt_b64);
+
+            // Encode to base64
+            creds.to_base64()
+        } else {
+            anyhow::bail!("Database not available")
+        }
+    }
+
+    /// Handle key events when showing sync credentials
+    fn handle_show_credentials_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q') => {
+                // Return to previous state
+                if let AppState::ShowSyncCredentials { previous, .. } =
+                    std::mem::replace(&mut self.state, AppState::Quit) {
+                    self.state = *previous;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Handle key events when inputting sync credentials
+    fn handle_input_credentials_key(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                // Cancel input
+                self.credential_input.clear();
+                self.input_mode = InputMode::Normal;
+                if let AppState::InputSyncCredentials { previous } =
+                    std::mem::replace(&mut self.state, AppState::Quit) {
+                    self.state = *previous;
+                }
+            }
+            KeyCode::Enter => {
+                // Process the credentials
+                let input = self.credential_input.trim().to_string();
+                self.credential_input.clear();
+                self.input_mode = InputMode::Normal;
+
+                // Return to previous state
+                if let AppState::InputSyncCredentials { previous } =
+                    std::mem::replace(&mut self.state, AppState::Quit) {
+                    self.state = *previous;
+                }
+
+                // Try to process credentials
+                if let Err(e) = self.process_credentials_input(&input) {
+                    self.error = Some(format!("Failed to paste credentials: {}", e));
+                } else {
+                    self.sync_status = Some("Sync credentials configured successfully!".to_string());
+                }
+            }
+            KeyCode::Char(c) => {
+                self.credential_input.push(c);
+            }
+            KeyCode::Backspace => {
+                self.credential_input.pop();
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// Process credentials input from text
+    fn process_credentials_input(&mut self, input: &str) -> Result<()> {
+        // Decode credentials
+        let creds = SyncCredentials::from_base64(input.trim())
+            .context("Invalid sync credentials format")?;
+
+        self.debug_log(&format!("Process credentials - endpoint: {}", creds.endpoint));
+        self.debug_log(&format!("Process credentials - client_id: {}", creds.client_id));
+        self.debug_log(&format!("Process credentials - has salt: {}", creds.salt.is_some()));
+
+        // Get database
+        let db = self.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+        // If web app salt is provided, update it first
+        if let Some(salt_b64) = &creds.salt {
+            use base64::Engine;
+            use crate::repository::encryption::EncryptionRepository;
+            let encryption_repo = EncryptionRepository::new(db.connection());
+
+            // Decode the base64 salt from web app
+            let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
+                .context("Invalid base64 salt from sync credentials")?;
+
+            self.debug_log(&format!("Process credentials - Salt (base64): {}", salt_b64));
+            self.debug_log(&format!("Process credentials - Salt (hex): {}", hex::encode(&salt)));
+            self.debug_log(&format!("Process credentials - Salt length: {} bytes", salt.len()));
+
+            // Validate salt length
+            if salt.len() < 32 {
+                anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes)", salt.len());
+            }
+
+            // Update encryption metadata with web app's salt AND iteration count
+            self.debug_log("Process credentials - Saving salt with 100,000 iterations");
+            encryption_repo.save(&salt, 100_000)?;
+            self.debug_log("Process credentials - Salt saved successfully");
+        }
+
+        // Save sync metadata with PLAINTEXT API key temporarily
+        let sync_repo = SyncRepository::new(db.connection());
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+
+        // Store API key as plaintext temporarily (will be encrypted on next unlock)
+        self.debug_log("Process credentials - Storing API key (will encrypt on next unlock)");
+        metadata.api_key = Some(format!("PLAINTEXT:{}", creds.api_key));
+        metadata.client_id = Some(creds.client_id);
+        metadata.sync_endpoint = creds.endpoint.clone();
+        metadata.sync_enabled = true;
+
+        sync_repo.update_metadata(&metadata)?;
+
+        // Update settings
+        self.settings.sync_endpoint = Some(creds.endpoint);
+        self.settings.sync_enabled = true;
+        self.save_settings()?;
+
+        // If web app salt was provided, lock and force re-unlock
+        if creds.salt.is_some() {
+            self.debug_log("Process credentials - Locking database to force re-unlock with new salt");
+
+            // Automatically lock the database
+            self.key = None;
+            self.notes.clear();
+            self.selected_note = 0;
+            self.password_input.clear();
+            self.password_confirm.clear();
+            self.input_mode = InputMode::Normal;
+            self.state = AppState::Locked;
+
+            // Show message about what happened
+            self.error = Some("Salt synchronized! Please re-enter your password to unlock with the new encryption salt.".to_string());
+        }
+
+        Ok(())
+    }
+
     /// Delete selected note
     fn delete_note(&mut self) -> Result<()> {
         if let Some(db) = &self.db {
@@ -1324,6 +1538,10 @@ impl App {
             AppState::NoteView => self.render_note_view(frame),
             AppState::Settings { .. } => self.render_settings(frame),
             AppState::Help { .. } => self.render_help(frame),
+            AppState::ShowSyncCredentials { credentials, .. } => {
+                self.render_show_credentials(frame, credentials)
+            }
+            AppState::InputSyncCredentials { .. } => self.render_input_credentials(frame),
             AppState::Quit => {}
         }
     }
@@ -1793,8 +2011,8 @@ impl App {
             Line::from(vec![
                 Span::styled("Sync Credentials: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  • Press 'p' to paste sync credentials from clipboard"),
-            Line::from("  • Press 'c' to copy sync credentials to clipboard"),
+            Line::from("  • Press 'p' to paste sync credentials (text input)"),
+            Line::from("  • Press 'c' to copy sync credentials (shows text)"),
         ];
 
         // Add status and error messages if present
@@ -1914,8 +2132,8 @@ impl App {
             Line::from("  Enter / i / Space     Edit selected field"),
             Line::from("  Enter                 Save text/number fields, cycle/toggle other fields"),
             Line::from("  Esc                   Cancel editing (text/number fields)"),
-            Line::from("  p                     Paste sync credentials from clipboard"),
-            Line::from("  c                     Copy sync credentials to clipboard"),
+            Line::from("  p                     Paste sync credentials (shows text input)"),
+            Line::from("  c                     Copy sync credentials (shows text to copy)"),
             Line::from("  s / q                 Close settings panel"),
             Line::from(""),
             Line::from(vec![
@@ -1929,6 +2147,146 @@ impl App {
             .wrap(Wrap { trim: false });
 
         frame.render_widget(paragraph, size);
+    }
+
+    /// Render sync credentials display modal
+    fn render_show_credentials(&self, frame: &mut Frame, credentials: &str) {
+        let size = frame.area();
+
+        // Create centered modal (60% width, 60% height)
+        let modal_width = (size.width as f32 * 0.6) as u16;
+        let modal_height = (size.height as f32 * 0.6) as u16;
+        let modal_x = (size.width - modal_width) / 2;
+        let modal_y = (size.height - modal_height) / 2;
+
+        let modal_area = ratatui::layout::Rect {
+            x: modal_x,
+            y: modal_y,
+            width: modal_width,
+            height: modal_height,
+        };
+
+        // Create background
+        frame.render_widget(
+            Block::default().style(Style::default().bg(Color::Black)),
+            modal_area,
+        );
+
+        // Create border block
+        let block = Block::default()
+            .title(" Sync Credentials (Copy This Text) ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Cyan));
+
+        // Split into content area and help area
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(3)])
+            .split(block.inner(modal_area));
+
+        // Render border
+        frame.render_widget(block, modal_area);
+
+        // Render credentials text (wrapped)
+        let text = vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                "Copy the text below and paste it into another Jottery client:",
+                Style::default().fg(Color::Yellow),
+            )),
+            Line::from(""),
+            Line::from(Span::raw(credentials)),
+        ];
+
+        let paragraph = Paragraph::new(text)
+            .wrap(Wrap { trim: false })
+            .style(Style::default().fg(Color::White));
+
+        frame.render_widget(paragraph, chunks[0]);
+
+        // Render help text
+        let help = Paragraph::new(Line::from(vec![
+            Span::styled("Press ", Style::default().fg(Color::Gray)),
+            Span::styled("Esc", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled(" or ", Style::default().fg(Color::Gray)),
+            Span::styled("Enter", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled(" to close", Style::default().fg(Color::Gray)),
+        ]))
+        .alignment(Alignment::Center);
+
+        frame.render_widget(help, chunks[1]);
+    }
+
+    /// Render sync credentials input modal
+    fn render_input_credentials(&self, frame: &mut Frame) {
+        let size = frame.area();
+
+        // Create centered modal (60% width, 40% height)
+        let modal_width = (size.width as f32 * 0.6) as u16;
+        let modal_height = (size.height as f32 * 0.4) as u16;
+        let modal_x = (size.width - modal_width) / 2;
+        let modal_y = (size.height - modal_height) / 2;
+
+        let modal_area = ratatui::layout::Rect {
+            x: modal_x,
+            y: modal_y,
+            width: modal_width,
+            height: modal_height,
+        };
+
+        // Create background
+        frame.render_widget(
+            Block::default().style(Style::default().bg(Color::Black)),
+            modal_area,
+        );
+
+        // Create border block
+        let block = Block::default()
+            .title(" Paste Sync Credentials ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Cyan));
+
+        // Split into content area and help area
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(2),
+                Constraint::Min(1),
+                Constraint::Length(3),
+            ])
+            .split(block.inner(modal_area));
+
+        // Render border
+        frame.render_widget(block, modal_area);
+
+        // Render instruction text
+        let instruction = Paragraph::new(Line::from(Span::styled(
+            "Paste the base64 credentials text from another Jottery client:",
+            Style::default().fg(Color::Yellow),
+        )));
+        frame.render_widget(instruction, chunks[0]);
+
+        // Render input field
+        let input = Paragraph::new(Line::from(vec![
+            Span::raw(&self.credential_input),
+            Span::styled("█", Style::default().fg(Color::Cyan)), // Cursor
+        ]))
+        .wrap(Wrap { trim: false })
+        .style(Style::default().fg(Color::White));
+
+        frame.render_widget(input, chunks[1]);
+
+        // Render help text
+        let help = Paragraph::new(Line::from(vec![
+            Span::styled("Press ", Style::default().fg(Color::Gray)),
+            Span::styled("Enter", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(" to paste | ", Style::default().fg(Color::Gray)),
+            Span::styled("Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+            Span::styled(" to cancel", Style::default().fg(Color::Gray)),
+        ]))
+        .alignment(Alignment::Center);
+
+        frame.render_widget(help, chunks[2]);
     }
 
     /// Check if app should quit

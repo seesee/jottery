@@ -29,6 +29,8 @@
   let importCredentialsText = '';
   let importing = false;
   let showCopiedMessage = false;
+  let showCredentialsModal = false;
+  let credentialsText = '';
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -126,17 +128,22 @@
       const json = JSON.stringify(credentials);
       const base64 = btoa(json);
 
-      // Copy to clipboard
-      await navigator.clipboard.writeText(base64);
+      // Try to copy to clipboard (best effort - may fail over SSH or in some browsers)
+      try {
+        await navigator.clipboard.writeText(base64);
+        console.log('[SettingsModal] Credentials copied to clipboard');
+      } catch (clipboardError) {
+        console.warn('[SettingsModal] Clipboard copy failed (this is OK):', clipboardError);
+      }
 
-      // Show success message
-      showCopiedMessage = true;
-      setTimeout(() => showCopiedMessage = false, 3000);
+      // Always show the modal with text for manual copy
+      credentialsText = base64;
+      showCredentialsModal = true;
 
-      console.log('[SettingsModal] Credentials copied to clipboard');
+      console.log('[SettingsModal] Showing credentials modal');
     } catch (error) {
-      console.error('Failed to copy credentials:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to copy credentials';
+      console.error('Failed to generate credentials:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to generate credentials';
     }
   }
 
@@ -541,19 +548,11 @@
                     on:click={handleCopySyncCredentials}
                     class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors"
                   >
-                    📋 Copy Credentials for Other Devices
+                    📋 Show Credentials for Other Devices
                   </button>
 
-                  {#if showCopiedMessage}
-                    <div class="mt-2 bg-green-100 dark:bg-green-800/30 border border-green-300 dark:border-green-600 rounded p-2">
-                      <p class="text-xs text-green-700 dark:text-green-300">
-                        ✓ Credentials copied to clipboard! Paste them in "Use Existing Credentials" on your other device.
-                      </p>
-                    </div>
-                  {/if}
-
                   <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    Click to copy all credentials as a single base64 string. Use "Use Existing Credentials" on other devices to import.
+                    Click to display credentials as text. Use "Use Existing Credentials" on other devices to import.
                   </p>
                   <p class="mt-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
                     ⚠️ All devices must use the SAME password to decrypt notes!
@@ -674,4 +673,57 @@
     onConfirm={confirmDeleteDatabase}
     onCancel={() => showDeleteConfirm = false}
   />
+
+  <!-- Sync Credentials Display Modal -->
+  {#if showCredentialsModal}
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={() => showCredentialsModal = false}>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden" on:click|stopPropagation>
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            📋 Sync Credentials
+          </h3>
+          <button
+            on:click={() => showCredentialsModal = false}
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+          <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+            Copy the text below and paste it into another Jottery client using "Use Existing Credentials":
+          </p>
+
+          <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
+            <pre class="text-xs font-mono text-gray-900 dark:text-gray-100 break-all whitespace-pre-wrap">{credentialsText}</pre>
+          </div>
+
+          <div class="mt-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
+            <p class="text-sm text-orange-800 dark:text-orange-200">
+              ⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!
+            </p>
+          </div>
+
+          <p class="mt-3 text-xs text-gray-600 dark:text-gray-400">
+            The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <button
+            on:click={() => showCredentialsModal = false}
+            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 {/if}

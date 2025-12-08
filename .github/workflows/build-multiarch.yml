@@ -19,38 +19,52 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       VERSION: ${{ github.ref_name }}
-
+  
+    container:
+      image: debian:bullseye-slim
+  
     steps:
+      - name: Install base dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            curl \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            sqlcipher \
+            libsqlcipher-dev \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabihf \
+            qemu-user-static \
+            ca-certificates
+          update-ca-certificates
+  
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-
+  
+      - name: Install Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+  
       - name: Install Rust targets
         run: |
           rustup target add x86_64-unknown-linux-gnu
           rustup target add aarch64-unknown-linux-gnu
           rustup target add armv7-unknown-linux-gnueabihf
-
-      - name: Install ARM cross-compilers
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-          gcc-aarch64-linux-gnu \
-          gcc-arm-linux-gnueabihf \
-          qemu-user-static
-
+  
+      - uses: Swatinem/rust-cache@v2
+  
       - name: Configure cross toolchains for ring/openssl
         run: |
           echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
           echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar" >> $GITHUB_ENV
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
+  
           echo "CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
           echo "AR_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-ar" >> $GITHUB_ENV
           echo "CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
-
-      - name: Install SQLCipher
-        run: sudo apt-get install -y sqlcipher libsqlcipher-dev
-
+  
       - name: Build Linux TUI (all arches)
         run: |
           chmod +x ./jottery-tui-build.sh
@@ -60,7 +74,7 @@ jobs:
             base=$(basename "$f")
             cp "$f" "releases-versioned/${base}-${VERSION}"
           done
-
+  
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
