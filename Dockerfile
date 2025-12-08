@@ -61,9 +61,12 @@ COPY releases ./releases
 RUN chmod -R +x /app/releases || true
 
 # -----------------------------
-# Persistent data directory
+# Create non-root user & prepare data dir
 # -----------------------------
-RUN mkdir -p /app/data
+RUN groupadd -r jottery && useradd -r -g jottery jottery
+
+RUN mkdir -p /app/data && chown -R jottery:jottery /app
+
 VOLUME ["/app/data"]
 
 # -----------------------------
@@ -100,6 +103,11 @@ ENV DATABASE_URL=/app/data/jottery.db
 EXPOSE 8088
 
 # -----------------------------
-# Start both jottery-server & Caddy
+# Switch to jottery user
+# -----------------------------
+USER jottery
+
+# -----------------------------
+# Start both jottery-server & Caddy (ensure DB exists as jottery)
 # -----------------------------
 CMD ["/bin/sh", "-c", "mkdir -p /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
