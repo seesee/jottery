@@ -131,11 +131,52 @@
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 14px;
     line-height: 1.6;
+    /* Mobile-friendly scrolling */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   :global(.cm-content) {
-    padding: 1rem;
+    padding: 0.5rem; /* Reduced padding for mobile */
     min-height: 100%;
+  }
+
+  /* Larger padding on tablet and desktop */
+  @media (min-width: 768px) {
+    :global(.cm-content) {
+      padding: 1rem;
+    }
+  }
+
+  /* Mobile-friendly scrollbars */
+  @media (max-width: 767px) {
+    :global(.cm-scroller::-webkit-scrollbar) {
+      width: 8px;
+      height: 8px;
+    }
+
+    :global(.cm-scroller::-webkit-scrollbar-track) {
+      background: transparent;
+    }
+
+    :global(.cm-scroller::-webkit-scrollbar-thumb) {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    :global(.dark .cm-scroller::-webkit-scrollbar-thumb) {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hide scrollbar when not scrolling on mobile */
+    :global(.cm-scroller::-webkit-scrollbar-thumb) {
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    :global(.cm-scroller:hover::-webkit-scrollbar-thumb) {
+      opacity: 1;
+    }
   }
 
   /* Light mode styles (when oneDark is not active) */
