@@ -17,6 +17,7 @@
   let showSettings = false;
   let showRecycleBin = false;
   let showShortcutsHelp = false;
+  let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
 
   async function handleNewNote() {
     try {
@@ -31,6 +32,9 @@
 
       // Select the newly created note
       selectNote(newNote.id);
+
+      // Switch to editor view on mobile
+      mobileView = 'editor';
     } catch (error) {
       console.error('Failed to create note:', error);
       alert('Failed to create note: ' + (error instanceof Error ? error.message : String(error)));
@@ -52,6 +56,15 @@
   function handleFocusSearch() {
     const input = document.getElementById('search-input') as HTMLInputElement;
     input?.focus();
+  }
+
+  function handleBackToList() {
+    mobileView = 'list';
+  }
+
+  function handleNoteSelect() {
+    // Switch to editor view on mobile when a note is selected
+    mobileView = 'editor';
   }
 
   function applyTheme(theme: 'light' | 'dark' | 'auto') {
@@ -215,14 +228,26 @@
       />
 
       <main class="flex-1 overflow-hidden flex">
-        <!-- Note List Sidebar -->
-        <div class="w-80 border-r border-gray-200 dark:border-gray-700">
-          <NoteList />
+        <!-- Mobile: Single view (list OR editor) -->
+        <div class="tablet:hidden w-full">
+          {#if mobileView === 'list'}
+            <NoteList onNoteSelect={handleNoteSelect} />
+          {:else}
+            <EditorPane onBackToList={handleBackToList} />
+          {/if}
         </div>
 
-        <!-- Editor -->
-        <div class="flex-1">
-          <EditorPane />
+        <!-- Desktop: Side-by-side layout -->
+        <div class="hidden tablet:flex w-full">
+          <!-- Note List Sidebar -->
+          <div class="w-80 border-r border-gray-200 dark:border-gray-700">
+            <NoteList />
+          </div>
+
+          <!-- Editor -->
+          <div class="flex-1">
+            <EditorPane />
+          </div>
         </div>
       </main>
     </div>

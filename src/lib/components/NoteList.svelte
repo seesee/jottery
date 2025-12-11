@@ -1,6 +1,8 @@
 <script lang="ts">
   import { filteredNotes, notes, searchQuery } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
+
+  export let onNoteSelect: (() => void) | undefined = undefined;
 </script>
 
 <div class="h-full overflow-y-auto bg-white dark:bg-gray-900">
@@ -21,7 +23,7 @@
     </div>
   {:else}
     {#each $filteredNotes as note (note.id)}
-      <NoteListItem {note} />
+      <NoteListItem {note} {onNoteSelect} />
     {/each}
   {/if}
 </div>

@@ -3,6 +3,7 @@
   import { selectNote, selectedNoteId } from '../stores/appStore';
 
   export let note: DecryptedNote;
+  export let onNoteSelect: (() => void) | undefined = undefined;
 
   $: isSelected = $selectedNoteId === note.id;
   $: title = note.content.split('\n')[0] || 'Untitled';
@@ -15,6 +16,10 @@
 
   function handleClick() {
     selectNote(note.id);
+    // Call mobile navigation callback if provided
+    if (onNoteSelect) {
+      onNoteSelect();
+    }
   }
 </script>
 

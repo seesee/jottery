@@ -8,6 +8,8 @@
   import AttachmentList from './AttachmentList.svelte';
   import FileUpload from './FileUpload.svelte';
 
+  export let onBackToList: (() => void) | undefined = undefined;
+
   let content = '';
   let tags: string[] = [];
   let attachments: Attachment[] = [];
@@ -248,6 +250,20 @@
   <div class="h-full flex flex-col bg-white dark:bg-gray-900">
     <!-- Toolbar -->
     <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between gap-2">
+      <!-- Mobile: Back Button -->
+      {#if onBackToList}
+        <button
+          on:click={onBackToList}
+          class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
+          title="Back to notes"
+          aria-label="Back to notes"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      {/if}
+
       <div class="flex gap-2">
         <button
           on:click={handleTogglePin}
