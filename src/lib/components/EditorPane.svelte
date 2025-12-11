@@ -306,7 +306,7 @@
     on:drop={handleEditorDrop}
   >
     <!-- Toolbar -->
-    <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between gap-2">
+    <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap items-center justify-between gap-2">
       <!-- Mobile: Back Button -->
       {#if onBackToList}
         <button
@@ -367,7 +367,7 @@
         <!-- Word Wrap Toggle -->
         <button
           on:click={handleWordWrapToggle}
-          class="px-4 py-2.5 min-h-11 rounded text-sm whitespace-nowrap {wordWrap ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
+          class="px-3 py-1.5 rounded text-sm whitespace-nowrap {wordWrap ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
           title="Toggle word wrap"
         >
           {wordWrap ? '↩ Wrap' : '→ No Wrap'}

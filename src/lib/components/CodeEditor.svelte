@@ -237,13 +237,29 @@
     background-color: rgb(30 64 175) !important; /* blue-800 for focused dark mode */
   }
 
-  /* Ensure selection layer is positioned correctly for wrapped lines */
+  /* Ensure selection layer is positioned correctly */
   :global(.cm-selectionLayer) {
-    z-index: -1;
+    z-index: -2;
+  }
+
+  /* Ensure content is positioned above selection */
+  :global(.cm-content) {
+    position: relative;
+    z-index: 0;
   }
 
   /* Fix selection rendering with line wrapping */
   :global(.cm-line) {
     position: relative;
+    z-index: 1;
+  }
+
+  /* Ensure selection match is visible */
+  :global(.cm-selectionMatch) {
+    background-color: rgba(191, 219, 254, 0.5) !important;
+  }
+
+  :global(.dark .cm-selectionMatch) {
+    background-color: rgba(30, 58, 138, 0.5) !important;
   }
 </style>
