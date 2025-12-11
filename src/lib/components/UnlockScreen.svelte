@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
   import { initialize, unlock, isInitialized, deleteDB } from '../services';
   import { _ } from 'svelte-i18n';
@@ -12,12 +13,20 @@
   let failedAttempts = 0;
   let showDeleteOption = false;
   let showDeleteConfirm = false;
+  let passwordInput: HTMLInputElement;
 
   // Check if needs initialization
   (async () => {
     needsInit = !(await isInitialized());
     isInitializedStore.set(!needsInit);
   })();
+
+  // Auto-focus password input on mount
+  onMount(() => {
+    if (passwordInput) {
+      passwordInput.focus();
+    }
+  });
 
   async function handleSubmit() {
     error = '';
@@ -110,6 +119,7 @@
             id="password"
             type="password"
             bind:value={password}
+            bind:this={passwordInput}
             disabled={loading}
             required
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"

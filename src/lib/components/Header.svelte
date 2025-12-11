@@ -9,6 +9,7 @@
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
   export let onOpenReleases: () => void = () => {};
+  export let forceMobileLayout: boolean = false;
 
   let showLockConfirm = false;
   let showReleasesModal = false;
@@ -47,7 +48,7 @@
     if (showMobileSearch) {
       // Focus search input after showing
       setTimeout(() => {
-        document.getElementById('search-input')?.focus();
+        document.getElementById('search-input-mobile')?.focus();
       }, 100);
     }
   }
@@ -58,71 +59,116 @@
 </script>
 
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
-  <div class="flex items-center gap-2 tablet:gap-4">
-    <!-- Mobile: Hamburger Menu Button -->
-    <button
-      on:click={toggleMobileMenu}
-      class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-      title="Menu"
-      aria-label="Open menu"
-    >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
-    </button>
+  <div class="flex items-center gap-2 {forceMobileLayout ? 'gap-2' : 'tablet:gap-4'}">
+    {#if forceMobileLayout}
+      <!-- Mobile: Hamburger Menu Button -->
+      <button
+        on:click={toggleMobileMenu}
+        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+        title="Menu"
+        aria-label="Open menu"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    {:else}
+      <button
+        on:click={toggleMobileMenu}
+        class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+        title="Menu"
+        aria-label="Open menu"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    {/if}
 
     <!-- Brand -->
-    <h1 class="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
+    <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
 
-    <!-- Desktop: Search Bar -->
-    <div class="hidden tablet:block flex-1 max-w-md relative">
-      <input
-        id="search-input"
-        type="text"
-        bind:value={$searchQuery}
-        placeholder={$_('search.placeholder')}
-        class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-      />
-      {#if $searchQuery}
+    {#if !forceMobileLayout}
+      <!-- Desktop: Search Bar -->
+      <div class="hidden tablet:block flex-1 max-w-md relative">
+        <input
+          id="search-input"
+          type="text"
+          bind:value={$searchQuery}
+          placeholder={$_('search.placeholder')}
+          class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+        />
+        {#if $searchQuery}
+          <button
+            on:click={() => searchQuery.set('')}
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            title={$_('search.clear')}
+          >
+            ✕
+          </button>
+        {/if}
+      </div>
+
+      <div class="flex-1 tablet:hidden"></div>
+    {:else}
+      <div class="flex-1"></div>
+    {/if}
+
+    {#if forceMobileLayout}
+      <!-- Mobile: Essential Actions -->
+      <div class="flex items-center gap-2">
         <button
-          on:click={() => searchQuery.set('')}
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          title={$_('search.clear')}
+          on:click={toggleMobileSearch}
+          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          title={$_('search.placeholder')}
+          aria-label="Search"
         >
-          ✕
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </button>
-      {/if}
-    </div>
 
-    <div class="flex-1 tablet:hidden"></div>
+        <button
+          on:click={handleNewNoteClick}
+          class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          title={$_('note.create')}
+          aria-label="New note"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+    {:else}
+      <!-- Mobile: Essential Actions (responsive) -->
+      <div class="flex tablet:hidden items-center gap-2">
+        <button
+          on:click={toggleMobileSearch}
+          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          title={$_('search.placeholder')}
+          aria-label="Search"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
 
-    <!-- Mobile: Essential Actions -->
-    <div class="flex tablet:hidden items-center gap-2">
-      <button
-        on:click={toggleMobileSearch}
-        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-        title={$_('search.placeholder')}
-        aria-label="Search"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </button>
+        <button
+          on:click={handleNewNoteClick}
+          class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          title={$_('note.create')}
+          aria-label="New note"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+    {/if}
 
-      <button
-        on:click={handleNewNoteClick}
-        class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-        title={$_('note.create')}
-        aria-label="New note"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Desktop: Full Actions -->
-    <div class="hidden tablet:flex items-center gap-2">
+    {#if !forceMobileLayout}
+      <!-- Desktop: Full Actions -->
+      <div class="hidden tablet:flex items-center gap-2">
       <button
         on:click={handleNewNoteClick}
         class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
@@ -163,11 +209,12 @@
         🔒 {$_('common.lock')}
       </button>
     </div>
+    {/if}
   </div>
 
   <!-- Mobile: Expandable Search Bar -->
   {#if showMobileSearch}
-    <div class="tablet:hidden mt-3 animate-slide-down">
+    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} mt-3 animate-slide-down">
       <div class="relative">
         <input
           id="search-input-mobile"
@@ -193,7 +240,7 @@
   {#if showMobileMenu}
     <!-- Backdrop -->
     <div
-      class="tablet:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+      class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed inset-0 bg-black bg-opacity-50 z-40"
       on:click={closeMobileMenu}
       role="button"
       tabindex="-1"
@@ -201,7 +248,7 @@
     ></div>
 
     <!-- Drawer -->
-    <div class="tablet:hidden fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800 z-50 shadow-xl animate-slide-in-left">
+    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800 z-50 shadow-xl animate-slide-in-left">
       <div class="flex flex-col h-full">
         <!-- Drawer Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">

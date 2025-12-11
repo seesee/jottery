@@ -14,6 +14,14 @@
   let tags: string[] = [];
   let attachments: Attachment[] = [];
   let isEditing = false;
+
+  // Wrapper to handle closing note and returning to list on mobile
+  function handleClose() {
+    clearSelection();
+    if (onBackToList) {
+      onBackToList();
+    }
+  }
   let saveTimeout: number | null = null;
   let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' = 'plain';
   let wordWrap: boolean = true;
@@ -144,7 +152,7 @@
       console.log('[EditorPane] Calling noteService.deleteNote...');
       await noteService.deleteNote($selectedNote.id);
       console.log('[EditorPane] Delete successful, clearing selection...');
-      clearSelection();
+      handleClose(); // Clear selection and return to list on mobile
 
       // Reload all notes to refresh the UI
       console.log('[EditorPane] Reloading notes...');
@@ -317,7 +325,7 @@
         </button>
 
         <button
-          on:click={clearSelection}
+          on:click={handleClose}
           class="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
         >
           ✕ Close

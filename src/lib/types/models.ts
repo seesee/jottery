@@ -44,6 +44,7 @@ export interface Attachment {
 export interface UserSettings {
   language: string; // i18n locale code
   theme: 'light' | 'dark' | 'auto';
+  layoutMode: 'auto' | 'mobile' | 'desktop'; // Layout mode override
   sortOrder: 'recent' | 'oldest' | 'alpha' | 'created';
   autoLockTimeout: number; // Minutes
   syncEnabled: boolean;
@@ -164,6 +165,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
 export const DEFAULT_SETTINGS: UserSettings = {
   language: 'en-GB',
   theme: 'auto',
+  layoutMode: 'auto',
   sortOrder: 'recent',
   autoLockTimeout: 15, // 15 minutes
   syncEnabled: false,

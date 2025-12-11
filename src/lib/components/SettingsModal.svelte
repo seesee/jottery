@@ -11,6 +11,7 @@
   export let onOpenShortcutsHelp: () => void = () => {};
 
   let theme: Theme = $settings.theme;
+  let layoutMode: 'auto' | 'mobile' | 'desktop' = $settings.layoutMode || 'auto';
   let autoLockTimeout = $settings.autoLockTimeout;
   let sortOrder = $settings.sortOrder;
   let language = $settings.language;
@@ -252,6 +253,7 @@
     try {
       await settingsRepository.update({
         theme,
+        layoutMode,
         autoLockTimeout,
         sortOrder,
         language,
@@ -261,6 +263,7 @@
       settings.update(s => ({
         ...s,
         theme,
+        layoutMode,
         autoLockTimeout,
         sortOrder,
         language,
@@ -389,6 +392,24 @@
             <option value="light">{$_('settings.themeLight')}</option>
             <option value="dark">{$_('settings.themeDark')}</option>
           </select>
+        </div>
+
+        <!-- Layout Mode -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Layout Mode
+          </label>
+          <select
+            bind:value={layoutMode}
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="auto">Auto (Responsive)</option>
+            <option value="mobile">Force Mobile Layout</option>
+            <option value="desktop">Force Desktop Layout</option>
+          </select>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Override the automatic layout detection for this device
+          </p>
         </div>
 
         <!-- Auto-lock timeout -->

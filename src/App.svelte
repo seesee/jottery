@@ -19,6 +19,10 @@
   let showShortcutsHelp = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
 
+  // Determine which layout to use based on layoutMode setting
+  $: useMobileLayout = $settings.layoutMode === 'mobile' ||
+    ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
+
   async function handleNewNote() {
     try {
       const newNote = await noteService.createNote('', []);
@@ -54,8 +58,15 @@
   }
 
   function handleFocusSearch() {
-    const input = document.getElementById('search-input') as HTMLInputElement;
-    input?.focus();
+    // Try desktop search first, fallback to mobile
+    const desktopInput = document.getElementById('search-input') as HTMLInputElement;
+    const mobileInput = document.getElementById('search-input-mobile') as HTMLInputElement;
+
+    if (desktopInput && window.getComputedStyle(desktopInput).display !== 'none') {
+      desktopInput.focus();
+    } else if (mobileInput) {
+      mobileInput.focus();
+    }
   }
 
   function handleBackToList() {
@@ -225,30 +236,33 @@
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
+        forceMobileLayout={useMobileLayout}
       />
 
       <main class="flex-1 overflow-hidden flex">
-        <!-- Mobile: Single view (list OR editor) -->
-        <div class="tablet:hidden w-full">
-          {#if mobileView === 'list'}
-            <NoteList onNoteSelect={handleNoteSelect} />
-          {:else}
-            <EditorPane onBackToList={handleBackToList} />
-          {/if}
-        </div>
-
-        <!-- Desktop: Side-by-side layout -->
-        <div class="hidden tablet:flex w-full">
-          <!-- Note List Sidebar -->
-          <div class="w-80 border-r border-gray-200 dark:border-gray-700">
-            <NoteList />
+        {#if useMobileLayout}
+          <!-- Mobile: Single view (list OR editor) -->
+          <div class="w-full">
+            {#if mobileView === 'list'}
+              <NoteList onNoteSelect={handleNoteSelect} />
+            {:else}
+              <EditorPane onBackToList={handleBackToList} />
+            {/if}
           </div>
+        {:else}
+          <!-- Desktop: Side-by-side layout -->
+          <div class="flex w-full">
+            <!-- Note List Sidebar -->
+            <div class="w-80 border-r border-gray-200 dark:border-gray-700">
+              <NoteList />
+            </div>
 
-          <!-- Editor -->
-          <div class="flex-1">
-            <EditorPane />
+            <!-- Editor -->
+            <div class="flex-1">
+              <EditorPane />
+            </div>
           </div>
-        </div>
+        {/if}
       </main>
     </div>
 
