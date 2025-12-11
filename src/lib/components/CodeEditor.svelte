@@ -220,9 +220,13 @@
     color: rgb(243 244 246); /* gray-100 */
   }
 
-  /* Fix selection highlighting for wrapped lines */
+  /* Selection highlighting - ensure backgrounds are visible */
   :global(.cm-selectionBackground) {
+    display: block !important;
+    position: absolute !important;
     background-color: rgb(191 219 254) !important; /* blue-200 for light mode */
+    opacity: 1 !important;
+    pointer-events: none !important;
   }
 
   :global(.dark .cm-selectionBackground) {
@@ -237,24 +241,13 @@
     background-color: rgb(30 64 175) !important; /* blue-800 for focused dark mode */
   }
 
-  /* Ensure selection layer is positioned correctly */
+  /* Ensure selection layer is properly rendered */
   :global(.cm-selectionLayer) {
-    z-index: -2;
+    position: relative !important;
+    z-index: -1 !important;
   }
 
-  /* Ensure content is positioned above selection */
-  :global(.cm-content) {
-    position: relative;
-    z-index: 0;
-  }
-
-  /* Fix selection rendering with line wrapping */
-  :global(.cm-line) {
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Ensure selection match is visible */
+  /* Selection match highlighting */
   :global(.cm-selectionMatch) {
     background-color: rgba(191, 219, 254, 0.5) !important;
   }
