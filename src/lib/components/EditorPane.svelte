@@ -272,24 +272,24 @@
         </button>
       {/if}
 
-      <div class="flex gap-2">
+      <div class="flex gap-3">
         <button
           on:click={handleTogglePin}
-          class="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
+          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
           title={$selectedNote.pinned ? 'Unpin' : 'Pin'}
         >
           {$selectedNote.pinned ? '⭐ Pinned' : '☆ Pin'}
         </button>
         <button
           on:click={handleDelete}
-          class="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm text-red-600 whitespace-nowrap"
+          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm text-red-600 whitespace-nowrap"
           title="Delete"
         >
           🗑️ Delete
         </button>
         <button
           on:click={handleCopy}
-          class="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
+          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
           title="Copy note content"
         >
           📋 Copy
@@ -318,7 +318,7 @@
         <!-- Word Wrap Toggle -->
         <button
           on:click={handleWordWrapToggle}
-          class="px-3 py-1 rounded text-sm whitespace-nowrap {wordWrap ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}"
+          class="px-4 py-2.5 min-h-11 rounded text-sm whitespace-nowrap {wordWrap ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
           title="Toggle word wrap"
         >
           {wordWrap ? '↩ Wrap' : '→ No Wrap'}
@@ -326,7 +326,7 @@
 
         <button
           on:click={handleClose}
-          class="px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
+          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
         >
           ✕ Close
         </button>

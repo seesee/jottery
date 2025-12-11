@@ -64,7 +64,7 @@
       <!-- Mobile: Hamburger Menu Button -->
       <button
         on:click={toggleMobileMenu}
-        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+        class="min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
         title="Menu"
         aria-label="Open menu"
       >
@@ -75,7 +75,7 @@
     {:else}
       <button
         on:click={toggleMobileMenu}
-        class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+        class="tablet:hidden min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
         title="Menu"
         aria-label="Open menu"
       >
@@ -116,10 +116,10 @@
 
     {#if forceMobileLayout}
       <!-- Mobile: Essential Actions -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
         <button
           on:click={toggleMobileSearch}
-          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           title={$_('search.placeholder')}
           aria-label="Search"
         >
@@ -130,7 +130,7 @@
 
         <button
           on:click={handleNewNoteClick}
-          class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors"
           title={$_('note.create')}
           aria-label="New note"
         >
@@ -141,10 +141,10 @@
       </div>
     {:else}
       <!-- Mobile: Essential Actions (responsive) -->
-      <div class="flex tablet:hidden items-center gap-2">
+      <div class="flex tablet:hidden items-center gap-3">
         <button
           on:click={toggleMobileSearch}
-          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           title={$_('search.placeholder')}
           aria-label="Search"
         >
@@ -155,7 +155,7 @@
 
         <button
           on:click={handleNewNoteClick}
-          class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors"
           title={$_('note.create')}
           aria-label="New note"
         >
@@ -255,7 +255,7 @@
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">Menu</h2>
           <button
             on:click={closeMobileMenu}
-            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
             aria-label="Close menu"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,7 +268,7 @@
         <nav class="flex-1 overflow-y-auto p-2">
           <button
             on:click={() => { onOpenRecycleBin(); closeMobileMenu(); }}
-            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
             <span class="text-xl">🗑️</span>
             <span class="text-sm font-medium">{$_('recycleBin.title')}</span>
@@ -276,7 +276,7 @@
 
           <button
             on:click={() => { onOpenSettings(); closeMobileMenu(); }}
-            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
             <span class="text-xl">⚙️</span>
             <span class="text-sm font-medium">{$_('common.settings')}</span>
@@ -284,7 +284,7 @@
 
           <button
             on:click={() => { handleOpenReleases(); closeMobileMenu(); }}
-            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
             <span class="text-xl">🚀</span>
             <span class="text-sm font-medium">{$_('releases.title')}</span>
@@ -294,7 +294,7 @@
 
           <button
             on:click={() => { handleLockRequest(); closeMobileMenu(); }}
-            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
             <span class="text-xl">🔒</span>
             <span class="text-sm font-medium">{$_('common.lock')}</span>
