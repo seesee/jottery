@@ -53,7 +53,7 @@
   onMount(() => {
     const extensions = [
       basicSetup,
-      drawSelection(), // Better selection rendering for wrapped lines
+      // Using native browser selection instead of drawSelection for better compatibility
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
       themeCompartment.of(isDark ? oneDark : []),
@@ -220,28 +220,20 @@
     color: rgb(243 244 246); /* gray-100 */
   }
 
-  /* Custom selection colors with proper blending */
-  :global(.cm-selectionBackground) {
-    background-color: #b3d7ff !important;
+  /* Use native browser selection - much more reliable */
+  :global(.cm-content ::selection) {
+    background-color: #b3d7ff;
   }
 
-  :global(.dark .cm-selectionBackground) {
-    background-color: #264f78 !important;
+  :global(.dark .cm-content ::selection) {
+    background-color: #264f78;
   }
 
-  /* Ensure selection layer is properly positioned */
-  :global(.cm-selectionLayer) {
-    z-index: -1;
-    pointer-events: none;
+  :global(.cm-content ::-moz-selection) {
+    background-color: #b3d7ff;
   }
 
-  /* Ensure content establishes stacking context */
-  :global(.cm-content) {
-    position: relative;
-    z-index: 0;
-  }
-
-  :global(.cm-line) {
-    position: relative;
+  :global(.dark .cm-content ::-moz-selection) {
+    background-color: #264f78;
   }
 </style>
