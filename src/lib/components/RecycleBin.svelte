@@ -92,36 +92,37 @@
 
 {#if show}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
     on:click={handleBackdropClick}
     on:keydown={(e) => e.key === 'Escape' && onClose()}
     role="dialog"
     aria-modal="true"
   >
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-4xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
-      <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+      <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Recycle Bin</h2>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           {#if deletedNotes.length > 0}
             <button
               on:click={handleEmptyRecycleBin}
-              class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+              class="px-4 py-2.5 min-h-11 text-sm text-red-600 active:bg-red-50 dark:active:bg-red-900/20 rounded-md transition-colors"
             >
               Empty Bin
             </button>
           {/if}
           <button
             on:click={onClose}
-            class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
+            aria-label="Close recycle bin"
           >
             ✕
           </button>
         </div>
       </div>
 
-      <!-- Content -->
-      <div class="p-4">
+      <!-- Content (scrollable) -->
+      <div class="p-4 flex-1 overflow-y-auto">
         {#if loading}
           <div class="text-center py-8">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -158,17 +159,17 @@
                     {/if}
                   </div>
 
-                  <div class="flex gap-2">
+                  <div class="flex gap-3">
                     <button
                       on:click={() => handleRestore(note.id)}
-                      class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                      class="px-4 py-2.5 min-h-11 text-sm bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors whitespace-nowrap"
                       title="Restore note"
                     >
                       Restore
                     </button>
                     <button
                       on:click={() => handlePermanentDelete(note.id)}
-                      class="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                      class="px-4 py-2.5 min-h-11 text-sm bg-red-600 active:bg-red-700 text-white rounded-md transition-colors whitespace-nowrap"
                       title="Permanently delete"
                     >
                       Delete Forever

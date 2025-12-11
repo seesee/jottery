@@ -344,23 +344,27 @@
 
 {#if show}
   <div
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
     on:click={handleBackdropClick}
     on:keydown={(e) => e.key === 'Escape' && onClose()}
     role="dialog"
     aria-modal="true"
   >
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
-      <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+      <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Settings</h2>
         <button
           on:click={onClose}
-          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
+          aria-label="Close settings"
         >
           ✕
         </button>
       </div>
+
+      <!-- Content (scrollable) -->
+      <div class="flex-1 overflow-y-auto">
 
       <!-- Content -->
       <div class="p-6 space-y-6">
@@ -653,19 +657,20 @@
           </div>
         </div>
       </div>
+      </div>
 
       <!-- Footer -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end gap-2">
+      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end gap-3 flex-shrink-0">
         <button
           on:click={onClose}
-          class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
         >
           {$_('common.cancel')}
         </button>
         <button
           on:click={handleSave}
           disabled={saving}
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
+          class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
         >
           {saving ? $_('settings.saving') : $_('settings.saveSettings')}
         </button>
