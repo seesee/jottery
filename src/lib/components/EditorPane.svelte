@@ -28,6 +28,9 @@
   let availableTags: string[] = [];
   let isUploading: boolean = false;
   let previousNoteId: string | null = null;
+  let isDraggingFile: boolean = false;
+  let isAttachmentsExpanded: boolean = false;
+  let dragCounter: number = 0; // Track nested drag events
 
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
@@ -252,10 +255,56 @@
       }
     }
   }
+
+  // Handle drag and drop for files
+  function handleEditorDragEnter(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter++;
+    if (e.dataTransfer?.types.includes('Files')) {
+      isDraggingFile = true;
+    }
+  }
+
+  function handleEditorDragLeave(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter === 0) {
+      isDraggingFile = false;
+    }
+  }
+
+  function handleEditorDragOver(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function handleEditorDrop(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    isDraggingFile = false;
+
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files);
+    }
+  }
+
+  function toggleAttachments() {
+    isAttachmentsExpanded = !isAttachmentsExpanded;
+  }
 </script>
 
 {#if isEditing && $selectedNote}
-  <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+  <div
+    class="h-full flex flex-col bg-white dark:bg-gray-900"
+    on:dragenter={handleEditorDragEnter}
+    on:dragleave={handleEditorDragLeave}
+    on:dragover={handleEditorDragOver}
+    on:drop={handleEditorDrop}
+  >
     <!-- Toolbar -->
     <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center justify-between gap-2">
       <!-- Mobile: Back Button -->
@@ -360,32 +409,49 @@
       />
     </div>
 
-    <!-- Attachments Section -->
-    <div class="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800/50 max-h-64 overflow-y-auto">
-      <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        Attachments ({attachments.length})
-      </div>
+    <!-- Attachments Section - Collapsible -->
+    <div class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <!-- Header - Always visible -->
+      <button
+        on:click={toggleAttachments}
+        class="w-full px-3 py-2 flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
+      >
+        <span>
+          📎 Attachments ({attachments.length})
+        </span>
+        <span class="text-xs transform transition-transform {isAttachmentsExpanded ? 'rotate-180' : ''}">
+          ▼
+        </span>
+      </button>
 
-      <div class="space-y-3">
-        <!-- File Upload -->
-        <FileUpload
-          onUpload={handleFileUpload}
-          disabled={isUploading}
-        />
-
-        <!-- Attachment List -->
-        {#if attachments.length > 0}
-          <AttachmentList
-            {attachments}
-            onDelete={handleDeleteAttachment}
-            readonly={false}
+      <!-- Expanded content or drop zone -->
+      {#if isAttachmentsExpanded || isDraggingFile}
+        <div class="px-3 pb-3 max-h-64 overflow-y-auto space-y-3">
+          <!-- File Upload - Show when expanded or dragging -->
+          <FileUpload
+            onUpload={handleFileUpload}
+            disabled={isUploading}
           />
-        {/if}
-      </div>
 
-      {#if isUploading}
-        <div class="mt-2 text-sm text-blue-600 dark:text-blue-400">
-          Uploading...
+          <!-- Attachment List -->
+          {#if attachments.length > 0}
+            <AttachmentList
+              {attachments}
+              onDelete={handleDeleteAttachment}
+              readonly={false}
+            />
+          {/if}
+
+          {#if isUploading}
+            <div class="text-sm text-blue-600 dark:text-blue-400">
+              Uploading...
+            </div>
+          {/if}
+        </div>
+      {:else if attachments.length > 0}
+        <!-- Collapsed view - show attachment count -->
+        <div class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400">
+          Click to {isAttachmentsExpanded ? 'hide' : 'view'} attachments
         </div>
       {/if}
     </div>
