@@ -220,39 +220,12 @@
     color: rgb(243 244 246); /* gray-100 */
   }
 
-  /* Selection highlighting - ensure backgrounds are visible */
+  /* Custom selection colors - minimal styling, let CodeMirror handle rendering */
   :global(.cm-selectionBackground) {
-    display: block !important;
-    position: absolute !important;
-    background-color: rgb(191 219 254) !important; /* blue-200 for light mode */
-    opacity: 1 !important;
-    pointer-events: none !important;
+    background-color: #b3d7ff !important;
   }
 
   :global(.dark .cm-selectionBackground) {
-    background-color: rgb(30 58 138) !important; /* blue-900 for dark mode */
-  }
-
-  :global(.cm-focused .cm-selectionBackground) {
-    background-color: rgb(147 197 253) !important; /* blue-300 for focused light mode */
-  }
-
-  :global(.dark .cm-focused .cm-selectionBackground) {
-    background-color: rgb(30 64 175) !important; /* blue-800 for focused dark mode */
-  }
-
-  /* Ensure selection layer is properly rendered */
-  :global(.cm-selectionLayer) {
-    position: relative !important;
-    z-index: -1 !important;
-  }
-
-  /* Selection match highlighting */
-  :global(.cm-selectionMatch) {
-    background-color: rgba(191, 219, 254, 0.5) !important;
-  }
-
-  :global(.dark .cm-selectionMatch) {
-    background-color: rgba(30, 58, 138, 0.5) !important;
+    background-color: #264f78 !important;
   }
 </style>
