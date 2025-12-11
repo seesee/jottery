@@ -220,12 +220,28 @@
     color: rgb(243 244 246); /* gray-100 */
   }
 
-  /* Custom selection colors - minimal styling, let CodeMirror handle rendering */
+  /* Custom selection colors with proper blending */
   :global(.cm-selectionBackground) {
     background-color: #b3d7ff !important;
   }
 
   :global(.dark .cm-selectionBackground) {
     background-color: #264f78 !important;
+  }
+
+  /* Ensure selection layer is properly positioned */
+  :global(.cm-selectionLayer) {
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Ensure content establishes stacking context */
+  :global(.cm-content) {
+    position: relative;
+    z-index: 0;
+  }
+
+  :global(.cm-line) {
+    position: relative;
   }
 </style>
