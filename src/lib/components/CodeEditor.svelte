@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
   import { EditorState, Compartment } from '@codemirror/state';
+  import { drawSelection } from '@codemirror/view';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';
   import { markdown } from '@codemirror/lang-markdown';
@@ -52,6 +53,7 @@
   onMount(() => {
     const extensions = [
       basicSetup,
+      drawSelection(), // Better selection rendering for wrapped lines
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
       themeCompartment.of(isDark ? oneDark : []),
@@ -175,5 +177,32 @@
 
   :global(.dark .cm-editor:not(.cm-theme-dark) .cm-content) {
     color: rgb(243 244 246); /* gray-100 */
+  }
+
+  /* Fix selection highlighting for wrapped lines */
+  :global(.cm-selectionBackground) {
+    background-color: rgb(191 219 254) !important; /* blue-200 for light mode */
+  }
+
+  :global(.dark .cm-selectionBackground) {
+    background-color: rgb(30 58 138) !important; /* blue-900 for dark mode */
+  }
+
+  :global(.cm-focused .cm-selectionBackground) {
+    background-color: rgb(147 197 253) !important; /* blue-300 for focused light mode */
+  }
+
+  :global(.dark .cm-focused .cm-selectionBackground) {
+    background-color: rgb(30 64 175) !important; /* blue-800 for focused dark mode */
+  }
+
+  /* Ensure selection layer is positioned correctly for wrapped lines */
+  :global(.cm-selectionLayer) {
+    z-index: -1;
+  }
+
+  /* Fix selection rendering with line wrapping */
+  :global(.cm-line) {
+    position: relative;
   }
 </style>
