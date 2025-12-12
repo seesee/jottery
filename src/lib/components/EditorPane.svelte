@@ -7,6 +7,7 @@
   import TagInput from './TagInput.svelte';
   import AttachmentList from './AttachmentList.svelte';
   import FileUpload from './FileUpload.svelte';
+  import { marked } from 'marked';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -25,12 +26,28 @@
   let saveTimeout: number | null = null;
   let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
   let wordWrap: boolean = true;
+  let showPreview: boolean = false;
   let availableTags: string[] = [];
   let isUploading: boolean = false;
   let previousNoteId: string | null = null;
   let isDraggingFile: boolean = false;
   let isAttachmentsExpanded: boolean = false;
   let dragCounter: number = 0; // Track nested drag events
+
+  // Compute preview HTML
+  $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
+
+  // Check if preview is available for current language
+  $: canPreview = language === 'markdown' || language === 'html';
+
+  function getPreviewHtml(text: string, lang: string): string {
+    if (lang === 'markdown') {
+      return marked(text);
+    } else if (lang === 'html') {
+      return text;
+    }
+    return '';
+  }
 
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
@@ -53,6 +70,7 @@
     attachments = [...$selectedNote.attachments];
     language = $selectedNote.syntaxLanguage || 'plain';
     wordWrap = $selectedNote.wordWrap ?? true;
+    showPreview = $selectedNote.showPreview ?? false;
     isEditing = true;
   } else {
     // Closing editor - trigger sync if we had a note open
@@ -67,6 +85,7 @@
     attachments = [];
     language = 'plain';
     wordWrap = true;
+    showPreview = false;
     isEditing = false;
   }
 
@@ -102,6 +121,7 @@
         attachments: attachments,
         syntaxLanguage: language,
         wordWrap,
+        showPreview,
       });
 
       // Reload all notes to refresh the store and UI
@@ -177,6 +197,11 @@
 
   function handleWordWrapToggle() {
     wordWrap = !wordWrap;
+    handleInput();
+  }
+
+  function handlePreviewToggle() {
+    showPreview = !showPreview;
     handleInput();
   }
 
@@ -425,6 +450,17 @@
           {wordWrap ? 'Wrap' : 'No Wrap'}
         </button>
 
+        <!-- Preview Toggle (only for markdown/html) -->
+        {#if canPreview}
+          <button
+            on:click={handlePreviewToggle}
+            class="px-3 py-1.5 rounded text-sm whitespace-nowrap flex-shrink-0 {showPreview ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
+            title="Toggle preview"
+          >
+            {showPreview ? '👁️ Preview' : '📝 Edit'}
+          </button>
+        {/if}
+
         <button
           on:click={handleClose}
           class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
@@ -447,18 +483,30 @@
       />
     </div>
 
-    <!-- Content Editor with CodeMirror -->
-    <div class="flex-1 overflow-hidden bg-white dark:bg-gray-900">
-      <CodeEditor
-        value={content}
-        onChange={(newValue) => {
-          content = newValue;
-          handleInput();
-        }}
-        {language}
-        {wordWrap}
-        {isDark}
-      />
+    <!-- Content Editor with CodeMirror and Preview -->
+    <div class="flex-1 overflow-hidden bg-white dark:bg-gray-900 flex {showPreview ? 'flex-row' : ''}">
+      <!-- Editor -->
+      {#if !showPreview || canPreview}
+        <div class="flex-1 overflow-hidden {showPreview ? 'border-r border-gray-200 dark:border-gray-700' : ''}">
+          <CodeEditor
+            value={content}
+            onChange={(newValue) => {
+              content = newValue;
+              handleInput();
+            }}
+            {language}
+            {wordWrap}
+            {isDark}
+          />
+        </div>
+      {/if}
+
+      <!-- Preview Panel -->
+      {#if showPreview && canPreview}
+        <div class="flex-1 overflow-auto p-4 prose dark:prose-invert max-w-none bg-white dark:bg-gray-900">
+          {@html previewHtml}
+        </div>
+      {/if}
     </div>
 
     <!-- Attachments Section - Only show if attachments exist or dragging files -->

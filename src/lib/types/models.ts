@@ -22,6 +22,7 @@ export interface Note {
   version: number; // Optimistic locking
   wordWrap?: boolean; // Word wrap enabled (default: true)
   syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash'; // Syntax highlighting language
+  showPreview?: boolean; // Show preview panel for markdown/html (default: false)
 }
 
 /**
@@ -124,6 +125,7 @@ export interface ExportNote {
   pinned: boolean;
   wordWrap?: boolean;
   syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+  showPreview?: boolean;
 }
 
 /**
@@ -158,6 +160,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   version: 1,
   wordWrap: true,
   syntaxLanguage: 'plain',
+  showPreview: false,
 };
 
 /**
