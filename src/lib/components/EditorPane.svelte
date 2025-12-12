@@ -256,6 +256,50 @@
     }
   }
 
+  function handleExport() {
+    if (!content || !$selectedNote) return;
+
+    // Map syntax language to file extension
+    const extensionMap: Record<string, string> = {
+      'plain': 'txt',
+      'javascript': 'js',
+      'python': 'py',
+      'markdown': 'md',
+      'json': 'json',
+      'html': 'html',
+      'css': 'css',
+      'sql': 'sql',
+      'bash': 'sh',
+      'perl': 'pl',
+    };
+
+    const extension = extensionMap[language] || 'txt';
+
+    // Generate filename from first line or date
+    const firstLine = content.split('\n')[0].trim();
+    const sanitizedFirstLine = firstLine
+      .substring(0, 50) // Max 50 chars
+      .replace(/[^a-z0-9_\-\.]/gi, '_') // Replace invalid chars
+      .replace(/_{2,}/g, '_') // Replace multiple underscores
+      .replace(/^_|_$/g, ''); // Trim underscores
+
+    const filename = sanitizedFirstLine ||
+      new Date($selectedNote.createdAt).toISOString().split('T')[0];
+
+    // Create blob and download
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.${extension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log(`Note exported as ${filename}.${extension}`);
+  }
+
   // Handle drag and drop for files
   function handleEditorDragEnter(e: DragEvent) {
     e.preventDefault();
@@ -342,6 +386,13 @@
           title="Copy note content"
         >
           📋 Copy
+        </button>
+        <button
+          on:click={handleExport}
+          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
+          title="Export note to file"
+        >
+          💾 Export
         </button>
       </div>
 
