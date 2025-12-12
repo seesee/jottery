@@ -4,29 +4,60 @@
   export let show = false;
   export let onClose: () => void = () => {};
 
+  const githubRepo = 'https://github.com/seesee/jottery';
   const releases = [
-    { name: 'Linux (amd64)', path: '/releases/jottery-linux-amd64' },
-    { name: 'macOS (amd64)', path: '/releases/jottery-macos-amd64' },
-    { name: 'Windows (amd64)', path: '/releases/jottery-windows-amd64.exe' },
+    { name: 'Linux (amd64)', url: `${githubRepo}/releases/latest/download/jottery-linux-amd64` },
+    { name: 'macOS (amd64)', url: `${githubRepo}/releases/latest/download/jottery-macos-amd64` },
+    { name: 'Windows (amd64)', url: `${githubRepo}/releases/latest/download/jottery-windows-amd64.exe` },
   ];
 </script>
 
 {#if show}
-  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" on:click={onClose}>
+  <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" on:click={onClose}>
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md" on:click|stopPropagation>
-      <h2 class="text-xl font-bold mb-4">{$_('releases.title')}</h2>
-      <p class="mb-4">{$_('releases.description')}</p>
-      <ul>
-        {#each releases as release}
-          <li class="mb-2">
-            <a href={release.path} download class="text-blue-600 hover:underline">
-              {release.name}
-            </a>
-          </li>
-        {/each}
-      </ul>
-      <div class="mt-6 text-right">
-        <button on:click={onClose} class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-md">
+      <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">{$_('releases.title')}</h2>
+      <p class="mb-4 text-gray-700 dark:text-gray-300">{$_('releases.description')}</p>
+
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Download TUI Client:</h3>
+        <ul class="space-y-2">
+          {#each releases as release}
+            <li>
+              <a
+                href={release.url}
+                class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span>↓</span>
+                {release.name}
+              </a>
+            </li>
+          {/each}
+        </ul>
+      </div>
+
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <a
+            href={githubRepo}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            View on GitHub
+          </a>
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-500">
+          © 2025 jottery • MIT License
+        </p>
+      </div>
+
+      <div class="text-right">
+        <button
+          on:click={onClose}
+          class="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+        >
           {$_('common.close')}
         </button>
       </div>
