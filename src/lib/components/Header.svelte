@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { searchQuery, isLocked } from '../stores/appStore';
-  import { lock } from '../services';
+  import { searchQuery, isLocked, settings } from '../stores/appStore';
+  import { lock, passwordStorageService, settingsRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import ReleasesModal from './ReleasesModal.svelte';
@@ -12,9 +12,13 @@
   export let forceMobileLayout: boolean = false;
 
   let showLockConfirm = false;
+  let showDisableRememberPasswordConfirm = false;
   let showReleasesModal = false;
   let showMobileMenu = false;
   let showMobileSearch = false;
+
+  // Check if remember password is enabled
+  $: rememberPasswordEnabled = $settings.rememberPassword || false;
 
   function handleNewNoteClick() {
     // Call parent handler
@@ -22,7 +26,13 @@
   }
 
   function handleLockRequest() {
-    showLockConfirm = true;
+    if (rememberPasswordEnabled) {
+      // If remember password is enabled, ask if they want to disable it
+      showDisableRememberPasswordConfirm = true;
+    } else {
+      // Normal lock confirmation
+      showLockConfirm = true;
+    }
   }
 
   function handleLockConfirm() {
@@ -33,6 +43,31 @@
 
   function handleLockCancel() {
     showLockConfirm = false;
+  }
+
+  async function handleDisableRememberPasswordConfirm() {
+    showDisableRememberPasswordConfirm = false;
+
+    // Clear stored password
+    passwordStorageService.clear();
+    console.log('[Header] Stored password cleared');
+
+    // Save the setting
+    try {
+      await settingsRepository.update({ rememberPassword: false });
+      settings.update(s => ({ ...s, rememberPassword: false }));
+      console.log('[Header] rememberPassword setting disabled in database');
+    } catch (error) {
+      console.error('Failed to save disabled setting:', error);
+    }
+
+    // Lock the application
+    lock();
+    isLocked.set(true);
+  }
+
+  function handleDisableRememberPasswordCancel() {
+    showDisableRememberPasswordConfirm = false;
   }
 
   function handleOpenReleases() {
@@ -203,10 +238,10 @@
 
       <button
         on:click={handleLockRequest}
-        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
-        title={$_('keyboard.lockApp')}
+        class="px-3 py-1.5 {rememberPasswordEnabled ? 'opacity-50 cursor-default' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
+        title={rememberPasswordEnabled ? 'Password remembered - click to disable' : $_('keyboard.lockApp')}
       >
-        🔒 {$_('common.lock')}
+        {rememberPasswordEnabled ? '🔓' : '🔒'} {$_('common.lock')}
       </button>
     </div>
     {/if}
@@ -294,9 +329,9 @@
 
           <button
             on:click={() => { handleLockRequest(); closeMobileMenu(); }}
-            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left {rememberPasswordEnabled ? 'opacity-50' : 'active:bg-gray-100 dark:active:bg-gray-700'} rounded-md transition-colors"
           >
-            <span class="text-xl">🔒</span>
+            <span class="text-xl">{rememberPasswordEnabled ? '🔓' : '🔒'}</span>
             <span class="text-sm font-medium">{$_('common.lock')}</span>
           </button>
         </nav>
@@ -344,6 +379,17 @@
   confirmClass="bg-blue-600 hover:bg-blue-700"
   onConfirm={handleLockConfirm}
   onCancel={handleLockCancel}
+/>
+
+<ConfirmModal
+  show={showDisableRememberPasswordConfirm}
+  title="Disable Remember Password?"
+  message="This will clear your stored password and lock the application.\n\nYou will need to enter your password the next time you access the app."
+  confirmText="Disable and Lock"
+  cancelText="Cancel"
+  confirmClass="bg-orange-600 hover:bg-orange-700"
+  onConfirm={handleDisableRememberPasswordConfirm}
+  onCancel={handleDisableRememberPasswordCancel}
 />
 
 <ReleasesModal
