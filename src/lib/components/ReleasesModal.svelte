@@ -6,9 +6,12 @@
 
   const githubRepo = 'https://github.com/seesee/jottery';
   const releases = [
-    { name: 'Linux (amd64)', url: `${githubRepo}/releases/latest/download/jottery-linux-amd64` },
-    { name: 'macOS (amd64)', url: `${githubRepo}/releases/latest/download/jottery-macos-amd64` },
-    { name: 'Windows (amd64)', url: `${githubRepo}/releases/latest/download/jottery-windows-amd64.exe` },
+    { name: 'Linux (x64)', url: `${githubRepo}/releases/latest/download/jottery-linux-x64` },
+    { name: 'Linux (arm64)', url: `${githubRepo}/releases/latest/download/jottery-linux-arm64` },
+    { name: 'Linux (armv7)', url: `${githubRepo}/releases/latest/download/jottery-linux-armv7` },
+    { name: 'macOS', url: `${githubRepo}/releases/latest/download/jottery-macos` },
+    { name: 'Windows', url: `${githubRepo}/releases/latest/download/jottery-windows.exe` },
+    { name: 'TUI Package (zip)', url: `${githubRepo}/releases/latest/download/jottery-tui.zip` },
   ];
 </script>
 
