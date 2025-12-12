@@ -302,11 +302,11 @@
   }
 
   function handleRememberPasswordToggle() {
-    if (!rememberPassword) {
-      // Trying to enable - show warning
+    if (rememberPassword) {
+      // Just enabled (value is now true) - show warning
       showRememberPasswordWarning = true;
     } else {
-      // Disabling - clear stored password and lock
+      // Just disabled (value is now false) - clear stored password and lock
       handleDisableRememberPassword();
     }
   }
