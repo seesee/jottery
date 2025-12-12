@@ -78,6 +78,12 @@
     if (noteChanged) {
       console.log('[EditorPane] Switching to different note, resetting state');
 
+      // Flush any pending save before switching
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
+
       content = $selectedNote.content;
       tags = [...$selectedNote.tags];
       attachments = [...$selectedNote.attachments];
@@ -95,9 +101,13 @@
 
     previousNoteId = $selectedNote.id;
   } else {
-    // Closing editor - trigger sync if we had a note open
+    // Closing editor - flush pending save and trigger sync
     if (previousNoteId) {
-      console.log('[EditorPane] Closing editor, triggering background sync...');
+      console.log('[EditorPane] Closing editor, flushing save and triggering sync...');
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
       triggerBackgroundSync();
     }
     previousNoteId = null;
@@ -224,7 +234,9 @@
 
   function handlePreviewToggle() {
     showPreview = !showPreview;
-    handleInput();
+    // Save immediately for preview toggle (no debounce)
+    if (saveTimeout) clearTimeout(saveTimeout);
+    handleSave();
   }
 
   async function handleFileUpload(files: FileList) {
@@ -526,9 +538,9 @@
       <!-- Preview Panel - Only shown when IN preview mode -->
       {#if showPreview && canPreview}
         <div class="h-full overflow-auto p-8 bg-white dark:bg-gray-900">
-          <div class="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-code:text-pink-600 dark:prose-code:text-pink-400">
+          <article class="prose prose-lg dark:prose-invert max-w-none">
             {@html previewHtml}
-          </div>
+          </article>
         </div>
       {/if}
     </div>
