@@ -145,10 +145,13 @@
 <style>
   :global(.cm-editor) {
     height: 100%;
+    width: 100%;
+    max-width: 100%;
   }
 
   :global(.cm-scroller) {
     overflow: auto;
+    max-width: 100%;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 14px;
     line-height: 1.6;
