@@ -9,6 +9,8 @@
   import { html } from '@codemirror/lang-html';
   import { css } from '@codemirror/lang-css';
   import { sql } from '@codemirror/lang-sql';
+  import { StreamLanguage } from '@codemirror/language';
+  import { perl } from '@codemirror/legacy-modes/mode/perl';
   import { oneDark } from '@codemirror/theme-one-dark';
   import { lineNumbers } from '@codemirror/view';
   import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
@@ -21,7 +23,7 @@
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
-  export let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' = 'plain';
+  export let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
   export let readonly: boolean = false;
   export let wordWrap: boolean = true;
   export let isDark: boolean = false;
@@ -54,6 +56,8 @@
       case 'bash':
         // Use javascript for bash as @codemirror/lang-bash doesn't exist
         return javascript();
+      case 'perl':
+        return StreamLanguage.define(perl);
       default:
         return [];
     }

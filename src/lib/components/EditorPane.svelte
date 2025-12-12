@@ -23,7 +23,7 @@
     }
   }
   let saveTimeout: number | null = null;
-  let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' = 'plain';
+  let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
   let wordWrap: boolean = true;
   let availableTags: string[] = [];
   let isUploading: boolean = false;
@@ -357,6 +357,7 @@
           <option value="markdown">Markdown</option>
           <option value="javascript">JavaScript</option>
           <option value="python">Python</option>
+          <option value="perl">Perl</option>
           <option value="json">JSON</option>
           <option value="html">HTML</option>
           <option value="css">CSS</option>
