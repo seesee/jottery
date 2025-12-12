@@ -27,10 +27,12 @@
   export let isDark: boolean = false;
 
   let editorContainer: HTMLDivElement;
+  let editorWrapper: HTMLDivElement;
   let editorView: EditorView | null = null;
   let languageCompartment = new Compartment();
   let wrapCompartment = new Compartment();
   let themeCompartment = new Compartment();
+  let measuredWidth: number = 0;
 
   // Get language extension based on language prop
   function getLanguageExtension() {
@@ -58,6 +60,9 @@
   }
 
   onMount(() => {
+    // Measure the available width
+    measuredWidth = editorWrapper.clientWidth;
+
     const extensions = [
       // Custom setup without drawSelection - use native browser selection instead
       lineNumbers(),
@@ -98,6 +103,16 @@
       state: startState,
       parent: editorContainer,
     });
+
+    // Update width on window resize
+    const handleResize = () => {
+      measuredWidth = editorWrapper.clientWidth;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   });
 
   onDestroy(() => {
@@ -140,20 +155,22 @@
   }
 </script>
 
-<div bind:this={editorContainer} class="h-full w-full"></div>
+<div bind:this={editorWrapper} class="h-full w-full overflow-hidden">
+  <div
+    bind:this={editorContainer}
+    class="h-full"
+    style="width: {measuredWidth}px; max-width: {measuredWidth}px; overflow-x: auto; overflow-y: hidden;"
+  ></div>
+</div>
 
 <style>
   :global(.cm-editor) {
     height: 100%;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
   }
 
   :global(.cm-scroller) {
-    overflow: auto;
-    width: 100%;
-    max-width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 14px;
     line-height: 1.6;
