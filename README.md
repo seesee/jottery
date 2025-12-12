@@ -8,7 +8,7 @@ Jottery is a simple, searchable, and privacy-focused scratchpad application. It 
 *   **Cross-Platform**: Access your notes from a web client or a Terminal User Interface (TUI).
 *   **Self-Hostable**: You have full control over your data by hosting the sync server yourself.
 *   **Search**: Quickly find your notes with a powerful full-text search.
-*   **Tagging**: Organize your notes with tags.
+*   **Tagging**: Organise your notes with tags.
 *   **Attachments**: Add attachments to your notes.
 *   **Code Snippets**: A rich text editor with support for various programming languages.
 
