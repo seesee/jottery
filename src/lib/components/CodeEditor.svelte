@@ -151,6 +151,7 @@
 
   :global(.cm-scroller) {
     overflow: auto;
+    width: 100%;
     max-width: 100%;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 14px;
@@ -163,6 +164,9 @@
   :global(.cm-content) {
     padding: 0.5rem; /* Reduced padding for mobile */
     min-height: 100%;
+    width: fit-content;
+    min-width: 100%;
+    max-width: max-content;
   }
 
   /* Larger padding on tablet and desktop */
