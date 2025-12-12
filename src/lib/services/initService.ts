@@ -99,18 +99,17 @@ export async function unlock(password: string): Promise<void> {
     console.log('[Unlock] ⚠️ No notes to verify password against - skipping verification');
   }
 
-  // Get settings to check rememberPassword
-  const settings = await settingsRepository.get();
-
-  // Store the master key (include password if rememberPassword is enabled)
+  // Store the master key
   const masterKey: MasterKey = {
     key,
     derivedAt: Date.now(),
-    password: settings.rememberPassword ? password : undefined,
   };
 
   keyManager.setMasterKey(masterKey);
   console.log('[Unlock] ✓ Master key stored in keyManager');
+
+  // Get settings to check rememberPassword
+  const settings = await settingsRepository.get();
 
   // Handle imported credentials (IMPORT: marker)
   console.log('[Unlock] Checking for imported credentials...');

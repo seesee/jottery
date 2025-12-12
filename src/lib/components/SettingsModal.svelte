@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { locale, _ } from 'svelte-i18n';
   import type { Theme, SyncStatus } from '../types';
@@ -20,6 +20,8 @@
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
   let showRememberPasswordWarning = false;
+  let rememberPasswordConfirmInput = '';
+  let rememberPasswordError = '';
 
   // Sync state
   let syncEndpoint = $settings.syncEndpoint || '';
@@ -312,29 +314,53 @@
   }
 
   async function confirmEnableRememberPassword() {
-    showRememberPasswordWarning = false;
-    rememberPassword = true;
+    if (!rememberPasswordConfirmInput) {
+      rememberPasswordError = 'Please enter your password';
+      return;
+    }
 
-    // Get current password from keyManager (user is already unlocked)
-    const masterKey = keyManager.getMasterKey();
-    if (masterKey && masterKey.password) {
-      try {
-        // Store the password
-        passwordStorageService.store(masterKey.password);
-        console.log('[SettingsModal] Password stored successfully');
+    rememberPasswordError = '';
 
-        // Save the setting immediately to persist it
-        await settingsRepository.update({ rememberPassword: true });
-        settings.update(s => ({ ...s, rememberPassword: true }));
-        console.log('[SettingsModal] rememberPassword setting saved to database');
-      } catch (error) {
-        console.error('Failed to store password:', error);
-        alert('Failed to store password: ' + (error instanceof Error ? error.message : String(error)));
-        rememberPassword = false;
-        return;
+    try {
+      // Verify the password by attempting to unlock with it
+      const metadata = await encryptionRepository.getMetadata();
+      if (!metadata) {
+        throw new Error('Encryption not initialized');
       }
-    } else {
-      console.warn('[SettingsModal] No password available to store');
+
+      const salt = base64ToUint8Array(metadata.salt);
+      const derivedKey = await cryptoService.deriveKey({
+        password: rememberPasswordConfirmInput,
+        salt,
+        iterations: metadata.iterations,
+        algorithm: 'PBKDF2',
+      });
+
+      // Try to decrypt a note to verify password is correct
+      const notes = await noteRepository.getAllActive();
+      if (notes.length > 0) {
+        const testNote = notes[0];
+        const encryptedContent = JSON.parse(testNote.content);
+        await cryptoService.decryptText(encryptedContent, derivedKey);
+      }
+
+      // Password is correct! Store it
+      passwordStorageService.store(rememberPasswordConfirmInput);
+      console.log('[SettingsModal] Password verified and stored successfully');
+
+      // Save the setting immediately to persist it
+      await settingsRepository.update({ rememberPassword: true });
+      settings.update(s => ({ ...s, rememberPassword: true }));
+      console.log('[SettingsModal] rememberPassword setting saved to database');
+
+      // Close modal and clear input
+      showRememberPasswordWarning = false;
+      rememberPasswordConfirmInput = '';
+      rememberPassword = true;
+    } catch (error) {
+      console.error('Password verification failed:', error);
+      rememberPasswordError = 'Incorrect password';
+      rememberPasswordConfirmInput = '';
       rememberPassword = false;
     }
   }
@@ -342,6 +368,18 @@
   function cancelEnableRememberPassword() {
     showRememberPasswordWarning = false;
     rememberPassword = false;
+    rememberPasswordConfirmInput = '';
+    rememberPasswordError = '';
+  }
+
+  // Helper function to convert base64 to Uint8Array
+  function base64ToUint8Array(base64: string): Uint8Array {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
   }
 
   async function handleDisableRememberPassword() {
@@ -795,17 +833,62 @@
   />
 
   <!-- Remember Password Warning Modal -->
-  <ConfirmModal
-    show={showRememberPasswordWarning}
-    title="⚠️ Security Warning"
-    message="Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.\n\n• Anyone with access to your device can read it\n• Browser extensions can access it\n• It may survive browser cache clearing\n• Auto-lock will be disabled\n\nOnly enable this if you fully understand the security risks.\n\nType ENABLE to confirm:"
-    confirmText="I Understand, Enable Anyway"
-    cancelText="Cancel"
-    confirmClass="bg-orange-600 hover:bg-orange-700"
-    requireTextMatch="ENABLE"
-    onConfirm={confirmEnableRememberPassword}
-    onCancel={cancelEnableRememberPassword}
-  />
+  {#if showRememberPasswordWarning}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+        <h3 class="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4">
+          ⚠️ Security Warning
+        </h3>
+
+        <div class="mb-4 text-sm text-gray-700 dark:text-gray-300 space-y-2">
+          <p class="font-semibold">
+            Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.
+          </p>
+          <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
+            <li>Anyone with access to your device can read it</li>
+            <li>Browser extensions can access it</li>
+            <li>It may survive browser cache clearing</li>
+            <li>Auto-lock will be disabled</li>
+          </ul>
+          <p class="font-semibold text-orange-700 dark:text-orange-300">
+            Only enable this if you fully understand the security risks.
+          </p>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Enter your password to confirm:
+          </label>
+          <input
+            type="password"
+            bind:value={rememberPasswordConfirmInput}
+            on:keydown={(e) => e.key === 'Enter' && confirmEnableRememberPassword()}
+            placeholder="Your password"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            autofocus
+          />
+          {#if rememberPasswordError}
+            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{rememberPasswordError}</p>
+          {/if}
+        </div>
+
+        <div class="flex gap-3 justify-end">
+          <button
+            on:click={cancelEnableRememberPassword}
+            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            on:click={confirmEnableRememberPassword}
+            class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md transition-colors"
+          >
+            I Understand, Enable Anyway
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Sync Credentials Display Modal -->
   {#if showCredentialsModal}
