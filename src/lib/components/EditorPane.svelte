@@ -42,6 +42,14 @@
 
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
+      // Configure marked for better rendering
+      marked.setOptions({
+        breaks: true, // Convert \n to <br>
+        gfm: true, // GitHub Flavored Markdown
+        headerIds: true,
+        mangle: false,
+        sanitize: false,
+      });
       return marked(text);
     } else if (lang === 'html') {
       return text;
@@ -422,6 +430,17 @@
       </div>
 
       <div class="flex gap-2 items-center flex-1 justify-end">
+        <!-- Preview Toggle (only for markdown/html) - Left of dropdown -->
+        {#if canPreview}
+          <button
+            on:click={handlePreviewToggle}
+            class="px-3 py-1.5 rounded text-sm whitespace-nowrap flex-shrink-0 {showPreview ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
+            title="Toggle preview"
+          >
+            {showPreview ? '📝 Edit' : '👁️ Preview'}
+          </button>
+        {/if}
+
         <!-- Syntax Language Selector -->
         <select
           value={language}
@@ -450,17 +469,6 @@
           {wordWrap ? 'Wrap' : 'No Wrap'}
         </button>
 
-        <!-- Preview Toggle (only for markdown/html) -->
-        {#if canPreview}
-          <button
-            on:click={handlePreviewToggle}
-            class="px-3 py-1.5 rounded text-sm whitespace-nowrap flex-shrink-0 {showPreview ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
-            title="Toggle preview"
-          >
-            {showPreview ? '👁️ Preview' : '📝 Edit'}
-          </button>
-        {/if}
-
         <button
           on:click={handleClose}
           class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
@@ -483,11 +491,11 @@
       />
     </div>
 
-    <!-- Content Editor with CodeMirror and Preview -->
-    <div class="flex-1 overflow-hidden bg-white dark:bg-gray-900 flex {showPreview ? 'flex-row' : ''}">
-      <!-- Editor -->
-      {#if !showPreview || canPreview}
-        <div class="flex-1 overflow-hidden {showPreview ? 'border-r border-gray-200 dark:border-gray-700' : ''}">
+    <!-- Content Editor with CodeMirror OR Preview (swap, not side-by-side) -->
+    <div class="flex-1 overflow-hidden bg-white dark:bg-gray-900">
+      <!-- Editor - Only shown when NOT in preview mode -->
+      {#if !showPreview}
+        <div class="h-full overflow-hidden">
           <CodeEditor
             value={content}
             onChange={(newValue) => {
@@ -501,9 +509,9 @@
         </div>
       {/if}
 
-      <!-- Preview Panel -->
+      <!-- Preview Panel - Only shown when IN preview mode -->
       {#if showPreview && canPreview}
-        <div class="flex-1 overflow-auto p-4 prose dark:prose-invert max-w-none bg-white dark:bg-gray-900">
+        <div class="h-full overflow-auto p-6 prose dark:prose-invert max-w-none bg-white dark:bg-gray-900">
           {@html previewHtml}
         </div>
       {/if}
