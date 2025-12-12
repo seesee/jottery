@@ -322,6 +322,11 @@
         // Store the password
         passwordStorageService.store(masterKey.password);
         console.log('[SettingsModal] Password stored successfully');
+
+        // Save the setting immediately to persist it
+        await settingsRepository.update({ rememberPassword: true });
+        settings.update(s => ({ ...s, rememberPassword: true }));
+        console.log('[SettingsModal] rememberPassword setting saved to database');
       } catch (error) {
         console.error('Failed to store password:', error);
         alert('Failed to store password: ' + (error instanceof Error ? error.message : String(error)));
@@ -339,12 +344,21 @@
     rememberPassword = false;
   }
 
-  function handleDisableRememberPassword() {
+  async function handleDisableRememberPassword() {
     rememberPassword = false;
 
     // Clear stored password
     passwordStorageService.clear();
     console.log('[SettingsModal] Stored password cleared');
+
+    // Save the setting immediately to persist it
+    try {
+      await settingsRepository.update({ rememberPassword: false });
+      settings.update(s => ({ ...s, rememberPassword: false }));
+      console.log('[SettingsModal] rememberPassword setting disabled in database');
+    } catch (error) {
+      console.error('Failed to save disabled setting:', error);
+    }
 
     // Lock the application
     lock();
