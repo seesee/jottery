@@ -76,7 +76,9 @@
     // Only reset local state when switching to a different note
     // Don't reset when the same note is reloaded (e.g., after save)
     if (noteChanged) {
-      console.log('[EditorPane] Switching to different note, resetting state');
+      console.log('[EditorPane] Switching to different note');
+      console.log('[EditorPane] From note:', previousNoteId, 'to note:', $selectedNote.id);
+      console.log('[EditorPane] New note showPreview value from DB:', $selectedNote.showPreview);
 
       // Flush any pending save before switching
       if (saveTimeout) {
@@ -92,11 +94,16 @@
       showPreview = $selectedNote.showPreview ?? false;
       isEditing = true;
 
+      console.log('[EditorPane] Local showPreview set to:', showPreview);
+
       // Trigger background sync if we had a previous note open
       if (previousNoteId) {
         console.log('[EditorPane] Triggering background sync for previous note');
         triggerBackgroundSync();
       }
+    } else {
+      console.log('[EditorPane] Same note reloaded (from sync), NOT resetting state');
+      console.log('[EditorPane] Current showPreview:', showPreview, 'DB showPreview:', $selectedNote.showPreview);
     }
 
     previousNoteId = $selectedNote.id;
@@ -146,6 +153,8 @@
   async function handleSave() {
     if (!$selectedNote) return;
 
+    console.log('[EditorPane] Saving note with showPreview:', showPreview);
+
     try {
       await noteService.updateNote($selectedNote.id, {
         content,
@@ -155,6 +164,8 @@
         wordWrap,
         showPreview,
       });
+
+      console.log('[EditorPane] Note saved successfully');
 
       // Reload all notes to refresh the store and UI
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
@@ -234,6 +245,7 @@
 
   function handlePreviewToggle() {
     showPreview = !showPreview;
+    console.log('[EditorPane] Preview toggled to:', showPreview);
     // Save immediately for preview toggle (no debounce)
     if (saveTimeout) clearTimeout(saveTimeout);
     handleSave();
@@ -537,10 +549,10 @@
 
       <!-- Preview Panel - Only shown when IN preview mode -->
       {#if showPreview && canPreview}
-        <div class="h-full overflow-auto p-8 bg-white dark:bg-gray-900">
-          <article class="prose prose-lg dark:prose-invert max-w-none">
+        <div class="h-full overflow-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+          <div class="prose dark:prose-invert max-w-none">
             {@html previewHtml}
-          </article>
+          </div>
         </div>
       {/if}
     </div>
