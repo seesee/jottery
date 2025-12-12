@@ -227,6 +227,8 @@ jobs:
     name: Publish GitHub Release
     needs: [collect-tui, docker-build]
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -235,6 +237,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
+
+      - name: Create non-versioned copies for /latest/ downloads
+        run: |
+          cd release-assets/all-tui
+          for f in *-${VERSION}*; do
+            # Create non-versioned copy by removing version suffix
+            base=$(echo "$f" | sed "s/-${VERSION}//")
+            cp "$f" "$base"
+          done
+          ls -la
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
