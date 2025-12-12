@@ -42,15 +42,20 @@
 
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
-      // Configure marked for better rendering
-      marked.setOptions({
-        breaks: true, // Convert \n to <br>
-        gfm: true, // GitHub Flavored Markdown
-        headerIds: true,
-        mangle: false,
-        sanitize: false,
-      });
-      return marked(text);
+      try {
+        // Configure marked for better rendering
+        marked.setOptions({
+          breaks: true, // Convert \n to <br>
+          gfm: true, // GitHub Flavored Markdown
+          headerIds: true,
+          mangle: false,
+          sanitize: false,
+        });
+        return marked.parse(text);
+      } catch (error) {
+        console.error('Markdown parsing error:', error);
+        return `<p>Error rendering markdown: ${error}</p>`;
+      }
     } else if (lang === 'html') {
       return text;
     }
@@ -66,20 +71,29 @@
 
   // Trigger background sync when switching notes
   $: if ($selectedNote) {
-    // If we're switching from one note to another, trigger background sync
-    if (previousNoteId && previousNoteId !== $selectedNote.id) {
-      console.log('[EditorPane] Switching notes, triggering background sync...');
-      triggerBackgroundSync();
-    }
-    previousNoteId = $selectedNote.id;
+    const noteChanged = previousNoteId !== $selectedNote.id;
 
-    content = $selectedNote.content;
-    tags = [...$selectedNote.tags];
-    attachments = [...$selectedNote.attachments];
-    language = $selectedNote.syntaxLanguage || 'plain';
-    wordWrap = $selectedNote.wordWrap ?? true;
-    showPreview = $selectedNote.showPreview ?? false;
-    isEditing = true;
+    // Only reset local state when switching to a different note
+    // Don't reset when the same note is reloaded (e.g., after save)
+    if (noteChanged) {
+      console.log('[EditorPane] Switching to different note, resetting state');
+
+      content = $selectedNote.content;
+      tags = [...$selectedNote.tags];
+      attachments = [...$selectedNote.attachments];
+      language = $selectedNote.syntaxLanguage || 'plain';
+      wordWrap = $selectedNote.wordWrap ?? true;
+      showPreview = $selectedNote.showPreview ?? false;
+      isEditing = true;
+
+      // Trigger background sync if we had a previous note open
+      if (previousNoteId) {
+        console.log('[EditorPane] Triggering background sync for previous note');
+        triggerBackgroundSync();
+      }
+    }
+
+    previousNoteId = $selectedNote.id;
   } else {
     // Closing editor - trigger sync if we had a note open
     if (previousNoteId) {
@@ -511,8 +525,10 @@
 
       <!-- Preview Panel - Only shown when IN preview mode -->
       {#if showPreview && canPreview}
-        <div class="h-full overflow-auto p-6 prose dark:prose-invert max-w-none bg-white dark:bg-gray-900">
-          {@html previewHtml}
+        <div class="h-full overflow-auto p-8 bg-white dark:bg-gray-900">
+          <div class="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-800 prose-code:text-pink-600 dark:prose-code:text-pink-400">
+            {@html previewHtml}
+          </div>
         </div>
       {/if}
     </div>
