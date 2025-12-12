@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EditorView, basicSetup } from 'codemirror';
+  import { EditorView, minimalSetup } from 'codemirror';
   import { EditorState, Compartment } from '@codemirror/state';
-  import { drawSelection } from '@codemirror/view';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';
   import { markdown } from '@codemirror/lang-markdown';
@@ -11,6 +10,14 @@
   import { css } from '@codemirror/lang-css';
   import { sql } from '@codemirror/lang-sql';
   import { oneDark } from '@codemirror/theme-one-dark';
+  import { lineNumbers } from '@codemirror/view';
+  import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
+  import { history, historyKeymap } from '@codemirror/commands';
+  import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+  import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+  import { bracketMatching } from '@codemirror/language';
+  import { defaultKeymap, indentWithTab } from '@codemirror/commands';
+  import { keymap } from '@codemirror/view';
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
@@ -52,8 +59,22 @@
 
   onMount(() => {
     const extensions = [
-      basicSetup,
-      // Using native browser selection instead of drawSelection for better compatibility
+      // Custom setup without drawSelection - use native browser selection instead
+      lineNumbers(),
+      highlightActiveLine(),
+      highlightSpecialChars(),
+      history(),
+      bracketMatching(),
+      autocompletion(),
+      highlightSelectionMatches(),
+      keymap.of([
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...searchKeymap,
+        ...completionKeymap,
+        indentWithTab
+      ]),
+      // Our custom extensions
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
       themeCompartment.of(isDark ? oneDark : []),
