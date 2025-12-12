@@ -5,6 +5,7 @@
 // Crypto services
 export { cryptoService, encryptJSON, decryptJSON, encryptStringArray, decryptStringArray } from './crypto';
 export { keyManager, setupActivityListeners, removeActivityListeners } from './keyManager';
+export { passwordStorageService } from './passwordStorageService';
 
 // Database
 export { initDB, getDB, closeDB, deleteDB, STORES } from './db';

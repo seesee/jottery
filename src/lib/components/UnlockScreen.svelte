@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
-  import { initialize, unlock, isInitialized, deleteDB } from '../services';
+  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, settingsRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
 
@@ -21,8 +21,39 @@
     isInitializedStore.set(!needsInit);
   })();
 
-  // Auto-focus password input on mount
-  onMount(() => {
+  // Auto-focus password input on mount and check for stored password
+  onMount(async () => {
+    // Try auto-unlock with stored password
+    if (!needsInit) {
+      try {
+        const settings = await settingsRepository.get();
+        if (settings.rememberPassword) {
+          const storedPassword = passwordStorageService.get();
+          if (storedPassword) {
+            console.log('[UnlockScreen] Stored password found, attempting auto-unlock...');
+            loading = true;
+            try {
+              await unlock(storedPassword);
+              isLocked.set(false);
+              console.log('[UnlockScreen] ✓ Auto-unlock successful!');
+              // Don't focus input - we're unlocked
+              return;
+            } catch (err) {
+              console.error('[UnlockScreen] Auto-unlock failed:', err);
+              // Clear invalid stored password
+              passwordStorageService.clear();
+              error = 'Stored password is invalid. Please enter your password.';
+            } finally {
+              loading = false;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[UnlockScreen] Failed to check stored password:', err);
+      }
+    }
+
+    // Focus password input if we didn't auto-unlock
     if (passwordInput) {
       passwordInput.focus();
     }
@@ -31,6 +62,8 @@
   async function handleSubmit() {
     error = '';
     loading = true;
+
+    const passwordToStore = password; // Store before clearing
 
     try {
       if (needsInit) {
@@ -43,14 +76,25 @@
           error = $_('unlock.passwordMismatch');
           return;
         }
-        await initialize(password);
+        await initialize(passwordToStore);
       } else {
         // Unlock existing
-        await unlock(password);
+        await unlock(passwordToStore);
       }
 
       // Update store to trigger UI change
       isLocked.set(false);
+
+      // Store password if rememberPassword is enabled
+      try {
+        const settings = await settingsRepository.get();
+        if (settings.rememberPassword) {
+          passwordStorageService.store(passwordToStore);
+          console.log('[UnlockScreen] Password stored for future auto-unlock');
+        }
+      } catch (err) {
+        console.error('[UnlockScreen] Failed to store password:', err);
+      }
 
       // Clear password fields and reset attempts
       password = '';

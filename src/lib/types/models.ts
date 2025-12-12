@@ -49,6 +49,7 @@ export interface UserSettings {
   autoLockTimeout: number; // Minutes
   syncEnabled: boolean;
   syncEndpoint?: string;
+  rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
 }
 
 /**
@@ -169,4 +170,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   sortOrder: 'recent',
   autoLockTimeout: 15, // 15 minutes
   syncEnabled: false,
+  rememberPassword: false,
 };

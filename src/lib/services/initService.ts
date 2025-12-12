@@ -99,10 +99,14 @@ export async function unlock(password: string): Promise<void> {
     console.log('[Unlock] ⚠️ No notes to verify password against - skipping verification');
   }
 
-  // Store the master key
+  // Get settings to check rememberPassword
+  const settings = await settingsRepository.get();
+
+  // Store the master key (include password if rememberPassword is enabled)
   const masterKey: MasterKey = {
     key,
     derivedAt: Date.now(),
+    password: settings.rememberPassword ? password : undefined,
   };
 
   keyManager.setMasterKey(masterKey);
@@ -112,11 +116,15 @@ export async function unlock(password: string): Promise<void> {
   console.log('[Unlock] Checking for imported credentials...');
   await handleImportedCredentials(key);
 
-  // Setup auto-lock
-  const settings = await settingsRepository.get();
-  setupActivityListeners(settings.autoLockTimeout);
+  // Setup auto-lock (disabled if rememberPassword is enabled)
+  if (settings.rememberPassword) {
+    console.log('[Unlock] ⚠️ Remember Password enabled - auto-lock DISABLED');
+  } else {
+    setupActivityListeners(settings.autoLockTimeout);
+    console.log('[Unlock] ✓ Auto-lock enabled with timeout:', settings.autoLockTimeout, 'minutes');
+  }
 
-  console.log('[Unlock] ✓ Unlock complete! Auto-lock timeout:', settings.autoLockTimeout, 'minutes');
+  console.log('[Unlock] ✓ Unlock complete!');
 }
 
 /**

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { locale, _ } from 'svelte-i18n';
   import type { Theme, SyncStatus } from '../types';
@@ -15,9 +15,11 @@
   let autoLockTimeout = $settings.autoLockTimeout;
   let sortOrder = $settings.sortOrder;
   let language = $settings.language;
+  let rememberPassword = $settings.rememberPassword || false;
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
+  let showRememberPasswordWarning = false;
 
   // Sync state
   let syncEndpoint = $settings.syncEndpoint || '';
@@ -257,6 +259,7 @@
         autoLockTimeout,
         sortOrder,
         language,
+        rememberPassword,
       });
 
       // Update store
@@ -267,6 +270,7 @@
         autoLockTimeout,
         sortOrder,
         language,
+        rememberPassword,
       }));
 
       onClose();
@@ -295,6 +299,56 @@
       console.error('Failed to delete database:', error);
       alert('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
     }
+  }
+
+  function handleRememberPasswordToggle() {
+    if (!rememberPassword) {
+      // Trying to enable - show warning
+      showRememberPasswordWarning = true;
+    } else {
+      // Disabling - clear stored password and lock
+      handleDisableRememberPassword();
+    }
+  }
+
+  async function confirmEnableRememberPassword() {
+    showRememberPasswordWarning = false;
+    rememberPassword = true;
+
+    // Get current password from keyManager (user is already unlocked)
+    const masterKey = keyManager.getMasterKey();
+    if (masterKey && masterKey.password) {
+      try {
+        // Store the password
+        passwordStorageService.store(masterKey.password);
+        console.log('[SettingsModal] Password stored successfully');
+      } catch (error) {
+        console.error('Failed to store password:', error);
+        alert('Failed to store password: ' + (error instanceof Error ? error.message : String(error)));
+        rememberPassword = false;
+        return;
+      }
+    } else {
+      console.warn('[SettingsModal] No password available to store');
+      rememberPassword = false;
+    }
+  }
+
+  function cancelEnableRememberPassword() {
+    showRememberPasswordWarning = false;
+    rememberPassword = false;
+  }
+
+  function handleDisableRememberPassword() {
+    rememberPassword = false;
+
+    // Clear stored password
+    passwordStorageService.clear();
+    console.log('[SettingsModal] Stored password cleared');
+
+    // Lock the application
+    lock();
+    isLocked.set(true);
   }
 
   function handleBackdropClick(e: MouseEvent) {
@@ -641,6 +695,32 @@
         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
           <h3 class="text-lg font-medium text-red-600 dark:text-red-400 mb-4">Danger Zone</h3>
 
+          <!-- Remember Password Toggle -->
+          <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                  🔓 Remember Password (Insecure)
+                </h4>
+                <p class="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                  Store your password on this device to skip entering it on every visit. <strong>WARNING:</strong> This stores your password in plain text in localStorage, which is highly insecure.
+                </p>
+                <p class="text-xs text-orange-600 dark:text-orange-400">
+                  Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  bind:checked={rememberPassword}
+                  on:change={handleRememberPasswordToggle}
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
+              </label>
+            </div>
+          </div>
+
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
               Delete All Data
@@ -698,6 +778,19 @@
     requireTextMatch="DELETE"
     onConfirm={confirmDeleteDatabase}
     onCancel={() => showDeleteConfirm = false}
+  />
+
+  <!-- Remember Password Warning Modal -->
+  <ConfirmModal
+    show={showRememberPasswordWarning}
+    title="⚠️ Security Warning"
+    message="Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.\n\n• Anyone with access to your device can read it\n• Browser extensions can access it\n• It may survive browser cache clearing\n• Auto-lock will be disabled\n\nOnly enable this if you fully understand the security risks.\n\nType ENABLE to confirm:"
+    confirmText="I Understand, Enable Anyway"
+    cancelText="Cancel"
+    confirmClass="bg-orange-600 hover:bg-orange-700"
+    requireTextMatch="ENABLE"
+    onConfirm={confirmEnableRememberPassword}
+    onCancel={cancelEnableRememberPassword}
   />
 
   <!-- Sync Credentials Display Modal -->

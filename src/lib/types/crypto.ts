@@ -9,6 +9,7 @@
 export interface MasterKey {
   key: CryptoKey;
   derivedAt: number; // Timestamp when derived
+  password?: string; // Optional: kept in memory for Remember Password feature
 }
 
 /**
