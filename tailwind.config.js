@@ -1,6 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{svelte,js,ts}'],
+  safelist: [
+    // Force inclusion of all prose-related classes
+    {
+      pattern: /^prose(-.*)?$/,
+      variants: ['dark', 'lg', 'xl'],
+    },
+  ],
   theme: {
     extend: {
       screens: {
