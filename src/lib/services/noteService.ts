@@ -118,6 +118,7 @@ class NoteService {
       pinned?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+      showPreview?: boolean;
     }
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
@@ -180,6 +181,11 @@ class NoteService {
     // Update syntax language if provided
     if (updates.syntaxLanguage !== undefined) {
       note.syntaxLanguage = updates.syntaxLanguage;
+    }
+
+    // Update show preview if provided
+    if (updates.showPreview !== undefined) {
+      note.showPreview = updates.showPreview;
     }
 
     return await noteRepository.update(note);
