@@ -122,6 +122,8 @@ pub struct App {
     notes: Vec<Note>,
     /// Selected note index
     selected_note: usize,
+    /// Preview scroll offset (number of lines scrolled down)
+    preview_scroll_offset: usize,
     /// Currently editing note ID (None = creating new note)
     editing_note_id: Option<String>,
     /// Settings
@@ -164,6 +166,7 @@ impl App {
             crypto: CryptoService::new(),
             notes: Vec::new(),
             selected_note: 0,
+            preview_scroll_offset: 0,
             editing_note_id: None,
             settings: UserSettings::default(),
             credential_input: String::new(),
@@ -423,11 +426,13 @@ impl App {
                     let note_count = self.filtered_notes().len();
                     if note_count > 0 && self.selected_note < note_count - 1 {
                         self.selected_note += 1;
+                        self.preview_scroll_offset = 0; // Reset scroll when changing notes
                     }
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
                     if self.selected_note > 0 {
                         self.selected_note -= 1;
+                        self.preview_scroll_offset = 0; // Reset scroll when changing notes
                     }
                 }
                 KeyCode::Char('p') => {
@@ -484,6 +489,23 @@ impl App {
                             }
                         }
                     }
+                }
+                // Vim-style preview scrolling (must come before plain 'd' key)
+                KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    // Ctrl-d: scroll preview down half page (10 lines)
+                    self.preview_scroll_offset = self.preview_scroll_offset.saturating_add(10);
+                }
+                KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    // Ctrl-u: scroll preview up half page (10 lines)
+                    self.preview_scroll_offset = self.preview_scroll_offset.saturating_sub(10);
+                }
+                KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    // Ctrl-f: scroll preview down full page (20 lines)
+                    self.preview_scroll_offset = self.preview_scroll_offset.saturating_add(20);
+                }
+                KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    // Ctrl-b: scroll preview up full page (20 lines)
+                    self.preview_scroll_offset = self.preview_scroll_offset.saturating_sub(20);
                 }
                 KeyCode::Char('d') => {
                     // Delete selected note
@@ -1858,7 +1880,7 @@ impl App {
         } else if self.search_active {
             "Type: search | Esc: exit | ↑/↓: navigate".to_string()
         } else {
-            "/: search | p: pin | t: tags | l: type | y: sync | s: settings | n: new | i: edit".to_string()
+            "/: search | p: pin | t: tags | l: type | Ctrl-d/u: scroll | n: new | i: edit".to_string()
         };
         let help = Paragraph::new(status_text)
             .style(if self.sync_status.is_some() {
@@ -1909,7 +1931,8 @@ impl App {
 
             let preview = Paragraph::new(Text::from(lines))
                 .block(preview_block)
-                .wrap(Wrap { trim: false });
+                .wrap(Wrap { trim: false })
+                .scroll((self.preview_scroll_offset as u16, 0));
             frame.render_widget(preview, right_pane);
         } else {
             let preview = Paragraph::new("No notes")
