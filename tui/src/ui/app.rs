@@ -297,7 +297,6 @@ impl App {
                             // Open external editor immediately
                             if let Ok(new_content) = self.edit_with_external_editor() {
                                 self.note_input = new_content;
-                                self.need_redraw = true; // Force full redraw after editor
                                 // Save the note
                                 if let Err(e) = self.save_note() {
                                     self.error = Some(format!("Failed to save note: {}", e));
@@ -368,12 +367,24 @@ impl App {
                     self.search_input.clear();
                 }
                 KeyCode::Char('n') => {
-                    // New note
+                    // New note - open editor immediately
                     self.note_input.clear();
+                    self.note_syntax = crate::models::SyntaxLanguage::default();
                     self.current_tags.clear();
                     self.editing_note_id = None;
-                    self.state = AppState::NoteView;
-                    self.input_mode = InputMode::Insert;
+
+                    // Open external editor immediately
+                    if let Ok(new_content) = self.edit_with_external_editor() {
+                        self.note_input = new_content;
+                        // Save the note
+                        if let Err(e) = self.save_note() {
+                            self.error = Some(format!("Failed to save note: {}", e));
+                        }
+                        // Reload notes to refresh the list
+                        if let Err(e) = self.load_notes() {
+                            self.error = Some(format!("Failed to reload notes: {}", e));
+                        }
+                    }
                 }
                 KeyCode::Char('i') | KeyCode::Enter => {
                     // Edit selected note directly with external editor
@@ -394,7 +405,6 @@ impl App {
                         // Open external editor immediately
                         if let Ok(new_content) = self.edit_with_external_editor() {
                             self.note_input = new_content;
-                            self.need_redraw = true; // Force full redraw after editor
                             // Save the note
                             if let Err(e) = self.save_note() {
                                 self.error = Some(format!("Failed to save note: {}", e));
@@ -438,6 +448,25 @@ impl App {
                         }
                     }
                 }
+                KeyCode::Char('t') => {
+                    // Edit tags for selected note
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let content = filtered[self.selected_note].content.clone();
+                        let note_id = filtered[self.selected_note].id.clone();
+                        let syntax_lang = filtered[self.selected_note].syntax_language;
+                        let tags = filtered[self.selected_note].tags.clone();
+
+                        // Set up for tag editing
+                        self.note_input = content;
+                        self.note_syntax = syntax_lang;
+                        self.current_tags = tags;
+                        self.editing_note_id = Some(note_id);
+                        self.state = AppState::NoteView;
+                        self.input_mode = InputMode::Tag;
+                        self.tag_input.clear();
+                    }
+                }
                 KeyCode::Char('d') => {
                     // Delete selected note
                     let filtered = self.filtered_notes();
@@ -474,7 +503,6 @@ impl App {
                     // Edit with external $EDITOR
                     if let Ok(content) = self.edit_with_external_editor() {
                         self.note_input = content;
-                        self.need_redraw = true; // Force full redraw after editor
                     }
                 }
                 KeyCode::Char('t') => {
@@ -1518,7 +1546,7 @@ impl App {
     }
 
     /// Edit note content with external $EDITOR
-    fn edit_with_external_editor(&self) -> Result<String> {
+    fn edit_with_external_editor(&mut self) -> Result<String> {
         // Create temporary file with current note content
         let mut temp_file = NamedTempFile::new()
             .context("Failed to create temporary file")?;
@@ -1548,16 +1576,17 @@ impl App {
             .context("Failed to enter alternate screen")?;
         enable_raw_mode().context("Failed to enable raw mode")?;
 
-        // Clear and refresh the screen to ensure proper redraw
+        // Clear screen with crossterm (this clears the visible screen)
         execute!(
             io::stdout(),
             Clear(ClearType::All),
             Clear(ClearType::Purge),
             MoveTo(0, 0)
         ).context("Failed to clear screen")?;
-
-        // Flush to ensure commands are executed
         io::stdout().flush().context("Failed to flush stdout")?;
+
+        // Set flag to force ratatui buffer clear on next render
+        self.need_redraw = true;
 
         if !status.success() {
             anyhow::bail!("Editor exited with non-zero status");

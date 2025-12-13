@@ -171,7 +171,11 @@ fn main() -> Result<()> {
     while !app.should_quit() {
         // Check if we need to force a full redraw (e.g., after external editor)
         if app.should_redraw() {
+            // Clear ratatui's internal buffer
             tui.clear()?;
+            // Also force a screen clear and redraw
+            use crossterm::{execute, terminal::{Clear, ClearType}};
+            execute!(std::io::stdout(), Clear(ClearType::All))?;
         }
 
         // Render
