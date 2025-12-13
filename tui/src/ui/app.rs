@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use crossterm::{
     event::{KeyCode, KeyEvent, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
@@ -1529,6 +1529,10 @@ impl App {
         execute!(io::stdout(), EnterAlternateScreen)
             .context("Failed to enter alternate screen")?;
         enable_raw_mode().context("Failed to enable raw mode")?;
+
+        // Clear and refresh the screen to ensure proper redraw
+        execute!(io::stdout(), Clear(ClearType::All))
+            .context("Failed to clear screen")?;
 
         if !status.success() {
             anyhow::bail!("Editor exited with non-zero status");
