@@ -1,6 +1,6 @@
 # Jottery
 
-Jottery is a simple, searchable, and privacy-focused scratchpad application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app, the sync server is optional.
+Jottery is a simple, searchable, and privacy-focused scratchpad/notes application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app, the sync server is optional.
 
 ## Features
 
