@@ -468,6 +468,14 @@ class SyncService {
         syncedAt: result.syncedAt,
       };
 
+      // Debug logging for tag storage
+      console.log(`[SyncService] Pull - Storing note ${remoteNote.id} with tags:`, {
+        tagsIsArray: Array.isArray(tagsForStorage),
+        tagsLength: tagsForStorage?.length,
+        tagsType: typeof tagsForStorage,
+        firstTagSample: tagsForStorage?.[0]?.substring(0, 100)
+      });
+
       const localNote = await noteRepository.getById(remoteNote.id);
 
       if (!localNote) {

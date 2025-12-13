@@ -320,9 +320,30 @@ class NoteService {
       const content = await cryptoService.decryptText(encryptedContent, key);
 
       let tags: string[] = [];
+
+      // Defensive check: ensure note.tags is an array
+      if (!Array.isArray(note.tags)) {
+        console.error(`[NoteService] Note ${note.id} has invalid tags type:`, typeof note.tags, note.tags);
+        // Force it to be an empty array
+        note.tags = [];
+      }
+
       if (note.tags.length > 0 && note.tags[0]) {
-        const encryptedTags = JSON.parse(note.tags[0]);
-        tags = await decryptStringArray(encryptedTags, key);
+        try {
+          const encryptedTags = JSON.parse(note.tags[0]);
+          const decryptedTags = await decryptStringArray(encryptedTags, key);
+
+          // Defensive check: ensure decrypted tags is an array
+          if (!Array.isArray(decryptedTags)) {
+            console.error(`[NoteService] Note ${note.id} decrypted tags is not an array:`, typeof decryptedTags, decryptedTags);
+            tags = [];
+          } else {
+            tags = decryptedTags;
+          }
+        } catch (error) {
+          console.error(`[NoteService] Failed to decrypt tags for note ${note.id}:`, error);
+          tags = [];
+        }
       }
 
       return {
