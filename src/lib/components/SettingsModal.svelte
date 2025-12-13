@@ -327,7 +327,9 @@
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
       // Capture the exact modifiers that are pressed
-      const hasCtrl = isMac ? e.metaKey : e.ctrlKey;
+      // On Mac, support both Cmd (metaKey) and Ctrl (ctrlKey) as "Ctrl"
+      // On Windows/Linux, just use Ctrl (ctrlKey)
+      const hasCtrl = e.metaKey || e.ctrlKey;
       const hasAlt = e.altKey;
       const hasShift = e.shiftKey;
 

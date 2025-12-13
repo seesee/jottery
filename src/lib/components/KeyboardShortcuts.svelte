@@ -17,7 +17,9 @@
     if (!shortcut || !shortcut.key) return false;
 
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const hasCtrl = isMac ? event.metaKey : event.ctrlKey;
+    // On Mac, support both Cmd (metaKey) and Ctrl (ctrlKey) as "Ctrl"
+    // On Windows/Linux, just use Ctrl (ctrlKey)
+    const hasCtrl = event.metaKey || event.ctrlKey;
     const hasAlt = event.altKey;
     const hasShift = event.shiftKey;
 
