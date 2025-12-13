@@ -426,6 +426,19 @@ class SyncService {
             const tagJson = await cryptoService.decryptText(encryptedTag, masterKey.key);
             const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
 
+            // Handle legacy format: if tag is an array, extract individual tags
+            if (Array.isArray(tag)) {
+              console.warn('[SyncService] Pull - Found legacy array tag format, extracting individual tags:', tag);
+              for (const individualTag of tag) {
+                if (typeof individualTag === 'string' && individualTag.trim().length > 0) {
+                  decryptedTags.push(individualTag);
+                } else {
+                  console.warn('[SyncService] Pull - Skipping invalid tag in array:', individualTag);
+                }
+              }
+              continue;
+            }
+
             // Validate tag before adding
             if (typeof tag !== 'string') {
               console.warn('[SyncService] Pull - Skipping non-string tag:', tag);
