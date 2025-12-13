@@ -357,8 +357,8 @@
       };
 
       recordingShortcut = null;
-      window.removeEventListener('keydown', handleKeyDown, true);
-      window.removeEventListener('keyup', handleKeyUp, true);
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+      window.removeEventListener('keyup', handleKeyUp, { capture: true });
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -366,8 +366,8 @@
       if (e.key === 'Escape') {
         e.preventDefault();
         recordingShortcut = null;
-        window.removeEventListener('keydown', handleKeyDown, true);
-        window.removeEventListener('keyup', handleKeyUp, true);
+        window.removeEventListener('keydown', handleKeyDown, { capture: true });
+        window.removeEventListener('keyup', handleKeyUp, { capture: true });
       }
     };
 
