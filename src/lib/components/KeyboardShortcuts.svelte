@@ -13,6 +13,9 @@
   let showLockConfirm = false;
 
   function matchesShortcut(event: KeyboardEvent, shortcut: any): boolean {
+    // Null check - shortcut might be undefined
+    if (!shortcut || !shortcut.key) return false;
+
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const hasCtrl = isMac ? event.metaKey : event.ctrlKey;
     const hasAlt = event.altKey;

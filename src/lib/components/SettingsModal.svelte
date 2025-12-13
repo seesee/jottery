@@ -347,7 +347,15 @@
       console.log('[SettingsModal] Recorded shortcut:', {
         raw: e.key,
         normalized: normalizedKey,
-        modifiers: { ctrl: hasCtrl, alt: hasAlt, shift: hasShift },
+        platform: navigator.platform,
+        isMac: isMac,
+        eventModifiers: {
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          altKey: e.altKey,
+          shiftKey: e.shiftKey
+        },
+        computed: { ctrl: hasCtrl, alt: hasAlt, shift: hasShift },
         result: newShortcut
       });
 
