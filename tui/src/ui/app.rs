@@ -872,7 +872,11 @@ impl App {
             self.settings = settings_repo.get()?;
         }
 
+        // Clear password fields and reset new database flag
         self.password_input.clear();
+        self.password_confirm.clear();
+        self.is_new_database = false;  // Database now exists
+        self.password_confirm_focused = false;  // Reset focus
         self.state = AppState::NoteList;
 
         Ok(())
@@ -1625,6 +1629,7 @@ impl App {
             self.selected_note = 0;
             self.password_input.clear();
             self.password_confirm.clear();
+            self.password_confirm_focused = false;  // Ensure single password field on unlock
             self.input_mode = InputMode::Normal;
             self.state = AppState::Locked;
 
