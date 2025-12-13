@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { settings } from '../stores/appStore';
+  import type { KeyboardShortcut } from '../types';
+
   export let show: boolean = false;
   export let onClose: () => void;
 
@@ -8,15 +11,31 @@
     }
   }
 
-  const shortcuts = [
+  function formatShortcut(shortcut: KeyboardShortcut): string[] {
+    const keys: string[] = [];
+
+    if (shortcut.ctrl) keys.push('Ctrl/Cmd');
+    if (shortcut.alt) keys.push('Alt');
+    if (shortcut.shift) keys.push('Shift');
+
+    // Capitalize single letters, but keep symbols as-is
+    const key = shortcut.key.length === 1 && shortcut.key.match(/[a-z]/i)
+      ? shortcut.key.toUpperCase()
+      : shortcut.key;
+    keys.push(key);
+
+    return keys;
+  }
+
+  $: shortcuts = [
     {
       category: 'Global',
       items: [
-        { keys: ['Ctrl/Cmd', 'K'], description: 'Focus search' },
-        { keys: ['Ctrl/Cmd', 'N'], description: 'Create new note' },
-        { keys: ['Ctrl/Cmd', 'L'], description: 'Lock application' },
-        { keys: ['Ctrl/Cmd', ','], description: 'Open settings' },
-        { keys: ['Ctrl/Cmd', '/'], description: 'Show keyboard shortcuts' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.focusSearch || { key: 'k', ctrl: true }), description: 'Focus search' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.newNote || { key: 'n', alt: true }), description: 'Create new note' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.lockApp || { key: 'l', alt: true }), description: 'Lock application' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.openSettings || { key: ',', ctrl: true }), description: 'Open settings' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.showShortcuts || { key: '/', alt: true }), description: 'Show keyboard shortcuts' },
       ]
     },
     {
@@ -33,7 +52,7 @@
       category: 'Editor',
       items: [
         { keys: ['Esc'], description: 'Close note' },
-        { keys: ['Ctrl/Cmd', 'Shift', 'C'], description: 'Copy note content' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.copyNote || { key: 'c', alt: true }), description: 'Copy note content' },
         { keys: ['Ctrl/Cmd', 'F'], description: 'Find in note (CodeMirror)' },
         { keys: ['Ctrl/Cmd', 'H'], description: 'Replace in note (CodeMirror)' },
       ]

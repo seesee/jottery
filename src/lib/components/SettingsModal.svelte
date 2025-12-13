@@ -3,7 +3,8 @@
   import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { locale, _ } from 'svelte-i18n';
-  import type { Theme, SyncStatus } from '../types';
+  import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts } from '../types';
+  import { DEFAULT_KEYBOARD_SHORTCUTS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
 
   export let show = false;
@@ -38,12 +39,18 @@
   let credentialsText = '';
   let showDisconnectSyncConfirm = false;
 
+  // Keyboard shortcut recording
+  let recordingShortcut: keyof KeyboardShortcuts | null = null;
+  let tempShortcuts: KeyboardShortcuts = { ...$settings.keyboardShortcuts } || { ...DEFAULT_KEYBOARD_SHORTCUTS };
+
   // Apply theme when it changes
   $: applyTheme(theme);
 
   // Load sync status when modal opens
   $: if (show) {
     loadSyncStatus();
+    // Reset temp shortcuts to current settings
+    tempShortcuts = { ...$settings.keyboardShortcuts } || { ...DEFAULT_KEYBOARD_SHORTCUTS };
   }
 
   function applyTheme(selectedTheme: Theme) {
@@ -287,6 +294,58 @@
   }
 
 
+  function formatShortcutDisplay(shortcut: KeyboardShortcut | undefined): string {
+    if (!shortcut) return 'Not set';
+
+    const parts: string[] = [];
+    if (shortcut.ctrl) parts.push('Ctrl/Cmd');
+    if (shortcut.alt) parts.push('Alt');
+    if (shortcut.shift) parts.push('Shift');
+
+    const key = shortcut.key.length === 1 && shortcut.key.match(/[a-z]/i)
+      ? shortcut.key.toUpperCase()
+      : shortcut.key;
+    parts.push(key);
+
+    return parts.join(' + ');
+  }
+
+  function startRecording(shortcutName: keyof KeyboardShortcuts) {
+    recordingShortcut = shortcutName;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Ignore just modifier keys
+      if (['Control', 'Alt', 'Shift', 'Meta', 'Command'].includes(e.key)) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const newShortcut: KeyboardShortcut = {
+        key: e.key,
+        ctrl: isMac ? e.metaKey : e.ctrlKey,
+        alt: e.altKey,
+        shift: e.shiftKey,
+      };
+
+      tempShortcuts = {
+        ...tempShortcuts,
+        [shortcutName]: newShortcut,
+      };
+
+      recordingShortcut = null;
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+  }
+
+  function resetShortcuts() {
+    tempShortcuts = { ...DEFAULT_KEYBOARD_SHORTCUTS };
+  }
+
   async function handleSave() {
     saving = true;
     try {
@@ -297,6 +356,7 @@
         sortOrder,
         language,
         rememberPassword,
+        keyboardShortcuts: tempShortcuts,
       });
 
       // Update store
@@ -308,6 +368,7 @@
         sortOrder,
         language,
         rememberPassword,
+        keyboardShortcuts: tempShortcuts,
       }));
 
       onClose();
@@ -760,6 +821,86 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Export notes as decrypted JSON. Import will merge notes with existing data.
             </p>
+          </div>
+        </div>
+
+        <!-- Keyboard Shortcuts -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Keyboard Shortcuts</h3>
+
+          <div class="space-y-3">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Customize keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.
+            </p>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Focus Search</span>
+                <button
+                  on:click={() => startRecording('focusSearch')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'focusSearch' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'focusSearch' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.focusSearch)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Create New Note</span>
+                <button
+                  on:click={() => startRecording('newNote')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'newNote' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'newNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.newNote)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Lock Application</span>
+                <button
+                  on:click={() => startRecording('lockApp')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'lockApp' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'lockApp' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.lockApp)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Open Settings</span>
+                <button
+                  on:click={() => startRecording('openSettings')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'openSettings' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'openSettings' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.openSettings)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Show Shortcuts Help</span>
+                <button
+                  on:click={() => startRecording('showShortcuts')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'showShortcuts' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'showShortcuts' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.showShortcuts)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Copy Note Content</span>
+                <button
+                  on:click={() => startRecording('copyNote')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'copyNote' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'copyNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.copyNote)}
+                </button>
+              </div>
+            </div>
+
+            <button
+              on:click={resetShortcuts}
+              class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+            >
+              Reset to Defaults
+            </button>
           </div>
         </div>
 

@@ -17,9 +17,11 @@ export type {
   ExportNote,
   ExportAttachment,
   SyncOperation,
+  KeyboardShortcut,
+  KeyboardShortcuts,
 } from './models';
 
-export { DEFAULT_NOTE, DEFAULT_SETTINGS } from './models';
+export { DEFAULT_NOTE, DEFAULT_SETTINGS, DEFAULT_KEYBOARD_SHORTCUTS } from './models';
 
 // Repository interfaces
 export type {

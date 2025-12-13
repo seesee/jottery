@@ -39,6 +39,28 @@ export interface Attachment {
 }
 
 /**
+ * Keyboard shortcut configuration
+ */
+export interface KeyboardShortcut {
+  key: string; // The key to press (e.g., 'k', 'n', ',')
+  ctrl?: boolean; // Ctrl on Windows/Linux, Cmd on Mac
+  alt?: boolean;
+  shift?: boolean;
+}
+
+/**
+ * All available keyboard shortcuts
+ */
+export interface KeyboardShortcuts {
+  focusSearch: KeyboardShortcut;
+  newNote: KeyboardShortcut;
+  lockApp: KeyboardShortcut;
+  openSettings: KeyboardShortcut;
+  showShortcuts: KeyboardShortcut;
+  copyNote: KeyboardShortcut;
+}
+
+/**
  * User application settings
  * Stored unencrypted in IndexedDB
  */
@@ -51,6 +73,7 @@ export interface UserSettings {
   syncEnabled: boolean;
   syncEndpoint?: string;
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
+  keyboardShortcuts?: KeyboardShortcuts; // Custom keyboard shortcuts
 }
 
 /**
@@ -164,6 +187,18 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
 };
 
 /**
+ * Default keyboard shortcuts (non-clashing with browser shortcuts)
+ */
+export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
+  focusSearch: { key: 'k', ctrl: true }, // Ctrl/Cmd+K
+  newNote: { key: 'n', alt: true }, // Alt+N
+  lockApp: { key: 'l', alt: true }, // Alt+L
+  openSettings: { key: ',', ctrl: true }, // Ctrl/Cmd+,
+  showShortcuts: { key: '/', alt: true }, // Alt+/
+  copyNote: { key: 'c', alt: true }, // Alt+C
+};
+
+/**
  * Default user settings
  */
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -174,4 +209,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   autoLockTimeout: 15, // 15 minutes
   syncEnabled: false,
   rememberPassword: false,
+  keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
 };

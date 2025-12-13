@@ -12,47 +12,65 @@
 
   let showLockConfirm = false;
 
+  function matchesShortcut(event: KeyboardEvent, shortcut: any): boolean {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const hasCtrl = isMac ? event.metaKey : event.ctrlKey;
+    const hasAlt = event.altKey;
+    const hasShift = event.shiftKey;
+
+    // Check modifiers match
+    if (shortcut.ctrl && !hasCtrl) return false;
+    if (!shortcut.ctrl && hasCtrl) return false;
+    if (shortcut.alt && !hasAlt) return false;
+    if (!shortcut.alt && hasAlt) return false;
+    if (shortcut.shift && !hasShift) return false;
+    if (!shortcut.shift && hasShift) return false;
+
+    // Check key matches (case insensitive)
+    return event.key.toLowerCase() === shortcut.key.toLowerCase();
+  }
+
   function handleKeydown(event: KeyboardEvent) {
     // Don't trigger shortcuts when typing in inputs/textareas
     const target = event.target as HTMLElement;
     const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const modifier = isMac ? event.metaKey : event.ctrlKey;
+    const shortcuts = $settings.keyboardShortcuts;
+    if (!shortcuts) return;
 
     // Global shortcuts (work even when editing for some)
-    if (modifier && event.key === 'k') {
+    if (matchesShortcut(event, shortcuts.focusSearch)) {
       event.preventDefault();
       onFocusSearch();
       return;
     }
 
-    if (modifier && event.key === 'n') {
+    if (matchesShortcut(event, shortcuts.newNote)) {
       event.preventDefault();
       onNewNote();
       return;
     }
 
-    if (modifier && event.key === 'l') {
+    if (matchesShortcut(event, shortcuts.lockApp)) {
       event.preventDefault();
       showLockConfirm = true;
       return;
     }
 
-    if (modifier && event.key === ',') {
+    if (matchesShortcut(event, shortcuts.openSettings)) {
       event.preventDefault();
       onOpenSettings();
       return;
     }
 
-    if (modifier && event.key === '/') {
+    if (matchesShortcut(event, shortcuts.showShortcuts)) {
       event.preventDefault();
       onOpenShortcutsHelp();
       return;
     }
 
     // Copy note content
-    if (modifier && event.shiftKey && (event.key === 'C' || event.key === 'c')) {
+    if (matchesShortcut(event, shortcuts.copyNote)) {
       event.preventDefault();
       handleCopyNote();
       return;
