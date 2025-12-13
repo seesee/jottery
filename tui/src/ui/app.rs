@@ -1164,7 +1164,7 @@ impl App {
 
             let decrypted_tags: Vec<String> = remote_note.tags.iter()
                 .enumerate()
-                .filter_map(|(idx, tag_json)| {
+                .flat_map(|(idx, tag_json)| {
                     self.debug_log(&format!("Pull - Tag[{}] raw JSON: {}", idx, tag_json));
 
                     // Parse the encrypted tag structure
@@ -1172,7 +1172,7 @@ impl App {
                         Ok(data) => data,
                         Err(e) => {
                             self.debug_log(&format!("Pull - Tag[{}] failed to parse as EncryptedData: {}, skipping", idx, e));
-                            return None;
+                            return Vec::new();
                         }
                     };
 
@@ -1183,35 +1183,41 @@ impl App {
                         Ok(s) => s,
                         Err(e) => {
                             self.debug_log(&format!("Pull - Tag[{}] failed to decrypt: {}, skipping", idx, e));
-                            return None;
+                            return Vec::new();
                         }
                     };
 
                     self.debug_log(&format!("Pull - Tag[{}] decrypted to: {}", idx, tag_json_str));
 
-                    // Handle malformed tags (empty arrays, non-strings, etc.)
-                    // Valid tag should be a JSON-encoded string like "\"tagname\""
-                    let tag: String = match serde_json::from_str(&tag_json_str) {
-                        Ok(t) => t,
-                        Err(e) => {
-                            // Check if it's an empty array or other invalid format
-                            if tag_json_str.trim() == "[]" || tag_json_str.trim().is_empty() {
-                                self.debug_log(&format!("Pull - Tag[{}] is empty/invalid ({}), skipping", idx, tag_json_str));
-                            } else {
-                                self.debug_log(&format!("Pull - Tag[{}] failed to parse tag value: {}, skipping", idx, e));
-                            }
-                            return None;
+                    // Try parsing as individual string first (new format)
+                    if let Ok(tag) = serde_json::from_str::<String>(&tag_json_str) {
+                        if !tag.trim().is_empty() {
+                            self.debug_log(&format!("Pull - Tag[{}] parsed as string: {}", idx, tag));
+                            return vec![tag];
+                        } else {
+                            self.debug_log(&format!("Pull - Tag[{}] is empty string, skipping", idx));
+                            return Vec::new();
                         }
-                    };
-
-                    // Skip empty tag strings
-                    if tag.is_empty() {
-                        self.debug_log(&format!("Pull - Tag[{}] is empty string, skipping", idx));
-                        return None;
                     }
 
-                    self.debug_log(&format!("Pull - Tag[{}] final value: {}", idx, tag));
-                    Some(tag)
+                    // Try parsing as array (legacy format where entire tag array was encrypted as one blob)
+                    if let Ok(tags) = serde_json::from_str::<Vec<String>>(&tag_json_str) {
+                        let valid_tags: Vec<String> = tags.into_iter()
+                            .filter(|t| !t.trim().is_empty())
+                            .collect();
+
+                        if !valid_tags.is_empty() {
+                            self.debug_log(&format!("Pull - Tag[{}] parsed as array with {} tags: {:?}", idx, valid_tags.len(), valid_tags));
+                            return valid_tags;
+                        } else {
+                            self.debug_log(&format!("Pull - Tag[{}] is empty array, skipping", idx));
+                            return Vec::new();
+                        }
+                    }
+
+                    // Invalid format
+                    self.debug_log(&format!("Pull - Tag[{}] invalid format (not string or array): {}, skipping", idx, tag_json_str));
+                    Vec::new()
                 })
                 .collect();
 
