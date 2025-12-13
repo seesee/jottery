@@ -424,10 +424,7 @@ impl App {
                 self.input_mode = InputMode::Normal;
             }
             InputMode::Normal => match key.code {
-                KeyCode::Char('i') => {
-                    self.input_mode = InputMode::Insert;
-                }
-                KeyCode::Char('e') => {
+                KeyCode::Char('e') | KeyCode::Enter => {
                     // Edit with external $EDITOR
                     if let Ok(content) = self.edit_with_external_editor() {
                         self.note_input = content;
@@ -453,25 +450,10 @@ impl App {
                 }
                 _ => {}
             },
-            InputMode::Insert => match key.code {
-                KeyCode::Esc => {
-                    self.input_mode = InputMode::Normal;
-                }
-                KeyCode::Char(c) => {
-                    self.note_input.push(c);
-                }
-                KeyCode::Backspace => {
-                    self.note_input.pop();
-                }
-                KeyCode::Delete => {
-                    // For append-only editor, Delete acts like Backspace
-                    self.note_input.pop();
-                }
-                KeyCode::Enter => {
-                    self.note_input.push('\n');
-                }
-                _ => {}
-            },
+            InputMode::Insert => {
+                // Insert mode not used in note view - redirect to normal mode
+                self.input_mode = InputMode::Normal;
+            }
             InputMode::Tag => match key.code {
                 KeyCode::Esc => {
                     // Exit tag mode
@@ -1821,10 +1803,9 @@ impl App {
         let size = frame.area();
 
         let mode_text = match self.input_mode {
-            InputMode::Normal => "NORMAL",
-            InputMode::Insert => "INSERT",
+            InputMode::Normal => "PREVIEW",
             InputMode::Tag => "TAG",
-            InputMode::SettingsEdit => "NORMAL", // Should not happen in note view
+            InputMode::Insert | InputMode::SettingsEdit => "PREVIEW", // Should not happen in note view
         };
 
         let block = Block::default()
@@ -1881,13 +1862,8 @@ impl App {
 
         // Help text
         let help = match self.input_mode {
-            InputMode::Normal | InputMode::SettingsEdit => {
-                Paragraph::new("i: insert | t: tags | q/Esc: save & quit")
-                    .style(Style::default().fg(Color::DarkGray))
-                    .alignment(Alignment::Center)
-            }
-            InputMode::Insert => {
-                Paragraph::new("Esc: normal mode | Type to edit")
+            InputMode::Normal | InputMode::Insert | InputMode::SettingsEdit => {
+                Paragraph::new("Enter/e: edit with $EDITOR | t: tags | q/Esc: save & quit")
                     .style(Style::default().fg(Color::DarkGray))
                     .alignment(Alignment::Center)
             }
@@ -1901,21 +1877,6 @@ impl App {
 
         // Show cursor
         match self.input_mode {
-            InputMode::Insert => {
-                // Calculate cursor position at end of text
-                let lines: Vec<&str> = self.note_input.lines().collect();
-                let line_count = if self.note_input.is_empty() {
-                    0
-                } else {
-                    lines.len().saturating_sub(1)
-                };
-                let last_line_len = lines.last().map(|l| l.len()).unwrap_or(0);
-
-                frame.set_cursor_position((
-                    chunks[1].x + 1 + last_line_len as u16,
-                    chunks[1].y + 1 + line_count as u16,
-                ));
-            }
             InputMode::Tag => {
                 // Cursor after tag input
                 let tag_prefix_len = if self.current_tags.is_empty() {
@@ -2100,24 +2061,15 @@ impl App {
             Line::from("  ↑ / ↓                 Navigate results"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE EDITOR - NORMAL MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("NOTE PREVIEW - VIEW MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  i                     Enter insert mode"),
-            Line::from("  e                     Edit with external $EDITOR"),
+            Line::from("  Enter / e             Edit with external $EDITOR"),
             Line::from("  t                     Enter tag mode"),
             Line::from("  ?                     Show this help"),
             Line::from("  q / Esc               Save and return to list"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE EDITOR - INSERT MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
-            Line::from("  Type                  Edit note content"),
-            Line::from("  Enter                 New line"),
-            Line::from("  Backspace / Delete    Delete character"),
-            Line::from("  Esc                   Exit to normal mode"),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("NOTE EDITOR - TAG MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("NOTE PREVIEW - TAG MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  Type                  Enter tag name"),
             Line::from("  Enter                 Add tag"),
