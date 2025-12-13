@@ -351,4 +351,81 @@ impl<'a> NoteRepository<'a> {
         let count: i64 = self.conn.query_row(query, [], |row| row.get(0))?;
         Ok(count)
     }
+
+    /// Get only deleted notes (for recycle bin)
+    pub fn get_deleted(&self, key: &[u8; 32]) -> Result<Vec<Note>> {
+        let query = "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
+                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
+             FROM notes WHERE deleted = 1 ORDER BY deleted_at DESC";
+
+        let mut stmt = self.conn.prepare(query)?;
+        let mut notes = Vec::new();
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,   // id
+                row.get::<_, String>(1)?,   // created_at
+                row.get::<_, String>(2)?,   // modified_at
+                row.get::<_, Option<String>>(3)?,   // synced_at
+                row.get::<_, String>(4)?,   // content
+                row.get::<_, String>(5)?,   // tags
+                row.get::<_, String>(6)?,   // attachments
+                row.get::<_, bool>(7)?,     // pinned
+                row.get::<_, bool>(8)?,     // deleted
+                row.get::<_, Option<String>>(9)?,   // deleted_at
+                row.get::<_, Option<String>>(10)?,  // sync_hash
+                row.get::<_, i32>(11)?,     // version
+                row.get::<_, bool>(12)?,    // word_wrap
+                row.get::<_, String>(13)?,  // syntax_language
+            ))
+        })?;
+
+        for row_result in rows {
+            let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
+                 pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language) = row_result?;
+
+            // Decrypt content and tags
+            let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
+            let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+
+            let content = self.crypto.decrypt_text(&encrypted_content, key)?;
+            let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+            let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+
+            notes.push(Note {
+                id,
+                created_at: DateTime::parse_from_rfc3339(&created_at)
+                    .unwrap()
+                    .with_timezone(&Utc),
+                modified_at: DateTime::parse_from_rfc3339(&modified_at)
+                    .unwrap()
+                    .with_timezone(&Utc),
+                synced_at: synced_at
+                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                    .map(|dt| dt.with_timezone(&Utc)),
+                content,
+                tags,
+                attachments,
+                pinned,
+                deleted,
+                deleted_at: deleted_at
+                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                    .map(|dt| dt.with_timezone(&Utc)),
+                sync_hash,
+                version,
+                word_wrap,
+                syntax_language: syntax_language.parse().unwrap_or_default(),
+            });
+        }
+
+        Ok(notes)
+    }
+
+    /// Permanently delete all notes in recycle bin
+    pub fn empty_trash(&self) -> Result<usize> {
+        let count = self
+            .conn
+            .execute("DELETE FROM notes WHERE deleted = 1", [])?;
+        Ok(count)
+    }
 }

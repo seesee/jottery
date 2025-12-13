@@ -72,8 +72,18 @@ pub enum InputMode {
     SettingsEdit,
 }
 
+/// Current view mode
+pub enum ViewMode {
+    /// Normal note list view
+    NoteList,
+    /// Recycle bin view (deleted notes)
+    RecycleBin,
+}
+
 /// Application
 pub struct App {
+    /// Current view mode
+    pub view_mode: ViewMode,
     /// Current state
     pub state: AppState,
     /// Input mode
@@ -142,6 +152,7 @@ impl App {
         let is_new_database = !db_path.exists();
 
         Ok(Self {
+            view_mode: ViewMode::NoteList,
             state: AppState::Locked,
             input_mode: InputMode::Normal,
             password_input: String::new(),
@@ -365,34 +376,39 @@ impl App {
                     self.trigger_sync();
                 }
                 KeyCode::Char('/') => {
-                    // Enter search mode
-                    self.search_active = true;
-                    self.search_input.clear();
+                    // Enter search mode (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        self.search_active = true;
+                        self.search_input.clear();
+                    }
                 }
                 KeyCode::Char('n') => {
-                    // New note - open editor immediately
-                    self.note_input.clear();
-                    self.note_syntax = crate::models::SyntaxLanguage::default();
-                    self.current_tags.clear();
-                    self.editing_note_id = None;
+                    // New note - open editor immediately (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        self.note_input.clear();
+                        self.note_syntax = crate::models::SyntaxLanguage::default();
+                        self.current_tags.clear();
+                        self.editing_note_id = None;
 
-                    // Open external editor immediately
-                    if let Ok(new_content) = self.edit_with_external_editor() {
-                        self.note_input = new_content;
-                        // Save the note
-                        if let Err(e) = self.save_note() {
-                            self.error = Some(format!("Failed to save note: {}", e));
-                        }
-                        // Reload notes to refresh the list
-                        if let Err(e) = self.load_notes() {
-                            self.error = Some(format!("Failed to reload notes: {}", e));
+                        // Open external editor immediately
+                        if let Ok(new_content) = self.edit_with_external_editor() {
+                            self.note_input = new_content;
+                            // Save the note
+                            if let Err(e) = self.save_note() {
+                                self.error = Some(format!("Failed to save note: {}", e));
+                            }
+                            // Reload notes to refresh the list
+                            if let Err(e) = self.load_notes() {
+                                self.error = Some(format!("Failed to reload notes: {}", e));
+                            }
                         }
                     }
                 }
                 KeyCode::Char('i') | KeyCode::Enter => {
-                    // Edit selected note directly with external editor
-                    let filtered = self.filtered_notes();
-                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                    // Edit selected note directly with external editor (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
                         // Clone data before modifying self
                         let content = filtered[self.selected_note].content.clone();
                         let note_id = filtered[self.selected_note].id.clone();
@@ -420,6 +436,7 @@ impl App {
 
                         // Clear editing state
                         self.editing_note_id = None;
+                        }
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
@@ -436,11 +453,12 @@ impl App {
                     }
                 }
                 KeyCode::Char('p') => {
-                    // Toggle pin on selected note
-                    let filtered = self.filtered_notes();
-                    if !filtered.is_empty() && self.selected_note < filtered.len() {
-                        let note_id = filtered[self.selected_note].id.clone();
-                        if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
+                    // Toggle pin on selected note (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
+                            let note_id = filtered[self.selected_note].id.clone();
+                            if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
                             note.pinned = !note.pinned;
 
                             // Save to database
@@ -451,12 +469,14 @@ impl App {
                                 }
                             }
                         }
+                        }
                     }
                 }
                 KeyCode::Char('t') => {
-                    // Edit tags for selected note
-                    let filtered = self.filtered_notes();
-                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                    // Edit tags for selected note (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let content = filtered[self.selected_note].content.clone();
                         let note_id = filtered[self.selected_note].id.clone();
                         let syntax_lang = filtered[self.selected_note].syntax_language;
@@ -470,12 +490,14 @@ impl App {
                         self.state = AppState::NoteView;
                         self.input_mode = InputMode::Tag;
                         self.tag_input.clear();
+                        }
                     }
                 }
                 KeyCode::Char('l') => {
-                    // Cycle syntax language for selected note
-                    let filtered = self.filtered_notes();
-                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                    // Cycle syntax language for selected note (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let note_id = filtered[self.selected_note].id.clone();
                         if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
                             note.syntax_language = note.syntax_language.next();
@@ -488,6 +510,43 @@ impl App {
                                 }
                             }
                         }
+                        }
+                    }
+                }
+                KeyCode::Char('r') => {
+                    // Toggle recycle bin view or restore note
+                    match self.view_mode {
+                        ViewMode::NoteList => {
+                            // Switch to recycle bin view
+                            self.view_mode = ViewMode::RecycleBin;
+                            self.selected_note = 0;
+                            self.preview_scroll_offset = 0;
+                            if let Err(e) = self.load_deleted_notes() {
+                                self.error = Some(format!("Failed to load deleted notes: {}", e));
+                            }
+                        }
+                        ViewMode::RecycleBin => {
+                            // Restore selected note
+                            if let Err(e) = self.restore_note() {
+                                self.error = Some(format!("Failed to restore note: {}", e));
+                            }
+                        }
+                    }
+                }
+                KeyCode::Char('E') => {
+                    // Empty recycle bin (only in recycle bin view)
+                    if matches!(self.view_mode, ViewMode::RecycleBin) {
+                        if let Err(e) = self.empty_trash() {
+                            self.error = Some(format!("Failed to empty trash: {}", e));
+                        }
+                    }
+                }
+                KeyCode::Esc => {
+                    // Exit recycle bin view
+                    if matches!(self.view_mode, ViewMode::RecycleBin) {
+                        self.view_mode = ViewMode::NoteList;
+                        self.selected_note = 0;
+                        self.preview_scroll_offset = 0;
                     }
                 }
                 // Vim-style preview scrolling (must come before plain 'd' key)
@@ -508,9 +567,10 @@ impl App {
                     self.preview_scroll_offset = self.preview_scroll_offset.saturating_sub(20);
                 }
                 KeyCode::Char('d') => {
-                    // Delete selected note
-                    let filtered = self.filtered_notes();
-                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                    // Delete selected note (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
                         // Find the actual note in the full list
                         let note_to_delete = filtered[self.selected_note];
                         if let Some(pos) = self.notes.iter().position(|n| n.id == note_to_delete.id) {
@@ -521,6 +581,7 @@ impl App {
                             if self.selected_note >= new_count && self.selected_note > 0 {
                                 self.selected_note -= 1;
                             }
+                        }
                         }
                     }
                 }
@@ -1590,6 +1651,58 @@ impl App {
         Ok(())
     }
 
+    /// Load deleted notes for recycle bin view
+    fn load_deleted_notes(&mut self) -> Result<()> {
+        if let (Some(db), Some(key)) = (&self.db, &self.key) {
+            let repo = NoteRepository::new(db.connection());
+            self.notes = repo.get_deleted(key)?;
+        }
+        Ok(())
+    }
+
+    /// Restore a deleted note
+    fn restore_note(&mut self) -> Result<()> {
+        if let (Some(db), Some(key)) = (&self.db, &self.key) {
+            if !self.notes.is_empty() && self.selected_note < self.notes.len() {
+                let note_id = self.notes[self.selected_note].id.clone();
+
+                // Restore the note by setting deleted = false
+                if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
+                    note.restore();
+
+                    // Save to database
+                    let repo = NoteRepository::new(db.connection());
+                    repo.update(note, key)?;
+                }
+
+                // Reload deleted notes to refresh the list
+                self.load_deleted_notes()?;
+
+                // Adjust selection after restore
+                if self.selected_note >= self.notes.len() && self.selected_note > 0 {
+                    self.selected_note -= 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Permanently delete all notes in recycle bin
+    fn empty_trash(&mut self) -> Result<()> {
+        if let Some(db) = &self.db {
+            let repo = NoteRepository::new(db.connection());
+            let count = repo.empty_trash()?;
+
+            // Clear the notes list
+            self.notes.clear();
+            self.selected_note = 0;
+
+            // Set success message
+            self.sync_status = Some(format!("Permanently deleted {} note{}", count, if count == 1 { "" } else { "s" }));
+        }
+        Ok(())
+    }
+
     /// Edit note content with external $EDITOR
     fn edit_with_external_editor(&mut self) -> Result<String> {
         // Create temporary file with current note content
@@ -1805,10 +1918,15 @@ impl App {
         let right_pane = main_chunks[1];
 
         // Left pane layout: search bar (optional), list
-        let title = if self.search_active {
-            "Notes (Search)"
-        } else {
-            "Notes"
+        let title = match self.view_mode {
+            ViewMode::RecycleBin => "Recycle Bin",
+            ViewMode::NoteList => {
+                if self.search_active {
+                    "Notes (Search)"
+                } else {
+                    "Notes"
+                }
+            }
         };
 
         let left_constraints = if self.search_active {
@@ -1885,7 +2003,14 @@ impl App {
         } else if self.search_active {
             "Type: search | Esc: exit | ↑/↓: navigate".to_string()
         } else {
-            "/: search | p: pin | t: tags | l: type | Ctrl-d/u: scroll | n: new | i: edit".to_string()
+            match self.view_mode {
+                ViewMode::RecycleBin => {
+                    "r: restore | E: empty bin | Esc: back to notes | ↑/↓: navigate".to_string()
+                }
+                ViewMode::NoteList => {
+                    "/: search | p: pin | t: tags | l: type | r: recycle bin | n: new | i: edit".to_string()
+                }
+            }
         };
         let help = Paragraph::new(status_text)
             .style(if self.sync_status.is_some() {
