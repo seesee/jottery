@@ -36,6 +36,7 @@
   let showCopiedMessage = false;
   let showCredentialsModal = false;
   let credentialsText = '';
+  let showDisconnectSyncConfirm = false;
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -248,6 +249,40 @@
       syncError = error instanceof Error ? error.message : 'Sync failed';
     } finally {
       syncing = false;
+    }
+  }
+
+  function handleDisconnectSync() {
+    showDisconnectSyncConfirm = true;
+  }
+
+  async function confirmDisconnectSync() {
+    showDisconnectSyncConfirm = false;
+    try {
+      console.log('[SettingsModal] Disconnecting from sync server...');
+
+      // Clear sync metadata
+      await syncRepository.updateMetadata({
+        clientId: undefined,
+        syncEndpoint: undefined,
+        syncEnabled: false,
+        apiKey: undefined,
+      });
+
+      // Update settings
+      await settingsRepository.update({
+        syncEndpoint: undefined,
+        syncEnabled: false,
+      });
+
+      // Update local state
+      syncEndpoint = '';
+      await loadSyncStatus();
+
+      console.log('[SettingsModal] Successfully disconnected from sync server');
+    } catch (error) {
+      console.error('Failed to disconnect from sync:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to disconnect';
     }
   }
 
@@ -565,7 +600,7 @@
                 <input
                   type="url"
                   bind:value={syncEndpoint}
-                  placeholder="http://localhost:3030"
+                  placeholder={typeof window !== 'undefined' ? window.location.origin : 'https://example.com'}
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -747,6 +782,24 @@
         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
           <h3 class="text-lg font-medium text-red-600 dark:text-red-400 mb-4">Danger Zone</h3>
 
+          <!-- Disconnect Sync Server -->
+          {#if syncStatus?.isEnabled}
+            <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
+              <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                🔌 Disconnect Sync Server
+              </h4>
+              <p class="text-sm text-orange-700 dark:text-orange-300 mb-3">
+                Disconnect this device from the sync server. This will clear sync credentials but will NOT delete your notes.
+              </p>
+              <button
+                on:click={handleDisconnectSync}
+                class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                Disconnect from Sync Server
+              </button>
+            </div>
+          {/if}
+
           <!-- Remember Password Toggle -->
           <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
             <div class="flex items-start justify-between">
@@ -830,6 +883,18 @@
     requireTextMatch="DELETE"
     onConfirm={confirmDeleteDatabase}
     onCancel={() => showDeleteConfirm = false}
+  />
+
+  <!-- Disconnect Sync Confirmation Modal -->
+  <ConfirmModal
+    show={showDisconnectSyncConfirm}
+    title="Disconnect from Sync Server?"
+    message="This will disconnect this device from the sync server and clear all sync credentials.{'\n\n'}Your notes will NOT be deleted and will remain on this device.{'\n\n'}You can reconnect to a sync server later."
+    confirmText="Disconnect"
+    cancelText="Cancel"
+    confirmClass="bg-orange-600 hover:bg-orange-700"
+    onConfirm={confirmDisconnectSync}
+    onCancel={() => showDisconnectSyncConfirm = false}
   />
 
   <!-- Remember Password Warning Modal -->
