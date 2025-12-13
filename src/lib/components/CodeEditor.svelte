@@ -28,6 +28,13 @@
   export let wordWrap: boolean = true;
   export let isDark: boolean = false;
 
+  // Export focus method for parent components to call
+  export function focus() {
+    if (editorView) {
+      editorView.focus();
+    }
+  }
+
   let editorContainer: HTMLDivElement;
   let editorWrapper: HTMLDivElement;
   let editorView: EditorView | null = null;

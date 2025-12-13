@@ -33,6 +33,7 @@
   let isDraggingFile: boolean = false;
   let isAttachmentsExpanded: boolean = false;
   let dragCounter: number = 0; // Track nested drag events
+  let codeEditor: any = null; // Reference to CodeEditor component
 
   // Compute preview HTML
   $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
@@ -95,6 +96,13 @@
       isEditing = true;
 
       console.log('[EditorPane] Local showPreview set to:', showPreview);
+
+      // Focus the editor after switching notes
+      setTimeout(() => {
+        if (codeEditor && !showPreview) {
+          codeEditor.focus();
+        }
+      }, 10);
 
       // Trigger background sync if we had a previous note open
       if (previousNoteId) {
@@ -535,6 +543,7 @@
       {#if !showPreview}
         <div class="h-full overflow-hidden">
           <CodeEditor
+            bind:this={codeEditor}
             value={content}
             onChange={(newValue) => {
               content = newValue;
