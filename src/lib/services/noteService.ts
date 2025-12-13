@@ -316,6 +316,14 @@ class NoteService {
    */
   private async decryptNote(note: Note, key: CryptoKey): Promise<DecryptedNote> {
     try {
+      console.log(`[NoteService] Decrypting note ${note.id}`);
+      console.log(`[NoteService] Note tags from IndexedDB:`, {
+        isArray: Array.isArray(note.tags),
+        length: note.tags?.length,
+        type: typeof note.tags,
+        raw: note.tags
+      });
+
       const encryptedContent = JSON.parse(note.content);
       const content = await cryptoService.decryptText(encryptedContent, key);
 
@@ -330,8 +338,12 @@ class NoteService {
 
       if (note.tags.length > 0 && note.tags[0]) {
         try {
+          console.log(`[NoteService] Note ${note.id} tags[0]:`, note.tags[0]?.substring(0, 100));
           const encryptedTags = JSON.parse(note.tags[0]);
+          console.log(`[NoteService] Note ${note.id} parsed encryptedTags:`, encryptedTags);
+
           const decryptedTags = await decryptStringArray(encryptedTags, key);
+          console.log(`[NoteService] Note ${note.id} decryptedTags:`, decryptedTags, 'type:', typeof decryptedTags, 'isArray:', Array.isArray(decryptedTags));
 
           // Defensive check: ensure decrypted tags is an array
           if (!Array.isArray(decryptedTags)) {
@@ -345,6 +357,8 @@ class NoteService {
           tags = [];
         }
       }
+
+      console.log(`[NoteService] Note ${note.id} final tags:`, tags, 'isArray:', Array.isArray(tags));
 
       return {
         ...note,

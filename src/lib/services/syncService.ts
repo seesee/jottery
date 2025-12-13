@@ -415,16 +415,28 @@ class SyncService {
     // Apply remote changes with Last-Write-Wins conflict resolution
     for (const remoteNote of result.notes) {
       // Convert tags from sync format (array of individually encrypted tags) to storage format (single encrypted blob)
+      console.log(`[SyncService] Pull - Processing note ${remoteNote.id}`);
+      console.log(`[SyncService] Pull - remoteNote.tags:`, {
+        isArray: Array.isArray(remoteNote.tags),
+        length: remoteNote.tags?.length,
+        type: typeof remoteNote.tags,
+        sample: remoteNote.tags?.[0]?.substring(0, 100)
+      });
+
       let tagsForStorage: string[];
 
       if (remoteNote.tags && remoteNote.tags.length > 0) {
         // Decrypt each individually encrypted tag
         const decryptedTags: string[] = [];
-        for (const encryptedTagJson of remoteNote.tags) {
+        for (let i = 0; i < remoteNote.tags.length; i++) {
+          const encryptedTagJson = remoteNote.tags[i];
           try {
+            console.log(`[SyncService] Pull - Tag[${i}] encrypted:`, encryptedTagJson?.substring(0, 100));
             const encryptedTag = JSON.parse(encryptedTagJson);
             const tagJson = await cryptoService.decryptText(encryptedTag, masterKey.key);
+            console.log(`[SyncService] Pull - Tag[${i}] decrypted:`, tagJson);
             const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
+            console.log(`[SyncService] Pull - Tag[${i}] parsed:`, tag, 'type:', typeof tag, 'isArray:', Array.isArray(tag));
 
             // Handle legacy format: if tag is an array, extract individual tags
             if (Array.isArray(tag)) {
@@ -451,15 +463,24 @@ class SyncService {
 
             decryptedTags.push(tag);
           } catch (error) {
-            console.error('[SyncService] Failed to decrypt tag:', error);
+            console.error('[SyncService] Pull - Failed to decrypt tag:', error);
           }
         }
+
+        console.log(`[SyncService] Pull - Collected ${decryptedTags.length} decrypted tags:`, decryptedTags);
 
         // Re-encrypt as a single blob for storage
         const encryptedTagsBlob = await cryptoService.encryptJSON(decryptedTags, masterKey.key);
         tagsForStorage = [JSON.stringify(encryptedTagsBlob)];
+
+        console.log(`[SyncService] Pull - tagsForStorage:`, {
+          isArray: Array.isArray(tagsForStorage),
+          length: tagsForStorage.length,
+          sample: tagsForStorage[0]?.substring(0, 100)
+        });
       } else {
         tagsForStorage = [];
+        console.log(`[SyncService] Pull - No tags on note`);
       }
 
       const noteForStorage = {
