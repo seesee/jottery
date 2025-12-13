@@ -237,24 +237,41 @@ class SyncService {
       throw new Error('Application is locked');
     }
 
-    // Build push request - convert tags from single encrypted blob to array of individually encrypted tags
+    // Build push request - convert tags from storage format to sync format
     const pushRequest: SyncPushRequest = {
       notes: await Promise.all(modifiedNotes.map(async note => {
-        // Decrypt the tags array (stored as single encrypted blob in note.tags[0])
-        const encryptedTagsBlob = JSON.parse(note.tags[0] || '{"ciphertext":"","iv":""}');
-        const decryptedTagsArray = await cryptoService.decryptJSON<string[]>(
-          encryptedTagsBlob,
-          masterKey.key
-        );
+        let individuallyEncryptedTags: string[];
 
-        // Encrypt each tag individually with JSON encoding (as required by sync protocol)
-        const individuallyEncryptedTags = await Promise.all(
-          decryptedTagsArray.map(async tag => {
-            const tagJson = JSON.stringify(tag);  // JSON-encode the tag
-            const encrypted = await cryptoService.encryptText(tagJson, masterKey.key);
-            return JSON.stringify(encrypted);  // Stringify the EncryptionResult
-          })
-        );
+        // Handle tags conversion - support both old and new storage formats
+        if (!note.tags || note.tags.length === 0) {
+          // No tags
+          individuallyEncryptedTags = [];
+        } else if (note.tags.length === 1) {
+          // Single-blob format: tags[0] is a JSON string containing encrypted array
+          try {
+            const encryptedTagsBlob = JSON.parse(note.tags[0]);
+            const decryptedTagsArray = await cryptoService.decryptJSON<string[]>(
+              encryptedTagsBlob,
+              masterKey.key
+            );
+
+            // Encrypt each tag individually with JSON encoding (as required by sync protocol)
+            individuallyEncryptedTags = await Promise.all(
+              decryptedTagsArray.map(async tag => {
+                const tagJson = JSON.stringify(tag);  // JSON-encode the tag
+                const encrypted = await cryptoService.encryptText(tagJson, masterKey.key);
+                return JSON.stringify(encrypted);  // Stringify the EncryptionResult
+              })
+            );
+          } catch (error) {
+            console.error('[SyncService] Failed to parse tags, assuming empty:', error);
+            individuallyEncryptedTags = [];
+          }
+        } else {
+          // Array format: already individually encrypted (shouldn't happen, but handle it)
+          console.warn('[SyncService] Note has multiple tag entries, using as-is');
+          individuallyEncryptedTags = note.tags;
+        }
 
         return {
           id: note.id,
