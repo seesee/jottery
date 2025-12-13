@@ -314,21 +314,33 @@
     recordingShortcut = shortcutName;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default browser behavior
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
 
-      // Ignore just modifier keys
+      // Ignore just modifier keys by themselves
       if (['Control', 'Alt', 'Shift', 'Meta', 'Command'].includes(e.key)) {
         return;
       }
 
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+      // Capture the exact modifiers that are pressed
+      const hasCtrl = isMac ? e.metaKey : e.ctrlKey;
+      const hasAlt = e.altKey;
+      const hasShift = e.shiftKey;
+
       const newShortcut: KeyboardShortcut = {
         key: e.key,
-        ctrl: isMac ? e.metaKey : e.ctrlKey,
-        alt: e.altKey,
-        shift: e.shiftKey,
       };
+
+      // Only add modifier flags if they're actually pressed
+      if (hasCtrl) newShortcut.ctrl = true;
+      if (hasAlt) newShortcut.alt = true;
+      if (hasShift) newShortcut.shift = true;
+
+      console.log('[SettingsModal] Recorded shortcut:', newShortcut, 'for', shortcutName);
 
       tempShortcuts = {
         ...tempShortcuts,
@@ -337,9 +349,22 @@
 
       recordingShortcut = null;
       window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUp, true);
     };
 
-    window.addEventListener('keydown', handleKeyDown, true);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Cancel recording on Escape
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        recordingShortcut = null;
+        window.removeEventListener('keydown', handleKeyDown, true);
+        window.removeEventListener('keyup', handleKeyUp, true);
+      }
+    };
+
+    // Use capture phase to intercept before browser shortcuts
+    window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+    window.addEventListener('keyup', handleKeyUp, { capture: true, passive: false });
   }
 
   function resetShortcuts() {
