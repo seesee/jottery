@@ -35,6 +35,7 @@ pub enum SyntaxLanguage {
     Css,
     Sql,
     Bash,
+    Perl,
 }
 
 impl Default for SyntaxLanguage {
@@ -55,7 +56,8 @@ impl SyntaxLanguage {
             Self::Html => Self::Css,
             Self::Css => Self::Sql,
             Self::Sql => Self::Bash,
-            Self::Bash => Self::Plain,
+            Self::Bash => Self::Perl,
+            Self::Perl => Self::Plain,
         }
     }
 }
@@ -72,6 +74,7 @@ impl std::fmt::Display for SyntaxLanguage {
             Self::Css => write!(f, "css"),
             Self::Sql => write!(f, "sql"),
             Self::Bash => write!(f, "bash"),
+            Self::Perl => write!(f, "perl"),
         }
     }
 }
@@ -90,6 +93,7 @@ impl std::str::FromStr for SyntaxLanguage {
             "css" => Ok(Self::Css),
             "sql" => Ok(Self::Sql),
             "bash" | "sh" => Ok(Self::Bash),
+            "perl" | "pl" => Ok(Self::Perl),
             _ => Err(format!("Unknown syntax language: {}", s)),
         }
     }

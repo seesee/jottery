@@ -51,6 +51,7 @@ impl SyntaxHighlighter {
             SyntaxLanguage::Css => "CSS",
             SyntaxLanguage::Sql => "SQL",
             SyntaxLanguage::Bash => "Bash",
+            SyntaxLanguage::Perl => "Perl",
         };
 
         // Try to find the syntax definition
