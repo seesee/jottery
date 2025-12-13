@@ -1147,15 +1147,45 @@ impl App {
             let decrypted_content = self.crypto.decrypt_text(&encrypted_content, key)?;
             self.debug_log(&format!("Pull - Successfully decrypted content, length: {} chars", decrypted_content.len()));
 
+            // Debug tag processing
+            self.debug_log(&format!("Pull - Note has {} tags", remote_note.tags.len()));
+
             let decrypted_tags: Vec<String> = remote_note.tags.iter()
-                .map(|tag_json| {
-                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json)?;
-                    let tag_json_str = self.crypto.decrypt_text(&encrypted_tag, key)?;
-                    // The decrypted text is a JSON-encoded string, so parse it to get the actual tag
-                    let tag: String = serde_json::from_str(&tag_json_str)?;
+                .enumerate()
+                .map(|(idx, tag_json)| {
+                    self.debug_log(&format!("Pull - Tag[{}] raw JSON: {}", idx, tag_json));
+
+                    // Parse the encrypted tag structure
+                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json)
+                        .map_err(|e| {
+                            self.debug_log(&format!("Pull - Tag[{}] failed to parse as EncryptedData: {}", idx, e));
+                            e
+                        })?;
+
+                    self.debug_log(&format!("Pull - Tag[{}] parsed EncryptedData successfully", idx));
+
+                    // Decrypt the tag
+                    let tag_json_str = self.crypto.decrypt_text(&encrypted_tag, key)
+                        .map_err(|e| {
+                            self.debug_log(&format!("Pull - Tag[{}] failed to decrypt: {}", idx, e));
+                            e
+                        })?;
+
+                    self.debug_log(&format!("Pull - Tag[{}] decrypted to: {}", idx, tag_json_str));
+
+                    // Parse the JSON-encoded tag string to get the actual tag
+                    let tag: String = serde_json::from_str(&tag_json_str)
+                        .map_err(|e| {
+                            self.debug_log(&format!("Pull - Tag[{}] failed to parse tag value: {}", idx, e));
+                            e
+                        })?;
+
+                    self.debug_log(&format!("Pull - Tag[{}] final value: {}", idx, tag));
                     Ok(tag)
                 })
                 .collect::<Result<Vec<_>>>()?;
+
+            self.debug_log(&format!("Pull - Successfully decrypted {} tags", decrypted_tags.len()));
 
             // Check if we have this note locally
             if let Some(local_note) = self.notes.iter_mut().find(|n| n.id == remote_note.id) {
