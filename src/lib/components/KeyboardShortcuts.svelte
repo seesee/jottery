@@ -18,13 +18,15 @@
     const hasAlt = event.altKey;
     const hasShift = event.shiftKey;
 
-    // Check modifiers match
-    if (shortcut.ctrl && !hasCtrl) return false;
-    if (!shortcut.ctrl && hasCtrl) return false;
-    if (shortcut.alt && !hasAlt) return false;
-    if (!shortcut.alt && hasAlt) return false;
-    if (shortcut.shift && !hasShift) return false;
-    if (!shortcut.shift && hasShift) return false;
+    // For multi-modifier support, ALL modifiers must match exactly
+    // Ctrl+N should NOT match Ctrl+Alt+N
+    const ctrlMatches = (shortcut.ctrl === true) === hasCtrl;
+    const altMatches = (shortcut.alt === true) === hasAlt;
+    const shiftMatches = (shortcut.shift === true) === hasShift;
+
+    if (!ctrlMatches || !altMatches || !shiftMatches) {
+      return false;
+    }
 
     // Check key matches (case insensitive)
     return event.key.toLowerCase() === shortcut.key.toLowerCase();

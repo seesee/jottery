@@ -331,14 +331,14 @@
       const hasAlt = e.altKey;
       const hasShift = e.shiftKey;
 
+      // Explicitly set all modifiers (including false for unpressed ones)
+      // This ensures Ctrl+N is different from Ctrl+Alt+N
       const newShortcut: KeyboardShortcut = {
         key: e.key,
+        ctrl: hasCtrl || undefined,
+        alt: hasAlt || undefined,
+        shift: hasShift || undefined,
       };
-
-      // Only add modifier flags if they're actually pressed
-      if (hasCtrl) newShortcut.ctrl = true;
-      if (hasAlt) newShortcut.alt = true;
-      if (hasShift) newShortcut.shift = true;
 
       console.log('[SettingsModal] Recorded shortcut:', newShortcut, 'for', shortcutName);
 
