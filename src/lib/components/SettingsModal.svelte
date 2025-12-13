@@ -331,16 +331,25 @@
       const hasAlt = e.altKey;
       const hasShift = e.shiftKey;
 
-      // Explicitly set all modifiers (including false for unpressed ones)
+      // Normalize key to lowercase to handle Shift properly
+      // e.g., Shift+R gives 'R', but we want to store 'r'
+      const normalizedKey = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+      // Explicitly set all modifiers
       // This ensures Ctrl+N is different from Ctrl+Alt+N
       const newShortcut: KeyboardShortcut = {
-        key: e.key,
+        key: normalizedKey,
         ctrl: hasCtrl || undefined,
         alt: hasAlt || undefined,
         shift: hasShift || undefined,
       };
 
-      console.log('[SettingsModal] Recorded shortcut:', newShortcut, 'for', shortcutName);
+      console.log('[SettingsModal] Recorded shortcut:', {
+        raw: e.key,
+        normalized: normalizedKey,
+        modifiers: { ctrl: hasCtrl, alt: hasAlt, shift: hasShift },
+        result: newShortcut
+      });
 
       tempShortcuts = {
         ...tempShortcuts,
