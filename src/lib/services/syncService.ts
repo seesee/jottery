@@ -359,26 +359,56 @@ class SyncService {
 
     console.log(`[SyncService] Pull complete: ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions.length} deletions`);
 
+    // Get master key for tag conversion
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new Error('Application is locked');
+    }
+
     // Apply remote changes with Last-Write-Wins conflict resolution
     for (const remoteNote of result.notes) {
+      // Convert tags from sync format (array of individually encrypted tags) to storage format (single encrypted blob)
+      let tagsForStorage: string[];
+
+      if (remoteNote.tags && remoteNote.tags.length > 0) {
+        // Decrypt each individually encrypted tag
+        const decryptedTags: string[] = [];
+        for (const encryptedTagJson of remoteNote.tags) {
+          try {
+            const encryptedTag = JSON.parse(encryptedTagJson);
+            const tagJson = await cryptoService.decryptText(encryptedTag, masterKey.key);
+            const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
+            decryptedTags.push(tag);
+          } catch (error) {
+            console.error('[SyncService] Failed to decrypt tag:', error);
+          }
+        }
+
+        // Re-encrypt as a single blob for storage
+        const encryptedTagsBlob = await cryptoService.encryptJSON(decryptedTags, masterKey.key);
+        tagsForStorage = [JSON.stringify(encryptedTagsBlob)];
+      } else {
+        tagsForStorage = [];
+      }
+
+      const noteForStorage = {
+        ...remoteNote,
+        tags: tagsForStorage,
+        syncedAt: result.syncedAt,
+      };
+
       const localNote = await noteRepository.getById(remoteNote.id);
 
       if (!localNote) {
         // New note from server - create locally
         console.log(`[SyncService] Creating new note from server: ${remoteNote.id}`);
-        await noteRepository.create({
-          ...remoteNote,
-          syncedAt: result.syncedAt,
-        });
+        await noteRepository.create(noteForStorage);
       } else {
         // Conflict resolution: Last-Write-Wins by modifiedAt
         if (remoteNote.modifiedAt > localNote.modifiedAt) {
           // Server version is newer - update local
           console.log(`[SyncService] Updating note with server version (newer): ${remoteNote.id}`);
-          await noteRepository.update({
-            ...remoteNote,
-            syncedAt: result.syncedAt,
-          });
+          await noteRepository.update(noteForStorage);
         } else {
           // Local version is newer or equal - keep local (already pushed or will be pushed)
           console.log(`[SyncService] Keeping local version (newer or equal): ${remoteNote.id}`);
