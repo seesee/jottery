@@ -981,7 +981,9 @@ impl App {
 
                 let encrypted_tags: Result<Vec<String>> = note.tags.iter()
                     .map(|tag| {
-                        let encrypted_tag = self.crypto.encrypt_text(tag, key)?;
+                        // JSON-encode the tag first, then encrypt it
+                        let tag_json = serde_json::to_string(tag)?;
+                        let encrypted_tag = self.crypto.encrypt_text(&tag_json, key)?;
                         Ok(serde_json::to_string(&encrypted_tag)?)
                     })
                     .collect();
@@ -1083,7 +1085,10 @@ impl App {
             let decrypted_tags: Vec<String> = remote_note.tags.iter()
                 .map(|tag_json| {
                     let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json)?;
-                    self.crypto.decrypt_text(&encrypted_tag, key)
+                    let tag_json_str = self.crypto.decrypt_text(&encrypted_tag, key)?;
+                    // The decrypted text is a JSON-encoded string, so parse it to get the actual tag
+                    let tag: String = serde_json::from_str(&tag_json_str)?;
+                    Ok(tag)
                 })
                 .collect::<Result<Vec<_>>>()?;
 
