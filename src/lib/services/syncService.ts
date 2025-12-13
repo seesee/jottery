@@ -297,6 +297,14 @@ class SyncService {
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
     };
 
+    // Debug log tag formats being sent
+    pushRequest.notes.forEach((note, idx) => {
+      console.log(`[SyncService] Push - Note[${idx}] ${note.id}: ${note.tags.length} tags`);
+      if (note.tags.length > 0) {
+        console.log(`[SyncService] Push - Note[${idx}] first tag format:`, note.tags[0].substring(0, 100));
+      }
+    });
+
     // Send to server
     const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/push`, {
       method: 'POST',
@@ -375,6 +383,15 @@ class SyncService {
     const result: SyncPullResponse = await response.json();
 
     console.log(`[SyncService] Pull complete: ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions.length} deletions`);
+
+    // Debug log tag formats being received
+    result.notes.forEach((note, idx) => {
+      console.log(`[SyncService] Pull - Note[${idx}] ${note.id}: ${note.tags?.length || 0} tags`);
+      if (note.tags && note.tags.length > 0) {
+        console.log(`[SyncService] Pull - Note[${idx}] tags type:`, Array.isArray(note.tags) ? 'array' : typeof note.tags);
+        console.log(`[SyncService] Pull - Note[${idx}] first tag:`, JSON.stringify(note.tags[0]).substring(0, 100));
+      }
+    });
 
     // Get master key for tag conversion
     const masterKey = keyManager.getMasterKey();

@@ -1126,8 +1126,20 @@ impl App {
             anyhow::bail!("Pull failed: {} - {}", status, error_text);
         }
 
-        let pull_response: SyncPullResponse = response.json()
-            .context("Failed to parse pull response")?;
+        // Get response text first for debugging
+        let response_text = response.text()
+            .context("Failed to read pull response text")?;
+
+        self.debug_log(&format!("Pull - Raw response (first 500 chars): {}",
+            if response_text.len() > 500 { &response_text[..500] } else { &response_text }));
+
+        // Try to parse the JSON response
+        let pull_response: SyncPullResponse = serde_json::from_str(&response_text)
+            .map_err(|e| {
+                self.debug_log(&format!("Pull - JSON parse error: {}", e));
+                self.debug_log(&format!("Pull - Full response text: {}", response_text));
+                anyhow::anyhow!("Failed to parse pull response: {}", e)
+            })?;
 
         // Apply remote changes
         self.debug_log(&format!("Pull - Received {} notes from server", pull_response.notes.len()));
