@@ -106,12 +106,10 @@
 
       // Trigger background sync if we had a previous note open
       if (previousNoteId) {
-        console.log('[EditorPane] Triggering background sync for previous note');
         triggerBackgroundSync();
       }
     } else {
-      console.log('[EditorPane] Same note reloaded (from sync), NOT resetting state');
-      console.log('[EditorPane] Current showPreview:', showPreview, 'DB showPreview:', $selectedNote.showPreview);
+      // Same note reloaded (from sync), not resetting state
     }
 
     previousNoteId = $selectedNote.id;
@@ -143,12 +141,9 @@
     try {
       const metadata = await syncRepository.getMetadata();
       if (metadata?.syncEnabled) {
-        console.log('[EditorPane] Sync enabled, syncing in background...');
         // Don't await - let it run in background
         syncService.syncNow().then(result => {
-          if (result.success) {
-            console.log('[EditorPane] Background sync completed successfully');
-          } else {
+          if (!result.success) {
             console.warn('[EditorPane] Background sync failed:', result.error);
           }
         });
@@ -161,8 +156,6 @@
   async function handleSave() {
     if (!$selectedNote) return;
 
-    console.log('[EditorPane] Saving note with showPreview:', showPreview);
-
     try {
       await noteService.updateNote($selectedNote.id, {
         content,
@@ -173,8 +166,6 @@
         showPreview,
       });
 
-      console.log('[EditorPane] Note saved successfully');
-
       // Reload all notes to refresh the store and UI
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
       notes.set(allNotes);
@@ -183,7 +174,6 @@
       searchService.indexNotes(allNotes);
 
       // Trigger background sync after saving
-      console.log('[EditorPane] Note saved, triggering background sync...');
       triggerBackgroundSync();
 
       // selectedNote will automatically update from the derived store
