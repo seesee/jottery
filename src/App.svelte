@@ -132,8 +132,6 @@
   // Watch lock status and load notes when unlocked
   $: if (!$isLocked && initialized) {
     loadNotes();
-    // Start auto-lock when unlocked
-    startAutoLock($settings.autoLockTimeout);
     // Start auto-sync if enabled
     startAutoSync();
   }
@@ -158,9 +156,17 @@
     }
   }
 
-  // Update auto-lock timeout when settings change
-  $: if (!$isLocked && $settings.autoLockTimeout) {
-    updateAutoLockTimeout($settings.autoLockTimeout);
+  // Manage auto-lock based on lock state and remember password setting
+  $: if (!$isLocked && initialized && $settings) {
+    if ($settings.rememberPassword) {
+      // Remember password enabled - disable auto-lock
+      console.log('[App] Remember password enabled - disabling auto-lock');
+      stopAutoLock();
+    } else {
+      // Remember password disabled - enable auto-lock
+      console.log('[App] Remember password disabled - enabling auto-lock');
+      startAutoLock($settings.autoLockTimeout);
+    }
   }
 
   async function loadNotes() {
