@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { DecryptedNote } from '../types';
-  import { selectNote, selectedNoteId } from '../stores/appStore';
+  import { selectNote, selectedNoteId, searchQuery } from '../stores/appStore';
 
   export let note: DecryptedNote;
   export let onNoteSelect: (() => void) | undefined = undefined;
@@ -23,6 +23,15 @@
     if (onNoteSelect) {
       onNoteSelect();
     }
+  }
+
+  function handleTagClick(event: MouseEvent, tag: string) {
+    // Stop propagation to prevent note selection
+    event.stopPropagation();
+    event.preventDefault();
+
+    // Set search query to filter by this tag
+    searchQuery.set(`#${tag}`);
   }
 </script>
 
@@ -52,7 +61,14 @@
     {#if note.tags.length > 0}
       <div class="flex gap-1 flex-wrap justify-end ml-2">
         {#each note.tags.slice(0, 2) as tag}
-          <span class="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-xs whitespace-nowrap">
+          <span
+            on:click={(e) => handleTagClick(e, tag)}
+            on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
+            role="button"
+            tabindex="0"
+            class="bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer"
+            title="Filter by #{tag}"
+          >
             #{tag}
           </span>
         {/each}
