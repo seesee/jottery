@@ -467,6 +467,24 @@ impl App {
                         self.tag_input.clear();
                     }
                 }
+                KeyCode::Char('l') => {
+                    // Cycle syntax language for selected note
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note_id = filtered[self.selected_note].id.clone();
+                        if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
+                            note.syntax_language = note.syntax_language.next();
+
+                            // Save to database
+                            if let (Some(db), Some(key)) = (&self.db, &self.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    self.error = Some(format!("Failed to update syntax language: {}", e));
+                                }
+                            }
+                        }
+                    }
+                }
                 KeyCode::Char('d') => {
                     // Delete selected note
                     let filtered = self.filtered_notes();
@@ -1840,7 +1858,7 @@ impl App {
         } else if self.search_active {
             "Type: search | Esc: exit | ↑/↓: navigate".to_string()
         } else {
-            "/: search | p: pin | y: sync | s: settings | n: new | i: edit".to_string()
+            "/: search | p: pin | t: tags | l: type | y: sync | s: settings | n: new | i: edit".to_string()
         };
         let help = Paragraph::new(status_text)
             .style(if self.sync_status.is_some() {
@@ -1876,14 +1894,20 @@ impl App {
             // Show syntax language
             metadata_parts.push(format!("Type: {}", note.syntax_language));
 
-            let metadata_line = if !metadata_parts.is_empty() {
-                format!("{}\n\n", metadata_parts.join(" | "))
-            } else {
-                String::new()
-            };
+            let metadata_line = metadata_parts.join(" | ");
 
-            let preview_text = format!("{}{}", metadata_line, note.content);
-            let preview = Paragraph::new(preview_text)
+            // Apply syntax highlighting to note content
+            let highlighted_content = self.syntax_highlighter.highlight(&note.content, note.syntax_language);
+
+            // Combine metadata and highlighted content
+            use ratatui::text::{Line, Text};
+            let mut lines = vec![
+                Line::styled(metadata_line, Style::default().fg(Color::Blue)),
+                Line::raw(""),  // Blank line
+            ];
+            lines.extend(highlighted_content.lines);
+
+            let preview = Paragraph::new(Text::from(lines))
                 .block(preview_block)
                 .wrap(Wrap { trim: false });
             frame.render_widget(preview, right_pane);

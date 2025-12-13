@@ -43,6 +43,23 @@ impl Default for SyntaxLanguage {
     }
 }
 
+impl SyntaxLanguage {
+    /// Get the next syntax language in the cycle
+    pub fn next(self) -> Self {
+        match self {
+            Self::Plain => Self::Javascript,
+            Self::Javascript => Self::Python,
+            Self::Python => Self::Markdown,
+            Self::Markdown => Self::Json,
+            Self::Json => Self::Html,
+            Self::Html => Self::Css,
+            Self::Css => Self::Sql,
+            Self::Sql => Self::Bash,
+            Self::Bash => Self::Plain,
+        }
+    }
+}
+
 impl std::fmt::Display for SyntaxLanguage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
