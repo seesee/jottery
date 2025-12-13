@@ -269,24 +269,35 @@ impl App {
                     self.selected_note = 0;
                 }
                 KeyCode::Enter => {
-                    // Exit search and open selected note
+                    // Exit search and edit selected note directly
                     if !self.filtered_notes().is_empty() {
                         let filtered = self.filtered_notes();
                         if self.selected_note < filtered.len() {
                             // Clone the data we need before modifying self
                             let content = filtered[self.selected_note].content.clone();
-                            let tags = filtered[self.selected_note].tags.clone();
                             let note_id = filtered[self.selected_note].id.clone();
-                            let syntax_language = filtered[self.selected_note].syntax_language;
 
+                            // Set up for editing
                             self.note_input = content;
-                            self.note_syntax = syntax_language;
-                            self.current_tags = tags;
-                            self.editing_note_id = Some(note_id);
-                            self.state = AppState::NoteView;
-                            self.input_mode = InputMode::Normal;
+                            self.editing_note_id = Some(note_id.clone());
                             self.search_input.clear();
                             self.search_active = false;
+
+                            // Open external editor immediately
+                            if let Ok(new_content) = self.edit_with_external_editor() {
+                                self.note_input = new_content;
+                                // Save the note
+                                if let Err(e) = self.save_note() {
+                                    self.error = Some(format!("Failed to save note: {}", e));
+                                }
+                                // Reload notes to refresh the list
+                                if let Err(e) = self.load_notes() {
+                                    self.error = Some(format!("Failed to reload notes: {}", e));
+                                }
+                            }
+
+                            // Clear editing state
+                            self.editing_note_id = None;
                         }
                     }
                 }
@@ -353,21 +364,32 @@ impl App {
                     self.input_mode = InputMode::Insert;
                 }
                 KeyCode::Char('i') | KeyCode::Enter => {
-                    // Edit selected note
+                    // Edit selected note directly with external editor
                     let filtered = self.filtered_notes();
                     if !filtered.is_empty() && self.selected_note < filtered.len() {
                         // Clone data before modifying self
                         let content = filtered[self.selected_note].content.clone();
-                        let tags = filtered[self.selected_note].tags.clone();
                         let note_id = filtered[self.selected_note].id.clone();
-                        let syntax_language = filtered[self.selected_note].syntax_language;
 
+                        // Set up for editing
                         self.note_input = content;
-                        self.note_syntax = syntax_language;
-                        self.current_tags = tags;
-                        self.editing_note_id = Some(note_id);
-                        self.state = AppState::NoteView;
-                        self.input_mode = InputMode::Normal;
+                        self.editing_note_id = Some(note_id.clone());
+
+                        // Open external editor immediately
+                        if let Ok(new_content) = self.edit_with_external_editor() {
+                            self.note_input = new_content;
+                            // Save the note
+                            if let Err(e) = self.save_note() {
+                                self.error = Some(format!("Failed to save note: {}", e));
+                            }
+                            // Reload notes to refresh the list
+                            if let Err(e) = self.load_notes() {
+                                self.error = Some(format!("Failed to reload notes: {}", e));
+                            }
+                        }
+
+                        // Clear editing state
+                        self.editing_note_id = None;
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
@@ -2049,7 +2071,7 @@ impl App {
             Line::from("  y                     Sync notes (if configured)"),
             Line::from("  s                     Show settings"),
             Line::from("  n                     Create new note"),
-            Line::from("  i / Enter             Edit selected note"),
+            Line::from("  i / Enter             Open note in $EDITOR"),
             Line::from("  d                     Delete selected note"),
             Line::from("  j / ↓                 Move down"),
             Line::from("  k / ↑                 Move up"),
@@ -2063,7 +2085,7 @@ impl App {
             Line::from("  #tag                  Search by tag"),
             Line::from("  -word                 Exclude word (negation)"),
             Line::from("  word1 word2           Match all words (AND)"),
-            Line::from("  Enter                 Open selected note"),
+            Line::from("  Enter                 Open note in $EDITOR"),
             Line::from("  Esc                   Exit search mode"),
             Line::from("  ↑ / ↓                 Navigate results"),
             Line::from(""),
