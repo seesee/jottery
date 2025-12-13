@@ -87,6 +87,8 @@ pub struct App {
     pub password_confirm_focused: bool,
     /// Note content input buffer
     pub note_input: String,
+    /// Current note's syntax language
+    pub note_syntax: crate::models::SyntaxLanguage,
     /// Tag input buffer (when adding tags)
     pub tag_input: String,
     /// Current tags for the note being edited
@@ -140,6 +142,7 @@ impl App {
             is_new_database,
             password_confirm_focused: false,
             note_input: String::new(),
+            note_syntax: crate::models::SyntaxLanguage::default(),
             tag_input: String::new(),
             current_tags: Vec::new(),
             search_input: String::new(),
@@ -274,8 +277,10 @@ impl App {
                             let content = filtered[self.selected_note].content.clone();
                             let tags = filtered[self.selected_note].tags.clone();
                             let note_id = filtered[self.selected_note].id.clone();
+                            let syntax_language = filtered[self.selected_note].syntax_language;
 
                             self.note_input = content;
+                            self.note_syntax = syntax_language;
                             self.current_tags = tags;
                             self.editing_note_id = Some(note_id);
                             self.state = AppState::NoteView;
@@ -355,8 +360,10 @@ impl App {
                         let content = filtered[self.selected_note].content.clone();
                         let tags = filtered[self.selected_note].tags.clone();
                         let note_id = filtered[self.selected_note].id.clone();
+                        let syntax_language = filtered[self.selected_note].syntax_language;
 
                         self.note_input = content;
+                        self.note_syntax = syntax_language;
                         self.current_tags = tags;
                         self.editing_note_id = Some(note_id);
                         self.state = AppState::NoteView;

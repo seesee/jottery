@@ -71,6 +71,9 @@ tempfile = "3.13"
 # Clipboard support
 arboard = "3.4"
 
+# Syntax highlighting
+syntect = "5.2"
+
 [dev-dependencies]
 
 [profile.release]
