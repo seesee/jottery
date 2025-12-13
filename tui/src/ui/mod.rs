@@ -3,6 +3,7 @@
 
 pub mod app;
 pub mod event;
+pub mod syntax;
 pub mod terminal;
 
 pub use app::App;

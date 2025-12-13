@@ -74,6 +74,9 @@ arboard = "3.4"
 # Syntax highlighting
 syntect = "5.2"
 
+# Markdown parsing
+pulldown-cmark = "0.12"
+
 [dev-dependencies]
 
 [profile.release]

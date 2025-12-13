@@ -169,6 +169,11 @@ fn main() -> Result<()> {
 
     // Main loop
     while !app.should_quit() {
+        // Check if we need to force a full redraw (e.g., after external editor)
+        if app.should_redraw() {
+            tui.clear()?;
+        }
+
         // Render
         tui.draw(|frame| {
             app.render(frame);

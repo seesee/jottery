@@ -3,6 +3,7 @@ use crossterm::{
     event::{KeyCode, KeyEvent, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
+    cursor::MoveTo,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
@@ -101,6 +102,8 @@ pub struct App {
     pub sync_status: Option<String>,
     /// Current error message
     pub error: Option<String>,
+    /// Flag to signal that terminal needs full redraw
+    pub need_redraw: bool,
     /// Selected settings field (0-5: language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint)
     pub selected_setting: usize,
     /// Settings input buffer (for string/number fields)
@@ -127,6 +130,8 @@ pub struct App {
     credential_input: String,
     /// Debug log file (for troubleshooting)
     debug_log: Option<Arc<Mutex<File>>>,
+    /// Syntax highlighter for code preview
+    syntax_highlighter: crate::ui::syntax::SyntaxHighlighter,
 }
 
 impl App {
@@ -149,6 +154,7 @@ impl App {
             search_active: false,
             sync_status: None,
             error: None,
+            need_redraw: false,
             selected_setting: 0,
             setting_input: String::new(),
             db_path,
@@ -162,6 +168,7 @@ impl App {
             settings: UserSettings::default(),
             credential_input: String::new(),
             debug_log,
+            syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
         })
     }
 
@@ -276,9 +283,13 @@ impl App {
                             // Clone the data we need before modifying self
                             let content = filtered[self.selected_note].content.clone();
                             let note_id = filtered[self.selected_note].id.clone();
+                            let syntax_lang = filtered[self.selected_note].syntax_language;
+                            let tags = filtered[self.selected_note].tags.clone();
 
                             // Set up for editing
                             self.note_input = content;
+                            self.note_syntax = syntax_lang;
+                            self.current_tags = tags;
                             self.editing_note_id = Some(note_id.clone());
                             self.search_input.clear();
                             self.search_active = false;
@@ -286,6 +297,7 @@ impl App {
                             // Open external editor immediately
                             if let Ok(new_content) = self.edit_with_external_editor() {
                                 self.note_input = new_content;
+                                self.need_redraw = true; // Force full redraw after editor
                                 // Save the note
                                 if let Err(e) = self.save_note() {
                                     self.error = Some(format!("Failed to save note: {}", e));
@@ -370,14 +382,19 @@ impl App {
                         // Clone data before modifying self
                         let content = filtered[self.selected_note].content.clone();
                         let note_id = filtered[self.selected_note].id.clone();
+                        let syntax_lang = filtered[self.selected_note].syntax_language;
+                        let tags = filtered[self.selected_note].tags.clone();
 
                         // Set up for editing
                         self.note_input = content;
+                        self.note_syntax = syntax_lang;
+                        self.current_tags = tags;
                         self.editing_note_id = Some(note_id.clone());
 
                         // Open external editor immediately
                         if let Ok(new_content) = self.edit_with_external_editor() {
                             self.note_input = new_content;
+                            self.need_redraw = true; // Force full redraw after editor
                             // Save the note
                             if let Err(e) = self.save_note() {
                                 self.error = Some(format!("Failed to save note: {}", e));
@@ -457,6 +474,7 @@ impl App {
                     // Edit with external $EDITOR
                     if let Ok(content) = self.edit_with_external_editor() {
                         self.note_input = content;
+                        self.need_redraw = true; // Force full redraw after editor
                     }
                 }
                 KeyCode::Char('t') => {
@@ -1531,8 +1549,15 @@ impl App {
         enable_raw_mode().context("Failed to enable raw mode")?;
 
         // Clear and refresh the screen to ensure proper redraw
-        execute!(io::stdout(), Clear(ClearType::All))
-            .context("Failed to clear screen")?;
+        execute!(
+            io::stdout(),
+            Clear(ClearType::All),
+            Clear(ClearType::Purge),
+            MoveTo(0, 0)
+        ).context("Failed to clear screen")?;
+
+        // Flush to ensure commands are executed
+        io::stdout().flush().context("Failed to flush stdout")?;
 
         if !status.success() {
             anyhow::bail!("Editor exited with non-zero status");
@@ -1543,6 +1568,16 @@ impl App {
             .context("Failed to read modified content")?;
 
         Ok(content)
+    }
+
+    /// Check if terminal needs redraw and reset flag
+    pub fn should_redraw(&mut self) -> bool {
+        if self.need_redraw {
+            self.need_redraw = false;
+            true
+        } else {
+            false
+        }
     }
 
     /// Render the UI
@@ -1887,8 +1922,9 @@ impl App {
             .style(tags_style);
         frame.render_widget(tags, chunks[0]);
 
-        // Render note content
-        let text = Paragraph::new(self.note_input.clone())
+        // Render note content with syntax highlighting
+        let highlighted_text = self.syntax_highlighter.highlight(&self.note_input, self.note_syntax);
+        let text = Paragraph::new(highlighted_text)
             .block(block)
             .wrap(Wrap { trim: false });
         frame.render_widget(text, chunks[1]);

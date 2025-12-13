@@ -44,6 +44,12 @@ impl Tui {
         self.terminal.draw(f)?;
         Ok(())
     }
+
+    /// Clear the terminal buffer (force full redraw)
+    pub fn clear(&mut self) -> Result<()> {
+        self.terminal.clear()?;
+        Ok(())
+    }
 }
 
 impl Drop for Tui {
