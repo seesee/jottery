@@ -231,27 +231,51 @@ class SyncService {
       }
     }
 
-    // Build push request
+    // Get master key for tag encryption conversion
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new Error('Application is locked');
+    }
+
+    // Build push request - convert tags from single encrypted blob to array of individually encrypted tags
     const pushRequest: SyncPushRequest = {
-      notes: modifiedNotes.map(note => ({
-        id: note.id,
-        createdAt: note.createdAt,
-        modifiedAt: note.modifiedAt,
-        content: note.content,
-        tags: note.tags,
-        attachments: note.attachments.map(a => ({
-          id: a.id,
-          filename: a.filename,
-          mimeType: a.mimeType,
-          size: a.size,
-          data: a.data,
-        })),
-        pinned: note.pinned,
-        deleted: note.deleted,
-        deletedAt: note.deletedAt,
-        version: note.version,
-        wordWrap: note.wordWrap,
-        syntaxLanguage: note.syntaxLanguage,
+      notes: await Promise.all(modifiedNotes.map(async note => {
+        // Decrypt the tags array (stored as single encrypted blob in note.tags[0])
+        const encryptedTagsBlob = JSON.parse(note.tags[0] || '{"ciphertext":"","iv":""}');
+        const decryptedTagsArray = await cryptoService.decryptJSON<string[]>(
+          encryptedTagsBlob,
+          masterKey.key
+        );
+
+        // Encrypt each tag individually with JSON encoding (as required by sync protocol)
+        const individuallyEncryptedTags = await Promise.all(
+          decryptedTagsArray.map(async tag => {
+            const tagJson = JSON.stringify(tag);  // JSON-encode the tag
+            const encrypted = await cryptoService.encryptText(tagJson, masterKey.key);
+            return JSON.stringify(encrypted);  // Stringify the EncryptionResult
+          })
+        );
+
+        return {
+          id: note.id,
+          createdAt: note.createdAt,
+          modifiedAt: note.modifiedAt,
+          content: note.content,
+          tags: individuallyEncryptedTags,
+          attachments: note.attachments.map(a => ({
+            id: a.id,
+            filename: a.filename,
+            mimeType: a.mimeType,
+            size: a.size,
+            data: a.data,
+          })),
+          pinned: note.pinned,
+          deleted: note.deleted,
+          deletedAt: note.deletedAt,
+          version: note.version,
+          wordWrap: note.wordWrap,
+          syntaxLanguage: note.syntaxLanguage,
+        };
       })),
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
     };
