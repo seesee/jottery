@@ -255,9 +255,22 @@ class SyncService {
               masterKey.key
             );
 
-            // Encrypt each tag individually with JSON encoding (as required by sync protocol)
+            // Filter out invalid tags (empty strings, non-strings, empty arrays, etc.)
+            const validTags = decryptedTagsArray.filter(tag => {
+              if (typeof tag !== 'string') {
+                console.warn('[SyncService] Skipping non-string tag:', tag);
+                return false;
+              }
+              if (tag.trim().length === 0) {
+                console.warn('[SyncService] Skipping empty tag');
+                return false;
+              }
+              return true;
+            });
+
+            // Encrypt each valid tag individually with JSON encoding (as required by sync protocol)
             individuallyEncryptedTags = await Promise.all(
-              decryptedTagsArray.map(async tag => {
+              validTags.map(async tag => {
                 const tagJson = JSON.stringify(tag);  // JSON-encode the tag
                 const encrypted = await cryptoService.encryptText(tagJson, masterKey.key);
                 return JSON.stringify(encrypted);  // Stringify the EncryptionResult
@@ -412,6 +425,17 @@ class SyncService {
             const encryptedTag = JSON.parse(encryptedTagJson);
             const tagJson = await cryptoService.decryptText(encryptedTag, masterKey.key);
             const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
+
+            // Validate tag before adding
+            if (typeof tag !== 'string') {
+              console.warn('[SyncService] Pull - Skipping non-string tag:', tag);
+              continue;
+            }
+            if (tag.trim().length === 0) {
+              console.warn('[SyncService] Pull - Skipping empty tag');
+              continue;
+            }
+
             decryptedTags.push(tag);
           } catch (error) {
             console.error('[SyncService] Failed to decrypt tag:', error);

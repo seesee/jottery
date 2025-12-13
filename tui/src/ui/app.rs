@@ -1164,38 +1164,56 @@ impl App {
 
             let decrypted_tags: Vec<String> = remote_note.tags.iter()
                 .enumerate()
-                .map(|(idx, tag_json)| {
+                .filter_map(|(idx, tag_json)| {
                     self.debug_log(&format!("Pull - Tag[{}] raw JSON: {}", idx, tag_json));
 
                     // Parse the encrypted tag structure
-                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json)
-                        .map_err(|e| {
-                            self.debug_log(&format!("Pull - Tag[{}] failed to parse as EncryptedData: {}", idx, e));
-                            e
-                        })?;
+                    let encrypted_tag: crate::crypto::EncryptedData = match serde_json::from_str(tag_json) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Tag[{}] failed to parse as EncryptedData: {}, skipping", idx, e));
+                            return None;
+                        }
+                    };
 
                     self.debug_log(&format!("Pull - Tag[{}] parsed EncryptedData successfully", idx));
 
                     // Decrypt the tag
-                    let tag_json_str = self.crypto.decrypt_text(&encrypted_tag, key)
-                        .map_err(|e| {
-                            self.debug_log(&format!("Pull - Tag[{}] failed to decrypt: {}", idx, e));
-                            e
-                        })?;
+                    let tag_json_str = match self.crypto.decrypt_text(&encrypted_tag, key) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Tag[{}] failed to decrypt: {}, skipping", idx, e));
+                            return None;
+                        }
+                    };
 
                     self.debug_log(&format!("Pull - Tag[{}] decrypted to: {}", idx, tag_json_str));
 
-                    // Parse the JSON-encoded tag string to get the actual tag
-                    let tag: String = serde_json::from_str(&tag_json_str)
-                        .map_err(|e| {
-                            self.debug_log(&format!("Pull - Tag[{}] failed to parse tag value: {}", idx, e));
-                            e
-                        })?;
+                    // Handle malformed tags (empty arrays, non-strings, etc.)
+                    // Valid tag should be a JSON-encoded string like "\"tagname\""
+                    let tag: String = match serde_json::from_str(&tag_json_str) {
+                        Ok(t) => t,
+                        Err(e) => {
+                            // Check if it's an empty array or other invalid format
+                            if tag_json_str.trim() == "[]" || tag_json_str.trim().is_empty() {
+                                self.debug_log(&format!("Pull - Tag[{}] is empty/invalid ({}), skipping", idx, tag_json_str));
+                            } else {
+                                self.debug_log(&format!("Pull - Tag[{}] failed to parse tag value: {}, skipping", idx, e));
+                            }
+                            return None;
+                        }
+                    };
+
+                    // Skip empty tag strings
+                    if tag.is_empty() {
+                        self.debug_log(&format!("Pull - Tag[{}] is empty string, skipping", idx));
+                        return None;
+                    }
 
                     self.debug_log(&format!("Pull - Tag[{}] final value: {}", idx, tag));
-                    Ok(tag)
+                    Some(tag)
                 })
-                .collect::<Result<Vec<_>>>()?;
+                .collect();
 
             self.debug_log(&format!("Pull - Successfully decrypted {} tags", decrypted_tags.len()));
 
