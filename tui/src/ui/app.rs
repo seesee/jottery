@@ -474,6 +474,10 @@ impl App {
                             let note_id = filtered[self.selected_note].id.clone();
                             if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
                             note.pinned = !note.pinned;
+                            // Update modified_at to match web client behavior (triggers sync)
+                            note.modified_at = chrono::Utc::now();
+                            // Increment version for optimistic locking
+                            note.version += 1;
 
                             // Save to database
                             if let (Some(db), Some(key)) = (&self.db, &self.key) {
@@ -561,6 +565,10 @@ impl App {
                         self.view_mode = ViewMode::NoteList;
                         self.selected_note = 0;
                         self.preview_scroll_offset = 0;
+                        // Reload normal notes
+                        if let Err(e) = self.load_notes() {
+                            self.error = Some(format!("Failed to reload notes: {}", e));
+                        }
                     }
                 }
                 // Vim-style preview scrolling (must come before plain 'd' key)
@@ -1146,7 +1154,7 @@ impl App {
 
         match self.perform_sync() {
             Ok(result) => {
-                self.sync_status = Some(format!("Sync complete! {} notes synced", result));
+                self.sync_status = Some(format!("Sync complete! {} {} synced", result, if result == 1 { "note" } else { "notes" }));
                 self.sync_status_set_at = Some(Instant::now());
             }
             Err(e) => {
