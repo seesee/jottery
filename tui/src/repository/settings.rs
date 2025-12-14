@@ -18,7 +18,7 @@ impl<'a> SettingsRepository<'a> {
     pub fn get(&self) -> Result<UserSettings> {
         let result = self.conn
             .query_row(
-                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes
+                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
@@ -30,6 +30,8 @@ impl<'a> SettingsRepository<'a> {
                         sync_enabled: row.get::<_, i32>(4)? != 0,
                         sync_endpoint: row.get(5)?,
                         auto_sync_interval_minutes: row.get::<_, Option<i32>>(6)?.unwrap_or(5),
+                        remember_password: row.get::<_, Option<i32>>(7)?.unwrap_or(0) != 0,
+                        stored_password: row.get(8)?,
                     })
                 },
             )
@@ -43,8 +45,8 @@ impl<'a> SettingsRepository<'a> {
         settings.validate().map_err(|e| anyhow::anyhow!("{}", e))?;
 
         self.conn.execute(
-            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes)
-             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 &settings.language,
                 settings.theme.to_string(),
@@ -53,6 +55,8 @@ impl<'a> SettingsRepository<'a> {
                 settings.sync_enabled as i32,
                 &settings.sync_endpoint,
                 settings.auto_sync_interval_minutes,
+                settings.remember_password as i32,
+                &settings.stored_password,
             ],
         )?;
 

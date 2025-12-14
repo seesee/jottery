@@ -97,6 +97,8 @@ pub struct App {
     pub is_new_database: bool,
     /// Which password field is active (false = password, true = confirm)
     pub password_confirm_focused: bool,
+    /// Whether to remember password after successful unlock
+    pub remember_password_checkbox: bool,
     /// Note content input buffer
     pub note_input: String,
     /// Current note's syntax language
@@ -164,6 +166,7 @@ impl App {
             password_confirm: String::new(),
             is_new_database,
             password_confirm_focused: false,
+            remember_password_checkbox: false,
             note_input: String::new(),
             note_syntax: crate::models::SyntaxLanguage::default(),
             tag_input: String::new(),
@@ -235,6 +238,10 @@ impl App {
             }
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.state = AppState::Quit;
+            }
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Toggle remember password checkbox
+                self.remember_password_checkbox = !self.remember_password_checkbox;
             }
             KeyCode::Tab if self.is_new_database => {
                 // Switch between password and confirm fields
@@ -879,12 +886,146 @@ impl App {
             self.settings = settings_repo.get()?;
         }
 
-        // Clear password fields and reset new database flag
+        // Store password if remember checkbox was enabled
+        if self.remember_password_checkbox {
+            // The password is still in self.password_input at this point
+            let password_to_store = self.password_input.clone();
+            if let Err(e) = self.store_password_for_autounlock(&password_to_store) {
+                self.error = Some(format!("Failed to store password: {}", e));
+            } else {
+                self.sync_status = Some("Password stored for auto-unlock. WARNING: Accessible to anyone with device access!".to_string());
+                self.sync_status_set_at = Some(Instant::now());
+            }
+        }
+
+        // Clear password fields and reset flags
         self.password_input.clear();
         self.password_confirm.clear();
         self.is_new_database = false;  // Database now exists
         self.password_confirm_focused = false;  // Reset focus
+        self.remember_password_checkbox = false;  // Reset checkbox
         self.state = AppState::NoteList;
+
+        Ok(())
+    }
+
+    /// Attempt to auto-unlock using stored password
+    /// Returns Ok(true) if successfully unlocked, Ok(false) if no stored password, Err on failure
+    pub fn try_auto_unlock(&mut self) -> Result<bool> {
+        // First, we need to read settings with a dummy password just to check if remember_password is enabled
+        // This is a chicken-and-egg problem: we need the password to read settings, but settings contain the password!
+        // Solution: Use a constant "bootstrap" password to encrypt the stored_password field specifically
+
+        // For now, try to open database with empty password to see if it exists
+        if !self.db_path.exists() {
+            return Ok(false); // New database, can't auto-unlock
+        }
+
+        // Try to open with a known constant to read settings (this will fail but we'll handle it)
+        // Actually, this won't work with SQLCipher. We need a different approach.
+        // The password must be stored in a separate unencrypted file.
+
+        // Check for stored password in a separate config file
+        let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+        let remember_file = config_dir.join(".jottery_remember");
+
+        if !remember_file.exists() {
+            return Ok(false); // No stored password
+        }
+
+        // Read and decrypt stored password
+        let encrypted_password = std::fs::read_to_string(&remember_file)
+            .context("Failed to read stored password file")?;
+
+        if encrypted_password.trim().is_empty() {
+            return Ok(false);
+        }
+
+        // Decrypt using device-specific constant key
+        let device_key = self.get_device_key();
+        let encrypted_data: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_password)
+            .context("Failed to parse stored password")?;
+        let password = self.crypto.decrypt_text(&encrypted_data, &device_key)
+            .context("Failed to decrypt stored password")?;
+
+        // Try to unlock with this password
+        self.password_input = password;
+        match self.unlock() {
+            Ok(()) => {
+                self.debug_log("Auto-unlock successful");
+                Ok(true)
+            }
+            Err(e) => {
+                self.password_input.clear();
+                // Delete invalid stored password file
+                let _ = std::fs::remove_file(&remember_file);
+                Err(e).context("Auto-unlock failed")
+            }
+        }
+    }
+
+    /// Get device-specific encryption key for storing password
+    /// WARNING: This is not cryptographically secure, just obfuscation
+    fn get_device_key(&self) -> [u8; 32] {
+        // Use a constant key derived from app name and version
+        // Anyone with access to the code can decrypt this
+        // The security warning makes this clear to users
+        let constant = b"jottery-tui-device-key-v1.0.0---";
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&constant[..32]);
+        key
+    }
+
+    /// Enable/disable remember password feature
+    /// When enabling, encrypts and stores the current password
+    pub fn toggle_remember_password(&mut self) -> Result<()> {
+        if self.settings.remember_password {
+            // Disable: clear stored password
+            self.settings.remember_password = false;
+            self.settings.stored_password = None;
+
+            // Delete remember file
+            let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+            let remember_file = config_dir.join(".jottery_remember");
+            let _ = std::fs::remove_file(&remember_file);
+
+            // Save settings
+            if let Some(db) = &self.db {
+                let settings_repo = SettingsRepository::new(db.connection());
+                settings_repo.update(&self.settings)?;
+            }
+
+            self.sync_status = Some("Password storage disabled. You will be prompted on next start.".to_string());
+            self.sync_status_set_at = Some(Instant::now());
+        } else {
+            // Enable: this should be done through a confirmation flow
+            self.sync_status = Some("Feature not yet fully implemented - use settings".to_string());
+            self.sync_status_set_at = Some(Instant::now());
+        }
+        Ok(())
+    }
+
+    /// Store password for auto-unlock (call after successful unlock when user confirms)
+    pub fn store_password_for_autounlock(&mut self, password: &str) -> Result<()> {
+        // Encrypt password with device key
+        let device_key = self.get_device_key();
+        let encrypted = self.crypto.encrypt_text(password, &device_key)?;
+        let encrypted_json = serde_json::to_string(&encrypted)?;
+
+        // Save to remember file
+        let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+        let remember_file = config_dir.join(".jottery_remember");
+        std::fs::write(&remember_file, &encrypted_json)
+            .context("Failed to write password storage file")?;
+
+        // Update settings
+        self.settings.remember_password = true;
+        self.settings.stored_password = Some(encrypted_json);
+
+        if let Some(db) = &self.db {
+            let settings_repo = SettingsRepository::new(db.connection());
+            settings_repo.update(&self.settings)?;
+        }
 
         Ok(())
     }
@@ -1942,6 +2083,8 @@ impl App {
         } else {
             vec![
                 Constraint::Length(3),  // Password field
+                Constraint::Length(2),  // Remember password checkbox
+                Constraint::Length(3),  // Help text
                 Constraint::Length(3),  // Error (if any)
                 Constraint::Min(0),     // Remaining space
             ]
@@ -2017,12 +2160,42 @@ impl App {
                 chunks[0].y + 1,
             ));
 
+            // Remember password checkbox
+            let checkbox_text = if self.remember_password_checkbox {
+                "[X] Remember password (Ctrl+R to toggle)"
+            } else {
+                "[ ] Remember password (Ctrl+R to toggle)"
+            };
+            let checkbox = Paragraph::new(checkbox_text)
+                .style(if self.remember_password_checkbox {
+                    Style::default().fg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                })
+                .alignment(Alignment::Center);
+            frame.render_widget(checkbox, chunks[1]);
+
+            // Help text with security warning
+            let help_text = if self.remember_password_checkbox {
+                "WARNING: Password will be accessible to anyone with physical access to this device!"
+            } else {
+                "Enter: unlock | Ctrl+Q: quit"
+            };
+            let help = Paragraph::new(help_text)
+                .style(if self.remember_password_checkbox {
+                    Style::default().fg(Color::Red)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                })
+                .alignment(Alignment::Center);
+            frame.render_widget(help, chunks[2]);
+
             // Error (if any)
             if let Some(err) = &self.error {
                 let error = Paragraph::new(err.clone())
                     .style(Style::default().fg(Color::Red))
                     .block(Block::default().title("Error").borders(Borders::ALL));
-                frame.render_widget(error, chunks[1]);
+                frame.render_widget(error, chunks[3]);
             }
         }
     }

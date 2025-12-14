@@ -12,6 +12,9 @@ pub struct UserSettings {
     pub sync_endpoint: Option<String>,
     #[serde(default = "default_auto_sync_interval")]
     pub auto_sync_interval_minutes: i32, // Minutes between auto-syncs (0 = disabled)
+    #[serde(default)]
+    pub remember_password: bool, // Whether to store password for auto-unlock
+    pub stored_password: Option<String>, // Encrypted password (JSON encrypted data)
 }
 
 fn default_auto_sync_interval() -> i32 {
@@ -81,6 +84,8 @@ impl UserSettings {
             sync_enabled: false,
             sync_endpoint: None,
             auto_sync_interval_minutes: 5, // 5 minutes like web client
+            remember_password: false, // Disabled by default for security
+            stored_password: None,
         }
     }
 

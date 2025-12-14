@@ -164,6 +164,11 @@ fn main() -> Result<()> {
     // Create app
     let mut app = App::new(db_path, debug_log)?;
 
+    // Try auto-unlock if password is stored
+    if let Ok(true) = app.try_auto_unlock() {
+        info!("Auto-unlock successful");
+    }
+
     // Event handler
     let events = EventHandler::default();
 
