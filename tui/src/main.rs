@@ -191,7 +191,11 @@ fn main() -> Result<()> {
             ui::Event::Resize(_, _) => {
                 // Terminal resized, will redraw on next iteration
             }
-            ui::Event::Tick | ui::Event::Mouse(_) => {
+            ui::Event::Tick => {
+                // Check if auto-sync should run
+                app.check_auto_sync();
+            }
+            ui::Event::Mouse(_) => {
                 // Ignore for now
             }
         }

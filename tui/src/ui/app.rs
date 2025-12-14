@@ -18,6 +18,7 @@ use std::{
     io::{self, Write},
     path::PathBuf,
     process::Command,
+    time::Instant,
     sync::{Arc, Mutex},
 };
 use tempfile::NamedTempFile;
@@ -144,6 +145,8 @@ pub struct App {
     debug_log: Option<Arc<Mutex<File>>>,
     /// Syntax highlighter for code preview
     syntax_highlighter: crate::ui::syntax::SyntaxHighlighter,
+    /// Last auto-sync time (for periodic sync)
+    last_auto_sync: Option<Instant>,
 }
 
 impl App {
@@ -183,6 +186,7 @@ impl App {
             credential_input: String::new(),
             debug_log,
             syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
+            last_auto_sync: None,
         })
     }
 
@@ -1283,6 +1287,46 @@ impl App {
         self.load_notes()?;
 
         Ok(sync_count)
+    }
+
+    /// Check if auto-sync should run and trigger it if needed
+    /// Call this periodically (e.g., on Tick events) to enable background sync
+    pub fn check_auto_sync(&mut self) {
+        // Check if auto-sync is enabled
+        if self.settings.auto_sync_interval_minutes <= 0 {
+            return; // Auto-sync disabled
+        }
+
+        // Check if sync is configured
+        if !self.settings.sync_enabled || self.settings.sync_endpoint.is_none() {
+            return; // Sync not configured
+        }
+
+        // Check if we're unlocked (have database and key)
+        if self.db.is_none() || self.key.is_none() {
+            return; // Not unlocked, can't sync
+        }
+
+        // Check time since last auto-sync
+        let now = Instant::now();
+        let should_sync = match self.last_auto_sync {
+            None => true, // Never synced, do it now
+            Some(last) => {
+                let elapsed = now.duration_since(last);
+                let interval = std::time::Duration::from_secs(
+                    (self.settings.auto_sync_interval_minutes as u64) * 60
+                );
+                elapsed >= interval
+            }
+        };
+
+        if should_sync {
+            self.debug_log("Auto-sync: triggering scheduled sync");
+            // Trigger sync (this will update sync_status)
+            self.trigger_sync();
+            // Update last auto-sync time
+            self.last_auto_sync = Some(now);
+        }
     }
 
     /// Start editing a setting field

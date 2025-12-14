@@ -10,6 +10,12 @@ pub struct UserSettings {
     pub auto_lock_timeout: i32, // Minutes
     pub sync_enabled: bool,
     pub sync_endpoint: Option<String>,
+    #[serde(default = "default_auto_sync_interval")]
+    pub auto_sync_interval_minutes: i32, // Minutes between auto-syncs (0 = disabled)
+}
+
+fn default_auto_sync_interval() -> i32 {
+    5 // Default to 5 minutes like web client
 }
 
 /// Theme options
@@ -74,6 +80,7 @@ impl UserSettings {
             auto_lock_timeout: 15, // 15 minutes
             sync_enabled: false,
             sync_endpoint: None,
+            auto_sync_interval_minutes: 5, // 5 minutes like web client
         }
     }
 
