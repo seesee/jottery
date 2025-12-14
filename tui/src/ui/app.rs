@@ -147,6 +147,8 @@ pub struct App {
     syntax_highlighter: crate::ui::syntax::SyntaxHighlighter,
     /// Last auto-sync time (for periodic sync)
     last_auto_sync: Option<Instant>,
+    /// When sync status was set (for auto-clearing)
+    sync_status_set_at: Option<Instant>,
 }
 
 impl App {
@@ -187,6 +189,7 @@ impl App {
             debug_log,
             syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
             last_auto_sync: None,
+            sync_status_set_at: None,
         })
     }
 
@@ -984,26 +987,31 @@ impl App {
         if !self.settings.sync_enabled {
             self.debug_log("trigger_sync - Sync not enabled, returning");
             self.sync_status = Some("Sync not enabled. Press 's' to configure in settings.".to_string());
+            self.sync_status_set_at = Some(Instant::now());
             return;
         }
 
         if self.settings.sync_endpoint.is_none() {
             self.debug_log("trigger_sync - Sync endpoint not configured, returning");
             self.sync_status = Some("Sync endpoint not configured. Configure in database settings table.".to_string());
+            self.sync_status_set_at = Some(Instant::now());
             return;
         }
 
         // Perform sync
         self.debug_log("trigger_sync - Starting sync");
         self.sync_status = Some("Syncing...".to_string());
+        self.sync_status_set_at = Some(Instant::now());
 
         match self.perform_sync() {
             Ok(result) => {
                 self.sync_status = Some(format!("Sync complete! {} notes synced", result));
+                self.sync_status_set_at = Some(Instant::now());
             }
             Err(e) => {
                 self.error = Some(format!("Sync failed: {}", e));
-                self.sync_status = None;
+                self.sync_status = Some(format!("Sync failed: {}", e));
+                self.sync_status_set_at = Some(Instant::now());
             }
         }
     }
@@ -1290,8 +1298,19 @@ impl App {
     }
 
     /// Check if auto-sync should run and trigger it if needed
+    /// Also handles auto-clearing sync status after timeout
     /// Call this periodically (e.g., on Tick events) to enable background sync
     pub fn check_auto_sync(&mut self) {
+        // Auto-clear sync status after 5 seconds
+        if let Some(set_at) = self.sync_status_set_at {
+            let now = Instant::now();
+            let elapsed = now.duration_since(set_at);
+            if elapsed >= std::time::Duration::from_secs(5) {
+                self.sync_status = None;
+                self.sync_status_set_at = None;
+            }
+        }
+
         // Check if auto-sync is enabled
         if self.settings.auto_sync_interval_minutes <= 0 {
             return; // Auto-sync disabled
@@ -2128,8 +2147,15 @@ impl App {
             }
         };
         let help = Paragraph::new(status_text)
-            .style(if self.sync_status.is_some() {
-                Style::default().fg(Color::Yellow)
+            .style(if let Some(ref status) = self.sync_status {
+                // Show red for errors, yellow for other sync status, green for success
+                if status.contains("failed") || status.contains("error") {
+                    Style::default().fg(Color::Red)
+                } else if status.contains("complete") {
+                    Style::default().fg(Color::Green)
+                } else {
+                    Style::default().fg(Color::Yellow)
+                }
             } else {
                 Style::default().fg(Color::DarkGray)
             })
