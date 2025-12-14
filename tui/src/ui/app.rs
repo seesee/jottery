@@ -71,6 +71,8 @@ pub enum InputMode {
     Tag,
     /// Settings edit mode
     SettingsEdit,
+    /// Password verification mode (for enabling remember password)
+    PasswordVerify,
 }
 
 /// Current view mode
@@ -619,8 +621,8 @@ impl App {
     /// Handle key events in note view state
     fn handle_note_view_key(&mut self, key: KeyEvent) -> Result<()> {
         match self.input_mode {
-            InputMode::SettingsEdit => {
-                // Settings edit mode should not be active in note view
+            InputMode::SettingsEdit | InputMode::PasswordVerify => {
+                // Settings modes should not be active in note view
                 // Reset to normal mode if somehow this happens
                 self.input_mode = InputMode::Normal;
             }
@@ -768,17 +770,6 @@ impl App {
                         // Trigger manual sync
                         self.trigger_sync();
                     }
-                    KeyCode::Char('f') => {
-                        // Forget stored password (only on remember password field)
-                        if self.selected_setting == 7 && self.settings.remember_password {
-                            if let Err(e) = self.forget_stored_password() {
-                                self.error = Some(format!("Failed to forget password: {}", e));
-                            } else {
-                                self.sync_status = Some("Stored password cleared. You will be prompted on next start.".to_string());
-                                self.sync_status_set_at = Some(Instant::now());
-                            }
-                        }
-                    }
                     _ => {}
                 }
             }
@@ -819,14 +810,6 @@ impl App {
                                 }
                                 self.input_mode = InputMode::Normal;
                             }
-                            7 => {
-                                // Remember password: toggle
-                                self.settings.remember_password = !self.settings.remember_password;
-                                if let Err(e) = self.save_settings() {
-                                    self.error = Some(format!("Failed to save settings: {}", e));
-                                }
-                                self.input_mode = InputMode::Normal;
-                            }
                             _ => {
                                 // String/number fields: type normally
                                 self.setting_input.push(c);
@@ -834,6 +817,59 @@ impl App {
                         }
                     }
                     KeyCode::Backspace => {
+                        self.setting_input.pop();
+                    }
+                    _ => {}
+                }
+            }
+            InputMode::PasswordVerify => {
+                // Password verification mode for enabling remember password
+                match key.code {
+                    KeyCode::Esc => {
+                        // Cancel password verification
+                        self.setting_input.clear();
+                        self.input_mode = InputMode::Normal;
+                        self.sync_status = Some("Password storage not enabled.".to_string());
+                        self.sync_status_set_at = Some(Instant::now());
+                    }
+                    KeyCode::Enter => {
+                        // Verify password and save if correct
+                        if self.setting_input.is_empty() {
+                            self.error = Some("Password cannot be empty.".to_string());
+                        } else {
+                            // Verify password by attempting to derive the key
+                            match self.verify_password_for_remember(&self.setting_input) {
+                                Ok(true) => {
+                                    // Password is correct - store it
+                                    let password_to_store = self.setting_input.clone();
+                                    self.setting_input.clear();
+                                    self.input_mode = InputMode::Normal;
+
+                                    if let Err(e) = self.store_password_for_autounlock(&password_to_store) {
+                                        self.error = Some(format!("Failed to store password: {}", e));
+                                    } else {
+                                        self.sync_status = Some("Password stored for auto-unlock. WARNING: Accessible to anyone with device access!".to_string());
+                                        self.sync_status_set_at = Some(Instant::now());
+                                    }
+                                }
+                                Ok(false) => {
+                                    self.error = Some("Incorrect password. Try again.".to_string());
+                                    self.setting_input.clear();
+                                }
+                                Err(e) => {
+                                    self.error = Some(format!("Password verification failed: {}", e));
+                                    self.setting_input.clear();
+                                    self.input_mode = InputMode::Normal;
+                                }
+                            }
+                        }
+                    }
+                    KeyCode::Char(c) => {
+                        // Add character to password input
+                        self.setting_input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        // Remove last character
                         self.setting_input.pop();
                     }
                     _ => {}
@@ -1079,6 +1115,25 @@ impl App {
         }
 
         Ok(())
+    }
+
+    /// Verify password is correct for enabling remember password
+    /// Returns Ok(true) if password is correct, Ok(false) if incorrect, Err on database error
+    fn verify_password_for_remember(&self, password: &str) -> Result<bool> {
+        // Try to open the database with the provided password
+        // This verifies the password without actually unlocking the app
+        match Database::open(&self.db_path, password) {
+            Ok(_) => Ok(true),  // Password is correct
+            Err(e) => {
+                // Check if it's a password error or other error
+                let error_msg = format!("{:?}", e);
+                if error_msg.contains("wrong password") || error_msg.contains("corrupted") {
+                    Ok(false)  // Password is incorrect
+                } else {
+                    Err(e)  // Other database error
+                }
+            }
+        }
     }
 
     /// Load notes from database
@@ -1580,10 +1635,21 @@ impl App {
                 self.input_mode = InputMode::SettingsEdit;
             }
             7 => {
-                // Remember password: toggle immediately
-                self.settings.remember_password = !self.settings.remember_password;
-                if let Err(e) = self.save_settings() {
-                    self.error = Some(format!("Failed to save settings: {}", e));
+                // Remember password: toggle with password verification
+                if self.settings.remember_password {
+                    // Currently ON -> turn OFF and delete stored password
+                    if let Err(e) = self.forget_stored_password() {
+                        self.error = Some(format!("Failed to forget password: {}", e));
+                    } else {
+                        self.sync_status = Some("Password storage disabled. You will be prompted on next start.".to_string());
+                        self.sync_status_set_at = Some(Instant::now());
+                    }
+                } else {
+                    // Currently OFF -> prompt for password to enable
+                    self.setting_input.clear();
+                    self.input_mode = InputMode::PasswordVerify;
+                    self.sync_status = Some("Enter your password to enable auto-unlock:".to_string());
+                    self.sync_status_set_at = Some(Instant::now());
                 }
             }
             _ => {}
@@ -2465,7 +2531,7 @@ impl App {
         let mode_text = match self.input_mode {
             InputMode::Normal => "PREVIEW",
             InputMode::Tag => "TAG",
-            InputMode::Insert | InputMode::SettingsEdit => "PREVIEW", // Should not happen in note view
+            InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify => "PREVIEW", // Should not happen in note view
         };
 
         let block = Block::default()
@@ -2523,7 +2589,7 @@ impl App {
 
         // Help text
         let help = match self.input_mode {
-            InputMode::Normal | InputMode::Insert | InputMode::SettingsEdit => {
+            InputMode::Normal | InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify => {
                 Paragraph::new("Enter/e: edit with $EDITOR | t: tags | q/Esc: save & quit")
                     .style(Style::default().fg(self.color_scheme.muted))
                     .alignment(Alignment::Center)
@@ -2563,6 +2629,7 @@ impl App {
 
         let mode_text = match self.input_mode {
             InputMode::SettingsEdit => " [EDIT]",
+            InputMode::PasswordVerify => " [ENTER PASSWORD]",
             _ => "",
         };
 
@@ -2575,8 +2642,12 @@ impl App {
         let field_line = |index: usize, label: String, value: String| -> Line {
             let selected = index == self.selected_setting;
             let editing = selected && matches!(self.input_mode, InputMode::SettingsEdit);
+            let password_verify = selected && matches!(self.input_mode, InputMode::PasswordVerify);
 
-            let display_value = if editing && (index == 0 || index == 3 || index == 5 || index == 6) {
+            let display_value = if password_verify && index == 7 {
+                // Show masked password input for remember password verification
+                format!("{}_{}", "*".repeat(self.setting_input.len()), if self.setting_input.is_empty() { " (enter password)" } else { "" })
+            } else if editing && (index == 0 || index == 3 || index == 5 || index == 6) {
                 // Show input buffer for editable fields (language, auto-lock, sync endpoint, auto-sync interval)
                 format!("{}_", self.setting_input)
             } else {
@@ -2589,7 +2660,7 @@ impl App {
             } else {
                 Style::default()
             };
-            let value_style = if editing {
+            let value_style = if editing || password_verify {
                 Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)
             } else if selected {
                 Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)
@@ -2626,7 +2697,11 @@ impl App {
                 Span::styled("Security Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
-            field_line(7, "Remember Password:     ".to_string(), format!("{} (press Enter to toggle, 'f' to forget)", if self.settings.remember_password { "Yes" } else { "No" })),
+            field_line(7, "Remember Password:     ".to_string(), if self.settings.remember_password {
+                "Yes (press Enter to disable)".to_string()
+            } else {
+                "No (press Enter to enable)".to_string()
+            }),
             Line::from(""),
             Line::from(""),
             Line::from(vec![
@@ -2636,7 +2711,7 @@ impl App {
             Line::from("  • Press Enter, i, or Space to edit a field"),
             Line::from("  • For text fields: type and press Enter to save, Esc to cancel"),
             Line::from("  • For toggles and cycles: press Enter to change value immediately"),
-            Line::from("  • Press 'f' on Remember Password to forget stored password"),
+            Line::from("  • Remember Password: Enter prompts for password (if enabling) or disables (if enabled)"),
             Line::from("  • Press 'y' to trigger manual sync"),
             Line::from(""),
             Line::from(vec![
