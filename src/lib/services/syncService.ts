@@ -18,7 +18,7 @@ import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
-import { cryptoService } from './crypto';
+import { cryptoService, encryptJSON } from './crypto';
 import { noteService } from './noteService';
 import { searchService } from './searchService';
 import { notes, settings } from '../stores/appStore';
@@ -470,7 +470,7 @@ class SyncService {
         console.log(`[SyncService] Pull - Collected ${decryptedTags.length} decrypted tags:`, decryptedTags);
 
         // Re-encrypt as a single blob for storage
-        const encryptedTagsBlob = await cryptoService.encryptJSON(decryptedTags, masterKey.key);
+        const encryptedTagsBlob = await encryptJSON(decryptedTags, masterKey.key);
         tagsForStorage = [JSON.stringify(encryptedTagsBlob)];
 
         console.log(`[SyncService] Pull - tagsForStorage:`, {
