@@ -711,7 +711,7 @@ impl App {
                     }
                     KeyCode::Down | KeyCode::Char('j') => {
                         // Move down through settings fields
-                        if self.selected_setting < 5 {
+                        if self.selected_setting < 7 {
                             self.selected_setting += 1;
                         }
                     }
@@ -765,6 +765,17 @@ impl App {
                         // Trigger manual sync
                         self.trigger_sync();
                     }
+                    KeyCode::Char('f') => {
+                        // Forget stored password (only on remember password field)
+                        if self.selected_setting == 7 && self.settings.remember_password {
+                            if let Err(e) = self.forget_stored_password() {
+                                self.error = Some(format!("Failed to forget password: {}", e));
+                            } else {
+                                self.sync_status = Some("Stored password cleared. You will be prompted on next start.".to_string());
+                                self.sync_status_set_at = Some(Instant::now());
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -788,7 +799,7 @@ impl App {
                         // For boolean and enum fields, handle cycling
                         match self.selected_setting {
                             1 => {
-                                // Theme: cycle through Light/Dark/Auto
+                                // Color Scheme: cycle through Light/Dark/Auto
                                 self.cycle_theme();
                                 self.input_mode = InputMode::Normal;
                             }
@@ -800,6 +811,14 @@ impl App {
                             4 => {
                                 // Sync enabled: toggle
                                 self.settings.sync_enabled = !self.settings.sync_enabled;
+                                if let Err(e) = self.save_settings() {
+                                    self.error = Some(format!("Failed to save settings: {}", e));
+                                }
+                                self.input_mode = InputMode::Normal;
+                            }
+                            7 => {
+                                // Remember password: toggle
+                                self.settings.remember_password = !self.settings.remember_password;
                                 if let Err(e) = self.save_settings() {
                                     self.error = Some(format!("Failed to save settings: {}", e));
                                 }
@@ -1029,6 +1048,25 @@ impl App {
         // Update settings
         self.settings.remember_password = true;
         self.settings.stored_password = Some(encrypted_json);
+
+        if let Some(db) = &self.db {
+            let settings_repo = SettingsRepository::new(db.connection());
+            settings_repo.update(&self.settings)?;
+        }
+
+        Ok(())
+    }
+
+    /// Forget stored password (disable auto-unlock)
+    fn forget_stored_password(&mut self) -> Result<()> {
+        // Delete remember file
+        let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+        let remember_file = config_dir.join(".jottery_remember");
+        let _ = std::fs::remove_file(&remember_file);
+
+        // Update settings
+        self.settings.remember_password = false;
+        self.settings.stored_password = None;
 
         if let Some(db) = &self.db {
             let settings_repo = SettingsRepository::new(db.connection());
@@ -1531,6 +1569,18 @@ impl App {
                 self.setting_input = self.settings.sync_endpoint.clone().unwrap_or_default();
                 self.input_mode = InputMode::SettingsEdit;
             }
+            6 => {
+                // Auto-sync interval
+                self.setting_input = self.settings.auto_sync_interval_minutes.to_string();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            7 => {
+                // Remember password: toggle immediately
+                self.settings.remember_password = !self.settings.remember_password;
+                if let Err(e) = self.save_settings() {
+                    self.error = Some(format!("Failed to save settings: {}", e));
+                }
+            }
             _ => {}
         }
     }
@@ -1563,6 +1613,18 @@ impl App {
                         anyhow::bail!("Sync endpoint must start with http:// or https://");
                     }
                     self.settings.sync_endpoint = Some(self.setting_input.clone());
+                }
+            }
+            6 => {
+                // Auto-sync interval
+                if let Ok(interval) = self.setting_input.parse::<i32>() {
+                    if interval >= 0 && interval <= 1440 {
+                        self.settings.auto_sync_interval_minutes = interval;
+                    } else {
+                        anyhow::bail!("Auto-sync interval must be between 0 and 1440 minutes");
+                    }
+                } else {
+                    anyhow::bail!("Invalid number");
                 }
             }
             _ => {}
@@ -2512,8 +2574,8 @@ impl App {
             let selected = index == self.selected_setting;
             let editing = selected && matches!(self.input_mode, InputMode::SettingsEdit);
 
-            let display_value = if editing && (index == 0 || index == 3 || index == 5) {
-                // Show input buffer for editable fields
+            let display_value = if editing && (index == 0 || index == 3 || index == 5 || index == 6) {
+                // Show input buffer for editable fields (language, auto-lock, sync endpoint, auto-sync interval)
                 format!("{}_", self.setting_input)
             } else {
                 value
@@ -2546,7 +2608,7 @@ impl App {
             ]),
             Line::from(""),
             field_line(0, "Language:              ".to_string(), self.settings.language.clone()),
-            field_line(1, "Theme:                 ".to_string(), format!("{} (press Enter to cycle)", self.settings.theme)),
+            field_line(1, "Color Scheme:          ".to_string(), format!("{} (press Enter to cycle)", self.settings.theme)),
             field_line(2, "Sort Order:            ".to_string(), format!("{} (press Enter to cycle)", self.settings.sort_order)),
             field_line(3, "Auto-lock Timeout:     ".to_string(), format!("{} minutes", self.settings.auto_lock_timeout)),
             Line::from(""),
@@ -2556,6 +2618,13 @@ impl App {
             Line::from(""),
             field_line(4, "Sync Enabled:          ".to_string(), format!("{} (press Enter to toggle)", if self.settings.sync_enabled { "Yes" } else { "No" })),
             field_line(5, "Sync Endpoint:         ".to_string(), self.settings.sync_endpoint.clone().unwrap_or_else(|| "Not configured".to_string())),
+            field_line(6, "Auto-sync Interval:    ".to_string(), format!("{} minutes (0 = disabled)", self.settings.auto_sync_interval_minutes)),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Security Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            field_line(7, "Remember Password:     ".to_string(), format!("{} (press Enter to toggle, 'f' to forget)", if self.settings.remember_password { "Yes" } else { "No" })),
             Line::from(""),
             Line::from(""),
             Line::from(vec![
@@ -2565,12 +2634,14 @@ impl App {
             Line::from("  • Press Enter, i, or Space to edit a field"),
             Line::from("  • For text fields: type and press Enter to save, Esc to cancel"),
             Line::from("  • For toggles and cycles: press Enter to change value immediately"),
+            Line::from("  • Press 'f' on Remember Password to forget stored password"),
+            Line::from("  • Press 'y' to trigger manual sync"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Sync Credentials: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Sync Credentials (for multi-device setup): ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  • Press 'p' to paste sync credentials (text input)"),
-            Line::from("  • Press 'c' to copy sync credentials (shows text)"),
+            Line::from("  • Press 'p' to paste sync credentials from another device"),
+            Line::from("  • Press 'c' to copy sync credentials to share with another device"),
         ];
 
         // Add status and error messages if present
@@ -2597,12 +2668,13 @@ impl App {
         frame.render_widget(paragraph, size);
 
         // Show cursor when editing text fields
-        if matches!(self.input_mode, InputMode::SettingsEdit) && (self.selected_setting == 0 || self.selected_setting == 3 || self.selected_setting == 5) {
+        if matches!(self.input_mode, InputMode::SettingsEdit) && (self.selected_setting == 0 || self.selected_setting == 3 || self.selected_setting == 5 || self.selected_setting == 6) {
             // Calculate cursor position based on selected field
             let line_offset = match self.selected_setting {
                 0 => 2,  // Language is on line 2
                 3 => 5,  // Auto-lock timeout is on line 5
                 5 => 10, // Sync endpoint is on line 10
+                6 => 11, // Auto-sync interval is on line 11
                 _ => 0,
             };
 
