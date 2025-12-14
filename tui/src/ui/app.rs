@@ -7,7 +7,7 @@ use crossterm::{
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
     Frame,
@@ -151,6 +151,8 @@ pub struct App {
     last_auto_sync: Option<Instant>,
     /// When sync status was set (for auto-clearing)
     sync_status_set_at: Option<Instant>,
+    /// Current color scheme (cached from settings)
+    color_scheme: crate::ui::ColorScheme,
 }
 
 impl App {
@@ -193,6 +195,7 @@ impl App {
             syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
             last_auto_sync: None,
             sync_status_set_at: None,
+            color_scheme: crate::ui::ColorScheme::default(),
         })
     }
 
@@ -911,6 +914,8 @@ impl App {
         if let Some(db) = &self.db {
             let settings_repo = SettingsRepository::new(db.connection());
             self.settings = settings_repo.get()?;
+            // Update color scheme from loaded settings
+            self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
         }
 
         // Store password if remember checkbox was enabled
@@ -1633,14 +1638,11 @@ impl App {
         self.save_settings()
     }
 
-    /// Cycle through theme options
+    /// Cycle through color scheme options
     fn cycle_theme(&mut self) {
-        use crate::models::Theme;
-        self.settings.theme = match self.settings.theme {
-            Theme::Light => Theme::Dark,
-            Theme::Dark => Theme::Auto,
-            Theme::Auto => Theme::Light,
-        };
+        self.settings.theme.cycle_next();
+        // Update cached color scheme
+        self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
         if let Err(e) = self.save_settings() {
             self.error = Some(format!("Failed to save settings: {}", e));
         }
@@ -2170,9 +2172,9 @@ impl App {
 
         // Password field
         let password_style = if self.is_new_database && !self.password_confirm_focused {
-            Style::default().fg(Color::Yellow)
+            Style::default().fg(self.color_scheme.accent)
         } else if !self.is_new_database {
-            Style::default().fg(Color::Yellow)
+            Style::default().fg(self.color_scheme.accent)
         } else {
             Style::default()
         };
@@ -2186,7 +2188,7 @@ impl App {
         if self.is_new_database {
             // Confirm field
             let confirm_style = if self.password_confirm_focused {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(self.color_scheme.accent)
             } else {
                 Style::default()
             };
@@ -2199,7 +2201,7 @@ impl App {
 
             // Help text
             let help = Paragraph::new("Tab: switch fields | Enter: create")
-                .style(Style::default().fg(Color::DarkGray))
+                .style(Style::default().fg(self.color_scheme.muted))
                 .alignment(Alignment::Center);
             frame.render_widget(help, chunks[2]);
 
@@ -2219,7 +2221,7 @@ impl App {
             // Error (if any)
             if let Some(err) = &self.error {
                 let error = Paragraph::new(err.clone())
-                    .style(Style::default().fg(Color::Red))
+                    .style(Style::default().fg(self.color_scheme.error))
                     .block(Block::default().title("Error").borders(Borders::ALL));
                 frame.render_widget(error, chunks[3]);
             }
@@ -2238,9 +2240,9 @@ impl App {
             };
             let checkbox = Paragraph::new(checkbox_text)
                 .style(if self.remember_password_checkbox {
-                    Style::default().fg(Color::Yellow)
+                    Style::default().fg(self.color_scheme.accent)
                 } else {
-                    Style::default().fg(Color::DarkGray)
+                    Style::default().fg(self.color_scheme.muted)
                 })
                 .alignment(Alignment::Center);
             frame.render_widget(checkbox, chunks[1]);
@@ -2253,9 +2255,9 @@ impl App {
             };
             let help = Paragraph::new(help_text)
                 .style(if self.remember_password_checkbox {
-                    Style::default().fg(Color::Red)
+                    Style::default().fg(self.color_scheme.error)
                 } else {
-                    Style::default().fg(Color::DarkGray)
+                    Style::default().fg(self.color_scheme.muted)
                 })
                 .alignment(Alignment::Center);
             frame.render_widget(help, chunks[2]);
@@ -2263,7 +2265,7 @@ impl App {
             // Error (if any)
             if let Some(err) = &self.error {
                 let error = Paragraph::new(err.clone())
-                    .style(Style::default().fg(Color::Red))
+                    .style(Style::default().fg(self.color_scheme.error))
                     .block(Block::default().title("Error").borders(Borders::ALL));
                 frame.render_widget(error, chunks[3]);
             }
@@ -2321,7 +2323,7 @@ impl App {
         let list_chunk = if self.search_active {
             let search_text = format!("Search: {}", self.search_input);
             let search_bar = Paragraph::new(search_text)
-                .style(Style::default().fg(Color::Yellow))
+                .style(Style::default().fg(self.color_scheme.accent))
                 .block(Block::default().title("Search").borders(Borders::ALL));
             frame.render_widget(search_bar, left_chunks[0]);
             left_chunks[1]
@@ -2361,7 +2363,7 @@ impl App {
 
                 let style = if i == self.selected_note {
                     Style::default()
-                        .fg(Color::Yellow)
+                        .fg(self.color_scheme.accent)
                         .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default()
@@ -2393,14 +2395,14 @@ impl App {
             .style(if let Some(ref status) = self.sync_status {
                 // Show red for errors, yellow for other sync status, green for success
                 if status.contains("failed") || status.contains("error") {
-                    Style::default().fg(Color::Red)
+                    Style::default().fg(self.color_scheme.error)
                 } else if status.contains("complete") {
-                    Style::default().fg(Color::Green)
+                    Style::default().fg(self.color_scheme.success)
                 } else {
-                    Style::default().fg(Color::Yellow)
+                    Style::default().fg(self.color_scheme.accent)
                 }
             } else {
-                Style::default().fg(Color::DarkGray)
+                Style::default().fg(self.color_scheme.muted)
             })
             .alignment(Alignment::Center);
         frame.render_widget(help, help_area);
@@ -2438,7 +2440,7 @@ impl App {
             // Combine metadata and highlighted content
             use ratatui::text::{Line, Text};
             let mut lines = vec![
-                Line::styled(metadata_line, Style::default().fg(Color::Blue)),
+                Line::styled(metadata_line, Style::default().fg(self.color_scheme.accent_secondary)),
                 Line::raw(""),  // Blank line
             ];
             lines.extend(highlighted_content.lines);
@@ -2503,9 +2505,9 @@ impl App {
         };
 
         let tags_style = if matches!(self.input_mode, InputMode::Tag) {
-            Style::default().fg(Color::Yellow)
+            Style::default().fg(self.color_scheme.accent)
         } else {
-            Style::default().fg(Color::Blue)
+            Style::default().fg(self.color_scheme.accent_secondary)
         };
 
         let tags = Paragraph::new(tags_text)
@@ -2523,12 +2525,12 @@ impl App {
         let help = match self.input_mode {
             InputMode::Normal | InputMode::Insert | InputMode::SettingsEdit => {
                 Paragraph::new("Enter/e: edit with $EDITOR | t: tags | q/Esc: save & quit")
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(self.color_scheme.muted))
                     .alignment(Alignment::Center)
             }
             InputMode::Tag => {
                 Paragraph::new("Type tag name | Enter: add | Backspace: remove last | Esc: exit")
-                    .style(Style::default().fg(Color::DarkGray))
+                    .style(Style::default().fg(self.color_scheme.muted))
                     .alignment(Alignment::Center)
             }
         };
@@ -2567,7 +2569,7 @@ impl App {
         let block = Block::default()
             .title(format!("Settings{} - ↑/↓: navigate | Enter/i: edit | s/q: close", mode_text))
             .borders(Borders::ALL)
-            .style(Style::default().fg(Color::Green));
+            .style(Style::default().fg(self.color_scheme.success));
 
         // Helper to create field line with selection indicator
         let field_line = |index: usize, label: String, value: String| -> Line {
@@ -2583,16 +2585,16 @@ impl App {
 
             let prefix = if selected { "→ " } else { "  " };
             let label_style = if selected {
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
             let value_style = if editing {
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)
             } else if selected {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::Yellow)
+                Style::default().fg(self.color_scheme.accent)
             };
 
             Line::from(vec![
@@ -2604,7 +2606,7 @@ impl App {
 
         let settings_text = vec![
             Line::from(vec![
-                Span::styled("Application Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Application Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
             field_line(0, "Language:              ".to_string(), self.settings.language.clone()),
@@ -2613,7 +2615,7 @@ impl App {
             field_line(3, "Auto-lock Timeout:     ".to_string(), format!("{} minutes", self.settings.auto_lock_timeout)),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Sync Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Sync Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
             field_line(4, "Sync Enabled:          ".to_string(), format!("{} (press Enter to toggle)", if self.settings.sync_enabled { "Yes" } else { "No" })),
@@ -2621,14 +2623,14 @@ impl App {
             field_line(6, "Auto-sync Interval:    ".to_string(), format!("{} minutes (0 = disabled)", self.settings.auto_sync_interval_minutes)),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Security Settings", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Security Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
             field_line(7, "Remember Password:     ".to_string(), format!("{} (press Enter to toggle, 'f' to forget)", if self.settings.remember_password { "Yes" } else { "No" })),
             Line::from(""),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Instructions: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Instructions: ", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  • Use ↑/↓ or j/k to navigate between fields"),
             Line::from("  • Press Enter, i, or Space to edit a field"),
@@ -2638,7 +2640,7 @@ impl App {
             Line::from("  • Press 'y' to trigger manual sync"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Sync Credentials (for multi-device setup): ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Sync Credentials (for multi-device setup): ", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  • Press 'p' to paste sync credentials from another device"),
             Line::from("  • Press 'c' to copy sync credentials to share with another device"),
@@ -2649,15 +2651,15 @@ impl App {
         if let Some(status) = &self.sync_status {
             all_lines.push(Line::from(""));
             all_lines.push(Line::from(vec![
-                Span::styled("Status: ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                Span::styled(status.clone(), Style::default().fg(Color::Green)),
+                Span::styled("Status: ", Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(status.clone(), Style::default().fg(self.color_scheme.success)),
             ]));
         }
         if let Some(err) = &self.error {
             all_lines.push(Line::from(""));
             all_lines.push(Line::from(vec![
-                Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-                Span::styled(err.clone(), Style::default().fg(Color::Red)),
+                Span::styled("Error: ", Style::default().fg(self.color_scheme.error).add_modifier(Modifier::BOLD)),
+                Span::styled(err.clone(), Style::default().fg(self.color_scheme.error)),
             ]));
         }
 
@@ -2692,11 +2694,11 @@ impl App {
         let block = Block::default()
             .title("Keyboard Shortcuts - Press ? or q to close")
             .borders(Borders::ALL)
-            .style(Style::default().fg(Color::Yellow));
+            .style(Style::default().fg(self.color_scheme.accent));
 
         let help_text = vec![
             Line::from(vec![
-                Span::styled("UNLOCK SCREEN", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("UNLOCK SCREEN", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  Type                  Enter password"),
             Line::from("  Enter                 Unlock database"),
@@ -2705,7 +2707,7 @@ impl App {
             Line::from("  Ctrl+q / Esc          Quit application"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE LIST", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("NOTE LIST", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  /                     Enter search mode"),
             Line::from("  y                     Sync notes (if configured)"),
@@ -2719,7 +2721,7 @@ impl App {
             Line::from("  Ctrl+q                Quit application"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("SEARCH MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("SEARCH MODE", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  Type                  Enter search query"),
             Line::from("  #tag                  Search by tag"),
@@ -2730,7 +2732,7 @@ impl App {
             Line::from("  ↑ / ↓                 Navigate results"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE PREVIEW - VIEW MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("NOTE PREVIEW - VIEW MODE", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  Enter / e             Edit with external $EDITOR"),
             Line::from("  t                     Enter tag mode"),
@@ -2738,7 +2740,7 @@ impl App {
             Line::from("  q / Esc               Save and return to list"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE PREVIEW - TAG MODE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("NOTE PREVIEW - TAG MODE", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  Type                  Enter tag name"),
             Line::from("  Enter                 Add tag"),
@@ -2747,7 +2749,7 @@ impl App {
             Line::from("  Esc                   Exit to normal mode"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("SETTINGS", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("SETTINGS", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  j/k or ↑/↓            Navigate between fields"),
             Line::from("  Enter / i / Space     Edit selected field"),
@@ -2758,7 +2760,7 @@ impl App {
             Line::from("  s / q                 Close settings panel"),
             Line::from(""),
             Line::from(vec![
-                Span::styled("GLOBAL", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("GLOBAL", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from("  ?                     Show this help screen"),
         ];
@@ -2789,7 +2791,7 @@ impl App {
 
         // Create background
         frame.render_widget(
-            Block::default().style(Style::default().bg(Color::Black)),
+            Block::default().style(Style::default().bg(self.color_scheme.background)),
             modal_area,
         );
 
@@ -2797,7 +2799,7 @@ impl App {
         let block = Block::default()
             .title(" Sync Credentials (Copy This Text) ")
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan));
+            .border_style(Style::default().fg(self.color_scheme.title));
 
         // Split into content area and help area
         let chunks = Layout::default()
@@ -2813,7 +2815,7 @@ impl App {
             Line::from(""),
             Line::from(Span::styled(
                 "Copy the text below and paste it into another Jottery client:",
-                Style::default().fg(Color::Yellow),
+                Style::default().fg(self.color_scheme.accent),
             )),
             Line::from(""),
             Line::from(Span::raw(credentials)),
@@ -2821,17 +2823,17 @@ impl App {
 
         let paragraph = Paragraph::new(text)
             .wrap(Wrap { trim: false })
-            .style(Style::default().fg(Color::White));
+            .style(Style::default().fg(self.color_scheme.foreground));
 
         frame.render_widget(paragraph, chunks[0]);
 
         // Render help text
         let help = Paragraph::new(Line::from(vec![
-            Span::styled("Press ", Style::default().fg(Color::Gray)),
-            Span::styled("Esc", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled(" or ", Style::default().fg(Color::Gray)),
-            Span::styled("Enter", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-            Span::styled(" to close", Style::default().fg(Color::Gray)),
+            Span::styled("Press ", Style::default().fg(self.color_scheme.muted)),
+            Span::styled("Esc", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" or ", Style::default().fg(self.color_scheme.muted)),
+            Span::styled("Enter", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
+            Span::styled(" to close", Style::default().fg(self.color_scheme.muted)),
         ]))
         .alignment(Alignment::Center);
 
@@ -2857,7 +2859,7 @@ impl App {
 
         // Create background
         frame.render_widget(
-            Block::default().style(Style::default().bg(Color::Black)),
+            Block::default().style(Style::default().bg(self.color_scheme.background)),
             modal_area,
         );
 
@@ -2865,7 +2867,7 @@ impl App {
         let block = Block::default()
             .title(" Paste Sync Credentials ")
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan));
+            .border_style(Style::default().fg(self.color_scheme.title));
 
         // Split into content area and help area
         let chunks = Layout::default()
@@ -2883,27 +2885,27 @@ impl App {
         // Render instruction text
         let instruction = Paragraph::new(Line::from(Span::styled(
             "Paste the base64 credentials text from another Jottery client:",
-            Style::default().fg(Color::Yellow),
+            Style::default().fg(self.color_scheme.accent),
         )));
         frame.render_widget(instruction, chunks[0]);
 
         // Render input field
         let input = Paragraph::new(Line::from(vec![
             Span::raw(&self.credential_input),
-            Span::styled("█", Style::default().fg(Color::Cyan)), // Cursor
+            Span::styled("█", Style::default().fg(self.color_scheme.title)), // Cursor
         ]))
         .wrap(Wrap { trim: false })
-        .style(Style::default().fg(Color::White));
+        .style(Style::default().fg(self.color_scheme.foreground));
 
         frame.render_widget(input, chunks[1]);
 
         // Render help text
         let help = Paragraph::new(Line::from(vec![
-            Span::styled("Press ", Style::default().fg(Color::Gray)),
-            Span::styled("Enter", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            Span::styled(" to paste | ", Style::default().fg(Color::Gray)),
-            Span::styled("Esc", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-            Span::styled(" to cancel", Style::default().fg(Color::Gray)),
+            Span::styled("Press ", Style::default().fg(self.color_scheme.muted)),
+            Span::styled("Enter", Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)),
+            Span::styled(" to paste | ", Style::default().fg(self.color_scheme.muted)),
+            Span::styled("Esc", Style::default().fg(self.color_scheme.error).add_modifier(Modifier::BOLD)),
+            Span::styled(" to cancel", Style::default().fg(self.color_scheme.muted)),
         ]))
         .alignment(Alignment::Center);
 

@@ -120,12 +120,15 @@ impl<'a> SettingsRepository<'a> {
     }
 }
 
-/// Parse theme string
+/// Parse theme string (with backward compatibility for old values)
 fn parse_theme(s: &str) -> Theme {
     match s.to_lowercase().as_str() {
-        "light" => Theme::Light,
-        "dark" => Theme::Dark,
-        _ => Theme::Auto,
+        // Legacy compatibility - map old values to new scheme names
+        "light" => Theme::from_name("default-light"),
+        "dark" => Theme::from_name("default-dark"),
+        "auto" => Theme::from_name("default-dark"),
+        // New color scheme names
+        _ => Theme::from_name(s),
     }
 }
 

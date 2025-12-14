@@ -21,28 +21,66 @@ fn default_auto_sync_interval() -> i32 {
     5 // Default to 5 minutes like web client
 }
 
-/// Theme options
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+/// Theme options (color scheme names)
+/// Changed from Light/Dark/Auto to full color scheme names
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(untagged)]
 pub enum Theme {
-    Light,
-    Dark,
-    Auto,
+    /// New color scheme format
+    Scheme(String),
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        Self::Auto
+        Self::Scheme("default-dark".to_string())
     }
 }
 
 impl std::fmt::Display for Theme {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Light => write!(f, "light"),
-            Self::Dark => write!(f, "dark"),
-            Self::Auto => write!(f, "auto"),
+            Self::Scheme(name) => {
+                // Convert internal name to display name
+                use crate::ui::ColorScheme;
+                write!(f, "{}", ColorScheme::internal_to_display(name))
+            }
         }
+    }
+}
+
+impl Theme {
+    /// Get the internal scheme name
+    pub fn scheme_name(&self) -> &str {
+        match self {
+            Self::Scheme(name) => name,
+        }
+    }
+
+    /// Create from internal name
+    pub fn from_name(name: &str) -> Self {
+        Self::Scheme(name.to_string())
+    }
+
+    /// Cycle to next color scheme
+    pub fn cycle_next(&mut self) {
+        let schemes = vec![
+            "default-dark",
+            "default-light",
+            "monokai",
+            "solarized-dark",
+            "solarized-light",
+            "nord",
+            "dracula",
+            "gruvbox-dark",
+            "gruvbox-light",
+            "tokyo-night",
+            "catppuccin",
+        ];
+
+        let current = self.scheme_name();
+        let current_idx = schemes.iter().position(|&s| s == current).unwrap_or(0);
+        let next_idx = (current_idx + 1) % schemes.len();
+        *self = Self::Scheme(schemes[next_idx].to_string());
     }
 }
 
@@ -78,7 +116,7 @@ impl UserSettings {
     pub fn default() -> Self {
         Self {
             language: "en-GB".to_string(),
-            theme: Theme::Auto,
+            theme: Theme::default(),
             sort_order: SortOrder::Recent,
             auto_lock_timeout: 15, // 15 minutes
             sync_enabled: false,
@@ -117,7 +155,7 @@ mod tests {
     fn test_default_settings() {
         let settings = UserSettings::default();
         assert_eq!(settings.language, "en-GB");
-        assert_eq!(settings.theme, Theme::Auto);
+        assert_eq!(settings.theme.scheme_name(), "default-dark");
         assert_eq!(settings.sort_order, SortOrder::Recent);
         assert_eq!(settings.auto_lock_timeout, 15);
         assert!(!settings.sync_enabled);
