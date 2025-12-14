@@ -16,7 +16,6 @@ impl Database {
     /// * `password` - Password for SQLCipher encryption (derived from user password)
     pub fn open<P: AsRef<Path>>(path: P, password: &str) -> Result<Self> {
         let path = path.as_ref();
-        let is_new = !path.exists();
 
         info!("Opening database at: {}", path.display());
 
@@ -43,13 +42,8 @@ impl Database {
 
         let mut db = Self { conn };
 
-        // Run migrations if this is a new database
-        if is_new {
-            info!("New database detected, running migrations...");
-            db.run_migrations()?;
-        } else {
-            debug!("Existing database opened successfully");
-        }
+        // Always run migrations (will skip already-applied migrations)
+        db.run_migrations()?;
 
         Ok(db)
     }
@@ -73,12 +67,30 @@ impl Database {
     fn run_migrations(&mut self) -> Result<()> {
         info!("Running database migrations...");
 
-        // Read and execute the migration SQL
-        let migration_sql = include_str!("../migrations/001_initial.sql");
+        // Get current schema version (0 if table doesn't exist)
+        let current_version: i32 = self.conn
+            .query_row("SELECT MAX(version) FROM schema_version", [], |row| row.get(0))
+            .unwrap_or(0);
 
-        self.conn
-            .execute_batch(migration_sql)
-            .context("Failed to run migrations")?;
+        info!("Current schema version: {}", current_version);
+
+        // List of all migrations
+        let migrations = vec![
+            (1, include_str!("../migrations/001_initial.sql")),
+            (2, include_str!("../migrations/002_add_auto_sync_interval.sql")),
+            (3, include_str!("../migrations/003_add_remember_password.sql")),
+        ];
+
+        // Run pending migrations
+        for (version, sql) in migrations {
+            if version > current_version {
+                info!("Applying migration {}", version);
+                self.conn
+                    .execute_batch(sql)
+                    .context(format!("Failed to apply migration {}", version))?;
+                info!("Migration {} applied successfully", version);
+            }
+        }
 
         info!("Migrations completed successfully");
         Ok(())
