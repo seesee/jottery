@@ -282,17 +282,18 @@
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-auto p-4">
+      <div class="flex-1 overflow-auto {previewType === 'image' ? '' : 'p-4'}">
         {#if isLoadingPreview}
           <div class="flex items-center justify-center h-full">
             <div class="text-gray-500 dark:text-gray-400">Loading preview...</div>
           </div>
         {:else if previewType === 'image' && previewContent}
-          <div class="flex items-center justify-center h-full">
+          <div class="w-full h-full flex items-center justify-center p-4">
             <img
               src={previewContent}
               alt={filenames.get(previewAttachment.id)}
               class="max-w-full max-h-full object-contain"
+              style="max-height: calc(90vh - 120px);"
             />
           </div>
         {:else if previewType === 'text' && previewContent}
