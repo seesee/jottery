@@ -34,12 +34,24 @@
   let isAttachmentsExpanded: boolean = false;
   let dragCounter: number = 0; // Track nested drag events
   let codeEditor: any = null; // Reference to CodeEditor component
+  let showMoreMenu: boolean = false;
+  let showInfoModal: boolean = false;
 
   // Compute preview HTML
   $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
 
   // Check if preview is available for current language
   $: canPreview = language === 'markdown' || language === 'html';
+
+  // Compute note statistics
+  $: noteStats = {
+    characters: content.length,
+    charactersNoSpaces: content.replace(/\s/g, '').length,
+    words: content.trim().split(/\s+/).filter(s => s.length > 0).length,
+    lines: content.split('\n').length,
+    tags: tags.length,
+    attachments: attachments.length,
+  };
 
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
@@ -212,6 +224,9 @@
     }
     console.log('[EditorPane] Selected note ID:', $selectedNote.id);
 
+    // Close menu first
+    showMoreMenu = false;
+
     try {
       console.log('[EditorPane] Calling noteService.deleteNote...');
       await noteService.deleteNote($selectedNote.id);
@@ -238,11 +253,13 @@
 
   function handleWordWrapToggle() {
     wordWrap = !wordWrap;
+    showMoreMenu = false;
     handleInput();
   }
 
   function handlePreviewToggle() {
     showPreview = !showPreview;
+    showMoreMenu = false;
     console.log('[EditorPane] Preview toggled to:', showPreview);
     // Save immediately for preview toggle (no debounce)
     if (saveTimeout) clearTimeout(saveTimeout);
@@ -302,6 +319,8 @@
   async function handleCopy() {
     if (!content) return;
 
+    showMoreMenu = false;
+
     try {
       await navigator.clipboard.writeText(content);
       // Could show a toast notification here
@@ -327,6 +346,8 @@
 
   function handleExport() {
     if (!content || !$selectedNote) return;
+
+    showMoreMenu = false;
 
     // Map syntax language to file extension
     const extensionMap: Record<string, string> = {
@@ -367,6 +388,23 @@
     URL.revokeObjectURL(url);
 
     console.log(`Note exported as ${filename}.${extension}`);
+  }
+
+  function handleShowInfo() {
+    showMoreMenu = false;
+    showInfoModal = true;
+  }
+
+  function toggleMoreMenu() {
+    showMoreMenu = !showMoreMenu;
+  }
+
+  // Close menu when clicking outside
+  function handleClickOutside(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.more-menu-container')) {
+      showMoreMenu = false;
+    }
   }
 
   // Handle drag and drop for files
@@ -410,6 +448,8 @@
   }
 </script>
 
+<svelte:window on:click={handleClickOutside} />
+
 {#if isEditing && $selectedNote}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
@@ -419,7 +459,7 @@
     on:drop={handleEditorDrop}
   >
     <!-- Toolbar -->
-    <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap items-center justify-between gap-2">
+    <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center gap-2">
       <!-- Mobile: Back Button -->
       {#if onBackToList}
         <button
@@ -434,84 +474,138 @@
         </button>
       {/if}
 
-      <div class="flex gap-3">
-        <button
-          on:click={handleTogglePin}
-          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
-          title={$selectedNote.pinned ? 'Unpin' : 'Pin'}
-        >
-          {$selectedNote.pinned ? '⭐ Pinned' : '☆ Pin'}
-        </button>
-        <button
-          on:click={handleDelete}
-          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm text-red-600 whitespace-nowrap"
-          title="Delete"
-        >
-          🗑️ Delete
-        </button>
-        <button
-          on:click={handleCopy}
-          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
-          title="Copy note content"
-        >
-          📋 Copy
-        </button>
-        <button
-          on:click={handleExport}
-          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
-          title="Export note to file"
-        >
-          💾 Export
-        </button>
-      </div>
-
-      <div class="flex gap-2 items-center flex-1 justify-end">
-        <!-- Preview Toggle (only for markdown/html) - Left of dropdown -->
-        {#if canPreview}
-          <button
-            on:click={handlePreviewToggle}
-            class="px-3 py-1.5 rounded text-sm whitespace-nowrap flex-shrink-0 {showPreview ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
-            title="Toggle preview"
-          >
-            {showPreview ? '📝 Edit' : '👁️ Preview'}
-          </button>
+      <!-- Pin Button (icon only) -->
+      <button
+        on:click={handleTogglePin}
+        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
+        title={$selectedNote.pinned ? 'Unpin note' : 'Pin note'}
+        aria-label={$selectedNote.pinned ? 'Unpin note' : 'Pin note'}
+      >
+        {#if $selectedNote.pinned}
+          <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        {:else}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
         {/if}
+      </button>
 
-        <!-- Syntax Language Selector -->
-        <select
-          value={language}
-          on:change={handleLanguageChange}
-          class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          title="Syntax highlighting"
-        >
-          <option value="plain">Plain Text</option>
-          <option value="markdown">Markdown</option>
-          <option value="javascript">JavaScript</option>
-          <option value="python">Python</option>
-          <option value="perl">Perl</option>
-          <option value="json">JSON</option>
-          <option value="html">HTML</option>
-          <option value="css">CSS</option>
-          <option value="sql">SQL</option>
-          <option value="bash">Bash</option>
-        </select>
+      <!-- Syntax Language Selector -->
+      <select
+        value={language}
+        on:change={handleLanguageChange}
+        class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+        title="Syntax highlighting"
+      >
+        <option value="plain">Plain Text</option>
+        <option value="markdown">Markdown</option>
+        <option value="javascript">JavaScript</option>
+        <option value="python">Python</option>
+        <option value="perl">Perl</option>
+        <option value="json">JSON</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+        <option value="sql">SQL</option>
+        <option value="bash">Bash</option>
+      </select>
 
-        <!-- Word Wrap Toggle -->
+      <div class="flex-1"></div>
+
+      <!-- More Menu -->
+      <div class="more-menu-container relative flex-shrink-0">
         <button
-          on:click={handleWordWrapToggle}
-          class="px-3 py-1.5 rounded text-sm whitespace-nowrap flex-shrink-0 {wordWrap ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'active:bg-gray-100 dark:active:bg-gray-800'}"
-          title="Toggle word wrap"
+          on:click={toggleMoreMenu}
+          class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+          title="More actions"
+          aria-label="More actions"
         >
-          {wordWrap ? 'Wrap' : 'No Wrap'}
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+          </svg>
         </button>
 
-        <button
-          on:click={handleClose}
-          class="px-4 py-2.5 min-h-11 rounded active:bg-gray-100 dark:active:bg-gray-800 text-sm whitespace-nowrap"
-        >
-          ✕ Close
-        </button>
+        {#if showMoreMenu}
+          <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+            <div class="py-1">
+              {#if canPreview}
+                <button
+                  on:click={handlePreviewToggle}
+                  class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                >
+                  {#if showPreview}
+                    <span>📝</span>
+                    <span>Edit Mode</span>
+                  {:else}
+                    <span>👁️</span>
+                    <span>Preview</span>
+                  {/if}
+                </button>
+              {/if}
+
+              <button
+                on:click={handleWordWrapToggle}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                {#if wordWrap}
+                  <span>↩️</span>
+                  <span>Word Wrap: On</span>
+                {:else}
+                  <span>➡️</span>
+                  <span>Word Wrap: Off</span>
+                {/if}
+              </button>
+
+              <button
+                on:click={handleCopy}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span>📋</span>
+                <span>Copy Content</span>
+              </button>
+
+              <button
+                on:click={handleExport}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span>💾</span>
+                <span>Export to File</span>
+              </button>
+
+              <button
+                on:click={handleShowInfo}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span>ℹ️</span>
+                <span>Info</span>
+              </button>
+
+              <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+
+              <button
+                on:click={handleDelete}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
+              >
+                <span>🗑️</span>
+                <span>Delete Note</span>
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
+
+      <!-- Close Button (icon only) -->
+      <button
+        on:click={handleClose}
+        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
+        title="Close note"
+        aria-label="Close note"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
 
     <!-- Tags Input -->
@@ -618,6 +712,82 @@
     <div class="text-center">
       <p class="text-lg mb-2">No note selected</p>
       <p class="text-sm">Select a note from the list or create a new one</p>
+    </div>
+  </div>
+{/if}
+
+<!-- Info Modal -->
+{#if showInfoModal && $selectedNote}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={() => showInfoModal = false}>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6" on:click|stopPropagation>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Note Information</h2>
+        <button
+          on:click={() => showInfoModal = false}
+          class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+          aria-label="Close"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div class="grid grid-cols-2 gap-2">
+          <div class="text-gray-600 dark:text-gray-400">Characters:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.characters.toLocaleString()}</div>
+
+          <div class="text-gray-600 dark:text-gray-400">Characters (no spaces):</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.charactersNoSpaces.toLocaleString()}</div>
+
+          <div class="text-gray-600 dark:text-gray-400">Words:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.words.toLocaleString()}</div>
+
+          <div class="text-gray-600 dark:text-gray-400">Lines:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.lines.toLocaleString()}</div>
+
+          <div class="text-gray-600 dark:text-gray-400">Tags:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.tags}</div>
+
+          <div class="text-gray-600 dark:text-gray-400">Attachments:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.attachments}</div>
+        </div>
+
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+          <div class="text-gray-600 dark:text-gray-400 mb-2">Syntax:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100 capitalize">{language.replace('-', ' ')}</div>
+        </div>
+
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+          <div class="text-gray-600 dark:text-gray-400 mb-2">Created:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.createdAt)}</div>
+        </div>
+
+        <div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">Modified:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.modifiedAt)}</div>
+        </div>
+
+        <div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">Version:</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">v{$selectedNote.version}</div>
+        </div>
+
+        <div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">Note ID:</div>
+          <div class="font-mono text-xs text-gray-900 dark:text-gray-100 break-all">{$selectedNote.id}</div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button
+          on:click={() => showInfoModal = false}
+          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Close
+        </button>
+      </div>
     </div>
   </div>
 {/if}
