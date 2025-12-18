@@ -18,7 +18,7 @@ import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
-import { cryptoService, encryptJSON } from './crypto';
+import { cryptoService, encryptJSON, decryptJSON } from './crypto';
 import { noteService } from './noteService';
 import { searchService } from './searchService';
 import { notes, settings } from '../stores/appStore';
@@ -250,7 +250,7 @@ class SyncService {
           // Single-blob format: tags[0] is a JSON string containing encrypted array
           try {
             const encryptedTagsBlob = JSON.parse(note.tags[0]);
-            const decryptedTagsArray = await cryptoService.decryptJSON<string[]>(
+            const decryptedTagsArray = await decryptJSON<string[]>(
               encryptedTagsBlob,
               masterKey.key
             );
