@@ -9,7 +9,7 @@ Jottery is a simple, searchable, and privacy-focused scratchpad/notes applicatio
 *   **Self-Hostable**: You have full control over your data by hosting the sync server yourself.
 *   **Search**: Quickly find your notes with a powerful full-text search.
 *   **Tagging**: Organise your notes with tags.
-*   **Attachments**: Add attachments to your notes.
+*   **Attachments**: Add, preview, and download attachments to your notes. 
 *   **Code Snippets**: A rich text editor with support for various programming languages.
 *   **Many handy features**: Export notes, preview html, document info, and markdown documents in-editor.
 
