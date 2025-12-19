@@ -8,6 +8,7 @@
   import AttachmentList from './AttachmentList.svelte';
   import FileUpload from './FileUpload.svelte';
   import { marked } from 'marked';
+  import hljs from 'highlight.js';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -56,13 +57,23 @@
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
       try {
-        // Configure marked for better rendering
+        // Configure marked for better rendering with syntax highlighting
         marked.setOptions({
           breaks: true, // Convert \n to <br>
           gfm: true, // GitHub Flavored Markdown
           headerIds: true,
           mangle: false,
           sanitize: false,
+          highlight: function(code, language) {
+            if (language && hljs.getLanguage(language)) {
+              try {
+                return hljs.highlight(code, { language }).value;
+              } catch (err) {
+                console.error('Syntax highlighting error:', err);
+              }
+            }
+            return hljs.highlightAuto(code).value;
+          }
         });
         return marked.parse(text);
       } catch (error) {

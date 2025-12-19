@@ -48,7 +48,7 @@ class NoteService {
       modifiedAt: options?.modifiedAt || now,
       pinned: options?.pinned || false,
       wordWrap: options?.wordWrap ?? true,
-      syntaxLanguage: options?.syntaxLanguage || 'plain',
+      syntaxLanguage: options?.syntaxLanguage || 'markdown',
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
       attachments: options?.attachments || [],

@@ -182,7 +182,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   deleted: false,
   version: 1,
   wordWrap: true,
-  syntaxLanguage: 'plain',
+  syntaxLanguage: 'markdown',
   showPreview: false,
 };
 

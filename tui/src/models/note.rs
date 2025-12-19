@@ -40,7 +40,7 @@ pub enum SyntaxLanguage {
 
 impl Default for SyntaxLanguage {
     fn default() -> Self {
-        Self::Plain
+        Self::Markdown
     }
 }
 
@@ -129,7 +129,7 @@ impl Note {
             sync_hash: None,
             version: 1,
             word_wrap: true,
-            syntax_language: SyntaxLanguage::Plain,
+            syntax_language: SyntaxLanguage::Markdown,
         }
     }
 
