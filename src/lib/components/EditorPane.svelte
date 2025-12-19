@@ -9,6 +9,7 @@
   import FileUpload from './FileUpload.svelte';
   import { marked } from 'marked';
   import hljs from 'highlight.js';
+  import 'highlight.js/styles/github.css';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -64,18 +65,34 @@
           headerIds: true,
           mangle: false,
           sanitize: false,
-          highlight: function(code, language) {
-            if (language && hljs.getLanguage(language)) {
-              try {
-                return hljs.highlight(code, { language }).value;
-              } catch (err) {
-                console.error('Syntax highlighting error:', err);
-              }
-            }
-            return hljs.highlightAuto(code).value;
-          }
         });
-        return marked.parse(text);
+
+        // Set up custom renderer for code blocks
+        const renderer = new marked.Renderer();
+        const originalCode = renderer.code.bind(renderer);
+
+        renderer.code = function(code, language, isEscaped) {
+          // Highlight the code if language is specified
+          if (language && hljs.getLanguage(language)) {
+            try {
+              const highlighted = hljs.highlight(code, { language }).value;
+              return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+            } catch (err) {
+              console.error('Syntax highlighting error:', err);
+            }
+          }
+          // Auto-detect if no language specified
+          try {
+            const highlighted = hljs.highlightAuto(code).value;
+            return `<pre><code class="hljs">${highlighted}</code></pre>`;
+          } catch (err) {
+            console.error('Auto-highlight error:', err);
+          }
+          // Fallback to default rendering
+          return originalCode(code, language, isEscaped);
+        };
+
+        return marked.parse(text, { renderer });
       } catch (error) {
         console.error('Markdown parsing error:', error);
         return `<p>Error rendering markdown: ${error}</p>`;
