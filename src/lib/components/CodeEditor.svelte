@@ -9,7 +9,7 @@
   import { html } from '@codemirror/lang-html';
   import { css } from '@codemirror/lang-css';
   import { sql } from '@codemirror/lang-sql';
-  import { StreamLanguage, LanguageDescription } from '@codemirror/language';
+  import { StreamLanguage, LanguageDescription, LanguageSupport } from '@codemirror/language';
   import { perl } from '@codemirror/legacy-modes/mode/perl';
   import { shell } from '@codemirror/legacy-modes/mode/shell';
   import { oneDark } from '@codemirror/theme-one-dark';
@@ -85,11 +85,11 @@
             LanguageDescription.of({
               name: 'bash',
               alias: ['sh', 'shell'],
-              load: async () => StreamLanguage.define(shell)
+              load: async () => new LanguageSupport(StreamLanguage.define(shell))
             }),
             LanguageDescription.of({
               name: 'perl',
-              load: async () => StreamLanguage.define(perl)
+              load: async () => new LanguageSupport(StreamLanguage.define(perl))
             }),
           ]
         });
@@ -102,9 +102,9 @@
       case 'sql':
         return sql();
       case 'bash':
-        return StreamLanguage.define(shell);
+        return new LanguageSupport(StreamLanguage.define(shell));
       case 'perl':
-        return StreamLanguage.define(perl);
+        return new LanguageSupport(StreamLanguage.define(perl));
       default:
         return [];
     }
