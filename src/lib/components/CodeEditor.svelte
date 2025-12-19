@@ -9,7 +9,7 @@
   import { html } from '@codemirror/lang-html';
   import { css } from '@codemirror/lang-css';
   import { sql } from '@codemirror/lang-sql';
-  import { StreamLanguage } from '@codemirror/language';
+  import { StreamLanguage, LanguageDescription } from '@codemirror/language';
   import { perl } from '@codemirror/legacy-modes/mode/perl';
   import { shell } from '@codemirror/legacy-modes/mode/shell';
   import { oneDark } from '@codemirror/theme-one-dark';
@@ -56,14 +56,41 @@
         return markdown({
           base: markdownLanguage,
           codeLanguages: [
-            { name: 'javascript', alias: ['js', 'jsx', 'ts', 'typescript'], load: () => Promise.resolve(javascript()) },
-            { name: 'python', alias: ['py'], load: () => Promise.resolve(python()) },
-            { name: 'json', load: () => Promise.resolve(json()) },
-            { name: 'html', load: () => Promise.resolve(html()) },
-            { name: 'css', load: () => Promise.resolve(css()) },
-            { name: 'sql', load: () => Promise.resolve(sql()) },
-            { name: 'bash', alias: ['sh', 'shell'], load: () => Promise.resolve(StreamLanguage.define(shell)) },
-            { name: 'perl', load: () => Promise.resolve(StreamLanguage.define(perl)) },
+            LanguageDescription.of({
+              name: 'javascript',
+              alias: ['js', 'jsx', 'ts', 'typescript'],
+              load: async () => javascript()
+            }),
+            LanguageDescription.of({
+              name: 'python',
+              alias: ['py'],
+              load: async () => python()
+            }),
+            LanguageDescription.of({
+              name: 'json',
+              load: async () => json()
+            }),
+            LanguageDescription.of({
+              name: 'html',
+              load: async () => html()
+            }),
+            LanguageDescription.of({
+              name: 'css',
+              load: async () => css()
+            }),
+            LanguageDescription.of({
+              name: 'sql',
+              load: async () => sql()
+            }),
+            LanguageDescription.of({
+              name: 'bash',
+              alias: ['sh', 'shell'],
+              load: async () => StreamLanguage.define(shell)
+            }),
+            LanguageDescription.of({
+              name: 'perl',
+              load: async () => StreamLanguage.define(perl)
+            }),
           ]
         });
       case 'json':
