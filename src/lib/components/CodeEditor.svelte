@@ -4,13 +4,14 @@
   import { EditorState, Compartment } from '@codemirror/state';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';
-  import { markdown } from '@codemirror/lang-markdown';
+  import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
   import { json } from '@codemirror/lang-json';
   import { html } from '@codemirror/lang-html';
   import { css } from '@codemirror/lang-css';
   import { sql } from '@codemirror/lang-sql';
   import { StreamLanguage } from '@codemirror/language';
   import { perl } from '@codemirror/legacy-modes/mode/perl';
+  import { shell } from '@codemirror/legacy-modes/mode/shell';
   import { oneDark } from '@codemirror/theme-one-dark';
   import { lineNumbers } from '@codemirror/view';
   import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
@@ -51,7 +52,20 @@
       case 'python':
         return python();
       case 'markdown':
-        return markdown();
+        // Configure markdown with syntax highlighting for code blocks
+        return markdown({
+          base: markdownLanguage,
+          codeLanguages: [
+            { name: 'javascript', alias: ['js', 'jsx', 'ts', 'typescript'], load: () => Promise.resolve(javascript()) },
+            { name: 'python', alias: ['py'], load: () => Promise.resolve(python()) },
+            { name: 'json', load: () => Promise.resolve(json()) },
+            { name: 'html', load: () => Promise.resolve(html()) },
+            { name: 'css', load: () => Promise.resolve(css()) },
+            { name: 'sql', load: () => Promise.resolve(sql()) },
+            { name: 'bash', alias: ['sh', 'shell'], load: () => Promise.resolve(StreamLanguage.define(shell)) },
+            { name: 'perl', load: () => Promise.resolve(StreamLanguage.define(perl)) },
+          ]
+        });
       case 'json':
         return json();
       case 'html':
@@ -61,8 +75,7 @@
       case 'sql':
         return sql();
       case 'bash':
-        // Use javascript for bash as @codemirror/lang-bash doesn't exist
-        return javascript();
+        return StreamLanguage.define(shell);
       case 'perl':
         return StreamLanguage.define(perl);
       default:
