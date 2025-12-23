@@ -115,6 +115,8 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
     let mut in_table = false;
     let mut in_table_head = false;
     let mut in_heading = false;
+    let mut in_list_item = false;
+    let mut list_item_started = false;
     let mut table_cells: Vec<String> = Vec::new();
     let mut current_cell_text = String::new();
     let mut table_rows: Vec<Vec<String>> = Vec::new();
@@ -210,8 +212,17 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                     Tag::Paragraph => {
                         // Paragraphs just group text, no special styling needed
                     }
-                    Tag::List(_) | Tag::Item => {
-                        // Lists - just pass through for now
+                    Tag::List(_) => {
+                        // List started - no special action needed
+                    }
+                    Tag::Item => {
+                        // Flush current line before list item
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
+                        in_list_item = true;
+                        list_item_started = false;
                     }
                     _ => {}
                 }
@@ -346,6 +357,7 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                     }
                     TagEnd::Item => {
                         // End list item with line break
+                        in_list_item = false;
                         if !current_line_spans.is_empty() {
                             lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
@@ -360,6 +372,11 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                 } else if in_table {
                     // Collect text for current table cell
                     current_cell_text.push_str(&text);
+                } else if in_list_item && !list_item_started {
+                    // Add bullet point at start of list item
+                    list_item_started = true;
+                    current_line_spans.push(Span::raw("• "));
+                    current_line_spans.push(Span::styled(text.to_string(), current_style));
                 } else {
                     current_line_spans.push(Span::styled(text.to_string(), current_style));
                 }
@@ -369,6 +386,11 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                     // In tables, just add code text without styling
                     current_cell_text.push_str(&code);
                 } else {
+                    // Add bullet point at start of list item if not started
+                    if in_list_item && !list_item_started {
+                        list_item_started = true;
+                        current_line_spans.push(Span::raw("• "));
+                    }
                     // Inline code -> yellow
                     current_line_spans.push(Span::styled(
                         code.to_string(),
