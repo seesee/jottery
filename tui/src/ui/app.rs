@@ -99,299 +99,175 @@ fn strip_markdown(text: &str) -> String {
     cleaned.trim().to_string()
 }
 
-/// Parse inline markdown formatting and return styled spans
-fn parse_inline_markdown(text: &str) -> Vec<Span<'static>> {
-    use ratatui::style::{Style, Modifier, Color};
-    use ratatui::text::Span;
-
-    let mut spans = Vec::new();
-    let mut current_text = String::new();
-    let mut chars = text.chars().peekable();
-    let mut current_style = Style::default();
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '`' => {
-                // Inline code
-                if !current_text.is_empty() {
-                    spans.push(Span::styled(current_text.clone(), current_style));
-                    current_text.clear();
-                }
-
-                let mut code = String::new();
-                while let Some(c) = chars.next() {
-                    if c == '`' {
-                        break;
-                    }
-                    code.push(c);
-                }
-
-                spans.push(Span::styled(
-                    code,
-                    Style::default().fg(Color::Yellow)
-                ));
-            }
-            '*' if chars.peek() == Some(&'*') => {
-                // Bold **text**
-                chars.next(); // consume second *
-
-                if !current_text.is_empty() {
-                    spans.push(Span::styled(current_text.clone(), current_style));
-                    current_text.clear();
-                }
-
-                let mut bold_text = String::new();
-                let mut found_end = false;
-
-                while let Some(c) = chars.next() {
-                    if c == '*' && chars.peek() == Some(&'*') {
-                        chars.next(); // consume second *
-                        found_end = true;
-                        break;
-                    }
-                    bold_text.push(c);
-                }
-
-                if found_end {
-                    spans.push(Span::styled(
-                        bold_text,
-                        Style::default()
-                            .fg(Color::White)
-                            .add_modifier(Modifier::BOLD)
-                    ));
-                } else {
-                    current_text.push_str("**");
-                    current_text.push_str(&bold_text);
-                }
-            }
-            '*' => {
-                // Italic *text* - use cyan color instead of ITALIC modifier (better terminal support)
-                if !current_text.is_empty() {
-                    spans.push(Span::styled(current_text.clone(), current_style));
-                    current_text.clear();
-                }
-
-                let mut italic_text = String::new();
-                let mut found_end = false;
-
-                while let Some(c) = chars.next() {
-                    if c == '*' {
-                        found_end = true;
-                        break;
-                    }
-                    italic_text.push(c);
-                }
-
-                if found_end {
-                    spans.push(Span::styled(
-                        italic_text,
-                        Style::default().fg(Color::Cyan)
-                    ));
-                } else {
-                    current_text.push('*');
-                    current_text.push_str(&italic_text);
-                }
-            }
-            '_' if chars.peek() == Some(&'_') => {
-                // Bold __text__
-                chars.next(); // consume second _
-
-                if !current_text.is_empty() {
-                    spans.push(Span::styled(current_text.clone(), current_style));
-                    current_text.clear();
-                }
-
-                let mut bold_text = String::new();
-                let mut found_end = false;
-
-                while let Some(c) = chars.next() {
-                    if c == '_' && chars.peek() == Some(&'_') {
-                        chars.next(); // consume second _
-                        found_end = true;
-                        break;
-                    }
-                    bold_text.push(c);
-                }
-
-                if found_end {
-                    spans.push(Span::styled(
-                        bold_text,
-                        Style::default()
-                            .fg(Color::White)
-                            .add_modifier(Modifier::BOLD)
-                    ));
-                } else {
-                    current_text.push_str("__");
-                    current_text.push_str(&bold_text);
-                }
-            }
-            '[' => {
-                // Links [text](url) - show text part with underline
-                if !current_text.is_empty() {
-                    spans.push(Span::styled(current_text.clone(), current_style));
-                    current_text.clear();
-                }
-
-                let mut link_text = String::new();
-                let mut found_bracket = false;
-
-                while let Some(c) = chars.next() {
-                    if c == ']' {
-                        found_bracket = true;
-                        break;
-                    }
-                    link_text.push(c);
-                }
-
-                if found_bracket && chars.peek() == Some(&'(') {
-                    chars.next(); // consume (
-                    // Skip URL
-                    while let Some(c) = chars.next() {
-                        if c == ')' {
-                            break;
-                        }
-                    }
-                    // Push link text with underline styling
-                    spans.push(Span::styled(
-                        link_text,
-                        Style::default().fg(Color::Blue).add_modifier(Modifier::UNDERLINED)
-                    ));
-                } else {
-                    current_text.push('[');
-                    current_text.push_str(&link_text);
-                }
-            }
-            _ => {
-                current_text.push(ch);
-            }
-        }
-    }
-
-    if !current_text.is_empty() {
-        spans.push(Span::styled(current_text, current_style));
-    }
-
-    if spans.is_empty() {
-        spans.push(Span::raw(""));
-    }
-
-    spans
-}
-
-/// Render markdown for terminal display with styling and code highlighting
+/// Render markdown for terminal display using pulldown-cmark parser
 fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter) -> Vec<Line<'static>> {
+    use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind};
     use ratatui::style::{Style, Modifier, Color};
-    use ratatui::text::Line;
+    use ratatui::text::{Line, Span};
     use crate::models::SyntaxLanguage;
 
     let mut lines = Vec::new();
+    let mut current_line_spans: Vec<Span<'static>> = Vec::new();
+    let mut current_style = Style::default();
     let mut in_code_block = false;
-    let mut code_block_lang = String::new();
     let mut code_block_content = String::new();
+    let mut code_block_lang = String::new();
 
-    let content_lines: Vec<&str> = content.lines().collect();
-    let mut i = 0;
+    // Style stack for nested formatting
+    let mut style_stack: Vec<Style> = vec![Style::default()];
 
-    while i < content_lines.len() {
-        let line = content_lines[i];
-        let trimmed = line.trim_start();
+    let parser = Parser::new(content);
 
-        // Check for code block markers
-        if trimmed.starts_with("```") {
-            if !in_code_block {
-                // Starting a code block
-                in_code_block = true;
-                code_block_lang = trimmed.trim_start_matches('`').trim().to_string();
-                code_block_content.clear();
-            } else {
-                // Ending a code block - render it with syntax highlighting
-                in_code_block = false;
-
-                // Determine syntax language
-                let lang = match code_block_lang.to_lowercase().as_str() {
-                    "javascript" | "js" => SyntaxLanguage::Javascript,
-                    "python" | "py" => SyntaxLanguage::Python,
-                    "json" => SyntaxLanguage::Json,
-                    "html" => SyntaxLanguage::Html,
-                    "css" => SyntaxLanguage::Css,
-                    "sql" => SyntaxLanguage::Sql,
-                    "bash" | "sh" => SyntaxLanguage::Bash,
-                    "perl" | "pl" => SyntaxLanguage::Perl,
-                    _ => SyntaxLanguage::Plain,
-                };
-
-                // Clone the content before clearing to avoid borrow issues
-                let content_to_highlight = code_block_content.clone();
-
-                // Apply syntax highlighting to code block
-                let highlighted = syntax_highlighter.highlight(&content_to_highlight, lang);
-
-                // Convert borrowed lines to owned lines
-                for line in highlighted.lines {
-                    let owned_line: Line<'static> = Line::from(
-                        line.spans.into_iter()
-                            .map(|span| Span::styled(span.content.to_string(), span.style))
-                            .collect::<Vec<_>>()
-                    );
-                    lines.push(owned_line);
+    for event in parser {
+        match event {
+            Event::Start(tag) => {
+                match tag {
+                    Tag::Heading { level, .. } => {
+                        // Headers in cyan + bold
+                        let header_style = Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD);
+                        style_stack.push(header_style);
+                        current_style = header_style;
+                    }
+                    Tag::Emphasis => {
+                        // Italic -> cyan color (better terminal support than ITALIC modifier)
+                        let italic_style = current_style.fg(Color::Cyan);
+                        style_stack.push(italic_style);
+                        current_style = italic_style;
+                    }
+                    Tag::Strong => {
+                        // Bold -> white + BOLD
+                        let bold_style = current_style
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD);
+                        style_stack.push(bold_style);
+                        current_style = bold_style;
+                    }
+                    Tag::Link { .. } => {
+                        // Links -> blue + underlined
+                        let link_style = current_style
+                            .fg(Color::Blue)
+                            .add_modifier(Modifier::UNDERLINED);
+                        style_stack.push(link_style);
+                        current_style = link_style;
+                    }
+                    Tag::CodeBlock(kind) => {
+                        in_code_block = true;
+                        code_block_content.clear();
+                        code_block_lang = match kind {
+                            CodeBlockKind::Fenced(lang) => lang.to_string(),
+                            CodeBlockKind::Indented => String::new(),
+                        };
+                    }
+                    Tag::Paragraph => {
+                        // Paragraphs just group text, no special styling needed
+                    }
+                    _ => {}
                 }
-
-                code_block_lang.clear();
-                code_block_content.clear();
             }
-            i += 1;
-            continue;
-        }
+            Event::End(tag_end) => {
+                match tag_end {
+                    TagEnd::Heading(_) | TagEnd::Emphasis | TagEnd::Strong | TagEnd::Link => {
+                        // Pop style from stack
+                        if style_stack.len() > 1 {
+                            style_stack.pop();
+                            current_style = *style_stack.last().unwrap();
+                        }
 
-        if in_code_block {
-            // Accumulate code block content
-            code_block_content.push_str(line);
-            code_block_content.push('\n');
-            i += 1;
-            continue;
-        }
+                        // Headings end with a line break
+                        if matches!(tag_end, TagEnd::Heading(_)) {
+                            if !current_line_spans.is_empty() {
+                                lines.push(Line::from(current_line_spans.clone()));
+                                current_line_spans.clear();
+                            }
+                        }
+                    }
+                    TagEnd::CodeBlock => {
+                        in_code_block = false;
 
-        // Handle headers
-        if let Some(rest) = trimmed.strip_prefix("######") {
-            lines.push(Line::styled(
-                rest.trim().to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-            ));
-        } else if let Some(rest) = trimmed.strip_prefix("#####") {
-            lines.push(Line::styled(
-                rest.trim().to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-            ));
-        } else if let Some(rest) = trimmed.strip_prefix("####") {
-            lines.push(Line::styled(
-                rest.trim().to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-            ));
-        } else if let Some(rest) = trimmed.strip_prefix("###") {
-            lines.push(Line::styled(
-                rest.trim().to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-            ));
-        } else if let Some(rest) = trimmed.strip_prefix("##") {
-            lines.push(Line::styled(
-                rest.trim().to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-            ));
-        } else if let Some(rest) = trimmed.strip_prefix('#') {
-            lines.push(Line::styled(
-                rest.trim().to_string(),
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
-            ));
-        } else if line.is_empty() {
-            // Preserve empty lines
-            lines.push(Line::raw(""));
-        } else {
-            // Regular line with inline formatting
-            let spans = parse_inline_markdown(line);
-            lines.push(Line::from(spans));
-        }
+                        // Determine syntax language
+                        let lang = match code_block_lang.to_lowercase().as_str() {
+                            "javascript" | "js" => SyntaxLanguage::Javascript,
+                            "python" | "py" => SyntaxLanguage::Python,
+                            "markdown" | "md" => SyntaxLanguage::Markdown,
+                            "json" => SyntaxLanguage::Json,
+                            "html" => SyntaxLanguage::Html,
+                            "css" => SyntaxLanguage::Css,
+                            "sql" => SyntaxLanguage::Sql,
+                            "bash" | "sh" => SyntaxLanguage::Bash,
+                            "perl" | "pl" => SyntaxLanguage::Perl,
+                            _ => SyntaxLanguage::Plain,
+                        };
 
-        i += 1;
+                        // Apply syntax highlighting
+                        let highlighted = syntax_highlighter.highlight(&code_block_content, lang);
+
+                        // Convert borrowed lines to owned
+                        for line in highlighted.lines {
+                            let owned_line: Line<'static> = Line::from(
+                                line.spans.into_iter()
+                                    .map(|span| Span::styled(span.content.to_string(), span.style))
+                                    .collect::<Vec<_>>()
+                            );
+                            lines.push(owned_line);
+                        }
+
+                        code_block_content.clear();
+                        code_block_lang.clear();
+                    }
+                    TagEnd::Paragraph => {
+                        // End paragraph with a line break
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
+                        // Add blank line after paragraph
+                        lines.push(Line::raw(""));
+                    }
+                    _ => {}
+                }
+            }
+            Event::Text(text) => {
+                if in_code_block {
+                    code_block_content.push_str(&text);
+                } else {
+                    current_line_spans.push(Span::styled(text.to_string(), current_style));
+                }
+            }
+            Event::Code(code) => {
+                // Inline code -> yellow
+                current_line_spans.push(Span::styled(
+                    code.to_string(),
+                    Style::default().fg(Color::Yellow)
+                ));
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                // Line break within paragraph
+                if !current_line_spans.is_empty() {
+                    lines.push(Line::from(current_line_spans.clone()));
+                    current_line_spans.clear();
+                }
+            }
+            Event::Rule => {
+                // Horizontal rule
+                lines.push(Line::styled(
+                    "─".repeat(80),
+                    Style::default().fg(Color::DarkGray)
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    // Flush any remaining spans
+    if !current_line_spans.is_empty() {
+        lines.push(Line::from(current_line_spans));
+    }
+
+    // Return empty line if no content
+    if lines.is_empty() {
+        lines.push(Line::raw(""));
     }
 
     lines
