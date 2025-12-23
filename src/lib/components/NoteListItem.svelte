@@ -6,7 +6,24 @@
   export let onNoteSelect: (() => void) | undefined = undefined;
 
   $: isSelected = $selectedNoteId === note.id;
-  $: title = note.content.split('\n')[0] || 'Untitled';
+
+  // Strip markdown formatting from the title
+  function stripMarkdown(text: string): string {
+    return text
+      // Remove markdown headers (# ## ### etc.)
+      .replace(/^#+\s+/, '')
+      // Remove bold (**text** or __text__)
+      .replace(/(\*\*|__)(.*?)\1/g, '$2')
+      // Remove italic (*text* or _text_)
+      .replace(/(\*|_)(.*?)\1/g, '$2')
+      // Remove inline code (`text`)
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove links but keep text [text](url)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .trim();
+  }
+
+  $: title = stripMarkdown(note.content.split('\n')[0] || 'Untitled');
   // Responsive preview length: shorter on mobile, longer on desktop
   $: isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   $: previewLength = isMobile ? 60 : 100;

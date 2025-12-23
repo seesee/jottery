@@ -2,16 +2,20 @@
 
 Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking application.
 
-## Features (Planned)
+## Features
 
-- 🔐 **End-to-End Encryption**: AES-256-GCM encryption with PBKDF2 key derivation
+- 🔐 **End-to-End Encryption**: AES-256-GCM encryption with PBKDF2 key derivation (256k iterations)
 - 📝 **Full Note Management**: Create, edit, delete, search, and tag notes
-- 🔄 **Sync**: Bidirectional sync with Jottery server
+- 🔄 **Bidirectional Sync**: Full sync with Jottery server including auto-sync
 - 💾 **Local Storage**: SQLite database with SQLCipher encryption
-- ⌨️ **Keyboard-Driven**: Efficient keyboard shortcuts for all operations
-- 🎨 **Syntax Highlighting**: Support for multiple programming languages
-- 📎 **Attachments**: View and manage file attachments
+- ⌨️ **Keyboard-Driven**: Efficient Vim-style keyboard shortcuts for all operations
+- 🎨 **Syntax Highlighting**: Support for JavaScript, Python, Markdown, JSON, HTML, CSS, SQL, Bash, Perl
+- 📋 **Markdown Rendering**: Beautiful markdown preview with tables, lists, code blocks, and inline formatting
 - 🗑️ **Recycle Bin**: Recover accidentally deleted notes
+- 🎨 **Color Schemes**: 11 built-in themes (Default Dark/Light, Monokai, Solarized, Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin)
+- 🔒 **Auto-lock**: Configurable timeout with optional password storage
+- 🔍 **Advanced Search**: Powerful search with tag filtering and boolean operators
+- 📊 **Split-pane View**: Note list + preview pane for quick navigation
 
 ## Installation
 
@@ -74,8 +78,25 @@ jottery import --input backup.json --password yourpassword
 1. Run `jottery` to start
 2. Enter a password to create encrypted database
 3. Press `n` to create your first note
-4. Press `i` to enter insert mode and start typing
-5. Press `Esc` then `q` to save and return to list
+4. Use your system's default `$EDITOR` to edit the note
+5. Save and close the editor to return to the list
+
+### Color Schemes
+
+Press `s` to open settings and cycle through 11 color schemes:
+- **Default Dark** - Clean dark theme
+- **Default Light** - Clean light theme
+- **Monokai** - Popular syntax highlighting theme
+- **Solarized Dark** - Low-contrast dark theme
+- **Solarized Light** - Low-contrast light theme
+- **Nord** - Arctic-inspired color palette
+- **Dracula** - Dark theme with purple accents
+- **Gruvbox Dark** - Retro groove dark theme
+- **Gruvbox Light** - Retro groove light theme
+- **Tokyo Night** - Dark theme inspired by Tokyo's night
+- **Catppuccin** - Pastel color scheme
+
+Use `Enter`/`i`/`Space` to cycle forward, `I`/`Shift+Enter` to cycle backward.
 
 ## Configuration
 
@@ -86,6 +107,92 @@ Configuration is stored in:
 
 Database is stored in the same directory as `jottery.db`.
 
+### Settings
+
+Press `s` to open the settings panel:
+- **Language** - Interface language (default: en-GB)
+- **Color Scheme** - Choose from 11 themes
+- **Sort Order** - Recent, Oldest, Alphabetical, or Created date
+- **Auto-lock Timeout** - Minutes before auto-lock (1-1440)
+- **Sync Enabled** - Enable/disable server sync
+- **Sync Endpoint** - Server URL for sync
+- **Auto-sync Interval** - Minutes between auto-sync (default: 5)
+- **Remember Password** - Auto-unlock on startup (stores encrypted password)
+
+### Sync Setup
+
+To sync with a Jottery server:
+1. Press `s` to open settings
+2. Navigate to "Sync Enabled" and press `Enter` to enable
+3. Navigate to "Sync Endpoint" and enter your server URL
+4. Copy sync credentials from the web UI
+5. Press `p` in the TUI to paste credentials
+6. Sync will happen automatically every 5 minutes (configurable)
+
+## Search Syntax
+
+The search bar supports powerful query syntax:
+
+### Tag Filtering
+```
+#tagname                    # Notes with this tag
+#tag1 #tag2                 # Notes with both tags (AND)
+#tag1 | #tag2               # Notes with either tag (OR)
+```
+
+### Text Search
+```
+dog                         # Contains "dog"
+"exact phrase"              # Exact phrase match
+dog cat                     # Contains both words (AND)
+dog | cat                   # Contains either word (OR)
+-cat                        # Does NOT contain "cat"
+```
+
+### Wildcards
+```
+dog*                        # Starts with "dog"
+*dog                        # Ends with "dog"
+*dog*                       # Contains "dog" anywhere
+```
+
+### Combined Queries
+```
+#work project -meeting      # Tagged #work, contains "project", not "meeting"
+#personal "family vacation" # Tagged #personal with exact phrase
+```
+
+## Markdown Rendering
+
+The preview pane renders markdown with full formatting support:
+
+### Supported Elements
+- **Headers** (H1-H6) - Styled in cyan + bold
+- **Bold text** (`**bold**` or `__bold__`) - White + bold
+- **Italic text** (`*italic*` or `_italic_`) - Cyan color
+- **Inline code** (`` `code` ``) - Yellow
+- **Links** (`[text](url)`) - Blue + underlined
+- **Code blocks** with syntax highlighting (9 languages)
+- **Tables** with aligned columns and header formatting
+- **Lists** (bullet points with `•` marker)
+- **Task lists** (`- [ ]` and `- [x]`)
+- **Horizontal rules** (`---` or `***`)
+
+### Example
+```markdown
+## Tasks
+
+- [x] Make coffee
+- [ ] Open notes app
+- [ ] Do actual work
+
+| Item     | Priority | Notes                       |
+|----------|----------|-----------------------------|
+| Biscuits | High     | Essential for productivity  |
+| Exercise | Medium   | Allegedly good for you      |
+| Email    | Low      | Ignored on purpose          |
+```
+
 ## Keyboard Shortcuts
 
 ### Unlock Screen
@@ -94,51 +201,93 @@ Database is stored in the same directory as `jottery.db`.
 | Type | Enter password |
 | `Enter` | Unlock database |
 | `Backspace` | Delete character |
+| `Ctrl+r` | Toggle remember password checkbox |
 | `q`/`Esc` | Quit |
 
-### Note List
+### Note List (Normal Mode)
 | Key | Action |
 |-----|--------|
 | `n` | Create new note |
-| `Enter` | Open selected note |
-| `d` | Delete selected note |
+| `Enter` | Open selected note in external editor |
+| `Space` | Toggle preview pane |
+| `d` | Delete selected note (moves to recycle bin) |
+| `r` | Restore note from recycle bin |
+| `D` | Permanently delete note |
 | `j`/`↓` | Move down |
 | `k`/`↑` | Move up |
+| `g` | Jump to top |
+| `G` | Jump to bottom |
+| `l` | Cycle syntax language forward (Plain → JavaScript → Python → Markdown → ...) |
+| `L` | Cycle syntax language backward |
+| `/` | Focus search input |
+| `t` | Focus tag input |
+| `Esc` | Clear search/tag filters |
+| `s` | Open settings |
+| `?` | Show keyboard shortcuts help |
+| `Ctrl+l` | Lock database |
 | `Ctrl+q` | Quit application |
 
-### Note Editor
+### Preview Pane (when open)
 | Key | Action |
 |-----|--------|
-| `i` | Enter insert mode (start typing) |
-| `Esc` | Exit insert mode |
-| `q` (normal mode) | Save and return to list |
-| Type | Edit note content (insert mode) |
-| `Enter` | New line (insert mode) |
-| `Backspace` | Delete character (insert mode) |
+| `j`/`↓` | Scroll down |
+| `k`/`↑` | Scroll up |
+| `Ctrl+d` | Scroll down half page |
+| `Ctrl+u` | Scroll up half page |
+| `g` | Jump to top |
+| `G` | Jump to bottom |
+
+### Settings Screen
+| Key | Action |
+|-----|--------|
+| `j`/`↓` | Move to next setting |
+| `k`/`↑` | Move to previous setting |
+| `Enter`/`i`/`Space` | Edit setting (cycle for theme/sort order) |
+| `I`/`Shift+Enter` | Cycle backward (theme/sort order) |
+| `p` | Paste sync credentials from clipboard |
+| `Esc`/`q` | Close settings |
+
+### Recycle Bin
+| Key | Action |
+|-----|--------|
+| `r` | Restore selected note |
+| `D` | Permanently delete |
+| `Esc`/`q` | Return to note list |
 
 ## Development Status
 
 ### Completed ✓
-- [x] Project setup
+- [x] Project setup and build configuration
 - [x] Database layer (SQLite + SQLCipher)
 - [x] Data models (Rust structs)
-- [x] Encryption layer (AES-256-GCM + PBKDF2)
-- [x] Repository pattern
+- [x] Encryption layer (AES-256-GCM + PBKDF2 with 256k iterations)
+- [x] Repository pattern for data access
 - [x] TUI framework (ratatui)
 - [x] Note management (create, edit, delete, list)
-- [x] Password-based unlocking
+- [x] Password-based unlocking with auto-lock
+- [x] Remember password feature (optional auto-unlock)
 - [x] Import/export (JSON)
+- [x] Tag management (add, remove, filter)
+- [x] Advanced search (boolean operators, tag filters, wildcards)
+- [x] Recycle bin (soft delete with restore)
+- [x] Settings panel (theme, sort order, auto-lock, sync config)
+- [x] Bidirectional sync client
+- [x] Auto-sync on schedule
+- [x] Syntax highlighting in preview (9 languages)
+- [x] Markdown rendering with proper formatting
+- [x] External editor integration ($EDITOR)
+- [x] Split-pane view (list + preview)
+- [x] Keyboard shortcuts help screen
+- [x] Multiple color schemes (11 themes)
+- [x] Vim-style navigation (hjkl, gg, G, Ctrl+d/u)
 
-### In Progress / Future
-- [ ] Tag management
-- [ ] Search functionality
-- [ ] Recycle bin (soft delete recovery)
-- [ ] Settings panel
-- [ ] Sync client
-- [ ] Attachment support
-- [ ] Syntax highlighting in editor
-- [ ] Auto-sync
-- [ ] Keyboard shortcuts help screen
+### Future Enhancements
+- [ ] Attachment support (view and download)
+- [ ] Nested tags
+- [ ] Note linking
+- [ ] Full-text search indexing
+- [ ] Multi-select operations
+- [ ] Note templates
 
 ## Architecture
 

@@ -9,7 +9,6 @@
   import FileUpload from './FileUpload.svelte';
   import { marked } from 'marked';
   import hljs from 'highlight.js';
-  import 'highlight.js/styles/github.css';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -71,25 +70,42 @@
         const renderer = new marked.Renderer();
         const originalCode = renderer.code.bind(renderer);
 
-        renderer.code = function(code, language, isEscaped) {
+        renderer.code = function(token) {
+          // In marked v17+, renderer receives a token object instead of separate parameters
+          const code = token.text;
+          const language = token.lang;
+
+          console.log('[Preview] Code block:', {
+            language,
+            codeLength: code?.length,
+            hasLanguage: !!language
+          });
+
           // Highlight the code if language is specified
           if (language && hljs.getLanguage(language)) {
             try {
+              console.log('[Preview] Highlighting with language:', language);
               const highlighted = hljs.highlight(code, { language }).value;
               return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
             } catch (err) {
               console.error('Syntax highlighting error:', err);
             }
           }
+
           // Auto-detect if no language specified
-          try {
-            const highlighted = hljs.highlightAuto(code).value;
-            return `<pre><code class="hljs">${highlighted}</code></pre>`;
-          } catch (err) {
-            console.error('Auto-highlight error:', err);
+          if (code) {
+            try {
+              console.log('[Preview] Auto-detecting language for code block');
+              const highlighted = hljs.highlightAuto(code).value;
+              return `<pre><code class="hljs">${highlighted}</code></pre>`;
+            } catch (err) {
+              console.error('Auto-highlight error:', err);
+            }
           }
+
           // Fallback to default rendering
-          return originalCode(code, language, isEscaped);
+          console.log('[Preview] Falling back to default rendering');
+          return originalCode.call(this, token);
         };
 
         return marked.parse(text, { renderer });
@@ -539,6 +555,23 @@
         <option value="bash">Bash</option>
       </select>
 
+      <!-- Preview/Edit Toggle (shown when contextually appropriate) -->
+      {#if canPreview}
+        <button
+          on:click={handlePreviewToggle}
+          class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 flex items-center gap-1.5"
+          title={showPreview ? 'Edit Mode' : 'Preview'}
+        >
+          {#if showPreview}
+            <span>📝</span>
+            <span>Edit</span>
+          {:else}
+            <span>👁️</span>
+            <span>Preview</span>
+          {/if}
+        </button>
+      {/if}
+
       <div class="flex-1"></div>
 
       <!-- More Menu -->
@@ -557,21 +590,6 @@
         {#if showMoreMenu}
           <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
             <div class="py-1">
-              {#if canPreview}
-                <button
-                  on:click={handlePreviewToggle}
-                  class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                >
-                  {#if showPreview}
-                    <span>📝</span>
-                    <span>Edit Mode</span>
-                  {:else}
-                    <span>👁️</span>
-                    <span>Preview</span>
-                  {/if}
-                </button>
-              {/if}
-
               <button
                 on:click={handleWordWrapToggle}
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
