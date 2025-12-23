@@ -363,6 +363,10 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             current_line_spans.clear();
                         }
                     }
+                    TagEnd::List(_) => {
+                        // Add blank line after list
+                        lines.push(Line::raw(""));
+                    }
                     _ => {}
                 }
             }
