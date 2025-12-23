@@ -101,7 +101,7 @@ fn strip_markdown(text: &str) -> String {
 
 /// Render markdown for terminal display using pulldown-cmark parser
 fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter) -> Vec<Line<'static>> {
-    use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind};
+    use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind, Options};
     use ratatui::style::{Style, Modifier, Color};
     use ratatui::text::{Line, Span};
     use crate::models::SyntaxLanguage;
@@ -112,17 +112,36 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
     let mut in_code_block = false;
     let mut code_block_content = String::new();
     let mut code_block_lang = String::new();
+    let mut in_table = false;
+    let mut in_heading = false;
 
     // Style stack for nested formatting
     let mut style_stack: Vec<Style> = vec![Style::default()];
 
-    let parser = Parser::new(content);
+    // Enable extensions: tables, strikethrough, tasklists, footnotes
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_TASKLISTS);
+
+    let parser = Parser::new_ext(content, options);
 
     for event in parser {
         match event {
             Event::Start(tag) => {
                 match tag {
-                    Tag::Heading { level, .. } => {
+                    Tag::Heading { .. } => {
+                        // Flush any current line before heading
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
+                        // Add blank line before heading (for spacing)
+                        if !lines.is_empty() {
+                            lines.push(Line::raw(""));
+                        }
+
+                        in_heading = true;
                         // Headers in cyan + bold
                         let header_style = Style::default()
                             .fg(Color::Cyan)
@@ -153,6 +172,12 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                         current_style = link_style;
                     }
                     Tag::CodeBlock(kind) => {
+                        // Flush current line before code block
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
+
                         in_code_block = true;
                         code_block_content.clear();
                         code_block_lang = match kind {
@@ -160,27 +185,39 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             CodeBlockKind::Indented => String::new(),
                         };
                     }
+                    Tag::Table(_) | Tag::TableHead | Tag::TableRow | Tag::TableCell => {
+                        in_table = true;
+                        // Tables are rendered as plain text with the pipe characters
+                    }
                     Tag::Paragraph => {
                         // Paragraphs just group text, no special styling needed
+                    }
+                    Tag::List(_) | Tag::Item => {
+                        // Lists - just pass through for now
                     }
                     _ => {}
                 }
             }
             Event::End(tag_end) => {
                 match tag_end {
-                    TagEnd::Heading(_) | TagEnd::Emphasis | TagEnd::Strong | TagEnd::Link => {
+                    TagEnd::Heading(_) => {
+                        in_heading = false;
                         // Pop style from stack
                         if style_stack.len() > 1 {
                             style_stack.pop();
                             current_style = *style_stack.last().unwrap();
                         }
-
                         // Headings end with a line break
-                        if matches!(tag_end, TagEnd::Heading(_)) {
-                            if !current_line_spans.is_empty() {
-                                lines.push(Line::from(current_line_spans.clone()));
-                                current_line_spans.clear();
-                            }
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
+                    }
+                    TagEnd::Emphasis | TagEnd::Strong | TagEnd::Link => {
+                        // Pop style from stack
+                        if style_stack.len() > 1 {
+                            style_stack.pop();
+                            current_style = *style_stack.last().unwrap();
                         }
                     }
                     TagEnd::CodeBlock => {
@@ -215,6 +252,22 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
 
                         code_block_content.clear();
                         code_block_lang.clear();
+                        // Add blank line after code block
+                        lines.push(Line::raw(""));
+                    }
+                    TagEnd::TableRow => {
+                        // End table row with line break
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
+                    }
+                    TagEnd::Table => {
+                        in_table = false;
+                        // Add blank line after table
+                        if !lines.is_empty() {
+                            lines.push(Line::raw(""));
+                        }
                     }
                     TagEnd::Paragraph => {
                         // End paragraph with a line break
@@ -222,8 +275,14 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
-                        // Add blank line after paragraph
-                        lines.push(Line::raw(""));
+                        // Don't add extra blank lines - let block spacing handle it
+                    }
+                    TagEnd::Item => {
+                        // End list item with line break
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
                     }
                     _ => {}
                 }
@@ -231,6 +290,9 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
             Event::Text(text) => {
                 if in_code_block {
                     code_block_content.push_str(&text);
+                } else if in_table {
+                    // In tables, preserve pipe characters
+                    current_line_spans.push(Span::styled(text.to_string(), current_style));
                 } else {
                     current_line_spans.push(Span::styled(text.to_string(), current_style));
                 }
@@ -242,19 +304,43 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                     Style::default().fg(Color::Yellow)
                 ));
             }
-            Event::SoftBreak | Event::HardBreak => {
-                // Line break within paragraph
+            Event::SoftBreak => {
+                // Soft break in markdown (single newline) - keep on same line in most contexts
+                // But in tables and lists, treat as line break
+                if in_table {
+                    if !current_line_spans.is_empty() {
+                        lines.push(Line::from(current_line_spans.clone()));
+                        current_line_spans.clear();
+                    }
+                } else {
+                    // Add a space for soft breaks in regular text
+                    current_line_spans.push(Span::raw(" "));
+                }
+            }
+            Event::HardBreak => {
+                // Hard break (two spaces + newline or <br>) - always break line
                 if !current_line_spans.is_empty() {
                     lines.push(Line::from(current_line_spans.clone()));
                     current_line_spans.clear();
                 }
             }
             Event::Rule => {
+                // Flush current line before rule
+                if !current_line_spans.is_empty() {
+                    lines.push(Line::from(current_line_spans.clone()));
+                    current_line_spans.clear();
+                }
                 // Horizontal rule
                 lines.push(Line::styled(
                     "─".repeat(80),
                     Style::default().fg(Color::DarkGray)
                 ));
+                lines.push(Line::raw(""));
+            }
+            Event::TaskListMarker(checked) => {
+                // Render task list checkbox
+                let checkbox = if checked { "[x] " } else { "[ ] " };
+                current_line_spans.push(Span::raw(checkbox));
             }
             _ => {}
         }
