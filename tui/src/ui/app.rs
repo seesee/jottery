@@ -113,7 +113,11 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
     let mut code_block_content = String::new();
     let mut code_block_lang = String::new();
     let mut in_table = false;
+    let mut in_table_head = false;
     let mut in_heading = false;
+    let mut table_cells: Vec<String> = Vec::new();
+    let mut current_cell_text = String::new();
+    let mut table_rows: Vec<Vec<String>> = Vec::new();
 
     // Style stack for nested formatting
     let mut style_stack: Vec<Style> = vec![Style::default()];
@@ -185,9 +189,23 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             CodeBlockKind::Indented => String::new(),
                         };
                     }
-                    Tag::Table(_) | Tag::TableHead | Tag::TableRow | Tag::TableCell => {
+                    Tag::Table(_) => {
+                        // Flush current line before table
+                        if !current_line_spans.is_empty() {
+                            lines.push(Line::from(current_line_spans.clone()));
+                            current_line_spans.clear();
+                        }
                         in_table = true;
-                        // Tables are rendered as plain text with the pipe characters
+                        table_rows.clear();
+                    }
+                    Tag::TableHead => {
+                        in_table_head = true;
+                    }
+                    Tag::TableRow => {
+                        table_cells.clear();
+                    }
+                    Tag::TableCell => {
+                        current_cell_text.clear();
                     }
                     Tag::Paragraph => {
                         // Paragraphs just group text, no special styling needed
@@ -255,19 +273,68 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                         // Add blank line after code block
                         lines.push(Line::raw(""));
                     }
+                    TagEnd::TableCell => {
+                        // Save the current cell text
+                        table_cells.push(current_cell_text.clone());
+                        current_cell_text.clear();
+                    }
                     TagEnd::TableRow => {
-                        // End table row with line break
-                        if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
-                            current_line_spans.clear();
+                        // Save the current row
+                        if !table_cells.is_empty() {
+                            table_rows.push(table_cells.clone());
+                            table_cells.clear();
                         }
+                    }
+                    TagEnd::TableHead => {
+                        in_table_head = false;
                     }
                     TagEnd::Table => {
                         in_table = false;
-                        // Add blank line after table
-                        if !lines.is_empty() {
-                            lines.push(Line::raw(""));
+
+                        // Calculate column widths
+                        let mut col_widths: Vec<usize> = Vec::new();
+                        for row in &table_rows {
+                            for (i, cell) in row.iter().enumerate() {
+                                let width = cell.len();
+                                if i >= col_widths.len() {
+                                    col_widths.push(width);
+                                } else if width > col_widths[i] {
+                                    col_widths[i] = width;
+                                }
+                            }
                         }
+
+                        // Render table rows
+                        for (row_idx, row) in table_rows.iter().enumerate() {
+                            let mut row_text = String::from("| ");
+                            for (i, cell) in row.iter().enumerate() {
+                                let width = if i < col_widths.len() { col_widths[i] } else { 0 };
+                                row_text.push_str(&format!("{:<width$} | ", cell, width = width));
+                            }
+
+                            // First row is header - make it bold
+                            if row_idx == 0 {
+                                lines.push(Line::styled(
+                                    row_text,
+                                    Style::default().add_modifier(Modifier::BOLD)
+                                ));
+                                // Add separator line after header
+                                let mut separator = String::from("|-");
+                                for &width in &col_widths {
+                                    separator.push_str(&"-".repeat(width));
+                                    separator.push_str("-|-");
+                                }
+                                // Remove trailing dash
+                                separator.pop();
+                                lines.push(Line::styled(separator, Style::default().fg(Color::DarkGray)));
+                            } else {
+                                lines.push(Line::raw(row_text));
+                            }
+                        }
+
+                        table_rows.clear();
+                        // Add blank line after table
+                        lines.push(Line::raw(""));
                     }
                     TagEnd::Paragraph => {
                         // End paragraph with a line break
@@ -291,27 +358,29 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                 if in_code_block {
                     code_block_content.push_str(&text);
                 } else if in_table {
-                    // In tables, preserve pipe characters
-                    current_line_spans.push(Span::styled(text.to_string(), current_style));
+                    // Collect text for current table cell
+                    current_cell_text.push_str(&text);
                 } else {
                     current_line_spans.push(Span::styled(text.to_string(), current_style));
                 }
             }
             Event::Code(code) => {
-                // Inline code -> yellow
-                current_line_spans.push(Span::styled(
-                    code.to_string(),
-                    Style::default().fg(Color::Yellow)
-                ));
+                if in_table {
+                    // In tables, just add code text without styling
+                    current_cell_text.push_str(&code);
+                } else {
+                    // Inline code -> yellow
+                    current_line_spans.push(Span::styled(
+                        code.to_string(),
+                        Style::default().fg(Color::Yellow)
+                    ));
+                }
             }
             Event::SoftBreak => {
                 // Soft break in markdown (single newline) - keep on same line in most contexts
-                // But in tables and lists, treat as line break
                 if in_table {
-                    if !current_line_spans.is_empty() {
-                        lines.push(Line::from(current_line_spans.clone()));
-                        current_line_spans.clear();
-                    }
+                    // In tables, add space to cell text
+                    current_cell_text.push(' ');
                 } else {
                     // Add a space for soft breaks in regular text
                     current_line_spans.push(Span::raw(" "));
