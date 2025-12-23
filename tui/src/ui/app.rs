@@ -30,6 +30,373 @@ use crate::{
     repository::{EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
 };
 
+/// Strip markdown formatting from text (for display in note list)
+fn strip_markdown(text: &str) -> String {
+    let mut result = text.to_string();
+
+    // Remove markdown headers (# ## ### etc.)
+    if let Some(stripped) = result.strip_prefix('#') {
+        let mut chars = stripped.chars();
+        // Skip additional # characters
+        while chars.as_str().starts_with('#') {
+            chars.next();
+        }
+        // Skip whitespace after #
+        result = chars.as_str().trim_start().to_string();
+    }
+
+    // Remove bold (**text** or __text__)
+    result = result.replace("**", "").replace("__", "");
+
+    // Remove italic (*text* or _text_) - simple approach
+    let mut cleaned = String::new();
+    let mut chars = result.chars().peekable();
+    let mut in_code = false;
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '`' => {
+                in_code = !in_code;
+                cleaned.push(ch);
+            }
+            '*' | '_' if !in_code => {
+                // Skip single * or _ used for emphasis
+                continue;
+            }
+            '[' if !in_code => {
+                // Handle links [text](url) - extract text only
+                let mut link_text = String::new();
+                let mut found_closing = false;
+
+                while let Some(c) = chars.next() {
+                    if c == ']' {
+                        found_closing = true;
+                        break;
+                    }
+                    link_text.push(c);
+                }
+
+                if found_closing {
+                    // Skip the (url) part
+                    if chars.peek() == Some(&'(') {
+                        chars.next(); // skip (
+                        while let Some(c) = chars.next() {
+                            if c == ')' {
+                                break;
+                            }
+                        }
+                    }
+                    cleaned.push_str(&link_text);
+                } else {
+                    cleaned.push('[');
+                    cleaned.push_str(&link_text);
+                }
+            }
+            _ => cleaned.push(ch),
+        }
+    }
+
+    cleaned.trim().to_string()
+}
+
+/// Parse inline markdown formatting and return styled spans
+fn parse_inline_markdown(text: &str) -> Vec<Span<'static>> {
+    use ratatui::style::{Style, Modifier, Color};
+    use ratatui::text::Span;
+
+    let mut spans = Vec::new();
+    let mut current_text = String::new();
+    let mut chars = text.chars().peekable();
+    let mut current_style = Style::default();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '`' => {
+                // Inline code
+                if !current_text.is_empty() {
+                    spans.push(Span::styled(current_text.clone(), current_style));
+                    current_text.clear();
+                }
+
+                let mut code = String::new();
+                while let Some(c) = chars.next() {
+                    if c == '`' {
+                        break;
+                    }
+                    code.push(c);
+                }
+
+                spans.push(Span::styled(
+                    code,
+                    Style::default().fg(Color::Yellow)
+                ));
+            }
+            '*' if chars.peek() == Some(&'*') => {
+                // Bold **text**
+                chars.next(); // consume second *
+
+                if !current_text.is_empty() {
+                    spans.push(Span::styled(current_text.clone(), current_style));
+                    current_text.clear();
+                }
+
+                let mut bold_text = String::new();
+                let mut found_end = false;
+
+                while let Some(c) = chars.next() {
+                    if c == '*' && chars.peek() == Some(&'*') {
+                        chars.next(); // consume second *
+                        found_end = true;
+                        break;
+                    }
+                    bold_text.push(c);
+                }
+
+                if found_end {
+                    spans.push(Span::styled(
+                        bold_text,
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD)
+                    ));
+                } else {
+                    current_text.push_str("**");
+                    current_text.push_str(&bold_text);
+                }
+            }
+            '*' => {
+                // Italic *text* - use cyan color instead of ITALIC modifier (better terminal support)
+                if !current_text.is_empty() {
+                    spans.push(Span::styled(current_text.clone(), current_style));
+                    current_text.clear();
+                }
+
+                let mut italic_text = String::new();
+                let mut found_end = false;
+
+                while let Some(c) = chars.next() {
+                    if c == '*' {
+                        found_end = true;
+                        break;
+                    }
+                    italic_text.push(c);
+                }
+
+                if found_end {
+                    spans.push(Span::styled(
+                        italic_text,
+                        Style::default().fg(Color::Cyan)
+                    ));
+                } else {
+                    current_text.push('*');
+                    current_text.push_str(&italic_text);
+                }
+            }
+            '_' if chars.peek() == Some(&'_') => {
+                // Bold __text__
+                chars.next(); // consume second _
+
+                if !current_text.is_empty() {
+                    spans.push(Span::styled(current_text.clone(), current_style));
+                    current_text.clear();
+                }
+
+                let mut bold_text = String::new();
+                let mut found_end = false;
+
+                while let Some(c) = chars.next() {
+                    if c == '_' && chars.peek() == Some(&'_') {
+                        chars.next(); // consume second _
+                        found_end = true;
+                        break;
+                    }
+                    bold_text.push(c);
+                }
+
+                if found_end {
+                    spans.push(Span::styled(
+                        bold_text,
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD)
+                    ));
+                } else {
+                    current_text.push_str("__");
+                    current_text.push_str(&bold_text);
+                }
+            }
+            '[' => {
+                // Links [text](url) - show text part with underline
+                if !current_text.is_empty() {
+                    spans.push(Span::styled(current_text.clone(), current_style));
+                    current_text.clear();
+                }
+
+                let mut link_text = String::new();
+                let mut found_bracket = false;
+
+                while let Some(c) = chars.next() {
+                    if c == ']' {
+                        found_bracket = true;
+                        break;
+                    }
+                    link_text.push(c);
+                }
+
+                if found_bracket && chars.peek() == Some(&'(') {
+                    chars.next(); // consume (
+                    // Skip URL
+                    while let Some(c) = chars.next() {
+                        if c == ')' {
+                            break;
+                        }
+                    }
+                    // Push link text with underline styling
+                    spans.push(Span::styled(
+                        link_text,
+                        Style::default().fg(Color::Blue).add_modifier(Modifier::UNDERLINED)
+                    ));
+                } else {
+                    current_text.push('[');
+                    current_text.push_str(&link_text);
+                }
+            }
+            _ => {
+                current_text.push(ch);
+            }
+        }
+    }
+
+    if !current_text.is_empty() {
+        spans.push(Span::styled(current_text, current_style));
+    }
+
+    if spans.is_empty() {
+        spans.push(Span::raw(""));
+    }
+
+    spans
+}
+
+/// Render markdown for terminal display with styling and code highlighting
+fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter) -> Vec<Line<'static>> {
+    use ratatui::style::{Style, Modifier, Color};
+    use ratatui::text::Line;
+    use crate::models::SyntaxLanguage;
+
+    let mut lines = Vec::new();
+    let mut in_code_block = false;
+    let mut code_block_lang = String::new();
+    let mut code_block_content = String::new();
+
+    let content_lines: Vec<&str> = content.lines().collect();
+    let mut i = 0;
+
+    while i < content_lines.len() {
+        let line = content_lines[i];
+        let trimmed = line.trim_start();
+
+        // Check for code block markers
+        if trimmed.starts_with("```") {
+            if !in_code_block {
+                // Starting a code block
+                in_code_block = true;
+                code_block_lang = trimmed.trim_start_matches('`').trim().to_string();
+                code_block_content.clear();
+            } else {
+                // Ending a code block - render it with syntax highlighting
+                in_code_block = false;
+
+                // Determine syntax language
+                let lang = match code_block_lang.to_lowercase().as_str() {
+                    "javascript" | "js" => SyntaxLanguage::Javascript,
+                    "python" | "py" => SyntaxLanguage::Python,
+                    "json" => SyntaxLanguage::Json,
+                    "html" => SyntaxLanguage::Html,
+                    "css" => SyntaxLanguage::Css,
+                    "sql" => SyntaxLanguage::Sql,
+                    "bash" | "sh" => SyntaxLanguage::Bash,
+                    "perl" | "pl" => SyntaxLanguage::Perl,
+                    _ => SyntaxLanguage::Plain,
+                };
+
+                // Clone the content before clearing to avoid borrow issues
+                let content_to_highlight = code_block_content.clone();
+
+                // Apply syntax highlighting to code block
+                let highlighted = syntax_highlighter.highlight(&content_to_highlight, lang);
+
+                // Convert borrowed lines to owned lines
+                for line in highlighted.lines {
+                    let owned_line: Line<'static> = Line::from(
+                        line.spans.into_iter()
+                            .map(|span| Span::styled(span.content.to_string(), span.style))
+                            .collect::<Vec<_>>()
+                    );
+                    lines.push(owned_line);
+                }
+
+                code_block_lang.clear();
+                code_block_content.clear();
+            }
+            i += 1;
+            continue;
+        }
+
+        if in_code_block {
+            // Accumulate code block content
+            code_block_content.push_str(line);
+            code_block_content.push('\n');
+            i += 1;
+            continue;
+        }
+
+        // Handle headers
+        if let Some(rest) = trimmed.strip_prefix("######") {
+            lines.push(Line::styled(
+                rest.trim().to_string(),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ));
+        } else if let Some(rest) = trimmed.strip_prefix("#####") {
+            lines.push(Line::styled(
+                rest.trim().to_string(),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ));
+        } else if let Some(rest) = trimmed.strip_prefix("####") {
+            lines.push(Line::styled(
+                rest.trim().to_string(),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ));
+        } else if let Some(rest) = trimmed.strip_prefix("###") {
+            lines.push(Line::styled(
+                rest.trim().to_string(),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ));
+        } else if let Some(rest) = trimmed.strip_prefix("##") {
+            lines.push(Line::styled(
+                rest.trim().to_string(),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ));
+        } else if let Some(rest) = trimmed.strip_prefix('#') {
+            lines.push(Line::styled(
+                rest.trim().to_string(),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ));
+        } else if line.is_empty() {
+            // Preserve empty lines
+            lines.push(Line::raw(""));
+        } else {
+            // Regular line with inline formatting
+            let spans = parse_inline_markdown(line);
+            lines.push(Line::from(spans));
+        }
+
+        i += 1;
+    }
+
+    lines
+}
+
 /// Application state
 pub enum AppState {
     /// Locked - password input screen
@@ -517,13 +884,33 @@ impl App {
                     }
                 }
                 KeyCode::Char('l') => {
-                    // Cycle syntax language for selected note (only in note list view)
+                    // Cycle syntax language forward for selected note (only in note list view)
                     if matches!(self.view_mode, ViewMode::NoteList) {
                         let filtered = self.filtered_notes();
                         if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let note_id = filtered[self.selected_note].id.clone();
                         if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
                             note.syntax_language = note.syntax_language.next();
+
+                            // Save to database
+                            if let (Some(db), Some(key)) = (&self.db, &self.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    self.error = Some(format!("Failed to update syntax language: {}", e));
+                                }
+                            }
+                        }
+                        }
+                    }
+                }
+                KeyCode::Char('L') => {
+                    // Cycle syntax language backward for selected note (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note_id = filtered[self.selected_note].id.clone();
+                        if let Some(note) = self.notes.iter_mut().find(|n| n.id == note_id) {
+                            note.syntax_language = note.syntax_language.prev();
 
                             // Save to database
                             if let (Some(db), Some(key)) = (&self.db, &self.key) {
@@ -726,9 +1113,17 @@ impl App {
                             self.selected_setting -= 1;
                         }
                     }
+                    KeyCode::Enter if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                        // Edit selected field (backward for cyclic fields)
+                        self.start_editing_setting_backward();
+                    }
                     KeyCode::Enter | KeyCode::Char('i') | KeyCode::Char(' ') => {
-                        // Edit selected field
+                        // Edit selected field (forward for cyclic fields)
                         self.start_editing_setting();
+                    }
+                    KeyCode::Char('I') => {
+                        // Edit selected field (backward for cyclic fields)
+                        self.start_editing_setting_backward();
                     }
                     KeyCode::Char('p') => {
                         // Show text input for sync credentials (try clipboard first as convenience)
@@ -1595,7 +1990,7 @@ impl App {
         }
     }
 
-    /// Start editing a setting field
+    /// Start editing a setting field (forward for cyclic fields)
     fn start_editing_setting(&mut self) {
         // Populate input buffer with current value for string/number fields
         match self.selected_setting {
@@ -1605,12 +2000,73 @@ impl App {
                 self.input_mode = InputMode::SettingsEdit;
             }
             1 => {
-                // Theme: cycle immediately, no input needed
+                // Theme: cycle forward immediately, no input needed
                 self.cycle_theme();
             }
             2 => {
-                // Sort order: cycle immediately, no input needed
+                // Sort order: cycle forward immediately, no input needed
                 self.cycle_sort_order();
+            }
+            3 => {
+                // Auto-lock timeout
+                self.setting_input = self.settings.auto_lock_timeout.to_string();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            4 => {
+                // Sync enabled: toggle immediately
+                self.settings.sync_enabled = !self.settings.sync_enabled;
+                if let Err(e) = self.save_settings() {
+                    self.error = Some(format!("Failed to save settings: {}", e));
+                }
+            }
+            5 => {
+                // Sync endpoint
+                self.setting_input = self.settings.sync_endpoint.clone().unwrap_or_default();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            6 => {
+                // Auto-sync interval
+                self.setting_input = self.settings.auto_sync_interval_minutes.to_string();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            7 => {
+                // Remember password: toggle with password verification
+                if self.settings.remember_password {
+                    // Currently ON -> turn OFF and delete stored password
+                    if let Err(e) = self.forget_stored_password() {
+                        self.error = Some(format!("Failed to forget password: {}", e));
+                    } else {
+                        self.sync_status = Some("Password storage disabled. You will be prompted on next start.".to_string());
+                        self.sync_status_set_at = Some(Instant::now());
+                    }
+                } else {
+                    // Currently OFF -> prompt for password to enable
+                    self.setting_input.clear();
+                    self.input_mode = InputMode::PasswordVerify;
+                    self.sync_status = Some("Enter your password to enable auto-unlock:".to_string());
+                    self.sync_status_set_at = Some(Instant::now());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Start editing a setting field (backward for cyclic fields)
+    fn start_editing_setting_backward(&mut self) {
+        // For cyclic fields, cycle backward; for others, behave like forward
+        match self.selected_setting {
+            0 => {
+                // Language
+                self.setting_input = self.settings.language.clone();
+                self.input_mode = InputMode::SettingsEdit;
+            }
+            1 => {
+                // Theme: cycle backward immediately, no input needed
+                self.cycle_theme_backward();
+            }
+            2 => {
+                // Sort order: cycle backward immediately, no input needed
+                self.cycle_sort_order_backward();
             }
             3 => {
                 // Auto-lock timeout
@@ -1704,7 +2160,7 @@ impl App {
         self.save_settings()
     }
 
-    /// Cycle through color scheme options
+    /// Cycle forward through color scheme options
     fn cycle_theme(&mut self) {
         self.settings.theme.cycle_next();
         // Update cached color scheme
@@ -1714,15 +2170,27 @@ impl App {
         }
     }
 
-    /// Cycle through sort order options
+    /// Cycle backward through color scheme options
+    fn cycle_theme_backward(&mut self) {
+        self.settings.theme.cycle_prev();
+        // Update cached color scheme
+        self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
+        if let Err(e) = self.save_settings() {
+            self.error = Some(format!("Failed to save settings: {}", e));
+        }
+    }
+
+    /// Cycle forward through sort order options
     fn cycle_sort_order(&mut self) {
-        use crate::models::SortOrder;
-        self.settings.sort_order = match self.settings.sort_order {
-            SortOrder::Recent => SortOrder::Oldest,
-            SortOrder::Oldest => SortOrder::Alpha,
-            SortOrder::Alpha => SortOrder::Created,
-            SortOrder::Created => SortOrder::Recent,
-        };
+        self.settings.sort_order = self.settings.sort_order.next();
+        if let Err(e) = self.save_settings() {
+            self.error = Some(format!("Failed to save settings: {}", e));
+        }
+    }
+
+    /// Cycle backward through sort order options
+    fn cycle_sort_order_backward(&mut self) {
+        self.settings.sort_order = self.settings.sort_order.prev();
         if let Err(e) = self.save_settings() {
             self.error = Some(format!("Failed to save settings: {}", e));
         }
@@ -2407,7 +2875,8 @@ impl App {
             .iter()
             .enumerate()
             .map(|(i, note)| {
-                let content = note.content.lines().next().unwrap_or("");
+                let first_line = note.content.lines().next().unwrap_or("");
+                let content = strip_markdown(first_line);
                 let mut preview = if content.len() > 30 {
                     format!("{}...", &content[..30])
                 } else {
@@ -2500,16 +2969,23 @@ impl App {
 
             let metadata_line = metadata_parts.join(" | ");
 
-            // Apply syntax highlighting to note content
-            let highlighted_content = self.syntax_highlighter.highlight(&note.content, note.syntax_language);
-
-            // Combine metadata and highlighted content
+            // Render content based on type
             use ratatui::text::{Line, Text};
             let mut lines = vec![
                 Line::styled(metadata_line, Style::default().fg(self.color_scheme.accent_secondary)),
                 Line::raw(""),  // Blank line
             ];
-            lines.extend(highlighted_content.lines);
+
+            // For markdown, render it cleanly; for other types, use syntax highlighting
+            use crate::models::SyntaxLanguage;
+            if note.syntax_language == SyntaxLanguage::Markdown {
+                // Render markdown with inline formatting and code block highlighting
+                lines.extend(render_markdown_for_terminal(&note.content, &self.syntax_highlighter));
+            } else {
+                // Apply syntax highlighting to code
+                let highlighted_content = self.syntax_highlighter.highlight(&note.content, note.syntax_language);
+                lines.extend(highlighted_content.lines);
+            }
 
             let preview = Paragraph::new(Text::from(lines))
                 .block(preview_block)

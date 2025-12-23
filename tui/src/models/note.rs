@@ -60,6 +60,22 @@ impl SyntaxLanguage {
             Self::Perl => Self::Plain,
         }
     }
+
+    /// Get the previous syntax language in the cycle
+    pub fn prev(self) -> Self {
+        match self {
+            Self::Plain => Self::Perl,
+            Self::Javascript => Self::Plain,
+            Self::Python => Self::Javascript,
+            Self::Markdown => Self::Python,
+            Self::Json => Self::Markdown,
+            Self::Html => Self::Json,
+            Self::Css => Self::Html,
+            Self::Sql => Self::Css,
+            Self::Bash => Self::Sql,
+            Self::Perl => Self::Bash,
+        }
+    }
 }
 
 impl std::fmt::Display for SyntaxLanguage {

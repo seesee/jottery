@@ -82,6 +82,28 @@ impl Theme {
         let next_idx = (current_idx + 1) % schemes.len();
         *self = Self::Scheme(schemes[next_idx].to_string());
     }
+
+    /// Cycle to previous color scheme
+    pub fn cycle_prev(&mut self) {
+        let schemes = vec![
+            "default-dark",
+            "default-light",
+            "monokai",
+            "solarized-dark",
+            "solarized-light",
+            "nord",
+            "dracula",
+            "gruvbox-dark",
+            "gruvbox-light",
+            "tokyo-night",
+            "catppuccin",
+        ];
+
+        let current = self.scheme_name();
+        let current_idx = schemes.iter().position(|&s| s == current).unwrap_or(0);
+        let prev_idx = if current_idx == 0 { schemes.len() - 1 } else { current_idx - 1 };
+        *self = Self::Scheme(schemes[prev_idx].to_string());
+    }
 }
 
 /// Sort options for note list
@@ -107,6 +129,28 @@ impl std::fmt::Display for SortOrder {
             Self::Oldest => write!(f, "oldest"),
             Self::Alpha => write!(f, "alpha"),
             Self::Created => write!(f, "created"),
+        }
+    }
+}
+
+impl SortOrder {
+    /// Get the next sort order in the cycle
+    pub fn next(self) -> Self {
+        match self {
+            Self::Recent => Self::Oldest,
+            Self::Oldest => Self::Alpha,
+            Self::Alpha => Self::Created,
+            Self::Created => Self::Recent,
+        }
+    }
+
+    /// Get the previous sort order in the cycle
+    pub fn prev(self) -> Self {
+        match self {
+            Self::Recent => Self::Created,
+            Self::Oldest => Self::Recent,
+            Self::Alpha => Self::Oldest,
+            Self::Created => Self::Alpha,
         }
     }
 }

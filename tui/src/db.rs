@@ -79,6 +79,7 @@ impl Database {
             (1, include_str!("../migrations/001_initial.sql")),
             (2, include_str!("../migrations/002_add_auto_sync_interval.sql")),
             (3, include_str!("../migrations/003_add_remember_password.sql")),
+            (4, include_str!("../migrations/004_update_syntax_default.sql")),
         ];
 
         // Run pending migrations
