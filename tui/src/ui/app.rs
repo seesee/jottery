@@ -1926,6 +1926,12 @@ impl App {
         let mut sync_count = 0;
 
         if !notes_to_push.is_empty() {
+            use crate::models::sync::{AttachmentRef, SyncAttachment};
+            use base64::{Engine as _, engine::general_purpose};
+
+            // Collect all unique attachment IDs that need to be pushed
+            let mut attachment_ids_to_push: std::collections::HashSet<String> = std::collections::HashSet::new();
+
             // Convert notes to sync format, encrypting content and tags
             let sync_notes: Result<Vec<SyncNote>> = notes_to_push.iter().map(|note| {
                 // Encrypt content and tags for transmission to server
@@ -1941,13 +1947,25 @@ impl App {
                     })
                     .collect();
 
+                // Build attachment references from note.attachments
+                let attachment_refs: Vec<AttachmentRef> = note.attachments.iter().map(|att| {
+                    attachment_ids_to_push.insert(att.id.clone());
+                    AttachmentRef {
+                        id: att.id.clone(),
+                        filename: att.filename.clone(), // Already encrypted in database
+                        mime_type: att.mime_type.clone(),
+                        size: att.size,
+                        data: att.data.clone(),
+                    }
+                }).collect();
+
                 Ok(SyncNote {
                     id: note.id.clone(),
                     created_at: note.created_at,
                     modified_at: note.modified_at,
                     content: content_json,
                     tags: encrypted_tags?,
-                    attachments: vec![], // TODO: Handle attachments
+                    attachments: attachment_refs,
                     pinned: note.pinned,
                     deleted: note.deleted,
                     deleted_at: note.deleted_at,
@@ -1959,9 +1977,27 @@ impl App {
 
             let sync_notes = sync_notes?;
 
+            // Fetch binary data for all attachments that need to be pushed
+            let attachment_repo = AttachmentRepository::new(db.connection());
+            let sync_attachments: Result<Vec<SyncAttachment>> = attachment_ids_to_push.iter().map(|att_id| {
+                // Get encrypted binary data from database
+                let (_filename, _mime_type, _size, encrypted_data) = attachment_repo
+                    .get(att_id, key)?
+                    .context(format!("Attachment {} not found", att_id))?;
+
+                // Re-encrypt and base64 encode for transmission
+                let encrypted_blob = self.crypto.encrypt_binary(&encrypted_data, key)?;
+                let base64_data = general_purpose::STANDARD.encode(serde_json::to_vec(&encrypted_blob)?);
+
+                Ok(SyncAttachment {
+                    id: att_id.clone(),
+                    data: base64_data,
+                })
+            }).collect();
+
             let push_request = SyncPushRequest {
                 notes: sync_notes,
-                attachments: vec![],
+                attachments: sync_attachments?,
             };
 
             // Create HTTP client
@@ -2031,6 +2067,63 @@ impl App {
 
         // Apply remote changes
         self.debug_log(&format!("Pull - Received {} notes from server", pull_response.notes.len()));
+
+        // Process incoming attachments first
+        self.debug_log(&format!("Pull - Received {} attachments from server", pull_response.attachments.len()));
+
+        use base64::{Engine as _, engine::general_purpose};
+        let attachment_repo = AttachmentRepository::new(db.connection());
+
+        for sync_attachment in &pull_response.attachments {
+            self.debug_log(&format!("Pull - Processing attachment: {}", sync_attachment.id));
+
+            // Base64 decode the data
+            let decoded_data = match general_purpose::STANDARD.decode(&sync_attachment.data) {
+                Ok(data) => data,
+                Err(e) => {
+                    self.debug_log(&format!("Pull - Failed to base64 decode attachment {}: {}, skipping", sync_attachment.id, e));
+                    continue;
+                }
+            };
+
+            // Deserialize to EncryptedData
+            let encrypted_blob: crate::crypto::EncryptedData = match serde_json::from_slice(&decoded_data) {
+                Ok(blob) => blob,
+                Err(e) => {
+                    self.debug_log(&format!("Pull - Failed to deserialize attachment {}: {}, skipping", sync_attachment.id, e));
+                    continue;
+                }
+            };
+
+            // Decrypt the binary data
+            let decrypted_data = match self.crypto.decrypt_binary(&encrypted_blob, key) {
+                Ok(data) => data,
+                Err(e) => {
+                    self.debug_log(&format!("Pull - Failed to decrypt attachment {}: {}, skipping", sync_attachment.id, e));
+                    continue;
+                }
+            };
+
+            // Note: We'll get filename, mime_type, size from the AttachmentRef in the note
+            // For now, just store the decrypted binary data. The attachment metadata
+            // will be set when we process the note's attachment references below.
+            // We need to temporarily store this in a map to associate with notes.
+
+            self.debug_log(&format!("Pull - Successfully decrypted attachment {}, {} bytes", sync_attachment.id, decrypted_data.len()));
+        }
+
+        // Create a map of attachment_id -> decrypted_data for quick lookup
+        let mut attachment_data_map: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
+
+        for sync_attachment in &pull_response.attachments {
+            if let Ok(decoded_data) = general_purpose::STANDARD.decode(&sync_attachment.data) {
+                if let Ok(encrypted_blob) = serde_json::from_slice::<crate::crypto::EncryptedData>(&decoded_data) {
+                    if let Ok(decrypted_data) = self.crypto.decrypt_binary(&encrypted_blob, key) {
+                        attachment_data_map.insert(sync_attachment.id.clone(), decrypted_data);
+                    }
+                }
+            }
+        }
 
         for remote_note in pull_response.notes {
             self.debug_log(&format!("Pull - Processing note: {}", remote_note.id));
@@ -2111,6 +2204,64 @@ impl App {
 
             self.debug_log(&format!("Pull - Successfully decrypted {} tags", decrypted_tags.len()));
 
+            // Process attachments for this note
+            let mut note_attachments: Vec<Attachment> = Vec::new();
+
+            for attachment_ref in &remote_note.attachments {
+                self.debug_log(&format!("Pull - Processing attachment ref: {}", attachment_ref.id));
+
+                // Get decrypted binary data from our map
+                if let Some(decrypted_data) = attachment_data_map.get(&attachment_ref.id) {
+                    // Decrypt the filename (it's stored encrypted in the database)
+                    let encrypted_filename: crate::crypto::EncryptedData = match serde_json::from_str(&attachment_ref.filename) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Failed to parse encrypted filename for {}: {}, skipping", attachment_ref.id, e));
+                            continue;
+                        }
+                    };
+
+                    let decrypted_filename = match self.crypto.decrypt_text(&encrypted_filename, key) {
+                        Ok(filename) => filename,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Failed to decrypt filename for {}: {}, skipping", attachment_ref.id, e));
+                            continue;
+                        }
+                    };
+
+                    // Parse the filename (it's stored as JSON string)
+                    let filename: String = match serde_json::from_str(&decrypted_filename) {
+                        Ok(name) => name,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Failed to parse filename JSON for {}: {}, skipping", attachment_ref.id, e));
+                            continue;
+                        }
+                    };
+
+                    // Store in database
+                    attachment_repo.store(
+                        &attachment_ref.id,
+                        &filename,
+                        &attachment_ref.mime_type,
+                        attachment_ref.size,
+                        decrypted_data,
+                        key
+                    )?;
+
+                    // Add to note's attachment array
+                    note_attachments.push(Attachment {
+                        id: attachment_ref.id.clone(),
+                        filename: filename.clone(),
+                        mime_type: attachment_ref.mime_type.clone(),
+                        size: attachment_ref.size,
+                        data: attachment_ref.data.clone(),
+                        thumbnail_data: None,
+                    });
+
+                    self.debug_log(&format!("Pull - Stored attachment: {} ({})", filename, attachment_ref.id));
+                }
+            }
+
             // Check if we have this note locally
             if let Some(local_note) = self.notes.iter_mut().find(|n| n.id == remote_note.id) {
                 // Conflict resolution: Last-Write-Wins
@@ -2118,6 +2269,7 @@ impl App {
                     // Remote is newer, update local with decrypted content
                     local_note.content = decrypted_content;
                     local_note.tags = decrypted_tags;
+                    local_note.attachments = note_attachments.clone();
                     local_note.modified_at = remote_note.modified_at;
                     local_note.pinned = remote_note.pinned;
                     local_note.deleted = remote_note.deleted;
@@ -2138,6 +2290,7 @@ impl App {
                 new_note.created_at = remote_note.created_at;
                 new_note.modified_at = remote_note.modified_at;
                 new_note.tags = decrypted_tags;
+                new_note.attachments = note_attachments;
                 new_note.pinned = remote_note.pinned;
                 new_note.deleted = remote_note.deleted;
                 new_note.deleted_at = remote_note.deleted_at;

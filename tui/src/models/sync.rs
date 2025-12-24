@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
