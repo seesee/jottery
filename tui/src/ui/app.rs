@@ -26,8 +26,8 @@ use tempfile::NamedTempFile;
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Note, UserSettings, sync::SyncCredentials},
-    repository::{EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
+    models::{Attachment, Note, UserSettings, sync::SyncCredentials},
+    repository::{attachment::AttachmentRepository, EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
 };
 
 /// Strip markdown formatting from text (for display in note list)
@@ -100,11 +100,27 @@ fn strip_markdown(text: &str) -> String {
 }
 
 /// Render markdown for terminal display using pulldown-cmark parser
-fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter) -> Vec<Line<'static>> {
+fn render_markdown_for_terminal(
+    content: &str,
+    syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter,
+    debug_log: &Option<Arc<Mutex<File>>>
+) -> Vec<Line<'static>> {
     use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind, Options};
     use ratatui::style::{Style, Modifier, Color};
     use ratatui::text::{Line, Span};
     use crate::models::SyntaxLanguage;
+
+    // Helper to write debug messages
+    let log_debug = |msg: &str| {
+        if let Some(log) = debug_log {
+            if let Ok(mut file) = log.lock() {
+                let _ = writeln!(file, "[{}] {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), msg);
+            }
+        }
+    };
+
+    // Log the first 500 chars of content to debug table issues
+    log_debug(&format!("=== Markdown content (first 500 chars): {:?}", &content.chars().take(500).collect::<String>()));
 
     let mut lines = Vec::new();
     let mut current_line_spans: Vec<Span<'static>> = Vec::new();
@@ -114,7 +130,6 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
     let mut code_block_lang = String::new();
     let mut in_table = false;
     let mut in_table_head = false;
-    let mut in_heading = false;
     let mut in_list_item = false;
     let mut list_item_started = false;
     let mut table_cells: Vec<String> = Vec::new();
@@ -148,7 +163,6 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             lines.push(Line::raw(""));
                         }
 
-                        in_heading = true;
                         // Headers in cyan + bold
                         let header_style = Style::default()
                             .fg(Color::Cyan)
@@ -201,12 +215,15 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                         in_table = true;
                         table_header_rows.clear();
                         table_body_rows.clear();
+                        log_debug(">>> Tag::Table start");
                     }
                     Tag::TableHead => {
                         in_table_head = true;
+                        log_debug(">>> Tag::TableHead start (setting in_table_head=true)");
                     }
                     Tag::TableRow => {
                         table_cells.clear();
+                        log_debug(&format!(">>> Tag::TableRow start (in_table_head={})", in_table_head));
                     }
                     Tag::TableCell => {
                         current_cell_text.clear();
@@ -232,7 +249,6 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
             Event::End(tag_end) => {
                 match tag_end {
                     TagEnd::Heading(_) => {
-                        in_heading = false;
                         // Pop style from stack
                         if style_stack.len() > 1 {
                             style_stack.pop();
@@ -294,6 +310,7 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                     TagEnd::TableRow => {
                         // Save the current row to appropriate vector
                         if !table_cells.is_empty() {
+                            log_debug(&format!("TableRow end - in_table_head={}, cells={:?}", in_table_head, table_cells));
                             if in_table_head {
                                 table_header_rows.push(table_cells.clone());
                             } else {
@@ -303,10 +320,18 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                         }
                     }
                     TagEnd::TableHead => {
+                        // Save header cells (they come directly in TableHead, not in a TableRow)
+                        if !table_cells.is_empty() {
+                            log_debug(&format!(">>> TagEnd::TableHead - saving header cells: {:?}", table_cells));
+                            table_header_rows.push(table_cells.clone());
+                            table_cells.clear();
+                        }
                         in_table_head = false;
+                        log_debug(">>> TagEnd::TableHead (setting in_table_head=false)");
                     }
                     TagEnd::Table => {
                         in_table = false;
+                        log_debug(&format!("Table end - header_rows={}, body_rows={}", table_header_rows.len(), table_body_rows.len()));
 
                         // Calculate column widths from both header and body
                         let mut col_widths: Vec<usize> = Vec::new();
@@ -525,6 +550,8 @@ pub enum InputMode {
     SettingsEdit,
     /// Password verification mode (for enabling remember password)
     PasswordVerify,
+    /// Attachment path input mode (entering file path to attach)
+    AttachmentPath,
 }
 
 /// Current view mode
@@ -607,6 +634,14 @@ pub struct App {
     sync_status_set_at: Option<Instant>,
     /// Current color scheme (cached from settings)
     color_scheme: crate::ui::ColorScheme,
+    /// Selected attachment index in preview pane
+    selected_attachment: usize,
+    /// File path input buffer (when adding attachments)
+    attachment_path_input: String,
+    /// Whether chafa is available for image preview (lazy-loaded)
+    chafa_available: Option<bool>,
+    /// Track if 'a' key was pressed (for a1, a2 sequence)
+    last_key_was_a: bool,
 }
 
 impl App {
@@ -650,6 +685,10 @@ impl App {
             last_auto_sync: None,
             sync_status_set_at: None,
             color_scheme: crate::ui::ColorScheme::default(),
+            selected_attachment: 0,
+            attachment_path_input: String::new(),
+            chafa_available: None,
+            last_key_was_a: false,
         })
     }
 
@@ -910,6 +949,22 @@ impl App {
                         }
                     }
                 }
+                KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Navigate attachments down (Shift+j)
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note = filtered[self.selected_note];
+                        if !note.attachments.is_empty() && self.selected_attachment < note.attachments.len() - 1 {
+                            self.selected_attachment += 1;
+                        }
+                    }
+                }
+                KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Navigate attachments up (Shift+k)
+                    if self.selected_attachment > 0 {
+                        self.selected_attachment -= 1;
+                    }
+                }
                 KeyCode::Down | KeyCode::Char('j') => {
                     let note_count = self.filtered_notes().len();
                     if note_count > 0 && self.selected_note < note_count - 1 {
@@ -1084,7 +1139,64 @@ impl App {
                         }
                     }
                 }
-                _ => {}
+                KeyCode::Char('a') => {
+                    // Mark 'a' key pressed for attachment viewing sequence (a1, a2, etc.)
+                    // Select first attachment
+                    self.last_key_was_a = true;
+                    self.selected_attachment = 0;
+                }
+                KeyCode::Char(c @ '1'..='9') if self.last_key_was_a => {
+                    // View attachment by number (a1, a2, etc.)
+                    let attachment_index = (c as usize) - ('1' as usize);
+
+                    // Get current note's attachments and clone the attachment we need
+                    let filtered = self.filtered_notes();
+                    let attachment_to_view = if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note = filtered[self.selected_note];
+                        if attachment_index < note.attachments.len() {
+                            Some(note.attachments[attachment_index].clone())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+
+                    // Now call view_attachment with the cloned attachment
+                    if let Some(attachment) = attachment_to_view {
+                        if let Err(e) = self.view_attachment(&attachment) {
+                            self.error = Some(format!("Failed to view attachment: {}", e));
+                        }
+                    } else {
+                        self.error = Some(format!("No attachment a{}", c));
+                    }
+
+                    self.last_key_was_a = false;
+                }
+                KeyCode::Char('A') => {
+                    // Enter attachment path input mode (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
+                            self.input_mode = InputMode::AttachmentPath;
+                            self.attachment_path_input.clear();
+                        } else {
+                            self.error = Some("No note selected".to_string());
+                        }
+                    }
+                }
+                KeyCode::Char('X') => {
+                    // Remove selected attachment (only in note list view)
+                    if matches!(self.view_mode, ViewMode::NoteList) {
+                        if let Err(e) = self.remove_attachment_from_current_note() {
+                            self.error = Some(format!("Failed to remove attachment: {}", e));
+                        }
+                    }
+                }
+                _ => {
+                    // Reset 'a' key flag for any other key
+                    self.last_key_was_a = false;
+                }
             }
         }
         Ok(())
@@ -1153,6 +1265,32 @@ impl App {
                     } else {
                         self.tag_input.pop();
                     }
+                }
+                _ => {}
+            },
+            InputMode::AttachmentPath => match key.code {
+                KeyCode::Enter => {
+                    // Add attachment from file path
+                    let path = self.attachment_path_input.clone();
+                    self.attachment_path_input.clear();
+                    self.input_mode = InputMode::Normal;
+
+                    if !path.is_empty() {
+                        if let Err(e) = self.add_attachment_to_current_note(&path) {
+                            self.error = Some(format!("Failed to add attachment: {}", e));
+                        }
+                    }
+                }
+                KeyCode::Esc => {
+                    // Cancel attachment input
+                    self.attachment_path_input.clear();
+                    self.input_mode = InputMode::Normal;
+                }
+                KeyCode::Backspace => {
+                    self.attachment_path_input.pop();
+                }
+                KeyCode::Char(c) => {
+                    self.attachment_path_input.push(c);
                 }
                 _ => {}
             },
@@ -1526,6 +1664,7 @@ impl App {
 
     /// Enable/disable remember password feature
     /// When enabling, encrypts and stores the current password
+    #[allow(dead_code)]
     pub fn toggle_remember_password(&mut self) -> Result<()> {
         if self.settings.remember_password {
             // Disable: clear stored password
@@ -2291,6 +2430,7 @@ impl App {
     }
 
     /// Paste sync credentials from clipboard
+    #[allow(dead_code)]
     fn paste_sync_credentials(&mut self) -> Result<()> {
         // Get clipboard content
         let mut clipboard = arboard::Clipboard::new()
@@ -2377,6 +2517,7 @@ impl App {
     }
 
     /// Copy sync credentials to clipboard
+    #[allow(dead_code)]
     fn copy_sync_credentials(&mut self) -> Result<()> {
         // Get sync metadata
         if let Some(db) = &self.db {
@@ -2666,6 +2807,333 @@ impl App {
             // Set success message
             self.sync_status = Some(format!("Permanently deleted {} note{}", count, if count == 1 { "" } else { "s" }));
         }
+        Ok(())
+    }
+
+    /// Check if chafa is available for image preview (cached result)
+    fn is_chafa_available(&mut self) -> bool {
+        if let Some(available) = self.chafa_available {
+            return available;
+        }
+
+        // Try to run chafa --version
+        let available = Command::new("chafa")
+            .arg("--version")
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false);
+
+        self.chafa_available = Some(available);
+        available
+    }
+
+    /// Detect MIME type from file extension
+    fn detect_mime_type(path: &std::path::Path) -> String {
+        if let Some(ext) = path.extension() {
+            match ext.to_str().unwrap_or("").to_lowercase().as_str() {
+                // Images
+                "png" => "image/png",
+                "jpg" | "jpeg" => "image/jpeg",
+                "gif" => "image/gif",
+                "webp" => "image/webp",
+                "svg" => "image/svg+xml",
+                "bmp" => "image/bmp",
+                // Documents
+                "pdf" => "application/pdf",
+                "txt" => "text/plain",
+                "md" => "text/markdown",
+                "json" => "application/json",
+                "xml" => "application/xml",
+                // Archives
+                "zip" => "application/zip",
+                "tar" => "application/x-tar",
+                "gz" => "application/gzip",
+                // Default
+                _ => "application/octet-stream",
+            }
+        } else {
+            "application/octet-stream"
+        }
+        .to_string()
+    }
+
+    /// Expand ~ to home directory in file path
+    fn expand_tilde(path: &str) -> Result<PathBuf> {
+        if path.starts_with("~/") {
+            let home = env::var("HOME")
+                .context("HOME environment variable not set")?;
+            Ok(PathBuf::from(home).join(&path[2..]))
+        } else {
+            Ok(PathBuf::from(path))
+        }
+    }
+
+    /// View an attachment (decrypt to temp file, then view with appropriate tool)
+    fn view_attachment(&mut self, attachment: &Attachment) -> Result<()> {
+        let db = self.db.as_ref().context("Database not available")?;
+        let key = self.key.as_ref().context("Key not available")?;
+
+        // Retrieve and decrypt attachment data
+        let attachment_repo = AttachmentRepository::new(db.connection());
+        let (filename, mime_type, _size, data) = attachment_repo
+            .get(&attachment.id, key)?
+            .context("Attachment not found in database")?;
+
+        // Create temporary file with original extension
+        let extension = std::path::Path::new(&filename)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+
+        let temp_file = tempfile::Builder::new()
+            .suffix(&format!(".{}", extension))
+            .tempfile()
+            .context("Failed to create temporary file")?;
+
+        // Write decrypted data to temp file
+        std::fs::write(temp_file.path(), &data)
+            .context("Failed to write attachment to temporary file")?;
+
+        // Determine viewer based on MIME type
+        let is_image = mime_type.starts_with("image/");
+
+        if is_image && self.is_chafa_available() {
+            // Use chafa for terminal image display
+            self.view_with_chafa(temp_file.path())?;
+        } else {
+            // Use system default opener
+            self.view_with_system_default(temp_file.path())?;
+        }
+
+        Ok(())
+    }
+
+    /// View image with chafa in terminal
+    fn view_with_chafa(&mut self, path: &std::path::Path) -> Result<()> {
+        // Suspend TUI
+        disable_raw_mode().context("Failed to disable raw mode")?;
+        execute!(io::stdout(), LeaveAlternateScreen)
+            .context("Failed to leave alternate screen")?;
+
+        // Launch chafa
+        let status = Command::new("chafa")
+            .arg("--size=80x40") // Reasonable terminal size
+            .arg("--animate=false") // No animation for static images
+            .arg(path)
+            .status()
+            .context("Failed to launch chafa")?;
+
+        if status.success() {
+            // Wait for user to press key to continue
+            println!("\nPress Enter to continue...");
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+        }
+
+        // Resume TUI (same pattern as edit_with_external_editor)
+        execute!(io::stdout(), EnterAlternateScreen)
+            .context("Failed to enter alternate screen")?;
+        enable_raw_mode().context("Failed to enable raw mode")?;
+        execute!(
+            io::stdout(),
+            Clear(ClearType::All),
+            Clear(ClearType::Purge),
+            MoveTo(0, 0)
+        )
+        .context("Failed to clear screen")?;
+        io::stdout().flush().context("Failed to flush stdout")?;
+        self.need_redraw = true;
+
+        if !status.success() {
+            anyhow::bail!("Chafa exited with non-zero status");
+        }
+
+        Ok(())
+    }
+
+    /// View file with system default application
+    fn view_with_system_default(&mut self, path: &std::path::Path) -> Result<()> {
+        // Suspend TUI
+        disable_raw_mode().context("Failed to disable raw mode")?;
+        execute!(io::stdout(), LeaveAlternateScreen)
+            .context("Failed to leave alternate screen")?;
+
+        // Determine command based on OS
+        #[cfg(target_os = "macos")]
+        let open_cmd = "open";
+        #[cfg(target_os = "linux")]
+        let open_cmd = "xdg-open";
+        #[cfg(target_os = "windows")]
+        let open_cmd = "start";
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+        let open_cmd = "xdg-open"; // Fallback
+
+        // Launch viewer (detached process)
+        let status = Command::new(open_cmd)
+            .arg(path)
+            .status()
+            .context(format!("Failed to launch viewer: {}", open_cmd))?;
+
+        if status.success() {
+            // Wait for user acknowledgment (file opened in background)
+            println!("File opened in default application.");
+            println!("Press Enter to continue...");
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+        }
+
+        // Resume TUI
+        execute!(io::stdout(), EnterAlternateScreen)
+            .context("Failed to enter alternate screen")?;
+        enable_raw_mode().context("Failed to enable raw mode")?;
+        execute!(
+            io::stdout(),
+            Clear(ClearType::All),
+            Clear(ClearType::Purge),
+            MoveTo(0, 0)
+        )
+        .context("Failed to clear screen")?;
+        io::stdout().flush().context("Failed to flush stdout")?;
+        self.need_redraw = true;
+
+        Ok(())
+    }
+
+    /// Add attachment to the current note
+    fn add_attachment_to_current_note(&mut self, file_path: &str) -> Result<()> {
+        // Expand tilde in path
+        let expanded_path = Self::expand_tilde(file_path)?;
+
+        // Validate file exists
+        if !expanded_path.exists() {
+            anyhow::bail!("File not found: {}", file_path);
+        }
+
+        if !expanded_path.is_file() {
+            anyhow::bail!("Path is not a file: {}", file_path);
+        }
+
+        // Check file size (warn if > 10MB, reject if > 50MB)
+        let metadata = std::fs::metadata(&expanded_path)
+            .context("Failed to read file metadata")?;
+        let size_bytes = metadata.len();
+
+        if size_bytes > 50 * 1024 * 1024 {
+            anyhow::bail!("File too large (>50MB): {} bytes", size_bytes);
+        }
+
+        // Read file data
+        let data = std::fs::read(&expanded_path)
+            .context("Failed to read file")?;
+
+        // Detect MIME type
+        let mime_type = Self::detect_mime_type(&expanded_path);
+
+        // Get filename
+        let filename = expanded_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unnamed")
+            .to_string();
+
+        // Get current note
+        let filtered = self.filtered_notes();
+        let note_id = if !filtered.is_empty() && self.selected_note < filtered.len() {
+            filtered[self.selected_note].id.clone()
+        } else {
+            anyhow::bail!("No note selected");
+        };
+
+        // Store encrypted attachment
+        let db = self.db.as_ref().context("Database not available")?;
+        let key = self.key.as_ref().context("Key not available")?;
+
+        // Generate UUID for attachment
+        let attachment_id = uuid::Uuid::new_v4().to_string();
+
+        let attachment_repo = AttachmentRepository::new(db.connection());
+        attachment_repo.store(&attachment_id, &filename, &mime_type, size_bytes as i64, &data, key)?;
+
+        // Create Attachment struct
+        let attachment = Attachment {
+            id: attachment_id.clone(),
+            filename: filename.clone(),
+            mime_type: mime_type.clone(),
+            size: size_bytes as i64,
+            data: attachment_id, // Reference to blob store
+            thumbnail_data: None,
+        };
+
+        // Load the note, add attachment, and save
+        let note_repo = NoteRepository::new(db.connection());
+        let mut note = note_repo
+            .get(&note_id, key)?
+            .context("Note not found")?;
+
+        note.attachments.push(attachment);
+        note.modified_at = chrono::Utc::now();
+        note.version += 1;
+
+        note_repo.update(&note, key)?;
+
+        // Refresh the note list to show updated note
+        self.load_notes()?;
+
+        Ok(())
+    }
+
+    /// Remove attachment from the current note
+    fn remove_attachment_from_current_note(&mut self) -> Result<()> {
+        // Get current note
+        let filtered = self.filtered_notes();
+        let note_id = if !filtered.is_empty() && self.selected_note < filtered.len() {
+            filtered[self.selected_note].id.clone()
+        } else {
+            anyhow::bail!("No note selected");
+        };
+
+        let db = self.db.as_ref().context("Database not available")?;
+        let key = self.key.as_ref().context("Key not available")?;
+
+        // Load the note
+        let note_repo = NoteRepository::new(db.connection());
+        let mut note = note_repo
+            .get(&note_id, key)?
+            .context("Note not found")?;
+
+        // Check if there are attachments
+        if note.attachments.is_empty() {
+            anyhow::bail!("No attachments to remove");
+        }
+
+        // Validate selected_attachment index
+        if self.selected_attachment >= note.attachments.len() {
+            anyhow::bail!("Invalid attachment selection");
+        }
+
+        // Get attachment to remove
+        let attachment = note.attachments.remove(self.selected_attachment);
+
+        // Delete from database
+        let attachment_repo = AttachmentRepository::new(db.connection());
+        attachment_repo.delete(&attachment.id)?;
+
+        // Update note
+        note.modified_at = chrono::Utc::now();
+        note.version += 1;
+
+        note_repo.update(&note, key)?;
+
+        // Adjust selected_attachment if needed
+        if self.selected_attachment >= note.attachments.len() && !note.attachments.is_empty() {
+            self.selected_attachment = note.attachments.len() - 1;
+        } else if note.attachments.is_empty() {
+            self.selected_attachment = 0;
+        }
+
+        // Refresh the note list to show updated note
+        self.load_notes()?;
+
         Ok(())
     }
 
@@ -3065,11 +3533,52 @@ impl App {
             use crate::models::SyntaxLanguage;
             if note.syntax_language == SyntaxLanguage::Markdown {
                 // Render markdown with inline formatting and code block highlighting
-                lines.extend(render_markdown_for_terminal(&note.content, &self.syntax_highlighter));
+                lines.extend(render_markdown_for_terminal(&note.content, &self.syntax_highlighter, &self.debug_log));
             } else {
                 // Apply syntax highlighting to code
                 let highlighted_content = self.syntax_highlighter.highlight(&note.content, note.syntax_language);
                 lines.extend(highlighted_content.lines);
+            }
+
+            // Add attachments section if there are any attachments
+            if !note.attachments.is_empty() {
+                lines.push(Line::raw("")); // Blank line before attachments
+                lines.push(Line::styled(
+                    "─".repeat(40),
+                    Style::default().fg(self.color_scheme.muted)
+                ));
+                lines.push(Line::styled(
+                    "Attachments:",
+                    Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)
+                ));
+
+                for (i, attachment) in note.attachments.iter().enumerate() {
+                    let size_kb = (attachment.size as f64) / 1024.0;
+                    let size_str = if size_kb < 1024.0 {
+                        format!("{:.1} KB", size_kb)
+                    } else {
+                        format!("{:.1} MB", size_kb / 1024.0)
+                    };
+
+                    let prefix = format!("  a{}. ", i + 1);
+                    let filename = &attachment.filename;
+                    let mime = &attachment.mime_type;
+                    let attachment_line = format!("{}{} ({}) [{}]", prefix, filename, size_str, mime);
+
+                    let style = if i == self.selected_attachment {
+                        Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(self.color_scheme.foreground)
+                    };
+
+                    lines.push(Line::styled(attachment_line, style));
+                }
+
+                lines.push(Line::raw(""));
+                lines.push(Line::styled(
+                    "Press 'a' + number to view, 'A' to add, 'X' to remove selected",
+                    Style::default().fg(self.color_scheme.muted)
+                ));
             }
 
             let preview = Paragraph::new(Text::from(lines))
@@ -3083,6 +3592,32 @@ impl App {
                 .alignment(Alignment::Center);
             frame.render_widget(preview, right_pane);
         }
+
+        // Render attachment path input overlay if in AttachmentPath mode
+        if matches!(self.input_mode, InputMode::AttachmentPath) {
+            use ratatui::layout::Rect;
+
+            // Calculate centered modal size
+            let modal_width = 60;
+            let modal_height = 3;
+            let x = (size.width.saturating_sub(modal_width)) / 2;
+            let y = (size.height.saturating_sub(modal_height)) / 2;
+
+            let modal_area = Rect::new(x, y, modal_width, modal_height);
+
+            // Render modal background
+            let modal_block = Block::default()
+                .title("Add Attachment (~/path or /absolute/path)")
+                .borders(Borders::ALL)
+                .style(Style::default().bg(self.color_scheme.background).fg(self.color_scheme.accent));
+
+            let modal_text = format!("Enter file path: {}", self.attachment_path_input);
+            let modal_paragraph = Paragraph::new(modal_text)
+                .block(modal_block)
+                .style(Style::default().fg(self.color_scheme.foreground));
+
+            frame.render_widget(modal_paragraph, modal_area);
+        }
     }
 
     /// Render note view
@@ -3092,6 +3627,7 @@ impl App {
         let mode_text = match self.input_mode {
             InputMode::Normal => "PREVIEW",
             InputMode::Tag => "TAG",
+            InputMode::AttachmentPath => "ATTACHMENT",
             InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify => "PREVIEW", // Should not happen in note view
         };
 
@@ -3157,6 +3693,11 @@ impl App {
             }
             InputMode::Tag => {
                 Paragraph::new("Type tag name | Enter: add | Backspace: remove last | Esc: exit")
+                    .style(Style::default().fg(self.color_scheme.muted))
+                    .alignment(Alignment::Center)
+            }
+            InputMode::AttachmentPath => {
+                Paragraph::new("Type file path | Enter: attach | Esc: cancel")
                     .style(Style::default().fg(self.color_scheme.muted))
                     .alignment(Alignment::Center)
             }
@@ -3394,6 +3935,15 @@ impl App {
             Line::from("  p                     Paste sync credentials (shows text input)"),
             Line::from("  c                     Copy sync credentials (shows text to copy)"),
             Line::from("  s / q                 Close settings panel"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("ATTACHMENTS", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  A                     Add attachment (enter file path)"),
+            Line::from("  a + number            View attachment (a1, a2, ...)"),
+            Line::from("  Shift+j / Shift+k     Navigate attachments"),
+            Line::from("  X                     Remove selected attachment"),
+            Line::from("  Note: Images use chafa if available, otherwise system default app"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("GLOBAL", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
