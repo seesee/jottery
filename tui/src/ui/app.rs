@@ -119,7 +119,8 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
     let mut list_item_started = false;
     let mut table_cells: Vec<String> = Vec::new();
     let mut current_cell_text = String::new();
-    let mut table_rows: Vec<Vec<String>> = Vec::new();
+    let mut table_header_rows: Vec<Vec<String>> = Vec::new();
+    let mut table_body_rows: Vec<Vec<String>> = Vec::new();
 
     // Style stack for nested formatting
     let mut style_stack: Vec<Style> = vec![Style::default()];
@@ -198,7 +199,8 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             current_line_spans.clear();
                         }
                         in_table = true;
-                        table_rows.clear();
+                        table_header_rows.clear();
+                        table_body_rows.clear();
                     }
                     Tag::TableHead => {
                         in_table_head = true;
@@ -290,9 +292,13 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                         current_cell_text.clear();
                     }
                     TagEnd::TableRow => {
-                        // Save the current row
+                        // Save the current row to appropriate vector
                         if !table_cells.is_empty() {
-                            table_rows.push(table_cells.clone());
+                            if in_table_head {
+                                table_header_rows.push(table_cells.clone());
+                            } else {
+                                table_body_rows.push(table_cells.clone());
+                            }
                             table_cells.clear();
                         }
                     }
@@ -302,9 +308,11 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                     TagEnd::Table => {
                         in_table = false;
 
-                        // Calculate column widths
+                        // Calculate column widths from both header and body
                         let mut col_widths: Vec<usize> = Vec::new();
-                        for row in &table_rows {
+
+                        // Check header rows
+                        for row in &table_header_rows {
                             for (i, cell) in row.iter().enumerate() {
                                 let width = cell.len();
                                 if i >= col_widths.len() {
@@ -315,35 +323,55 @@ fn render_markdown_for_terminal(content: &str, syntax_highlighter: &crate::ui::s
                             }
                         }
 
-                        // Render table rows
-                        for (row_idx, row) in table_rows.iter().enumerate() {
+                        // Check body rows
+                        for row in &table_body_rows {
+                            for (i, cell) in row.iter().enumerate() {
+                                let width = cell.len();
+                                if i >= col_widths.len() {
+                                    col_widths.push(width);
+                                } else if width > col_widths[i] {
+                                    col_widths[i] = width;
+                                }
+                            }
+                        }
+
+                        // Render header rows (bold)
+                        for row in &table_header_rows {
                             let mut row_text = String::from("| ");
                             for (i, cell) in row.iter().enumerate() {
                                 let width = if i < col_widths.len() { col_widths[i] } else { 0 };
                                 row_text.push_str(&format!("{:<width$} | ", cell, width = width));
                             }
-
-                            // First row is header - make it bold
-                            if row_idx == 0 {
-                                lines.push(Line::styled(
-                                    row_text,
-                                    Style::default().add_modifier(Modifier::BOLD)
-                                ));
-                                // Add separator line after header
-                                let mut separator = String::from("|-");
-                                for &width in &col_widths {
-                                    separator.push_str(&"-".repeat(width));
-                                    separator.push_str("-|-");
-                                }
-                                // Remove trailing dash
-                                separator.pop();
-                                lines.push(Line::styled(separator, Style::default().fg(Color::DarkGray)));
-                            } else {
-                                lines.push(Line::raw(row_text));
-                            }
+                            lines.push(Line::styled(
+                                row_text,
+                                Style::default().add_modifier(Modifier::BOLD)
+                            ));
                         }
 
-                        table_rows.clear();
+                        // Add separator line after header
+                        if !table_header_rows.is_empty() {
+                            let mut separator = String::from("|-");
+                            for &width in &col_widths {
+                                separator.push_str(&"-".repeat(width));
+                                separator.push_str("-|-");
+                            }
+                            // Remove trailing dash
+                            separator.pop();
+                            lines.push(Line::styled(separator, Style::default().fg(Color::DarkGray)));
+                        }
+
+                        // Render body rows (normal)
+                        for row in &table_body_rows {
+                            let mut row_text = String::from("| ");
+                            for (i, cell) in row.iter().enumerate() {
+                                let width = if i < col_widths.len() { col_widths[i] } else { 0 };
+                                row_text.push_str(&format!("{:<width$} | ", cell, width = width));
+                            }
+                            lines.push(Line::raw(row_text));
+                        }
+
+                        table_header_rows.clear();
+                        table_body_rows.clear();
                         // Add blank line after table
                         lines.push(Line::raw(""));
                     }
