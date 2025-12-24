@@ -6,7 +6,7 @@ use crossterm::{
     cursor::MoveTo,
 };
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
@@ -642,6 +642,8 @@ pub struct App {
     chafa_available: Option<bool>,
     /// Track if 'a' key was pressed (for a1, a2 sequence)
     last_key_was_a: bool,
+    /// Show force resync confirmation modal
+    show_force_sync_confirm: bool,
 }
 
 impl App {
@@ -689,6 +691,7 @@ impl App {
             attachment_path_input: String::new(),
             chafa_available: None,
             last_key_was_a: false,
+            show_force_sync_confirm: false,
         })
     }
 
@@ -913,8 +916,23 @@ impl App {
                     self.error = None;
                 }
                 KeyCode::Char('y') => {
-                    // Sync notes
-                    self.trigger_sync();
+                    // Handle based on context
+                    if self.show_force_sync_confirm {
+                        // Confirm force full sync
+                        self.show_force_sync_confirm = false;
+                        self.force_full_sync();
+                    } else {
+                        // Normal sync
+                        self.trigger_sync();
+                    }
+                }
+                KeyCode::Char('Y') => {
+                    // Show force full sync confirmation
+                    self.show_force_sync_confirm = true;
+                }
+                KeyCode::Char('n') if self.show_force_sync_confirm => {
+                    // Cancel force sync
+                    self.show_force_sync_confirm = false;
                 }
                 KeyCode::Char('/') => {
                     // Enter search mode (only in note list view)
@@ -1123,8 +1141,11 @@ impl App {
                     }
                 }
                 KeyCode::Esc => {
-                    // Exit recycle bin view
-                    if matches!(self.view_mode, ViewMode::RecycleBin) {
+                    // Cancel force sync confirmation if showing
+                    if self.show_force_sync_confirm {
+                        self.show_force_sync_confirm = false;
+                    } else if matches!(self.view_mode, ViewMode::RecycleBin) {
+                        // Exit recycle bin view
                         self.view_mode = ViewMode::NoteList;
                         self.selected_note = 0;
                         self.preview_scroll_offset = 0;
@@ -1879,7 +1900,7 @@ impl App {
         self.sync_status = Some("Syncing...".to_string());
         self.sync_status_set_at = Some(Instant::now());
 
-        match self.perform_sync() {
+        match self.perform_sync(false) {
             Ok(result) => {
                 self.sync_status = Some(format!("Sync complete! {} {} synced", result, if result == 1 { "note" } else { "notes" }));
                 self.sync_status_set_at = Some(Instant::now());
@@ -1892,8 +1913,46 @@ impl App {
         }
     }
 
+    /// Force full resync from server
+    fn force_full_sync(&mut self) {
+        self.debug_log("force_full_sync - Called");
+
+        // Check if sync is configured
+        if !self.settings.sync_enabled {
+            self.debug_log("force_full_sync - Sync not enabled, returning");
+            self.sync_status = Some("Sync not enabled. Press 's' to configure in settings.".to_string());
+            self.sync_status_set_at = Some(Instant::now());
+            return;
+        }
+
+        if self.settings.sync_endpoint.is_none() {
+            self.debug_log("force_full_sync - Sync endpoint not configured, returning");
+            self.sync_status = Some("Sync endpoint not configured. Configure in database settings table.".to_string());
+            self.sync_status_set_at = Some(Instant::now());
+            return;
+        }
+
+        // Perform force sync
+        self.debug_log("force_full_sync - Starting force full sync");
+        self.sync_status = Some("Force syncing all notes...".to_string());
+        self.sync_status_set_at = Some(Instant::now());
+
+        match self.perform_sync(true) {
+            Ok(result) => {
+                self.sync_status = Some(format!("Force sync complete! {} {} synced from server", result, if result == 1 { "note" } else { "notes" }));
+                self.sync_status_set_at = Some(Instant::now());
+            }
+            Err(e) => {
+                self.error = Some(format!("Force sync failed: {}", e));
+                self.sync_status = Some(format!("Force sync failed: {}", e));
+                self.sync_status_set_at = Some(Instant::now());
+            }
+        }
+    }
+
     /// Perform bidirectional sync with server
-    fn perform_sync(&mut self) -> Result<usize> {
+    /// If force is true, pulls all notes from server regardless of last sync time
+    fn perform_sync(&mut self, force: bool) -> Result<usize> {
         use crate::models::sync::{SyncPushRequest, SyncPullRequest, SyncNote, SyncPushResponse, SyncPullResponse};
         use crate::repository::sync::SyncRepository;
         use chrono::Utc;
@@ -2027,10 +2086,17 @@ impl App {
         }
 
         // PULL: Get changes from server
-        let known_note_ids: Vec<String> = self.notes.iter().map(|n| n.id.clone()).collect();
+        let (last_sync_for_pull, known_note_ids) = if force {
+            // Force full sync: request all notes from server
+            (None, vec![])
+        } else {
+            // Normal sync: use last sync time and known note IDs
+            let known_ids = self.notes.iter().map(|n| n.id.clone()).collect();
+            (last_sync, known_ids)
+        };
 
         let pull_request = SyncPullRequest {
-            last_sync_at: last_sync,
+            last_sync_at: last_sync_for_pull,
             known_note_ids,
         };
 
@@ -3819,6 +3885,56 @@ impl App {
 
             frame.render_widget(modal_paragraph, modal_area);
         }
+
+        // Render force sync confirmation modal if showing
+        if self.show_force_sync_confirm {
+            // Create centered modal
+            let modal_width = 60;
+            let modal_height = 7;
+            let modal_x = (size.width.saturating_sub(modal_width)) / 2;
+            let modal_y = (size.height.saturating_sub(modal_height)) / 2;
+
+            let modal_area = Rect {
+                x: modal_x,
+                y: modal_y,
+                width: modal_width,
+                height: modal_height,
+            };
+
+            // Clear background
+            let clear_block = Block::default()
+                .style(Style::default().bg(self.color_scheme.background));
+            frame.render_widget(clear_block, modal_area);
+
+            // Render modal
+            let modal_block = Block::default()
+                .title("Force Full Resync")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(self.color_scheme.accent))
+                .style(Style::default().bg(self.color_scheme.background));
+
+            let modal_text = vec![
+                Line::from(""),
+                Line::from("Pull ALL notes and attachments from server?").style(Style::default().fg(self.color_scheme.foreground)),
+                Line::from("This will overwrite local changes if server is newer.").style(Style::default().fg(self.color_scheme.muted)),
+                Line::from(""),
+                Line::from(vec![
+                    Span::raw("Press "),
+                    Span::styled("y", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                    Span::raw(" to confirm, "),
+                    Span::styled("n", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                    Span::raw(" or "),
+                    Span::styled("Esc", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                    Span::raw(" to cancel"),
+                ]).style(Style::default().fg(self.color_scheme.foreground)),
+            ];
+
+            let modal_paragraph = Paragraph::new(modal_text)
+                .block(modal_block)
+                .alignment(ratatui::layout::Alignment::Center);
+
+            frame.render_widget(modal_paragraph, modal_area);
+        }
     }
 
     /// Render note view
@@ -4016,6 +4132,7 @@ impl App {
             Line::from("  • For toggles and cycles: press Enter to change value immediately"),
             Line::from("  • Remember Password: Enter prompts for password (if enabling) or disables (if enabled)"),
             Line::from("  • Press 'y' to trigger manual sync"),
+            Line::from("  • Press 'Y' (Shift+y) to force full resync (pull all notes from server)"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Sync Credentials (for multi-device setup): ", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
