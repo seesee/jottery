@@ -2262,8 +2262,11 @@ impl App {
                 }
             }
 
-            // Check if we have this note locally
-            if let Some(local_note) = self.notes.iter_mut().find(|n| n.id == remote_note.id) {
+            // Check if we have this note in the database (not just in-memory list)
+            let existing_note = note_repo.get(&remote_note.id, key)?;
+
+            if let Some(mut local_note) = existing_note {
+                // Note exists in database - check if we should update it
                 // Conflict resolution: Last-Write-Wins
                 if remote_note.modified_at > local_note.modified_at {
                     // Remote is newer, update local with decrypted content
@@ -2280,13 +2283,19 @@ impl App {
                         local_note.syntax_language = lang_str.parse().unwrap_or_default();
                     }
 
-                    note_repo.update(local_note, key)?;
+                    note_repo.update(&local_note, key)?;
+
+                    // Also update in-memory list if present
+                    if let Some(mem_note) = self.notes.iter_mut().find(|n| n.id == remote_note.id) {
+                        *mem_note = local_note;
+                    }
+
                     sync_count += 1;
                 }
             } else {
                 // New note from server, add it with decrypted content
                 let mut new_note = Note::new(decrypted_content);
-                new_note.id = remote_note.id;
+                new_note.id = remote_note.id.clone();
                 new_note.created_at = remote_note.created_at;
                 new_note.modified_at = remote_note.modified_at;
                 new_note.tags = decrypted_tags;
@@ -2301,7 +2310,12 @@ impl App {
                 }
 
                 note_repo.create(&new_note, key)?;
-                self.notes.insert(0, new_note);
+
+                // Add to in-memory list only if not deleted
+                if !new_note.deleted {
+                    self.notes.insert(0, new_note);
+                }
+
                 sync_count += 1;
             }
         }
