@@ -2086,18 +2086,25 @@ impl App {
         }
 
         // PULL: Get changes from server
-        let (last_sync_for_pull, known_note_ids) = if force {
-            // Force full sync: request all notes from server
-            (None, vec![])
+        let (last_sync_for_pull, known_note_ids, known_attachment_ids) = if force {
+            // Force full sync: request all notes and attachments from server
+            (None, vec![], vec![])
         } else {
-            // Normal sync: use last sync time and known note IDs
+            // Normal sync: use last sync time, known note IDs, and known attachment IDs
             let known_ids = self.notes.iter().map(|n| n.id.clone()).collect();
-            (last_sync, known_ids)
+
+            // Collect all attachment IDs we already have locally
+            let known_att_ids: Vec<String> = self.notes.iter()
+                .flat_map(|note| note.attachments.iter().map(|att| att.id.clone()))
+                .collect();
+
+            (last_sync, known_ids, known_att_ids)
         };
 
         let pull_request = SyncPullRequest {
             last_sync_at: last_sync_for_pull,
             known_note_ids,
+            known_attachment_ids,
         };
 
         let pull_url = format!("{}/api/v1/sync/pull", endpoint);

@@ -167,6 +167,7 @@ pub struct SyncRejected {
 pub struct SyncPullRequest {
     pub last_sync_at: Option<DateTime<Utc>>,
     pub known_note_ids: Vec<String>,
+    pub known_attachment_ids: Vec<String>,
 }
 
 /// Pull response from server
