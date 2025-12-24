@@ -791,6 +791,37 @@ impl App {
             self.sync_status = None;
         }
 
+        // Handle attachment path input mode
+        if matches!(self.input_mode, InputMode::AttachmentPath) {
+            match key.code {
+                KeyCode::Enter => {
+                    // Add attachment from file path
+                    let path = self.attachment_path_input.clone();
+                    self.attachment_path_input.clear();
+                    self.input_mode = InputMode::Normal;
+
+                    if !path.is_empty() {
+                        if let Err(e) = self.add_attachment_to_current_note(&path) {
+                            self.error = Some(format!("Failed to add attachment: {}", e));
+                        }
+                    }
+                }
+                KeyCode::Esc => {
+                    // Cancel attachment input
+                    self.attachment_path_input.clear();
+                    self.input_mode = InputMode::Normal;
+                }
+                KeyCode::Backspace => {
+                    self.attachment_path_input.pop();
+                }
+                KeyCode::Char(c) => {
+                    self.attachment_path_input.push(c);
+                }
+                _ => {}
+            }
+            return Ok(());
+        }
+
         // Handle search mode
         if self.search_active {
             match key.code {
@@ -1268,32 +1299,11 @@ impl App {
                 }
                 _ => {}
             },
-            InputMode::AttachmentPath => match key.code {
-                KeyCode::Enter => {
-                    // Add attachment from file path
-                    let path = self.attachment_path_input.clone();
-                    self.attachment_path_input.clear();
-                    self.input_mode = InputMode::Normal;
-
-                    if !path.is_empty() {
-                        if let Err(e) = self.add_attachment_to_current_note(&path) {
-                            self.error = Some(format!("Failed to add attachment: {}", e));
-                        }
-                    }
-                }
-                KeyCode::Esc => {
-                    // Cancel attachment input
-                    self.attachment_path_input.clear();
-                    self.input_mode = InputMode::Normal;
-                }
-                KeyCode::Backspace => {
-                    self.attachment_path_input.pop();
-                }
-                KeyCode::Char(c) => {
-                    self.attachment_path_input.push(c);
-                }
-                _ => {}
-            },
+            InputMode::AttachmentPath => {
+                // AttachmentPath mode is handled in note list view, not note view
+                // Reset to normal if somehow we end up here
+                self.input_mode = InputMode::Normal;
+            }
         }
         Ok(())
     }
