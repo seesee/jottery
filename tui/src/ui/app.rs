@@ -3011,11 +3011,26 @@ impl App {
 
     /// Add attachment to the current note
     fn add_attachment_to_current_note(&mut self, file_path: &str) -> Result<()> {
+        // Clone debug_log so we can use it in the closure without borrowing self
+        let debug_log = self.debug_log.clone();
+        // Helper to write debug messages
+        let log_debug = |msg: &str| {
+            if let Some(log) = &debug_log {
+                if let Ok(mut file) = log.lock() {
+                    let _ = writeln!(file, "[{}] {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), msg);
+                }
+            }
+        };
+
+        log_debug(&format!("add_attachment: Starting with path: {}", file_path));
+
         // Expand tilde in path
         let expanded_path = Self::expand_tilde(file_path)?;
+        log_debug(&format!("add_attachment: Expanded path: {:?}", expanded_path));
 
         // Validate file exists
         if !expanded_path.exists() {
+            log_debug("add_attachment: File not found");
             anyhow::bail!("File not found: {}", file_path);
         }
 
@@ -3048,9 +3063,13 @@ impl App {
 
         // Get current note
         let filtered = self.filtered_notes();
+        log_debug(&format!("add_attachment: filtered_notes count: {}", filtered.len()));
         let note_id = if !filtered.is_empty() && self.selected_note < filtered.len() {
-            filtered[self.selected_note].id.clone()
+            let id = filtered[self.selected_note].id.clone();
+            log_debug(&format!("add_attachment: Selected note ID: {}", id));
+            id
         } else {
+            log_debug("add_attachment: No note selected");
             anyhow::bail!("No note selected");
         };
 
@@ -3060,9 +3079,11 @@ impl App {
 
         // Generate UUID for attachment
         let attachment_id = uuid::Uuid::new_v4().to_string();
+        log_debug(&format!("add_attachment: Generated attachment ID: {}", attachment_id));
 
         let attachment_repo = AttachmentRepository::new(db.connection());
         attachment_repo.store(&attachment_id, &filename, &mime_type, size_bytes as i64, &data, key)?;
+        log_debug("add_attachment: Stored in attachments table");
 
         // Create Attachment struct
         let attachment = Attachment {
@@ -3080,14 +3101,17 @@ impl App {
             .get(&note_id, key)?
             .context("Note not found")?;
 
+        log_debug(&format!("add_attachment: Note has {} attachments before adding", note.attachments.len()));
         note.attachments.push(attachment);
         note.modified_at = chrono::Utc::now();
         note.version += 1;
 
         note_repo.update(&note, key)?;
+        log_debug(&format!("add_attachment: Updated note, now has {} attachments", note.attachments.len()));
 
         // Refresh the note list to show updated note
         self.load_notes()?;
+        log_debug("add_attachment: Reloaded notes list");
 
         Ok(())
     }
