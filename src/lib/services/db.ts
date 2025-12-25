@@ -3,10 +3,10 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Note, UserSettings, EncryptionMetadata } from '../types';
+import type { Note, UserSettings, EncryptionMetadata, NoteVersion } from '../types';
 
 const DB_NAME = 'jottery';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 // Object store names
 export const STORES = {
@@ -16,6 +16,7 @@ export const STORES = {
   SETTINGS: 'settings',
   ENCRYPTION: 'encryption',
   SYNC_METADATA: 'sync_metadata',
+  NOTE_VERSIONS: 'note_versions',
 } as const;
 
 export interface JotteryDB {
@@ -48,6 +49,15 @@ export interface JotteryDB {
   sync_metadata: {
     key: string; // 'metadata' or 'note:<uuid>'
     value: any; // SyncMetadata | NoteSyncMetadata (will be defined in types/sync.ts)
+  };
+  note_versions: {
+    key: string; // versionKey
+    value: NoteVersion;
+    indexes: {
+      noteId: string;
+      createdAt: string;
+      'noteId-version': [string, number];
+    };
   };
 }
 
@@ -100,6 +110,18 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
         console.log('[DB] Creating v2 schema (sync_metadata store)...');
         db.createObjectStore(STORES.SYNC_METADATA);
         console.log('[DB] sync_metadata store created successfully');
+      }
+
+      // Version 3: Add note versions store
+      if (oldVersion < 3) {
+        console.log('[DB] Creating v3 schema (note_versions store)...');
+        const versionsStore = db.createObjectStore(STORES.NOTE_VERSIONS, {
+          keyPath: 'versionKey',
+        });
+        versionsStore.createIndex('noteId', 'noteId');
+        versionsStore.createIndex('createdAt', 'createdAt');
+        versionsStore.createIndex('noteId-version', ['noteId', 'version'], { unique: true });
+        console.log('[DB] note_versions store created successfully');
       }
 
       console.log('[DB] Upgrade complete');

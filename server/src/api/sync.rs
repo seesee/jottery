@@ -208,6 +208,51 @@ pub async fn push(
         }
     }
 
+    // Store note versions
+    for version in push_req.versions {
+        let now_for_version = chrono::Utc::now().to_rfc3339();
+
+        // Serialize tags and attachments as JSON
+        let tags_json = serde_json::to_string(&version.tags)
+            .map_err(|e| AppError::InternalError(format!("Failed to serialize version tags: {}", e)))?;
+        let attachments_json = serde_json::to_string(&version.attachments)
+            .map_err(|e| AppError::InternalError(format!("Failed to serialize version attachments: {}", e)))?;
+
+        // Convert optional fields
+        let word_wrap = version.word_wrap.map(|w| if w { 1 } else { 0 });
+
+        // Upsert version (insert or replace if exists)
+        sqlx::query!(
+            r#"
+            INSERT INTO note_versions (
+                version_key, note_id, client_id, version, created_at, synced_at,
+                server_synced_at, content, tags, attachments, syntax_language, word_wrap, reason
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            ON CONFLICT(version_key) DO UPDATE SET
+                synced_at = excluded.synced_at,
+                server_synced_at = excluded.server_synced_at
+            "#,
+            version.version_key,
+            version.note_id,
+            client_id,
+            version.version,
+            version.created_at,
+            version.synced_at,
+            now_for_version,
+            version.content,
+            tags_json,
+            attachments_json,
+            version.syntax_language,
+            word_wrap,
+            version.reason
+        )
+        .execute(&state.pool)
+        .await?;
+
+        tracing::debug!("Stored version: {} for note {}", version.version_key, version.note_id);
+    }
+
     // Store attachment data (binary blobs)
     for attachment in push_req.attachments {
         // Decode base64
@@ -387,14 +432,54 @@ pub async fn pull(
     // Get deletions
     let deletions = Vec::new(); // Simplified for now
 
+    // Get versions for all notes (optionally filter by time if needed)
+    let epoch = "1970-01-01T00:00:00Z".to_string();
+    let last_sync_filter = pull_req.last_sync_at.as_ref().unwrap_or(&epoch);
+    let db_versions = sqlx::query!(
+        "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, reason
+         FROM note_versions
+         WHERE client_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
+         ORDER BY note_id, version",
+        client_id,
+        last_sync_filter,
+        last_sync_filter
+    )
+    .fetch_all(&state.pool)
+    .await?;
+
+    // Convert to SyncNoteVersion
+    let mut versions_response = Vec::new();
+    for db_version in db_versions {
+        // Deserialize tags
+        let tags: Vec<String> = serde_json::from_str(&db_version.tags).unwrap_or_default();
+
+        // Deserialize attachments
+        let attachments: Vec<crate::models::AttachmentRef> = serde_json::from_str(&db_version.attachments).unwrap_or_default();
+
+        versions_response.push(crate::models::SyncNoteVersion {
+            version_key: db_version.version_key,
+            note_id: db_version.note_id,
+            version: db_version.version,
+            created_at: db_version.created_at,
+            synced_at: db_version.synced_at,
+            content: db_version.content,
+            tags,
+            attachments,
+            syntax_language: db_version.syntax_language,
+            word_wrap: db_version.word_wrap.map(|w| w != 0),
+            reason: db_version.reason,
+        });
+    }
+
     let synced_at = chrono::Utc::now().to_rfc3339();
 
-    tracing::info!("Pull response: {} notes, {} attachments", notes.len(), attachments_data.len());
+    tracing::info!("Pull response: {} notes, {} attachments, {} versions", notes.len(), attachments_data.len(), versions_response.len());
 
     Ok(Json(SyncPullResponse {
         notes,
         deletions,
         attachments: attachments_data,
+        versions: versions_response,
         synced_at,
     }))
 }

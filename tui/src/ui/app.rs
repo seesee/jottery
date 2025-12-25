@@ -1962,6 +1962,7 @@ impl App {
 
         let sync_repo = SyncRepository::new(db.connection());
         let note_repo = NoteRepository::new(db.connection());
+        let version_repo = crate::repository::NoteVersionRepository::new(db.connection());
 
         // Get sync metadata
         let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
@@ -2036,6 +2037,53 @@ impl App {
 
             let sync_notes = sync_notes?;
 
+            // Collect versions for all notes being pushed
+            use crate::models::sync::SyncNoteVersion;
+            let mut sync_versions: Vec<SyncNoteVersion> = Vec::new();
+
+            for note in &notes_to_push {
+                let note_versions = version_repo.get_versions_for_note(&note.id, key)?;
+
+                for version in note_versions {
+                    // Encrypt content and tags for transmission
+                    let encrypted_content = self.crypto.encrypt_text(&version.content, key)?;
+                    let content_json = serde_json::to_string(&encrypted_content)?;
+
+                    let encrypted_tags: Result<Vec<String>> = version.tags.iter()
+                        .map(|tag| {
+                            let tag_json = serde_json::to_string(tag)?;
+                            let encrypted_tag = self.crypto.encrypt_text(&tag_json, key)?;
+                            Ok(serde_json::to_string(&encrypted_tag)?)
+                        })
+                        .collect();
+
+                    // Build attachment references
+                    let attachment_refs: Vec<AttachmentRef> = version.attachments.iter().map(|att| {
+                        AttachmentRef {
+                            id: att.id.clone(),
+                            filename: att.filename.clone(), // Already encrypted
+                            mime_type: att.mime_type.clone(),
+                            size: att.size,
+                            data: att.data.clone(),
+                        }
+                    }).collect();
+
+                    sync_versions.push(SyncNoteVersion {
+                        version_key: format!("{}:{}", version.note_id, version.version),
+                        note_id: version.note_id.clone(),
+                        version: version.version,
+                        created_at: version.created_at,
+                        synced_at: version.synced_at,
+                        content: content_json,
+                        tags: encrypted_tags?,
+                        attachments: attachment_refs,
+                        syntax_language: version.syntax_language.as_ref().map(|s| s.to_string()),
+                        word_wrap: version.word_wrap,
+                        reason: version.reason.to_string(),
+                    });
+                }
+            }
+
             // Fetch binary data for all attachments that need to be pushed
             let attachment_repo = AttachmentRepository::new(db.connection());
             let sync_attachments: Result<Vec<SyncAttachment>> = attachment_ids_to_push.iter().map(|att_id| {
@@ -2057,6 +2105,7 @@ impl App {
             let push_request = SyncPushRequest {
                 notes: sync_notes,
                 attachments: sync_attachments?,
+                versions: sync_versions,
             };
 
             // Create HTTP client
@@ -2080,6 +2129,13 @@ impl App {
                 .context("Failed to parse push response")?;
 
             sync_count += push_response.accepted.len();
+
+            // Create version snapshots for accepted notes
+            for accepted in &push_response.accepted {
+                if let Ok(Some(note)) = note_repo.get(&accepted.id, key) {
+                    let _ = version_repo.create_version(&note, accepted.synced_at, crate::repository::VersionReason::Sync, key);
+                }
+            }
 
             // Update last push timestamp
             metadata.last_push_at = Some(Utc::now());
@@ -2342,6 +2398,9 @@ impl App {
                 // Note exists in database - check if we should update it
                 // Conflict resolution: Last-Write-Wins
                 if remote_note.modified_at > local_note.modified_at {
+                    // Capture local version BEFORE overwriting with remote
+                    let _ = version_repo.create_version(&local_note, pull_response.synced_at, crate::repository::VersionReason::Sync, key);
+
                     // Remote is newer, update local with decrypted content
                     local_note.content = decrypted_content;
                     local_note.tags = decrypted_tags;
@@ -2390,6 +2449,89 @@ impl App {
                 }
 
                 sync_count += 1;
+            }
+        }
+
+        // Process incoming versions from server
+        self.debug_log(&format!("Pull - Received {} versions from server", pull_response.versions.len()));
+
+        for server_version in &pull_response.versions {
+            self.debug_log(&format!("Pull - Processing version: {} (v{})", server_version.version_key, server_version.version));
+
+            // Check if this version already exists
+            let existing_version = version_repo.get_version_by_key(&server_version.version_key)?;
+
+            if existing_version.is_none() {
+                // New version from server - decrypt and store it locally
+
+                // Decrypt content
+                let encrypted_content: crate::crypto::EncryptedData = match serde_json::from_str(&server_version.content) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        self.debug_log(&format!("Pull - Failed to parse version content: {}, skipping", e));
+                        continue;
+                    }
+                };
+
+                let decrypted_content = match self.crypto.decrypt_text(&encrypted_content, key) {
+                    Ok(content) => content,
+                    Err(e) => {
+                        self.debug_log(&format!("Pull - Failed to decrypt version content: {}, skipping", e));
+                        continue;
+                    }
+                };
+
+                // Decrypt tags
+                let decrypted_tags: Vec<String> = server_version.tags.iter()
+                    .flat_map(|tag_json| {
+                        let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
+                        let tag_json_str = self.crypto.decrypt_text(&encrypted_tag, key).ok()?;
+                        serde_json::from_str::<String>(&tag_json_str).ok()
+                    })
+                    .collect();
+
+                // Convert attachment refs
+                let version_attachments: Vec<Attachment> = server_version.attachments.iter().map(|att_ref| {
+                    Attachment {
+                        id: att_ref.id.clone(),
+                        filename: att_ref.filename.clone(),
+                        mime_type: att_ref.mime_type.clone(),
+                        size: att_ref.size,
+                        data: att_ref.data.clone(),
+                        thumbnail_data: None,
+                    }
+                }).collect();
+
+                // Parse version reason
+                let reason = if server_version.reason == "manual-sync" {
+                    crate::repository::VersionReason::ManualSync
+                } else {
+                    crate::repository::VersionReason::Sync
+                };
+
+                // Create local version
+                let local_version = crate::repository::NoteVersion {
+                    version_key: server_version.version_key.clone(),
+                    note_id: server_version.note_id.clone(),
+                    version: server_version.version,
+                    created_at: server_version.created_at,
+                    synced_at: server_version.synced_at,
+                    content: decrypted_content,
+                    tags: decrypted_tags,
+                    attachments: version_attachments,
+                    syntax_language: server_version.syntax_language
+                        .as_ref()
+                        .and_then(|s| s.parse().ok()),
+                    word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
+                    reason,
+                };
+
+                // Store the version
+                if let Err(e) = version_repo.insert_version_from_sync(&local_version, key) {
+                    self.debug_log(&format!("Pull - Failed to store version {}: {}", server_version.version_key, e));
+                } else {
+                    self.debug_log(&format!("Pull - Stored version from server: {}", server_version.version_key));
+                }
             }
         }
 

@@ -7,6 +7,7 @@
   import TagInput from './TagInput.svelte';
   import AttachmentList from './AttachmentList.svelte';
   import FileUpload from './FileUpload.svelte';
+  import VersionHistoryModal from './VersionHistoryModal.svelte';
   import { marked } from 'marked';
   import hljs from 'highlight.js';
 
@@ -37,6 +38,7 @@
   let codeEditor: any = null; // Reference to CodeEditor component
   let showMoreMenu: boolean = false;
   let showInfoModal: boolean = false;
+  let showVersionHistory: boolean = false;
 
   // Compute preview HTML
   $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
@@ -439,6 +441,11 @@
     showInfoModal = true;
   }
 
+  function handleShowVersionHistory() {
+    showMoreMenu = false;
+    showVersionHistory = true;
+  }
+
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
   }
@@ -625,6 +632,14 @@
               >
                 <span>ℹ️</span>
                 <span>Info</span>
+              </button>
+
+              <button
+                on:click={handleShowVersionHistory}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span>📜</span>
+                <span>Version History</span>
               </button>
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -837,3 +852,24 @@
     </div>
   </div>
 {/if}
+
+<!-- Version History Modal -->
+<VersionHistoryModal
+  show={showVersionHistory}
+  noteId={$selectedNote?.id}
+  currentVersion={$selectedNote?.version}
+  onClose={() => showVersionHistory = false}
+  onRestore={async (version) => {
+    await noteService.loadNoteById($selectedNote!.id);
+    // Reload note from database to get updated content
+    const updatedNote = await noteService.getNote($selectedNote!.id);
+    if (updatedNote) {
+      content = updatedNote.content;
+      tags = updatedNote.tags;
+      attachments = updatedNote.attachments;
+      language = updatedNote.syntaxLanguage || 'plain';
+      wordWrap = updatedNote.wordWrap ?? true;
+      showPreview = updatedNote.showPreview ?? false;
+    }
+  }}
+/>

@@ -40,6 +40,7 @@ export interface SyncStatus {
 export interface SyncPushRequest {
   notes: SyncNote[];
   attachments: SyncAttachment[];
+  versions: SyncNoteVersion[];
 }
 
 // Note structure for sync (matches server expectations)
@@ -106,6 +107,7 @@ export interface SyncPullResponse {
   notes: SyncNote[];
   deletions: SyncDeletion[];
   attachments: SyncAttachment[];
+  versions: SyncNoteVersion[];
   syncedAt: string;
 }
 
@@ -113,6 +115,21 @@ export interface SyncPullResponse {
 export interface SyncDeletion {
   id: string;
   deletedAt: string;
+}
+
+// Note version for sync
+export interface SyncNoteVersion {
+  versionKey: string;        // `${noteId}:${version}`
+  noteId: string;
+  version: number;
+  createdAt: string;
+  syncedAt: string;
+  content: string;           // Encrypted JSON string
+  tags: string[];            // Array of encrypted JSON strings
+  attachments: AttachmentRef[];
+  syntaxLanguage?: string;
+  wordWrap?: boolean;
+  reason: 'sync' | 'manual-sync';
 }
 
 // Server status response

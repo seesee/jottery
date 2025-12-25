@@ -18,6 +18,7 @@ import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
+import { versionRepository } from './versionRepository';
 import { cryptoService, encryptJSON, decryptJSON } from './crypto';
 import { noteService } from './noteService';
 import { searchService } from './searchService';
@@ -308,6 +309,7 @@ class SyncService {
         };
       })),
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
+      versions: await this.collectVersionsForPush(modifiedNotes),
     };
 
     // Debug log tag formats being sent
@@ -345,6 +347,15 @@ class SyncService {
         serverVersion: accepted.serverVersion,
         lastSyncStatus: 'synced',
       });
+
+      // Create version snapshot after successful push
+      const note = await noteRepository.getById(accepted.id);
+      if (note) {
+        await versionRepository.createVersion(note, {
+          syncedAt: accepted.syncedAt,
+          reason: 'sync',
+        });
+      }
     }
 
     // Handle rejected notes (conflicts)
@@ -517,6 +528,12 @@ class SyncService {
       } else {
         // Conflict resolution: Last-Write-Wins by modifiedAt
         if (remoteNote.modifiedAt > localNote.modifiedAt) {
+          // Capture local version BEFORE overwriting with server version
+          await versionRepository.createVersion(localNote, {
+            syncedAt: result.syncedAt,
+            reason: 'sync',
+          });
+
           // Server version is newer - update local
           console.log(`[SyncService] Updating note with server version (newer): ${remoteNote.id}`);
           await noteRepository.update(noteForStorage);
@@ -543,6 +560,55 @@ class SyncService {
         console.log(`[SyncService] Downloaded attachment: ${attachment.id}`);
       } catch (error) {
         console.error(`Failed to download attachment ${attachment.id}:`, error);
+      }
+    }
+
+    // Merge versions from server
+    console.log(`[SyncService] Pull - Received ${result.versions.length} versions from server`);
+    for (const serverVersion of result.versions) {
+      // Check if we already have this version locally
+      const existingVersion = await versionRepository.getVersion(
+        serverVersion.noteId,
+        serverVersion.version
+      );
+
+      if (!existingVersion) {
+        // New version from server - store it locally
+        // Convert SyncNoteVersion to NoteVersion format for storage
+        const versionToStore: NoteVersion = {
+          versionKey: serverVersion.versionKey,
+          noteId: serverVersion.noteId,
+          version: serverVersion.version,
+          createdAt: serverVersion.createdAt,
+          syncedAt: serverVersion.syncedAt,
+          content: serverVersion.content,
+          tags: serverVersion.tags,
+          attachments: serverVersion.attachments,
+          syntaxLanguage: serverVersion.syntaxLanguage,
+          wordWrap: serverVersion.wordWrap,
+          reason: serverVersion.reason,
+        };
+
+        await versionRepository.createVersion(
+          {
+            id: serverVersion.noteId,
+            content: serverVersion.content,
+            tags: serverVersion.tags,
+            attachments: serverVersion.attachments,
+            version: serverVersion.version,
+            syntaxLanguage: serverVersion.syntaxLanguage,
+            wordWrap: serverVersion.wordWrap,
+            // These fields won't be used since we're directly storing the version
+            createdAt: serverVersion.createdAt,
+            modifiedAt: serverVersion.createdAt,
+            pinned: false,
+            deleted: false,
+            syncedAt: serverVersion.syncedAt,
+          } as Note,
+          { syncedAt: serverVersion.syncedAt, reason: serverVersion.reason as 'sync' | 'manual-sync' }
+        );
+
+        console.log(`[SyncService] Pull - Stored new version from server: ${serverVersion.versionKey}`);
       }
     }
 
@@ -634,6 +700,38 @@ class SyncService {
    */
   isAutoSyncEnabled(): boolean {
     return this.autoSyncTimer !== undefined;
+  }
+
+  /**
+   * Collect all versions for notes being pushed
+   */
+  private async collectVersionsForPush(notes: Note[]): Promise<SyncNoteVersion[]> {
+    const versions: SyncNoteVersion[] = [];
+
+    for (const note of notes) {
+      // Get all versions for this note
+      const noteVersions = await versionRepository.getVersionsForNote(note.id);
+
+      // Convert to SyncNoteVersion format (versions are already encrypted in storage)
+      for (const version of noteVersions) {
+        versions.push({
+          versionKey: version.versionKey,
+          noteId: version.noteId,
+          version: version.version,
+          createdAt: version.createdAt,
+          syncedAt: version.syncedAt,
+          content: version.content,
+          tags: version.tags,
+          attachments: version.attachments,
+          syntaxLanguage: version.syntaxLanguage,
+          wordWrap: version.wordWrap,
+          reason: version.reason,
+        });
+      }
+    }
+
+    console.log(`[SyncService] Push - Sending ${versions.length} versions`);
+    return versions;
   }
 
   // Helper methods for base64 conversion

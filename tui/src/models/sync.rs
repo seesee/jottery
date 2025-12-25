@@ -97,6 +97,7 @@ impl Default for SyncStatusDisplay {
 pub struct SyncPushRequest {
     pub notes: Vec<SyncNote>,
     pub attachments: Vec<SyncAttachment>,
+    pub versions: Vec<SyncNoteVersion>,
 }
 
 /// Note structure for sync (matches server expectations)
@@ -177,6 +178,7 @@ pub struct SyncPullResponse {
     pub notes: Vec<SyncNote>,
     pub deletions: Vec<SyncDeletion>,
     pub attachments: Vec<SyncAttachment>,
+    pub versions: Vec<SyncNoteVersion>,
     pub synced_at: DateTime<Utc>,
 }
 
@@ -186,6 +188,23 @@ pub struct SyncPullResponse {
 pub struct SyncDeletion {
     pub id: String,
     pub deleted_at: DateTime<Utc>,
+}
+
+/// Note version for sync
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncNoteVersion {
+    pub version_key: String,        // `${noteId}:${version}`
+    pub note_id: String,
+    pub version: i32,
+    pub created_at: DateTime<Utc>,
+    pub synced_at: DateTime<Utc>,
+    pub content: String,           // Encrypted JSON string
+    pub tags: Vec<String>,         // Array of encrypted JSON strings
+    pub attachments: Vec<AttachmentRef>,
+    pub syntax_language: Option<String>,
+    pub word_wrap: Option<bool>,
+    pub reason: String,            // 'sync' or 'manual-sync'
 }
 
 /// Server status response

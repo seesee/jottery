@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct SyncPushRequest {
     pub notes: Vec<SyncNote>,
     pub attachments: Vec<SyncAttachment>,
+    pub versions: Vec<SyncNoteVersion>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -86,6 +87,7 @@ pub struct SyncPullResponse {
     pub notes: Vec<SyncNote>,
     pub deletions: Vec<SyncDeletion>,
     pub attachments: Vec<SyncAttachmentData>,
+    pub versions: Vec<SyncNoteVersion>,
     #[serde(rename = "syncedAt")]
     pub synced_at: String,
 }
@@ -114,4 +116,26 @@ pub struct SyncStatusResponse {
     pub note_count: i64,
     #[serde(rename = "lastSyncedAt")]
     pub last_synced_at: Option<String>,
+}
+
+// Note version for sync
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SyncNoteVersion {
+    #[serde(rename = "versionKey")]
+    pub version_key: String,        // `${noteId}:${version}`
+    #[serde(rename = "noteId")]
+    pub note_id: String,
+    pub version: i64,
+    #[serde(rename = "createdAt")]
+    pub created_at: String,
+    #[serde(rename = "syncedAt")]
+    pub synced_at: String,
+    pub content: String,            // Encrypted JSON string
+    pub tags: Vec<String>,          // Array of encrypted JSON strings
+    pub attachments: Vec<AttachmentRef>,
+    #[serde(rename = "syntaxLanguage")]
+    pub syntax_language: Option<String>,
+    #[serde(rename = "wordWrap")]
+    pub word_wrap: Option<bool>,
+    pub reason: String,             // 'sync' or 'manual-sync'
 }

@@ -1,0 +1,248 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { versionService } from '../services/versionService';
+  import type { DecryptedNoteVersion } from '../types';
+  import { formatDate } from '../utils/dateFormat';
+  import ConfirmModal from './ConfirmModal.svelte';
+
+  export let show: boolean = false;
+  export let noteId: string | undefined = undefined;
+  export let currentVersion: number | undefined = undefined;
+  export let onClose: () => void;
+  export let onRestore: ((version: number) => Promise<void>) | undefined = undefined;
+
+  let versions: DecryptedNoteVersion[] = [];
+  let loading = false;
+  let selectedVersion: DecryptedNoteVersion | null = null;
+  let showRestoreConfirm = false;
+  let versionToRestore: number | null = null;
+
+  async function loadVersions() {
+    if (!noteId) return;
+
+    loading = true;
+    try {
+      versions = await versionService.getVersionsForNote(noteId);
+      // Auto-select the first (newest) version
+      if (versions.length > 0) {
+        selectedVersion = versions[0];
+      }
+    } catch (error) {
+      console.error('Failed to load versions:', error);
+    } finally {
+      loading = false;
+    }
+  }
+
+  function handleSelectVersion(version: DecryptedNoteVersion) {
+    selectedVersion = version;
+  }
+
+  function handleRestoreClick() {
+    if (!selectedVersion) return;
+    versionToRestore = selectedVersion.version;
+    showRestoreConfirm = true;
+  }
+
+  async function confirmRestore() {
+    showRestoreConfirm = false;
+    if (versionToRestore === null) return;
+
+    try {
+      if (onRestore) {
+        await onRestore(versionToRestore);
+      } else {
+        await versionService.restoreVersion(noteId!, versionToRestore);
+      }
+      versionToRestore = null;
+      onClose();
+    } catch (error) {
+      console.error('Failed to restore version:', error);
+      alert('Failed to restore version: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  function handleBackdropClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }
+
+  function getPreviewContent(content: string): string {
+    // Get first 500 characters for preview
+    return content.length > 500 ? content.substring(0, 500) + '...' : content;
+  }
+
+  function formatReason(reason: string): string {
+    return reason === 'sync' ? 'Auto Sync' : 'Manual Sync';
+  }
+
+  // Load versions when modal opens or noteId changes
+  $: if (show && noteId) {
+    loadVersions();
+  }
+</script>
+
+{#if show}
+  <div
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
+    on:click={handleBackdropClick}
+    on:keydown={(e) => e.key === 'Escape' && onClose()}
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-6xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
+      <!-- Header -->
+      <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Version History</h2>
+        <button
+          on:click={onClose}
+          class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
+          aria-label="Close version history"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Content: Two-pane layout -->
+      <div class="flex-1 flex overflow-hidden">
+        {#if loading}
+          <div class="flex-1 flex items-center justify-center py-8">
+            <div class="text-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p class="mt-2 text-gray-600 dark:text-gray-400">Loading versions...</p>
+            </div>
+          </div>
+        {:else if versions.length === 0}
+          <div class="flex-1 flex items-center justify-center py-8">
+            <div class="text-center">
+              <p class="text-lg text-gray-600 dark:text-gray-400">No version history</p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">Versions will be created during sync</p>
+            </div>
+          </div>
+        {:else}
+          <!-- Left pane: Version list -->
+          <div class="w-64 border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
+            <div class="p-2">
+              {#each versions as version (version.versionKey)}
+                <button
+                  on:click={() => handleSelectVersion(version)}
+                  class="w-full text-left p-3 rounded-md mb-1 transition-colors {selectedVersion?.versionKey === version.versionKey ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="font-medium text-gray-900 dark:text-gray-100">
+                      v{version.version}
+                      {#if currentVersion === version.version}
+                        <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">(current)</span>
+                      {/if}
+                    </span>
+                  </div>
+                  <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    {formatDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                    {formatReason(version.reason)}
+                  </div>
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Right pane: Preview -->
+          <div class="flex-1 flex flex-col overflow-hidden">
+            {#if selectedVersion}
+              <div class="flex-1 overflow-y-auto p-4">
+                <div class="space-y-4">
+                  <!-- Metadata -->
+                  <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 text-sm">
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <span class="text-gray-600 dark:text-gray-400">Version:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">v{selectedVersion.version}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600 dark:text-gray-400">Characters:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">{selectedVersion.characterCount?.toLocaleString() || 0}</span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600 dark:text-gray-400">Created:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
+                          {formatDate(selectedVersion.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <div>
+                        <span class="text-gray-600 dark:text-gray-400">Synced:</span>
+                        <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
+                          {formatDate(selectedVersion.syncedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                    {#if selectedVersion.tags.length > 0}
+                      <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <span class="text-gray-600 dark:text-gray-400">Tags:</span>
+                        <div class="flex gap-1 mt-1 flex-wrap">
+                          {#each selectedVersion.tags as tag}
+                            <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs">
+                              #{tag}
+                            </span>
+                          {/each}
+                        </div>
+                      </div>
+                    {/if}
+                  </div>
+
+                  <!-- Content Preview -->
+                  <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content Preview</h3>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3">
+                      <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100 font-mono">{getPreviewContent(selectedVersion.content)}</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {:else}
+              <div class="flex-1 flex items-center justify-center">
+                <p class="text-gray-500 dark:text-gray-400">Select a version to preview</p>
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Footer -->
+      {#if versions.length > 0}
+        <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end gap-3 flex-shrink-0">
+          <button
+            on:click={onClose}
+            class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+          >
+            Close
+          </button>
+          {#if selectedVersion && selectedVersion.version !== currentVersion}
+            <button
+              on:click={handleRestoreClick}
+              class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 text-white font-medium rounded-md transition-colors"
+            >
+              Restore This Version
+            </button>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  <!-- Restore Confirmation Modal -->
+  <ConfirmModal
+    show={showRestoreConfirm}
+    title="Restore Version"
+    message="Are you sure you want to restore this version? Your current note will be saved as a new version before restoring."
+    confirmText="Restore"
+    cancelText="Cancel"
+    confirmClass="bg-blue-600 hover:bg-blue-700"
+    onConfirm={confirmRestore}
+    onCancel={() => {
+      showRestoreConfirm = false;
+      versionToRestore = null;
+    }}
+  />
+{/if}

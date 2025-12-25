@@ -97,6 +97,34 @@ export interface DecryptedNote extends Omit<Note, 'content' | 'tags'> {
 }
 
 /**
+ * Note version snapshot (for version history)
+ * Stores encrypted content at a specific point in time
+ */
+export interface NoteVersion {
+  versionKey: string; // `${noteId}:${version}`
+  noteId: string;
+  version: number;
+  createdAt: string; // When version captured
+  syncedAt: string; // When sync completed
+  content: string; // Encrypted
+  tags: string[]; // Encrypted (same format as Note)
+  attachments: Attachment[];
+  syntaxLanguage?: string;
+  wordWrap?: boolean;
+  reason: 'sync' | 'manual-sync';
+}
+
+/**
+ * Decrypted version of NoteVersion (in-memory only)
+ * Used for displaying version history
+ */
+export interface DecryptedNoteVersion extends Omit<NoteVersion, 'content' | 'tags'> {
+  content: string; // Decrypted
+  tags: string[]; // Decrypted
+  characterCount?: number;
+}
+
+/**
  * Search query structure
  */
 export interface SearchQuery {
