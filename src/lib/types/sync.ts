@@ -98,6 +98,7 @@ export interface SyncRejected {
 export interface SyncPullRequest {
   lastSyncAt?: string;
   knownNoteIds: string[];
+  knownAttachmentIds: string[];
 }
 
 // Pull response from server

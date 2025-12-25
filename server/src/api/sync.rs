@@ -356,9 +356,15 @@ pub async fn pull(
         });
     }
 
-    // Get attachment data
+    // Get attachment data - only for attachments the client doesn't already have
     let mut attachments_data = Vec::new();
     for att_id in needed_attachments {
+        // Skip if client already has this attachment
+        if pull_req.known_attachment_ids.contains(&att_id) {
+            tracing::debug!("Skipping attachment {} (client already has it)", att_id);
+            continue;
+        }
+
         if let Some(att_data) = sqlx::query!(
             "SELECT id, data FROM attachments_data WHERE id = ?",
             att_id
@@ -369,6 +375,7 @@ pub async fn pull(
             if let Some(id) = att_data.id {
                 use base64::Engine;
                 let encoded = base64::engine::general_purpose::STANDARD.encode(&att_data.data);
+                tracing::debug!("Sending attachment {} to client", id);
                 attachments_data.push(SyncAttachmentData {
                     id,
                     data: encoded,

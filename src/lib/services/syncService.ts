@@ -370,13 +370,24 @@ class SyncService {
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt;
 
-    // Get all known note IDs
+    // Get all known note IDs and attachment IDs
     const allNotes = await noteRepository.getAll();
     const knownIds = allNotes.map(n => n.id);
+
+    // Collect all known attachment IDs from local notes
+    const knownAttachmentIds: string[] = [];
+    for (const note of allNotes) {
+      for (const attachment of note.attachments) {
+        if (!knownAttachmentIds.includes(attachment.id)) {
+          knownAttachmentIds.push(attachment.id);
+        }
+      }
+    }
 
     const pullRequest: SyncPullRequest = {
       lastSyncAt,
       knownNoteIds: knownIds,
+      knownAttachmentIds,
     };
 
     const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/pull`, {

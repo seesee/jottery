@@ -76,6 +76,8 @@ pub struct SyncPullRequest {
     pub last_sync_at: Option<String>,
     #[serde(rename = "knownNoteIds")]
     pub known_note_ids: Vec<String>,
+    #[serde(rename = "knownAttachmentIds")]
+    pub known_attachment_ids: Vec<String>,
 }
 
 // Sync pull response
