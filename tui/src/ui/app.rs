@@ -2361,8 +2361,22 @@ impl App {
 
             if let Some(mut local_note) = existing_note {
                 // Note exists in database - check if we should update it
-                // Conflict resolution: Last-Write-Wins
-                if remote_note.modified_at > local_note.modified_at {
+                self.debug_log(&format!("Pull - Existing note found: {}", remote_note.id));
+                self.debug_log(&format!("  Remote modified_at: {}", remote_note.modified_at));
+                self.debug_log(&format!("  Local modified_at: {}", local_note.modified_at));
+                self.debug_log(&format!("  Remote > Local? {}", remote_note.modified_at > local_note.modified_at));
+                self.debug_log(&format!("  Local attachments: {}, Remote attachments: {}", local_note.attachments.len(), note_attachments.len()));
+
+                // Conflict resolution: Last-Write-Wins, but also update if attachments differ
+                let should_update = remote_note.modified_at > local_note.modified_at
+                    || note_attachments.len() != local_note.attachments.len();
+
+                if should_update {
+                    if remote_note.modified_at > local_note.modified_at {
+                        self.debug_log("  -> Updating note (remote is newer)");
+                    } else {
+                        self.debug_log("  -> Updating note (attachments differ even though timestamps match)");
+                    }
                     // Capture local version BEFORE overwriting with remote
                     let _ = version_repo.create_version(&local_note, pull_response.synced_at, crate::repository::VersionReason::Sync, key);
 
@@ -2388,6 +2402,8 @@ impl App {
                     }
 
                     sync_count += 1;
+                } else {
+                    self.debug_log("  -> NOT updating note (local is same or newer) - ATTACHMENTS WILL BE LOST!");
                 }
             } else {
                 // New note from server, add it with decrypted content
