@@ -1030,20 +1030,25 @@
       </div>
 
       <!-- Footer -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end gap-3 flex-shrink-0">
-        <button
-          on:click={onClose}
-          class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-        >
-          {$_('common.cancel')}
-        </button>
-        <button
-          on:click={handleSave}
-          disabled={saving}
-          class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
-        >
-          {saving ? $_('settings.saving') : $_('settings.saveSettings')}
-        </button>
+      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center gap-3 flex-shrink-0">
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          v{__APP_VERSION__}
+        </div>
+        <div class="flex gap-3">
+          <button
+            on:click={onClose}
+            class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+          >
+            {$_('common.cancel')}
+          </button>
+          <button
+            on:click={handleSave}
+            disabled={saving}
+            class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
+          >
+            {saving ? $_('settings.saving') : $_('settings.saveSettings')}
+          </button>
+        </div>
       </div>
     </div>
 

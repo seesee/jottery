@@ -3811,9 +3811,9 @@ impl App {
         let size = frame.area();
 
         let title = if self.is_new_database {
-            "Jottery TUI - Create Password"
+            format!("Jottery TUI v{} - Create Password", env!("CARGO_PKG_VERSION"))
         } else {
-            "Jottery TUI - Unlock"
+            format!("Jottery TUI v{} - Unlock", env!("CARGO_PKG_VERSION"))
         };
 
         let block = Block::default()
@@ -3974,14 +3974,14 @@ impl App {
 
         // Left pane layout: search bar (optional), list
         let title = match self.view_mode {
-            ViewMode::RecycleBin => "Recycle Bin",
-            ViewMode::AttachmentViewer => "Attachment Viewer",
-            ViewMode::VersionHistory => "Version History",
+            ViewMode::RecycleBin => "Recycle Bin".to_string(),
+            ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
+            ViewMode::VersionHistory => "Version History".to_string(),
             ViewMode::NoteList => {
                 if self.search_active {
-                    "Notes (Search)"
+                    format!("Jottery v{} - Notes (Search)", env!("CARGO_PKG_VERSION"))
                 } else {
-                    "Notes"
+                    format!("Jottery v{} - Notes", env!("CARGO_PKG_VERSION"))
                 }
             }
         };

@@ -18,6 +18,7 @@ use ui::{App, EventHandler, Tui};
 
 #[derive(Parser)]
 #[command(name = "jottery")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "A privacy-focused, encrypted note-taking TUI", long_about = None)]
 struct Cli {
     /// Database file path
@@ -25,7 +26,7 @@ struct Cli {
     database: PathBuf,
 
     /// Enable debug logging
-    #[arg(short, long)]
+    #[arg(long)]
     debug: bool,
 
     /// Debug log file path (for troubleshooting)
