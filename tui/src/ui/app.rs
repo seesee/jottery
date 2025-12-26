@@ -1194,36 +1194,58 @@ impl App {
                 KeyCode::Char('a') => {
                     // Mark 'a' key pressed for attachment viewing sequence (a1, a2, etc.)
                     // Select first attachment
+                    println!("[DEBUG] 'a' key pressed - setting last_key_was_a=true, selected_attachment=0");
                     self.last_key_was_a = true;
                     self.selected_attachment = 0;
+
+                    // Debug: show current note's attachment count
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note = filtered[self.selected_note];
+                        println!("[DEBUG] Current note has {} attachments", note.attachments.len());
+                    } else {
+                        println!("[DEBUG] No note selected or note list is empty");
+                    }
                 }
                 KeyCode::Char(c @ '1'..='9') if self.last_key_was_a => {
                     // View attachment by number (a1, a2, etc.)
+                    println!("[DEBUG] Digit '{}' pressed after 'a' - last_key_was_a={}", c, self.last_key_was_a);
                     let attachment_index = (c as usize) - ('1' as usize);
+                    println!("[DEBUG] Calculated attachment_index={}", attachment_index);
 
                     // Get current note's attachments and clone the attachment we need
                     let filtered = self.filtered_notes();
                     let attachment_to_view = if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let note = filtered[self.selected_note];
+                        println!("[DEBUG] Note has {} attachments, trying to view attachment {}", note.attachments.len(), attachment_index);
                         if attachment_index < note.attachments.len() {
+                            println!("[DEBUG] Found attachment: {}", note.attachments[attachment_index].filename);
                             Some(note.attachments[attachment_index].clone())
                         } else {
+                            println!("[DEBUG] Attachment index {} out of bounds", attachment_index);
                             None
                         }
                     } else {
+                        println!("[DEBUG] No note selected or filtered list empty");
                         None
                     };
 
                     // Now call view_attachment with the cloned attachment
                     if let Some(attachment) = attachment_to_view {
+                        println!("[DEBUG] Calling view_attachment for: {}", attachment.filename);
                         if let Err(e) = self.view_attachment(&attachment) {
+                            println!("[DEBUG] view_attachment failed: {}", e);
                             self.error = Some(format!("Failed to view attachment: {}", e));
+                        } else {
+                            println!("[DEBUG] view_attachment succeeded");
                         }
                     } else {
+                        println!("[DEBUG] No attachment found for a{}", c);
                         self.error = Some(format!("No attachment a{}", c));
                     }
 
                     self.last_key_was_a = false;
+                    println!("[DEBUG] Reset last_key_was_a to false");
                 }
                 KeyCode::Char('A') => {
                     // Enter attachment path input mode (only in note list view)
