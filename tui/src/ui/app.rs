@@ -3876,8 +3876,7 @@ impl App {
         let filtered = self.filtered_notes();
         let items: Vec<ListItem> = filtered
             .iter()
-            .enumerate()
-            .map(|(i, note)| {
+            .map(|note| {
                 let first_line = note.content.lines().next().unwrap_or("");
                 let content = strip_markdown(first_line);
                 let mut preview = if content.len() > 30 {
@@ -3899,20 +3898,23 @@ impl App {
                     preview = format!("{}{}", indicators, preview);
                 }
 
-                let style = if i == self.selected_note {
-                    Style::default()
-                        .fg(self.color_scheme.accent)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default()
-                };
-
-                ListItem::new(preview).style(style)
+                ListItem::new(preview)
             })
             .collect();
 
-        let list = List::new(items).block(list_block);
-        frame.render_widget(list, list_chunk);
+        let list = List::new(items)
+            .block(list_block)
+            .highlight_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(self.color_scheme.accent)
+            );
+
+        // Create list state for scrolling
+        let mut list_state = ratatui::widgets::ListState::default();
+        list_state.select(Some(self.selected_note));
+
+        frame.render_stateful_widget(list, list_chunk, &mut list_state);
 
         // Help text (full width at bottom)
         let status_text = if let Some(ref status) = self.sync_status {
