@@ -37,10 +37,15 @@ fi
 sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" tui/Cargo.toml && rm tui/Cargo.toml.bak
 echo "✓ Updated tui/Cargo.toml"
 
+# Update Cargo.toml (server)
+sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" server/Cargo.toml && rm server/Cargo.toml.bak
+echo "✓ Updated server/Cargo.toml"
+
 echo ""
 echo "Version updated to $VERSION in:"
-echo "  - package.json"
-echo "  - tui/Cargo.toml"
+echo "  - package.json (web client)"
+echo "  - tui/Cargo.toml (TUI client)"
+echo "  - server/Cargo.toml (server)"
 echo ""
 echo "Next steps:"
 echo "  1. Review changes: git diff"
