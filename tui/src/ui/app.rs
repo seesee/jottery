@@ -2381,12 +2381,16 @@ impl App {
                         }
                     };
 
-                    // Parse the filename (it's stored as JSON string)
+                    // Parse the filename - try JSON first (new format), fall back to plain string (legacy format)
                     let filename: String = match serde_json::from_str(&decrypted_filename) {
-                        Ok(name) => name,
-                        Err(e) => {
-                            self.debug_log(&format!("Pull - Failed to parse filename JSON for {}: {}, skipping", attachment_ref.id, e));
-                            continue;
+                        Ok(name) => {
+                            self.debug_log(&format!("Pull - Parsed filename as JSON: {}", name));
+                            name
+                        },
+                        Err(_) => {
+                            // Decrypted value is already a plain string (legacy format or direct value)
+                            self.debug_log(&format!("Pull - Using decrypted filename directly: {}", decrypted_filename));
+                            decrypted_filename
                         }
                     };
 
