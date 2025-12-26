@@ -2,14 +2,14 @@ use anyhow::{Context, Result};
 use crossterm::{
     event::{KeyCode, KeyEvent, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear, ClearType},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear as TerminalClear, ClearType},
     cursor::MoveTo,
 };
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
     Frame,
 };
 use std::{
@@ -3430,8 +3430,8 @@ impl App {
         enable_raw_mode().context("Failed to enable raw mode")?;
         execute!(
             io::stdout(),
-            Clear(ClearType::All),
-            Clear(ClearType::Purge),
+            TerminalClear(ClearType::All),
+            TerminalClear(ClearType::Purge),
             MoveTo(0, 0)
         )
         .context("Failed to clear screen")?;
@@ -3482,8 +3482,8 @@ impl App {
         enable_raw_mode().context("Failed to enable raw mode")?;
         execute!(
             io::stdout(),
-            Clear(ClearType::All),
-            Clear(ClearType::Purge),
+            TerminalClear(ClearType::All),
+            TerminalClear(ClearType::Purge),
             MoveTo(0, 0)
         )
         .context("Failed to clear screen")?;
@@ -3741,8 +3741,8 @@ impl App {
         // Clear screen with crossterm (this clears the visible screen)
         execute!(
             io::stdout(),
-            Clear(ClearType::All),
-            Clear(ClearType::Purge),
+            TerminalClear(ClearType::All),
+            TerminalClear(ClearType::Purge),
             MoveTo(0, 0)
         ).context("Failed to clear screen")?;
         io::stdout().flush().context("Failed to flush stdout")?;
@@ -4185,6 +4185,9 @@ impl App {
 
             let modal_area = Rect::new(x, y, modal_width, modal_height);
 
+            // Clear the background area
+            frame.render_widget(Clear, modal_area);
+
             // Render modal background
             let modal_block = Block::default()
                 .title("Add Attachment (~/path or /absolute/path)")
@@ -4214,10 +4217,8 @@ impl App {
                 height: modal_height,
             };
 
-            // Clear background
-            let clear_block = Block::default()
-                .style(Style::default().bg(self.color_scheme.background));
-            frame.render_widget(clear_block, modal_area);
+            // Clear the background area
+            frame.render_widget(Clear, modal_area);
 
             // Render modal
             let modal_block = Block::default()
@@ -4266,10 +4267,8 @@ impl App {
                 height: modal_height,
             };
 
-            // Clear background
-            let clear_block = Block::default()
-                .style(Style::default().bg(self.color_scheme.background));
-            frame.render_widget(clear_block, modal_area);
+            // Clear the background area
+            frame.render_widget(Clear, modal_area);
 
             // Check if we have valid data to show
             let has_note = !filtered.is_empty() && self.selected_note < filtered.len();
@@ -4373,10 +4372,8 @@ impl App {
                 height: modal_height,
             };
 
-            // Clear background
-            let clear_block = Block::default()
-                .style(Style::default().bg(self.color_scheme.background));
-            frame.render_widget(clear_block, modal_area);
+            // Clear the background area
+            frame.render_widget(Clear, modal_area);
 
             if !self.loaded_versions.is_empty() {
                 // Create two-pane layout (version list | preview)
