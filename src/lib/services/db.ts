@@ -6,7 +6,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata, NoteVersion } from '../types';
 
 const DB_NAME = 'jottery';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 // Object store names
 export const STORES = {
@@ -122,6 +122,24 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
         versionsStore.createIndex('createdAt', 'createdAt');
         versionsStore.createIndex('noteId-version', ['noteId', 'version'], { unique: true });
         console.log('[DB] note_versions store created successfully');
+      }
+
+      // Version 4: Ensure note_versions store exists (fix for v3 migration issues)
+      if (oldVersion < 4) {
+        console.log('[DB] Applying v4 schema updates...');
+        // Check if note_versions exists, create if missing
+        if (!db.objectStoreNames.contains(STORES.NOTE_VERSIONS)) {
+          console.log('[DB] Creating note_versions store (was missing from v3)...');
+          const versionsStore = db.createObjectStore(STORES.NOTE_VERSIONS, {
+            keyPath: 'versionKey',
+          });
+          versionsStore.createIndex('noteId', 'noteId');
+          versionsStore.createIndex('createdAt', 'createdAt');
+          versionsStore.createIndex('noteId-version', ['noteId', 'version'], { unique: true });
+          console.log('[DB] note_versions store created successfully');
+        } else {
+          console.log('[DB] note_versions store already exists, no changes needed');
+        }
       }
 
       console.log('[DB] Upgrade complete');
