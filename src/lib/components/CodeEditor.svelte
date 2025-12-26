@@ -130,6 +130,12 @@
         ...completionKeymap,
         indentWithTab
       ]),
+      // Enable mobile keyboard features (autocorrect, autocapitalize, spellcheck)
+      EditorView.contentAttributes.of({
+        autocorrect: 'on',
+        autocapitalize: 'on',
+        spellcheck: 'true',
+      }),
       // Our custom extensions
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
