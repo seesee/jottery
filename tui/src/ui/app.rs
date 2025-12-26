@@ -2202,71 +2202,17 @@ impl App {
             anyhow::bail!("Pull failed: {} - {}", status, error_text);
         }
 
-        // Get response text first for debugging
+        // Parse the JSON response
         let response_text = response.text()
             .context("Failed to read pull response text")?;
-
-        self.debug_log(&format!("Pull - Raw response (first 500 chars): {}",
-            if response_text.len() > 500 { &response_text[..500] } else { &response_text }));
-
-        // Try to parse the JSON response
         let pull_response: SyncPullResponse = serde_json::from_str(&response_text)
-            .map_err(|e| {
-                self.debug_log(&format!("Pull - JSON parse error: {}", e));
-                self.debug_log(&format!("Pull - Full response text: {}", response_text));
-                anyhow::anyhow!("Failed to parse pull response: {}", e)
-            })?;
-
-        // Apply remote changes
-        self.debug_log(&format!("Pull - Received {} notes from server", pull_response.notes.len()));
-
-        // Process incoming attachments first
-        self.debug_log(&format!("Pull - Received {} attachments from server", pull_response.attachments.len()));
+            .context("Failed to parse pull response")?;
 
         use base64::{Engine as _, engine::general_purpose};
         let attachment_repo = AttachmentRepository::new(db.connection());
 
-        for sync_attachment in &pull_response.attachments {
-            self.debug_log(&format!("Pull - Processing attachment: {}", sync_attachment.id));
-
-            // Base64 decode the data
-            let decoded_data = match general_purpose::STANDARD.decode(&sync_attachment.data) {
-                Ok(data) => data,
-                Err(e) => {
-                    self.debug_log(&format!("Pull - Failed to base64 decode attachment {}: {}, skipping", sync_attachment.id, e));
-                    continue;
-                }
-            };
-
-            // Deserialize to EncryptedData
-            let encrypted_blob: crate::crypto::EncryptedData = match serde_json::from_slice(&decoded_data) {
-                Ok(blob) => blob,
-                Err(e) => {
-                    self.debug_log(&format!("Pull - Failed to deserialize attachment {}: {}, skipping", sync_attachment.id, e));
-                    continue;
-                }
-            };
-
-            // Decrypt the binary data
-            let decrypted_data = match self.crypto.decrypt_binary(&encrypted_blob, key) {
-                Ok(data) => data,
-                Err(e) => {
-                    self.debug_log(&format!("Pull - Failed to decrypt attachment {}: {}, skipping", sync_attachment.id, e));
-                    continue;
-                }
-            };
-
-            // Note: We'll get filename, mime_type, size from the AttachmentRef in the note
-            // For now, just store the decrypted binary data. The attachment metadata
-            // will be set when we process the note's attachment references below.
-            // We need to temporarily store this in a map to associate with notes.
-
-            self.debug_log(&format!("Pull - Successfully decrypted attachment {}, {} bytes", sync_attachment.id, decrypted_data.len()));
-        }
-
-        // Create a map of attachment_id -> decrypted_data for quick lookup
+        // Decrypt attachments and build a map for quick lookup
         let mut attachment_data_map: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
-
         for sync_attachment in &pull_response.attachments {
             if let Ok(decoded_data) = general_purpose::STANDARD.decode(&sync_attachment.data) {
                 if let Ok(encrypted_blob) = serde_json::from_slice::<crate::crypto::EncryptedData>(&decoded_data) {
@@ -2278,121 +2224,58 @@ impl App {
         }
 
         for remote_note in pull_response.notes {
-            self.debug_log(&format!("Pull - Processing note: {}", remote_note.id));
-
             // Decrypt content and tags from server (they're stored encrypted on server)
-            self.debug_log(&format!("Pull - Encrypted content JSON: {}", &remote_note.content));
-
             let encrypted_content: crate::crypto::EncryptedData = serde_json::from_str(&remote_note.content)?;
-            self.debug_log(&format!("Pull - Encrypted data - ciphertext len: {}, nonce len: {}, tag len: {}",
-                encrypted_content.ciphertext.len(),
-                encrypted_content.nonce.len(),
-                encrypted_content.tag.len()));
-
             let decrypted_content = self.crypto.decrypt_text(&encrypted_content, key)?;
-            self.debug_log(&format!("Pull - Successfully decrypted content, length: {} chars", decrypted_content.len()));
-
-            // Debug tag processing
-            self.debug_log(&format!("Pull - Note has {} tags", remote_note.tags.len()));
 
             let decrypted_tags: Vec<String> = remote_note.tags.iter()
-                .enumerate()
-                .flat_map(|(idx, tag_json)| {
-                    self.debug_log(&format!("Pull - Tag[{}] raw JSON: {}", idx, tag_json));
-
-                    // Parse the encrypted tag structure
-                    let encrypted_tag: crate::crypto::EncryptedData = match serde_json::from_str(tag_json) {
-                        Ok(data) => data,
-                        Err(e) => {
-                            self.debug_log(&format!("Pull - Tag[{}] failed to parse as EncryptedData: {}, skipping", idx, e));
-                            return Vec::new();
-                        }
-                    };
-
-                    self.debug_log(&format!("Pull - Tag[{}] parsed EncryptedData successfully", idx));
-
-                    // Decrypt the tag
-                    let tag_json_str = match self.crypto.decrypt_text(&encrypted_tag, key) {
-                        Ok(s) => s,
-                        Err(e) => {
-                            self.debug_log(&format!("Pull - Tag[{}] failed to decrypt: {}, skipping", idx, e));
-                            return Vec::new();
-                        }
-                    };
-
-                    self.debug_log(&format!("Pull - Tag[{}] decrypted to: {}", idx, tag_json_str));
+                .flat_map(|tag_json| {
+                    // Parse and decrypt the tag
+                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
+                    let tag_json_str = self.crypto.decrypt_text(&encrypted_tag, key).ok()?;
 
                     // Try parsing as individual string first (new format)
                     if let Ok(tag) = serde_json::from_str::<String>(&tag_json_str) {
                         if !tag.trim().is_empty() {
-                            self.debug_log(&format!("Pull - Tag[{}] parsed as string: {}", idx, tag));
-                            return vec![tag];
-                        } else {
-                            self.debug_log(&format!("Pull - Tag[{}] is empty string, skipping", idx));
-                            return Vec::new();
+                            return Some(vec![tag]);
                         }
                     }
 
-                    // Try parsing as array (legacy format where entire tag array was encrypted as one blob)
+                    // Try parsing as array (legacy format)
                     if let Ok(tags) = serde_json::from_str::<Vec<String>>(&tag_json_str) {
                         let valid_tags: Vec<String> = tags.into_iter()
                             .filter(|t| !t.trim().is_empty())
                             .collect();
-
                         if !valid_tags.is_empty() {
-                            self.debug_log(&format!("Pull - Tag[{}] parsed as array with {} tags: {:?}", idx, valid_tags.len(), valid_tags));
-                            return valid_tags;
-                        } else {
-                            self.debug_log(&format!("Pull - Tag[{}] is empty array, skipping", idx));
-                            return Vec::new();
+                            return Some(valid_tags);
                         }
                     }
 
-                    // Invalid format
-                    self.debug_log(&format!("Pull - Tag[{}] invalid format (not string or array): {}, skipping", idx, tag_json_str));
-                    Vec::new()
+                    None
                 })
+                .flatten()
                 .collect();
-
-            self.debug_log(&format!("Pull - Successfully decrypted {} tags", decrypted_tags.len()));
 
             // Process attachments for this note
             let mut note_attachments: Vec<Attachment> = Vec::new();
 
             for attachment_ref in &remote_note.attachments {
-                self.debug_log(&format!("Pull - Processing attachment ref: {}", attachment_ref.id));
-
                 // Get decrypted binary data from our map
                 if let Some(decrypted_data) = attachment_data_map.get(&attachment_ref.id) {
-                    // Decrypt the filename (it's stored encrypted in the database)
+                    // Decrypt the filename
                     let encrypted_filename: crate::crypto::EncryptedData = match serde_json::from_str(&attachment_ref.filename) {
                         Ok(data) => data,
-                        Err(e) => {
-                            self.debug_log(&format!("Pull - Failed to parse encrypted filename for {}: {}, skipping", attachment_ref.id, e));
-                            continue;
-                        }
+                        Err(_) => continue,
                     };
 
                     let decrypted_filename = match self.crypto.decrypt_text(&encrypted_filename, key) {
                         Ok(filename) => filename,
-                        Err(e) => {
-                            self.debug_log(&format!("Pull - Failed to decrypt filename for {}: {}, skipping", attachment_ref.id, e));
-                            continue;
-                        }
+                        Err(_) => continue,
                     };
 
                     // Parse the filename - try JSON first (new format), fall back to plain string (legacy format)
-                    let filename: String = match serde_json::from_str(&decrypted_filename) {
-                        Ok(name) => {
-                            self.debug_log(&format!("Pull - Parsed filename as JSON: {}", name));
-                            name
-                        },
-                        Err(_) => {
-                            // Decrypted value is already a plain string (legacy format or direct value)
-                            self.debug_log(&format!("Pull - Using decrypted filename directly: {}", decrypted_filename));
-                            decrypted_filename
-                        }
-                    };
+                    let filename: String = serde_json::from_str(&decrypted_filename)
+                        .unwrap_or(decrypted_filename);
 
                     // Store in database
                     attachment_repo.store(
@@ -2407,14 +2290,12 @@ impl App {
                     // Add to note's attachment array
                     note_attachments.push(Attachment {
                         id: attachment_ref.id.clone(),
-                        filename: filename.clone(),
+                        filename,
                         mime_type: attachment_ref.mime_type.clone(),
                         size: attachment_ref.size,
                         data: attachment_ref.data.clone(),
                         thumbnail_data: None,
                     });
-
-                    self.debug_log(&format!("Pull - Stored attachment: {} ({})", filename, attachment_ref.id));
                 }
             }
 
