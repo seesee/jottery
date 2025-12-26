@@ -148,7 +148,7 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
   console.log(`[DB] Database opened successfully. Version: ${dbInstance.version}`);
   console.log(`[DB] Available stores: ${[...dbInstance.objectStoreNames].join(', ')}`);
 
-  // Verify sync_metadata store exists (defensive check)
+  // Verify required stores exist (defensive check)
   if (!dbInstance.objectStoreNames.contains(STORES.SYNC_METADATA)) {
     console.error(`[DB] ERROR: sync_metadata store is missing! Database is in inconsistent state.`);
     console.error(`[DB] Please delete the database and reload. Instructions:`);
@@ -158,6 +158,17 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
     throw new Error(
       'Database is in inconsistent state. The sync_metadata store is missing. ' +
       'Please delete the IndexedDB database and reload the page.'
+    );
+  }
+
+  if (!dbInstance.objectStoreNames.contains(STORES.NOTE_VERSIONS)) {
+    console.error(`[DB] ERROR: note_versions store is missing! Database is in inconsistent state.`);
+    console.error(`[DB] This likely means you need to do a hard refresh (Ctrl+Shift+R / Cmd+Shift+R)`);
+    console.error(`[DB] to load the updated code with the database migration.`);
+    console.error(`[DB] Current database version: ${dbInstance.version}, expected: ${DB_VERSION}`);
+    throw new Error(
+      'Database is in inconsistent state. The note_versions store is missing. ' +
+      'Please do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) to load the updated code.'
     );
   }
 
