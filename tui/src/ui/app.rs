@@ -832,6 +832,19 @@ impl App {
                     self.search_input.clear();
                     self.selected_note = 0;
                 }
+                KeyCode::Char('a') => {
+                    // Open attachment viewer modal (works in search mode too)
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note = filtered[self.selected_note];
+                        if !note.attachments.is_empty() {
+                            self.view_mode = ViewMode::AttachmentViewer;
+                            self.selected_attachment = 0;
+                        } else {
+                            self.error = Some("No attachments in this note".to_string());
+                        }
+                    }
+                }
                 KeyCode::Enter => {
                     // Exit search and edit selected note directly
                     if !self.filtered_notes().is_empty() {
