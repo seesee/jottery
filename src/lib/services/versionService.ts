@@ -66,6 +66,7 @@ class VersionService {
     await versionRepository.createVersion(currentNote, {
       syncedAt: new Date().toISOString(),
       reason: 'manual-sync',
+      forceCreate: true, // Always create version when manually restoring
     });
 
     // Restore version data (all fields are already encrypted)

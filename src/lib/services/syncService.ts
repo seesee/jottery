@@ -139,7 +139,7 @@ class SyncService {
   /**
    * Perform full bidirectional sync
    */
-  async syncNow(): Promise<{ success: boolean; error?: string }> {
+  async syncNow(options?: { forceCreateVersion?: boolean }): Promise<{ success: boolean; error?: string }> {
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
@@ -169,10 +169,10 @@ class SyncService {
       }
 
       // 2. Push local changes
-      await this.push(metadata.syncEndpoint, apiKey);
+      await this.push(metadata.syncEndpoint, apiKey, options?.forceCreateVersion);
 
       // 3. Pull remote changes
-      await this.pull(metadata.syncEndpoint, apiKey);
+      await this.pull(metadata.syncEndpoint, apiKey, options?.forceCreateVersion);
 
       // 4. Update last sync timestamp
       await syncRepository.updateMetadata({
@@ -203,7 +203,7 @@ class SyncService {
   /**
    * Push local changes to server
    */
-  private async push(endpoint: string, apiKey: string): Promise<void> {
+  private async push(endpoint: string, apiKey: string, forceCreateVersion?: boolean): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
@@ -354,6 +354,7 @@ class SyncService {
         await versionRepository.createVersion(note, {
           syncedAt: accepted.syncedAt,
           reason: 'sync',
+          forceCreate: forceCreateVersion,
         });
       }
     }
@@ -376,7 +377,7 @@ class SyncService {
   /**
    * Pull remote changes from server
    */
-  private async pull(endpoint: string, apiKey: string): Promise<void> {
+  private async pull(endpoint: string, apiKey: string, forceCreateVersion?: boolean): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt;
@@ -532,6 +533,7 @@ class SyncService {
           await versionRepository.createVersion(localNote, {
             syncedAt: result.syncedAt,
             reason: 'sync',
+            forceCreate: forceCreateVersion,
           });
 
           // Server version is newer - update local
@@ -605,7 +607,11 @@ class SyncService {
             deleted: false,
             syncedAt: serverVersion.syncedAt,
           } as Note,
-          { syncedAt: serverVersion.syncedAt, reason: serverVersion.reason as 'sync' | 'manual-sync' }
+          {
+            syncedAt: serverVersion.syncedAt,
+            reason: serverVersion.reason as 'sync' | 'manual-sync',
+            forceCreate: true, // Always store versions from server
+          }
         );
 
         console.log(`[SyncService] Pull - Stored new version from server: ${serverVersion.versionKey}`);

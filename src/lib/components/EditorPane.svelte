@@ -163,8 +163,9 @@
       }, 10);
 
       // Trigger background sync if we had a previous note open
+      // Force version creation when switching notes
       if (previousNoteId) {
-        triggerBackgroundSync();
+        triggerBackgroundSync(true);
       }
     } else {
       // Same note reloaded (from sync), not resetting state
@@ -173,13 +174,14 @@
     previousNoteId = $selectedNote.id;
   } else {
     // Closing editor - flush pending save and trigger sync
+    // Force version creation when closing the editor
     if (previousNoteId) {
       console.log('[EditorPane] Closing editor, flushing save and triggering sync...');
       if (saveTimeout) {
         clearTimeout(saveTimeout);
         saveTimeout = null;
       }
-      triggerBackgroundSync();
+      triggerBackgroundSync(true);
     }
     previousNoteId = null;
 
@@ -194,13 +196,14 @@
 
   /**
    * Trigger background sync without blocking UI
+   * @param forceCreateVersion - Force version creation even if less than 30s since last version
    */
-  async function triggerBackgroundSync() {
+  async function triggerBackgroundSync(forceCreateVersion: boolean = false) {
     try {
       const metadata = await syncRepository.getMetadata();
       if (metadata?.syncEnabled) {
         // Don't await - let it run in background
-        syncService.syncNow().then(result => {
+        syncService.syncNow({ forceCreateVersion }).then(result => {
           if (!result.success) {
             console.warn('[EditorPane] Background sync failed:', result.error);
           }

@@ -10,16 +10,32 @@ class VersionRepository {
   /**
    * Create a new version snapshot of a note
    * Includes deduplication - skips if content unchanged from latest version
+   * Also includes time-based throttling - skips if created too recently (unless forced)
    */
   async createVersion(
     note: Note,
-    metadata: { syncedAt: string; reason: 'sync' | 'manual-sync' }
+    metadata: { syncedAt: string; reason: 'sync' | 'manual-sync'; forceCreate?: boolean }
   ): Promise<NoteVersion | null> {
     // Deduplication check
     const latestVersion = await this.getLatestVersion(note.id);
     if (latestVersion && latestVersion.content === note.content) {
       console.log(`[versionRepository] Skipping duplicate version for note ${note.id}`);
       return null; // Skip duplicate
+    }
+
+    // Time-based throttling (unless forced)
+    // Only create versions if 30 seconds have passed since last version
+    if (!metadata.forceCreate && latestVersion) {
+      const lastVersionTime = new Date(latestVersion.createdAt).getTime();
+      const now = new Date().getTime();
+      const timeSinceLastVersion = (now - lastVersionTime) / 1000; // seconds
+
+      if (timeSinceLastVersion < 30) {
+        console.log(
+          `[versionRepository] Skipping version for note ${note.id} - only ${timeSinceLastVersion.toFixed(1)}s since last version (minimum 30s)`
+        );
+        return null;
+      }
     }
 
     const versionKey = `${note.id}:${note.version}`;
