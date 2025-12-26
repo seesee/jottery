@@ -3,6 +3,7 @@ use std::time::Duration;
 
 /// Terminal events
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code)]
 pub enum Event {
     /// Terminal tick (for animations/timers)
     Tick,

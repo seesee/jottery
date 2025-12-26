@@ -1,3 +1,6 @@
+//! Cryptographic service for encryption and key derivation
+#![allow(dead_code)]
+
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng, rand_core::RngCore},
     Aes256Gcm, Nonce,
@@ -105,6 +108,7 @@ impl CryptoService {
     /// # Arguments
     /// * `data` - Binary data to encrypt
     /// * `key` - 256-bit AES key
+    #[allow(dead_code)]
     pub fn encrypt_binary(&self, data: &[u8], key: &[u8; KEY_LENGTH]) -> Result<EncryptedData> {
         let cipher = Aes256Gcm::new(key.into());
         let nonce = self.generate_nonce();

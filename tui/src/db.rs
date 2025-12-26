@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use anyhow::{Context, Result};
 use rusqlite::{Connection, OpenFlags};
 use std::path::Path;

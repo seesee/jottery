@@ -68,7 +68,8 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
-    let log_level = if cli.debug { "debug" } else { "info" };
+    // If debug-log is specified, automatically enable debug level
+    let log_level = if cli.debug || cli.debug_log.is_some() { "debug" } else { "info" };
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()

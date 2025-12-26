@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /// Repository for encryption metadata
 use anyhow::{Context, Result};
 use chrono::Utc;

@@ -49,6 +49,7 @@ impl ColorScheme {
     }
 
     /// Get all available scheme names
+    #[allow(dead_code)]
     pub fn available_schemes() -> Vec<&'static str> {
         vec![
             "Default Dark",
@@ -66,6 +67,7 @@ impl ColorScheme {
     }
 
     /// Convert display name to internal name
+    #[allow(dead_code)]
     pub fn display_to_internal(display_name: &str) -> &'static str {
         match display_name {
             "Default Dark" => "default-dark",
@@ -123,6 +125,7 @@ impl ColorScheme {
     }
 
     /// Default light scheme
+    #[allow(dead_code)]
     pub fn default_light() -> Self {
         Self {
             name: "Default Light",

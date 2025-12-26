@@ -156,6 +156,7 @@ impl Note {
     }
 
     /// Mark note as deleted (soft delete)
+    #[allow(dead_code)]
     pub fn mark_deleted(&mut self) {
         self.deleted = true;
         self.deleted_at = Some(Utc::now());
@@ -170,6 +171,7 @@ impl Note {
     }
 
     /// Toggle pinned status
+    #[allow(dead_code)]
     pub fn toggle_pin(&mut self) {
         self.pinned = !self.pinned;
         self.touch();
@@ -178,6 +180,7 @@ impl Note {
 
 impl Attachment {
     /// Create a new attachment reference
+    #[allow(dead_code)]
     pub fn new(filename: String, mime_type: String, size: i64, data: String) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
