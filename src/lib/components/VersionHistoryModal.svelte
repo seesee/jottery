@@ -69,8 +69,8 @@
   }
 
   function getPreviewContent(content: string): string {
-    // Get first 500 characters for preview
-    return content.length > 500 ? content.substring(0, 500) + '...' : content;
+    // Return full content for scrollable preview
+    return content;
   }
 
   function formatReason(reason: string): string {
@@ -151,10 +151,10 @@
           <!-- Right pane: Preview -->
           <div class="flex-1 flex flex-col overflow-hidden">
             {#if selectedVersion}
-              <div class="flex-1 overflow-y-auto p-4">
-                <div class="space-y-4">
+              <div class="flex-1 p-4 flex flex-col overflow-hidden">
+                <div class="flex-1 flex flex-col space-y-4 min-h-0">
                   <!-- Metadata -->
-                  <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 text-sm">
+                  <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 text-sm flex-shrink-0">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
                         <span class="text-gray-600 dark:text-gray-400">Version:</span>
@@ -192,9 +192,9 @@
                   </div>
 
                   <!-- Content Preview -->
-                  <div>
+                  <div class="flex-1 flex flex-col min-h-0">
                     <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content Preview</h3>
-                    <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3">
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 overflow-y-auto flex-1">
                       <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100 font-mono">{getPreviewContent(selectedVersion.content)}</pre>
                     </div>
                   </div>
