@@ -11,7 +11,7 @@ Jottery is a simple, searchable, and privacy-focused scratchpad/notes applicatio
 *   **Tagging**: Organise your notes with tags.
 *   **Attachments**: Add, preview, and download attachments to your notes. 
 *   **Code Snippets**: A rich text editor with support for various programming languages.
-*   **Many handy features**: Export notes, preview html, document info, and markdown documents in-editor.
+*   **Many handy features**: Export notes, preview html, document info, versioning, and markdown documents in-editor.
 
 ## Components
 
