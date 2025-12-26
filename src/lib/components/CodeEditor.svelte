@@ -42,7 +42,20 @@
   let languageCompartment = new Compartment();
   let wrapCompartment = new Compartment();
   let themeCompartment = new Compartment();
+  let mobileAttributesCompartment = new Compartment();
   let measuredWidth: number = 0;
+
+  // Get mobile keyboard attributes based on language (only for prose, not code)
+  function getMobileAttributes() {
+    // Only enable autocorrect/autocapitalize for prose languages (plain text and markdown)
+    const isProse = language === 'plain' || language === 'markdown';
+
+    return EditorView.contentAttributes.of({
+      autocorrect: isProse ? 'on' : 'off',
+      autocapitalize: isProse ? 'on' : 'off',
+      spellcheck: isProse ? 'true' : 'false',
+    });
+  }
 
   // Get language extension based on language prop
   function getLanguageExtension() {
@@ -130,13 +143,8 @@
         ...completionKeymap,
         indentWithTab
       ]),
-      // Enable mobile keyboard features (autocorrect, autocapitalize, spellcheck)
-      EditorView.contentAttributes.of({
-        autocorrect: 'on',
-        autocapitalize: 'on',
-        spellcheck: 'true',
-      }),
       // Our custom extensions
+      mobileAttributesCompartment.of(getMobileAttributes()),
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
       themeCompartment.of(isDark ? oneDark : []),
@@ -193,7 +201,10 @@
   // Update language when language prop changes
   $: if (editorView && language) {
     editorView.dispatch({
-      effects: languageCompartment.reconfigure(getLanguageExtension()),
+      effects: [
+        languageCompartment.reconfigure(getLanguageExtension()),
+        mobileAttributesCompartment.reconfigure(getMobileAttributes()),
+      ],
     });
   }
 
