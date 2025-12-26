@@ -788,6 +788,11 @@ impl App {
 
     /// Handle key events in note list state
     fn handle_note_list_key(&mut self, key: KeyEvent) -> Result<()> {
+        // Debug: log which key was pressed
+        if let KeyCode::Char(c) = key.code {
+            self.debug_log(&format!("Key pressed: '{}'", c));
+        }
+
         // Clear sync status on any key (except 'y' which sets it)
         if key.code != KeyCode::Char('y') {
             self.sync_status = None;
@@ -831,19 +836,6 @@ impl App {
                     self.search_active = false;
                     self.search_input.clear();
                     self.selected_note = 0;
-                }
-                KeyCode::Char('a') => {
-                    // Open attachment viewer modal (works in search mode too)
-                    let filtered = self.filtered_notes();
-                    if !filtered.is_empty() && self.selected_note < filtered.len() {
-                        let note = filtered[self.selected_note];
-                        if !note.attachments.is_empty() {
-                            self.view_mode = ViewMode::AttachmentViewer;
-                            self.selected_attachment = 0;
-                        } else {
-                            self.error = Some("No attachments in this note".to_string());
-                        }
-                    }
                 }
                 KeyCode::Enter => {
                     // Exit search and edit selected note directly
@@ -1250,15 +1242,22 @@ impl App {
                 }
                 KeyCode::Char('a') => {
                     // Open attachment viewer modal
+                    self.debug_log("'a' key pressed - attempting to open attachment viewer");
                     let filtered = self.filtered_notes();
+                    self.debug_log(&format!("  filtered.len() = {}, selected_note = {}", filtered.len(), self.selected_note));
                     if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let note = filtered[self.selected_note];
+                        self.debug_log(&format!("  note has {} attachments", note.attachments.len()));
                         if !note.attachments.is_empty() {
+                            self.debug_log("  Setting view_mode to AttachmentViewer");
                             self.view_mode = ViewMode::AttachmentViewer;
                             self.selected_attachment = 0;
                         } else {
+                            self.debug_log("  No attachments - setting error");
                             self.error = Some("No attachments in this note".to_string());
                         }
+                    } else {
+                        self.debug_log("  Filtered is empty or selected_note out of bounds");
                     }
                 }
                 KeyCode::Char(c @ '1'..='9') => {
@@ -1954,6 +1953,10 @@ impl App {
 
         match self.perform_sync(false) {
             Ok(result) => {
+                // Reload notes from database to pick up sync changes
+                if let Err(e) = self.load_notes() {
+                    self.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
+                }
                 self.sync_status = Some(format!("Sync complete! {} {} synced", result, if result == 1 { "note" } else { "notes" }));
                 self.sync_status_set_at = Some(Instant::now());
             }
@@ -1991,6 +1994,10 @@ impl App {
 
         match self.perform_sync(true) {
             Ok(result) => {
+                // Reload notes from database to pick up sync changes
+                if let Err(e) = self.load_notes() {
+                    self.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
+                }
                 self.sync_status = Some(format!("Force sync complete! {} {} synced from server", result, if result == 1 { "note" } else { "notes" }));
                 self.sync_status_set_at = Some(Instant::now());
             }
@@ -2287,24 +2294,37 @@ impl App {
 
             // Process attachments for this note
             let mut note_attachments: Vec<Attachment> = Vec::new();
+            self.debug_log(&format!("Pull - Processing {} attachments for note {}", remote_note.attachments.len(), remote_note.id));
 
             for attachment_ref in &remote_note.attachments {
+                self.debug_log(&format!("Pull - Processing attachment: {} ({})", attachment_ref.id, attachment_ref.mime_type));
+
                 // Get decrypted binary data from our map
                 if let Some(decrypted_data) = attachment_data_map.get(&attachment_ref.id) {
+                    self.debug_log(&format!("Pull - Found attachment data in map, size: {} bytes", decrypted_data.len()));
+
                     // Decrypt the filename
                     let encrypted_filename: crate::crypto::EncryptedData = match serde_json::from_str(&attachment_ref.filename) {
                         Ok(data) => data,
-                        Err(_) => continue,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Failed to parse filename as JSON for {}: {}, raw: {:?}", attachment_ref.id, e, &attachment_ref.filename[..100.min(attachment_ref.filename.len())]));
+                            continue;
+                        }
                     };
 
                     let decrypted_filename = match self.crypto.decrypt_text(&encrypted_filename, key) {
                         Ok(filename) => filename,
-                        Err(_) => continue,
+                        Err(e) => {
+                            self.debug_log(&format!("Pull - Failed to decrypt filename for {}: {}", attachment_ref.id, e));
+                            continue;
+                        }
                     };
 
                     // Parse the filename - try JSON first (new format), fall back to plain string (legacy format)
                     let filename: String = serde_json::from_str(&decrypted_filename)
                         .unwrap_or(decrypted_filename);
+
+                    self.debug_log(&format!("Pull - Decrypted filename: {}", filename));
 
                     // Store in database
                     attachment_repo.store(
@@ -2316,17 +2336,25 @@ impl App {
                         key
                     )?;
 
+                    self.debug_log(&format!("Pull - Stored attachment in database"));
+
                     // Add to note's attachment array
                     note_attachments.push(Attachment {
                         id: attachment_ref.id.clone(),
-                        filename,
+                        filename: filename.clone(),
                         mime_type: attachment_ref.mime_type.clone(),
                         size: attachment_ref.size,
                         data: attachment_ref.data.clone(),
                         thumbnail_data: None,
                     });
+
+                    self.debug_log(&format!("Pull - Added attachment to note_attachments array"));
+                } else {
+                    self.debug_log(&format!("Pull - Attachment data NOT found in map for {}", attachment_ref.id));
                 }
             }
+
+            self.debug_log(&format!("Pull - Total attachments added to note: {}", note_attachments.len()));
 
             // Check if we have this note in the database (not just in-memory list)
             let existing_note = note_repo.get(&remote_note.id, key)?;
