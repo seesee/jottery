@@ -651,6 +651,8 @@ pub struct App {
     selected_version: usize,
     /// Note ID for which versions are loaded (to detect when to reload)
     versions_note_id: Option<String>,
+    /// Scroll offset for version preview content
+    version_preview_scroll_offset: usize,
 }
 
 impl App {
@@ -702,6 +704,7 @@ impl App {
             loaded_versions: Vec::new(),
             selected_version: 0,
             versions_note_id: None,
+            version_preview_scroll_offset: 0,
         })
     }
 
@@ -989,6 +992,7 @@ impl App {
                                     self.view_mode = ViewMode::NoteList;
                                     self.loaded_versions.clear();
                                     self.versions_note_id = None;
+                                    self.version_preview_scroll_offset = 0;
                                 }
                                 Err(e) => {
                                     self.error = Some(format!("Failed to restore version: {}", e));
@@ -1073,6 +1077,7 @@ impl App {
                         // Navigate versions in viewer
                         if self.selected_version < self.loaded_versions.len().saturating_sub(1) {
                             self.selected_version += 1;
+                            self.version_preview_scroll_offset = 0; // Reset scroll when changing versions
                         }
                     } else {
                         // Navigate notes
@@ -1093,6 +1098,7 @@ impl App {
                         // Navigate versions in viewer
                         if self.selected_version > 0 {
                             self.selected_version -= 1;
+                            self.version_preview_scroll_offset = 0; // Reset scroll when changing versions
                         }
                     } else {
                         // Navigate notes
@@ -1100,6 +1106,18 @@ impl App {
                             self.selected_note -= 1;
                             self.preview_scroll_offset = 0;
                         }
+                    }
+                }
+                KeyCode::Char('J') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Scroll preview content down in version history mode
+                    if matches!(self.view_mode, ViewMode::VersionHistory) {
+                        self.version_preview_scroll_offset = self.version_preview_scroll_offset.saturating_add(3);
+                    }
+                }
+                KeyCode::Char('K') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                    // Scroll preview content up in version history mode
+                    if matches!(self.view_mode, ViewMode::VersionHistory) {
+                        self.version_preview_scroll_offset = self.version_preview_scroll_offset.saturating_sub(3);
                     }
                 }
                 KeyCode::Char('p') => {
@@ -1233,6 +1251,7 @@ impl App {
                         self.view_mode = ViewMode::NoteList;
                         self.loaded_versions.clear();
                         self.versions_note_id = None;
+                        self.version_preview_scroll_offset = 0;
                     } else if matches!(self.view_mode, ViewMode::RecycleBin) {
                         // Exit recycle bin view
                         self.view_mode = ViewMode::NoteList;
@@ -4431,6 +4450,16 @@ impl App {
                 if self.selected_version < self.loaded_versions.len() {
                     let version = &self.loaded_versions[self.selected_version];
 
+                    // Split right pane into content area and help text area
+                    let preview_chunks = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([
+                            Constraint::Min(0),      // Content area (scrollable)
+                            Constraint::Length(1),   // Help text (fixed)
+                        ])
+                        .split(panes[1]);
+
+                    // Content area with scrollable preview
                     let preview_block = Block::default()
                         .title(" Preview ")
                         .borders(Borders::NONE);
@@ -4474,29 +4503,27 @@ impl App {
                     ));
                     preview_lines.push(Line::from(""));
 
-                    // Content preview (first 500 chars or full content if smaller)
-                    let preview_content = if version.content.len() > 500 {
-                        format!("{}...", &version.content[..500])
-                    } else {
-                        version.content.clone()
-                    };
-
-                    for line in preview_content.lines() {
+                    // Full content (no truncation)
+                    for line in version.content.lines() {
                         preview_lines.push(Line::from(line));
                     }
 
-                    preview_lines.push(Line::from(""));
-                    preview_lines.push(Line::from(""));
-                    preview_lines.push(Line::styled(
-                        "↑/↓: navigate │ Enter: restore version │ Esc: close",
-                        Style::default().fg(self.color_scheme.muted)
-                    ));
-
                     let preview = Paragraph::new(preview_lines)
                         .block(preview_block)
-                        .wrap(Wrap { trim: false });
+                        .wrap(Wrap { trim: false })
+                        .scroll((self.version_preview_scroll_offset as u16, 0));
 
-                    frame.render_widget(preview, panes[1]);
+                    frame.render_widget(preview, preview_chunks[0]);
+
+                    // Fixed help text at bottom
+                    let help_text = Line::styled(
+                        "↑/↓: versions │ Shift+J/K: scroll │ Enter: restore │ Esc: close",
+                        Style::default().fg(self.color_scheme.muted)
+                    );
+                    let help_paragraph = Paragraph::new(help_text)
+                        .alignment(Alignment::Center);
+
+                    frame.render_widget(help_paragraph, preview_chunks[1]);
                 }
             } else {
                 // Show error state - no versions
