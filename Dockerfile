@@ -30,11 +30,25 @@ WORKDIR /app/server
 # Tell SQLx to run in offline mode during compile
 ENV SQLX_OFFLINE=true
 
-# Copy server source code
-COPY server/ .
+# Copy only Cargo files first for dependency caching
+COPY server/Cargo.toml server/Cargo.lock ./
 
-# Build server binary
+# Create a dummy main.rs to build dependencies
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+
+# Build dependencies (this layer will be cached)
 RUN cargo build --release --bin jottery-server
+
+# Remove dummy source
+RUN rm -rf src
+
+# Now copy the actual source code
+COPY server/src ./src
+COPY server/migrations ./migrations
+COPY server/.sqlx ./.sqlx
+
+# Build the actual binary (dependencies already cached)
+RUN touch src/main.rs && cargo build --release --bin jottery-server
 
 # -----------------------------
 # Stage 3: Final unified runtime image (Caddy + Server)
