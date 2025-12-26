@@ -119,9 +119,6 @@ fn render_markdown_for_terminal(
         }
     };
 
-    // Log the first 500 chars of content to debug table issues
-    log_debug(&format!("=== Markdown content (first 500 chars): {:?}", &content.chars().take(500).collect::<String>()));
-
     let mut lines = Vec::new();
     let mut current_line_spans: Vec<Span<'static>> = Vec::new();
     let mut current_style = Style::default();
@@ -4071,78 +4068,109 @@ impl App {
         // Render attachment viewer modal if showing
         if matches!(self.view_mode, ViewMode::AttachmentViewer) {
             let filtered = self.filtered_notes();
-            if !filtered.is_empty() && self.selected_note < filtered.len() {
-                let note = filtered[self.selected_note];
-                if !note.attachments.is_empty() {
-                    // Calculate modal size based on content
-                    let modal_width = 80.min(size.width.saturating_sub(4));
-                    let modal_height = (note.attachments.len() as u16 + 6).min(size.height.saturating_sub(4));
-                    let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-                    let modal_y = (size.height.saturating_sub(modal_height)) / 2;
 
-                    let modal_area = Rect {
-                        x: modal_x,
-                        y: modal_y,
-                        width: modal_width,
-                        height: modal_height,
+            // Calculate modal size
+            let modal_width = 80.min(size.width.saturating_sub(4));
+            let modal_height = 10.min(size.height.saturating_sub(4));
+            let modal_x = (size.width.saturating_sub(modal_width)) / 2;
+            let modal_y = (size.height.saturating_sub(modal_height)) / 2;
+
+            let modal_area = Rect {
+                x: modal_x,
+                y: modal_y,
+                width: modal_width,
+                height: modal_height,
+            };
+
+            // Clear background
+            let clear_block = Block::default()
+                .style(Style::default().bg(self.color_scheme.background));
+            frame.render_widget(clear_block, modal_area);
+
+            // Check if we have valid data to show
+            let has_note = !filtered.is_empty() && self.selected_note < filtered.len();
+            let note = if has_note { Some(filtered[self.selected_note]) } else { None };
+            let has_attachments = note.map(|n| !n.attachments.is_empty()).unwrap_or(false);
+
+            if has_attachments {
+                let note = note.unwrap();
+
+                // Render modal with attachments
+                let modal_block = Block::default()
+                    .title(format!(" Attachments ({}) ", note.attachments.len()))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.color_scheme.accent))
+                    .style(Style::default().bg(self.color_scheme.background));
+
+                let mut modal_lines = vec![Line::from("")];
+
+                // Render attachment list
+                for (i, attachment) in note.attachments.iter().enumerate() {
+                    let size_kb = (attachment.size as f64) / 1024.0;
+                    let size_str = if size_kb < 1024.0 {
+                        format!("{:.1} KB", size_kb)
+                    } else {
+                        format!("{:.1} MB", size_kb / 1024.0)
                     };
 
-                    // Clear background
-                    let clear_block = Block::default()
-                        .style(Style::default().bg(self.color_scheme.background));
-                    frame.render_widget(clear_block, modal_area);
+                    let number = if i < 9 { format!("{}", i + 1) } else { " ".to_string() };
+                    let line_text = format!(
+                        " {} │ {} │ {} │ {}",
+                        number,
+                        attachment.filename,
+                        size_str,
+                        attachment.mime_type
+                    );
 
-                    // Render modal
-                    let modal_block = Block::default()
-                        .title(format!(" Attachments ({}) ", note.attachments.len()))
-                        .borders(Borders::ALL)
-                        .border_style(Style::default().fg(self.color_scheme.accent))
-                        .style(Style::default().bg(self.color_scheme.background));
+                    let style = if i == self.selected_attachment {
+                        Style::default()
+                            .fg(self.color_scheme.background)
+                            .bg(self.color_scheme.accent)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(self.color_scheme.foreground)
+                    };
 
-                    let mut modal_lines = vec![Line::from("")];
-
-                    // Render attachment list
-                    for (i, attachment) in note.attachments.iter().enumerate() {
-                        let size_kb = (attachment.size as f64) / 1024.0;
-                        let size_str = if size_kb < 1024.0 {
-                            format!("{:.1} KB", size_kb)
-                        } else {
-                            format!("{:.1} MB", size_kb / 1024.0)
-                        };
-
-                        let number = if i < 9 { format!("{}", i + 1) } else { " ".to_string() };
-                        let line_text = format!(
-                            " {} │ {} │ {} │ {}",
-                            number,
-                            attachment.filename,
-                            size_str,
-                            attachment.mime_type
-                        );
-
-                        let style = if i == self.selected_attachment {
-                            Style::default()
-                                .fg(self.color_scheme.background)
-                                .bg(self.color_scheme.accent)
-                                .add_modifier(Modifier::BOLD)
-                        } else {
-                            Style::default().fg(self.color_scheme.foreground)
-                        };
-
-                        modal_lines.push(Line::styled(line_text, style));
-                    }
-
-                    modal_lines.push(Line::from(""));
-                    modal_lines.push(Line::styled(
-                        "↑/↓: navigate │ 1-9: quick select │ Enter: view │ d: delete │ Esc: close",
-                        Style::default().fg(self.color_scheme.muted)
-                    ));
-
-                    let modal_paragraph = Paragraph::new(modal_lines)
-                        .block(modal_block)
-                        .alignment(ratatui::layout::Alignment::Left);
-
-                    frame.render_widget(modal_paragraph, modal_area);
+                    modal_lines.push(Line::styled(line_text, style));
                 }
+
+                modal_lines.push(Line::from(""));
+                modal_lines.push(Line::styled(
+                    "↑/↓: navigate │ 1-9: quick select │ Enter: view │ d: delete │ Esc: close",
+                    Style::default().fg(self.color_scheme.muted)
+                ));
+
+                let modal_paragraph = Paragraph::new(modal_lines)
+                    .block(modal_block)
+                    .alignment(ratatui::layout::Alignment::Left);
+
+                frame.render_widget(modal_paragraph, modal_area);
+            } else {
+                // Show error state - no attachments or no note
+                let modal_block = Block::default()
+                    .title(" Attachments ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.color_scheme.error))
+                    .style(Style::default().bg(self.color_scheme.background));
+
+                let error_text = if !has_note {
+                    "No note selected"
+                } else {
+                    "No attachments in this note"
+                };
+
+                let modal_lines = vec![
+                    Line::from(""),
+                    Line::styled(error_text, Style::default().fg(self.color_scheme.error)),
+                    Line::from(""),
+                    Line::styled("Press Esc to close", Style::default().fg(self.color_scheme.muted)),
+                ];
+
+                let modal_paragraph = Paragraph::new(modal_lines)
+                    .block(modal_block)
+                    .alignment(ratatui::layout::Alignment::Center);
+
+                frame.render_widget(modal_paragraph, modal_area);
             }
         }
     }
