@@ -22,7 +22,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tempfile::NamedTempFile;
-use tracing::debug;
 
 use crate::{
     crypto::{CryptoService, KeyManager},
@@ -561,6 +560,8 @@ pub enum ViewMode {
     NoteList,
     /// Recycle bin view (deleted notes)
     RecycleBin,
+    /// Attachment viewer modal
+    AttachmentViewer,
 }
 
 /// Application
@@ -965,8 +966,21 @@ impl App {
                     }
                 }
                 KeyCode::Char('i') | KeyCode::Enter => {
+                    // In attachment viewer: view selected attachment
+                    if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
+                            let note = filtered[self.selected_note];
+                            if self.selected_attachment < note.attachments.len() {
+                                let attachment = note.attachments[self.selected_attachment].clone();
+                                if let Err(e) = self.view_attachment(&attachment) {
+                                    self.error = Some(format!("Failed to view attachment: {}", e));
+                                }
+                            }
+                        }
+                    }
                     // Edit selected note directly with external editor (only in note list view)
-                    if matches!(self.view_mode, ViewMode::NoteList) {
+                    else if matches!(self.view_mode, ViewMode::NoteList) {
                         let filtered = self.filtered_notes();
                         if !filtered.is_empty() && self.selected_note < filtered.len() {
                         // Clone data before modifying self
@@ -1016,16 +1030,36 @@ impl App {
                     }
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
-                    let note_count = self.filtered_notes().len();
-                    if note_count > 0 && self.selected_note < note_count - 1 {
-                        self.selected_note += 1;
-                        self.preview_scroll_offset = 0; // Reset scroll when changing notes
+                    if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                        // Navigate attachments in viewer
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
+                            let note = filtered[self.selected_note];
+                            if self.selected_attachment < note.attachments.len().saturating_sub(1) {
+                                self.selected_attachment += 1;
+                            }
+                        }
+                    } else {
+                        // Navigate notes
+                        let note_count = self.filtered_notes().len();
+                        if note_count > 0 && self.selected_note < note_count - 1 {
+                            self.selected_note += 1;
+                            self.preview_scroll_offset = 0;
+                        }
                     }
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
-                    if self.selected_note > 0 {
-                        self.selected_note -= 1;
-                        self.preview_scroll_offset = 0; // Reset scroll when changing notes
+                    if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                        // Navigate attachments in viewer
+                        if self.selected_attachment > 0 {
+                            self.selected_attachment -= 1;
+                        }
+                    } else {
+                        // Navigate notes
+                        if self.selected_note > 0 {
+                            self.selected_note -= 1;
+                            self.preview_scroll_offset = 0;
+                        }
                     }
                 }
                 KeyCode::Char('p') => {
@@ -1131,6 +1165,9 @@ impl App {
                                 self.error = Some(format!("Failed to restore note: {}", e));
                             }
                         }
+                        ViewMode::AttachmentViewer => {
+                            // 'r' does nothing in attachment viewer
+                        }
                     }
                 }
                 KeyCode::Char('E') => {
@@ -1145,6 +1182,9 @@ impl App {
                     // Cancel force sync confirmation if showing
                     if self.show_force_sync_confirm {
                         self.show_force_sync_confirm = false;
+                    } else if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                        // Exit attachment viewer
+                        self.view_mode = ViewMode::NoteList;
                     } else if matches!(self.view_mode, ViewMode::RecycleBin) {
                         // Exit recycle bin view
                         self.view_mode = ViewMode::NoteList;
@@ -1173,9 +1213,15 @@ impl App {
                     // Ctrl-b: scroll preview up full page (20 lines)
                     self.preview_scroll_offset = self.preview_scroll_offset.saturating_sub(20);
                 }
-                KeyCode::Char('d') => {
+                KeyCode::Char('d') | KeyCode::Delete => {
+                    // In attachment viewer: delete selected attachment
+                    if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                        if let Err(e) = self.delete_current_attachment() {
+                            self.error = Some(format!("Failed to delete attachment: {}", e));
+                        }
+                    }
                     // Delete selected note (only in note list view)
-                    if matches!(self.view_mode, ViewMode::NoteList) {
+                    else if matches!(self.view_mode, ViewMode::NoteList) {
                         let filtered = self.filtered_notes();
                         if !filtered.is_empty() && self.selected_note < filtered.len() {
                         // Find the actual note in the full list
@@ -1193,60 +1239,33 @@ impl App {
                     }
                 }
                 KeyCode::Char('a') => {
-                    // Mark 'a' key pressed for attachment viewing sequence (a1, a2, etc.)
-                    // Select first attachment
-                    debug!("'a' key pressed - setting last_key_was_a=true, selected_attachment=0");
-                    self.last_key_was_a = true;
-                    self.selected_attachment = 0;
-
-                    // Debug: show current note's attachment count
+                    // Open attachment viewer modal
                     let filtered = self.filtered_notes();
                     if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let note = filtered[self.selected_note];
-                        debug!("Current note has {} attachments", note.attachments.len());
-                    } else {
-                        debug!("No note selected or note list is empty");
+                        if !note.attachments.is_empty() {
+                            self.view_mode = ViewMode::AttachmentViewer;
+                            self.selected_attachment = 0;
+                        } else {
+                            self.error = Some("No attachments in this note".to_string());
+                        }
                     }
                 }
-                KeyCode::Char(c @ '1'..='9') if self.last_key_was_a => {
-                    // View attachment by number (a1, a2, etc.)
-                    debug!("Digit '{}' pressed after 'a' - last_key_was_a={}", c, self.last_key_was_a);
-                    let attachment_index = (c as usize) - ('1' as usize);
-                    debug!("Calculated attachment_index={}", attachment_index);
-
-                    // Get current note's attachments and clone the attachment we need
-                    let filtered = self.filtered_notes();
-                    let attachment_to_view = if !filtered.is_empty() && self.selected_note < filtered.len() {
-                        let note = filtered[self.selected_note];
-                        debug!("Note has {} attachments, trying to view attachment {}", note.attachments.len(), attachment_index);
-                        if attachment_index < note.attachments.len() {
-                            debug!("Found attachment: {}", note.attachments[attachment_index].filename);
-                            Some(note.attachments[attachment_index].clone())
-                        } else {
-                            debug!("Attachment index {} out of bounds", attachment_index);
-                            None
+                KeyCode::Char(c @ '1'..='9') => {
+                    // In attachment viewer: select and view attachment by number (1-9)
+                    if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                        let attachment_index = (c as usize) - ('1' as usize);
+                        let filtered = self.filtered_notes();
+                        if !filtered.is_empty() && self.selected_note < filtered.len() {
+                            let note = filtered[self.selected_note];
+                            if attachment_index < note.attachments.len() {
+                                let attachment = note.attachments[attachment_index].clone();
+                                if let Err(e) = self.view_attachment(&attachment) {
+                                    self.error = Some(format!("Failed to view attachment: {}", e));
+                                }
+                            }
                         }
-                    } else {
-                        debug!("No note selected or filtered list empty");
-                        None
-                    };
-
-                    // Now call view_attachment with the cloned attachment
-                    if let Some(attachment) = attachment_to_view {
-                        debug!("Calling view_attachment for: {}", attachment.filename);
-                        if let Err(e) = self.view_attachment(&attachment) {
-                            debug!("view_attachment failed: {}", e);
-                            self.error = Some(format!("Failed to view attachment: {}", e));
-                        } else {
-                            debug!("view_attachment succeeded");
-                        }
-                    } else {
-                        debug!("No attachment found for a{}", c);
-                        self.error = Some(format!("No attachment a{}", c));
                     }
-
-                    self.last_key_was_a = false;
-                    debug!("Reset last_key_was_a to false");
                 }
                 KeyCode::Char('A') => {
                     // Enter attachment path input mode (only in note list view)
@@ -3299,6 +3318,58 @@ impl App {
         Ok(())
     }
 
+    /// Delete the currently selected attachment
+    fn delete_current_attachment(&mut self) -> Result<()> {
+        let db = self.db.as_ref().context("Database not available")?;
+        let key = self.key.as_ref().context("Key not available")?;
+
+        // Get the note ID and attachment info first (without holding a borrow)
+        let (note_id, attachment_id, filename) = {
+            let filtered = self.filtered_notes();
+            if filtered.is_empty() || self.selected_note >= filtered.len() {
+                anyhow::bail!("No note selected");
+            }
+
+            let note = filtered[self.selected_note];
+            if self.selected_attachment >= note.attachments.len() {
+                anyhow::bail!("No attachment selected");
+            }
+
+            let attachment_id = note.attachments[self.selected_attachment].id.clone();
+            let filename = note.attachments[self.selected_attachment].filename.clone();
+            (note.id.clone(), attachment_id, filename)
+        };
+
+        // Now we can mutate self.notes
+        if let Some(note_in_list) = self.notes.iter_mut().find(|n| n.id == note_id) {
+            // Remove attachment from note
+            note_in_list.attachments.retain(|att| att.id != attachment_id);
+
+            // Update note in database
+            note_in_list.modified_at = chrono::Utc::now();
+            note_in_list.version += 1;
+
+            let note_repo = NoteRepository::new(db.connection());
+            note_repo.update(note_in_list, key)?;
+
+            // Delete attachment data from database
+            let attachment_repo = AttachmentRepository::new(db.connection());
+            attachment_repo.delete(&attachment_id)?;
+
+            // Adjust selection
+            if note_in_list.attachments.is_empty() {
+                // No more attachments, close viewer
+                self.view_mode = ViewMode::NoteList;
+            } else if self.selected_attachment >= note_in_list.attachments.len() {
+                self.selected_attachment = note_in_list.attachments.len() - 1;
+            }
+
+            self.error = Some(format!("Deleted: {}", filename));
+        }
+
+        Ok(())
+    }
+
     /// Add attachment to the current note
     fn add_attachment_to_current_note(&mut self, file_path: &str) -> Result<()> {
         // Clone debug_log so we can use it in the closure without borrowing self
@@ -3710,6 +3781,7 @@ impl App {
         // Left pane layout: search bar (optional), list
         let title = match self.view_mode {
             ViewMode::RecycleBin => "Recycle Bin",
+            ViewMode::AttachmentViewer => "Attachment Viewer",
             ViewMode::NoteList => {
                 if self.search_active {
                     "Notes (Search)"
@@ -3797,6 +3869,9 @@ impl App {
             match self.view_mode {
                 ViewMode::RecycleBin => {
                     "r: restore | E: empty bin | Esc: back to notes | ↑/↓: navigate".to_string()
+                }
+                ViewMode::AttachmentViewer => {
+                    "↑/↓: navigate | 1-9: quick select | Enter: view | d: delete | Esc: close".to_string()
                 }
                 ViewMode::NoteList => {
                     "/: search | p: pin | t: tags | l: type | r: recycle bin | n: new | i: edit".to_string()
@@ -3991,6 +4066,84 @@ impl App {
                 .alignment(ratatui::layout::Alignment::Center);
 
             frame.render_widget(modal_paragraph, modal_area);
+        }
+
+        // Render attachment viewer modal if showing
+        if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+            let filtered = self.filtered_notes();
+            if !filtered.is_empty() && self.selected_note < filtered.len() {
+                let note = filtered[self.selected_note];
+                if !note.attachments.is_empty() {
+                    // Calculate modal size based on content
+                    let modal_width = 80.min(size.width.saturating_sub(4));
+                    let modal_height = (note.attachments.len() as u16 + 6).min(size.height.saturating_sub(4));
+                    let modal_x = (size.width.saturating_sub(modal_width)) / 2;
+                    let modal_y = (size.height.saturating_sub(modal_height)) / 2;
+
+                    let modal_area = Rect {
+                        x: modal_x,
+                        y: modal_y,
+                        width: modal_width,
+                        height: modal_height,
+                    };
+
+                    // Clear background
+                    let clear_block = Block::default()
+                        .style(Style::default().bg(self.color_scheme.background));
+                    frame.render_widget(clear_block, modal_area);
+
+                    // Render modal
+                    let modal_block = Block::default()
+                        .title(format!(" Attachments ({}) ", note.attachments.len()))
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(self.color_scheme.accent))
+                        .style(Style::default().bg(self.color_scheme.background));
+
+                    let mut modal_lines = vec![Line::from("")];
+
+                    // Render attachment list
+                    for (i, attachment) in note.attachments.iter().enumerate() {
+                        let size_kb = (attachment.size as f64) / 1024.0;
+                        let size_str = if size_kb < 1024.0 {
+                            format!("{:.1} KB", size_kb)
+                        } else {
+                            format!("{:.1} MB", size_kb / 1024.0)
+                        };
+
+                        let number = if i < 9 { format!("{}", i + 1) } else { " ".to_string() };
+                        let line_text = format!(
+                            " {} │ {} │ {} │ {}",
+                            number,
+                            attachment.filename,
+                            size_str,
+                            attachment.mime_type
+                        );
+
+                        let style = if i == self.selected_attachment {
+                            Style::default()
+                                .fg(self.color_scheme.background)
+                                .bg(self.color_scheme.accent)
+                                .add_modifier(Modifier::BOLD)
+                        } else {
+                            Style::default().fg(self.color_scheme.foreground)
+                        };
+
+                        modal_lines.push(Line::styled(line_text, style));
+                    }
+
+                    modal_lines.push(Line::from(""));
+                    modal_lines.push(Line::styled(
+                        "↑/↓: navigate │ 1-9: quick select │ Enter: view │ d: delete │ Esc: close",
+                        Style::default().fg(self.color_scheme.muted)
+                    ));
+
+                    let modal_paragraph = Paragraph::new(modal_lines)
+                        .block(modal_block)
+                        .alignment(ratatui::layout::Alignment::Left);
+
+                    frame.render_widget(modal_paragraph, modal_area);
+                }
+            }
         }
     }
 
