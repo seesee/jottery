@@ -559,6 +559,8 @@ pub enum ViewMode {
     RecycleBin,
     /// Attachment viewer modal
     AttachmentViewer,
+    /// Version history viewer modal
+    VersionHistory,
 }
 
 /// Application
@@ -643,6 +645,12 @@ pub struct App {
     last_key_was_a: bool,
     /// Show force resync confirmation modal
     show_force_sync_confirm: bool,
+    /// Loaded versions for version history viewer
+    loaded_versions: Vec<crate::repository::NoteVersion>,
+    /// Selected version index in version history viewer
+    selected_version: usize,
+    /// Note ID for which versions are loaded (to detect when to reload)
+    versions_note_id: Option<String>,
 }
 
 impl App {
@@ -691,6 +699,9 @@ impl App {
             chafa_available: None,
             last_key_was_a: false,
             show_force_sync_confirm: false,
+            loaded_versions: Vec::new(),
+            selected_version: 0,
+            versions_note_id: None,
         })
     }
 
@@ -968,8 +979,25 @@ impl App {
                     }
                 }
                 KeyCode::Char('i') | KeyCode::Enter => {
+                    // In version history: restore selected version
+                    if matches!(self.view_mode, ViewMode::VersionHistory) {
+                        if !self.loaded_versions.is_empty() && self.selected_version < self.loaded_versions.len() {
+                            let version_number = self.loaded_versions[self.selected_version].version;
+                            match self.restore_version(version_number) {
+                                Ok(()) => {
+                                    self.error = Some(format!("Restored version {}", version_number));
+                                    self.view_mode = ViewMode::NoteList;
+                                    self.loaded_versions.clear();
+                                    self.versions_note_id = None;
+                                }
+                                Err(e) => {
+                                    self.error = Some(format!("Failed to restore version: {}", e));
+                                }
+                            }
+                        }
+                    }
                     // In attachment viewer: view selected attachment
-                    if matches!(self.view_mode, ViewMode::AttachmentViewer) {
+                    else if matches!(self.view_mode, ViewMode::AttachmentViewer) {
                         let filtered = self.filtered_notes();
                         if !filtered.is_empty() && self.selected_note < filtered.len() {
                             let note = filtered[self.selected_note];
@@ -1041,6 +1069,11 @@ impl App {
                                 self.selected_attachment += 1;
                             }
                         }
+                    } else if matches!(self.view_mode, ViewMode::VersionHistory) {
+                        // Navigate versions in viewer
+                        if self.selected_version < self.loaded_versions.len().saturating_sub(1) {
+                            self.selected_version += 1;
+                        }
                     } else {
                         // Navigate notes
                         let note_count = self.filtered_notes().len();
@@ -1055,6 +1088,11 @@ impl App {
                         // Navigate attachments in viewer
                         if self.selected_attachment > 0 {
                             self.selected_attachment -= 1;
+                        }
+                    } else if matches!(self.view_mode, ViewMode::VersionHistory) {
+                        // Navigate versions in viewer
+                        if self.selected_version > 0 {
+                            self.selected_version -= 1;
                         }
                     } else {
                         // Navigate notes
@@ -1170,6 +1208,9 @@ impl App {
                         ViewMode::AttachmentViewer => {
                             // 'r' does nothing in attachment viewer
                         }
+                        ViewMode::VersionHistory => {
+                            // 'r' does nothing in version history
+                        }
                     }
                 }
                 KeyCode::Char('E') => {
@@ -1187,6 +1228,11 @@ impl App {
                     } else if matches!(self.view_mode, ViewMode::AttachmentViewer) {
                         // Exit attachment viewer
                         self.view_mode = ViewMode::NoteList;
+                    } else if matches!(self.view_mode, ViewMode::VersionHistory) {
+                        // Exit version history viewer
+                        self.view_mode = ViewMode::NoteList;
+                        self.loaded_versions.clear();
+                        self.versions_note_id = None;
                     } else if matches!(self.view_mode, ViewMode::RecycleBin) {
                         // Exit recycle bin view
                         self.view_mode = ViewMode::NoteList;
@@ -1258,6 +1304,21 @@ impl App {
                         }
                     } else {
                         self.debug_log("  Filtered is empty or selected_note out of bounds");
+                    }
+                }
+                KeyCode::Char('v') => {
+                    // Open version history viewer modal
+                    let filtered = self.filtered_notes();
+                    if !filtered.is_empty() && self.selected_note < filtered.len() {
+                        let note_id = filtered[self.selected_note].id.clone();
+                        if let Err(e) = self.load_versions_for_note(&note_id) {
+                            self.error = Some(format!("Failed to load versions: {}", e));
+                        } else if self.loaded_versions.is_empty() {
+                            self.error = Some("No version history for this note".to_string());
+                        } else {
+                            self.view_mode = ViewMode::VersionHistory;
+                            self.selected_version = 0;
+                        }
                     }
                 }
                 KeyCode::Char(c @ '1'..='9') => {
@@ -1923,6 +1984,66 @@ impl App {
         });
 
         notes
+    }
+
+    /// Load version history for a note
+    fn load_versions_for_note(&mut self, note_id: &str) -> Result<()> {
+        let db = self.db.as_ref().context("Database not available")?;
+        let key = self.key.as_ref().context("Key not available")?;
+
+        let version_repo = crate::repository::NoteVersionRepository::new(db.connection());
+        self.loaded_versions = version_repo.get_versions_for_note(note_id, key)?;
+        self.versions_note_id = Some(note_id.to_string());
+        self.selected_version = 0;
+
+        Ok(())
+    }
+
+    /// Restore a specific version of a note
+    fn restore_version(&mut self, version_number: i32) -> Result<()> {
+        let db = self.db.as_ref().context("Database not available")?;
+        let key = self.key.as_ref().context("Key not available")?;
+
+        // Get the note ID from loaded versions context
+        let note_id = self.versions_note_id.as_ref()
+            .context("No note context for version restore")?
+            .clone();
+
+        // Get the version to restore
+        let version_repo = crate::repository::NoteVersionRepository::new(db.connection());
+        let version = version_repo.get_version(&note_id, version_number, key)?
+            .context(format!("Version {} not found", version_number))?;
+
+        // Find the current note in memory
+        let note_in_list = self.notes.iter_mut()
+            .find(|n| n.id == note_id)
+            .context("Note not found in memory")?;
+
+        // Create a snapshot of the current state before restoring
+        version_repo.create_version(
+            note_in_list,
+            chrono::Utc::now(),
+            crate::repository::VersionReason::ManualSync,
+            key,
+        )?;
+
+        // Restore the version data
+        note_in_list.content = version.content;
+        note_in_list.tags = version.tags;
+        note_in_list.attachments = version.attachments;
+        note_in_list.syntax_language = version.syntax_language.unwrap_or_default();
+        note_in_list.word_wrap = version.word_wrap.unwrap_or(true);
+        note_in_list.modified_at = chrono::Utc::now();
+        note_in_list.version += 1;
+
+        // Update in database
+        let note_repo = crate::repository::NoteRepository::new(db.connection());
+        note_repo.update(note_in_list, key)?;
+
+        // Reload versions to show the new snapshot
+        self.load_versions_for_note(&note_id)?;
+
+        Ok(())
     }
 
     /// Trigger manual sync
@@ -3836,6 +3957,7 @@ impl App {
         let title = match self.view_mode {
             ViewMode::RecycleBin => "Recycle Bin",
             ViewMode::AttachmentViewer => "Attachment Viewer",
+            ViewMode::VersionHistory => "Version History",
             ViewMode::NoteList => {
                 if self.search_active {
                     "Notes (Search)"
@@ -3929,8 +4051,11 @@ impl App {
                 ViewMode::AttachmentViewer => {
                     "↑/↓: navigate | 1-9: quick select | Enter: view | d: delete | Esc: close".to_string()
                 }
+                ViewMode::VersionHistory => {
+                    "↑/↓: navigate | Enter: restore version | Esc: close".to_string()
+                }
                 ViewMode::NoteList => {
-                    "/: search | p: pin | t: tags | l: type | r: recycle bin | n: new | i: edit".to_string()
+                    "/: search | p: pin | t: tags | l: type | r: recycle bin | v: versions | n: new | i: edit".to_string()
                 }
             }
         };
@@ -4221,6 +4346,172 @@ impl App {
                 let modal_lines = vec![
                     Line::from(""),
                     Line::styled(error_text, Style::default().fg(self.color_scheme.error)),
+                    Line::from(""),
+                    Line::styled("Press Esc to close", Style::default().fg(self.color_scheme.muted)),
+                ];
+
+                let modal_paragraph = Paragraph::new(modal_lines)
+                    .block(modal_block)
+                    .alignment(ratatui::layout::Alignment::Center);
+
+                frame.render_widget(modal_paragraph, modal_area);
+            }
+        }
+
+        // Render version history modal if showing
+        if matches!(self.view_mode, ViewMode::VersionHistory) {
+            // Calculate modal size (larger than attachment viewer for content preview)
+            let modal_width = 100.min(size.width.saturating_sub(4));
+            let modal_height = 30.min(size.height.saturating_sub(4));
+            let modal_x = (size.width.saturating_sub(modal_width)) / 2;
+            let modal_y = (size.height.saturating_sub(modal_height)) / 2;
+
+            let modal_area = Rect {
+                x: modal_x,
+                y: modal_y,
+                width: modal_width,
+                height: modal_height,
+            };
+
+            // Clear background
+            let clear_block = Block::default()
+                .style(Style::default().bg(self.color_scheme.background));
+            frame.render_widget(clear_block, modal_area);
+
+            if !self.loaded_versions.is_empty() {
+                // Create two-pane layout (version list | preview)
+                let modal_block = Block::default()
+                    .title(format!(" Version History ({}) ", self.loaded_versions.len()))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.color_scheme.accent))
+                    .style(Style::default().bg(self.color_scheme.background));
+
+                // Split into left pane (version list) and right pane (preview)
+                let inner_area = modal_block.inner(modal_area);
+                frame.render_widget(modal_block, modal_area);
+
+                let panes = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Length(30),  // Version list
+                        Constraint::Min(0),      // Preview pane
+                    ])
+                    .split(inner_area);
+
+                // Left pane: Version list
+                let mut version_lines = vec![];
+                for (i, version) in self.loaded_versions.iter().enumerate() {
+                    let created_str = version.created_at.format("%Y-%m-%d %H:%M").to_string();
+                    let reason_str = match version.reason {
+                        crate::repository::VersionReason::Sync => "auto",
+                        crate::repository::VersionReason::ManualSync => "manual",
+                    };
+
+                    let line_text = format!(" v{:<4} │ {} │ {}", version.version, created_str, reason_str);
+
+                    let style = if i == self.selected_version {
+                        Style::default()
+                            .fg(self.color_scheme.background)
+                            .bg(self.color_scheme.accent)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(self.color_scheme.foreground)
+                    };
+
+                    version_lines.push(Line::styled(line_text, style));
+                }
+
+                let version_list_block = Block::default()
+                    .title(" Versions ")
+                    .borders(Borders::RIGHT);
+
+                let version_list = Paragraph::new(version_lines)
+                    .block(version_list_block);
+
+                frame.render_widget(version_list, panes[0]);
+
+                // Right pane: Preview of selected version
+                if self.selected_version < self.loaded_versions.len() {
+                    let version = &self.loaded_versions[self.selected_version];
+
+                    let preview_block = Block::default()
+                        .title(" Preview ")
+                        .borders(Borders::NONE);
+
+                    let mut preview_lines = vec![];
+
+                    // Metadata section
+                    preview_lines.push(Line::styled(
+                        format!("Version: {}", version.version),
+                        Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)
+                    ));
+                    preview_lines.push(Line::styled(
+                        format!("Created: {}", version.created_at.format("%Y-%m-%d %H:%M:%S")),
+                        Style::default().fg(self.color_scheme.foreground)
+                    ));
+                    preview_lines.push(Line::styled(
+                        format!("Synced:  {}", version.synced_at.format("%Y-%m-%d %H:%M:%S")),
+                        Style::default().fg(self.color_scheme.foreground)
+                    ));
+                    preview_lines.push(Line::styled(
+                        format!("Characters: {}", version.content.len()),
+                        Style::default().fg(self.color_scheme.foreground)
+                    ));
+
+                    // Tags section
+                    if !version.tags.is_empty() {
+                        let tags_str = version.tags.iter()
+                            .map(|t| format!("#{}", t))
+                            .collect::<Vec<_>>()
+                            .join(" ");
+                        preview_lines.push(Line::styled(
+                            format!("Tags: {}", tags_str),
+                            Style::default().fg(self.color_scheme.accent_secondary)
+                        ));
+                    }
+
+                    preview_lines.push(Line::from(""));
+                    preview_lines.push(Line::styled(
+                        "─".repeat(60),
+                        Style::default().fg(self.color_scheme.muted)
+                    ));
+                    preview_lines.push(Line::from(""));
+
+                    // Content preview (first 500 chars or full content if smaller)
+                    let preview_content = if version.content.len() > 500 {
+                        format!("{}...", &version.content[..500])
+                    } else {
+                        version.content.clone()
+                    };
+
+                    for line in preview_content.lines() {
+                        preview_lines.push(Line::from(line));
+                    }
+
+                    preview_lines.push(Line::from(""));
+                    preview_lines.push(Line::from(""));
+                    preview_lines.push(Line::styled(
+                        "↑/↓: navigate │ Enter: restore version │ Esc: close",
+                        Style::default().fg(self.color_scheme.muted)
+                    ));
+
+                    let preview = Paragraph::new(preview_lines)
+                        .block(preview_block)
+                        .wrap(Wrap { trim: false });
+
+                    frame.render_widget(preview, panes[1]);
+                }
+            } else {
+                // Show error state - no versions
+                let modal_block = Block::default()
+                    .title(" Version History ")
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(self.color_scheme.error))
+                    .style(Style::default().bg(self.color_scheme.background));
+
+                let modal_lines = vec![
+                    Line::from(""),
+                    Line::styled("No version history", Style::default().fg(self.color_scheme.error)),
                     Line::from(""),
                     Line::styled("Press Esc to close", Style::default().fg(self.color_scheme.muted)),
                 ];
