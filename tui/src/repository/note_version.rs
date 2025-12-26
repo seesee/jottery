@@ -2,6 +2,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection};
+use tracing::debug;
 
 use crate::crypto::{CryptoService, EncryptedData};
 use crate::models::{Attachment, Note, SyntaxLanguage};
@@ -77,7 +78,7 @@ impl<'a> NoteVersionRepository<'a> {
         // Deduplication check
         if let Some(latest) = self.get_latest_version(&note.id, key)? {
             if latest.content == note.content {
-                println!("[NoteVersionRepository] Skipping duplicate version for note {}", note.id);
+                debug!("Skipping duplicate version for note {}", note.id);
                 return Ok(None);
             }
         }
@@ -112,7 +113,7 @@ impl<'a> NoteVersionRepository<'a> {
             ],
         )?;
 
-        println!("[NoteVersionRepository] Created version {} for note {}", note.version, note.id);
+        debug!("Created version {} for note {}", note.version, note.id);
         Ok(Some(version_key))
     }
 
@@ -274,7 +275,7 @@ impl<'a> NoteVersionRepository<'a> {
             params![note_id],
         )?;
 
-        println!("[NoteVersionRepository] Deleted {} versions for note {}", deleted, note_id);
+        debug!("Deleted {} versions for note {}", deleted, note_id);
         Ok(deleted)
     }
 
@@ -348,7 +349,7 @@ impl<'a> NoteVersionRepository<'a> {
             ],
         )?;
 
-        println!("[NoteVersionRepository] Inserted version from sync: {}", version.version_key);
+        debug!("Inserted version from sync: {}", version.version_key);
         Ok(())
     }
 }
