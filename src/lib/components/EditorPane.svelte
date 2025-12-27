@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -246,6 +246,33 @@
     isEditing = false;
   }
 
+  // Handle draft mode - show empty editor for new note
+  $: if ($isDraftMode) {
+    console.log('[EditorPane] Entering draft mode');
+
+    // Clear any pending saves
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    // Reset editor to empty state
+    content = '';
+    tags = [];
+    attachments = [];
+    language = $settings.enabledSyntaxLanguages?.includes('markdown') ? 'markdown' : 'plain';
+    wordWrap = true;
+    showPreview = false;
+    isEditing = true;
+
+    // Focus the editor
+    setTimeout(() => {
+      if (codeEditor && !showPreview) {
+        codeEditor.focus();
+      }
+    }, 10);
+  }
+
   /**
    * Trigger background sync without blocking UI
    */
@@ -323,8 +350,43 @@
     }
   }
 
-  function handleInput() {
-    // Auto-save with debounce
+  async function handleInput() {
+    // If in draft mode and content is added, create the note
+    if ($isDraftMode && content.trim().length > 0) {
+      console.log('[EditorPane] Content added in draft mode, creating note');
+      try {
+        // Create the note with current content
+        const newNote = await noteService.createNote(content, tags);
+
+        // Update note with additional properties
+        await noteService.updateNote(newNote.id, {
+          content,
+          tags,
+          attachments,
+          syntaxLanguage: language,
+          wordWrap,
+          showPreview,
+        });
+
+        // Reload all notes
+        const allNotes = await noteService.getAllNotes($settings.sortOrder);
+        notes.set(allNotes);
+
+        // Re-index for search
+        searchService.indexNotes(allNotes);
+
+        // Exit draft mode and select the new note
+        exitDraftMode();
+        selectNote(newNote.id);
+
+        console.log('[EditorPane] Note created successfully:', newNote.id);
+      } catch (error) {
+        console.error('[EditorPane] Failed to create note from draft:', error);
+      }
+      return;
+    }
+
+    // Normal auto-save with debounce
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = window.setTimeout(handleSave, 1000);
   }

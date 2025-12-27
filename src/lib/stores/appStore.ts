@@ -15,6 +15,9 @@ export const notes = writable<DecryptedNote[]>([]);
 export const selectedNoteId = writable<string | null>(null);
 export const searchQuery = writable<string>('');
 
+// Draft mode for new notes (deferred creation)
+export const isDraftMode = writable<boolean>(false);
+
 // Settings
 export const settings = writable<UserSettings>(DEFAULT_SETTINGS);
 
@@ -55,4 +58,13 @@ export function clearSelection() {
 
 export function setSearchQuery(query: string) {
   searchQuery.set(query);
+}
+
+export function enterDraftMode() {
+  isDraftMode.set(true);
+  selectedNoteId.set(null);
+}
+
+export function exitDraftMode() {
+  isDraftMode.set(false);
 }

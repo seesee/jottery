@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { searchQuery, isLocked, settings } from '../stores/appStore';
+  import { searchQuery, isLocked, settings, isDraftMode } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -166,8 +166,9 @@
 
         <button
           on:click={handleNewNoteClick}
-          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors"
-          title={newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create')}
+          disabled={$isDraftMode}
+          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={$isDraftMode ? 'Add content to current note first' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,8 +192,9 @@
 
         <button
           on:click={handleNewNoteClick}
-          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors"
-          title={newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create')}
+          disabled={$isDraftMode}
+          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={$isDraftMode ? 'Add content to current note first' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,8 +209,9 @@
       <div class="hidden tablet:flex items-center gap-2">
       <button
         on:click={handleNewNoteClick}
-        class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
-        title={newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create')}
+        disabled={$isDraftMode}
+        class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title={$isDraftMode ? 'Add content to current note first' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
       >
         + {$_('note.new')}
       </button>
