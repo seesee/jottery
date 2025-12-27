@@ -180,8 +180,38 @@
         exitDraftMode();
       }
 
-      // Flush any pending save before switching
-      if (saveTimeout) {
+      // Save and create version for the previous note before switching
+      if (previousNoteId && !$isDraftMode) {
+        console.log('[EditorPane] Saving previous note and creating version before switching');
+
+        // Save immediately (don't wait for debounce)
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+          saveTimeout = null;
+        }
+
+        // Perform save and version creation asynchronously
+        (async () => {
+          try {
+            // Save current changes
+            await noteService.updateNote(previousNoteId, {
+              content,
+              tags: tags,
+              attachments: attachments,
+              syntaxLanguage: language,
+              wordWrap,
+              showPreview,
+            });
+            console.log('[EditorPane] Saved previous note before switching');
+
+            // Create version snapshot for the previous note
+            await createVersionSnapshot(previousNoteId);
+          } catch (error) {
+            console.error('[EditorPane] Error saving/versioning before switch:', error);
+          }
+        })();
+      } else if (saveTimeout) {
+        // Just clear the timeout if in draft mode
         clearTimeout(saveTimeout);
         saveTimeout = null;
       }
@@ -237,8 +267,8 @@
           });
           console.log('[EditorPane] Saved pending changes before closing');
 
-          // Now create version snapshot and sync
-          await createVersionSnapshot();
+          // Now create version snapshot and sync for the previous note
+          await createVersionSnapshot(previousNoteId);
           await triggerBackgroundSync();
         } catch (error) {
           console.error('[EditorPane] Error during close save:', error);
@@ -301,15 +331,17 @@
   }
 
   /**
-   * Create a version snapshot of the current note
+   * Create a version snapshot for a specific note
    * Only called when navigating away or closing editor
    */
-  async function createVersionSnapshot() {
-    if (!$selectedNote) return;
+  async function createVersionSnapshot(noteId?: string) {
+    // Use provided noteId or fall back to current selected note
+    const targetNoteId = noteId || $selectedNote?.id;
+    if (!targetNoteId) return;
 
     try {
       // Get the encrypted note from repository (not decrypted from service)
-      const currentNote = await noteRepository.getById($selectedNote.id);
+      const currentNote = await noteRepository.getById(targetNoteId);
       if (currentNote) {
         // Increment version BEFORE creating the snapshot
         currentNote.version = (currentNote.version || 0) + 1;
@@ -322,10 +354,10 @@
           syncedAt: new Date().toISOString(),
           reason: 'manual-sync',
         });
-        console.log('[EditorPane] Created version snapshot, version:', currentNote.version);
+        console.log('[EditorPane] Created version snapshot for note:', targetNoteId, 'version:', currentNote.version);
       }
     } catch (error) {
-      console.error('[EditorPane] Failed to create version:', error);
+      console.error('[EditorPane] Failed to create version for note:', targetNoteId, error);
     }
   }
 
