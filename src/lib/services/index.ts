@@ -16,6 +16,7 @@ export { attachmentRepository } from './attachmentRepository';
 export { settingsRepository } from './settingsRepository';
 export { encryptionRepository } from './encryptionRepository';
 export { syncRepository } from './syncRepository';
+export { versionRepository } from './versionRepository';
 
 // Business logic services
 export { syncService } from './syncService';
