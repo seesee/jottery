@@ -209,8 +209,8 @@
 
     previousNoteId = $selectedNote.id;
   } else {
-    // Exit draft mode if closing without creating a note
-    if ($isDraftMode) {
+    // Exit draft mode if closing without creating a note (but not when just entering draft mode)
+    if ($isDraftMode && previousNoteId) {
       console.log('[EditorPane] Exiting draft mode - editor closed without creating note');
       exitDraftMode();
     }
