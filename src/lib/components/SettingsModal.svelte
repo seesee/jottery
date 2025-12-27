@@ -937,6 +937,46 @@
                   {recordingShortcut === 'copyNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.copyNote)}
                 </button>
               </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Undo</span>
+                <button
+                  on:click={() => startRecording('undo')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'undo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'undo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.undo)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Redo</span>
+                <button
+                  on:click={() => startRecording('redo')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'redo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'redo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.redo)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Version History</span>
+                <button
+                  on:click={() => startRecording('versionHistory')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'versionHistory' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'versionHistory' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.versionHistory)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Note Info</span>
+                <button
+                  on:click={() => startRecording('noteInfo')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'noteInfo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'noteInfo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.noteInfo)}
+                </button>
+              </div>
             </div>
 
             <button

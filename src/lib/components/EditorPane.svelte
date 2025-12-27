@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
@@ -327,6 +328,20 @@
     handleInput();
   }
 
+  function handleUndo() {
+    if (codeEditor) {
+      codeEditor.undo();
+    }
+    showMoreMenu = false;
+  }
+
+  function handleRedo() {
+    if (codeEditor) {
+      codeEditor.redo();
+    }
+    showMoreMenu = false;
+  }
+
   function handlePreviewToggle() {
     showPreview = !showPreview;
     showMoreMenu = false;
@@ -521,6 +536,69 @@
   function toggleAttachments() {
     isAttachmentsExpanded = !isAttachmentsExpanded;
   }
+
+  // Keyboard shortcut handler
+  function matchesShortcut(event: KeyboardEvent, shortcut: any): boolean {
+    if (!shortcut || !shortcut.key) return false;
+
+    const hasCtrl = event.metaKey || event.ctrlKey;
+    const hasAlt = event.altKey;
+    const hasShift = event.shiftKey;
+
+    const ctrlMatches = (shortcut.ctrl === true) === hasCtrl;
+    const altMatches = (shortcut.alt === true) === hasAlt;
+    const shiftMatches = (shortcut.shift === true) === hasShift;
+
+    if (!ctrlMatches || !altMatches || !shiftMatches) {
+      return false;
+    }
+
+    return event.key.toLowerCase() === shortcut.key.toLowerCase();
+  }
+
+  function handleEditorKeydown(event: KeyboardEvent) {
+    // Only handle shortcuts when a note is selected
+    if (!$selectedNote) return;
+
+    const shortcuts = $settings.keyboardShortcuts;
+    if (!shortcuts) return;
+
+    // Undo
+    if (matchesShortcut(event, shortcuts.undo)) {
+      event.preventDefault();
+      handleUndo();
+      return;
+    }
+
+    // Redo
+    if (matchesShortcut(event, shortcuts.redo)) {
+      event.preventDefault();
+      handleRedo();
+      return;
+    }
+
+    // Version History
+    if (matchesShortcut(event, shortcuts.versionHistory)) {
+      event.preventDefault();
+      handleShowVersionHistory();
+      return;
+    }
+
+    // Note Info
+    if (matchesShortcut(event, shortcuts.noteInfo)) {
+      event.preventDefault();
+      handleShowInfo();
+      return;
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('keydown', handleEditorKeydown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', handleEditorKeydown);
+  });
 </script>
 
 <svelte:window on:click={handleClickOutside} />
@@ -621,6 +699,24 @@
         {#if showMoreMenu}
           <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
             <div class="py-1">
+              <button
+                on:click={handleUndo}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span>↶</span>
+                <span>Undo</span>
+              </button>
+
+              <button
+                on:click={handleRedo}
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span>↷</span>
+                <span>Redo</span>
+              </button>
+
+              <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+
               <button
                 on:click={handleWordWrapToggle}
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"

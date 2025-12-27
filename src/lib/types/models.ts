@@ -58,6 +58,10 @@ export interface KeyboardShortcuts {
   openSettings: KeyboardShortcut;
   showShortcuts: KeyboardShortcut;
   copyNote: KeyboardShortcut;
+  undo: KeyboardShortcut;
+  redo: KeyboardShortcut;
+  versionHistory: KeyboardShortcut;
+  noteInfo: KeyboardShortcut;
 }
 
 /**
@@ -224,6 +228,10 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   openSettings: { key: ',', ctrl: true }, // Ctrl/Cmd+,
   showShortcuts: { key: '/', alt: true }, // Alt+/
   copyNote: { key: 'c', alt: true }, // Alt+C
+  undo: { key: 'z', ctrl: true }, // Ctrl/Cmd+Z
+  redo: { key: 'z', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+Z
+  versionHistory: { key: 'h', alt: true }, // Alt+H
+  noteInfo: { key: 'i', alt: true }, // Alt+I
 };
 
 /**

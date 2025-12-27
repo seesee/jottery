@@ -15,7 +15,7 @@
   import { oneDark } from '@codemirror/theme-one-dark';
   import { lineNumbers } from '@codemirror/view';
   import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
-  import { history, historyKeymap } from '@codemirror/commands';
+  import { history, historyKeymap, undo as undoCommand, redo as redoCommand } from '@codemirror/commands';
   import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
   import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
   import { bracketMatching } from '@codemirror/language';
@@ -33,6 +33,20 @@
   export function focus() {
     if (editorView) {
       editorView.focus();
+    }
+  }
+
+  // Export undo method
+  export function undo() {
+    if (editorView) {
+      undoCommand(editorView);
+    }
+  }
+
+  // Export redo method
+  export function redo() {
+    if (editorView) {
+      redoCommand(editorView);
     }
   }
 
