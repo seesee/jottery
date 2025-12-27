@@ -163,9 +163,8 @@
         }
       }, 10);
 
-      // Create version snapshot and trigger sync when switching notes
+      // Trigger sync when switching notes (version snapshot will be created on close)
       if (previousNoteId) {
-        createVersionSnapshot();
         triggerBackgroundSync();
       }
     } else {
