@@ -23,6 +23,10 @@
 
   // Wrapper to handle closing note and returning to list on mobile
   function handleClose() {
+    // Exit draft mode if active
+    if ($isDraftMode) {
+      exitDraftMode();
+    }
     clearSelection();
     if (onBackToList) {
       onBackToList();
@@ -209,14 +213,8 @@
 
     previousNoteId = $selectedNote.id;
   } else {
-    // Exit draft mode if closing without creating a note (but not when just entering draft mode)
-    if ($isDraftMode && previousNoteId) {
-      console.log('[EditorPane] Exiting draft mode - editor closed without creating note');
-      exitDraftMode();
-    }
-
     // Closing editor - flush pending save, create version, and trigger sync
-    if (previousNoteId) {
+    if (previousNoteId && !$isDraftMode) {
       console.log('[EditorPane] Closing editor, saving, creating version and triggering sync...');
 
       // Save immediately (don't wait for debounce)
@@ -277,12 +275,10 @@
     showPreview = false;
     isEditing = true;
 
-    // Focus the editor
-    setTimeout(() => {
-      if (codeEditor && !showPreview) {
-        codeEditor.focus();
-      }
-    }, 10);
+    // Focus the editor immediately (no setTimeout to avoid losing first character)
+    if (codeEditor && !showPreview) {
+      codeEditor.focus();
+    }
   }
 
   /**

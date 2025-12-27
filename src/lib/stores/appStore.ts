@@ -62,7 +62,7 @@ export function setSearchQuery(query: string) {
 
 export function enterDraftMode() {
   isDraftMode.set(true);
-  selectedNoteId.set(null);
+  // Don't clear selectedNoteId - draft mode will override display
 }
 
 export function exitDraftMode() {
