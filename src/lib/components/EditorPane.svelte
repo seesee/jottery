@@ -184,6 +184,16 @@
       if (previousNoteId && !$isDraftMode) {
         console.log('[EditorPane] Saving previous note and creating version before switching');
 
+        // CRITICAL: Capture values in consts to prevent async closure bug
+        // By the time the async function executes, these variables may have been reassigned
+        const noteIdToSave = previousNoteId;
+        const contentToSave = content;
+        const tagsToSave = [...tags];
+        const attachmentsToSave = [...attachments];
+        const languageToSave = language;
+        const wordWrapToSave = wordWrap;
+        const showPreviewToSave = showPreview;
+
         // Save immediately (don't wait for debounce)
         if (saveTimeout) {
           clearTimeout(saveTimeout);
@@ -193,19 +203,19 @@
         // Perform save and version creation asynchronously
         (async () => {
           try {
-            // Save current changes
-            await noteService.updateNote(previousNoteId, {
-              content,
-              tags: tags,
-              attachments: attachments,
-              syntaxLanguage: language,
-              wordWrap,
-              showPreview,
+            // Save current changes - use captured consts
+            await noteService.updateNote(noteIdToSave, {
+              content: contentToSave,
+              tags: tagsToSave,
+              attachments: attachmentsToSave,
+              syntaxLanguage: languageToSave,
+              wordWrap: wordWrapToSave,
+              showPreview: showPreviewToSave,
             });
             console.log('[EditorPane] Saved previous note before switching');
 
-            // Create version snapshot for the previous note
-            await createVersionSnapshot(previousNoteId);
+            // Create version snapshot - use captured const
+            await createVersionSnapshot(noteIdToSave);
           } catch (error) {
             console.error('[EditorPane] Error saving/versioning before switch:', error);
           }
