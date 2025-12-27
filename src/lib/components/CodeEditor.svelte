@@ -21,6 +21,8 @@
   import { bracketMatching } from '@codemirror/language';
   import { defaultKeymap, indentWithTab } from '@codemirror/commands';
   import { keymap } from '@codemirror/view';
+  import { settings } from '../stores/appStore';
+  import { getFontSize } from '../utils/fontSize';
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
@@ -58,6 +60,9 @@
   let themeCompartment = new Compartment();
   let mobileAttributesCompartment = new Compartment();
   let measuredWidth: number = 0;
+
+  // Compute font size from settings
+  $: fontSize = getFontSize($settings.fontSize);
 
   // Get mobile keyboard attributes based on language (only for prose, not code)
   function getMobileAttributes() {
@@ -237,7 +242,7 @@
   }
 </script>
 
-<div bind:this={editorWrapper} class="h-full w-full overflow-hidden">
+<div bind:this={editorWrapper} class="h-full w-full overflow-hidden" style="font-size: {fontSize}px;">
   <div
     bind:this={editorContainer}
     class="h-full"
@@ -254,7 +259,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 16px; /* 16px minimum prevents iOS auto-zoom */
+    /* font-size inherited from parent wrapper div */
     line-height: 1.6;
     /* Mobile-friendly scrolling */
     -webkit-overflow-scrolling: touch;

@@ -74,6 +74,7 @@ export interface UserSettings {
   layoutMode: 'auto' | 'mobile' | 'desktop'; // Layout mode override
   sortOrder: 'recent' | 'oldest' | 'alpha' | 'created';
   autoLockTimeout: number; // Minutes
+  fontSize: 'auto' | 'small' | 'medium' | 'large'; // Editor font size (auto = mobile-aware)
   syncEnabled: boolean;
   syncEndpoint?: string;
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
@@ -243,6 +244,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   layoutMode: 'auto',
   sortOrder: 'recent',
   autoLockTimeout: 15, // 15 minutes
+  fontSize: 'auto', // Auto-detects mobile and uses appropriate size
   syncEnabled: false,
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,

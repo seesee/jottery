@@ -15,6 +15,7 @@
 
   let theme: Theme = $settings.theme;
   let layoutMode: 'auto' | 'mobile' | 'desktop' = $settings.layoutMode || 'auto';
+  let fontSize: 'auto' | 'small' | 'medium' | 'large' = $settings.fontSize || 'auto';
   let autoLockTimeout = $settings.autoLockTimeout;
   let sortOrder = $settings.sortOrder;
   let language = $settings.language;
@@ -455,6 +456,7 @@
       await settingsRepository.update({
         theme,
         layoutMode,
+        fontSize,
         autoLockTimeout,
         sortOrder,
         language,
@@ -467,6 +469,7 @@
         ...s,
         theme,
         layoutMode,
+        fontSize,
         autoLockTimeout,
         sortOrder,
         language,
@@ -784,6 +787,26 @@
             </select>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Override the automatic layout detection for this device
+            </p>
+          </div>
+
+          <!-- Font Size -->
+          <div>
+            <label for="setting-font-size" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Editor Font Size
+            </label>
+            <select
+              id="setting-font-size"
+              bind:value={fontSize}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="auto">Auto (Mobile-aware: 16px on mobile, 14px desktop)</option>
+              <option value="small">Small (12px)</option>
+              <option value="medium">Medium (14px)</option>
+              <option value="large">Large (16px)</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Auto uses larger font on mobile to prevent browser zoom
             </p>
           </div>
 
