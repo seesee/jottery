@@ -316,14 +316,6 @@ class NoteService {
    */
   private async decryptNote(note: Note, key: CryptoKey): Promise<DecryptedNote> {
     try {
-      console.log(`[NoteService] Decrypting note ${note.id}`);
-      console.log(`[NoteService] Note tags from IndexedDB:`, {
-        isArray: Array.isArray(note.tags),
-        length: note.tags?.length,
-        type: typeof note.tags,
-        raw: note.tags
-      });
-
       const encryptedContent = JSON.parse(note.content);
       const content = await cryptoService.decryptText(encryptedContent, key);
 
@@ -341,12 +333,8 @@ class NoteService {
           // Check format: single blob (length 1) vs individual tags (length > 1)
           if (note.tags.length === 1) {
             // NEW FORMAT: Single encrypted blob containing all tags
-            console.log(`[NoteService] Note ${note.id} has NEW format (single blob), tags[0]:`, note.tags[0]?.substring(0, 100));
             const encryptedTags = JSON.parse(note.tags[0]);
-            console.log(`[NoteService] Note ${note.id} parsed encryptedTags:`, encryptedTags);
-
             const decryptedTags = await decryptStringArray(encryptedTags, key);
-            console.log(`[NoteService] Note ${note.id} decryptedTags:`, decryptedTags, 'type:', typeof decryptedTags, 'isArray:', Array.isArray(decryptedTags));
 
             // Defensive check: ensure decrypted tags is an array
             if (!Array.isArray(decryptedTags)) {
@@ -357,7 +345,6 @@ class NoteService {
             }
           } else {
             // OLD/TUI FORMAT: Multiple individually encrypted tags (from before conversion was added)
-            console.log(`[NoteService] Note ${note.id} has OLD format (${note.tags.length} individual tags), converting...`);
             const decryptedTags: string[] = [];
 
             for (let i = 0; i < note.tags.length; i++) {
@@ -368,7 +355,6 @@ class NoteService {
 
                 if (typeof tag === 'string' && tag.trim().length > 0) {
                   decryptedTags.push(tag);
-                  console.log(`[NoteService] Note ${note.id} tag[${i}]:`, tag);
                 }
               } catch (error) {
                 console.error(`[NoteService] Note ${note.id} failed to decrypt tag[${i}]:`, error);
@@ -376,15 +362,12 @@ class NoteService {
             }
 
             tags = decryptedTags;
-            console.log(`[NoteService] Note ${note.id} converted ${tags.length} tags from old format`);
           }
         } catch (error) {
           console.error(`[NoteService] Failed to decrypt tags for note ${note.id}:`, error);
           tags = [];
         }
       }
-
-      console.log(`[NoteService] Note ${note.id} final tags:`, tags, 'isArray:', Array.isArray(tags));
 
       return {
         ...note,
