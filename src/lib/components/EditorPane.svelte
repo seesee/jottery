@@ -183,18 +183,7 @@
 
       // Save and create version for the previous note before switching
       if (previousNoteId && !$isDraftMode) {
-        console.log('[EditorPane] Saving previous note before switching, hasContentChanged:', hasContentChanged);
-
-        // CRITICAL: Capture values in consts to prevent async closure bug
-        // By the time the async function executes, these variables may have been reassigned
-        const noteIdToSave = previousNoteId;
-        const contentToSave = content;
-        const tagsToSave = [...tags];
-        const attachmentsToSave = [...attachments];
-        const languageToSave = language;
-        const wordWrapToSave = wordWrap;
-        const showPreviewToSave = showPreview;
-        const shouldCreateVersion = hasContentChanged; // Capture the flag
+        console.log('[EditorPane] Note switch - hasContentChanged:', hasContentChanged);
 
         // Save immediately (don't wait for debounce)
         if (saveTimeout) {
@@ -202,31 +191,42 @@
           saveTimeout = null;
         }
 
-        // Perform save and version creation asynchronously
-        (async () => {
-          try {
-            // Save current changes - use captured consts
-            await noteService.updateNote(noteIdToSave, {
-              content: contentToSave,
-              tags: tagsToSave,
-              attachments: attachmentsToSave,
-              syntaxLanguage: languageToSave,
-              wordWrap: wordWrapToSave,
-              showPreview: showPreviewToSave,
-            });
-            console.log('[EditorPane] Saved previous note before switching');
+        // Only save and create version if content was actually modified
+        if (hasContentChanged) {
+          // CRITICAL: Capture values in consts to prevent async closure bug
+          // By the time the async function executes, these variables may have been reassigned
+          const noteIdToSave = previousNoteId;
+          const contentToSave = content;
+          const tagsToSave = [...tags];
+          const attachmentsToSave = [...attachments];
+          const languageToSave = language;
+          const wordWrapToSave = wordWrap;
+          const showPreviewToSave = showPreview;
 
-            // Only create version if content was actually modified
-            if (shouldCreateVersion) {
+          // Perform save and version creation asynchronously
+          (async () => {
+            try {
+              // Save current changes - use captured consts
+              await noteService.updateNote(noteIdToSave, {
+                content: contentToSave,
+                tags: tagsToSave,
+                attachments: attachmentsToSave,
+                syntaxLanguage: languageToSave,
+                wordWrap: wordWrapToSave,
+                showPreview: showPreviewToSave,
+              });
+              console.log('[EditorPane] Saved previous note before switching');
+
+              // Create version snapshot
               console.log('[EditorPane] Creating version snapshot (content was modified)');
               await createVersionSnapshot(noteIdToSave);
-            } else {
-              console.log('[EditorPane] Skipping version creation (no content changes)');
+            } catch (error) {
+              console.error('[EditorPane] Error saving/versioning before switch:', error);
             }
-          } catch (error) {
-            console.error('[EditorPane] Error saving/versioning before switch:', error);
-          }
-        })();
+          })();
+        } else {
+          console.log('[EditorPane] Skipping save and version (no content changes)');
+        }
       } else if (saveTimeout) {
         // Just clear the timeout if in draft mode
         clearTimeout(saveTimeout);
@@ -263,10 +263,7 @@
   } else {
     // Closing editor - flush pending save, create version, and trigger sync
     if (previousNoteId && !$isDraftMode) {
-      console.log('[EditorPane] Closing editor, saving and triggering sync, hasContentChanged:', hasContentChanged);
-
-      // Capture the flag before async operation
-      const shouldCreateVersion = hasContentChanged;
+      console.log('[EditorPane] Closing editor - hasContentChanged:', hasContentChanged);
 
       // Save immediately (don't wait for debounce)
       if (saveTimeout) {
@@ -274,33 +271,36 @@
         saveTimeout = null;
       }
 
-      // Perform the save, then create version
-      (async () => {
-        try {
-          // Save current changes immediately
-          await noteService.updateNote(previousNoteId, {
-            content,
-            tags: tags,
-            attachments: attachments,
-            syntaxLanguage: language,
-            wordWrap,
-            showPreview,
-          });
-          console.log('[EditorPane] Saved pending changes before closing');
+      // Only save and create version if content was actually modified
+      if (hasContentChanged) {
+        // Perform the save, then create version
+        (async () => {
+          try {
+            // Save current changes immediately
+            await noteService.updateNote(previousNoteId, {
+              content,
+              tags: tags,
+              attachments: attachments,
+              syntaxLanguage: language,
+              wordWrap,
+              showPreview,
+            });
+            console.log('[EditorPane] Saved pending changes before closing');
 
-          // Only create version if content was actually modified
-          if (shouldCreateVersion) {
+            // Create version snapshot
             console.log('[EditorPane] Creating version snapshot (content was modified)');
             await createVersionSnapshot(previousNoteId);
-          } else {
-            console.log('[EditorPane] Skipping version creation (no content changes)');
-          }
 
-          await triggerBackgroundSync();
-        } catch (error) {
-          console.error('[EditorPane] Error during close save:', error);
-        }
-      })();
+            await triggerBackgroundSync();
+          } catch (error) {
+            console.error('[EditorPane] Error during close save:', error);
+          }
+        })();
+      } else {
+        console.log('[EditorPane] Skipping save and version (no content changes)');
+        // Still trigger sync even if we didn't save
+        triggerBackgroundSync();
+      }
     }
     previousNoteId = null;
 
