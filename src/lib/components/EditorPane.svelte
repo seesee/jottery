@@ -1,6 +1,6 @@
 <script lang="ts">
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository } from '../services';
+  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import type { Attachment } from '../types';
   import CodeEditor from './CodeEditor.svelte';
@@ -221,7 +221,8 @@
     if (!$selectedNote) return;
 
     try {
-      const currentNote = await noteService.getNote($selectedNote.id);
+      // Get the encrypted note from repository (not decrypted from service)
+      const currentNote = await noteRepository.getById($selectedNote.id);
       if (currentNote) {
         await versionRepository.createVersion(currentNote, {
           syncedAt: new Date().toISOString(),
