@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { isLocked, notes, settings, searchQuery, filteredNotes, selectNote } from './lib/stores/appStore';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository } from './lib/services';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, versionService } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
@@ -12,6 +12,7 @@
   import KeyboardShortcuts from './lib/components/KeyboardShortcuts.svelte';
   import RecycleBin from './lib/components/RecycleBin.svelte';
   import KeyboardShortcutsHelp from './lib/components/KeyboardShortcutsHelp.svelte';
+  import UpdateBanner from './lib/components/UpdateBanner.svelte';
 
   let initialized = false;
   let showSettings = false;
@@ -112,6 +113,9 @@
 
       // Check lock status
       isLocked.set(checkLocked());
+
+      // Start version checking (only in production)
+      versionService.startChecking();
 
       initialized = true;
     } catch (error) {
@@ -236,6 +240,9 @@
 {:else if $isLocked}
   <UnlockScreen />
 {:else}
+  <!-- Update banner (appears at top when new version available) -->
+  <UpdateBanner />
+
   <div class="h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <div class="flex h-full flex-col">
       <Header

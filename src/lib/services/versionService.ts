@@ -1,172 +1,120 @@
 /**
- * Version service for decrypting and managing note version history
- * Handles version retrieval, decryption, and restoration
+ * Version checking service
+ * Periodically checks for new versions and notifies the app
  */
 
-import type { DecryptedNoteVersion, Note } from '../types';
-import { versionRepository } from './versionRepository';
-import { noteRepository } from './noteRepository';
-import { cryptoService, decryptStringArray } from './crypto';
-import { keyManager } from './keyManager';
+import { writable } from 'svelte/store';
+
+interface VersionInfo {
+  version: string;
+  buildTime: string;
+  buildHash: string;
+}
+
+// Store to track if an update is available
+export const updateAvailable = writable<boolean>(false);
+export const newVersionInfo = writable<VersionInfo | null>(null);
 
 class VersionService {
-  /**
-   * Get all versions for a note (decrypted)
-   */
-  async getVersionsForNote(noteId: string): Promise<DecryptedNoteVersion[]> {
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) {
-      throw new Error('Application is locked');
-    }
+  private currentVersion: string;
+  private currentBuildHash: string | null = null;
+  private checkInterval: number | null = null;
+  private readonly CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-    const versions = await versionRepository.getVersionsForNote(noteId);
-    return await Promise.all(
-      versions.map(v => this.decryptVersion(v, masterKey.key))
-    );
+  constructor() {
+    this.currentVersion = __APP_VERSION__;
   }
 
   /**
-   * Get a specific version (decrypted)
+   * Start periodic version checking
    */
-  async getVersion(noteId: string, version: number): Promise<DecryptedNoteVersion | null> {
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) {
-      throw new Error('Application is locked');
+  startChecking(): void {
+    // Don't check in development mode
+    if (import.meta.env.DEV) {
+      console.log('[VersionService] Skipping version checks in development mode');
+      return;
     }
 
-    const versionData = await versionRepository.getVersion(noteId, version);
-    if (!versionData) {
-      return null;
-    }
+    console.log('[VersionService] Starting version checks');
 
-    return await this.decryptVersion(versionData, masterKey.key);
+    // Check immediately on start
+    this.checkForUpdate();
+
+    // Then check periodically
+    this.checkInterval = window.setInterval(() => {
+      this.checkForUpdate();
+    }, this.CHECK_INTERVAL_MS);
   }
 
   /**
-   * Restore a note to a specific version
-   * Creates a snapshot of the current state before restoring
+   * Stop periodic version checking
    */
-  async restoreVersion(noteId: string, targetVersion: number): Promise<void> {
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) {
-      throw new Error('Application is locked');
+  stopChecking(): void {
+    if (this.checkInterval !== null) {
+      clearInterval(this.checkInterval);
+      this.checkInterval = null;
+      console.log('[VersionService] Stopped version checks');
     }
-
-    const version = await versionRepository.getVersion(noteId, targetVersion);
-    if (!version) {
-      throw new Error(`Version ${targetVersion} not found`);
-    }
-
-    const currentNote = await noteRepository.getById(noteId);
-    if (!currentNote) {
-      throw new Error(`Note ${noteId} not found`);
-    }
-
-    // Snapshot current state before restoring
-    await versionRepository.createVersion(currentNote, {
-      syncedAt: new Date().toISOString(),
-      reason: 'manual-sync',
-    });
-
-    // Restore version data (all fields are already encrypted)
-    currentNote.content = version.content;
-    currentNote.tags = version.tags;
-    currentNote.attachments = version.attachments;
-    currentNote.syntaxLanguage = version.syntaxLanguage;
-    currentNote.wordWrap = version.wordWrap;
-
-    await noteRepository.update(currentNote);
-    console.log(`[versionService] Restored note ${noteId} to version ${targetVersion}`);
   }
 
   /**
-   * Decrypt a version for display
-   * Handles both new (single blob) and old (individual) tag formats
+   * Check for a new version
    */
-  private async decryptVersion(version: any, key: CryptoKey): Promise<DecryptedNoteVersion> {
+  private async checkForUpdate(): Promise<void> {
     try {
-      // Decrypt content
-      const encryptedContent = JSON.parse(version.content);
-      const content = await cryptoService.decryptText(encryptedContent, key);
+      // Fetch version.json with cache-busting
+      const response = await fetch(`/version.json?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
 
-      // Decrypt tags
-      let tags: string[] = [];
-
-      // Defensive check: ensure version.tags is an array
-      if (!Array.isArray(version.tags)) {
-        console.error(`[versionService] Version has invalid tags type:`, typeof version.tags);
-        version.tags = [];
+      if (!response.ok) {
+        console.warn('[VersionService] Failed to fetch version.json:', response.status);
+        return;
       }
 
-      if (version.tags.length > 0) {
-        try {
-          if (version.tags.length === 1) {
-            // NEW FORMAT: Single encrypted blob containing all tags
-            const encryptedTags = JSON.parse(version.tags[0]);
-            const decryptedTags = await decryptStringArray(encryptedTags, key);
+      const versionInfo: VersionInfo = await response.json();
 
-            // Defensive check: ensure decrypted tags is an array
-            if (!Array.isArray(decryptedTags)) {
-              console.error(`[versionService] Decrypted tags is not an array:`, typeof decryptedTags);
-              tags = [];
-            } else {
-              tags = decryptedTags;
-            }
-          } else {
-            // OLD FORMAT: Multiple individually encrypted tags
-            console.log(`[versionService] Version has old format (${version.tags.length} individual tags)`);
-            const decryptedTags: string[] = [];
-
-            for (let i = 0; i < version.tags.length; i++) {
-              try {
-                const encryptedTag = JSON.parse(version.tags[i]);
-                const tagJson = await cryptoService.decryptText(encryptedTag, key);
-                const tag = JSON.parse(tagJson);
-
-                if (typeof tag === 'string' && tag.trim().length > 0) {
-                  decryptedTags.push(tag);
-                }
-              } catch (error) {
-                console.error(`[versionService] Failed to decrypt tag[${i}]:`, error);
-              }
-            }
-
-            tags = decryptedTags;
-          }
-        } catch (error) {
-          console.error(`[versionService] Error decrypting tags:`, error);
-          tags = [];
-        }
+      // Store the build hash on first check
+      if (this.currentBuildHash === null) {
+        this.currentBuildHash = versionInfo.buildHash;
+        console.log('[VersionService] Current version:', {
+          version: this.currentVersion,
+          buildHash: this.currentBuildHash,
+        });
+        return;
       }
 
-      return {
-        ...version,
-        content,
-        tags,
-        characterCount: content.length,
-      };
+      // Check if the build hash has changed (more reliable than version for detecting updates)
+      if (versionInfo.buildHash !== this.currentBuildHash) {
+        console.log('[VersionService] New version detected!', {
+          current: { version: this.currentVersion, buildHash: this.currentBuildHash },
+          new: versionInfo,
+        });
+
+        // Notify the app that an update is available
+        newVersionInfo.set(versionInfo);
+        updateAvailable.set(true);
+
+        // Stop checking once we've detected an update
+        this.stopChecking();
+      } else {
+        console.log('[VersionService] No update available (current build hash:', this.currentBuildHash, ')');
+      }
     } catch (error) {
-      console.error(`[versionService] Error decrypting version:`, error);
-      throw new Error('Failed to decrypt version');
+      console.error('[VersionService] Error checking for updates:', error);
     }
   }
 
   /**
-   * Count total versions for a note
+   * Reload the app to get the new version
    */
-  async countVersionsForNote(noteId: string): Promise<number> {
-    return await versionRepository.countVersionsForNote(noteId);
-  }
-
-  /**
-   * Delete all versions for a note (when note is permanently deleted)
-   */
-  async deleteVersionsForNote(noteId: string): Promise<void> {
-    await versionRepository.deleteVersionsForNote(noteId);
+  reloadApp(): void {
+    console.log('[VersionService] Reloading app...');
+    window.location.reload();
   }
 }
 
-/**
- * Singleton instance
- */
 export const versionService = new VersionService();
