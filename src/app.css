@@ -131,3 +131,20 @@ body {
   height: 100vh;
   overflow: hidden;
 }
+
+/* Prevent iOS auto-zoom on input focus by ensuring 16px minimum font size */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Allow Tailwind utilities to override if needed */
+.text-xs input,
+.text-xs textarea,
+.text-xs select,
+.text-sm input,
+.text-sm textarea,
+.text-sm select {
+  font-size: 16px !important;
+}

@@ -254,7 +254,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 14px;
+    font-size: 16px; /* 16px minimum prevents iOS auto-zoom */
     line-height: 1.6;
     /* Mobile-friendly scrolling */
     -webkit-overflow-scrolling: touch;
