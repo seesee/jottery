@@ -83,11 +83,21 @@
       return;
     }
 
-    // Editor shortcuts
+    // Editor shortcuts - only close note if no modals are open
     if (event.key === 'Escape' && $selectedNoteId) {
-      event.preventDefault();
-      clearSelection();
-      return;
+      // Check if any modal is open (they have z-50 class and are visible)
+      const modals = document.querySelectorAll('.z-50');
+      const hasOpenModal = Array.from(modals).some(modal => {
+        const style = window.getComputedStyle(modal as HTMLElement);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+
+      // Only close the note if no modal is open
+      if (!hasOpenModal) {
+        event.preventDefault();
+        clearSelection();
+        return;
+      }
     }
 
     // Don't process other shortcuts when editing

@@ -176,13 +176,35 @@
   } else {
     // Closing editor - flush pending save, create version, and trigger sync
     if (previousNoteId) {
-      console.log('[EditorPane] Closing editor, creating version and triggering sync...');
+      console.log('[EditorPane] Closing editor, saving, creating version and triggering sync...');
+
+      // Save immediately (don't wait for debounce)
       if (saveTimeout) {
         clearTimeout(saveTimeout);
         saveTimeout = null;
       }
-      createVersionSnapshot();
-      triggerBackgroundSync();
+
+      // Perform the save, then create version
+      (async () => {
+        try {
+          // Save current changes immediately
+          await noteService.updateNote(previousNoteId, {
+            content,
+            tags: tags,
+            attachments: attachments,
+            syntaxLanguage: language,
+            wordWrap,
+            showPreview,
+          });
+          console.log('[EditorPane] Saved pending changes before closing');
+
+          // Now create version snapshot and sync
+          await createVersionSnapshot();
+          await triggerBackgroundSync();
+        } catch (error) {
+          console.error('[EditorPane] Error during close save:', error);
+        }
+      })();
     }
     previousNoteId = null;
 
