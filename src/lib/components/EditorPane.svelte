@@ -12,6 +12,7 @@
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import { marked } from 'marked';
   import { getHljsInstance, preloadLanguages } from '../utils/syntaxHighlighter';
+  import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -28,7 +29,7 @@
     }
   }
   let saveTimeout: number | null = null;
-  let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
+  let language: string = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
   let availableTags: string[] = [];
@@ -73,6 +74,18 @@
       console.error('Failed to preload syntax languages:', err);
     });
   }
+
+  // Generate available language options (plain + enabled languages)
+  $: availableLanguages = [
+    { id: 'plain', name: 'Plain Text' },
+    ...($settings.enabledSyntaxLanguages || [])
+      .map(langId => {
+        const lang = ALL_LANGUAGES.find(l => l.id === langId);
+        return lang ? { id: lang.id, name: lang.name } : null;
+      })
+      .filter((lang): lang is { id: string; name: string } => lang !== null)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  ];
 
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
@@ -699,16 +712,9 @@
         class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
         title="Syntax highlighting"
       >
-        <option value="plain">Plain Text</option>
-        <option value="markdown">Markdown</option>
-        <option value="javascript">JavaScript</option>
-        <option value="python">Python</option>
-        <option value="perl">Perl</option>
-        <option value="json">JSON</option>
-        <option value="html">HTML</option>
-        <option value="css">CSS</option>
-        <option value="sql">SQL</option>
-        <option value="bash">Bash</option>
+        {#each availableLanguages as lang}
+          <option value={lang.id}>{lang.name}</option>
+        {/each}
       </select>
 
       <!-- Preview/Edit Toggle (shown when contextually appropriate) -->

@@ -21,7 +21,7 @@ export interface Note {
   syncHash?: string; // Hash for conflict detection
   version: number; // Optimistic locking
   wordWrap?: boolean; // Word wrap enabled (default: true)
-  syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash'; // Syntax highlighting language
+  syntaxLanguage?: string; // Syntax highlighting language (any supported language ID)
   showPreview?: boolean; // Show preview panel for markdown/html (default: false)
 }
 
@@ -181,7 +181,7 @@ export interface ExportNote {
   attachments: ExportAttachment[];
   pinned: boolean;
   wordWrap?: boolean;
-  syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+  syntaxLanguage?: string; // Any supported language ID
   showPreview?: boolean;
 }
 
