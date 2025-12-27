@@ -79,6 +79,7 @@ export interface UserSettings {
   syncEndpoint?: string;
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
   keyboardShortcuts?: KeyboardShortcuts; // Custom keyboard shortcuts
+  enabledSyntaxLanguages?: string[]; // Enabled syntax highlighting languages (defaults to core languages)
 }
 
 /**
@@ -248,4 +249,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   syncEnabled: false,
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
+  enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'markdown', 'json', 'xml', 'css', 'bash', 'sql'], // Core languages + SQL
 };

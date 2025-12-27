@@ -11,7 +11,7 @@
   import FileUpload from './FileUpload.svelte';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import { marked } from 'marked';
-  import hljs from 'highlight.js';
+  import { getHljsInstance, preloadLanguages } from '../utils/syntaxHighlighter';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -63,6 +63,16 @@
   $: copyNoteShortcut = formatShortcutForTooltip(shortcuts?.copyNote);
   $: noteInfoShortcut = formatShortcutForTooltip(shortcuts?.noteInfo);
   $: versionHistoryShortcut = formatShortcutForTooltip(shortcuts?.versionHistory);
+
+  // Get hljs instance
+  const hljs = getHljsInstance();
+
+  // Preload enabled syntax languages
+  $: if ($settings.enabledSyntaxLanguages) {
+    preloadLanguages($settings.enabledSyntaxLanguages).catch(err => {
+      console.error('Failed to preload syntax languages:', err);
+    });
+  }
 
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
