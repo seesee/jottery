@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
@@ -644,6 +645,32 @@
       target.value = '';
     }
   }
+
+  // Handle Escape key to close modal
+  function handleKeyDown(event: KeyboardEvent) {
+    if (show && event.key === 'Escape') {
+      // Check if any child modal is open (they have z-50 class and are visible)
+      const modals = document.querySelectorAll('.z-50');
+      const hasOpenChildModal = Array.from(modals).some(modal => {
+        const style = window.getComputedStyle(modal as HTMLElement);
+        return style.display !== 'none' && style.visibility !== 'hidden' && modal.getAttribute('role') === 'dialog';
+      });
+
+      // Only close settings modal if no child modal is open
+      if (!hasOpenChildModal) {
+        event.preventDefault();
+        onClose();
+      }
+    }
+  }
+
+  onMount(() => {
+    window.addEventListener('keydown', handleKeyDown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', handleKeyDown);
+  });
 </script>
 
 {#if show}
@@ -780,6 +807,7 @@
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="recent">{$_('settings.sortRecent')}</option>
+              <option value="created">{$_('settings.sortCreated')}</option>
               <option value="oldest">{$_('settings.sortOldest')}</option>
               <option value="alpha">{$_('settings.sortAlpha')}</option>
             </select>
