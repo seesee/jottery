@@ -46,6 +46,7 @@
   let showMoreMenu: boolean = false;
   let showInfoModal: boolean = false;
   let showVersionHistory: boolean = false;
+  let hasContentChanged: boolean = false; // Track if content modified since note loaded
 
   // Compute preview HTML
   $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
@@ -182,7 +183,7 @@
 
       // Save and create version for the previous note before switching
       if (previousNoteId && !$isDraftMode) {
-        console.log('[EditorPane] Saving previous note and creating version before switching');
+        console.log('[EditorPane] Saving previous note before switching, hasContentChanged:', hasContentChanged);
 
         // CRITICAL: Capture values in consts to prevent async closure bug
         // By the time the async function executes, these variables may have been reassigned
@@ -193,6 +194,7 @@
         const languageToSave = language;
         const wordWrapToSave = wordWrap;
         const showPreviewToSave = showPreview;
+        const shouldCreateVersion = hasContentChanged; // Capture the flag
 
         // Save immediately (don't wait for debounce)
         if (saveTimeout) {
@@ -214,8 +216,13 @@
             });
             console.log('[EditorPane] Saved previous note before switching');
 
-            // Create version snapshot - use captured const
-            await createVersionSnapshot(noteIdToSave);
+            // Only create version if content was actually modified
+            if (shouldCreateVersion) {
+              console.log('[EditorPane] Creating version snapshot (content was modified)');
+              await createVersionSnapshot(noteIdToSave);
+            } else {
+              console.log('[EditorPane] Skipping version creation (no content changes)');
+            }
           } catch (error) {
             console.error('[EditorPane] Error saving/versioning before switch:', error);
           }
@@ -233,6 +240,7 @@
       wordWrap = $selectedNote.wordWrap ?? true;
       showPreview = $selectedNote.showPreview ?? false;
       isEditing = true;
+      hasContentChanged = false; // Reset change tracking for new note
 
       console.log('[EditorPane] Local showPreview set to:', showPreview);
 
@@ -255,7 +263,10 @@
   } else {
     // Closing editor - flush pending save, create version, and trigger sync
     if (previousNoteId && !$isDraftMode) {
-      console.log('[EditorPane] Closing editor, saving, creating version and triggering sync...');
+      console.log('[EditorPane] Closing editor, saving and triggering sync, hasContentChanged:', hasContentChanged);
+
+      // Capture the flag before async operation
+      const shouldCreateVersion = hasContentChanged;
 
       // Save immediately (don't wait for debounce)
       if (saveTimeout) {
@@ -277,8 +288,14 @@
           });
           console.log('[EditorPane] Saved pending changes before closing');
 
-          // Now create version snapshot and sync for the previous note
-          await createVersionSnapshot(previousNoteId);
+          // Only create version if content was actually modified
+          if (shouldCreateVersion) {
+            console.log('[EditorPane] Creating version snapshot (content was modified)');
+            await createVersionSnapshot(previousNoteId);
+          } else {
+            console.log('[EditorPane] Skipping version creation (no content changes)');
+          }
+
           await triggerBackgroundSync();
         } catch (error) {
           console.error('[EditorPane] Error during close save:', error);
@@ -294,6 +311,7 @@
     wordWrap = true;
     showPreview = false;
     isEditing = false;
+    hasContentChanged = false; // Reset change tracking
   }
 
   // Handle draft mode - show empty editor for new note
@@ -314,6 +332,7 @@
     wordWrap = true;
     showPreview = false;
     isEditing = true;
+    hasContentChanged = false; // Reset change tracking for draft
 
     // Focus the editor immediately (no setTimeout to avoid losing first character)
     if (codeEditor && !showPreview) {
@@ -408,6 +427,9 @@
   }
 
   async function handleInput() {
+    // Mark content as changed
+    hasContentChanged = true;
+
     // If in draft mode and content is added, create the note
     if ($isDraftMode && content.trim().length > 0) {
       console.log('[EditorPane] Content added in draft mode, creating note');
