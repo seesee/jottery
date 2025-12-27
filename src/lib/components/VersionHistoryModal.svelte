@@ -141,6 +141,7 @@
     on:keydown={(e) => e.key === 'Escape' && onClose()}
     role="dialog"
     aria-modal="true"
+    tabindex="0"
   >
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-6xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->

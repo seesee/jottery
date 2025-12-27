@@ -47,6 +47,7 @@
     on:keydown={handleKeydown}
     role="dialog"
     aria-modal="true"
+    tabindex="0"
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
       <!-- Header -->
@@ -62,15 +63,15 @@
 
         {#if requireTextMatch}
           <div class="mt-4">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="confirm-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Type <strong>{requireTextMatch}</strong> to confirm:
             </label>
             <input
+              id="confirm-input"
               type="text"
               bind:value={inputValue}
               placeholder={requireTextMatch}
               class="w-full px-3 py-2.5 min-h-11 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-              autofocus
             />
           </div>
         {/if}

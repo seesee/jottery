@@ -638,6 +638,8 @@
     on:dragleave={handleEditorDragLeave}
     on:dragover={handleEditorDragOver}
     on:drop={handleEditorDrop}
+    role="region"
+    aria-label="Note editor"
   >
     <!-- Toolbar -->
     <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center gap-2">
@@ -927,8 +929,22 @@
 
 <!-- Info Modal -->
 {#if showInfoModal && $selectedNote}
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={() => showInfoModal = false}>
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6" on:click|stopPropagation>
+  <div
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    on:click={() => showInfoModal = false}
+    on:keydown={(e) => e.key === 'Enter' && (showInfoModal = false)}
+    role="button"
+    tabindex="-1"
+    aria-label="Close modal"
+  >
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="0"
+    >
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Note Information</h2>
         <button

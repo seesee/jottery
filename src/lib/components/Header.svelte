@@ -262,6 +262,7 @@
     <div
       class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed inset-0 bg-black bg-opacity-50 z-40"
       on:click={closeMobileMenu}
+      on:keydown={(e) => e.key === 'Enter' && closeMobileMenu()}
       role="button"
       tabindex="-1"
       aria-label="Close menu"

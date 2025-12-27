@@ -247,10 +247,21 @@
 
 <!-- Preview Modal -->
 {#if previewAttachment}
-  <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" on:click={closePreview}>
+  <div
+    class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+    on:click={closePreview}
+    on:keydown={(e) => e.key === 'Enter' && closePreview()}
+    role="button"
+    tabindex="-1"
+    aria-label="Close preview"
+  >
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col"
       on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="0"
     >
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -303,7 +314,7 @@
             src={previewContent}
             class="w-full h-full min-h-[60vh] border-0"
             title="PDF Preview"
-          />
+          ></iframe>
         {:else if previewType === 'audio' && previewContent}
           <div class="flex items-center justify-center h-full">
             <audio controls class="w-full max-w-xl">
@@ -313,8 +324,9 @@
           </div>
         {:else if previewType === 'video' && previewContent}
           <div class="flex items-center justify-center h-full">
-            <video controls class="max-w-full max-h-full">
+            <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
               <source src={previewContent} type={previewAttachment.mimeType} />
+              <track kind="captions" />
               Your browser does not support video playback.
             </video>
           </div>

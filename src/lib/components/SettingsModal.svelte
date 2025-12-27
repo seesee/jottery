@@ -680,6 +680,7 @@
     on:keydown={(e) => e.key === 'Escape' && onClose()}
     role="dialog"
     aria-modal="true"
+    tabindex="0"
   >
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
@@ -737,10 +738,11 @@
         {#if currentTab === 'general'}
           <!-- Language -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="setting-language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {$_('settings.language')}
             </label>
             <select
+              id="setting-language"
               bind:value={language}
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -752,10 +754,11 @@
 
           <!-- Theme -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="setting-theme" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {$_('settings.theme')}
             </label>
             <select
+              id="setting-theme"
               bind:value={theme}
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -767,10 +770,11 @@
 
           <!-- Layout Mode -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="setting-layout-mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Layout Mode
             </label>
             <select
+              id="setting-layout-mode"
               bind:value={layoutMode}
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -785,10 +789,11 @@
 
           <!-- Auto-lock timeout -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="setting-autolock" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {$_('settings.autoLockTimeout')}
             </label>
             <input
+              id="setting-autolock"
               type="number"
               bind:value={autoLockTimeout}
               min="1"
@@ -799,10 +804,11 @@
 
           <!-- Sort order -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label for="setting-sort-order" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {$_('settings.sortOrder')}
             </label>
             <select
+              id="setting-sort-order"
               bind:value={sortOrder}
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -976,10 +982,11 @@
             {#if !syncStatus?.isEnabled}
               <!-- Setup: Endpoint and Device Name -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="sync-endpoint" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Sync Server Endpoint
                 </label>
                 <input
+                  id="sync-endpoint"
                   type="url"
                   bind:value={syncEndpoint}
                   placeholder={typeof window !== 'undefined' ? window.location.origin : 'https://example.com'}
@@ -991,10 +998,11 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label for="sync-device-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Device Name
                 </label>
                 <input
+                  id="sync-device-name"
                   type="text"
                   bind:value={deviceName}
                   placeholder="My Laptop"
@@ -1051,7 +1059,7 @@
                     placeholder="Paste base64 credentials here..."
                     rows="4"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                  />
+                  ></textarea>
                   <button
                     on:click={handleImportCredentials}
                     disabled={!importCredentialsText.trim() || importing}
@@ -1337,16 +1345,16 @@
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label for="remember-password-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Enter your password to confirm:
           </label>
           <input
+            id="remember-password-confirm"
             type="password"
             bind:value={rememberPasswordConfirmInput}
             on:keydown={(e) => e.key === 'Enter' && confirmEnableRememberPassword()}
             placeholder="Your password"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-            autofocus
           />
           {#if rememberPasswordError}
             <p class="mt-2 text-sm text-red-600 dark:text-red-400">{rememberPasswordError}</p>
@@ -1373,8 +1381,22 @@
 
   <!-- Sync Credentials Display Modal -->
   {#if showCredentialsModal}
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" on:click={() => showCredentialsModal = false}>
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden" on:click|stopPropagation>
+    <div
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      on:click={() => showCredentialsModal = false}
+      on:keydown={(e) => e.key === 'Enter' && (showCredentialsModal = false)}
+      role="button"
+      tabindex="-1"
+      aria-label="Close credentials modal"
+    >
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+        on:click|stopPropagation
+        on:keydown|stopPropagation
+        role="dialog"
+        aria-modal="true"
+        tabindex="0"
+      >
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1383,6 +1405,7 @@
           <button
             on:click={() => showCredentialsModal = false}
             class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            aria-label="Close credentials modal"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
