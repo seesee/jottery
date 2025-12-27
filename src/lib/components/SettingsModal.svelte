@@ -48,6 +48,10 @@
   let showDocumentation = false;
   let selectedArchitecture = detectArchitecture();
 
+  // Tab state
+  type Tab = 'general' | 'keyboard' | 'sync' | 'advanced' | 'about';
+  let currentTab: Tab = 'general';
+
   // Detect user's architecture
   function detectArchitecture(): string {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -663,92 +667,283 @@
         </button>
       </div>
 
+      <!-- Tab Navigation -->
+      <div class="border-b border-gray-200 dark:border-gray-700 flex overflow-x-auto flex-shrink-0">
+        <button
+          on:click={() => currentTab = 'general'}
+          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'general' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
+        >
+          General
+        </button>
+        <button
+          on:click={() => currentTab = 'keyboard'}
+          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'keyboard' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
+        >
+          Keyboard Shortcuts
+        </button>
+        <button
+          on:click={() => currentTab = 'sync'}
+          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'sync' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
+        >
+          Sync
+        </button>
+        <button
+          on:click={() => currentTab = 'advanced'}
+          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'advanced' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
+        >
+          Advanced
+        </button>
+        <button
+          on:click={() => currentTab = 'about'}
+          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'about' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
+        >
+          About
+        </button>
+      </div>
+
       <!-- Content (scrollable) -->
       <div class="flex-1 overflow-y-auto">
 
       <!-- Content -->
       <div class="p-6 space-y-6">
-        <!-- Language -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {$_('settings.language')}
-          </label>
-          <select
-            bind:value={language}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {#each AVAILABLE_LOCALES as { code, name }}
-              <option value={code}>{name}</option>
-            {/each}
-          </select>
-        </div>
+        <!-- GENERAL TAB -->
+        {#if currentTab === 'general'}
+          <!-- Language -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {$_('settings.language')}
+            </label>
+            <select
+              bind:value={language}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {#each AVAILABLE_LOCALES as { code, name }}
+                <option value={code}>{name}</option>
+              {/each}
+            </select>
+          </div>
 
-        <!-- Theme -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {$_('settings.theme')}
-          </label>
-          <select
-            bind:value={theme}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="auto">{$_('settings.themeAuto')}</option>
-            <option value="light">{$_('settings.themeLight')}</option>
-            <option value="dark">{$_('settings.themeDark')}</option>
-          </select>
-        </div>
+          <!-- Theme -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {$_('settings.theme')}
+            </label>
+            <select
+              bind:value={theme}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="auto">{$_('settings.themeAuto')}</option>
+              <option value="light">{$_('settings.themeLight')}</option>
+              <option value="dark">{$_('settings.themeDark')}</option>
+            </select>
+          </div>
 
-        <!-- Layout Mode -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Layout Mode
-          </label>
-          <select
-            bind:value={layoutMode}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="auto">Auto (Responsive)</option>
-            <option value="mobile">Force Mobile Layout</option>
-            <option value="desktop">Force Desktop Layout</option>
-          </select>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Override the automatic layout detection for this device
-          </p>
-        </div>
+          <!-- Layout Mode -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Layout Mode
+            </label>
+            <select
+              bind:value={layoutMode}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="auto">Auto (Responsive)</option>
+              <option value="mobile">Force Mobile Layout</option>
+              <option value="desktop">Force Desktop Layout</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Override the automatic layout detection for this device
+            </p>
+          </div>
 
-        <!-- Auto-lock timeout -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {$_('settings.autoLockTimeout')}
-          </label>
-          <input
-            type="number"
-            bind:value={autoLockTimeout}
-            min="1"
-            max="1440"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+          <!-- Auto-lock timeout -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {$_('settings.autoLockTimeout')}
+            </label>
+            <input
+              type="number"
+              bind:value={autoLockTimeout}
+              min="1"
+              max="1440"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-        <!-- Sort order -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {$_('settings.sortOrder')}
-          </label>
-          <select
-            bind:value={sortOrder}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="recent">{$_('settings.sortRecent')}</option>
-            <option value="oldest">{$_('settings.sortOldest')}</option>
-            <option value="alpha">{$_('settings.sortAlpha')}</option>
-          </select>
-        </div>
+          <!-- Sort order -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {$_('settings.sortOrder')}
+            </label>
+            <select
+              bind:value={sortOrder}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="recent">{$_('settings.sortRecent')}</option>
+              <option value="oldest">{$_('settings.sortOldest')}</option>
+              <option value="alpha">{$_('settings.sortAlpha')}</option>
+            </select>
+          </div>
 
-        <!-- Sync Configuration -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Sync</h3>
+          <!-- Remember Password Toggle -->
+          <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                  🔓 Remember Password (Insecure)
+                </h4>
+                <p class="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                  Store your password on this device to skip entering it on every visit. <strong>WARNING:</strong> This stores your password in plain text in localStorage, which is highly insecure.
+                </p>
+                <p class="text-xs text-orange-600 dark:text-orange-400">
+                  Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  bind:checked={rememberPassword}
+                  on:change={handleRememberPasswordToggle}
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
+              </label>
+            </div>
+          </div>
+        {/if}
 
+        <!-- KEYBOARD SHORTCUTS TAB -->
+        {#if currentTab === 'keyboard'}
+          <div class="space-y-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              Customize keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.
+            </p>
+
+            <div class="space-y-2">
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Focus Search</span>
+                <button
+                  on:click={() => startRecording('focusSearch')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'focusSearch' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'focusSearch' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.focusSearch)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Create New Note</span>
+                <button
+                  on:click={() => startRecording('newNote')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'newNote' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'newNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.newNote)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Lock Application</span>
+                <button
+                  on:click={() => startRecording('lockApp')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'lockApp' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'lockApp' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.lockApp)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Open Settings</span>
+                <button
+                  on:click={() => startRecording('openSettings')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'openSettings' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'openSettings' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.openSettings)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Show Shortcuts Help</span>
+                <button
+                  on:click={() => startRecording('showShortcuts')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'showShortcuts' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'showShortcuts' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.showShortcuts)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Copy Note Content</span>
+                <button
+                  on:click={() => startRecording('copyNote')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'copyNote' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'copyNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.copyNote)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Undo</span>
+                <button
+                  on:click={() => startRecording('undo')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'undo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'undo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.undo)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Redo</span>
+                <button
+                  on:click={() => startRecording('redo')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'redo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'redo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.redo)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Version History</span>
+                <button
+                  on:click={() => startRecording('versionHistory')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'versionHistory' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'versionHistory' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.versionHistory)}
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                <span class="text-sm text-gray-700 dark:text-gray-300">Note Info</span>
+                <button
+                  on:click={() => startRecording('noteInfo')}
+                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'noteInfo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+                >
+                  {recordingShortcut === 'noteInfo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.noteInfo)}
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-2">
+              <button
+                on:click={resetShortcuts}
+                class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                Reset to Defaults
+              </button>
+
+              <button
+                on:click={onOpenShortcutsHelp}
+                class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+              >
+                ⌨️ View All Shortcuts
+              </button>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+                Quick reference of all keyboard shortcuts
+              </p>
+            </div>
+          </div>
+        {/if}
+
+        <!-- SYNC TAB -->
+        {#if currentTab === 'sync'}
           <div class="space-y-4">
             {#if !syncStatus?.isEnabled}
               <!-- Setup: Endpoint and Device Name -->
@@ -894,299 +1089,164 @@
                 </p>
               </div>
             {/if}
+
+            <!-- Disconnect Sync Server -->
+            {#if syncStatus?.isEnabled}
+              <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                  🔌 Disconnect Sync Server
+                </h4>
+                <p class="text-sm text-orange-700 dark:text-orange-300 mb-3">
+                  Disconnect this device from the sync server. This will clear sync credentials but will NOT delete your notes.
+                </p>
+                <button
+                  on:click={handleDisconnectSync}
+                  class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-md transition-colors"
+                >
+                  Disconnect from Sync Server
+                </button>
+              </div>
+            {/if}
           </div>
-        </div>
+        {/if}
 
-        <!-- Import/Export -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Import/Export</h3>
-
-          <div class="space-y-3">
-            <div class="flex gap-2">
-              <button
-                on:click={handleExport}
-                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
-              >
-                📤 {$_('settings.exportNotes')}
-              </button>
-              <button
-                on:click={handleImport}
-                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
-              >
-                📥 {$_('settings.importNotes')}
-              </button>
-            </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Export notes as decrypted JSON. Import will merge notes with existing data.
-            </p>
-          </div>
-        </div>
-
-        <!-- Keyboard Shortcuts -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Keyboard Shortcuts</h3>
-
-          <div class="space-y-3">
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              Customize keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.
-            </p>
-
-            <div class="space-y-2">
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Focus Search</span>
-                <button
-                  on:click={() => startRecording('focusSearch')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'focusSearch' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'focusSearch' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.focusSearch)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Create New Note</span>
-                <button
-                  on:click={() => startRecording('newNote')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'newNote' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'newNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.newNote)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Lock Application</span>
-                <button
-                  on:click={() => startRecording('lockApp')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'lockApp' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'lockApp' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.lockApp)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Open Settings</span>
-                <button
-                  on:click={() => startRecording('openSettings')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'openSettings' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'openSettings' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.openSettings)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Show Shortcuts Help</span>
-                <button
-                  on:click={() => startRecording('showShortcuts')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'showShortcuts' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'showShortcuts' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.showShortcuts)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Copy Note Content</span>
-                <button
-                  on:click={() => startRecording('copyNote')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'copyNote' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'copyNote' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.copyNote)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Undo</span>
-                <button
-                  on:click={() => startRecording('undo')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'undo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'undo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.undo)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Redo</span>
-                <button
-                  on:click={() => startRecording('redo')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'redo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'redo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.redo)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Version History</span>
-                <button
-                  on:click={() => startRecording('versionHistory')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'versionHistory' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'versionHistory' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.versionHistory)}
-                </button>
-              </div>
-
-              <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                <span class="text-sm text-gray-700 dark:text-gray-300">Note Info</span>
-                <button
-                  on:click={() => startRecording('noteInfo')}
-                  class="px-3 py-1 text-xs font-mono {recordingShortcut === 'noteInfo' ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
-                >
-                  {recordingShortcut === 'noteInfo' ? 'Press a key...' : formatShortcutDisplay(tempShortcuts.noteInfo)}
-                </button>
+        <!-- ADVANCED TAB -->
+        {#if currentTab === 'advanced'}
+          <div class="space-y-6">
+            <!-- Import/Export -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Import/Export</h4>
+              <div class="space-y-3">
+                <div class="flex gap-2">
+                  <button
+                    on:click={handleExport}
+                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                  >
+                    📤 {$_('settings.exportNotes')}
+                  </button>
+                  <button
+                    on:click={handleImport}
+                    class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
+                  >
+                    📥 {$_('settings.importNotes')}
+                  </button>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                  Export notes as decrypted JSON. Import will merge notes with existing data.
+                </p>
               </div>
             </div>
 
-            <div class="mt-4 space-y-2">
+            <!-- Download Terminal Client -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">💻 Download Terminal Client</h4>
+              <div class="flex gap-2 mb-2">
+                <select
+                  bind:value={selectedArchitecture}
+                  class="flex-1 px-3 py-2 min-h-11 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {#if selectedArchitecture === ''}
+                    <option value="">Select platform...</option>
+                  {/if}
+                  {#each architectures as arch}
+                    <option value={arch.value}>{arch.label}</option>
+                  {/each}
+                </select>
+                <button
+                  on:click={handleDownload}
+                  disabled={!selectedArchitecture}
+                  class="px-4 py-2 min-h-11 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
+                >
+                  Download
+                </button>
+              </div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Use the terminal client to access your notes from the command line
+              </p>
+            </div>
+
+            <!-- Delete All Data -->
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                Delete All Data
+              </h4>
+              <p class="text-sm text-red-700 dark:text-red-300 mb-3">
+                This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone.
+              </p>
               <button
-                on:click={onOpenShortcutsHelp}
+                on:click={handleDeleteDatabase}
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                {$_('settings.deleteDatabase')}
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        <!-- ABOUT TAB -->
+        {#if currentTab === 'about'}
+          <div class="space-y-6">
+            <!-- Version -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Version</h4>
+              <p class="text-lg text-gray-900 dark:text-white font-mono">v{__APP_VERSION__}</p>
+            </div>
+
+            <!-- Documentation -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Documentation</h4>
+              <button
+                on:click={() => showDocumentation = true}
                 class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
               >
-                ⌨️ View All Shortcuts
+                📚 View Documentation
               </button>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-                Quick reference of all keyboard shortcuts
+              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Learn how to use Jottery effectively
               </p>
-
-              <button
-                on:click={resetShortcuts}
-                class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
-              >
-                Reset to Defaults
-              </button>
             </div>
-          </div>
-        </div>
 
-        <!-- Help & Resources -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Help & Resources</h3>
-
-          <!-- Documentation -->
-          <button
-            on:click={() => showDocumentation = true}
-            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 mb-3"
-          >
-            📚 Documentation
-          </button>
-          <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-            Learn how to use Jottery effectively
-          </p>
-
-          <!-- Download Terminal Client -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              💻 Download Terminal Client
-            </label>
-            <div class="flex gap-2">
-              <select
-                bind:value={selectedArchitecture}
-                class="flex-1 px-3 py-2 min-h-11 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {#if selectedArchitecture === ''}
-                  <option value="">Select platform...</option>
-                {/if}
-                {#each architectures as arch}
-                  <option value={arch.value}>{arch.label}</option>
-                {/each}
-              </select>
-              <button
-                on:click={handleDownload}
-                disabled={!selectedArchitecture}
-                class="px-4 py-2 min-h-11 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
-              >
-                Download
-              </button>
-            </div>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Use the terminal client to access your notes from the command line
-            </p>
-          </div>
-
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-          <h3 class="text-lg font-medium text-red-600 dark:text-red-400 mb-4">Danger Zone</h3>
-
-          <!-- Disconnect Sync Server -->
-          {#if syncStatus?.isEnabled}
-            <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
-              <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
-                🔌 Disconnect Sync Server
-              </h4>
-              <p class="text-sm text-orange-700 dark:text-orange-300 mb-3">
-                Disconnect this device from the sync server. This will clear sync credentials but will NOT delete your notes.
+            <!-- Terminal Client Info -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Terminal Client</h4>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Access your notes from the command line with the Jottery terminal client. The TUI provides a fast, keyboard-driven interface for managing your notes.
               </p>
-              <button
-                on:click={handleDisconnectSync}
-                class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-md transition-colors"
-              >
-                Disconnect from Sync Server
-              </button>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Download the terminal client from the <strong>Advanced</strong> tab.
+              </p>
             </div>
-          {/if}
 
-          <!-- Remember Password Toggle -->
-          <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
-                  🔓 Remember Password (Insecure)
-                </h4>
-                <p class="text-sm text-orange-700 dark:text-orange-300 mb-2">
-                  Store your password on this device to skip entering it on every visit. <strong>WARNING:</strong> This stores your password in plain text in localStorage, which is highly insecure.
-                </p>
-                <p class="text-xs text-orange-600 dark:text-orange-400">
-                  Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.
-                </p>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer ml-4">
-                <input
-                  type="checkbox"
-                  bind:checked={rememberPassword}
-                  on:change={handleRememberPasswordToggle}
-                  class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
-              </label>
+            <!-- About -->
+            <div>
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">About Jottery</h4>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Jottery is a privacy-focused, self-hosted scratch pad application for capturing, organizing, and searching notes with rich content, syntax highlighting, and encryption.
+              </p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Licensed under the MIT License.
+              </p>
             </div>
           </div>
-
-          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
-              Delete All Data
-            </h4>
-            <p class="text-sm text-red-700 dark:text-red-300 mb-3">
-              This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone.
-            </p>
-            <button
-              on:click={handleDeleteDatabase}
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors"
-            >
-              {$_('settings.deleteDatabase')}
-            </button>
-          </div>
-        </div>
+        {/if}
       </div>
       </div>
 
       <!-- Footer -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center gap-3 flex-shrink-0">
-        <div class="text-xs text-gray-500 dark:text-gray-400">
-          v{__APP_VERSION__}
-        </div>
-        <div class="flex gap-3">
-          <button
-            on:click={onClose}
-            class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          >
-            {$_('common.cancel')}
-          </button>
-          <button
-            on:click={handleSave}
-            disabled={saving}
-            class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
-          >
-            {saving ? $_('settings.saving') : $_('settings.saveSettings')}
-          </button>
-        </div>
+      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center gap-3 flex-shrink-0">
+        <button
+          on:click={onClose}
+          class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+        >
+          {$_('common.cancel')}
+        </button>
+        <button
+          on:click={handleSave}
+          disabled={saving}
+          class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
+        >
+          {saving ? $_('settings.saving') : $_('settings.saveSettings')}
+        </button>
       </div>
     </div>
 
