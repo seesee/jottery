@@ -26,8 +26,6 @@
     }
   }
   let saveTimeout: number | null = null;
-  let versionTimeout: number | null = null; // Timer for idle version creation
-  let lastEditTime: number = Date.now(); // Track when user last edited
   let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
@@ -182,10 +180,6 @@
         clearTimeout(saveTimeout);
         saveTimeout = null;
       }
-      if (versionTimeout) {
-        clearTimeout(versionTimeout);
-        versionTimeout = null;
-      }
       createVersionSnapshot();
       triggerBackgroundSync();
     }
@@ -221,6 +215,7 @@
 
   /**
    * Create a version snapshot of the current note
+   * Only called when navigating away or closing editor
    */
   async function createVersionSnapshot() {
     if (!$selectedNote) return;
@@ -237,23 +232,6 @@
     } catch (error) {
       console.error('[EditorPane] Failed to create version:', error);
     }
-  }
-
-  /**
-   * Start idle timer for version creation
-   */
-  function startVersionIdleTimer() {
-    // Clear existing timer
-    if (versionTimeout) {
-      clearTimeout(versionTimeout);
-    }
-
-    // Start new timer based on user settings
-    const idleMinutes = $settings.versionIdleMinutes || 5;
-    versionTimeout = window.setTimeout(() => {
-      console.log(`[EditorPane] ${idleMinutes} minutes of idle time - creating version`);
-      createVersionSnapshot();
-    }, idleMinutes * 60 * 1000);
   }
 
   async function handleSave() {
@@ -286,15 +264,9 @@
   }
 
   function handleInput() {
-    // Track last edit time
-    lastEditTime = Date.now();
-
     // Auto-save with debounce
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = window.setTimeout(handleSave, 1000);
-
-    // Start idle timer for version creation
-    startVersionIdleTimer();
   }
 
   async function handleTogglePin() {

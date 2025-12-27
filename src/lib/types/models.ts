@@ -74,7 +74,6 @@ export interface UserSettings {
   syncEndpoint?: string;
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
   keyboardShortcuts?: KeyboardShortcuts; // Custom keyboard shortcuts
-  versionIdleMinutes: number; // Minutes of idle time before creating version (default: 5)
 }
 
 /**
@@ -239,5 +238,4 @@ export const DEFAULT_SETTINGS: UserSettings = {
   syncEnabled: false,
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
-  versionIdleMinutes: 5, // 5 minutes of idle time before creating version
 };
