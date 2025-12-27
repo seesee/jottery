@@ -1,6 +1,6 @@
 <script lang="ts">
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository } from '../services';
+  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import type { Attachment } from '../types';
   import CodeEditor from './CodeEditor.svelte';
@@ -26,6 +26,8 @@
     }
   }
   let saveTimeout: number | null = null;
+  let versionTimeout: number | null = null; // Timer for idle version creation
+  let lastEditTime: number = Date.now(); // Track when user last edited
   let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
@@ -162,10 +164,10 @@
         }
       }, 10);
 
-      // Trigger background sync if we had a previous note open
-      // Force version creation when switching notes
+      // Create version snapshot and trigger sync when switching notes
       if (previousNoteId) {
-        triggerBackgroundSync(true);
+        createVersionSnapshot();
+        triggerBackgroundSync();
       }
     } else {
       // Same note reloaded (from sync), not resetting state
@@ -173,15 +175,19 @@
 
     previousNoteId = $selectedNote.id;
   } else {
-    // Closing editor - flush pending save and trigger sync
-    // Force version creation when closing the editor
+    // Closing editor - flush pending save, create version, and trigger sync
     if (previousNoteId) {
-      console.log('[EditorPane] Closing editor, flushing save and triggering sync...');
+      console.log('[EditorPane] Closing editor, creating version and triggering sync...');
       if (saveTimeout) {
         clearTimeout(saveTimeout);
         saveTimeout = null;
       }
-      triggerBackgroundSync(true);
+      if (versionTimeout) {
+        clearTimeout(versionTimeout);
+        versionTimeout = null;
+      }
+      createVersionSnapshot();
+      triggerBackgroundSync();
     }
     previousNoteId = null;
 
@@ -196,14 +202,13 @@
 
   /**
    * Trigger background sync without blocking UI
-   * @param forceCreateVersion - Force version creation even if less than 30s since last version
    */
-  async function triggerBackgroundSync(forceCreateVersion: boolean = false) {
+  async function triggerBackgroundSync() {
     try {
       const metadata = await syncRepository.getMetadata();
       if (metadata?.syncEnabled) {
         // Don't await - let it run in background
-        syncService.syncNow({ forceCreateVersion }).then(result => {
+        syncService.syncNow().then(result => {
           if (!result.success) {
             console.warn('[EditorPane] Background sync failed:', result.error);
           }
@@ -212,6 +217,43 @@
     } catch (error) {
       console.error('[EditorPane] Failed to check sync status:', error);
     }
+  }
+
+  /**
+   * Create a version snapshot of the current note
+   */
+  async function createVersionSnapshot() {
+    if (!$selectedNote) return;
+
+    try {
+      const currentNote = await noteService.getNote($selectedNote.id);
+      if (currentNote) {
+        await versionRepository.createVersion(currentNote, {
+          syncedAt: new Date().toISOString(),
+          reason: 'manual-sync',
+        });
+        console.log('[EditorPane] Created version snapshot');
+      }
+    } catch (error) {
+      console.error('[EditorPane] Failed to create version:', error);
+    }
+  }
+
+  /**
+   * Start idle timer for version creation
+   */
+  function startVersionIdleTimer() {
+    // Clear existing timer
+    if (versionTimeout) {
+      clearTimeout(versionTimeout);
+    }
+
+    // Start new timer based on user settings
+    const idleMinutes = $settings.versionIdleMinutes || 5;
+    versionTimeout = window.setTimeout(() => {
+      console.log(`[EditorPane] ${idleMinutes} minutes of idle time - creating version`);
+      createVersionSnapshot();
+    }, idleMinutes * 60 * 1000);
   }
 
   async function handleSave() {
@@ -244,9 +286,15 @@
   }
 
   function handleInput() {
+    // Track last edit time
+    lastEditTime = Date.now();
+
     // Auto-save with debounce
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = window.setTimeout(handleSave, 1000);
+
+    // Start idle timer for version creation
+    startVersionIdleTimer();
   }
 
   async function handleTogglePin() {

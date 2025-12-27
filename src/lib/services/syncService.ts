@@ -139,7 +139,7 @@ class SyncService {
   /**
    * Perform full bidirectional sync
    */
-  async syncNow(options?: { forceCreateVersion?: boolean }): Promise<{ success: boolean; error?: string }> {
+  async syncNow(): Promise<{ success: boolean; error?: string }> {
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
@@ -169,10 +169,10 @@ class SyncService {
       }
 
       // 2. Push local changes
-      await this.push(metadata.syncEndpoint, apiKey, options?.forceCreateVersion);
+      await this.push(metadata.syncEndpoint, apiKey);
 
       // 3. Pull remote changes
-      await this.pull(metadata.syncEndpoint, apiKey, options?.forceCreateVersion);
+      await this.pull(metadata.syncEndpoint, apiKey);
 
       // 4. Update last sync timestamp
       await syncRepository.updateMetadata({
@@ -203,7 +203,7 @@ class SyncService {
   /**
    * Push local changes to server
    */
-  private async push(endpoint: string, apiKey: string, forceCreateVersion?: boolean): Promise<void> {
+  private async push(endpoint: string, apiKey: string): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
@@ -348,15 +348,8 @@ class SyncService {
         lastSyncStatus: 'synced',
       });
 
-      // Create version snapshot after successful push
-      const note = await noteRepository.getById(accepted.id);
-      if (note) {
-        await versionRepository.createVersion(note, {
-          syncedAt: accepted.syncedAt,
-          reason: 'sync',
-          forceCreate: forceCreateVersion,
-        });
-      }
+      // Version creation is now handled separately by EditorPane idle timer
+      // and on note navigation, not during sync
     }
 
     // Handle rejected notes (conflicts)
@@ -377,7 +370,7 @@ class SyncService {
   /**
    * Pull remote changes from server
    */
-  private async pull(endpoint: string, apiKey: string, forceCreateVersion?: boolean): Promise<void> {
+  private async pull(endpoint: string, apiKey: string): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt;
@@ -529,13 +522,6 @@ class SyncService {
       } else {
         // Conflict resolution: Last-Write-Wins by modifiedAt
         if (remoteNote.modifiedAt > localNote.modifiedAt) {
-          // Capture local version BEFORE overwriting with server version
-          await versionRepository.createVersion(localNote, {
-            syncedAt: result.syncedAt,
-            reason: 'sync',
-            forceCreate: forceCreateVersion,
-          });
-
           // Server version is newer - update local
           console.log(`[SyncService] Updating note with server version (newer): ${remoteNote.id}`);
           await noteRepository.update(noteForStorage);
@@ -610,7 +596,6 @@ class SyncService {
           {
             syncedAt: serverVersion.syncedAt,
             reason: serverVersion.reason as 'sync' | 'manual-sync',
-            forceCreate: true, // Always store versions from server
           }
         );
 
