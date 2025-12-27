@@ -6,6 +6,7 @@
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts } from '../types';
   import { DEFAULT_KEYBOARD_SHORTCUTS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
+  import DocumentationModal from './DocumentationModal.svelte';
 
   export let show = false;
   export let onClose: () => void = () => {};
@@ -42,6 +43,59 @@
   // Keyboard shortcut recording
   let recordingShortcut: keyof KeyboardShortcuts | null = null;
   let tempShortcuts: KeyboardShortcuts = { ...$settings.keyboardShortcuts } || { ...DEFAULT_KEYBOARD_SHORTCUTS };
+
+  // Documentation and downloads
+  let showDocumentation = false;
+  let selectedArchitecture = detectArchitecture();
+
+  // Detect user's architecture
+  function detectArchitecture(): string {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const platform = navigator.platform?.toLowerCase() || '';
+
+    // macOS
+    if (platform.includes('mac') || userAgent.includes('mac')) {
+      return 'macos';
+    }
+
+    // Windows
+    if (platform.includes('win') || userAgent.includes('windows')) {
+      return 'windows';
+    }
+
+    // Linux - try to detect architecture
+    if (platform.includes('linux') || userAgent.includes('linux')) {
+      // Check for ARM
+      if (userAgent.includes('aarch64') || userAgent.includes('arm64')) {
+        return 'linux-arm64';
+      }
+      if (userAgent.includes('armv7') || userAgent.includes('armhf')) {
+        return 'linux-armv7';
+      }
+      // Default to x64 for Linux
+      return 'linux-x64';
+    }
+
+    // Can't detect
+    return '';
+  }
+
+  const githubRepo = 'https://github.com/seesee/jottery';
+
+  const architectures = [
+    { value: 'macos', label: 'macOS (Universal)', url: `${githubRepo}/releases/latest/download/jottery-macos` },
+    { value: 'windows', label: 'Windows (x64)', url: `${githubRepo}/releases/latest/download/jottery-windows.exe` },
+    { value: 'linux-x64', label: 'Linux (x64)', url: `${githubRepo}/releases/latest/download/jottery-linux-x64` },
+    { value: 'linux-arm64', label: 'Linux (ARM64)', url: `${githubRepo}/releases/latest/download/jottery-linux-arm64` },
+    { value: 'linux-armv7', label: 'Linux (ARMv7)', url: `${githubRepo}/releases/latest/download/jottery-linux-armv7` },
+  ];
+
+  function handleDownload() {
+    const arch = architectures.find(a => a.value === selectedArchitecture);
+    if (arch) {
+      window.open(arch.url, '_blank');
+    }
+  }
 
   // Apply theme when it changes
   $: applyTheme(theme);
@@ -992,6 +1046,48 @@
         <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Help & Resources</h3>
 
+          <!-- Documentation -->
+          <button
+            on:click={() => showDocumentation = true}
+            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2 mb-3"
+          >
+            📚 Documentation
+          </button>
+          <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            Learn how to use Jottery effectively
+          </p>
+
+          <!-- Download Terminal Client -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              💻 Download Terminal Client
+            </label>
+            <div class="flex gap-2">
+              <select
+                bind:value={selectedArchitecture}
+                class="flex-1 px-3 py-2 min-h-11 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {#if selectedArchitecture === ''}
+                  <option value="">Select platform...</option>
+                {/if}
+                {#each architectures as arch}
+                  <option value={arch.value}>{arch.label}</option>
+                {/each}
+              </select>
+              <button
+                on:click={handleDownload}
+                disabled={!selectedArchitecture}
+                class="px-4 py-2 min-h-11 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
+              >
+                Download
+              </button>
+            </div>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Use the terminal client to access your notes from the command line
+            </p>
+          </div>
+
+          <!-- Keyboard Shortcuts -->
           <button
             on:click={onOpenShortcutsHelp}
             class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
@@ -1238,3 +1334,9 @@
     </div>
   {/if}
 {/if}
+
+<!-- Documentation Modal -->
+<DocumentationModal
+  show={showDocumentation}
+  onClose={() => showDocumentation = false}
+/>

@@ -3,17 +3,14 @@
   import { lock, passwordStorageService, settingsRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
-  import ReleasesModal from './ReleasesModal.svelte';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
-  export let onOpenReleases: () => void = () => {};
   export let forceMobileLayout: boolean = false;
 
   let showLockConfirm = false;
   let showDisableRememberPasswordConfirm = false;
-  let showReleasesModal = false;
   let showMobileMenu = false;
   let showMobileSearch = false;
 
@@ -68,10 +65,6 @@
 
   function handleDisableRememberPasswordCancel() {
     showDisableRememberPasswordConfirm = false;
-  }
-
-  function handleOpenReleases() {
-    showReleasesModal = true;
   }
 
   function toggleMobileMenu() {
@@ -229,14 +222,6 @@
       </button>
 
       <button
-        on:click={handleOpenReleases}
-        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
-        title={$_('releases.title')}
-      >
-        🚀 {$_('releases.title')}
-      </button>
-
-      <button
         on:click={handleLockRequest}
         class="px-3 py-1.5 {rememberPasswordEnabled ? 'opacity-50 cursor-default' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
         title={rememberPasswordEnabled ? 'Password remembered - click to disable' : $_('keyboard.lockApp')}
@@ -317,14 +302,6 @@
             <span class="text-sm font-medium">{$_('common.settings')}</span>
           </button>
 
-          <button
-            on:click={() => { handleOpenReleases(); closeMobileMenu(); }}
-            class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          >
-            <span class="text-xl">🚀</span>
-            <span class="text-sm font-medium">{$_('releases.title')}</span>
-          </button>
-
           <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
 
           <button
@@ -390,9 +367,4 @@
   confirmClass="bg-orange-600 hover:bg-orange-700"
   onConfirm={handleDisableRememberPasswordConfirm}
   onCancel={handleDisableRememberPasswordCancel}
-/>
-
-<ReleasesModal
-  show={showReleasesModal}
-  onClose={() => showReleasesModal = false}
 />
