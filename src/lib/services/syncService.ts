@@ -12,6 +12,8 @@ import type {
   AuthRegisterRequest,
   AuthRegisterResponse,
   Note,
+  NoteVersion,
+  SyncNoteVersion,
 } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
