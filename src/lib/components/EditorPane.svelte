@@ -342,20 +342,27 @@
     try {
       // Get the encrypted note from repository (not decrypted from service)
       const currentNote = await noteRepository.getById(targetNoteId);
-      if (currentNote) {
-        // Increment version BEFORE creating the snapshot
-        currentNote.version = (currentNote.version || 0) + 1;
+      if (!currentNote) return;
 
-        // Save the note with incremented version (update() will set modifiedAt)
-        await noteRepository.update(currentNote);
-
-        // Create version snapshot with the new version number
-        await versionRepository.createVersion(currentNote, {
-          syncedAt: new Date().toISOString(),
-          reason: 'manual-sync',
-        });
-        console.log('[EditorPane] Created version snapshot for note:', targetNoteId, 'version:', currentNote.version);
+      // Check for duplicate BEFORE incrementing version
+      const latestVersion = await versionRepository.getLatestVersion(targetNoteId);
+      if (latestVersion && latestVersion.content === currentNote.content) {
+        console.log('[EditorPane] Skipping version creation - no changes since last version');
+        return; // Skip if content unchanged
       }
+
+      // Increment version only if we're actually creating a snapshot
+      currentNote.version = (currentNote.version || 0) + 1;
+
+      // Save the note with incremented version (update() will set modifiedAt)
+      await noteRepository.update(currentNote);
+
+      // Create version snapshot with the new version number
+      await versionRepository.createVersion(currentNote, {
+        syncedAt: new Date().toISOString(),
+        reason: 'manual-sync',
+      });
+      console.log('[EditorPane] Created version snapshot for note:', targetNoteId, 'version:', currentNote.version);
     } catch (error) {
       console.error('[EditorPane] Failed to create version for note:', targetNoteId, error);
     }
