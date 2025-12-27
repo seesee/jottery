@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { updateAvailable, newVersionInfo, versionService } from '../services';
+  import { updateAvailable, newVersionInfo, appUpdateService } from '../services';
 
   function handleReload() {
-    versionService.reloadApp();
+    appUpdateService.reloadApp();
   }
 
   function handleDismiss() {

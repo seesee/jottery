@@ -1,6 +1,6 @@
 /**
- * Version checking service
- * Periodically checks for new versions and notifies the app
+ * App update checking service
+ * Periodically checks for new app versions and notifies the user
  */
 
 import { writable } from 'svelte/store';
@@ -15,7 +15,7 @@ interface VersionInfo {
 export const updateAvailable = writable<boolean>(false);
 export const newVersionInfo = writable<VersionInfo | null>(null);
 
-class VersionService {
+class AppUpdateService {
   private currentVersion: string;
   private currentBuildHash: string | null = null;
   private checkInterval: number | null = null;
@@ -31,11 +31,11 @@ class VersionService {
   startChecking(): void {
     // Don't check in development mode
     if (import.meta.env.DEV) {
-      console.log('[VersionService] Skipping version checks in development mode');
+      console.log('[AppUpdateService] Skipping version checks in development mode');
       return;
     }
 
-    console.log('[VersionService] Starting version checks');
+    console.log('[AppUpdateService] Starting version checks');
 
     // Check immediately on start
     this.checkForUpdate();
@@ -53,7 +53,7 @@ class VersionService {
     if (this.checkInterval !== null) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      console.log('[VersionService] Stopped version checks');
+      console.log('[AppUpdateService] Stopped version checks');
     }
   }
 
@@ -71,7 +71,7 @@ class VersionService {
       });
 
       if (!response.ok) {
-        console.warn('[VersionService] Failed to fetch version.json:', response.status);
+        console.warn('[AppUpdateService] Failed to fetch version.json:', response.status);
         return;
       }
 
@@ -80,7 +80,7 @@ class VersionService {
       // Store the build hash on first check
       if (this.currentBuildHash === null) {
         this.currentBuildHash = versionInfo.buildHash;
-        console.log('[VersionService] Current version:', {
+        console.log('[AppUpdateService] Current version:', {
           version: this.currentVersion,
           buildHash: this.currentBuildHash,
         });
@@ -89,7 +89,7 @@ class VersionService {
 
       // Check if the build hash has changed (more reliable than version for detecting updates)
       if (versionInfo.buildHash !== this.currentBuildHash) {
-        console.log('[VersionService] New version detected!', {
+        console.log('[AppUpdateService] New version detected!', {
           current: { version: this.currentVersion, buildHash: this.currentBuildHash },
           new: versionInfo,
         });
@@ -101,10 +101,10 @@ class VersionService {
         // Stop checking once we've detected an update
         this.stopChecking();
       } else {
-        console.log('[VersionService] No update available (current build hash:', this.currentBuildHash, ')');
+        console.log('[AppUpdateService] No update available (current build hash:', this.currentBuildHash, ')');
       }
     } catch (error) {
-      console.error('[VersionService] Error checking for updates:', error);
+      console.error('[AppUpdateService] Error checking for updates:', error);
     }
   }
 
@@ -112,9 +112,9 @@ class VersionService {
    * Reload the app to get the new version
    */
   reloadApp(): void {
-    console.log('[VersionService] Reloading app...');
+    console.log('[AppUpdateService] Reloading app...');
     window.location.reload();
   }
 }
 
-export const versionService = new VersionService();
+export const appUpdateService = new AppUpdateService();

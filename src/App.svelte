@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { isLocked, notes, settings, searchQuery, filteredNotes, selectNote } from './lib/stores/appStore';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, versionService } from './lib/services';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
@@ -115,7 +115,7 @@
       isLocked.set(checkLocked());
 
       // Start version checking (only in production)
-      versionService.startChecking();
+      appUpdateService.startChecking();
 
       initialized = true;
     } catch (error) {

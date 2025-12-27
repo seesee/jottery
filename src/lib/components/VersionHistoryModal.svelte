@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { versionService } from '../services/versionService';
-  import type { DecryptedNoteVersion } from '../types';
+  import { versionRepository, noteRepository, cryptoService, keyManager } from '../services';
+  import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
+  import { decryptStringArray } from '../services/crypto';
 
   export let show: boolean = false;
   export let noteId: string | undefined = undefined;
@@ -17,12 +18,43 @@
   let showRestoreConfirm = false;
   let versionToRestore: number | null = null;
 
+  async function decryptVersion(version: NoteVersion): Promise<DecryptedNoteVersion> {
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) throw new Error('Application is locked');
+
+    const encryptedContent = JSON.parse(version.content);
+    const content = await cryptoService.decryptText(encryptedContent, masterKey.key);
+
+    let tags: string[] = [];
+    if (version.tags.length > 0) {
+      if (version.tags.length === 1) {
+        const encryptedTags = JSON.parse(version.tags[0]);
+        tags = await cryptoService.decryptJSON(encryptedTags, masterKey.key);
+      } else {
+        // Old format - individually encrypted tags
+        for (const tagJson of version.tags) {
+          const encryptedTag = JSON.parse(tagJson);
+          const tagText = await cryptoService.decryptText(encryptedTag, masterKey.key);
+          tags.push(JSON.parse(tagText));
+        }
+      }
+    }
+
+    return {
+      ...version,
+      content,
+      tags,
+      characterCount: content.length
+    };
+  }
+
   async function loadVersions() {
     if (!noteId) return;
 
     loading = true;
     try {
-      versions = await versionService.getVersionsForNote(noteId);
+      const encryptedVersions = await versionRepository.getVersionsForNote(noteId);
+      versions = await Promise.all(encryptedVersions.map(v => decryptVersion(v)));
       // Auto-select the first (newest) version
       if (versions.length > 0) {
         selectedVersion = versions[0];
@@ -46,13 +78,33 @@
 
   async function confirmRestore() {
     showRestoreConfirm = false;
-    if (versionToRestore === null) return;
+    if (versionToRestore === null || !noteId) return;
 
     try {
       if (onRestore) {
         await onRestore(versionToRestore);
       } else {
-        await versionService.restoreVersion(noteId!, versionToRestore);
+        // Restore the version directly
+        const version = await versionRepository.getVersion(noteId, versionToRestore);
+        if (!version) throw new Error(`Version ${versionToRestore} not found`);
+
+        const currentNote = await noteRepository.getById(noteId);
+        if (!currentNote) throw new Error(`Note ${noteId} not found`);
+
+        // Snapshot current state before restoring
+        await versionRepository.createVersion(currentNote, {
+          syncedAt: new Date().toISOString(),
+          reason: 'manual-sync',
+        });
+
+        // Restore version data
+        currentNote.content = version.content;
+        currentNote.tags = version.tags;
+        currentNote.attachments = version.attachments;
+        currentNote.syntaxLanguage = version.syntaxLanguage;
+        currentNote.wordWrap = version.wordWrap;
+
+        await noteRepository.update(currentNote);
       }
       versionToRestore = null;
       onClose();

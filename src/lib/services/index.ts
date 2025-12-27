@@ -27,4 +27,4 @@ export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFi
 export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';
 export { tagService, getAllTags, getTagStats, getPopularTags, getNotesByTag, getNotesByTags, normalizeTag, isValidTag, parseTagString } from './tagService';
 export { initI18n, getInitialLocale, AVAILABLE_LOCALES, DEFAULT_LOCALE } from './i18nService';
-export { versionService, updateAvailable, newVersionInfo } from './versionService';
+export { appUpdateService, updateAvailable, newVersionInfo } from './appUpdateService';
