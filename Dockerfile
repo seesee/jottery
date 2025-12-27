@@ -22,33 +22,30 @@ COPY vite.config.ts .
 RUN npm run build
 
 # -----------------------------
-# Stage 2: Build the Rust server
+# Stage 2: Build the Rust server (using cargo-chef for dependency caching)
 # -----------------------------
-FROM rust:1.85 AS server-builder
+FROM rust:1.85 AS chef
+WORKDIR /app
+RUN cargo install cargo-chef
+
+FROM chef AS planner
+WORKDIR /app/server
+COPY server/ .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS server-builder
 WORKDIR /app/server
 
 # Tell SQLx to run in offline mode during compile
 ENV SQLX_OFFLINE=true
 
-# Copy only Cargo files first for dependency caching
-COPY server/Cargo.toml server/Cargo.lock ./
+# Copy the recipe and build dependencies (this layer will be cached)
+COPY --from=planner /app/server/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 
-# Create a dummy main.rs to build dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
-# Build dependencies (this layer will be cached)
+# Now copy the actual source code and build
+COPY server/ .
 RUN cargo build --release --bin jottery-server
-
-# Remove dummy source
-RUN rm -rf src
-
-# Now copy the actual source code
-COPY server/src ./src
-COPY server/migrations ./migrations
-COPY server/.sqlx ./.sqlx
-
-# Build the actual binary (dependencies already cached)
-RUN touch src/main.rs && cargo build --release --bin jottery-server
 
 # -----------------------------
 # Stage 3: Final unified runtime image (Caddy + Server)
