@@ -3,6 +3,7 @@
   import { selectedNote, clearSelection, notes, settings } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
+  import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
   import CodeEditor from './CodeEditor.svelte';
   import TagInput from './TagInput.svelte';
@@ -56,6 +57,12 @@
     tags: tags.length,
     attachments: attachments.length,
   };
+
+  // Format keyboard shortcuts for display
+  $: shortcuts = $settings.keyboardShortcuts;
+  $: copyNoteShortcut = formatShortcutForTooltip(shortcuts?.copyNote);
+  $: noteInfoShortcut = formatShortcutForTooltip(shortcuts?.noteInfo);
+  $: versionHistoryShortcut = formatShortcutForTooltip(shortcuts?.versionHistory);
 
   function getPreviewHtml(text: string, lang: string): string {
     if (lang === 'markdown') {
@@ -765,7 +772,10 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>📋</span>
-                <span>Copy Content</span>
+                <span class="flex-1">Copy Content</span>
+                {#if copyNoteShortcut}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{copyNoteShortcut}</span>
+                {/if}
               </button>
 
               <button
@@ -773,7 +783,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>💾</span>
-                <span>Export to File</span>
+                <span class="flex-1">Export to File</span>
               </button>
 
               <button
@@ -781,7 +791,10 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>ℹ️</span>
-                <span>Info</span>
+                <span class="flex-1">Info</span>
+                {#if noteInfoShortcut}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{noteInfoShortcut}</span>
+                {/if}
               </button>
 
               <button
@@ -789,7 +802,10 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>📜</span>
-                <span>Version History</span>
+                <span class="flex-1">Version History</span>
+                {#if versionHistoryShortcut}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{versionHistoryShortcut}</span>
+                {/if}
               </button>
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -810,7 +826,7 @@
       <button
         on:click={handleClose}
         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
-        title="Close note"
+        title="Close note (Esc)"
         aria-label="Close note"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

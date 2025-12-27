@@ -3,6 +3,7 @@
   import { lock, passwordStorageService, settingsRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
+  import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
@@ -16,6 +17,13 @@
 
   // Check if remember password is enabled
   $: rememberPasswordEnabled = $settings.rememberPassword || false;
+
+  // Format keyboard shortcuts for display
+  $: shortcuts = $settings.keyboardShortcuts;
+  $: newNoteShortcut = formatShortcutForTooltip(shortcuts?.newNote);
+  $: focusSearchShortcut = formatShortcutForTooltip(shortcuts?.focusSearch);
+  $: openSettingsShortcut = formatShortcutForTooltip(shortcuts?.openSettings);
+  $: lockAppShortcut = formatShortcutForTooltip(shortcuts?.lockApp);
 
   function handleNewNoteClick() {
     // Call parent handler
@@ -148,7 +156,7 @@
         <button
           on:click={toggleMobileSearch}
           class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={$_('search.placeholder')}
+          title={focusSearchShortcut ? `${$_('search.placeholder')} (${focusSearchShortcut})` : $_('search.placeholder')}
           aria-label="Search"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,7 +167,7 @@
         <button
           on:click={handleNewNoteClick}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors"
-          title={$_('note.create')}
+          title={newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create')}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +181,7 @@
         <button
           on:click={toggleMobileSearch}
           class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={$_('search.placeholder')}
+          title={focusSearchShortcut ? `${$_('search.placeholder')} (${focusSearchShortcut})` : $_('search.placeholder')}
           aria-label="Search"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,7 +192,7 @@
         <button
           on:click={handleNewNoteClick}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors"
-          title={$_('note.create')}
+          title={newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create')}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +208,7 @@
       <button
         on:click={handleNewNoteClick}
         class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
-        title={$_('note.create')}
+        title={newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create')}
       >
         + {$_('note.new')}
       </button>
@@ -216,7 +224,7 @@
       <button
         on:click={onOpenSettings}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
-        title={$_('common.settings')}
+        title={openSettingsShortcut ? `${$_('common.settings')} (${openSettingsShortcut})` : $_('common.settings')}
       >
         ⚙️ {$_('common.settings')}
       </button>
@@ -224,7 +232,7 @@
       <button
         on:click={handleLockRequest}
         class="px-3 py-1.5 {rememberPasswordEnabled ? 'opacity-50 cursor-default' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
-        title={rememberPasswordEnabled ? 'Password remembered - click to disable' : $_('keyboard.lockApp')}
+        title={rememberPasswordEnabled ? 'Password remembered - click to disable' : lockAppShortcut ? `${$_('keyboard.lockApp')} (${lockAppShortcut})` : $_('keyboard.lockApp')}
       >
         {rememberPasswordEnabled ? '🔓' : '🔒'} {$_('common.lock')}
       </button>
@@ -292,7 +300,7 @@
             class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
             <span class="text-xl">🗑️</span>
-            <span class="text-sm font-medium">{$_('recycleBin.title')}</span>
+            <span class="flex-1 text-sm font-medium">{$_('recycleBin.title')}</span>
           </button>
 
           <button
@@ -300,7 +308,10 @@
             class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
             <span class="text-xl">⚙️</span>
-            <span class="text-sm font-medium">{$_('common.settings')}</span>
+            <span class="flex-1 text-sm font-medium">{$_('common.settings')}</span>
+            {#if openSettingsShortcut}
+              <span class="text-xs text-gray-500 dark:text-gray-400">{openSettingsShortcut}</span>
+            {/if}
           </button>
 
           <div class="my-2 border-t border-gray-200 dark:border-gray-700"></div>
@@ -310,7 +321,10 @@
             class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left {rememberPasswordEnabled ? 'opacity-50' : 'active:bg-gray-100 dark:active:bg-gray-700'} rounded-md transition-colors"
           >
             <span class="text-xl">{rememberPasswordEnabled ? '🔓' : '🔒'}</span>
-            <span class="text-sm font-medium">{$_('common.lock')}</span>
+            <span class="flex-1 text-sm font-medium">{$_('common.lock')}</span>
+            {#if lockAppShortcut && !rememberPasswordEnabled}
+              <span class="text-xs text-gray-500 dark:text-gray-400">{lockAppShortcut}</span>
+            {/if}
           </button>
         </nav>
       </div>
