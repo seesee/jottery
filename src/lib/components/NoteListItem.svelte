@@ -4,7 +4,6 @@
 
   export let note: DecryptedNote;
   export let onNoteSelect: (() => void) | undefined = undefined;
-  export let focused = false;
 
   $: isSelected = $selectedNoteId === note.id;
 
@@ -55,7 +54,7 @@
 
 <button
   on:click={handleClick}
-  class="w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''} {focused && !isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-600 ring-inset' : ''}"
+  class="w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}"
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
