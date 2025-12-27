@@ -52,8 +52,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     const db = getDB();
     // Update modified timestamp
     note.modifiedAt = new Date().toISOString();
-    // Increment version for version tracking
-    note.version = (note.version || 1) + 1;
+    // Note: version is NOT incremented here - only when creating version snapshots
     await db.put(STORES.NOTES, note);
     return note;
   }

@@ -225,11 +225,18 @@
       // Get the encrypted note from repository (not decrypted from service)
       const currentNote = await noteRepository.getById($selectedNote.id);
       if (currentNote) {
+        // Increment version BEFORE creating the snapshot
+        currentNote.version = (currentNote.version || 0) + 1;
+
+        // Save the note with incremented version (update() will set modifiedAt)
+        await noteRepository.update(currentNote);
+
+        // Create version snapshot with the new version number
         await versionRepository.createVersion(currentNote, {
           syncedAt: new Date().toISOString(),
           reason: 'manual-sync',
         });
-        console.log('[EditorPane] Created version snapshot');
+        console.log('[EditorPane] Created version snapshot, version:', currentNote.version);
       }
     } catch (error) {
       console.error('[EditorPane] Failed to create version:', error);
