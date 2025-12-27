@@ -1033,12 +1033,24 @@
               </div>
             </div>
 
-            <button
-              on:click={resetShortcuts}
-              class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
-            >
-              Reset to Defaults
-            </button>
+            <div class="mt-4 space-y-2">
+              <button
+                on:click={onOpenShortcutsHelp}
+                class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+              >
+                ⌨️ View All Shortcuts
+              </button>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+                Quick reference of all keyboard shortcuts
+              </p>
+
+              <button
+                on:click={resetShortcuts}
+                class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                Reset to Defaults
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1087,16 +1099,6 @@
             </p>
           </div>
 
-          <!-- Keyboard Shortcuts -->
-          <button
-            on:click={onOpenShortcutsHelp}
-            class="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
-          >
-            ⌨️ {$_('settings.keyboardShortcuts')}
-          </button>
-          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            View all available keyboard shortcuts
-          </p>
         </div>
 
         <!-- Danger Zone -->
