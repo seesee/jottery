@@ -170,6 +170,12 @@
       console.log('[EditorPane] From note:', previousNoteId, 'to note:', $selectedNote.id);
       console.log('[EditorPane] New note showPreview value from DB:', $selectedNote.showPreview);
 
+      // Exit draft mode if we were in it
+      if ($isDraftMode) {
+        console.log('[EditorPane] Exiting draft mode - note selected');
+        exitDraftMode();
+      }
+
       // Flush any pending save before switching
       if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -203,6 +209,12 @@
 
     previousNoteId = $selectedNote.id;
   } else {
+    // Exit draft mode if closing without creating a note
+    if ($isDraftMode) {
+      console.log('[EditorPane] Exiting draft mode - editor closed without creating note');
+      exitDraftMode();
+    }
+
     // Closing editor - flush pending save, create version, and trigger sync
     if (previousNoteId) {
       console.log('[EditorPane] Closing editor, saving, creating version and triggering sync...');
@@ -579,7 +591,7 @@
       .replace(/^_|_$/g, ''); // Trim underscores
 
     const filename = sanitizedFirstLine ||
-      new Date($selectedNote.createdAt).toISOString().split('T')[0];
+      new Date($selectedNote?.createdAt || new Date()).toISOString().split('T')[0];
 
     // Create blob and download
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -723,7 +735,7 @@
 
 <svelte:window on:click={handleClickOutside} />
 
-{#if isEditing && $selectedNote}
+{#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
     on:dragenter={handleEditorDragEnter}
@@ -752,11 +764,12 @@
       <!-- Pin Button (icon only) -->
       <button
         on:click={handleTogglePin}
-        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
-        title={$selectedNote.pinned ? 'Unpin note' : 'Pin note'}
-        aria-label={$selectedNote.pinned ? 'Unpin note' : 'Pin note'}
+        disabled={$isDraftMode}
+        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        title={$isDraftMode ? 'Save note first' : ($selectedNote?.pinned ? 'Unpin note' : 'Pin note')}
+        aria-label={$isDraftMode ? 'Save note first' : ($selectedNote?.pinned ? 'Unpin note' : 'Pin note')}
       >
-        {#if $selectedNote.pinned}
+        {#if $selectedNote?.pinned}
           <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
@@ -1005,12 +1018,14 @@
     {/if}
 
     <!-- Metadata Footer -->
+    {#if $selectedNote}
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex justify-between">
         <span>Created: {formatDateTime($selectedNote.createdAt)}</span>
         <span>Modified: {formatDateTime($selectedNote.modifiedAt)}</span>
       </div>
     </div>
+    {/if}
   </div>
 {:else}
   <div class="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -1078,6 +1093,7 @@
           <div class="font-medium text-gray-900 dark:text-gray-100 capitalize">{language.replace('-', ' ')}</div>
         </div>
 
+        {#if $selectedNote}
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
           <div class="text-gray-600 dark:text-gray-400 mb-2">Created:</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.createdAt)}</div>
@@ -1087,7 +1103,9 @@
           <div class="text-gray-600 dark:text-gray-400 mb-2">Modified:</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.modifiedAt)}</div>
         </div>
+        {/if}
 
+        {#if $selectedNote}
         <div>
           <div class="text-gray-600 dark:text-gray-400 mb-2">Version:</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">v{$selectedNote.version}</div>
@@ -1097,6 +1115,7 @@
           <div class="text-gray-600 dark:text-gray-400 mb-2">Note ID:</div>
           <div class="font-mono text-xs text-gray-900 dark:text-gray-100 break-all">{$selectedNote.id}</div>
         </div>
+        {/if}
       </div>
 
       <div class="mt-6 flex justify-end">
