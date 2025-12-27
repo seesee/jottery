@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { versionRepository, noteRepository, cryptoService, keyManager } from '../services';
+  import { versionRepository, noteRepository, cryptoService, keyManager, decryptJSON } from '../services';
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
-  import { decryptStringArray } from '../services/crypto';
 
   export let show: boolean = false;
   export let noteId: string | undefined = undefined;
@@ -29,7 +28,7 @@
     if (version.tags.length > 0) {
       if (version.tags.length === 1) {
         const encryptedTags = JSON.parse(version.tags[0]);
-        tags = await cryptoService.decryptJSON(encryptedTags, masterKey.key);
+        tags = await decryptJSON(encryptedTags, masterKey.key);
       } else {
         // Old format - individually encrypted tags
         for (const tagJson of version.tags) {
