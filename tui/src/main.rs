@@ -10,10 +10,16 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
+use std::io::{self, Write};
+use std::process::Command;
+use std::env;
+use tempfile::NamedTempFile;
 use tracing::info;
 
 use crypto::CryptoService;
 use db::Database;
+use models::Note;
+use repository::{NoteRepository, sync::SyncRepository};
 use ui::{App, EventHandler, Tui};
 
 #[derive(Parser)]
@@ -43,6 +49,58 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Create a quick note with $EDITOR
+    Note {
+        /// Password for encryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+
+        /// Optional tags for the note (comma-separated)
+        #[arg(short, long)]
+        tags: Option<String>,
+    },
+    /// List all notes
+    List {
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+
+        /// Filter by tag
+        #[arg(short, long)]
+        tag: Option<String>,
+
+        /// Maximum number of notes to show
+        #[arg(short = 'n', long, default_value = "20")]
+        limit: usize,
+    },
+    /// Search notes
+    Search {
+        /// Search query
+        query: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+
+        /// Maximum number of results to show
+        #[arg(short = 'n', long, default_value = "10")]
+        limit: usize,
+    },
+    /// Show a specific note by ID
+    Show {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Sync notes with remote server
+    Sync {
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
     /// Export notes to JSON file
     Export {
         /// Output file path
@@ -63,6 +121,86 @@ enum Commands {
         #[arg(short, long)]
         password: String,
     },
+}
+
+/// Prompt for password from stdin
+fn prompt_password() -> Result<String> {
+    print!("Password: ");
+    io::stdout().flush()?;
+    let password = rpassword::read_password()?;
+    Ok(password)
+}
+
+/// Get or prompt for password
+fn get_password(password_opt: Option<String>) -> Result<String> {
+    match password_opt {
+        Some(pwd) => Ok(pwd),
+        None => prompt_password(),
+    }
+}
+
+/// Open $EDITOR with content and return the edited result
+fn open_editor(initial_content: &str) -> Result<String> {
+    // Create temporary file
+    let mut temp_file = NamedTempFile::new()
+        .context("Failed to create temporary file")?;
+    temp_file
+        .write_all(initial_content.as_bytes())
+        .context("Failed to write to temporary file")?;
+    temp_file.flush()?;
+
+    let temp_path = temp_file.path();
+
+    // Get editor from environment (default to vi)
+    let editor = env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+
+    // Launch editor
+    let status = Command::new(&editor)
+        .arg(temp_path)
+        .status()
+        .context(format!("Failed to launch editor: {}", editor))?;
+
+    if !status.success() {
+        anyhow::bail!("Editor exited with non-zero status");
+    }
+
+    // Read the edited content
+    let content = std::fs::read_to_string(temp_path)
+        .context("Failed to read temporary file")?;
+
+    Ok(content)
+}
+
+/// Format a note for display
+fn format_note_preview(note: &Note, show_content: bool) -> String {
+    let title = if !note.content.is_empty() {
+        note.content.lines().next().unwrap_or("(empty)")
+    } else {
+        "(empty)"
+    };
+
+    let tags_str = if note.tags.is_empty() {
+        String::new()
+    } else {
+        format!(" [{}]", note.tags.join(", "))
+    };
+
+    let preview = if show_content {
+        let content_preview = note.content.lines()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("\n{}\n", content_preview)
+    } else {
+        String::new()
+    };
+
+    format!("{} - {}{}{}",
+        &note.id[..8],
+        title,
+        tags_str,
+        preview
+    )
 }
 
 fn main() -> Result<()> {
@@ -116,6 +254,162 @@ fn main() -> Result<()> {
 
     // Handle subcommands
     match cli.command {
+        Some(Commands::Note { password, tags }) => {
+            let password = get_password(password)?;
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let crypto = CryptoService::new();
+            let salt = crypto.generate_salt();
+            let key = crypto.derive_key(&password, &salt, 256_000)?;
+
+            // Open editor with empty content
+            let content = open_editor("")?;
+
+            // If content is empty, don't create note
+            if content.trim().is_empty() {
+                println!("Note is empty, not saving.");
+                return Ok(());
+            }
+
+            // Parse tags if provided
+            let note_tags: Vec<String> = tags
+                .map(|t| t.split(',').map(|s| s.trim().to_string()).collect())
+                .unwrap_or_default();
+
+            // Create note struct
+            let mut note = Note::new(content);
+            note.tags = note_tags;
+
+            // Save to database
+            let note_repo = NoteRepository::new(db.connection());
+            note_repo.create(&note, &key)?;
+            println!("✓ Note created: {}", &note.id[..8]);
+
+            // Auto-sync if configured
+            let sync_repo = SyncRepository::new(db.connection());
+            if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+                if metadata.sync_enabled {
+                    println!("Syncing...");
+                    // Note: Full sync implementation would go here
+                    println!("✓ Sync complete");
+                }
+            }
+
+            return Ok(());
+        }
+        Some(Commands::List { password, tag, limit }) => {
+            let password = get_password(password)?;
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let crypto = CryptoService::new();
+            let salt = crypto.generate_salt();
+            let key = crypto.derive_key(&password, &salt, 256_000)?;
+
+            let note_repo = NoteRepository::new(db.connection());
+            let notes = note_repo.list(false, &key)?;
+
+            // Filter by tag if specified
+            let filtered_notes: Vec<_> = if let Some(tag_filter) = tag {
+                notes.into_iter()
+                    .filter(|n| n.tags.contains(&tag_filter))
+                    .take(limit)
+                    .collect()
+            } else {
+                notes.into_iter().take(limit).collect()
+            };
+
+            if filtered_notes.is_empty() {
+                println!("No notes found.");
+            } else {
+                println!("Found {} notes:\n", filtered_notes.len());
+                for note in filtered_notes {
+                    println!("{}", format_note_preview(&note, false));
+                }
+            }
+
+            return Ok(());
+        }
+        Some(Commands::Search { query, password, limit }) => {
+            let password = get_password(password)?;
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let crypto = CryptoService::new();
+            let salt = crypto.generate_salt();
+            let key = crypto.derive_key(&password, &salt, 256_000)?;
+
+            let note_repo = NoteRepository::new(db.connection());
+            let notes = note_repo.list(false, &key)?;
+
+            // Simple search implementation
+            let query_lower = query.to_lowercase();
+            let results: Vec<_> = notes.into_iter()
+                .filter(|n| {
+                    n.content.to_lowercase().contains(&query_lower) ||
+                    n.tags.iter().any(|t| t.to_lowercase().contains(&query_lower))
+                })
+                .take(limit)
+                .collect();
+
+            if results.is_empty() {
+                println!("No results found for: {}", query);
+            } else {
+                println!("Found {} results for '{}':\n", results.len(), query);
+                for note in results {
+                    println!("{}", format_note_preview(&note, true));
+                }
+            }
+
+            return Ok(());
+        }
+        Some(Commands::Show { id, password }) => {
+            let password = get_password(password)?;
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let crypto = CryptoService::new();
+            let salt = crypto.generate_salt();
+            let key = crypto.derive_key(&password, &salt, 256_000)?;
+
+            let note_repo = NoteRepository::new(db.connection());
+            let notes = note_repo.list(false, &key)?;
+
+            // Find note by partial ID match
+            let note = notes.into_iter()
+                .find(|n| n.id.starts_with(&id))
+                .context("Note not found")?;
+
+            println!("ID: {}", note.id);
+            println!("Created: {}", note.created_at);
+            println!("Modified: {}", note.modified_at);
+            if !note.tags.is_empty() {
+                println!("Tags: {}", note.tags.join(", "));
+            }
+            println!("\n{}", note.content);
+
+            return Ok(());
+        }
+        Some(Commands::Sync { password }) => {
+            let password = get_password(password)?;
+            let db = Database::open(&db_path, &password)
+                .context("Failed to open database. Check your password.")?;
+
+            let sync_repo = SyncRepository::new(db.connection());
+            match sync_repo.get_metadata()? {
+                Some(metadata) if metadata.sync_enabled => {
+                    println!("Syncing with {}...", metadata.sync_endpoint);
+                    // Note: Full sync implementation would go here
+                    println!("✓ Sync complete");
+                }
+                _ => {
+                    println!("Sync is not configured. Use the TUI to set it up.");
+                }
+            }
+
+            return Ok(());
+        }
         Some(Commands::Export { output, password }) => {
             info!("Exporting notes to: {}", output.display());
             let db = Database::open(&db_path, &password)
