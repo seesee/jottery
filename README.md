@@ -2,6 +2,12 @@
 
 Jottery is a simple, searchable, and privacy-focused scratchpad/notes application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app, the sync server is optional.
 
+## Why Jottery?
+
+Jottery was created to solve a common problem: **finding a quick, reliable place to capture fleeting thoughts and temporary data**. Whether you're tweaking text before pasting it elsewhere, saving command output, or jotting down ideas that might be useful later (or might not), you need a scratchpad that's always available and works the way you do.
+
+Most note-taking apps are either too heavy (designed for long-form content) or too limited (basic text files). Jottery strikes a balance: it's lightweight enough for quick captures but powerful enough to handle code snippets, searchable tags, and rich formatting. By providing both web and terminal clients that sync seamlessly, it meets you wherever you're working—whether that's a browser, SSH session, or local terminal.
+
 ## Features
 
 *   **End-to-End Encryption**: All your notes are encrypted on your device before being sent to the server. The server only stores encrypted blobs of data.
@@ -9,9 +15,11 @@ Jottery is a simple, searchable, and privacy-focused scratchpad/notes applicatio
 *   **Self-Hostable**: You have full control over your data by hosting the sync server yourself.
 *   **Search**: Quickly find your notes with a powerful full-text search.
 *   **Tagging**: Organise your notes with tags.
-*   **Attachments**: Add, preview, and download attachments to your notes. 
+*   **Attachments**: Add, preview, and download attachments to your notes.
 *   **Code Snippets**: A rich text editor with support for various programming languages.
-*   **Many handy features**: Export notes, preview html, document info, basic versioning, and markdown documents in-editor.
+*   **Quick Delete**: Delete notes instantly from the list view (hover for delete button, or use configurable keyboard shortcut).
+*   **Keyboard Shortcuts**: Fully customizable keyboard shortcuts for common actions.
+*   **Many handy features**: Export notes, preview HTML, document info, basic versioning, and markdown documents in-editor.
 
 ## Components
 
@@ -23,7 +31,25 @@ A modern web application that provides a rich user experience for managing your 
 
 ### 2. TUI Client
 
-A lightweight and fast terminal user interface for those who prefer to work in the terminal.
+A lightweight and fast terminal user interface for those who prefer to work in the terminal. The TUI includes powerful command-line tools for quick note operations:
+
+**CLI Commands:**
+- `jottery note` - Create a note with your `$EDITOR`, or pipe content directly:
+  ```bash
+  echo "Quick note" | jottery note
+  ls -la | jottery note -t system,logs
+  ```
+- `jottery list` - List all notes with optional tag filtering
+- `jottery search <query>` - Search notes by content or tags
+- `jottery show <id>` - Display a specific note
+- `jottery sync` - Manually trigger sync with server
+- `jottery export` / `jottery import` - Backup and restore notes
+
+**CLI Features:**
+- **Stored password support** - No password prompts when you've saved your password
+- **Pipe content directly** - Capture command output as notes instantly
+- **Auto-sync** - Notes sync to server automatically after creation (if configured)
+- **Tag support** - Add tags to piped content with `-t tag1,tag2`
 
 ### 3. Sync Server
 
