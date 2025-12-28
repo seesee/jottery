@@ -19,7 +19,7 @@ use tracing::info;
 use crypto::CryptoService;
 use db::Database;
 use models::Note;
-use repository::{NoteRepository, sync::SyncRepository};
+use repository::{NoteRepository, sync::SyncRepository, EncryptionRepository};
 use ui::{App, EventHandler, Tui};
 
 #[derive(Parser)]
@@ -137,6 +137,26 @@ fn get_password(password_opt: Option<String>) -> Result<String> {
         Some(pwd) => Ok(pwd),
         None => prompt_password(),
     }
+}
+
+/// Derive encryption key from password using stored salt
+fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
+    let encryption_repo = EncryptionRepository::new(db.connection());
+    let crypto = CryptoService::new();
+
+    // Get stored salt and iterations from database
+    let (salt, iterations) = if let Some(metadata) = encryption_repo.get()? {
+        (metadata.salt, metadata.iterations)
+    } else {
+        // First-time setup: generate new salt and save it
+        let new_salt = crypto.generate_salt();
+        let iterations = 256_000;
+        encryption_repo.save(&new_salt, iterations)?;
+        (new_salt.to_vec(), iterations)
+    };
+
+    // Derive key using stored salt
+    crypto.derive_key(password, &salt, iterations)
 }
 
 /// Open $EDITOR with content and return the edited result
@@ -259,9 +279,8 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
 
-            let crypto = CryptoService::new();
-            let salt = crypto.generate_salt();
-            let key = crypto.derive_key(&password, &salt, 256_000)?;
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
 
             // Open editor with empty content
             let content = open_editor("")?;
@@ -303,9 +322,8 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
 
-            let crypto = CryptoService::new();
-            let salt = crypto.generate_salt();
-            let key = crypto.derive_key(&password, &salt, 256_000)?;
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
             let notes = note_repo.list(false, &key)?;
@@ -336,9 +354,8 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
 
-            let crypto = CryptoService::new();
-            let salt = crypto.generate_salt();
-            let key = crypto.derive_key(&password, &salt, 256_000)?;
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
             let notes = note_repo.list(false, &key)?;
@@ -369,9 +386,8 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
 
-            let crypto = CryptoService::new();
-            let salt = crypto.generate_salt();
-            let key = crypto.derive_key(&password, &salt, 256_000)?;
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
             let notes = note_repo.list(false, &key)?;
@@ -415,9 +431,8 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
 
-            let crypto = CryptoService::new();
-            let salt = crypto.generate_salt();
-            let key = crypto.derive_key(&password, &salt, 256_000)?;
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
 
             let count = export::export_notes(&db, &key, &output)?;
             println!("✓ Exported {} notes to {}", count, output.display());
@@ -428,9 +443,8 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
 
-            let crypto = CryptoService::new();
-            let salt = crypto.generate_salt();
-            let key = crypto.derive_key(&password, &salt, 256_000)?;
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
 
             let count = export::import_notes(&db, &key, &input)?;
             println!("✓ Imported {} notes from {}", count, input.display());
