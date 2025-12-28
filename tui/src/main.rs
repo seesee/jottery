@@ -165,11 +165,11 @@ fn try_load_stored_password(db_path: &PathBuf) -> Result<Option<String>> {
 /// Get device-specific encryption key for stored password
 /// Must match the implementation in ui/app.rs
 fn get_device_key() -> [u8; 32] {
-    use sha2::{Sha256, Digest};
-    let mut hasher = Sha256::new();
-    hasher.update(b"jottery-remember-key-v1");
-    let result = hasher.finalize();
-    result.into()
+    // Must exactly match the constant in ui/app.rs
+    let constant = b"jottery-tui-device-key-v1.0.0---";
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&constant[..32]);
+    key
 }
 
 /// Get or prompt for password, checking stored password first
