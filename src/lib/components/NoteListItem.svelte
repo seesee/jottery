@@ -4,8 +4,10 @@
 
   export let note: DecryptedNote;
   export let onNoteSelect: (() => void) | undefined = undefined;
+  export let onDeleteRequest: ((note: DecryptedNote) => void) | undefined = undefined;
 
   $: isSelected = $selectedNoteId === note.id;
+  let isHovered = false;
 
   // Strip markdown formatting from the title
   function stripMarkdown(text: string): string {
@@ -50,11 +52,23 @@
     // Set search query to filter by this tag
     searchQuery.set(`#${tag}`);
   }
+
+  function handleDeleteClick(event: MouseEvent) {
+    event.stopPropagation();
+    event.preventDefault();
+
+    // Request deletion from parent
+    if (onDeleteRequest) {
+      onDeleteRequest(note);
+    }
+  }
 </script>
 
 <button
   on:click={handleClick}
-  class="w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}"
+  on:mouseenter={() => isHovered = true}
+  on:mouseleave={() => isHovered = false}
+  class="w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}"
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -65,6 +79,21 @@
         {title}
       </h3>
     </div>
+    {#if isHovered}
+      <span
+        on:click={handleDeleteClick}
+        on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}
+        role="button"
+        tabindex="0"
+        class="ml-2 p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0 cursor-pointer"
+        title={note.pinned ? "Unpin note first to delete" : "Delete note"}
+        aria-label={note.pinned ? "Unpin note first to delete" : "Delete note"}
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </span>
+    {/if}
   </div>
 
   {#if preview}
