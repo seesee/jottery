@@ -10,7 +10,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::process::Command;
 use std::env;
 use tempfile::NamedTempFile;
@@ -446,8 +446,18 @@ fn main() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            // Open editor with empty content
-            let content = open_editor("")?;
+            // Check if content is being piped in
+            use std::io::IsTerminal;
+            let content = if !io::stdin().is_terminal() {
+                // Reading from pipe
+                let mut buffer = String::new();
+                io::stdin().read_to_string(&mut buffer)
+                    .context("Failed to read from stdin")?;
+                buffer
+            } else {
+                // No pipe, open editor
+                open_editor("")?
+            };
 
             // If content is empty, don't create note
             if content.trim().is_empty() {
