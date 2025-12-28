@@ -352,8 +352,20 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!("Push failed: {} - {}", status, error_text);
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+
+            // Provide user-friendly error messages
+            let error_msg = if status == 403 {
+                "Your account has been deactivated or is pending admin approval. Please contact the administrator."
+            } else if status == 401 {
+                "Invalid API key or authentication failed. Try re-registering your device."
+            } else if status == 409 {
+                "Sync conflict detected. Some notes have conflicting changes on the server."
+            } else {
+                &error_body
+            };
+
+            anyhow::bail!("Sync failed: {}", error_msg);
         }
 
         let push_response: SyncPushResponse = response.json()
