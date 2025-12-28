@@ -12,6 +12,7 @@ pub struct SyncMetadata {
     pub last_pull_at: Option<DateTime<Utc>>,
     pub api_key: Option<String>,        // Encrypted API key (JSON stringified EncryptedData)
     pub client_id: Option<String>,      // UUID assigned by server
+    pub user_email: Option<String>,     // User email (for multi-user auth)
     pub sync_enabled: bool,
     pub sync_endpoint: String,
     pub auto_sync_interval: Option<i32>, // Minutes (0 = disabled, default: 5)
@@ -25,6 +26,7 @@ impl Default for SyncMetadata {
             last_pull_at: None,
             api_key: None,
             client_id: None,
+            user_email: None,
             sync_enabled: false,
             sync_endpoint: String::new(),
             auto_sync_interval: Some(5),
