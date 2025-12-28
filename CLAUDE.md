@@ -247,6 +247,7 @@ Export format is JSON with decrypted content:
 ## Internationalization
 
 - Default language: English (en-GB)
+- **IMPORTANT**: Always use British English spelling and grammar in all documentation, code comments, and user-facing text (e.g., "organise" not "organize", "customisable" not "customizable", "colour" not "color")
 - Use translation keys: `t('note.create')`
 - No hardcoded strings in components
 - Translation files in `locales/` directory (e.g., `en-GB.json`, `en-US.json`)
