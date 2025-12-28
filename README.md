@@ -18,7 +18,7 @@ Most note-taking apps are either too heavy (designed for long-form content) or t
 *   **Attachments**: Add, preview, and download attachments to your notes.
 *   **Code Snippets**: A rich text editor with support for various programming languages.
 *   **Quick Delete**: Delete notes instantly from the list view (hover for delete button, or use configurable keyboard shortcut).
-*   **Keyboard Shortcuts**: Fully customizable keyboard shortcuts for common actions.
+*   **Keyboard Shortcuts**: Fully customisable keyboard shortcuts for common actions.
 *   **Many handy features**: Export notes, preview HTML, document info, basic versioning, and markdown documents in-editor.
 
 ## Components

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**jottery** is a privacy-focused, self-hosted scratch pad application for capturing, organizing, and searching notes with rich content, syntax highlighting, and encryption. The project is being developed in phases:
+**jottery** is a privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with rich content, syntax highlighting, and encryption. The project is being developed in phases:
 
 - **Phase 1**: Web application (single-page application)
 - **Phase 2**: Enhanced features (attachments, themes, keyboard shortcuts)
