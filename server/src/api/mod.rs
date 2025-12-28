@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod auth;
 pub mod sync;
 
@@ -13,6 +14,14 @@ pub mod middleware {
     use std::sync::Arc;
 
     use crate::AppState;
+
+    /// Client information extracted from API key authentication
+    /// Contains both client_id (for audit trail) and user_id (for access control)
+    #[derive(Debug, Clone)]
+    pub struct ClientInfo {
+        pub client_id: String,
+        pub user_id: String,
+    }
 
     pub async fn auth_middleware(
         State(state): State<Arc<AppState>>,
@@ -38,9 +47,9 @@ pub mod middleware {
         hasher.update(api_key.as_bytes());
         let hashed_key = format!("{:x}", hasher.finalize());
 
-        // Look up client in database
+        // Look up client in database (including user_id for access control)
         let result = sqlx::query!(
-            "SELECT id, is_active FROM clients WHERE api_key = ?",
+            "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
             hashed_key
         )
         .fetch_optional(&state.pool)
@@ -50,9 +59,14 @@ pub mod middleware {
         match result {
             Some(client) if client.is_active == Some(1) => {
                 let client_id = client.id;
+                let user_id = client.user_id;
 
-                // Add client_id to request extensions
-                request.extensions_mut().insert(client_id.clone());
+                // Add both client_id and user_id to request extensions
+                // client_id for audit trail, user_id for access control
+                request.extensions_mut().insert(ClientInfo {
+                    client_id: client_id.clone(),
+                    user_id,
+                });
 
                 // Update last_seen_at
                 let now = chrono::Utc::now().to_rfc3339();

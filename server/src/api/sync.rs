@@ -7,6 +7,7 @@ use base64::Engine;
 use std::sync::Arc;
 
 use crate::{
+    api::middleware::ClientInfo,
     error::{AppError, AppResult},
     models::{
         SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
@@ -15,11 +16,11 @@ use crate::{
     AppState,
 };
 
-// Custom extractor for authenticated client ID
-pub struct ClientId(pub String);
+// Custom extractor for authenticated client info (client_id + user_id)
+pub struct AuthClient(pub ClientInfo);
 
 #[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for ClientId
+impl<S> axum::extract::FromRequestParts<S> for AuthClient
 where
     S: Send + Sync,
 {
@@ -31,32 +32,32 @@ where
     ) -> Result<Self, Self::Rejection> {
         parts
             .extensions
-            .get::<String>()
+            .get::<ClientInfo>()
             .cloned()
-            .map(ClientId)
+            .map(AuthClient)
             .ok_or(AppError::Unauthorized)
     }
 }
 
 pub async fn get_status(
     State(state): State<Arc<AppState>>,
-    ClientId(client_id): ClientId,
+    AuthClient(client_info): AuthClient,
 ) -> AppResult<Json<SyncStatusResponse>> {
 
-    // Get note count
+    // Get note count for this user (across all their devices)
     let count_result = sqlx::query!(
-        "SELECT COUNT(*) as count FROM notes WHERE client_id = ?",
-        client_id
+        "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
+        client_info.user_id
     )
     .fetch_one(&state.pool)
     .await?;
 
     let note_count = count_result.count;
 
-    // Get last modified timestamp
+    // Get last modified timestamp for this user
     let last_modified_result = sqlx::query!(
-        "SELECT server_modified_at FROM notes WHERE client_id = ? ORDER BY server_modified_at DESC LIMIT 1",
-        client_id
+        "SELECT server_modified_at FROM notes WHERE user_id = ? ORDER BY server_modified_at DESC LIMIT 1",
+        client_info.user_id
     )
     .fetch_optional(&state.pool)
     .await?;
@@ -66,7 +67,7 @@ pub async fn get_status(
         .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
     Ok(Json(SyncStatusResponse {
-        client_id,
+        client_id: client_info.client_id,
         server_last_modified,
         note_count: note_count as i64,
         last_synced_at: None,
@@ -75,7 +76,7 @@ pub async fn get_status(
 
 pub async fn push(
     State(state): State<Arc<AppState>>,
-    ClientId(client_id): ClientId,
+    AuthClient(client_info): AuthClient,
     Json(push_req): Json<SyncPushRequest>,
 ) -> AppResult<Json<SyncPushResponse>> {
 
@@ -84,8 +85,9 @@ pub async fn push(
     let errors = Vec::new();
 
     tracing::info!(
-        "Push from client {}: {} notes, {} attachments",
-        client_id,
+        "Push from user {} (client {}): {} notes, {} attachments",
+        client_info.user_id,
+        client_info.client_id,
         push_req.notes.len(),
         push_req.attachments.len()
     );
@@ -93,11 +95,11 @@ pub async fn push(
     let now = chrono::Utc::now().to_rfc3339();
 
     for note in push_req.notes {
-        // Check if note exists
+        // Check if note exists for this user (across all their devices)
         let existing = sqlx::query!(
-            "SELECT modified_at, server_version FROM notes WHERE id = ? AND client_id = ?",
+            "SELECT modified_at, server_version FROM notes WHERE id = ? AND user_id = ?",
             note.id,
-            client_id
+            client_info.user_id
         )
         .fetch_optional(&state.pool)
         .await?;
@@ -126,15 +128,15 @@ pub async fn push(
                 .map(|e| e.server_version + 1)
                 .unwrap_or(1);
 
-            // Upsert note
+            // Upsert note (with both user_id for access control and client_id for audit)
             sqlx::query!(
                 r#"
                 INSERT INTO notes (
-                    id, client_id, created_at, modified_at, server_modified_at,
+                    id, user_id, client_id, created_at, modified_at, server_modified_at,
                     content, tags, pinned, deleted, deleted_at, version, server_version,
                     word_wrap, syntax_language
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
@@ -149,7 +151,8 @@ pub async fn push(
                     syntax_language = excluded.syntax_language
                 "#,
                 note.id,
-                client_id,
+                client_info.user_id,
+                client_info.client_id,
                 note.created_at,
                 note.modified_at,
                 now,
@@ -235,7 +238,7 @@ pub async fn push(
             "#,
             version.version_key,
             version.note_id,
-            client_id,
+            client_info.client_id,
             version.version,
             version.created_at,
             version.synced_at,
@@ -286,23 +289,24 @@ pub async fn push(
 
 pub async fn pull(
     State(state): State<Arc<AppState>>,
-    ClientId(client_id): ClientId,
+    AuthClient(client_info): AuthClient,
     Json(pull_req): Json<SyncPullRequest>,
 ) -> AppResult<Json<SyncPullResponse>> {
 
     tracing::info!(
-        "Pull from client {}: lastSyncAt={:?}, {} known IDs",
-        client_id,
+        "Pull from user {} (client {}): lastSyncAt={:?}, {} known IDs",
+        client_info.user_id,
+        client_info.client_id,
         pull_req.last_sync_at,
         pull_req.known_note_ids.len()
     );
 
-    // Get notes modified after lastSyncAt
+    // Get notes modified after lastSyncAt for this user (across all their devices)
     // We need to build the query string dynamically to avoid type incompatibility
     let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE client_id = ? AND server_modified_at > ? ORDER BY server_modified_at",
-            client_id,
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at",
+            client_info.user_id,
             last_sync
         )
         .fetch_all(&state.pool)
@@ -328,8 +332,8 @@ pub async fn pull(
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE client_id = ? ORDER BY server_modified_at",
-            client_id
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? ORDER BY server_modified_at",
+            client_info.user_id
         )
         .fetch_all(&state.pool)
         .await?;
@@ -432,7 +436,9 @@ pub async fn pull(
     // Get deletions
     let deletions = Vec::new(); // Simplified for now
 
-    // Get versions for all notes (optionally filter by time if needed)
+    // Get versions for all notes from this client
+    // Note: versions are still per-client (not shared across user's devices)
+    // This is intentional as versions track device-specific history
     let epoch = "1970-01-01T00:00:00Z".to_string();
     let last_sync_filter = pull_req.last_sync_at.as_ref().unwrap_or(&epoch);
     let db_versions = sqlx::query!(
@@ -440,7 +446,7 @@ pub async fn pull(
          FROM note_versions
          WHERE client_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
          ORDER BY note_id, version",
-        client_id,
+        client_info.client_id,
         last_sync_filter,
         last_sync_filter
     )
@@ -486,20 +492,26 @@ pub async fn pull(
 
 pub async fn delete_note(
     State(state): State<Arc<AppState>>,
-    ClientId(client_id): ClientId,
+    AuthClient(client_info): AuthClient,
     Path(note_id): Path<String>,
 ) -> AppResult<StatusCode> {
 
-    // Delete note (cascades to attachments via foreign keys)
+    // Delete note for this user (cascades to attachments via foreign keys)
+    // Filter by user_id to ensure users can only delete their own notes
     sqlx::query!(
-        "DELETE FROM notes WHERE id = ? AND client_id = ?",
+        "DELETE FROM notes WHERE id = ? AND user_id = ?",
         note_id,
-        client_id
+        client_info.user_id
     )
     .execute(&state.pool)
     .await?;
 
-    tracing::info!("Deleted note: {} for client: {}", note_id, client_id);
+    tracing::info!(
+        "Deleted note: {} for user: {} (client: {})",
+        note_id,
+        client_info.user_id,
+        client_info.client_id
+    );
 
     Ok(StatusCode::NO_CONTENT)
 }

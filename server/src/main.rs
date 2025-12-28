@@ -56,7 +56,7 @@ async fn main() {
     // Build application state
     let app_state = Arc::new(AppState { pool });
 
-    // Build protected sync routes with auth middleware
+    // Build protected sync routes with API key auth middleware
     let sync_routes = Router::new()
         .route("/api/v1/sync/status", get(api::sync::get_status))
         .route("/api/v1/sync/push", post(api::sync::push))
@@ -67,14 +67,35 @@ async fn main() {
             api::middleware::auth_middleware,
         ));
 
+    // Build protected admin routes with session auth middleware
+    let admin_routes = Router::new()
+        .route("/api/v1/admin/users", get(api::admin::users::list_users))
+        .route("/api/v1/admin/users/:id", get(api::admin::users::get_user))
+        .route("/api/v1/admin/users/:id/approve", post(api::admin::users::approve_user))
+        .route("/api/v1/admin/users/:id/deactivate", post(api::admin::users::deactivate_user))
+        .route("/api/v1/admin/users/:id/activate", post(api::admin::users::activate_user))
+        .route("/api/v1/admin/users/:id", delete(api::admin::users::delete_user))
+        .route("/api/v1/admin/users/:id/devices", get(api::admin::users::list_user_devices))
+        .route("/api/v1/admin/devices/:id", delete(api::admin::users::revoke_device))
+        .route("/api/v1/admin/stats", get(api::admin::stats::get_stats))
+        .route("/api/v1/admin/audit", get(api::admin::stats::get_audit_log))
+        .route("/api/v1/admin/notes/metadata", get(api::admin::stats::get_notes_metadata))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            api::admin::admin_auth_middleware,
+        ));
+
     // Build main router
     let app = Router::new()
         // Health check (no auth required)
         .route("/health", get(health_check))
         // Auth routes (no auth required)
-        .route("/api/v1/auth/register", post(api::auth::register))
-        // Merge protected sync routes
+        .route("/api/v1/auth/register-user", post(api::auth::register_user))
+        .route("/api/v1/auth/register-device", post(api::auth::register_device))
+        .route("/api/v1/auth/login", post(api::auth::login))
+        // Merge protected routes
         .merge(sync_routes)
+        .merge(admin_routes)
         // Add state
         .with_state(app_state)
         // Add middleware
