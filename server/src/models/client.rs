@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Client {
     pub id: String,
-    pub api_key: String, // Hashed
+    pub user_id: String,            // NEW: User ownership
+    pub api_key: String,            // Hashed
     pub device_name: String,
     pub device_type: String,
     pub created_at: String,
-    pub last_seen_at: String,
+    pub last_seen_at: Option<String>,
     pub is_active: i32,
 }
 

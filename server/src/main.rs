@@ -13,6 +13,7 @@ mod config;
 mod db;
 mod error;
 mod models;
+mod utils;
 
 use crate::config::Config;
 
