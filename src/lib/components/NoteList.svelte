@@ -3,6 +3,7 @@
   import NoteListItem from './NoteListItem.svelte';
   import { beforeUpdate, afterUpdate } from 'svelte';
   import { noteRepository } from '../services/noteRepository';
+  import { noteService } from '../services/noteService';
   import { keyManager } from '../services/keyManager';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
 
@@ -27,9 +28,11 @@
 
   async function reloadNotes() {
     // Reload notes after deletion
-    const masterKey = keyManager.getMasterKey();
-    if (masterKey) {
-      await noteRepository.loadNotes(masterKey.key);
+    try {
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+    } catch (error) {
+      console.error('Failed to reload notes:', error);
     }
   }
 
@@ -40,14 +43,14 @@
       return;
     }
 
-    // Delete directly - notes go to recycle bin
+    // Soft delete - notes go to recycle bin
     try {
       const masterKey = keyManager.getMasterKey();
       if (!masterKey) {
         throw new Error('Application is locked');
       }
 
-      await noteRepository.delete(note.id);
+      await noteRepository.softDelete(note.id);
       await reloadNotes();
     } catch (error) {
       console.error('Failed to delete note:', error);
