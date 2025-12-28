@@ -244,7 +244,7 @@ pub async fn login(
     );
 
     let response = LoginResponse {
-        session_id: session.id,
+        session_id: session_token, // Return the token, not the session.id
         expires_at: expires_at_str,
         user: UserInfo {
             id: user.id,

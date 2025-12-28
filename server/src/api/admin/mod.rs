@@ -23,13 +23,8 @@ pub async fn admin_auth_middleware(
     // Extract session token from cookie or Authorization header
     let session_token = extract_session_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // Hash the session token for lookup (we store SHA-256 hashes)
-    let mut hasher = Sha256::new();
-    hasher.update(session_token.as_bytes());
-    let token_hash = format!("{:x}", hasher.finalize());
-
-    // Validate session and get user info
-    let session = SessionRepository::validate_and_get(&state.pool, &token_hash)
+    // Validate session and get user info (function hashes token internally)
+    let session = SessionRepository::validate_and_get(&state.pool, &session_token)
         .await
         .map_err(|e| {
             tracing::error!("Session validation failed: {}", e);
