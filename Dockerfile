@@ -22,7 +22,29 @@ COPY vite.config.ts .
 RUN npm run build
 
 # -----------------------------
-# Stage 2: Build the Rust server (using cargo-chef for dependency caching)
+# Stage 2: Build the Admin Dashboard
+# -----------------------------
+FROM node:20-slim AS admin-builder
+WORKDIR /app/admin
+
+# Copy admin dashboard deps first for caching
+COPY admin/package.json admin/package-lock.json ./
+RUN npm install
+
+# Copy rest of admin dashboard source
+COPY admin/src ./src
+COPY admin/public ./public
+COPY admin/index.html .
+COPY admin/tsconfig.json .
+COPY admin/svelte.config.js .
+COPY admin/tailwind.config.js .
+COPY admin/postcss.config.js .
+COPY admin/vite.config.ts .
+
+RUN npm run build
+
+# -----------------------------
+# Stage 3: Build the Rust server (using cargo-chef for dependency caching)
 # -----------------------------
 FROM rust:1.85 AS chef
 WORKDIR /app
@@ -48,7 +70,7 @@ COPY server/ .
 RUN cargo build --release --bin jottery-server
 
 # -----------------------------
-# Stage 3: Final unified runtime image (Caddy + Server)
+# Stage 4: Final unified runtime image (Caddy + Server)
 # -----------------------------
 FROM debian:bookworm-slim
 WORKDIR /app
@@ -59,10 +81,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
-# Copy server + web client
+# Copy server + web client + admin dashboard
 # -----------------------------
 COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
 COPY --from=web-builder    /app/dist ./dist
+COPY --from=admin-builder  /app/admin/dist ./admin/dist
 
 # -----------------------------
 # Copy TUI binaries (added by GitHub Actions in /releases)
@@ -83,16 +106,25 @@ RUN mkdir -p /etc/caddy
 
 COPY <<'EOF' /etc/caddy/Caddyfile
 :8088 {
-    root * /app/dist
-    file_server
+    # Admin dashboard
+    handle_path /admin* {
+        root * /app/admin/dist
+        try_files {path} /index.html
+        file_server
+    }
 
-    # Strip /api prefix and reverse proxy to jottery-server
+    # API proxy to jottery-server
     handle_path /api/* {
         reverse_proxy localhost:3030
     }
 
+    # Web UI (default)
+    root * /app/dist
+    file_server
+
     @notStatic {
         not path /api*
+        not path /admin*
         not file
     }
     rewrite @notStatic /index.html
