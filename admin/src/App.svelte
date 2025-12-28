@@ -3,18 +3,24 @@
   import Login from './pages/Login.svelte';
   import Dashboard from './pages/Dashboard.svelte';
   import Users from './pages/Users.svelte';
+  import Toast from './components/Toast.svelte';
+  import ConfirmModal from './components/ConfirmModal.svelte';
 
   type Page = 'dashboard' | 'users';
   let currentPage = $state<Page>('dashboard');
+  let showLogoutConfirm = $state(false);
 
   function navigateTo(page: Page) {
     currentPage = page;
   }
 
   function handleLogout() {
-    if (confirm('Are you sure you want to log out?')) {
-      auth.logout();
-    }
+    showLogoutConfirm = true;
+  }
+
+  function confirmLogout() {
+    auth.logout();
+    showLogoutConfirm = false;
   }
 </script>
 
@@ -81,4 +87,17 @@
       </div>
     </main>
   </div>
+
+  {#if showLogoutConfirm}
+    <ConfirmModal
+      title="Confirm Logout"
+      message="Are you sure you want to log out?"
+      confirmText="Log out"
+      cancelText="Cancel"
+      onConfirm={confirmLogout}
+      onCancel={() => showLogoutConfirm = false}
+    />
+  {/if}
 {/if}
+
+<Toast />

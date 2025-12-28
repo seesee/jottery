@@ -2,11 +2,17 @@
   import { api, ApiError } from '../lib/api';
   import type { UserListItem } from '../lib/api';
   import { onMount } from 'svelte';
+  import { toast } from '../lib/toast.svelte';
+  import ConfirmModal from '../components/ConfirmModal.svelte';
 
   let users = $state<UserListItem[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let filter = $state<'all' | 'pending' | 'approved' | 'inactive'>('all');
+
+  // Confirmation modal state
+  type ConfirmAction = { type: 'approve' | 'deactivate' | 'activate'; userId: string; email: string } | null;
+  let confirmAction = $state<ConfirmAction>(null);
 
   async function loadUsers() {
     try {
@@ -21,41 +27,41 @@
     }
   }
 
-  async function approveUser(userId: string, email: string) {
-    if (!confirm(`Approve user ${email}?`)) return;
-
-    try {
-      await api.approveUser(userId);
-      await loadUsers();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        alert(`Failed to approve user: ${err.message}`);
-      }
-    }
+  function requestApprove(userId: string, email: string) {
+    confirmAction = { type: 'approve', userId, email };
   }
 
-  async function deactivateUser(userId: string, email: string) {
-    if (!confirm(`Deactivate user ${email}?`)) return;
-
-    try {
-      await api.deactivateUser(userId);
-      await loadUsers();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        alert(`Failed to deactivate user: ${err.message}`);
-      }
-    }
+  function requestDeactivate(userId: string, email: string) {
+    confirmAction = { type: 'deactivate', userId, email };
   }
 
-  async function activateUser(userId: string, email: string) {
-    if (!confirm(`Activate user ${email}?`)) return;
+  function requestActivate(userId: string, email: string) {
+    confirmAction = { type: 'activate', userId, email };
+  }
+
+  async function executeAction() {
+    if (!confirmAction) return;
+
+    const { type, userId, email } = confirmAction;
+    confirmAction = null;
 
     try {
-      await api.activateUser(userId);
+      if (type === 'approve') {
+        await api.approveUser(userId);
+        toast.success(`User ${email} approved successfully`);
+      } else if (type === 'deactivate') {
+        await api.deactivateUser(userId);
+        toast.success(`User ${email} deactivated`);
+      } else if (type === 'activate') {
+        await api.activateUser(userId);
+        toast.success(`User ${email} activated`);
+      }
       await loadUsers();
     } catch (err) {
       if (err instanceof ApiError) {
-        alert(`Failed to activate user: ${err.message}`);
+        toast.error(`Failed to ${type} user: ${err.message}`);
+      } else {
+        toast.error(`Failed to ${type} user`);
       }
     }
   }
@@ -202,7 +208,7 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                 {#if !user.approved}
                   <button
-                    onclick={() => approveUser(user.id, user.email)}
+                    onclick={() => requestApprove(user.id, user.email)}
                     class="text-green-600 hover:text-green-900"
                   >
                     Approve
@@ -210,14 +216,14 @@
                 {/if}
                 {#if user.isActive}
                   <button
-                    onclick={() => deactivateUser(user.id, user.email)}
+                    onclick={() => requestDeactivate(user.id, user.email)}
                     class="text-yellow-600 hover:text-yellow-900"
                   >
                     Deactivate
                   </button>
                 {:else}
                   <button
-                    onclick={() => activateUser(user.id, user.email)}
+                    onclick={() => requestActivate(user.id, user.email)}
                     class="text-green-600 hover:text-green-900"
                   >
                     Activate
@@ -231,3 +237,15 @@
     </div>
   {/if}
 </div>
+
+{#if confirmAction}
+  {@const actionText = confirmAction.type === 'approve' ? 'Approve' : confirmAction.type === 'deactivate' ? 'Deactivate' : 'Activate'}
+  {@const message = `Are you sure you want to ${confirmAction.type} user ${confirmAction.email}?`}
+  <ConfirmModal
+    title="{actionText} User"
+    message={message}
+    confirmText={actionText}
+    onConfirm={executeAction}
+    onCancel={() => confirmAction = null}
+  />
+{/if}
