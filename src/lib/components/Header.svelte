@@ -4,6 +4,7 @@
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
+  import { getFontSizeCSS } from '../utils/fontSize';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
@@ -17,6 +18,9 @@
 
   // Check if remember password is enabled
   $: rememberPasswordEnabled = $settings.rememberPassword || false;
+
+  // Compute font size from settings (prevents Safari zoom on mobile)
+  $: searchFontSize = getFontSizeCSS($settings.fontSize);
 
   // Format keyboard shortcuts for display
   $: shortcuts = $settings.keyboardShortcuts;
@@ -132,7 +136,8 @@
           type="text"
           bind:value={$searchQuery}
           placeholder={$_('search.placeholder')}
-          class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          style="font-size: {searchFontSize}"
         />
         {#if $searchQuery}
           <button
@@ -252,7 +257,8 @@
           type="text"
           bind:value={$searchQuery}
           placeholder={$_('search.placeholder')}
-          class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          style="font-size: {searchFontSize}"
         />
         {#if $searchQuery}
           <button
