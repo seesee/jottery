@@ -79,17 +79,17 @@
         {title}
       </h3>
     </div>
-    {#if isHovered}
+    {#if isHovered && !note.pinned}
       <span
         on:click={handleDeleteClick}
         on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}
         role="button"
         tabindex="0"
-        class="ml-2 p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0 cursor-pointer"
-        title={note.pinned ? "Unpin note first to delete" : "Delete note"}
-        aria-label={note.pinned ? "Unpin note first to delete" : "Delete note"}
+        class="absolute top-2 right-2 p-0.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+        title="Delete note"
+        aria-label="Delete note"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </span>

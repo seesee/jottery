@@ -54,6 +54,7 @@ export interface KeyboardShortcut {
 export interface KeyboardShortcuts {
   focusSearch: KeyboardShortcut;
   newNote: KeyboardShortcut;
+  deleteNote: KeyboardShortcut;
   lockApp: KeyboardShortcut;
   openSettings: KeyboardShortcut;
   showShortcuts: KeyboardShortcut;
@@ -226,6 +227,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
 export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   focusSearch: { key: 'k', ctrl: true }, // Ctrl/Cmd+K
   newNote: { key: 'n', alt: true }, // Alt+N
+  deleteNote: { key: 'Delete' }, // Delete key (no modifiers)
   lockApp: { key: 'l', alt: true }, // Alt+L
   openSettings: { key: ',', ctrl: true }, // Ctrl/Cmd+,
   showShortcuts: { key: '/', alt: true }, // Alt+/
