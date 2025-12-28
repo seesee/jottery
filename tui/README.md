@@ -63,7 +63,30 @@ jottery --database /path/to/notes.db
 jottery --debug
 ```
 
-### Export/Import
+### CLI Commands
+
+#### Registration (for sync setup)
+
+```bash
+# Register a new user account on the server
+jottery register-user --server https://your-server.com --email your@email.com
+# Optional: provide password via flag (or will prompt)
+jottery register-user -s https://your-server.com -e your@email.com -p yourpassword
+
+# Register this device with an approved user account
+jottery register-device --server https://your-server.com --email your@email.com
+# Optional: provide device name (default: "TUI")
+jottery register-device -s https://your-server.com -e your@email.com -n "My Laptop"
+```
+
+#### Sync
+
+```bash
+# Manually trigger sync (if already configured)
+jottery sync --password yourpassword
+```
+
+#### Export/Import
 
 ```bash
 # Export notes to JSON (decrypted for backup)
@@ -71,6 +94,37 @@ jottery export --output backup.json --password yourpassword
 
 # Import notes from JSON
 jottery import --input backup.json --password yourpassword
+```
+
+#### Note Management via CLI
+
+```bash
+# Create a note via pipe
+echo "Note content here" | jottery note --password yourpassword
+
+# Create a note with tags
+echo "Task item" | jottery note -p yourpassword --tags todo,work
+
+# Open editor for new note
+jottery note --password yourpassword
+```
+
+#### Other Commands
+
+```bash
+# List all notes
+jottery list --password yourpassword
+# Show note content
+jottery list --password yourpassword --show-content
+
+# Show a specific note
+jottery show <note-id> --password yourpassword
+
+# Delete a note
+jottery delete <note-id> --password yourpassword
+
+# Reset database (deletes all data)
+jottery --reset
 ```
 
 ### First Run
@@ -121,13 +175,57 @@ Press `s` to open the settings panel:
 
 ### Sync Setup
 
-To sync with a Jottery server:
-1. Press `s` to open settings
-2. Navigate to "Sync Enabled" and press `Enter` to enable
-3. Navigate to "Sync Endpoint" and enter your server URL
-4. Copy sync credentials from the web UI
-5. Press `p` in the TUI to paste credentials
-6. Sync will happen automatically every 5 minutes (configurable)
+Jottery now requires user account registration and admin approval before syncing.
+
+#### Step 1: Register User Account
+
+```bash
+jottery register-user --server https://your-server.com --email your@email.com
+```
+
+You'll be prompted to:
+- Enter a password (min 12 characters)
+- This creates your user account on the server
+- Account will be **pending admin approval** initially
+
+#### Step 2: Wait for Admin Approval
+
+The server administrator must approve your account before you can register devices.
+- Contact your administrator after registration
+- They can approve via the admin web dashboard or CLI tool
+
+#### Step 3: Register Your Device
+
+Once approved, register this TUI as a device:
+
+```bash
+jottery register-device --server https://your-server.com --email your@email.com
+```
+
+You'll be prompted for:
+- **Server password**: Your account password from Step 1
+- **Local database password**: Separate password for encrypting your local database
+  - This can be different from your server password
+  - Used to encrypt your local notes database
+  - Required each time you open the TUI (unless "Remember Password" is enabled)
+
+The device registration will:
+- Authenticate with your approved user account
+- Receive an API key from the server
+- Store encrypted credentials in your local database
+- Enable sync automatically
+
+#### Step 4: Use the TUI
+
+After registration, simply run:
+
+```bash
+jottery
+```
+
+- Sync will happen automatically every 5 minutes (configurable)
+- Manual sync: Press `s` → navigate to "Sync Now" → press `Enter`
+- Sync settings available in the settings panel (`s` key)
 
 ## Search Syntax
 
