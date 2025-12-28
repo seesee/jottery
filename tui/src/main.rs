@@ -257,7 +257,6 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
     let api_key = crypto.decrypt_text(&api_key_encrypted, key)?;
 
     let endpoint = metadata.sync_endpoint.clone();
-    let client_id = metadata.client_id.clone().unwrap_or_default();
 
     // PUSH: Get notes modified since last sync
     let notes_to_push = if let Some(last_sync) = metadata.last_sync_at {
@@ -306,16 +305,18 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
 
         // Send push request
         let client = reqwest::blocking::Client::new();
+        let push_url = format!("{}/api/v1/sync/push", endpoint);
         let response = client
-            .post(format!("{}/notes/push", endpoint))
-            .header("X-API-Key", &api_key)
-            .header("X-Client-ID", &client_id)
+            .post(&push_url)
+            .header("Authorization", format!("Bearer {}", api_key))
             .json(&push_request)
             .send()
             .context("Failed to send push request")?;
 
         if !response.status().is_success() {
-            anyhow::bail!("Push failed with status: {}", response.status());
+            let status = response.status();
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Push failed: {} - {}", status, error_text);
         }
 
         let push_response: SyncPushResponse = response.json()
