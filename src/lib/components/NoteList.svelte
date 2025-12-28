@@ -1,22 +1,23 @@
 <script lang="ts">
   import { filteredNotes, notes, searchQuery } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
-  import { onMount, afterUpdate } from 'svelte';
+  import { beforeUpdate, afterUpdate } from 'svelte';
 
   export let onNoteSelect: (() => void) | undefined = undefined;
 
   let scrollContainer: HTMLDivElement;
   let savedScrollTop = 0;
 
-  // Save scroll position before updates
-  $: if ($filteredNotes && scrollContainer) {
-    // Save current scroll position before the list updates
-    savedScrollTop = scrollContainer.scrollTop;
-  }
+  // Save scroll position before DOM updates
+  beforeUpdate(() => {
+    if (scrollContainer) {
+      savedScrollTop = scrollContainer.scrollTop;
+    }
+  });
 
-  // Restore scroll position after updates
+  // Restore scroll position after DOM updates
   afterUpdate(() => {
-    if (scrollContainer && savedScrollTop > 0) {
+    if (scrollContainer && savedScrollTop >= 0) {
       scrollContainer.scrollTop = savedScrollTop;
     }
   });
