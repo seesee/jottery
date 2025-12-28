@@ -64,37 +64,61 @@ export async function exportNotes(noteIds: string[]): Promise<ExportData> {
  */
 async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNote> {
   // Decrypt content
-  const encryptedContent = JSON.parse(note.content);
-  const content = await cryptoService.decryptText(encryptedContent, key);
+  let content: string;
+  try {
+    const encryptedContent = JSON.parse(note.content);
+    content = await cryptoService.decryptText(encryptedContent, key);
+  } catch (parseError) {
+    console.warn(`Note ${note.id} has unencrypted content, using as-is`);
+    content = note.content;
+  }
 
   // Decrypt tags
   let tags: string[] = [];
   if (note.tags.length > 0 && note.tags[0]) {
-    const encryptedTags = JSON.parse(note.tags[0]);
-    tags = await decryptStringArray(encryptedTags, key);
+    try {
+      const encryptedTags = JSON.parse(note.tags[0]);
+      tags = await decryptStringArray(encryptedTags, key);
+    } catch (parseError) {
+      console.warn(`Note ${note.id} has unencrypted tags, using as-is`);
+      tags = note.tags;
+    }
   }
 
   // Decrypt and export attachments
   const exportAttachments: ExportAttachment[] = [];
   for (const attachment of note.attachments) {
-    // Get encrypted blob from storage
-    const encryptedBlob = await attachmentRepository.getBlob(attachment.data);
-    if (!encryptedBlob) continue;
+    try {
+      // Get encrypted blob from storage
+      const encryptedBlob = await attachmentRepository.getBlob(attachment.data);
+      if (!encryptedBlob) continue;
 
-    // Decrypt attachment filename
-    const filenameEncrypted = JSON.parse(attachment.filename);
-    const filename = await cryptoService.decryptText(filenameEncrypted, key);
+      // Decrypt attachment filename
+      // Handle both encrypted (JSON) and plain text filenames for backward compatibility
+      let filename: string;
+      try {
+        const filenameEncrypted = JSON.parse(attachment.filename);
+        filename = await cryptoService.decryptText(filenameEncrypted, key);
+      } catch (parseError) {
+        // If JSON.parse fails, assume it's a plain text filename (old data)
+        console.warn(`Attachment ${attachment.id} has unencrypted filename, using as-is`);
+        filename = attachment.filename;
+      }
 
-    // Decrypt attachment data
-    const encryptedDataJson = new TextDecoder().decode(encryptedBlob);
-    const encryptedData = JSON.parse(encryptedDataJson);
-    const decryptedData = await cryptoService.decryptBinary(encryptedData, key);
+      // Decrypt attachment data
+      const encryptedDataJson = new TextDecoder().decode(encryptedBlob);
+      const encryptedData = JSON.parse(encryptedDataJson);
+      const decryptedData = await cryptoService.decryptBinary(encryptedData, key);
 
-    exportAttachments.push({
-      filename,
-      mimeType: attachment.mimeType,
-      data: arrayBufferToBase64(decryptedData),
-    });
+      exportAttachments.push({
+        filename,
+        mimeType: attachment.mimeType,
+        data: arrayBufferToBase64(decryptedData),
+      });
+    } catch (attachmentError) {
+      console.error(`Failed to export attachment ${attachment.id}:`, attachmentError);
+      // Continue with other attachments instead of failing the entire export
+    }
   }
 
   return {
