@@ -100,7 +100,7 @@ pub async fn approve_user(
     .await?;
 
     tracing::info!("User approved: user_id={}", user_id);
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Deactivate user
@@ -117,16 +117,24 @@ pub async fn deactivate_user(
     .await?;
 
     tracing::info!("User deactivated: user_id={}", user_id);
-    Ok(StatusCode::OK)
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Reactivate user
 /// POST /api/v1/admin/users/:id/activate
 pub async fn activate_user(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
 ) -> AppResult<StatusCode> {
-    // TODO: Implement user reactivation
-    Ok(StatusCode::OK)
+    sqlx::query!(
+        r#"UPDATE users SET is_active = 1 WHERE id = ?"#,
+        user_id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("User activated: user_id={}", user_id);
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Delete user
