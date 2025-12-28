@@ -7,6 +7,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
+use tower_http::services::ServeDir;
 
 mod api;
 mod config;
@@ -85,6 +86,14 @@ async fn main() {
             api::admin::admin_auth_middleware,
         ));
 
+    // Serve admin dashboard static files
+    let admin_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Failed to get parent directory")
+        .join("admin/dist");
+
+    tracing::info!("Serving admin dashboard from: {}", admin_dir.display());
+
     // Build main router
     let app = Router::new()
         // Health check (no auth required)
@@ -96,6 +105,8 @@ async fn main() {
         // Merge protected routes
         .merge(sync_routes)
         .merge(admin_routes)
+        // Serve admin dashboard (must be after API routes to avoid conflicts)
+        .nest_service("/admin", ServeDir::new(admin_dir))
         // Add state
         .with_state(app_state)
         // Add middleware
