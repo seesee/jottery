@@ -1,3 +1,4 @@
+mod api;
 mod crypto;
 mod db;
 mod export;
@@ -100,6 +101,42 @@ enum Commands {
         /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
         password: Option<String>,
+    },
+    /// Register a new user account on the server
+    RegisterUser {
+        /// Server endpoint URL
+        #[arg(short, long)]
+        server: String,
+
+        /// User email
+        #[arg(short, long)]
+        email: String,
+
+        /// Password (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Register this device with the server (requires approved user account)
+    RegisterDevice {
+        /// Server endpoint URL
+        #[arg(short, long)]
+        server: String,
+
+        /// User email
+        #[arg(short, long)]
+        email: String,
+
+        /// Password (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+
+        /// Device name
+        #[arg(short = 'n', long, default_value = "TUI")]
+        device_name: String,
+
+        /// Encryption password for local database
+        #[arg(short = 'k', long)]
+        key_password: Option<String>,
     },
     /// Export notes to JSON file
     Export {
@@ -585,6 +622,137 @@ fn main() -> Result<()> {
                 println!("Tags: {}", note.tags.join(", "));
             }
             println!("\n{}", note.content);
+
+            return Ok(());
+        }
+        Some(Commands::RegisterUser { server, email, password }) => {
+            use api::AuthClient;
+
+            // Get password
+            let password = match password {
+                Some(pwd) => pwd,
+                None => {
+                    print!("Password: ");
+                    io::stdout().flush()?;
+                    rpassword::read_password()?
+                }
+            };
+
+            // Validate password strength
+            if password.len() < 12 {
+                anyhow::bail!("Password must be at least 12 characters");
+            }
+
+            println!("Registering user {} on server {}...", email, server);
+
+            // Create auth client and register
+            let client = AuthClient::new(server.clone());
+
+            // Check server connectivity first
+            if !client.health_check()? {
+                anyhow::bail!("Server {} is not reachable", server);
+            }
+
+            let response = client.register_user(&email, &password)
+                .context("User registration failed")?;
+
+            println!("\n✓ Registration successful!");
+            println!("User ID: {}", response.user_id);
+            println!("Email: {}", response.email);
+            println!("Status: {}", response.status);
+            println!("\n{}", response.message);
+
+            if response.status == "pending_approval" {
+                println!("\nNext steps:");
+                println!("1. Wait for admin approval");
+                println!("2. Once approved, register your device:");
+                println!("   jottery register-device --server {} --email {}", server, email);
+            }
+
+            return Ok(());
+        }
+        Some(Commands::RegisterDevice { server, email, password, device_name, key_password }) => {
+            use api::AuthClient;
+
+            // Get user password
+            let password = match password {
+                Some(pwd) => pwd,
+                None => {
+                    print!("Server password: ");
+                    io::stdout().flush()?;
+                    rpassword::read_password()?
+                }
+            };
+
+            // Get encryption password for local database
+            let key_password = match key_password {
+                Some(pwd) => pwd,
+                None => {
+                    print!("Local database password: ");
+                    io::stdout().flush()?;
+                    let pwd1 = rpassword::read_password()?;
+                    print!("Confirm password: ");
+                    io::stdout().flush()?;
+                    let pwd2 = rpassword::read_password()?;
+
+                    if pwd1 != pwd2 {
+                        anyhow::bail!("Passwords do not match");
+                    }
+                    pwd1
+                }
+            };
+
+            println!("Registering device '{}' for {}...", device_name, email);
+
+            // Create auth client and register device
+            let client = AuthClient::new(server.clone());
+
+            // Check server connectivity first
+            if !client.health_check()? {
+                anyhow::bail!("Server {} is not reachable", server);
+            }
+
+            let response = client.register_device(&email, &password, &device_name, "tui")
+                .context("Device registration failed")?;
+
+            println!("\n✓ Device registered successfully!");
+            println!("Client ID: {}", response.client_id);
+            println!("User ID: {}", response.user_id);
+            println!("Device: {}", response.device_name);
+
+            // Initialize database with encryption password
+            let db = Database::open(&db_path, &key_password)
+                .context("Failed to create database")?;
+
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &key_password)?;
+
+            // Encrypt and store API key
+            let crypto = CryptoService::new();
+            let encrypted_api_key = crypto.encrypt_text(&response.api_key, &key)?;
+            let api_key_json = serde_json::to_string(&encrypted_api_key)?;
+
+            // Store sync configuration
+            let sync_repo = SyncRepository::new(db.connection());
+            let sync_metadata = models::sync::SyncMetadata {
+                last_sync_at: None,
+                last_push_at: None,
+                last_pull_at: None,
+                api_key: Some(api_key_json),
+                client_id: Some(response.client_id),
+                user_email: Some(email.clone()),
+                sync_enabled: true,
+                sync_endpoint: server.clone(),
+                auto_sync_interval: Some(5),
+            };
+
+            sync_repo.update_metadata(&sync_metadata)?;
+
+            println!("\n✓ Sync configured successfully!");
+            println!("\nYou can now:");
+            println!("1. Create notes: jottery note");
+            println!("2. Sync notes: jottery sync");
+            println!("3. Launch TUI: jottery");
 
             return Ok(());
         }
