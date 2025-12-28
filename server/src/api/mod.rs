@@ -48,8 +48,8 @@ pub mod middleware {
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         match result {
-            Some(client) if client.is_active == 1 => {
-                let client_id = client.id.clone().unwrap_or_default();
+            Some(client) if client.is_active == Some(1) => {
+                let client_id = client.id;
 
                 // Add client_id to request extensions
                 request.extensions_mut().insert(client_id.clone());

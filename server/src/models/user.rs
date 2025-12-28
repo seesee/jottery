@@ -8,12 +8,12 @@ pub struct User {
     pub email: String,
     pub password_hash: String,
     pub created_at: String,
-    pub approved: i32,              // SQLite uses INTEGER for BOOLEAN (0/1)
+    pub approved: i64,               // SQLite uses INTEGER for BOOLEAN (0/1)
     pub approved_at: Option<String>,
     pub approved_by: Option<String>,
-    pub is_active: i32,             // 0/1
-    pub is_admin: i32,              // 0/1
-    pub storage_quota_mb: i32,
+    pub is_active: i64,              // 0/1
+    pub is_admin: i64,               // 0/1
+    pub storage_quota_mb: Option<i64>, // Can be NULL in DB (has DEFAULT but no NOT NULL)
     pub last_login_at: Option<String>,
 }
 
@@ -97,9 +97,9 @@ pub struct UserListItem {
     #[serde(rename = "createdAt")]
     pub created_at: String,
     #[serde(rename = "deviceCount")]
-    pub device_count: i32,
+    pub device_count: i64,
     #[serde(rename = "noteCount")]
-    pub note_count: i32,
+    pub note_count: i64,
 }
 
 /// User detail (for admin dashboard)
@@ -119,5 +119,5 @@ pub struct UserDetail {
     #[serde(rename = "lastLoginAt")]
     pub last_login_at: Option<String>,
     #[serde(rename = "storageQuotaMb")]
-    pub storage_quota_mb: i32,
+    pub storage_quota_mb: i64,
 }
