@@ -82,6 +82,7 @@ impl Database {
             (3, include_str!("../migrations/003_add_remember_password.sql")),
             (4, include_str!("../migrations/004_update_syntax_default.sql")),
             (5, include_str!("../migrations/005_add_note_versions.sql")),
+            (6, include_str!("../migrations/006_add_user_email.sql")),
         ];
 
         // Run pending migrations
