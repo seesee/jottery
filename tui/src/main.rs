@@ -468,12 +468,20 @@ fn main() -> Result<()> {
             note_repo.create(&note, &key)?;
             println!("✓ Note created: {}", &note.id[..8]);
 
-            // Check sync status
+            // Auto-sync if configured
             let sync_repo = SyncRepository::new(db.connection());
             if let Ok(Some(metadata)) = sync_repo.get_metadata() {
                 if metadata.sync_enabled {
-                    println!("✓ Note will sync next time you run the TUI (manual sync or auto-sync)");
-                    println!("  Or run: jottery sync");
+                    println!("Syncing to {}...", metadata.sync_endpoint);
+                    match perform_cli_sync(&db, &key, metadata) {
+                        Ok(count) => {
+                            println!("✓ Synced {} note(s) to server", count);
+                        }
+                        Err(e) => {
+                            eprintln!("⚠ Sync failed: {}", e);
+                            eprintln!("  Note saved locally. Run 'jottery sync' to retry.");
+                        }
+                    }
                 }
             }
 
