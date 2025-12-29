@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(size), 0) FROM attachments_meta\n         WHERE note_id IN (SELECT id FROM notes WHERE user_id = ? AND deleted = 0)",
+  "describe": {
+    "columns": [
+      {
+        "name": "COALESCE(SUM(size), 0)",
+        "ordinal": 0,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8bd96c7321ee80973ee1a40436a9a5dced031bc2ec7ad2f5dd49f3f324ede448"
+}

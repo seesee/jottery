@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    INSERT INTO attachments_meta (id, note_id, note_user_id, filename, mime_type, size, created_at)\n                    VALUES (?, ?, ?, ?, ?, ?, ?)\n                    ON CONFLICT(id) DO UPDATE SET\n                        filename = excluded.filename,\n                        mime_type = excluded.mime_type,\n                        size = excluded.size\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "d7c9ca48b9d13e55505a59197c29defbfffad58ea69d7982c877a5d4ca43bca7"
+}

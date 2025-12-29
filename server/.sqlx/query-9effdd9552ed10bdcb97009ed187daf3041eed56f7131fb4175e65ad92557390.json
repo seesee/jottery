@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                INSERT INTO notes (\n                    id, user_id, client_id, created_at, modified_at, server_modified_at,\n                    content, tags, pinned, deleted, deleted_at, version, server_version,\n                    word_wrap, syntax_language\n                )\n                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                ON CONFLICT(id, user_id) DO UPDATE SET\n                    modified_at = excluded.modified_at,\n                    server_modified_at = excluded.server_modified_at,\n                    content = excluded.content,\n                    tags = excluded.tags,\n                    pinned = excluded.pinned,\n                    deleted = excluded.deleted,\n                    deleted_at = excluded.deleted_at,\n                    version = excluded.version,\n                    server_version = excluded.server_version,\n                    word_wrap = excluded.word_wrap,\n                    syntax_language = excluded.syntax_language\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 15
+    },
+    "nullable": []
+  },
+  "hash": "9effdd9552ed10bdcb97009ed187daf3041eed56f7131fb4175e65ad92557390"
+}
