@@ -124,6 +124,7 @@ impl SessionRepository {
     }
 
     /// Delete all sessions for a user
+    #[allow(dead_code)]
     pub async fn delete_all_for_user(
         pool: &SqlitePool,
         user_id: &str,
@@ -139,6 +140,7 @@ impl SessionRepository {
     }
 
     /// Delete expired sessions (cleanup)
+    #[allow(dead_code)]
     pub async fn delete_expired(pool: &SqlitePool) -> Result<u64, sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -153,6 +155,7 @@ impl SessionRepository {
     }
 
     /// Get all active sessions for a user
+    #[allow(dead_code)]
     pub async fn get_by_user(pool: &SqlitePool, user_id: &str) -> Result<Vec<Session>, sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -171,6 +174,7 @@ impl SessionRepository {
     }
 
     /// Count active sessions
+    #[allow(dead_code)]
     pub async fn count_active(pool: &SqlitePool) -> Result<i64, sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 

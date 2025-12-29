@@ -85,6 +85,7 @@ pub struct UserInfo {
 }
 
 /// User list item (for admin dashboard)
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct UserListItem {
     pub id: String,
@@ -103,6 +104,7 @@ pub struct UserListItem {
 }
 
 /// User detail (for admin dashboard)
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct UserDetail {
     pub id: String,

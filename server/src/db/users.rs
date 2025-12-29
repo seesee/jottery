@@ -67,6 +67,7 @@ impl UserRepository {
     }
 
     /// Get all users (for admin)
+    #[allow(dead_code)]
     pub async fn get_all(pool: &SqlitePool) -> Result<Vec<User>, sqlx::Error> {
         sqlx::query_as!(
             User,
@@ -77,6 +78,7 @@ impl UserRepository {
     }
 
     /// Get pending users (not yet approved)
+    #[allow(dead_code)]
     pub async fn get_pending(pool: &SqlitePool) -> Result<Vec<User>, sqlx::Error> {
         sqlx::query_as!(
             User,
@@ -87,6 +89,7 @@ impl UserRepository {
     }
 
     /// Approve a user
+    #[allow(dead_code)]
     pub async fn approve(
         pool: &SqlitePool,
         user_id: &str,
@@ -111,6 +114,7 @@ impl UserRepository {
     }
 
     /// Deactivate a user
+    #[allow(dead_code)]
     pub async fn deactivate(pool: &SqlitePool, user_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
@@ -123,6 +127,7 @@ impl UserRepository {
     }
 
     /// Reactivate a user
+    #[allow(dead_code)]
     pub async fn activate(pool: &SqlitePool, user_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"UPDATE users SET is_active = 1 WHERE id = ?"#,
@@ -150,6 +155,7 @@ impl UserRepository {
     }
 
     /// Delete a user (hard delete)
+    #[allow(dead_code)]
     pub async fn delete(pool: &SqlitePool, user_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"DELETE FROM users WHERE id = ?"#,
@@ -162,6 +168,7 @@ impl UserRepository {
     }
 
     /// Get user count by approval status
+    #[allow(dead_code)]
     pub async fn get_count_by_status(
         pool: &SqlitePool,
     ) -> Result<(i64, i64, i64), sqlx::Error> {
@@ -187,6 +194,7 @@ impl UserRepository {
     }
 
     /// Get note count for a user
+    #[allow(dead_code)]
     pub async fn get_note_count(pool: &SqlitePool, user_id: &str) -> Result<i64, sqlx::Error> {
         let result = sqlx::query!(
             r#"SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND deleted = 0"#,
@@ -199,6 +207,7 @@ impl UserRepository {
     }
 
     /// Get device count for a user
+    #[allow(dead_code)]
     pub async fn get_device_count(pool: &SqlitePool, user_id: &str) -> Result<i64, sqlx::Error> {
         let result = sqlx::query!(
             r#"SELECT COUNT(*) as count FROM clients WHERE user_id = ? AND is_active = 1"#,

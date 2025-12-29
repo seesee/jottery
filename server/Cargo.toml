@@ -3,6 +3,10 @@ name = "jottery-server"
 version = "0.6.7"
 edition = "2021"
 
+[lib]
+name = "jottery_server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "jottery-server"
 path = "src/main.rs"
@@ -10,6 +14,10 @@ path = "src/main.rs"
 [[bin]]
 name = "jottery-admin"
 path = "src/admin.rs"
+
+[[bin]]
+name = "gen_password_hash"
+path = "src/bin/gen_password_hash.rs"
 
 [dependencies]
 # Web framework

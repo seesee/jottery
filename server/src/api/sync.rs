@@ -129,6 +129,7 @@ pub async fn push(
                 .unwrap_or(1);
 
             // Upsert note (with both user_id for access control and client_id for audit)
+            // Use composite primary key (id, user_id) to allow same note UUIDs across users
             sqlx::query!(
                 r#"
                 INSERT INTO notes (
@@ -137,7 +138,7 @@ pub async fn push(
                     word_wrap, syntax_language
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
+                ON CONFLICT(id, user_id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
                     content = excluded.content,
@@ -179,8 +180,8 @@ pub async fn push(
             for attachment_ref in &note.attachments {
                 sqlx::query!(
                     r#"
-                    INSERT INTO attachments_meta (id, note_id, filename, mime_type, size, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO attachments_meta (id, note_id, note_user_id, filename, mime_type, size, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         filename = excluded.filename,
                         mime_type = excluded.mime_type,
@@ -188,6 +189,7 @@ pub async fn push(
                     "#,
                     attachment_ref.id,
                     note.id,
+                    client_info.user_id,
                     attachment_ref.filename,
                     attachment_ref.mime_type,
                     attachment_ref.size,
@@ -228,16 +230,17 @@ pub async fn push(
         sqlx::query!(
             r#"
             INSERT INTO note_versions (
-                version_key, note_id, client_id, version, created_at, synced_at,
+                version_key, note_id, user_id, client_id, version, created_at, synced_at,
                 server_synced_at, content, tags, attachments, syntax_language, word_wrap, reason
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
             ON CONFLICT(version_key) DO UPDATE SET
                 synced_at = excluded.synced_at,
                 server_synced_at = excluded.server_synced_at
             "#,
             version.version_key,
             version.note_id,
+            client_info.user_id,
             client_info.client_id,
             version.version,
             version.created_at,
@@ -314,7 +317,7 @@ pub async fn pull(
 
         rows.into_iter()
             .filter_map(|row| Some(crate::models::Note {
-                id: row.id?,
+                id: row.id,
                 client_id: row.client_id,
                 created_at: row.created_at,
                 modified_at: row.modified_at,
@@ -340,7 +343,7 @@ pub async fn pull(
 
         rows.into_iter()
             .filter_map(|row| Some(crate::models::Note {
-                id: row.id?,
+                id: row.id,
                 client_id: row.client_id,
                 created_at: row.created_at,
                 modified_at: row.modified_at,

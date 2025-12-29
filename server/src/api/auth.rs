@@ -258,6 +258,7 @@ pub async fn login(
 
 /// Logout endpoint
 /// Invalidates the current session
+#[allow(dead_code)]
 pub async fn logout(
     State(state): State<Arc<AppState>>,
     session_id: String, // TODO: Extract from auth middleware

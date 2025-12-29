@@ -14,7 +14,7 @@ pub mod middleware {
     use sha2::{Sha256, Digest};
     use std::sync::Arc;
 
-    use crate::{AppState, db::SessionRepository, models::Session};
+    use crate::{AppState, db::SessionRepository};
 
     /// Client information extracted from API key authentication
     /// Contains both client_id (for audit trail) and user_id (for access control)

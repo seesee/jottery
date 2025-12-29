@@ -83,6 +83,29 @@ curl http://localhost:3030/health
 # Should return: OK
 ```
 
+## Admin Dashboard
+
+The server includes a web-based admin dashboard for managing users, viewing statistics, and monitoring server activity.
+
+### Accessing the Dashboard
+
+Navigate to: `http://localhost:3030/admin`
+
+### Default Credentials
+
+**⚠️ IMPORTANT: Change the default password immediately after first login!**
+
+- **Email**: `admin@localhost`
+- **Password**: `changeme`
+
+### Admin Features
+
+- User management (approve/deactivate users)
+- View server statistics (notes, storage, sync activity)
+- Browse note metadata (IDs, timestamps - content remains encrypted)
+- Audit log of sync operations
+- Device management
+
 ## API Endpoints
 
 ### Authentication

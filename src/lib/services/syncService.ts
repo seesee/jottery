@@ -142,6 +142,10 @@ class SyncService {
    * Perform full bidirectional sync
    */
   async syncNow(forceFullSync = false): Promise<{ success: boolean; error?: string }> {
+    console.log('[SyncService] ========================================');
+    console.log('[SyncService] syncNow() called with forceFullSync =', forceFullSync);
+    console.log('[SyncService] ========================================');
+
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
@@ -171,6 +175,7 @@ class SyncService {
       }
 
       // 2. Push local changes (force full sync if requested)
+      console.log('[SyncService] About to call push() with forceFullSync =', forceFullSync);
       await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
 
       // 3. Pull remote changes
@@ -206,26 +211,33 @@ class SyncService {
    * Push local changes to server
    */
   private async push(endpoint: string, apiKey: string, forceAll = false): Promise<void> {
+    console.log('[SyncService] ========== PUSH START ==========');
+    console.log('[SyncService] Push called with forceAll =', forceAll);
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
+    console.log('[SyncService] Last sync timestamp:', metadata?.lastSyncAt || 'NEVER');
 
     let modifiedNotes: Note[];
     if (forceAll) {
       // Force push ALL notes, regardless of timestamps
       console.log('[SyncService] Force sync enabled - pushing all notes');
       modifiedNotes = await noteRepository.getAll();
+      console.log('[SyncService] Retrieved ALL notes from repository:', modifiedNotes.length);
+      console.log('[SyncService] Note IDs:', modifiedNotes.map(n => n.id));
     } else {
       // Only push notes modified since last sync
       const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
+      console.log('[SyncService] Getting notes modified after:', lastSyncAt);
       modifiedNotes = await noteRepository.getModifiedAfter(lastSyncAt);
+      console.log('[SyncService] Retrieved modified notes:', modifiedNotes.length);
     }
 
     if (modifiedNotes.length === 0) {
-      console.log('[SyncService] No notes to push');
+      console.log('[SyncService] No notes to push - exiting');
       return; // Nothing to push
     }
 
-    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes`);
+    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes to server`);
 
     // Collect attachments for all modified notes
     const attachmentMap = new Map<string, string>();

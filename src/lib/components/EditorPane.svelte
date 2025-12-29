@@ -1150,10 +1150,40 @@
   noteId={$selectedNote?.id}
   currentVersion={$selectedNote?.version}
   onClose={() => showVersionHistory = false}
-  onRestore={async (version) => {
-    await noteService.loadNoteById($selectedNote!.id);
-    // Reload note from database to get updated content
-    const updatedNote = await noteService.getNote($selectedNote!.id);
+  onRestore={async (versionNumber) => {
+    if (!$selectedNote?.id) return;
+
+    // Get the version to restore
+    const version = await versionRepository.getVersion($selectedNote.id, versionNumber);
+    if (!version) {
+      console.error(`Version ${versionNumber} not found`);
+      return;
+    }
+
+    // Get current note
+    const currentNote = await noteRepository.getById($selectedNote.id);
+    if (!currentNote) {
+      console.error(`Note ${$selectedNote.id} not found`);
+      return;
+    }
+
+    // Snapshot current state before restoring
+    await versionRepository.createVersion(currentNote, {
+      syncedAt: new Date().toISOString(),
+      reason: 'manual-sync',
+    });
+
+    // Restore version data to the note in database
+    currentNote.content = version.content;
+    currentNote.tags = version.tags;
+    currentNote.attachments = version.attachments;
+    currentNote.syntaxLanguage = version.syntaxLanguage;
+    currentNote.wordWrap = version.wordWrap;
+
+    await noteRepository.update(currentNote);
+
+    // Reload the note to get decrypted content for display
+    const updatedNote = await noteService.getNote($selectedNote.id);
     if (updatedNote) {
       content = updatedNote.content;
       tags = updatedNote.tags;
@@ -1161,6 +1191,11 @@
       language = updatedNote.syntaxLanguage || 'plain';
       wordWrap = updatedNote.wordWrap ?? true;
       showPreview = updatedNote.showPreview ?? false;
+
+      // Refresh the note in the notes list
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
     }
   }}
 />

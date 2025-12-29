@@ -85,10 +85,5 @@
         {loading ? 'Signing in...' : 'Sign in'}
       </button>
     </form>
-
-    <div class="mt-6 text-center text-sm text-gray-600">
-      <p>Default credentials: admin@localhost / admin</p>
-      <p class="text-xs mt-2 text-gray-500">Change password after first login</p>
-    </div>
   </div>
 </div>

@@ -45,7 +45,7 @@ INSERT INTO users (id, email, password_hash, created_at, approved, is_admin, is_
 VALUES (
     '00000000-0000-0000-0000-000000000001',
     'admin@localhost',
-    '$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHRzYWx0c2FsdA$7YwBR5Iy8dn9W+oMq8K7vw9r8NvJ6cVPKxZ6Uw9J9Qw',
+    '$argon2id$v=19$m=19456,t=2,p=1$EVQp6JMJNY3JYI2sPBp58Q$ooV7ZZOE7PuFFrJA60P0cYLiQH3k7CdBMLaF5bakVUA',
     datetime('now'),
     1,  -- Pre-approved
     1,  -- Is admin

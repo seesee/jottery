@@ -13,6 +13,7 @@ pub struct Client {
     pub is_active: i32,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct RegisterRequest {
     #[serde(rename = "deviceName")]
@@ -21,6 +22,7 @@ pub struct RegisterRequest {
     pub device_type: String,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct RegisterResponse {
     #[serde(rename = "apiKey")]

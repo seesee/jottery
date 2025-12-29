@@ -103,7 +103,7 @@ pub async fn login(
     let expires_at_str = expires_at.to_rfc3339();
 
     // Create session
-    let session = SessionRepository::create(
+    let _session = SessionRepository::create(
         &state.pool,
         CreateSessionParams {
             user_id: user.id.clone(),
