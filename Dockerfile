@@ -35,7 +35,6 @@ RUN npm install
 COPY admin/src ./src
 COPY admin/public ./public
 COPY admin/index.html .
-COPY admin/tsconfig.json .
 COPY admin/svelte.config.js .
 COPY admin/tailwind.config.js .
 COPY admin/postcss.config.js .

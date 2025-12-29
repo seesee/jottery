@@ -2,10 +2,16 @@
     root * /app/dist
     file_server
 
-    reverse_proxy /api* jottery:3030
+    # Proxy API requests to backend server
+    reverse_proxy /api* localhost:3030
 
+    # Proxy admin dashboard to backend server
+    reverse_proxy /admin* localhost:3030
+
+    # SPA fallback: rewrite non-static, non-API, non-admin requests to index.html
     @notStatic {
         not path /api*
+        not path /admin*
         not file
     }
     rewrite @notStatic /index.html
