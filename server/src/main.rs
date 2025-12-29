@@ -68,6 +68,15 @@ async fn main() {
             api::middleware::auth_middleware,
         ));
 
+    // Build protected user routes with session auth middleware (for account management)
+    let user_routes = Router::new()
+        .route("/api/v1/user/account", get(api::user::get_account_info))
+        .route("/api/v1/user/notes", delete(api::user::delete_all_notes))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            api::middleware::user_auth_middleware,
+        ));
+
     // Build protected admin routes with session auth middleware
     let admin_routes = Router::new()
         .route("/api/v1/admin/users", get(api::admin::users::list_users))
@@ -104,8 +113,10 @@ async fn main() {
         .route("/api/v1/auth/register-user", post(api::auth::register_user))
         .route("/api/v1/auth/register-device", post(api::auth::register_device))
         .route("/api/v1/auth/login", post(api::auth::login))
+        .route("/api/v1/user/login", post(api::user::login))
         // Merge protected routes
         .merge(sync_routes)
+        .merge(user_routes)
         .merge(admin_routes)
         // Serve admin dashboard (must be after API routes to avoid conflicts)
         .nest_service("/admin", ServeDir::new(admin_dir))
