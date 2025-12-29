@@ -1332,43 +1332,70 @@
                 </p>
               </div>
 
-              <!-- Multi-User Registration Flow -->
+              <!-- Device Sync Setup -->
               {#if registrationMode === 'select'}
-                <!-- Mode Selection -->
                 <div class="space-y-3">
-                  <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Choose registration method:
+                  <!-- Primary Method: Import Credentials -->
+                  <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500 dark:border-blue-600 rounded-lg p-4">
+                    <div class="flex items-start gap-3 mb-3">
+                      <span class="text-2xl">🔐</span>
+                      <div class="flex-1">
+                        <div class="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                          Import Sync Credentials
+                        </div>
+                        <div class="text-xs text-blue-800 dark:text-blue-200 mb-2">
+                          <strong>Recommended:</strong> Most secure method for adding new devices
+                        </div>
+                        <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                          <div>✓ Zero-knowledge encryption (server cannot decrypt your notes)</div>
+                          <div>✓ Copy credentials from your first device</div>
+                          <div>✓ All devices use the same encryption key</div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      on:click={() => showImportCredentials = !showImportCredentials}
+                      class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                    >
+                      📋 Import Credentials from Another Device
+                    </button>
                   </div>
-                  <button
-                    on:click={() => registrationMode = 'newUser'}
-                    class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors text-left flex items-start gap-3"
-                  >
-                    <span class="text-xl">👤</span>
-                    <div>
-                      <div class="font-semibold">Register New User Account</div>
-                      <div class="text-xs opacity-90">Create a new account (requires admin approval)</div>
+
+                  <!-- Account Management (Not for Sync) -->
+                  <details class="group">
+                    <summary class="cursor-pointer list-none">
+                      <div class="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-3 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center gap-2">
+                            <span class="text-lg">👤</span>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Account Management
+                            </span>
+                          </div>
+                          <span class="text-xs text-gray-500 dark:text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                        </div>
+                      </div>
+                    </summary>
+                    <div class="mt-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg">
+                      <div class="text-xs text-yellow-800 dark:text-yellow-200 mb-3">
+                        <strong>⚠️ Note:</strong> Email/password accounts are for server administration only (admin dashboard access, account deletion, subscription management). They do NOT enable device sync - you must use credential import above.
+                      </div>
+                      <div class="space-y-2">
+                        <button
+                          on:click={() => registrationMode = 'newUser'}
+                          class="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded transition-colors text-left"
+                        >
+                          Create Account (for admin access)
+                        </button>
+                        <button
+                          on:click={() => registrationMode = 'existingUser'}
+                          class="w-full px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded transition-colors text-left"
+                        >
+                          Link Existing Account (optional)
+                        </button>
+                      </div>
                     </div>
-                  </button>
-                  <button
-                    on:click={() => registrationMode = 'existingUser'}
-                    class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors text-left flex items-start gap-3"
-                  >
-                    <span class="text-xl">🔐</span>
-                    <div>
-                      <div class="font-semibold">Have an Account? Register Device</div>
-                      <div class="text-xs opacity-90">Already approved by admin? Register this device</div>
-                    </div>
-                  </button>
-                  <button
-                    on:click={() => showImportCredentials = !showImportCredentials}
-                    class="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors text-left flex items-start gap-3"
-                  >
-                    <span class="text-xl">📋</span>
-                    <div>
-                      <div class="font-semibold">Use Existing Credentials</div>
-                      <div class="text-xs opacity-90">Import from another device (legacy method)</div>
-                    </div>
-                  </button>
+                  </details>
                 </div>
               {:else if registrationMode === 'newUser'}
                 <!-- New User Registration Flow -->
@@ -1457,15 +1484,18 @@
                       {registeringDevice ? 'Registering Device...' : 'Register This Device'}
                     </button>
                   {:else if registrationStep === 'complete'}
-                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3">
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
                       <div class="flex items-start gap-2">
-                        <span class="text-xl">✅</span>
+                        <span class="text-xl">⚠️</span>
                         <div>
-                          <div class="font-semibold text-sm text-green-900 dark:text-green-100">
-                            Registration Complete!
+                          <div class="font-semibold text-sm text-yellow-900 dark:text-yellow-100">
+                            Account Created (Admin Access Only)
                           </div>
-                          <p class="text-xs text-green-800 dark:text-green-200 mt-1">
-                            Your device is now registered and sync is enabled.
+                          <p class="text-xs text-yellow-800 dark:text-yellow-200 mt-2">
+                            Your account is ready for server administration, but <strong>device sync is NOT enabled yet</strong>.
+                          </p>
+                          <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-2 font-medium">
+                            To enable sync on this device, you must import credentials from another device using the "Import Sync Credentials" option above.
                           </p>
                         </div>
                       </div>
@@ -1473,11 +1503,11 @@
                   {/if}
                 </div>
               {:else if registrationMode === 'existingUser'}
-                <!-- Existing User Device Registration -->
-                <div class="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20 space-y-3">
+                <!-- Link Existing Account (Optional) -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
                   <div class="flex items-center justify-between mb-2">
                     <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                      Register Device for Existing Account
+                      Link Account (Optional)
                     </h4>
                     <button
                       on:click={resetRegistrationFlow}
@@ -1486,6 +1516,13 @@
                       ← Back
                     </button>
                   </div>
+
+                  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3 mb-3">
+                    <p class="text-xs text-blue-800 dark:text-blue-200">
+                      ℹ️ This feature is for future use (admin dashboard access, subscription management). It does <strong>not</strong> enable sync on this device.
+                    </p>
+                  </div>
+
                   <div>
                     <label for="existing-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Email Address
@@ -1511,12 +1548,14 @@
                     />
                   </div>
                   <button
-                    on:click={handleRegisterDevice}
-                    disabled={!syncEndpoint || !userEmail || !userPassword || !deviceName.trim() || registeringDevice}
-                    class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
+                    disabled
+                    class="w-full px-4 py-2 bg-gray-400 text-white text-sm font-medium rounded-md cursor-not-allowed"
                   >
-                    {registeringDevice ? 'Registering Device...' : 'Register This Device'}
+                    Coming Soon
                   </button>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                    Account linking will be enabled in a future update
+                  </p>
                 </div>
               {/if}
 
