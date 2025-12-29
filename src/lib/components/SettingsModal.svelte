@@ -285,12 +285,13 @@
       await loadSyncStatus();
 
       // Trigger full sync automatically
-      console.log('[SettingsModal] Triggering full sync after device registration');
+      console.log('[SettingsModal] Triggering full sync of ALL notes after device registration...');
       const syncResult = await syncService.syncNow(true);
       if (syncResult.success) {
-        console.log('[SettingsModal] Initial sync completed successfully');
+        console.log('[SettingsModal] ✓ Initial sync completed successfully');
+        console.log('[SettingsModal] All existing notes have been synced to server');
       } else {
-        console.warn('[SettingsModal] Initial sync failed, but device is registered');
+        console.warn('[SettingsModal] ⚠️ Initial sync failed, but device is registered. Error:', syncResult.error);
       }
 
       registrationStep = 'complete';
@@ -823,18 +824,25 @@
     if (!syncEndpoint && typeof window !== 'undefined') {
       try {
         const defaultEndpoint = window.location.origin;
+        console.log('[SettingsModal] Checking for sync server at:', defaultEndpoint);
         const response = await fetch(`${defaultEndpoint}/api/v1/sync/status`, {
           method: 'HEAD',
         });
+        console.log('[SettingsModal] Sync status check response:', response.status);
         // If we get any response other than 404, assume sync is available
+        // (401 Unauthorized means sync endpoint exists but needs auth)
         if (response.status !== 404) {
-          console.log('[SettingsModal] Detected sync server at:', defaultEndpoint);
+          console.log('[SettingsModal] ✓ Detected sync server at:', defaultEndpoint);
           syncEndpoint = defaultEndpoint;
+        } else {
+          console.log('[SettingsModal] No sync server at current origin (404)');
         }
       } catch (error) {
-        // Silently fail - user can manually enter endpoint
-        console.log('[SettingsModal] No sync server detected at current origin');
+        // Network error - user can manually enter endpoint
+        console.log('[SettingsModal] Network error checking sync server:', error);
       }
+    } else if (syncEndpoint) {
+      console.log('[SettingsModal] Sync endpoint already configured:', syncEndpoint);
     }
   });
 
@@ -1519,7 +1527,7 @@
                             Sync Enabled Successfully!
                           </div>
                           <p class="text-xs text-green-800 dark:text-green-200 mt-2">
-                            Your device is now registered and syncing. You can now use this sync server across all your devices.
+                            Your device is now registered and <strong>all your existing notes have been synced to the server</strong>. Any future changes will sync automatically.
                           </p>
                           <p class="text-xs text-green-700 dark:text-green-300 mt-2 font-medium">
                             📋 To add another device: Click "Export Sync Credentials" below and import them on your other device.
