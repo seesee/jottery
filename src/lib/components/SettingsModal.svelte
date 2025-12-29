@@ -399,14 +399,27 @@
     loadingAccountInfo = true;
     syncError = '';
     try {
-      const response = await fetch(`${syncEndpoint}/api/v1/user/account`, {
+      const accountUrl = `${syncEndpoint}/api/v1/user/account`;
+      console.log('[SettingsModal] Fetching account info from:', accountUrl);
+      console.log('[SettingsModal] Using session token:', userSession.sessionId);
+
+      const response = await fetch(accountUrl, {
         headers: {
           'Authorization': `Bearer ${userSession.sessionId}`,
         },
       });
 
+      console.log('[SettingsModal] Account info response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch account info');
+        let errorMessage = `Failed to fetch account info (${response.status})`;
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       accountInfo = await response.json();
