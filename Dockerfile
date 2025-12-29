@@ -33,7 +33,6 @@ RUN npm install
 
 # Copy rest of admin dashboard source
 COPY admin/src ./src
-COPY admin/public ./public
 COPY admin/index.html .
 COPY admin/svelte.config.js .
 COPY admin/tailwind.config.js .
