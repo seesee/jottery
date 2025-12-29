@@ -148,9 +148,23 @@ class ApiClient {
     return this.request('DELETE', `/api/v1/admin/users/${id}`);
   }
 
+  async toggleAdmin(id: string, isAdmin: boolean): Promise<void> {
+    return this.request('POST', `/api/v1/admin/users/${id}/toggle-admin`, {
+      is_admin: isAdmin,
+    });
+  }
+
   // Admin - Stats
   async getStats(): Promise<StatsResponse> {
     return this.request('GET', '/api/v1/admin/stats');
+  }
+
+  // Admin - Password
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return this.request('POST', '/api/v1/admin/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
   }
 }
 

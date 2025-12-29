@@ -24,13 +24,29 @@
   $: useMobileLayout = $settings.layoutMode === 'mobile' ||
     ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
 
-  async function handleNewNote() {
-    // Enter draft mode instead of immediately creating a note
-    // The note will be created when content is added in EditorPane
-    enterDraftMode();
+  let creatingNote = false;
 
-    // Switch to editor view on mobile
-    mobileView = 'editor';
+  async function handleNewNote() {
+    if (creatingNote) return; // Prevent multiple clicks
+
+    creatingNote = true;
+    try {
+      // Create empty note immediately
+      const newNote = await noteService.createNote('', []);
+
+      // Reload notes and select the new one
+      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      notes.set(allNotes);
+      searchService.indexNotes(allNotes);
+      selectNote(newNote.id);
+
+      // Switch to editor view on mobile
+      mobileView = 'editor';
+    } catch (error) {
+      console.error('Failed to create note:', error);
+    } finally {
+      creatingNote = false;
+    }
   }
 
   function handleOpenSettings() {
@@ -237,6 +253,7 @@
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
         forceMobileLayout={useMobileLayout}
+        disableNewNote={creatingNote}
       />
 
       <main class="flex-1 overflow-hidden flex">

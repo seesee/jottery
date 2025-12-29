@@ -141,7 +141,7 @@ class SyncService {
   /**
    * Perform full bidirectional sync
    */
-  async syncNow(): Promise<{ success: boolean; error?: string }> {
+  async syncNow(forceFullSync = false): Promise<{ success: boolean; error?: string }> {
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
@@ -170,8 +170,8 @@ class SyncService {
         // Continue anyway - server might be slow but still functional
       }
 
-      // 2. Push local changes
-      await this.push(metadata.syncEndpoint, apiKey);
+      // 2. Push local changes (force full sync if requested)
+      await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
 
       // 3. Pull remote changes
       await this.pull(metadata.syncEndpoint, apiKey);
@@ -205,13 +205,20 @@ class SyncService {
   /**
    * Push local changes to server
    */
-  private async push(endpoint: string, apiKey: string): Promise<void> {
+  private async push(endpoint: string, apiKey: string, forceAll = false): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
-    const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
 
-    // Get notes modified since last sync
-    const modifiedNotes = await noteRepository.getModifiedAfter(lastSyncAt);
+    let modifiedNotes: Note[];
+    if (forceAll) {
+      // Force push ALL notes, regardless of timestamps
+      console.log('[SyncService] Force sync enabled - pushing all notes');
+      modifiedNotes = await noteRepository.getAll();
+    } else {
+      // Only push notes modified since last sync
+      const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
+      modifiedNotes = await noteRepository.getModifiedAfter(lastSyncAt);
+    }
 
     if (modifiedNotes.length === 0) {
       console.log('[SyncService] No notes to push');

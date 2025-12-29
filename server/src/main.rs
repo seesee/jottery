@@ -75,12 +75,14 @@ async fn main() {
         .route("/api/v1/admin/users/:id/approve", post(api::admin::users::approve_user))
         .route("/api/v1/admin/users/:id/deactivate", post(api::admin::users::deactivate_user))
         .route("/api/v1/admin/users/:id/activate", post(api::admin::users::activate_user))
+        .route("/api/v1/admin/users/:id/toggle-admin", post(api::admin::users::toggle_admin))
         .route("/api/v1/admin/users/:id", delete(api::admin::users::delete_user))
         .route("/api/v1/admin/users/:id/devices", get(api::admin::users::list_user_devices))
         .route("/api/v1/admin/devices/:id", delete(api::admin::users::revoke_device))
         .route("/api/v1/admin/stats", get(api::admin::stats::get_stats))
         .route("/api/v1/admin/audit", get(api::admin::stats::get_audit_log))
         .route("/api/v1/admin/notes/metadata", get(api::admin::stats::get_notes_metadata))
+        .route("/api/v1/admin/change-password", post(api::admin::users::change_password))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             api::admin::admin_auth_middleware,

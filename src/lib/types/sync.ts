@@ -9,6 +9,8 @@ export interface SyncMetadata {
   lastPullAt?: string;            // ISO 8601 - last pull attempt
   apiKey?: string;                // Encrypted API key (JSON stringified EncryptionResult)
   clientId?: string;              // UUID assigned by server
+  userId?: string;                // User ID (for multi-user systems)
+  userEmail?: string;             // User email (for multi-user systems)
   syncEnabled: boolean;
   syncEndpoint: string;
   autoSyncInterval?: number;      // Minutes (0 = disabled, default: 5)

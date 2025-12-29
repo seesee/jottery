@@ -215,7 +215,17 @@
       }
     } catch (error) {
       console.error('User registration failed:', error);
-      syncError = error instanceof Error ? error.message : 'User registration failed';
+      const errorMessage = error instanceof Error ? error.message : 'User registration failed';
+
+      // Handle "Email already registered" - allow resuming registration
+      if (errorMessage.includes('Email already registered')) {
+        console.log('[SettingsModal] Email already registered, proceeding to device registration step');
+        // Assume they might be approved and let device registration handle the auth check
+        registrationStep = 'device';
+        syncError = ''; // Clear error, let device registration validate approval status
+      } else {
+        syncError = errorMessage;
+      }
     } finally {
       registeringUser = false;
     }
@@ -253,8 +263,9 @@
       const encryptedApiKey = await cryptoService.encryptText(response.apiKey, masterKey.key);
 
       // Save sync settings
-      await syncRepository.saveSyncMetadata({
-        endpoint: syncEndpoint,
+      await syncRepository.updateMetadata({
+        syncEnabled: true,
+        syncEndpoint: syncEndpoint,
         apiKey: JSON.stringify(encryptedApiKey),
         clientId: response.clientId,
         userId: response.userId,
@@ -431,7 +442,8 @@
     syncing = true;
     syncError = '';
     try {
-      const result = await syncService.syncNow();
+      // Force a full sync to ensure all notes (including imported ones) are pushed
+      const result = await syncService.syncNow(true);
       if (result.success) {
         await loadSyncStatus();
       } else {

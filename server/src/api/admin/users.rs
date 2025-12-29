@@ -74,13 +74,128 @@ pub async fn list_users(
     ))
 }
 
-/// Get user details
+/// Get user details with statistics
 /// GET /api/v1/admin/users/:id
 pub async fn get_user(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
-    // TODO: Implement user detail retrieval
-    Ok((StatusCode::OK, Json(serde_json::json!({}))))
+    // Get user basic info
+    let user = sqlx::query!(
+        r#"SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb FROM users WHERE id = ?"#,
+        user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
+
+    // Get device count and last seen
+    let device_stats = sqlx::query!(
+        r#"
+        SELECT
+            COUNT(*) as total,
+            COUNT(CASE WHEN is_active = 1 THEN 1 END) as active,
+            MAX(last_seen_at) as last_seen
+        FROM clients
+        WHERE user_id = ?
+        "#,
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    // Get note count
+    let note_count = sqlx::query!(
+        r#"SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND deleted = 0"#,
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    // Get attachment count and total size
+    let attachment_stats = sqlx::query!(
+        r#"
+        SELECT
+            COUNT(DISTINCT am.id) as count,
+            COALESCE(SUM(am.size), 0) as total_bytes
+        FROM notes n
+        JOIN attachments_meta am ON n.id = am.note_id
+        WHERE n.user_id = ? AND n.deleted = 0
+        "#,
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    // Get last sync time (when server last received an update)
+    let last_sync = sqlx::query!(
+        r#"
+        SELECT MAX(server_modified_at) as last_sync
+        FROM notes
+        WHERE user_id = ?
+        "#,
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
+    // Get list of devices
+    let devices = sqlx::query!(
+        r#"
+        SELECT id, device_name, device_type, created_at, last_seen_at, is_active
+        FROM clients
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        "#,
+        user_id
+    )
+    .fetch_all(&state.pool)
+    .await?;
+
+    let device_list: Vec<serde_json::Value> = devices
+        .into_iter()
+        .map(|d| {
+            serde_json::json!({
+                "id": d.id,
+                "name": d.device_name,
+                "type": d.device_type,
+                "createdAt": d.created_at,
+                "lastSeenAt": d.last_seen_at,
+                "isActive": d.is_active.unwrap_or(0) == 1
+            })
+        })
+        .collect();
+
+    Ok((
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "id": user.id,
+            "email": user.email,
+            "approved": user.approved == 1,
+            "isAdmin": user.is_admin == 1,
+            "isActive": user.is_active == 1,
+            "createdAt": user.created_at,
+            "approvedAt": user.approved_at,
+            "lastLoginAt": user.last_login_at,
+            "storageQuotaMb": user.storage_quota_mb,
+            "stats": {
+                "devices": {
+                    "total": device_stats.total,
+                    "active": device_stats.active,
+                    "lastSeen": device_stats.last_seen
+                },
+                "notes": {
+                    "count": note_count.count
+                },
+                "attachments": {
+                    "count": attachment_stats.count,
+                    "totalBytes": attachment_stats.total_bytes
+                },
+                "lastSyncAt": last_sync.last_sync
+            },
+            "devices": device_list
+        })),
+    ))
 }
 
 /// Approve pending user
@@ -137,12 +252,114 @@ pub async fn activate_user(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Toggle admin status
+/// POST /api/v1/admin/users/:id/toggle-admin
+#[derive(Debug, serde::Deserialize)]
+pub struct ToggleAdminRequest {
+    pub is_admin: bool,
+}
+
+pub async fn toggle_admin(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
+    axum::Extension(current_user_id): axum::Extension<String>,
+    Json(req): Json<ToggleAdminRequest>,
+) -> AppResult<StatusCode> {
+    // Prevent demoting yourself
+    if user_id == current_user_id && !req.is_admin {
+        return Err(crate::error::AppError::BadRequest(
+            "Cannot remove your own admin privileges".to_string(),
+        ));
+    }
+
+    // If demoting an admin, check if there are other admins
+    if !req.is_admin {
+        let target_user = sqlx::query!(
+            r#"SELECT is_admin FROM users WHERE id = ?"#,
+            user_id
+        )
+        .fetch_optional(&state.pool)
+        .await?
+        .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
+
+        // Only check if currently an admin
+        if target_user.is_admin == 1 {
+            let admin_count = sqlx::query!(
+                r#"SELECT COUNT(*) as count FROM users WHERE is_admin = 1 AND is_active = 1"#
+            )
+            .fetch_one(&state.pool)
+            .await?;
+
+            if admin_count.count <= 1 {
+                return Err(crate::error::AppError::BadRequest(
+                    "Cannot demote the last admin user".to_string(),
+                ));
+            }
+        }
+    }
+
+    // Update admin status
+    let is_admin_value = if req.is_admin { 1 } else { 0 };
+    sqlx::query!(
+        r#"UPDATE users SET is_admin = ? WHERE id = ?"#,
+        is_admin_value,
+        user_id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    let action = if req.is_admin { "promoted to admin" } else { "demoted from admin" };
+    tracing::info!("User {}: user_id={} by admin={}", action, user_id, current_user_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Delete user
 /// DELETE /api/v1/admin/users/:id
 pub async fn delete_user(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
+    axum::Extension(current_user_id): axum::Extension<String>,
 ) -> AppResult<StatusCode> {
-    // TODO: Implement user deletion
+    // Prevent deleting yourself
+    if user_id == current_user_id {
+        return Err(crate::error::AppError::BadRequest(
+            "Cannot delete your own account".to_string(),
+        ));
+    }
+
+    // Check if target user is an admin
+    let target_user = sqlx::query!(
+        r#"SELECT is_admin FROM users WHERE id = ?"#,
+        user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
+
+    // If deleting an admin, check if there are other admins
+    if target_user.is_admin == 1 {
+        let admin_count = sqlx::query!(
+            r#"SELECT COUNT(*) as count FROM users WHERE is_admin = 1 AND is_active = 1"#
+        )
+        .fetch_one(&state.pool)
+        .await?;
+
+        if admin_count.count <= 1 {
+            return Err(crate::error::AppError::BadRequest(
+                "Cannot delete the last admin user".to_string(),
+            ));
+        }
+    }
+
+    // Delete user (CASCADE will handle related records)
+    sqlx::query!(
+        r#"DELETE FROM users WHERE id = ?"#,
+        user_id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("User deleted: user_id={} by admin={}", user_id, current_user_id);
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -166,5 +383,65 @@ pub async fn revoke_device(
     State(_state): State<Arc<AppState>>,
 ) -> AppResult<StatusCode> {
     // TODO: Implement device revocation
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Change admin password
+/// POST /api/v1/admin/change-password
+#[derive(Debug, serde::Deserialize)]
+pub struct ChangePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
+pub async fn change_password(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(user_id): axum::Extension<String>,
+    Json(req): Json<ChangePasswordRequest>,
+) -> AppResult<StatusCode> {
+    use crate::utils::password::{hash_password, verify_password};
+    use crate::db::UserRepository;
+
+    // Get current user
+    let user = UserRepository::get_by_id(&state.pool, &user_id)
+        .await
+        .map_err(|_| crate::error::AppError::Unauthorized)?;
+
+    // Verify current password
+    let password_valid = verify_password(&req.current_password, &user.password_hash)
+        .map_err(|e| {
+            tracing::error!("Password verification failed: {}", e);
+            crate::error::AppError::InternalServerError
+        })?;
+
+    if !password_valid {
+        tracing::warn!("Password change failed: invalid current password for user {}", user_id);
+        return Err(crate::error::AppError::Unauthorized);
+    }
+
+    // Validate new password strength
+    if req.new_password.len() < 12 {
+        return Err(crate::error::AppError::BadRequest(
+            "New password must be at least 12 characters".to_string(),
+        ));
+    }
+
+    // Hash new password
+    let new_password_hash = hash_password(&req.new_password)
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            crate::error::AppError::InternalServerError
+        })?;
+
+    // Update password
+    sqlx::query!(
+        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        new_password_hash,
+        user_id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("Password changed successfully for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)
 }

@@ -10,6 +10,7 @@
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
   export let forceMobileLayout: boolean = false;
+  export let disableNewNote: boolean = false;
 
   let showLockConfirm = false;
   let showDisableRememberPasswordConfirm = false;
@@ -171,9 +172,9 @@
 
         <button
           on:click={handleNewNoteClick}
-          disabled={$isDraftMode}
+          disabled={disableNewNote}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={$isDraftMode ? 'Add content to current note first' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
+          title={disableNewNote ? 'Creating note...' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,9 +198,9 @@
 
         <button
           on:click={handleNewNoteClick}
-          disabled={$isDraftMode}
+          disabled={disableNewNote}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={$isDraftMode ? 'Add content to current note first' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
+          title={disableNewNote ? 'Creating note...' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -11,7 +11,7 @@
   let filter = $state<'all' | 'pending' | 'approved' | 'inactive'>('all');
 
   // Confirmation modal state
-  type ConfirmAction = { type: 'approve' | 'deactivate' | 'activate'; userId: string; email: string } | null;
+  type ConfirmAction = { type: 'approve' | 'deactivate' | 'activate' | 'delete' | 'toggleAdmin'; userId: string; email: string; isAdmin?: boolean } | null;
   let confirmAction = $state<ConfirmAction>(null);
 
   async function loadUsers() {
@@ -39,10 +39,18 @@
     confirmAction = { type: 'activate', userId, email };
   }
 
+  function requestDelete(userId: string, email: string) {
+    confirmAction = { type: 'delete', userId, email };
+  }
+
+  function requestToggleAdmin(userId: string, email: string, isAdmin: boolean) {
+    confirmAction = { type: 'toggleAdmin', userId, email, isAdmin };
+  }
+
   async function executeAction() {
     if (!confirmAction) return;
 
-    const { type, userId, email } = confirmAction;
+    const { type, userId, email, isAdmin } = confirmAction;
     confirmAction = null;
 
     try {
@@ -55,6 +63,13 @@
       } else if (type === 'activate') {
         await api.activateUser(userId);
         toast.success(`User ${email} activated`);
+      } else if (type === 'delete') {
+        await api.deleteUser(userId);
+        toast.success(`User ${email} deleted`);
+      } else if (type === 'toggleAdmin') {
+        await api.toggleAdmin(userId, isAdmin!);
+        const action = isAdmin ? 'promoted to admin' : 'demoted from admin';
+        toast.success(`User ${email} ${action}`);
       }
       await loadUsers();
     } catch (err) {
@@ -205,30 +220,61 @@
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {new Date(user.createdAt).toLocaleDateString('en-GB')}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                {#if !user.approved}
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div class="flex flex-wrap gap-2">
+                  {#if !user.approved}
+                    <button
+                      onclick={() => requestApprove(user.id, user.email)}
+                      class="text-green-600 hover:text-green-900"
+                    >
+                      Approve
+                    </button>
+                  {/if}
+
+                  {#if user.approved}
+                    {#if user.isAdmin}
+                      <button
+                        onclick={() => requestToggleAdmin(user.id, user.email, false)}
+                        class="text-purple-600 hover:text-purple-900"
+                        title="Demote from admin"
+                      >
+                        Remove Admin
+                      </button>
+                    {:else}
+                      <button
+                        onclick={() => requestToggleAdmin(user.id, user.email, true)}
+                        class="text-purple-600 hover:text-purple-900"
+                        title="Promote to admin"
+                      >
+                        Make Admin
+                      </button>
+                    {/if}
+                  {/if}
+
+                  {#if user.isActive}
+                    <button
+                      onclick={() => requestDeactivate(user.id, user.email)}
+                      class="text-yellow-600 hover:text-yellow-900"
+                    >
+                      Deactivate
+                    </button>
+                  {:else}
+                    <button
+                      onclick={() => requestActivate(user.id, user.email)}
+                      class="text-green-600 hover:text-green-900"
+                    >
+                      Activate
+                    </button>
+                  {/if}
+
                   <button
-                    onclick={() => requestApprove(user.id, user.email)}
-                    class="text-green-600 hover:text-green-900"
+                    onclick={() => requestDelete(user.id, user.email)}
+                    class="text-red-600 hover:text-red-900"
+                    title="Delete user"
                   >
-                    Approve
+                    Delete
                   </button>
-                {/if}
-                {#if user.isActive}
-                  <button
-                    onclick={() => requestDeactivate(user.id, user.email)}
-                    class="text-yellow-600 hover:text-yellow-900"
-                  >
-                    Deactivate
-                  </button>
-                {:else}
-                  <button
-                    onclick={() => requestActivate(user.id, user.email)}
-                    class="text-green-600 hover:text-green-900"
-                  >
-                    Activate
-                  </button>
-                {/if}
+                </div>
               </td>
             </tr>
           {/each}
@@ -239,8 +285,18 @@
 </div>
 
 {#if confirmAction}
-  {@const actionText = confirmAction.type === 'approve' ? 'Approve' : confirmAction.type === 'deactivate' ? 'Deactivate' : 'Activate'}
-  {@const message = `Are you sure you want to ${confirmAction.type} user ${confirmAction.email}?`}
+  {@const actionText = confirmAction.type === 'approve' ? 'Approve' :
+                        confirmAction.type === 'deactivate' ? 'Deactivate' :
+                        confirmAction.type === 'activate' ? 'Activate' :
+                        confirmAction.type === 'delete' ? 'Delete' :
+                        confirmAction.isAdmin ? 'Promote to Admin' : 'Demote from Admin'}
+  {@const message = confirmAction.type === 'delete'
+    ? `Are you sure you want to permanently delete user ${confirmAction.email}? This action cannot be undone.`
+    : confirmAction.type === 'toggleAdmin' && confirmAction.isAdmin
+    ? `Are you sure you want to promote ${confirmAction.email} to admin? They will have full access to all admin functions.`
+    : confirmAction.type === 'toggleAdmin' && !confirmAction.isAdmin
+    ? `Are you sure you want to remove admin privileges from ${confirmAction.email}?`
+    : `Are you sure you want to ${confirmAction.type} user ${confirmAction.email}?`}
   <ConfirmModal
     title="{actionText} User"
     message={message}
