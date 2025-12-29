@@ -279,7 +279,7 @@
         syncEnabled: true,
       }));
 
-      await settingsRepository.save($settings);
+      await settingsRepository.update({ syncEndpoint, syncEnabled: true });
 
       // Reload status
       await loadSyncStatus();
