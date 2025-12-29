@@ -89,7 +89,7 @@ COPY --from=admin-builder  /app/admin/dist ./admin/dist
 # Copy TUI binaries (added by GitHub Actions in /releases)
 # -----------------------------
 COPY releases ./releases
-RUN chmod -R +x /app/releases || true
+RUN chmod -R +x /app/releases 2>/dev/null || true
 
 # -----------------------------
 # Persistent data directory
