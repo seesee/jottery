@@ -124,7 +124,7 @@ pub async fn login(
     Ok((
         StatusCode::OK,
         Json(LoginResponse {
-            session_id: session.id,
+            session_id: session_token.clone(),  // Return the actual token, not the session ID
             expires_at: expires_at_str,
             user: UserInfo {
                 id: user.id,
