@@ -104,16 +104,14 @@ RUN mkdir -p /etc/caddy
 
 COPY <<'EOF' /etc/caddy/Caddyfile
 :8088 {
+    # API proxy to jottery-server (must be before admin to avoid conflicts)
+    reverse_proxy /api/* localhost:3030
+
     # Admin dashboard
     handle_path /admin* {
         root * /app/admin/dist
         try_files {path} /index.html
         file_server
-    }
-
-    # API proxy to jottery-server
-    handle_path /api/* {
-        reverse_proxy localhost:3030
     }
 
     # Web UI (default)
