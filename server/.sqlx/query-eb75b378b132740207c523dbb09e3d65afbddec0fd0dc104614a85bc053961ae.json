@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) as count FROM notes WHERE client_id = ?",
+  "query": "SELECT COUNT(*) as count FROM users WHERE approved = 0",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
       false
     ]
   },
-  "hash": "c81c0351cafb19e2fd85cb38e40d835a74fac5405ba3ddf46bfc1dee15f383e9"
+  "hash": "eb75b378b132740207c523dbb09e3d65afbddec0fd0dc104614a85bc053961ae"
 }

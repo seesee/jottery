@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT server_modified_at FROM notes WHERE client_id = ? ORDER BY server_modified_at DESC LIMIT 1",
+  "query": "SELECT server_modified_at FROM notes WHERE user_id = ? ORDER BY server_modified_at DESC LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "dbd9440a942d27a863fa7cc01067f1dcc9a14054da9b824b4093342b4568de6f"
+  "hash": "7800de18626e2451e44a52a8bad313636bc558a39f072fe3e31c0676bc70d788"
 }

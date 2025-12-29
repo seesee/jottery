@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            COUNT(*) as total,\n            SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active\n        FROM clients\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "total",
+        "ordinal": 0,
+        "type_info": "Int"
+      },
+      {
+        "name": "active",
+        "ordinal": 1,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "b11d6cd4d01a2dc0064ce70b57b71a5a01648885749e4ef51f213e7123e85521"
+}

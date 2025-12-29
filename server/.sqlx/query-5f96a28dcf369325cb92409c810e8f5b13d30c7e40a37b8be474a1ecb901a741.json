@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            u.id,\n            u.email,\n            u.approved,\n            u.is_admin,\n            u.is_active,\n            u.created_at,\n            COUNT(DISTINCT c.id) as device_count,\n            COUNT(DISTINCT n.id) as note_count\n        FROM users u\n        LEFT JOIN clients c ON u.id = c.user_id AND c.is_active = 1\n        LEFT JOIN notes n ON u.id = n.user_id AND n.deleted = 0\n        GROUP BY u.id\n        ORDER BY u.created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "approved",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "is_admin",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "device_count",
+        "ordinal": 6,
+        "type_info": "Int"
+      },
+      {
+        "name": "note_count",
+        "ordinal": 7,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5f96a28dcf369325cb92409c810e8f5b13d30c7e40a37b8be474a1ecb901a741"
+}

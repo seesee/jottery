@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT * FROM sessions\n            WHERE user_id = ? AND expires_at > ?\n            ORDER BY created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "token_hash",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "expires_at",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_used_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_agent",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "ip_address",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "fbf29217f272eb038112837cae72150758dc3b7733cdd501d33da8e2eb0f38e9"
+}
