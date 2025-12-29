@@ -348,7 +348,9 @@
     loggingIn = true;
     syncError = '';
     try {
-      const response = await fetch(`${syncEndpoint}/api/v1/user/login`, {
+      const loginUrl = `${syncEndpoint}/api/v1/user/login`;
+      console.log('[SettingsModal] Attempting login to:', loginUrl);
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -358,10 +360,18 @@
           password: accountPassword,
         }),
       });
+      console.log('[SettingsModal] Login response status:', response.status);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
+        let errorMessage = 'Login failed';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } catch (e) {
+          // Response body is not JSON, use status text
+          errorMessage = response.statusText || `Login failed (${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
