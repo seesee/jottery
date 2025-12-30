@@ -76,6 +76,7 @@ export interface UserSettings {
   sortOrder: 'recent' | 'oldest' | 'alpha' | 'created';
   autoLockTimeout: number; // Minutes
   fontSize: 'auto' | 'small' | 'medium' | 'large'; // Editor font size (auto = mobile-aware)
+  timezone: string; // IANA timezone (e.g., 'UTC', 'America/New_York', 'local' for browser timezone)
   syncEnabled: boolean;
   syncEndpoint?: string;
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
@@ -248,6 +249,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   sortOrder: 'recent',
   autoLockTimeout: 15, // 15 minutes
   fontSize: 'auto', // Auto-detects mobile and uses appropriate size
+  timezone: 'local', // Use browser's local timezone by default
   syncEnabled: false,
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,

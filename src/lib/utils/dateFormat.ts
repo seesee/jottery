@@ -1,16 +1,19 @@
 /**
- * Date formatting utilities using Intl API for proper i18n
+ * Date formatting utilities using Intl API for proper i18n and timezone support
  */
 
 import { get } from 'svelte/store';
 import { locale } from 'svelte-i18n';
+import { settings } from '../stores/appStore';
 
 /**
- * Format a date using the current locale
+ * Format a date using the current locale and user's timezone setting
  */
 export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const currentLocale = get(locale) || 'en-GB';
+  const $settings = get(settings);
+  const timezone = $settings.timezone || 'local';
 
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -18,6 +21,7 @@ export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOpt
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: timezone === 'local' ? undefined : timezone,
     ...options,
   };
 

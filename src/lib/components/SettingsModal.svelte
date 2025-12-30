@@ -22,6 +22,7 @@
   let autoLockTimeout = $settings.autoLockTimeout;
   let sortOrder = $settings.sortOrder;
   let language = $settings.language;
+  let timezone = $settings.timezone || 'local';
   let rememberPassword = $settings.rememberPassword || false;
   let enabledSyntaxLanguages: string[] = $settings.enabledSyntaxLanguages || [];
   let saving = false;
@@ -764,6 +765,7 @@
         autoLockTimeout,
         sortOrder,
         language,
+        timezone,
         rememberPassword,
         keyboardShortcuts: tempShortcuts,
         enabledSyntaxLanguages,
@@ -778,6 +780,7 @@
         autoLockTimeout,
         sortOrder,
         language,
+        timezone,
         rememberPassword,
         keyboardShortcuts: tempShortcuts,
         enabledSyntaxLanguages,
@@ -1083,6 +1086,7 @@
             bind:autoLockTimeout
             bind:sortOrder
             bind:language
+            bind:timezone
             bind:rememberPassword
             onRememberPasswordToggle={handleRememberPasswordToggle}
           />

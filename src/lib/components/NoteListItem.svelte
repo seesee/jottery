@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { DecryptedNote } from '../types';
   import { selectNote, selectedNoteId, searchQuery } from '../stores/appStore';
+  import { formatTimestamp } from '../utils/timezone';
 
   export let note: DecryptedNote;
   export let onNoteSelect: (() => void) | undefined = undefined;
@@ -30,11 +31,7 @@
   $: isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   $: previewLength = isMobile ? 60 : 100;
   $: preview = note.content.split('\n').slice(1).join(' ').slice(0, previewLength);
-  $: formattedDate = new Date(note.modifiedAt).toLocaleDateString('en-GB', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  $: formattedDate = formatTimestamp(note.modifiedAt, 'date');
 
   function handleClick() {
     selectNote(note.id);

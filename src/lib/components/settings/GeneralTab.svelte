@@ -9,8 +9,46 @@
   export let autoLockTimeout: number;
   export let sortOrder: 'recent' | 'created' | 'oldest' | 'alpha';
   export let language: string;
+  export let timezone: string;
   export let rememberPassword: boolean;
   export let onRememberPasswordToggle: () => void;
+
+  // Common timezones grouped by region
+  const TIMEZONES = [
+    { value: 'local', label: 'Local (Browser Timezone)' },
+    { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+    { value: 'America/New_York', label: 'America/New York (EST/EDT)' },
+    { value: 'America/Chicago', label: 'America/Chicago (CST/CDT)' },
+    { value: 'America/Denver', label: 'America/Denver (MST/MDT)' },
+    { value: 'America/Los_Angeles', label: 'America/Los Angeles (PST/PDT)' },
+    { value: 'America/Anchorage', label: 'America/Anchorage (AKST/AKDT)' },
+    { value: 'Pacific/Honolulu', label: 'Pacific/Honolulu (HST)' },
+    { value: 'America/Toronto', label: 'America/Toronto (EST/EDT)' },
+    { value: 'America/Mexico_City', label: 'America/Mexico City (CST/CDT)' },
+    { value: 'America/Sao_Paulo', label: 'America/São Paulo (BRT)' },
+    { value: 'Europe/London', label: 'Europe/London (GMT/BST)' },
+    { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST)' },
+    { value: 'Europe/Berlin', label: 'Europe/Berlin (CET/CEST)' },
+    { value: 'Europe/Rome', label: 'Europe/Rome (CET/CEST)' },
+    { value: 'Europe/Madrid', label: 'Europe/Madrid (CET/CEST)' },
+    { value: 'Europe/Amsterdam', label: 'Europe/Amsterdam (CET/CEST)' },
+    { value: 'Europe/Stockholm', label: 'Europe/Stockholm (CET/CEST)' },
+    { value: 'Europe/Moscow', label: 'Europe/Moscow (MSK)' },
+    { value: 'Europe/Istanbul', label: 'Europe/Istanbul (TRT)' },
+    { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
+    { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST)' },
+    { value: 'Asia/Bangkok', label: 'Asia/Bangkok (ICT)' },
+    { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT)' },
+    { value: 'Asia/Hong_Kong', label: 'Asia/Hong Kong (HKT)' },
+    { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST)' },
+    { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
+    { value: 'Asia/Seoul', label: 'Asia/Seoul (KST)' },
+    { value: 'Australia/Sydney', label: 'Australia/Sydney (AEDT/AEST)' },
+    { value: 'Australia/Melbourne', label: 'Australia/Melbourne (AEDT/AEST)' },
+    { value: 'Australia/Brisbane', label: 'Australia/Brisbane (AEST)' },
+    { value: 'Australia/Perth', label: 'Australia/Perth (AWST)' },
+    { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZDT/NZST)' },
+  ];
 </script>
 
 <!-- Language -->
@@ -27,6 +65,25 @@
       <option value={code}>{name}</option>
     {/each}
   </select>
+</div>
+
+<!-- Timezone -->
+<div>
+  <label for="setting-timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    Timezone
+  </label>
+  <select
+    id="setting-timezone"
+    bind:value={timezone}
+    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    {#each TIMEZONES as tz}
+      <option value={tz.value}>{tz.label}</option>
+    {/each}
+  </select>
+  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+    All timestamps are stored in UTC and displayed in your selected timezone
+  </p>
 </div>
 
 <!-- Theme -->
