@@ -126,7 +126,7 @@
                         <strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server cannot read your content.
                       </div>
                       <div>
-                        <strong>💡 Self-host?</strong> Run your own server - <a href="https://github.com/chand1012/jottery" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">see GitHub</a>
+                        <strong>💡 Self-host?</strong> Run your own server - <a href="https://github.com/seesee/jottery" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">see GitHub</a>
                       </div>
                     </div>
                   </div>

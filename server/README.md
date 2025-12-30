@@ -565,5 +565,5 @@ MIT License - see LICENSE file in project root
 ## Support
 
 For issues and questions:
-- GitHub: https://github.com/yourusername/jottery
+- GitHub: https://github.com/seesee/jottery
 - Spec: See `jottery-spec.md` in project root

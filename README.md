@@ -89,7 +89,7 @@ The easiest way to get started is with Docker. This will build and run the web c
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/jottery.git
+    git clone https://github.com/seesee/jottery.git
     cd jottery
     ```
 
@@ -108,7 +108,7 @@ If you prefer to run the components manually, you can follow these steps:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/jottery.git
+    git clone https://github.com/seesee/jottery.git
     cd jottery
     ```
 

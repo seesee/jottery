@@ -169,7 +169,7 @@
                           <div>All your notes are end-to-end encrypted. The server cannot read your content.</div>
                           <div class="mt-2">
                             <a
-                              href="https://github.com/chand1012/jottery"
+                              href="https://github.com/seesee/jottery"
                               target="_blank"
                               rel="noopener noreferrer"
                               class="text-blue-700 dark:text-blue-300 hover:underline font-medium"
