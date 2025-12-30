@@ -191,6 +191,211 @@ If you prefer to run the components manually, you can follow these steps:
 
 You can download pre-compiled binaries for the TUI client for Linux, macOS, and Windows from the "Releases" section of the web application.
 
+## Import/Export Format
+
+Jottery uses a JSON-based format for importing and exporting notes. All data is **decrypted** during export and **re-encrypted** during import using your master password.
+
+### Overview
+
+- **Format**: JSON with UTF-8 encoding
+- **Version**: `1.0` (specified in `version` field)
+- **Security**: Exported data contains decrypted note content, tags, and attachments
+- **Compatibility**: Import works across different Jottery clients (Web, TUI)
+
+### Export Format Structure
+
+```json
+{
+  "version": "1.0",
+  "exportDate": "2025-12-30T18:30:00.000Z",
+  "notes": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "createdAt": "2025-12-25T10:00:00.000Z",
+      "modifiedAt": "2025-12-29T15:30:00.000Z",
+      "content": "# Meeting Notes\n\nDiscussed project timeline...",
+      "tags": ["work", "meetings", "project-alpha"],
+      "attachments": [
+        {
+          "filename": "diagram.png",
+          "mimeType": "image/png",
+          "data": "iVBORw0KGgoAAAANSUhEUgAAAAUA..."
+        }
+      ],
+      "pinned": false,
+      "wordWrap": true,
+      "syntaxLanguage": "markdown"
+    }
+  ]
+}
+```
+
+### Field Descriptions
+
+#### Root Object
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `version` | string | Yes | Export format version (currently `"1.0"`) |
+| `exportDate` | string | Yes | ISO 8601 timestamp when export was created |
+| `notes` | array | Yes | Array of exported notes (see Note Object below) |
+
+#### Note Object
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | UUID v4 identifier for the note |
+| `createdAt` | string | Yes | ISO 8601 timestamp when note was created |
+| `modifiedAt` | string | Yes | ISO 8601 timestamp of last modification |
+| `content` | string | Yes | **Decrypted** note content (plain text or markdown) |
+| `tags` | array | Yes | Array of **decrypted** tag strings |
+| `attachments` | array | Yes | Array of attachment objects (can be empty) |
+| `pinned` | boolean | Yes | Whether note is pinned to top of list |
+| `wordWrap` | boolean | No | Word wrap setting for editor (default: false) |
+| `syntaxLanguage` | string | No | Syntax highlighting language ID (e.g., `"javascript"`, `"markdown"`) |
+
+#### Attachment Object
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `filename` | string | Yes | **Decrypted** original filename |
+| `mimeType` | string | Yes | MIME type (e.g., `"image/png"`, `"application/pdf"`) |
+| `data` | string | Yes | Base64-encoded file data (**decrypted**) |
+
+### Import Strategies
+
+When importing notes, you can choose one of three strategies:
+
+1. **`merge`** (default): Import all notes with new UUIDs, preserving existing notes
+2. **`skip`**: Skip notes with IDs that already exist in your database
+3. **`replace`**: Delete existing notes with matching IDs and import new versions
+
+### Example: Minimal Valid Export
+
+```json
+{
+  "version": "1.0",
+  "exportDate": "2025-12-30T20:00:00.000Z",
+  "notes": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "createdAt": "2025-12-30T19:00:00.000Z",
+      "modifiedAt": "2025-12-30T19:00:00.000Z",
+      "content": "Hello World",
+      "tags": [],
+      "attachments": [],
+      "pinned": false
+    }
+  ]
+}
+```
+
+### Example: Note with Attachments and Tags
+
+```json
+{
+  "version": "1.0",
+  "exportDate": "2025-12-30T20:15:00.000Z",
+  "notes": [
+    {
+      "id": "a3b2c1d0-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "createdAt": "2025-12-28T14:22:00.000Z",
+      "modifiedAt": "2025-12-30T16:45:00.000Z",
+      "content": "```javascript\nconst hello = () => console.log('Hello!');\n```",
+      "tags": ["code", "javascript", "snippets"],
+      "attachments": [
+        {
+          "filename": "screenshot.png",
+          "mimeType": "image/png",
+          "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        },
+        {
+          "filename": "README.txt",
+          "mimeType": "text/plain",
+          "data": "VGhpcyBpcyBhIHRlc3QgZmlsZQ=="
+        }
+      ],
+      "pinned": true,
+      "wordWrap": false,
+      "syntaxLanguage": "javascript"
+    }
+  ]
+}
+```
+
+### Supported Syntax Languages
+
+The `syntaxLanguage` field supports all languages available in CodeMirror 6, including:
+
+- Programming: `javascript`, `typescript`, `python`, `rust`, `go`, `java`, `cpp`, `c`, `csharp`, `php`, `ruby`, `swift`, `kotlin`
+- Web: `html`, `css`, `scss`, `less`, `vue`, `svelte`
+- Markup: `markdown`, `xml`, `yaml`, `json`, `toml`
+- Shell: `shell`, `bash`, `powershell`
+- Query: `sql`, `mysql`, `postgresql`
+- And many more...
+
+### Important Notes
+
+**Security:**
+- Exported files contain **unencrypted, plain-text data**
+- Store export files securely (encrypt with tools like GPG or use encrypted volumes)
+- Delete export files after transferring if they contain sensitive information
+
+**Compatibility:**
+- Export format version `1.0` is the current standard
+- Future versions may add fields but will maintain backward compatibility
+- Timestamps must be valid ISO 8601 format with timezone (e.g., `2025-12-30T20:00:00.000Z`)
+- UUIDs must be valid UUID v4 format
+
+**File Size:**
+- Attachments are Base64-encoded, which increases size by ~33%
+- Large exports with many attachments may take time to process
+- Consider exporting in batches for very large note collections
+
+**Automation:**
+- The JSON format is designed to be easily parsed and generated by scripts
+- Perfect for backup automation, migration tools, or external integrations
+- Can be processed with `jq`, Python, Node.js, or any JSON-compatible tool
+
+### Programmatic Usage Examples
+
+**Using `jq` to extract all tags:**
+```bash
+jq '.notes[].tags[]' jottery-export-2025-12-30.json | sort -u
+```
+
+**Using Python to filter notes by tag:**
+```python
+import json
+
+with open('jottery-export.json', 'r') as f:
+    data = json.load(f)
+
+work_notes = [n for n in data['notes'] if 'work' in n['tags']]
+print(f"Found {len(work_notes)} work-related notes")
+```
+
+**Using Node.js to create a backup:**
+```javascript
+const fs = require('fs');
+const exportData = {
+  version: '1.0',
+  exportDate: new Date().toISOString(),
+  notes: [
+    {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      modifiedAt: new Date().toISOString(),
+      content: 'Automated backup note',
+      tags: ['backup', 'automated'],
+      attachments: [],
+      pinned: false
+    }
+  ]
+};
+fs.writeFileSync('backup.json', JSON.stringify(exportData, null, 2));
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
