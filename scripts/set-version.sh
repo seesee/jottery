@@ -41,11 +41,23 @@ echo "✓ Updated tui/Cargo.toml"
 sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" server/Cargo.toml && rm server/Cargo.toml.bak
 echo "✓ Updated server/Cargo.toml"
 
+# Update package.json (admin dashboard)
+if command -v jq &> /dev/null; then
+    # Use jq if available for safer JSON editing
+    jq ".version = \"$VERSION\"" admin/package.json > admin/package.json.tmp && mv admin/package.json.tmp admin/package.json
+    echo "✓ Updated admin/package.json"
+else
+    # Fallback to sed (less safe but works)
+    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" admin/package.json && rm admin/package.json.bak
+    echo "✓ Updated admin/package.json (using sed)"
+fi
+
 echo ""
 echo "Version updated to $VERSION in:"
 echo "  - package.json (web client)"
 echo "  - tui/Cargo.toml (TUI client)"
 echo "  - server/Cargo.toml (server)"
+echo "  - admin/package.json (admin dashboard)"
 echo ""
 echo "Review changes:"
 echo "  git diff"

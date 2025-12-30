@@ -3,6 +3,9 @@
   import type { StatsResponse } from '../lib/api';
   import { onMount } from 'svelte';
 
+  // Access the version from the global __APP_VERSION__ variable
+  declare const __APP_VERSION__: string;
+
   let stats = $state<StatsResponse | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
@@ -131,7 +134,7 @@
       <div class="space-y-3 text-sm text-gray-600">
         <div class="flex justify-between">
           <span>Server Version:</span>
-          <span class="font-medium text-gray-900">v0.6.0</span>
+          <span class="font-medium text-gray-900">v{__APP_VERSION__}</span>
         </div>
         <div class="flex justify-between">
           <span>Active Users:</span>
