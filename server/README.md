@@ -100,25 +100,114 @@ Navigate to: `http://localhost:3030/admin`
 
 ### Admin Features
 
-- User management (approve/deactivate users)
-- View server statistics (notes, storage, sync activity)
-- Browse note metadata (IDs, timestamps - content remains encrypted)
-- Audit log of sync operations
-- Device management
+The admin dashboard provides comprehensive user and system management:
+
+**User Management:**
+- View all registered users with statistics
+- Approve pending user registrations
+- Deactivate/reactivate user accounts
+- Delete user accounts (with cascade to all user data)
+- View per-user device list and statistics
+
+**System Monitoring:**
+- Total users, notes, and storage usage
+- Active vs inactive users
+- Recent sync activity
+- Audit log of all sync operations
+
+**Account Management:**
+- Change admin password (requires current password)
+- Session management (7-day expiry)
+- Logout functionality
+
+### Security Recommendations
+
+1. **Change Default Password:** Immediately change `admin@localhost` password after first login
+2. **HTTPS Only:** Always use HTTPS in production (configure with reverse proxy like Nginx)
+3. **Review Users:** Regularly review pending registrations and active users
+4. **Monitor Audit Log:** Check for suspicious sync activity
+5. **Backup Database:** Regular backups include all user data and credentials (passwords are hashed)
 
 ## API Endpoints
 
-### Authentication
+### User Registration & Authentication
 
-#### Register Client
+#### Register User Account
 
-Register a new device and receive an API key.
+Create a new user account (pending admin approval).
 
 ```http
-POST /api/v1/auth/register
+POST /api/v1/auth/register-user
 Content-Type: application/json
 
 {
+  "email": "user@example.com",
+  "password": "secure-password-min-12-chars"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "userId": "uuid-v4",
+  "email": "user@example.com",
+  "status": "pending_approval",
+  "message": "Account created. Awaiting admin approval."
+}
+```
+
+**Errors:**
+- `400` - Invalid email format or password too short (min 12 characters)
+- `409` - Email already registered
+
+#### Admin Login
+
+Login to admin dashboard (creates session).
+
+```http
+POST /api/v1/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@localhost",
+  "password": "changeme"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "sessionId": "uuid-session-token",
+  "expiresAt": "2025-01-06T10:30:00Z",
+  "user": {
+    "id": "uuid-v4",
+    "email": "admin@localhost",
+    "isAdmin": true
+  }
+}
+```
+
+**Session Usage:**
+Include session token in subsequent admin requests:
+```http
+Authorization: Bearer <sessionId>
+```
+Or via cookie (set automatically by browser):
+```http
+Cookie: session_token=<sessionId>
+```
+
+#### Register Device
+
+Register a device for an existing, approved user.
+
+```http
+POST /api/v1/auth/register-device
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "user-password",
   "deviceName": "My Laptop",
   "deviceType": "web"
 }
@@ -127,11 +216,16 @@ Content-Type: application/json
 **Response** (201 Created):
 ```json
 {
-  "apiKey": "64-character-hex-string",
   "clientId": "uuid-v4",
-  "createdAt": "2025-03-12T10:30:00Z"
+  "apiKey": "64-character-hex-string",
+  "userId": "uuid-v4",
+  "deviceName": "My Laptop"
 }
 ```
+
+**Errors:**
+- `401` - Invalid email or password
+- `403` - User not approved or account deactivated
 
 ⚠️ **Important**: Save the `apiKey` - it's only returned once and cannot be recovered!
 
@@ -270,17 +364,170 @@ Authorization: Bearer <api-key>
 
 **Response** (204 No Content)
 
+### Admin API Endpoints
+
+All admin endpoints require session authentication (see Admin Login above).
+
+#### List Users
+
+```http
+GET /api/v1/admin/users
+Authorization: Bearer <session-token>
+```
+
+**Response** (200 OK):
+```json
+{
+  "users": [
+    {
+      "id": "uuid",
+      "email": "user@example.com",
+      "approved": false,
+      "isAdmin": false,
+      "isActive": true,
+      "createdAt": "2025-01-01T10:00:00Z",
+      "deviceCount": 2,
+      "noteCount": 15
+    }
+  ]
+}
+```
+
+#### Get User Details
+
+```http
+GET /api/v1/admin/users/:userId
+Authorization: Bearer <session-token>
+```
+
+**Response** (200 OK):
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "approved": true,
+  "approvedAt": "2025-01-01T11:00:00Z",
+  "isAdmin": false,
+  "isActive": true,
+  "createdAt": "2025-01-01T10:00:00Z",
+  "lastLoginAt": "2025-01-05T14:30:00Z",
+  "devices": [
+    {
+      "id": "device-uuid",
+      "deviceName": "My Laptop",
+      "deviceType": "web",
+      "lastSeenAt": "2025-01-05T14:30:00Z"
+    }
+  ],
+  "statistics": {
+    "noteCount": 15,
+    "attachmentCount": 3,
+    "storageUsedBytes": 52428800
+  }
+}
+```
+
+#### Approve User
+
+```http
+POST /api/v1/admin/users/:userId/approve
+Authorization: Bearer <session-token>
+```
+
+**Response:** 204 No Content
+
+#### Deactivate/Activate User
+
+```http
+POST /api/v1/admin/users/:userId/deactivate
+POST /api/v1/admin/users/:userId/activate
+Authorization: Bearer <session-token>
+```
+
+**Response:** 204 No Content
+
+#### Delete User
+
+Permanently delete user and all associated data (notes, devices, attachments).
+
+```http
+DELETE /api/v1/admin/users/:userId
+Authorization: Bearer <session-token>
+```
+
+**Response:** 204 No Content
+
+#### Get Server Statistics
+
+```http
+GET /api/v1/admin/stats
+Authorization: Bearer <session-token>
+```
+
+**Response** (200 OK):
+```json
+{
+  "totalUsers": 10,
+  "pendingUsers": 2,
+  "activeUsers": 8,
+  "totalDevices": 18,
+  "totalNotes": 245,
+  "totalAttachments": 42,
+  "totalStorageBytes": 524288000,
+  "recentSyncActivity": [
+    {
+      "userId": "uuid",
+      "email": "user@example.com",
+      "lastSyncAt": "2025-01-05T14:30:00Z",
+      "noteCount": 15
+    }
+  ]
+}
+```
+
+#### Change Admin Password
+
+```http
+POST /api/v1/admin/change-password
+Authorization: Bearer <session-token>
+Content-Type: application/json
+
+{
+  "currentPassword": "old-password",
+  "newPassword": "new-password-min-12-chars"
+}
+```
+
+**Response:** 204 No Content
+
+**Errors:**
+- `401` - Current password incorrect
+- `400` - New password too short
+
+See admin dashboard at `/admin` for full user management UI with visual interface for all these operations.
+
 ## Database Schema
 
 The server uses SQLite with the following tables:
 
-- **`clients`**: Registered devices with hashed API keys
-- **`notes`**: Encrypted note data with versioning
+- **`users`**: User accounts with email, Argon2id password hash, approval status, admin role
+- **`sessions`**: Admin dashboard sessions with token hash and expiry (7-day lifespan)
+- **`clients`**: Registered devices with hashed API keys (linked to users via user_id)
+- **`notes`**: Encrypted note data with versioning (linked to users via user_id)
 - **`attachments_meta`**: Attachment metadata
 - **`attachments_data`**: Binary attachment storage (BLOB)
+- **`note_versions`**: Note version history (linked to users)
+
+**Multi-User Schema:**
+- Each user can have multiple devices (clients)
+- Each note belongs to a user (via user_id foreign key)
+- Device API keys are hashed (SHA-256) before storage
+- Admin passwords use Argon2id hashing (memory=19456, time=2, parallelism=1)
+- Sessions expire after 7 days and are automatically cleaned up
+
 - **`sync_operations`**: Audit trail of sync operations
 
-The schema is created automatically via SQLx migrations on first run.
+The schema is created automatically via SQLx migrations on first run. Migration 003 adds the multi-user system and creates the default admin user.
 
 ## Production Deployment
 

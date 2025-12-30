@@ -6,10 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **jottery** is a privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with rich content, syntax highlighting, and encryption. The project is being developed in phases:
 
-- **Phase 1**: Web application (single-page application)
-- **Phase 2**: Enhanced features (attachments, themes, keyboard shortcuts)
-- **Phase 3**: Sync & server capabilities
-- **Phase 4**: Unix TUI (terminal user interface)
+- **Phase 1**: Web application (single-page application) ✅ COMPLETE
+- **Phase 2**: Enhanced features (attachments, themes, keyboard shortcuts) ✅ COMPLETE
+- **Phase 3**: Sync & server capabilities ✅ COMPLETE
+  - Multi-user authentication with admin approval workflow
+  - Session-based admin dashboard
+  - Device API key management
+- **Phase 4**: Unix TUI (terminal user interface) 🔄 IN PROGRESS
 
 **License**: MIT
 
@@ -28,10 +31,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Icons**: Lucide Icons or Heroicons
 
 ### TUI Application (Phase 4)
-- **Language**: Rust or Go
-- **Framework**: ratatui (Rust) or bubbletea (Go)
+- **Language**: Rust
+- **Framework**: ratatui
 - **Storage**: SQLite with SQLCipher
 - **Editor**: System $EDITOR or built-in
+- **Async Runtime**: Tokio
+
+### Sync Server (Phase 3)
+- **Language**: Rust
+- **Framework**: Axum (async web framework)
+- **Database**: SQLite with SQLx
+- **Authentication**: Argon2id for passwords, SHA-256 for API keys
+- **Sessions**: Token-based with 7-day expiry
+- **Admin UI**: Svelte (separate SPA at `/admin`)
+- **Async Runtime**: Tokio
 
 ## Architecture Principles
 
@@ -71,17 +84,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```typescript
 interface Note {
   id: string;                    // UUID v4
+  userId?: string;               // Owner user ID (multi-user support)
   createdAt: string;             // ISO 8601 with timezone
   modifiedAt: string;            // ISO 8601 with timezone
   syncedAt?: string;             // ISO 8601 with timezone
   content: string;               // Encrypted note content
   tags: string[];                // Encrypted array of tags
   attachments: Attachment[];     // Array of attachment references
-  pinned: boolean;              // Pin status
-  deleted: boolean;             // Soft delete flag
-  deletedAt?: string;           // Deletion timestamp
-  syncHash?: string;            // Hash for conflict detection
-  version: number;              // Optimistic locking
+  pinned: boolean;               // Pin status
+  deleted: boolean;              // Soft delete flag
+  deletedAt?: string;            // Deletion timestamp
+  syncHash?: string;             // Hash for conflict detection
+  version: number;               // Optimistic locking
+  wordWrap?: boolean;            // Editor preference
+  syntaxLanguage?: string;       // Syntax highlighting language
 }
 
 interface Attachment {
@@ -100,6 +116,9 @@ interface UserSettings {
   autoLockTimeout: number;      // Minutes
   syncEnabled: boolean;
   syncEndpoint?: string;
+  userEmail?: string;           // For multi-user systems
+  userId?: string;              // User ID from server
+  deviceName?: string;          // Registered device name
 }
 ```
 
@@ -120,6 +139,40 @@ class LastWriteWinsResolver implements ConflictResolver {
 ```
 
 Default to last-write-wins, but design for future strategies (manual merge, CRDTs).
+
+### Multi-User Architecture
+
+**Authentication Hierarchy:**
+```
+User Account (email/password)
+  ├── Device 1 (API key)
+  ├── Device 2 (API key)
+  └── Device N (API key)
+```
+
+**Separation of Concerns:**
+- **User Registration:** Creates user account, requires admin approval
+- **Device Registration:** Links device to approved user, issues API key
+- **Admin Sessions:** Separate authentication for dashboard access
+- **Sync Operations:** Device-level authentication with API keys
+
+**Security Model:**
+- User passwords: Argon2id hashed (memory=19456, time=2, parallelism=1)
+- API keys: 32-byte random, SHA-256 hashed
+- Session tokens: UUID v4, SHA-256 hashed
+- All sensitive data encrypted client-side before sync
+
+**User Isolation:**
+- Notes belong to users (user_id foreign key)
+- Devices belong to users (user_id foreign key)
+- Sync operations filtered by user
+- Admin can view metadata, not decrypted content
+
+**Default Admin Account:**
+- Email: `admin@localhost`
+- Password: `changeme` (must be changed on first deployment)
+- Created automatically by migration 003
+- Pre-approved and active
 
 ## Design Patterns to Avoid
 

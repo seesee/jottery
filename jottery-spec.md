@@ -7,14 +7,17 @@ Project Name: jottery
 
 Purpose: A privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with support for rich content, syntax highlighting, and encryption.
 
-Target Platforms:
+Target Platforms & Development Phases:
 
+- **Phase 1**: Web application (single-page application) ✅ COMPLETE
+- **Phase 2**: Enhanced features (attachments, themes, keyboard shortcuts) ✅ COMPLETE
+- **Phase 3**: Sync & server capabilities ✅ COMPLETE
+  - Multi-user authentication with admin approval workflow
+  - Session-based admin dashboard
+  - Device API key management
+- **Phase 4**: Unix TUI (terminal user interface) 🔄 IN PROGRESS
 
-- Web (single-page application) - Phase 1
-
-- Unix TUI (terminal user interface) - Phase 2
-
-Licence: Open source (recommend MIT or GPL-3.0)
+Licence: MIT (Open Source)
 
 
 ---
@@ -429,6 +432,128 @@ Best Practices:
 - Support plural forms
 
 - RTL language support (future)
+
+
+---
+
+2.9 Multi-User Authentication
+
+
+Architecture:
+
+
+User Registration Flow:
+
+1. User registers via web UI or TUI with email/password
+2. Password validated (minimum 12 characters)
+3. Password hashed with Argon2id (m=19456, t=2, p=1)
+4. User created in pending approval state
+5. Admin approves via admin dashboard or CLI
+6. User can now register devices
+
+Device Registration Flow:
+
+1. User authenticates with email/password
+2. Server validates credentials and approval status
+3. Device assigned unique client ID and API key
+4. API key hashed (SHA-256) before storage
+5. Device uses API key for all sync operations
+
+Admin Authentication:
+
+1. Admin logs in with email/password
+2. Server creates session token (UUID v4)
+3. Session token hashed before storage
+4. Session valid for 7 days
+5. Token passed via Bearer auth or cookie
+
+Data Model:
+
+
+	interface User {
+	  id: string;                    // UUID v4
+	  email: string;                 // Unique
+	  passwordHash: string;          // Argon2id hash
+	  createdAt: string;             // ISO 8601
+	  approved: boolean;             // Admin approval flag
+	  approvedAt?: string;           // Approval timestamp
+	  approvedBy?: string;           // Admin user ID
+	  isActive: boolean;             // Soft deactivation
+	  isAdmin: boolean;              // Admin role flag
+	  storageQuotaMb: number;        // Storage limit (default: 1000)
+	  lastLoginAt?: string;          // Last successful auth
+	}
+
+	interface Session {
+	  id: string;                    // UUID v4
+	  userId: string;                // Foreign key to User
+	  tokenHash: string;             // SHA-256 of session token
+	  createdAt: string;             // ISO 8601
+	  expiresAt: string;             // ISO 8601 (7 days)
+	  lastUsedAt: string;            // Updated on each request
+	  userAgent?: string;            // Browser/client info
+	  ipAddress?: string;            // Client IP
+	}
+
+	interface Client {
+	  id: string;                    // UUID v4
+	  userId: string;                // Foreign key to User
+	  apiKey: string;                // SHA-256 hash
+	  deviceName: string;            // User-provided name
+	  deviceType: string;            // 'web', 'tui', 'cli'
+	  createdAt: string;             // ISO 8601
+	  lastSeenAt?: string;           // Last sync operation
+	  isActive: boolean;             // Can be revoked
+	}
+
+
+Security Considerations:
+
+
+Password Requirements:
+
+- Minimum 12 characters
+- Hashed with Argon2id (memory-hard, resistant to GPU attacks)
+- No password recovery (by design)
+
+API Key Management:
+
+- Generated with cryptographically secure random (32 bytes)
+- Hashed before storage (SHA-256)
+- Never stored in plaintext on server
+- Returned only once during device registration
+
+Session Management:
+
+- 7-day expiration (sliding window on activity)
+- Secure token generation (UUID v4)
+- Token hashed before storage
+- Admin can invalidate sessions
+
+Multi-Admin Support:
+
+- Multiple admin users allowed
+- Cannot delete last admin user
+- Admin actions logged for audit trail
+
+Default Admin Account:
+
+**Created by migration 003:**
+- Email: `admin@localhost`
+- Password: `changeme`
+- Pre-approved and active
+- ⚠️ MUST be changed on first deployment
+
+Admin Dashboard:
+
+**Web UI:** `/admin`
+
+**Features:**
+- User management (approve, deactivate, delete)
+- Device management (view, revoke)
+- System statistics (users, notes, storage)
+- Audit log (sync operations)
+- Password change
 
 
 ---

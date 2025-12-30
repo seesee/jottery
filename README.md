@@ -11,8 +11,12 @@ Most note-taking apps are either too heavy (designed for long-form content) or t
 ## Features
 
 *   **End-to-End Encryption**: All your notes are encrypted on your device before being sent to the server. The server only stores encrypted blobs of data.
+*   **Multi-User Support**: Multiple users can use the same server, each with their own encrypted notes and devices.
+*   **Admin Approval Workflow**: New user registrations require admin approval for controlled access.
 *   **Cross-Platform**: Access your notes from a web client or a Terminal User Interface (TUI).
 *   **Self-Hostable**: You have full control over your data by hosting the sync server yourself.
+*   **Device Management**: Register multiple devices per user, each with its own API key.
+*   **Admin Dashboard**: Web-based interface for managing users, viewing statistics, and monitoring server activity.
 *   **Search**: Quickly find your notes with a powerful full-text search.
 *   **Tagging**: Organise your notes with tags.
 *   **Attachments**: Add, preview, and download attachments to your notes.
@@ -54,6 +58,40 @@ A lightweight and fast terminal user interface for those who prefer to work in t
 ### 3. Sync Server
 
 A simple server that stores your encrypted notes and syncs them between your clients.
+
+## Authentication & User Management
+
+Jottery supports multi-user deployments with an admin approval workflow:
+
+### User Registration
+
+1. New users register with email and password (minimum 12 characters)
+2. Account enters "pending approval" state
+3. Admin approves the account via admin dashboard or CLI
+4. Approved users can register devices for sync
+
+### Device Registration
+
+- Each user can register multiple devices (web, TUI, CLI)
+- Each device receives a unique API key for sync operations
+- Devices can be individually revoked by admins
+- Separate from user accounts for better security
+
+### Admin Dashboard
+
+Access the web-based admin dashboard at `http://your-server:3030/admin`
+
+**Default credentials** (⚠️ CHANGE IMMEDIATELY):
+- Email: `admin@localhost`
+- Password: `changeme`
+
+**Admin Features:**
+- Approve/reject user registrations
+- View user statistics (notes, devices, storage)
+- Deactivate/reactivate user accounts
+- Manage device registrations
+- View audit logs of sync operations
+- Monitor server statistics
 
 ## Technology Stack
 
@@ -100,6 +138,20 @@ The easiest way to get started is with Docker. This will build and run the web c
     ```
 
     The web interface will be available at `http://localhost:8000`. The data will be stored in a `data` directory on your host machine.
+
+3.  **Access the admin dashboard:**
+
+    Navigate to `http://localhost:3030/admin` and login with the default credentials:
+    - Email: `admin@localhost`
+    - Password: `changeme`
+
+    ⚠️ **IMPORTANT:** Change the default admin password immediately via the admin dashboard.
+
+4.  **Create your first user account:**
+
+    - Register a new user account via the web UI at `http://localhost:8000`
+    - Login to the admin dashboard and approve the new user
+    - The approved user can now register devices and start syncing notes
 
 ### Manual Installation
 
