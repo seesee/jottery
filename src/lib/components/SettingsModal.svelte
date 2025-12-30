@@ -38,7 +38,6 @@
   let syncError = '';
   let registering = false;
   let deviceName = 'My Device';
-  let showImportCredentials = false;
   let importCredentialsText = '';
   let importing = false;
   let showCopiedMessage = false;
@@ -596,7 +595,6 @@
 
       // Clear the import text
       importCredentialsText = '';
-      showImportCredentials = false;
 
     } catch (error) {
       console.error('[Import] ERROR:', error);
@@ -1122,7 +1120,6 @@
             bind:registeringDevice
             bind:registeredUserId
             bind:userRegistrationMessage
-            bind:showImportCredentials
             bind:importCredentialsText
             bind:importing
             bind:showCopiedMessage

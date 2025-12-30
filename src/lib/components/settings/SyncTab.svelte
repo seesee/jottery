@@ -21,7 +21,6 @@
   export let userRegistrationMessage: string;
 
   // Import credentials
-  export let showImportCredentials: boolean;
   export let importCredentialsText: string;
   export let importing: boolean;
 
@@ -75,7 +74,6 @@
       bind:registeringDevice
       bind:registeredUserId
       bind:userRegistrationMessage
-      bind:showImportCredentials
       bind:importCredentialsText
       bind:importing
       bind:syncError

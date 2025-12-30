@@ -4,7 +4,7 @@
   export let deviceName: string;
 
   // Registration state
-  export let registrationMode: 'select' | 'newUser' | 'existingUser';
+  export let registrationMode: 'select' | 'newUser' | 'existingUser' | 'importCredentials';
   export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
   export let userEmail: string;
   export let userPassword: string;
@@ -14,7 +14,6 @@
   export let userRegistrationMessage: string;
 
   // Import credentials
-  export let showImportCredentials: boolean;
   export let importCredentialsText: string;
   export let importing: boolean;
 
@@ -87,7 +86,7 @@
                       </div>
                     </div>
                     <button
-                      on:click={() => showImportCredentials = !showImportCredentials}
+                      on:click={() => registrationMode = 'importCredentials'}
                       class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
                     >
                       📋 Import Credentials from Another Device
@@ -290,36 +289,25 @@
                     Account linking will be enabled in a future update
                   </p>
                 </div>
-              {/if}
-
-<!-- Error Display -->
-{#if syncError}
-                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                  <div class="flex items-start gap-2">
-                    <span class="text-xl">⚠️</span>
-                    <div>
-                      <div class="font-semibold text-sm text-red-900 dark:text-red-100">
-                        Error
-                      </div>
-                      <p class="text-xs text-red-800 dark:text-red-200 mt-1">
-                        {syncError}
-                      </p>
-                    </div>
+{:else if registrationMode === 'importCredentials'}
+                <div class="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20 space-y-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <h4 class="font-medium text-sm text-gray-900 dark:text-white">
+                      Import Credentials
+                    </h4>
+                    <button
+                      on:click={onResetRegistrationFlow}
+                      class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    >
+                      ← Back
+                    </button>
                   </div>
-                </div>
-              {/if}
 
-<!-- Import Credentials Box -->
-              {#if showImportCredentials}
-                <div class="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
-                  <h4 class="font-medium text-sm text-gray-900 dark:text-white mb-2">
-                    Import Credentials
-                  </h4>
-                  <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                  <p class="text-xs text-gray-600 dark:text-gray-400">
                     Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.
                   </p>
 
-                  <div class="mb-3 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded p-2">
+                  <div class="bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded p-2">
                     <p class="text-xs text-orange-800 dark:text-orange-200 font-medium">
                       ⚠️ IMPORTANT: You must use the SAME password on all devices!
                     </p>
@@ -337,9 +325,26 @@
                   <button
                     on:click={onImportCredentials}
                     disabled={!importCredentialsText.trim() || importing}
-                    class="w-full mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
+                    class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
                   >
                     {importing ? 'Importing...' : '📥 Import and Lock'}
                   </button>
+                </div>
+              {/if}
+
+<!-- Error Display -->
+{#if syncError}
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <div class="flex items-start gap-2">
+                    <span class="text-xl">⚠️</span>
+                    <div>
+                      <div class="font-semibold text-sm text-red-900 dark:text-red-100">
+                        Error
+                      </div>
+                      <p class="text-xs text-red-800 dark:text-red-200 mt-1">
+                        {syncError}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               {/if}
