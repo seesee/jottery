@@ -835,15 +835,21 @@
       if (img.getAttribute('data-loaded') === 'true') continue;
 
       try {
-        // Load the blob from repository
-        const blob = await attachmentRepository.getBlob(attachmentId);
-        if (blob) {
-          const blobUrl = URL.createObjectURL(new Blob([blob]));
+        // Find the attachment object to get decrypted data
+        const attachment = attachments.find(a => a.data === attachmentId);
+        if (attachment) {
+          // Load and decrypt the blob using attachmentService
+          const blob = await attachmentService.getAttachmentData(attachment);
+          const blobUrl = URL.createObjectURL(blob);
           img.setAttribute('src', blobUrl);
           img.setAttribute('data-loaded', 'true');
 
           // Track blob URL for cleanup
           blobUrls.add(blobUrl);
+        } else {
+          console.error(`Failed to find attachment with data: ${attachmentId}`);
+          img.setAttribute('alt', '[Attachment not found]');
+          img.setAttribute('data-loaded', 'true');
         }
       } catch (error) {
         console.error(`Failed to load attachment ${attachmentId}:`, error);
@@ -884,20 +890,16 @@
         }
 
         if (foundAttachment) {
-          console.log(`[Preview] Loading blob for attachment.data: ${foundAttachment.data}`);
-          // Load the blob
-          const blob = await attachmentRepository.getBlob(foundAttachment.data);
-          if (blob) {
-            const blobUrl = URL.createObjectURL(new Blob([blob]));
-            console.log(`[Preview] Created blob URL: ${blobUrl} for ${filename}`);
-            img.setAttribute('src', blobUrl);
-            img.setAttribute('data-loaded', 'true');
+          console.log(`[Preview] Loading blob for attachment: ${foundAttachment.id}`);
+          // Load and decrypt the blob using attachmentService
+          const blob = await attachmentService.getAttachmentData(foundAttachment);
+          const blobUrl = URL.createObjectURL(blob);
+          console.log(`[Preview] Created blob URL: ${blobUrl} for ${filename}`);
+          img.setAttribute('src', blobUrl);
+          img.setAttribute('data-loaded', 'true');
 
-            // Track blob URL for cleanup
-            blobUrls.add(blobUrl);
-          } else {
-            console.error(`[Preview] No blob data found for ${foundAttachment.data}`);
-          }
+          // Track blob URL for cleanup
+          blobUrls.add(blobUrl);
         } else {
           console.error(`[Preview] No attachment found with filename: ${filename}`);
           img.setAttribute('alt', `[Attachment not found: ${filename}]`);
