@@ -23,6 +23,7 @@ export interface Note {
   wordWrap?: boolean; // Word wrap enabled (default: true)
   syntaxLanguage?: string; // Syntax highlighting language (any supported language ID)
   showPreview?: boolean; // Show preview panel for markdown/html (default: false)
+  needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
 }
 
 /**

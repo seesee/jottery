@@ -48,12 +48,17 @@ class IndexedDBNoteRepository implements NoteRepository {
   /**
    * Update an existing note
    * @param updateModifiedAt - If false, preserves the existing modifiedAt timestamp (for UI-only changes)
+   * @param skipSyncFlag - If true, doesn't set needsSync flag (used when clearing flag after sync)
    */
-  async update(note: Note, updateModifiedAt: boolean = true): Promise<Note> {
+  async update(note: Note, updateModifiedAt: boolean = true, skipSyncFlag: boolean = false): Promise<Note> {
     const db = getDB();
     // Update modified timestamp only for content changes, not UI state changes
     if (updateModifiedAt) {
       note.modifiedAt = new Date().toISOString();
+    }
+    // Mark note as needing sync when any change is made (unless explicitly skipped)
+    if (!skipSyncFlag) {
+      note.needsSync = true;
     }
     // Note: version is NOT incremented here - only when creating version snapshots
     await db.put(STORES.NOTES, note);
@@ -145,6 +150,7 @@ class IndexedDBNoteRepository implements NoteRepository {
 
   /**
    * Get notes modified after a timestamp (for sync)
+   * @deprecated Use getNotesNeedingSync() instead for more reliable sync tracking
    */
   async getModifiedAfter(timestamp: string): Promise<Note[]> {
     const db = getDB();
@@ -154,6 +160,16 @@ class IndexedDBNoteRepository implements NoteRepository {
     const notes = await index.getAll(range);
     await tx.done;
     return notes;
+  }
+
+  /**
+   * Get all notes that need to be synced
+   * Uses needsSync flag to identify notes with any changes (content or UI state)
+   */
+  async getNotesNeedingSync(): Promise<Note[]> {
+    const db = getDB();
+    const allNotes = await db.getAll(STORES.NOTES);
+    return allNotes.filter(note => note.needsSync === true);
   }
 
   /**

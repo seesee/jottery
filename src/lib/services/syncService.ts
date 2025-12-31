@@ -225,11 +225,10 @@ class SyncService {
       console.log('[SyncService] Retrieved ALL notes from repository:', modifiedNotes.length);
       console.log('[SyncService] Note IDs:', modifiedNotes.map(n => n.id));
     } else {
-      // Only push notes modified since last sync
-      const lastSyncAt = metadata?.lastSyncAt || '1970-01-01T00:00:00Z';
-      console.log('[SyncService] Getting notes modified after:', lastSyncAt);
-      modifiedNotes = await noteRepository.getModifiedAfter(lastSyncAt);
-      console.log('[SyncService] Retrieved modified notes:', modifiedNotes.length);
+      // Only push notes that need syncing (flagged with needsSync)
+      console.log('[SyncService] Getting notes that need syncing');
+      modifiedNotes = await noteRepository.getNotesNeedingSync();
+      console.log('[SyncService] Retrieved notes needing sync:', modifiedNotes.length);
     }
 
     if (modifiedNotes.length === 0) {
@@ -368,6 +367,13 @@ class SyncService {
         serverVersion: accepted.serverVersion,
         lastSyncStatus: 'synced',
       });
+
+      // Clear needsSync flag for successfully synced notes
+      const note = await noteRepository.getById(accepted.id);
+      if (note) {
+        note.needsSync = false;
+        await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
+      }
 
       // Version creation is now handled separately by EditorPane idle timer
       // and on note navigation, not during sync
