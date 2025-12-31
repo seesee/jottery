@@ -864,32 +864,42 @@
       try {
         // Find attachment by decrypted filename
         let foundAttachment = null;
+        console.log(`[Preview] Looking for attachment with filename: ${filename}`);
+        console.log(`[Preview] Available attachments:`, attachments.length);
+
         for (const attachment of attachments) {
           try {
             const encryptedFilename = JSON.parse(attachment.filename);
             const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
+            console.log(`[Preview] Checking attachment ${attachment.id}: "${decryptedFilename}"`);
 
             if (decryptedFilename === filename) {
+              console.log(`[Preview] Found match! ID: ${attachment.id}, data: ${attachment.data}`);
               foundAttachment = attachment;
               break;
             }
           } catch (err) {
-            console.error('Failed to decrypt filename:', err);
+            console.error('Failed to decrypt filename for attachment:', attachment.id, err);
           }
         }
 
         if (foundAttachment) {
+          console.log(`[Preview] Loading blob for attachment.data: ${foundAttachment.data}`);
           // Load the blob
           const blob = await attachmentRepository.getBlob(foundAttachment.data);
           if (blob) {
             const blobUrl = URL.createObjectURL(new Blob([blob]));
+            console.log(`[Preview] Created blob URL: ${blobUrl} for ${filename}`);
             img.setAttribute('src', blobUrl);
             img.setAttribute('data-loaded', 'true');
 
             // Track blob URL for cleanup
             blobUrls.add(blobUrl);
+          } else {
+            console.error(`[Preview] No blob data found for ${foundAttachment.data}`);
           }
         } else {
+          console.error(`[Preview] No attachment found with filename: ${filename}`);
           img.setAttribute('alt', `[Attachment not found: ${filename}]`);
           img.setAttribute('data-loaded', 'true');
         }
