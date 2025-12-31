@@ -131,6 +131,15 @@ class NoteService {
       throw new Error(`Note ${id} not found`);
     }
 
+    // Determine if this is a content change or just UI state change
+    // Content changes: content, tags, attachments, pinned
+    // UI state changes: wordWrap, syntaxLanguage, showPreview
+    const hasContentChange =
+      updates.content !== undefined ||
+      updates.tags !== undefined ||
+      updates.attachments !== undefined ||
+      updates.pinned !== undefined;
+
     // Update content if provided
     if (updates.content !== undefined) {
       const encryptedContent = await cryptoService.encryptText(
@@ -188,7 +197,8 @@ class NoteService {
       note.showPreview = updates.showPreview;
     }
 
-    return await noteRepository.update(note);
+    // Only update modifiedAt if there was an actual content change
+    return await noteRepository.update(note, hasContentChange);
   }
 
   /**

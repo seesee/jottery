@@ -47,11 +47,14 @@ class IndexedDBNoteRepository implements NoteRepository {
 
   /**
    * Update an existing note
+   * @param updateModifiedAt - If false, preserves the existing modifiedAt timestamp (for UI-only changes)
    */
-  async update(note: Note): Promise<Note> {
+  async update(note: Note, updateModifiedAt: boolean = true): Promise<Note> {
     const db = getDB();
-    // Update modified timestamp
-    note.modifiedAt = new Date().toISOString();
+    // Update modified timestamp only for content changes, not UI state changes
+    if (updateModifiedAt) {
+      note.modifiedAt = new Date().toISOString();
+    }
     // Note: version is NOT incremented here - only when creating version snapshots
     await db.put(STORES.NOTES, note);
     return note;
