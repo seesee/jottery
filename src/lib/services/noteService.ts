@@ -26,6 +26,7 @@ class NoteService {
       pinned?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+      showPreview?: boolean;
       attachments?: Attachment[];
     }
   ): Promise<Note> {
@@ -49,6 +50,7 @@ class NoteService {
       pinned: options?.pinned || false,
       wordWrap: options?.wordWrap ?? true,
       syntaxLanguage: options?.syntaxLanguage || 'markdown',
+      showPreview: options?.showPreview ?? false,
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
       attachments: options?.attachments || [],

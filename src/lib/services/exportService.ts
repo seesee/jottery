@@ -131,6 +131,7 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
     pinned: note.pinned,
     wordWrap: note.wordWrap,
     syntaxLanguage: note.syntaxLanguage,
+    showPreview: note.showPreview,
   };
 }
 
@@ -227,6 +228,7 @@ export async function importNotes(
         pinned: exportNote.pinned,
         wordWrap: exportNote.wordWrap,
         syntaxLanguage: exportNote.syntaxLanguage,
+        showPreview: exportNote.showPreview,
         attachments: attachments,
       });
       imported++;
