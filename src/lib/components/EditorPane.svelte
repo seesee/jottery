@@ -120,10 +120,11 @@
           if (href && href.startsWith('attachment:')) {
             const attachmentRef = href.substring('attachment:'.length);
 
-            // Find the attachment by ID or data reference
-            // Support multiple formats: UUID, UUID without hyphens, or data field
-            const attachment = attachments.find(a => {
-              // Direct ID match
+            // Find the attachment by filename (preferred) or UUID
+            // Note: We can't decrypt filenames synchronously in the renderer,
+            // so we need to handle this in afterUpdate. For now, try to match by UUID.
+            let attachment = attachments.find(a => {
+              // Direct ID match (UUID)
               if (a.id === attachmentRef) return true;
 
               // Match UUID without hyphens
@@ -140,6 +141,13 @@
               return false;
             });
 
+            // If not found by UUID, mark for filename lookup in afterUpdate
+            // Store the reference in the data attribute for async resolution
+            if (!attachment) {
+              // Return placeholder that will be resolved by filename in afterUpdate
+              return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+            }
+
             if (attachment) {
               // Check if it's an image
               if (attachment.mimeType.startsWith('image/')) {
@@ -149,15 +157,12 @@
               } else {
                 // For non-image attachments, create a download link
                 const icon = attachment.mimeType.includes('pdf') ? '📄' : '📎';
-                return `<div class="attachment-download" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}" style="padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; dark:bg-gray-800;">
+                return `<div class="attachment-download" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}" style="padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; dark:bg-gray-800; cursor: pointer;">
                   <span style="font-size: 24px; margin-right: 8px;">${icon}</span>
-                  <span style="font-weight: 500;">${text || 'Download attachment'}</span>
+                  <span style="font-weight: 500;">${text || attachmentRef}</span>
                   <span style="margin-left: 8px; color: #666; font-size: 0.9em;">(${(attachment.size / 1024).toFixed(1)} KB)</span>
                 </div>`;
               }
-            } else {
-              // Attachment not found
-              return `<span style="color: red;">[Attachment not found: ${attachmentRef}]</span>`;
             }
           }
 
@@ -810,9 +815,12 @@
     const previewContainer = document.querySelector('.prose');
     if (!previewContainer) return;
 
-    // Process images
-    const images = previewContainer.querySelectorAll('img[data-attachment-id]');
-    for (const img of images) {
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) return;
+
+    // Process images with attachment IDs (already resolved)
+    const imagesById = previewContainer.querySelectorAll('img[data-attachment-id]');
+    for (const img of imagesById) {
       const attachmentId = img.getAttribute('data-attachment-id');
       if (!attachmentId) continue;
 
@@ -834,6 +842,54 @@
         console.error(`Failed to load attachment ${attachmentId}:`, error);
         img.setAttribute('alt', '[Failed to load image]');
         img.setAttribute('data-loaded', 'true'); // Mark as processed even on error
+      }
+    }
+
+    // Process images with filenames (need to resolve)
+    const imagesByFilename = previewContainer.querySelectorAll('img[data-attachment-filename]');
+    for (const img of imagesByFilename) {
+      const filename = img.getAttribute('data-attachment-filename');
+      if (!filename) continue;
+
+      // Skip if already loaded
+      if (img.getAttribute('data-loaded') === 'true') continue;
+
+      try {
+        // Find attachment by decrypted filename
+        let foundAttachment = null;
+        for (const attachment of attachments) {
+          try {
+            const encryptedFilename = JSON.parse(attachment.filename);
+            const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
+
+            if (decryptedFilename === filename) {
+              foundAttachment = attachment;
+              break;
+            }
+          } catch (err) {
+            console.error('Failed to decrypt filename:', err);
+          }
+        }
+
+        if (foundAttachment) {
+          // Load the blob
+          const blob = await attachmentRepository.getBlob(foundAttachment.data);
+          if (blob) {
+            const blobUrl = URL.createObjectURL(new Blob([blob]));
+            img.setAttribute('src', blobUrl);
+            img.setAttribute('data-loaded', 'true');
+
+            // Clean up blob URL when component unmounts
+            onDestroy(() => URL.revokeObjectURL(blobUrl));
+          }
+        } else {
+          img.setAttribute('alt', `[Attachment not found: ${filename}]`);
+          img.setAttribute('data-loaded', 'true');
+        }
+      } catch (error) {
+        console.error(`Failed to load attachment by filename ${filename}:`, error);
+        img.setAttribute('alt', '[Failed to load image]');
+        img.setAttribute('data-loaded', 'true');
       }
     }
 
