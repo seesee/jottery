@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository } from '../services';
+  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, attachmentRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
@@ -105,9 +105,48 @@
           sanitize: false,
         });
 
-        // Set up custom renderer for code blocks
+        // Set up custom renderer for code blocks and images
         const renderer = new marked.Renderer();
         const originalCode = renderer.code.bind(renderer);
+        const originalImage = renderer.image.bind(renderer);
+
+        // Custom image renderer to handle attachment: URLs
+        renderer.image = function(token) {
+          const href = token.href;
+          const title = token.title || '';
+          const text = token.text || '';
+
+          // Check if this is an attachment URL
+          if (href && href.startsWith('attachment:')) {
+            const attachmentId = href.substring('attachment:'.length);
+
+            // Find the attachment in the current note
+            const attachment = attachments.find(a => a.id === attachmentId);
+
+            if (attachment) {
+              // Check if it's an image
+              if (attachment.mimeType.startsWith('image/')) {
+                // Return a placeholder that will be replaced with actual blob URL
+                // We'll use a data attribute to store the attachment ID for later processing
+                return `<img src="" data-attachment-id="${attachmentId}" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+              } else {
+                // For non-image attachments, create a download link
+                const icon = attachment.mimeType.includes('pdf') ? '📄' : '📎';
+                return `<div class="attachment-download" data-attachment-id="${attachmentId}" style="padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; dark:bg-gray-800;">
+                  <span style="font-size: 24px; margin-right: 8px;">${icon}</span>
+                  <span style="font-weight: 500;">${text || 'Download attachment'}</span>
+                  <span style="margin-left: 8px; color: #666; font-size: 0.9em;">(${(attachment.size / 1024).toFixed(1)} KB)</span>
+                </div>`;
+              }
+            } else {
+              // Attachment not found
+              return `<span style="color: red;">[Attachment not found: ${attachmentId}]</span>`;
+            }
+          }
+
+          // For non-attachment images, use default renderer
+          return originalImage.call(this, token);
+        };
 
         renderer.code = function(token) {
           // In marked v17+, renderer receives a token object instead of separate parameters
@@ -744,6 +783,88 @@
 
   onDestroy(() => {
     window.removeEventListener('keydown', handleEditorKeydown);
+  });
+
+  // Process attachment URLs in preview mode
+  afterUpdate(async () => {
+    if (!showPreview) return;
+
+    // Find all attachment images and download links
+    const previewContainer = document.querySelector('.prose');
+    if (!previewContainer) return;
+
+    // Process images
+    const images = previewContainer.querySelectorAll('img[data-attachment-id]');
+    for (const img of images) {
+      const attachmentId = img.getAttribute('data-attachment-id');
+      if (!attachmentId) continue;
+
+      // Skip if already loaded
+      if (img.getAttribute('src')) continue;
+
+      try {
+        // Load the blob from repository
+        const blob = await attachmentRepository.getBlob(attachmentId);
+        if (blob) {
+          const blobUrl = URL.createObjectURL(new Blob([blob]));
+          img.setAttribute('src', blobUrl);
+
+          // Clean up blob URL when component unmounts
+          onDestroy(() => URL.revokeObjectURL(blobUrl));
+        }
+      } catch (error) {
+        console.error(`Failed to load attachment ${attachmentId}:`, error);
+        img.setAttribute('alt', '[Failed to load image]');
+      }
+    }
+
+    // Process download links
+    const downloads = previewContainer.querySelectorAll('.attachment-download[data-attachment-id]');
+    for (const div of downloads) {
+      const attachmentId = div.getAttribute('data-attachment-id');
+      if (!attachmentId) continue;
+
+      // Skip if already processed
+      if (div.classList.contains('clickable')) continue;
+
+      div.classList.add('clickable');
+      div.style.cursor = 'pointer';
+
+      div.addEventListener('click', async () => {
+        try {
+          const blob = await attachmentRepository.getBlob(attachmentId);
+          const attachment = attachments.find(a => a.id === attachmentId);
+
+          if (blob && attachment) {
+            const blobUrl = URL.createObjectURL(new Blob([blob]));
+            const a = document.createElement('a');
+            a.href = blobUrl;
+
+            // Decrypt filename for download
+            try {
+              const masterKey = keyManager.getMasterKey();
+              if (masterKey) {
+                const encryptedFilename = JSON.parse(attachment.filename);
+                const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
+                a.download = decryptedFilename;
+              } else {
+                a.download = 'attachment';
+              }
+            } catch (err) {
+              console.error('Failed to decrypt filename:', err);
+              a.download = 'attachment';
+            }
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+          }
+        } catch (error) {
+          console.error(`Failed to download attachment ${attachmentId}:`, error);
+        }
+      });
+    }
   });
 </script>
 
