@@ -1,6 +1,6 @@
 # Jottery
 
-Jottery is a simple, searchable, and privacy-focused scratchpad/notes application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app, the sync server is optional.
+Jottery is a simple, searchable, and privacy-focused scratchpad/notes application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app or in a terminal, the sync server is optional. All data are stored locally unless explicitly configured to sync to an endpoint of your choosing.
 
 ## Why Jottery?
 
@@ -10,7 +10,7 @@ Most note-taking apps are either too heavy (designed for long-form content) or t
 
 ## Features
 
-*   **End-to-End Encryption**: All your notes are encrypted on your device before being sent to the server. The server only stores encrypted blobs of data.
+*   **End-to-End Encryption**: All your notes are encrypted on your device before being stored/sent to the sync server. The server only stores encrypted blobs of data.
 *   **Multi-User Support**: Multiple users can use the same server, each with their own encrypted notes and devices.
 *   **Admin Approval Workflow**: New user registrations require admin approval for controlled access.
 *   **Cross-Platform**: Access your notes from a web client or a Terminal User Interface (TUI).
@@ -24,6 +24,11 @@ Most note-taking apps are either too heavy (designed for long-form content) or t
 *   **Quick Delete**: Delete notes instantly from the list view (hover for delete button, or use configurable keyboard shortcut).
 *   **Keyboard Shortcuts**: Fully customisable keyboard shortcuts for common actions.
 *   **Many handy features**: Export notes, preview HTML, document info, basic versioning, and markdown documents in-editor.
+
+## Caveats
+*   **Sync**: The sync mechanism is quite robust but very basic. Updates are sent periodically and the last version to be received "wins". To mitigate against accidental deletions, the previous version is also stored.
+*   **Security**: Use a strong password -- all data blobs (notes, tags, attachments) are encrypted using it. If you forget your password, there is no recovery process. You will lose all your notes and will need to start over. Because it's handy for development purposes, there is a mechanism to store the password in both web and tui app (this is NOT synced) so you don't need to constantly input your password -- but if you use this, your notes are basically plain text to anyone with access to your device/db files. I suggest using a password manager.
+*   **Sync Server**: All sync accounts need to be approved by an admin. Admins can see "username" (email address is suggested but does not need to be "real"), the total number of notes and the combined size (in kb) of the notes held by that user. 
 
 ## Components
 
