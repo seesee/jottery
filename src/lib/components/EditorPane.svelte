@@ -118,21 +118,38 @@
 
           // Check if this is an attachment URL
           if (href && href.startsWith('attachment:')) {
-            const attachmentId = href.substring('attachment:'.length);
+            const attachmentRef = href.substring('attachment:'.length);
 
-            // Find the attachment in the current note
-            const attachment = attachments.find(a => a.id === attachmentId);
+            // Find the attachment by ID or data reference
+            // Support multiple formats: UUID, UUID without hyphens, or data field
+            const attachment = attachments.find(a => {
+              // Direct ID match
+              if (a.id === attachmentRef) return true;
+
+              // Match UUID without hyphens
+              const idWithoutHyphens = a.id.replace(/-/g, '');
+              if (attachmentRef.startsWith(idWithoutHyphens)) return true;
+
+              // Match by data field
+              if (a.data === attachmentRef) return true;
+
+              // Match data without hyphens
+              const dataWithoutHyphens = a.data.replace(/-/g, '');
+              if (attachmentRef.startsWith(dataWithoutHyphens)) return true;
+
+              return false;
+            });
 
             if (attachment) {
               // Check if it's an image
               if (attachment.mimeType.startsWith('image/')) {
                 // Return a placeholder with data URL to avoid CSP errors
-                // Use a data attribute to mark as unloaded
-                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-id="${attachmentId}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+                // Store the actual attachment.data value (blob storage key) in data attribute
+                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
               } else {
                 // For non-image attachments, create a download link
                 const icon = attachment.mimeType.includes('pdf') ? '📄' : '📎';
-                return `<div class="attachment-download" data-attachment-id="${attachmentId}" style="padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; dark:bg-gray-800;">
+                return `<div class="attachment-download" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}" style="padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; dark:bg-gray-800;">
                   <span style="font-size: 24px; margin-right: 8px;">${icon}</span>
                   <span style="font-weight: 500;">${text || 'Download attachment'}</span>
                   <span style="margin-left: 8px; color: #666; font-size: 0.9em;">(${(attachment.size / 1024).toFixed(1)} KB)</span>
@@ -140,7 +157,7 @@
               }
             } else {
               // Attachment not found
-              return `<span style="color: red;">[Attachment not found: ${attachmentId}]</span>`;
+              return `<span style="color: red;">[Attachment not found: ${attachmentRef}]</span>`;
             }
           }
 
@@ -824,6 +841,7 @@
     const downloads = previewContainer.querySelectorAll('.attachment-download[data-attachment-id]');
     for (const div of downloads) {
       const attachmentId = div.getAttribute('data-attachment-id');
+      const attachmentData = div.getAttribute('data-attachment-data');
       if (!attachmentId) continue;
 
       // Skip if already processed
@@ -834,7 +852,9 @@
 
       div.addEventListener('click', async () => {
         try {
-          const blob = await attachmentRepository.getBlob(attachmentId);
+          // Use data attribute for blob key, fall back to ID
+          const blobKey = attachmentData || attachmentId;
+          const blob = await attachmentRepository.getBlob(blobKey);
           const attachment = attachments.find(a => a.id === attachmentId);
 
           if (blob && attachment) {
