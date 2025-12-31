@@ -126,9 +126,9 @@
             if (attachment) {
               // Check if it's an image
               if (attachment.mimeType.startsWith('image/')) {
-                // Return a placeholder that will be replaced with actual blob URL
-                // We'll use a data attribute to store the attachment ID for later processing
-                return `<img src="" data-attachment-id="${attachmentId}" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+                // Return a placeholder with data URL to avoid CSP errors
+                // Use a data attribute to mark as unloaded
+                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-id="${attachmentId}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
               } else {
                 // For non-image attachments, create a download link
                 const icon = attachment.mimeType.includes('pdf') ? '📄' : '📎';
@@ -800,7 +800,7 @@
       if (!attachmentId) continue;
 
       // Skip if already loaded
-      if (img.getAttribute('src')) continue;
+      if (img.getAttribute('data-loaded') === 'true') continue;
 
       try {
         // Load the blob from repository
@@ -808,6 +808,7 @@
         if (blob) {
           const blobUrl = URL.createObjectURL(new Blob([blob]));
           img.setAttribute('src', blobUrl);
+          img.setAttribute('data-loaded', 'true');
 
           // Clean up blob URL when component unmounts
           onDestroy(() => URL.revokeObjectURL(blobUrl));
@@ -815,6 +816,7 @@
       } catch (error) {
         console.error(`Failed to load attachment ${attachmentId}:`, error);
         img.setAttribute('alt', '[Failed to load image]');
+        img.setAttribute('data-loaded', 'true'); // Mark as processed even on error
       }
     }
 
