@@ -49,6 +49,9 @@
   let showVersionHistory: boolean = false;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
 
+  // Track blob URLs for cleanup
+  let blobUrls: Set<string> = new Set();
+
   // Compute preview HTML
   $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
 
@@ -805,6 +808,10 @@
 
   onDestroy(() => {
     window.removeEventListener('keydown', handleEditorKeydown);
+
+    // Clean up all blob URLs
+    blobUrls.forEach(url => URL.revokeObjectURL(url));
+    blobUrls.clear();
   });
 
   // Process attachment URLs in preview mode
@@ -835,8 +842,8 @@
           img.setAttribute('src', blobUrl);
           img.setAttribute('data-loaded', 'true');
 
-          // Clean up blob URL when component unmounts
-          onDestroy(() => URL.revokeObjectURL(blobUrl));
+          // Track blob URL for cleanup
+          blobUrls.add(blobUrl);
         }
       } catch (error) {
         console.error(`Failed to load attachment ${attachmentId}:`, error);
@@ -879,8 +886,8 @@
             img.setAttribute('src', blobUrl);
             img.setAttribute('data-loaded', 'true');
 
-            // Clean up blob URL when component unmounts
-            onDestroy(() => URL.revokeObjectURL(blobUrl));
+            // Track blob URL for cleanup
+            blobUrls.add(blobUrl);
           }
         } else {
           img.setAttribute('alt', `[Attachment not found: ${filename}]`);
