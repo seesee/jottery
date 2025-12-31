@@ -131,55 +131,79 @@ class NoteService {
       throw new Error(`Note ${id} not found`);
     }
 
-    // Determine if this is a content change or just UI state change
-    // Content changes: content, tags, attachments, pinned
-    // UI state changes: wordWrap, syntaxLanguage, showPreview
-    const hasContentChange =
-      updates.content !== undefined ||
-      updates.tags !== undefined ||
-      updates.attachments !== undefined ||
-      updates.pinned !== undefined;
+    // Track if actual content changed (not just UI state)
+    let hasContentChange = false;
 
-    // Update content if provided
-    if (updates.content !== undefined) {
+    // Decrypt current content to compare
+    let currentContent = '';
+    let currentTags: string[] = [];
+    try {
+      const contentData = JSON.parse(note.content);
+      currentContent = await cryptoService.decryptText(contentData, masterKey.key);
+
+      if (note.tags.length > 0 && note.tags[0]) {
+        const tagsData = JSON.parse(note.tags[0]);
+        currentTags = await decryptStringArray(tagsData, masterKey.key);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt current note for comparison:', error);
+    }
+
+    // Update content if provided and changed
+    if (updates.content !== undefined && updates.content !== currentContent) {
       const encryptedContent = await cryptoService.encryptText(
         updates.content,
         masterKey.key
       );
       note.content = JSON.stringify(encryptedContent);
+      hasContentChange = true;
     }
 
-    // Update tags if provided
+    // Update tags if provided and changed
     if (updates.tags !== undefined) {
-      const encryptedTags = await encryptStringArray(updates.tags, masterKey.key);
-      note.tags = [JSON.stringify(encryptedTags)];
+      const tagsChanged =
+        updates.tags.length !== currentTags.length ||
+        updates.tags.some((tag, i) => tag !== currentTags[i]);
+
+      if (tagsChanged) {
+        const encryptedTags = await encryptStringArray(updates.tags, masterKey.key);
+        note.tags = [JSON.stringify(encryptedTags)];
+        hasContentChange = true;
+      }
     }
 
-    // Update attachments if provided
+    // Update attachments if provided and changed
     if (updates.attachments !== undefined) {
-      // Find removed attachments and clean them up
+      // Check if attachments changed
       const oldAttachmentIds = new Set(note.attachments.map(a => a.id));
       const newAttachmentIds = new Set(updates.attachments.map(a => a.id));
+      const attachmentsChanged =
+        oldAttachmentIds.size !== newAttachmentIds.size ||
+        [...oldAttachmentIds].some(id => !newAttachmentIds.has(id));
 
-      // Delete attachments that were removed
-      for (const oldId of oldAttachmentIds) {
-        if (!newAttachmentIds.has(oldId)) {
-          try {
-            await attachmentRepository.deleteBlob(oldId);
-            // Also try to delete thumbnail if it exists
-            await attachmentRepository.deleteThumbnail(oldId);
-          } catch (error) {
-            console.error(`Failed to delete attachment blob ${oldId}:`, error);
+      if (attachmentsChanged) {
+        // Delete attachments that were removed
+        for (const oldId of oldAttachmentIds) {
+          if (!newAttachmentIds.has(oldId)) {
+            try {
+              await attachmentRepository.deleteBlob(oldId);
+              // Also try to delete thumbnail if it exists
+              await attachmentRepository.deleteThumbnail(oldId);
+            } catch (error) {
+              console.error(`Failed to delete attachment blob ${oldId}:`, error);
+            }
           }
         }
-      }
 
-      note.attachments = updates.attachments;
+        note.attachments = updates.attachments;
+        hasContentChange = true;
+      }
     }
 
-    // Update pinned status if provided
-    if (updates.pinned !== undefined) {
+    // Update pinned status if provided and changed
+    if (updates.pinned !== undefined && updates.pinned !== note.pinned) {
       note.pinned = updates.pinned;
+      hasContentChange = true;
     }
 
     // Update word wrap if provided
