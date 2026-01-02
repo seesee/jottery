@@ -2,6 +2,7 @@
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};
   export let placeholder: string = 'Add tags...';
+  export let onTagClick: ((tag: string) => void) | undefined = undefined;
 
   let inputValue = '';
   let suggestions: string[] = [];
@@ -81,7 +82,20 @@
     <!-- Existing tags -->
     {#each tags as tag, index}
       <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-md">
-        #{tag}
+        <span
+          on:click={() => onTagClick?.(tag)}
+          class="{onTagClick ? 'cursor-pointer hover:underline' : ''}"
+          role={onTagClick ? 'button' : undefined}
+          tabindex={onTagClick ? 0 : undefined}
+          on:keydown={(e) => {
+            if (onTagClick && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onTagClick(tag);
+            }
+          }}
+        >
+          #{tag}
+        </span>
         <button
           on:click={() => removeTag(index)}
           class="hover:text-blue-600 dark:hover:text-blue-400"

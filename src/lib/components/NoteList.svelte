@@ -14,7 +14,7 @@
 
   // Virtual scrolling state
   const ESTIMATED_ITEM_HEIGHT = 80; // Initial estimated height per note item in pixels
-  const OVERSCAN = 5; // Number of items to render outside viewport for smooth scrolling
+  const OVERSCAN = 15; // Number of items to render outside viewport for smooth scrolling
   let viewportHeight = 0;
   let scrollTop = 0;
   let startIndex = 0;
@@ -72,17 +72,12 @@
     viewportHeight = scrollContainer.clientHeight;
     scrollTop = scrollContainer.scrollTop;
 
-    // Find start index based on scroll position
+    // Find start index based on scroll position (subtract OVERSCAN for buffer above)
     startIndex = Math.max(0, findIndexAtPosition(scrollTop) - OVERSCAN);
 
-    // Calculate end index based on viewport height
-    let remainingHeight = viewportHeight;
-    let currentIndex = startIndex;
-    while (remainingHeight > 0 && currentIndex < $filteredNotes.length) {
-      remainingHeight -= getItemHeight(currentIndex);
-      currentIndex++;
-    }
-    endIndex = Math.min($filteredNotes.length, currentIndex + OVERSCAN);
+    // Find end index based on scroll position + viewport height (add OVERSCAN for buffer below)
+    const endPosition = scrollTop + viewportHeight;
+    endIndex = Math.min($filteredNotes.length, findIndexAtPosition(endPosition) + 1 + OVERSCAN);
 
     visibleNotes = $filteredNotes.slice(startIndex, endIndex);
     totalHeight = calculateTotalHeight();
@@ -123,6 +118,39 @@
   // Update visible range when filtered notes change
   $: if ($filteredNotes) {
     updateVisibleRange();
+  }
+
+  let previousSelectedNoteId: string | null = null;
+
+  // Scroll selected note into view when selection changes (not during manual scrolling)
+  $: if ($selectedNoteId && scrollContainer && $selectedNoteId !== previousSelectedNoteId) {
+    scrollToNote($selectedNoteId);
+    previousSelectedNoteId = $selectedNoteId;
+  }
+
+  function scrollToNote(noteId: string) {
+    const noteIndex = $filteredNotes.findIndex(n => n.id === noteId);
+    if (noteIndex === -1) return;
+
+    // Calculate the position of the note
+    const notePosition = calculateOffset(noteIndex);
+    const noteHeight = getItemHeight(noteIndex);
+
+    const scrollTop = scrollContainer.scrollTop;
+    const viewportHeight = scrollContainer.clientHeight;
+
+    // Check if note is outside the viewport
+    const isAboveViewport = notePosition < scrollTop;
+    const isBelowViewport = notePosition + noteHeight > scrollTop + viewportHeight;
+
+    if (isAboveViewport) {
+      // Scroll to show note at top of viewport
+      scrollContainer.scrollTop = notePosition;
+    } else if (isBelowViewport) {
+      // Scroll to show note at bottom of viewport
+      scrollContainer.scrollTop = notePosition + noteHeight - viewportHeight;
+    }
+    // If note is already visible, don't scroll
   }
 
   // Initialize on mount

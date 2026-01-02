@@ -140,11 +140,14 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
  */
 export async function importNotes(
   data: ExportData,
-  strategy: 'merge' | 'replace' | 'skip' = 'merge'
+  strategy: 'merge' | 'replace' | 'skip' = 'merge',
+  onProgress?: (current: number, total: number) => void
 ): Promise<{
   imported: number;
   skipped: number;
   errors: string[];
+  attachments: number;
+  tags: Set<string>;
 }> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
@@ -153,15 +156,20 @@ export async function importNotes(
 
   let imported = 0;
   let skipped = 0;
+  let attachments = 0;
+  const tags = new Set<string>();
   const errors: string[] = [];
 
   // Validate export version
   if (data.version !== EXPORT_VERSION) {
     errors.push(`Unsupported export version: ${data.version}`);
-    return { imported, skipped, errors };
+    return { imported, skipped, errors, attachments, tags };
   }
 
-  for (const exportNote of data.notes) {
+  const totalNotes = data.notes.length;
+
+  for (let i = 0; i < data.notes.length; i++) {
+    const exportNote = data.notes[i];
     try {
       // Check if note already exists
       const existingNote = await noteRepository.getById(exportNote.id);
@@ -178,7 +186,7 @@ export async function importNotes(
       }
 
       // Process attachments: re-encrypt and store
-      const attachments: Attachment[] = [];
+      const noteAttachments: Attachment[] = [];
       if (exportNote.attachments && exportNote.attachments.length > 0) {
         for (const exportAttachment of exportNote.attachments) {
           try {
@@ -207,7 +215,7 @@ export async function importNotes(
             );
 
             // Create attachment metadata
-            attachments.push({
+            noteAttachments.push({
               id: attachmentId,
               filename: JSON.stringify(encryptedFilename),
               mimeType: exportAttachment.mimeType,
@@ -229,17 +237,26 @@ export async function importNotes(
         wordWrap: exportNote.wordWrap,
         syntaxLanguage: exportNote.syntaxLanguage,
         showPreview: exportNote.showPreview,
-        attachments: attachments,
+        attachments: noteAttachments,
       });
+
+      // Track statistics
       imported++;
+      attachments += noteAttachments.length;
+      exportNote.tags.forEach(tag => tags.add(tag));
     } catch (error) {
       errors.push(
         `Failed to import note ${exportNote.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+
+    // Report progress after each note
+    if (onProgress) {
+      onProgress(i + 1, totalNotes);
+    }
   }
 
-  return { imported, skipped, errors };
+  return { imported, skipped, errors, attachments, tags };
 }
 
 /**

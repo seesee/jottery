@@ -29,17 +29,14 @@ foreach my $note (@{$data->{notes}}) {
   }
   
   foreach my $match (@matches) {
-    my $result = `perl summarise-url.pl "$match->{url}" 2>&1`;
+    my $result = `perl summarise-url.pl "$match->{url}" 2>/dev/null`;
     chomp($result);
     
     my $replacement = "[$match->{text}]($match->{url})";
     
-    if ($result) {
-      $result =~ s/^.*?(\{.*)$/$1/s;
+    if ($result && $result =~ /^\{/) {
       my $parsed = eval { $json->decode($result) };
-      if ($@) {
-        push @{$note->{tags}}, "url-failed";
-      } elsif ($parsed && $parsed->{url}) {
+      if ($parsed && $parsed->{url}) {
         my @new_tags = @{$parsed->{tags} // []};
         push @{$note->{tags}}, @new_tags;
         $replacement = "[$match->{text}]($parsed->{url})";

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote } from '../stores/appStore';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote, searchQuery } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, attachmentRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -33,6 +33,12 @@
       onBackToList();
     }
   }
+
+  // Handle clicking on a tag to search for it
+  function handleTagClick(tag: string) {
+    searchQuery.set(`#${tag}`);
+  }
+
   let saveTimeout: number | null = null;
   let draftCreateTimeout: number | null = null; // Debounce timer for creating draft notes
   let language: string = 'plain';
@@ -1169,6 +1175,7 @@
         }}
         {availableTags}
         placeholder="Add tags..."
+        onTagClick={handleTagClick}
       />
     </div>
 

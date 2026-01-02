@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { searchQuery, isLocked, settings, isDraftMode } from '../stores/appStore';
-  import { lock, passwordStorageService, settingsRepository } from '../services';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode, selectedNote } from '../stores/appStore';
+  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -11,8 +11,9 @@
   export let onOpenRecycleBin: () => void = () => {};
   export let forceMobileLayout: boolean = false;
   export let disableNewNote: boolean = false;
+  export let loadingNotes: boolean = false;
+  export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
 
-  let showLockConfirm = false;
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showMobileSearch = false;
@@ -35,24 +36,38 @@
     onNewNote();
   }
 
-  function handleLockRequest() {
+  async function handleLockRequest() {
     if (rememberPasswordEnabled) {
       // If remember password is enabled, ask if they want to disable it
       showDisableRememberPasswordConfirm = true;
     } else {
-      // Normal lock confirmation
-      showLockConfirm = true;
+      // Auto-save and sync before locking (no confirmation needed)
+      await handleLockNow();
     }
   }
 
-  function handleLockConfirm() {
-    showLockConfirm = false;
+  async function handleLockNow() {
+    isLocking.set(true);
+
+    try {
+      // Give any pending auto-saves time to complete (EditorPane has 1s debounce)
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      // Trigger sync if enabled (will save all notes to server)
+      const syncMetadata = await syncRepository.getMetadata();
+      if (syncMetadata?.syncEnabled) {
+        console.log('[Header] Syncing before lock...');
+        await syncService.syncNow();
+      }
+    } catch (error) {
+      console.error('[Header] Error during pre-lock save/sync:', error);
+      // Continue with lock even if sync fails
+    }
+
+    // Lock the application
     lock();
     isLocked.set(true);
-  }
-
-  function handleLockCancel() {
-    showLockConfirm = false;
+    isLocking.set(false);
   }
 
   async function handleDisableRememberPasswordConfirm() {
@@ -71,9 +86,8 @@
       console.error('Failed to save disabled setting:', error);
     }
 
-    // Lock the application
-    lock();
-    isLocked.set(true);
+    // Lock the application (with auto-save/sync)
+    await handleLockNow();
   }
 
   function handleDisableRememberPasswordCancel() {
@@ -136,11 +150,16 @@
           id="search-input"
           type="text"
           bind:value={$searchQuery}
-          placeholder={$_('search.placeholder')}
-          class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          placeholder={loadingNotes ? `Loading ${loadingProgress.current}/${loadingProgress.total} notes...` : $_('search.placeholder')}
+          disabled={loadingNotes}
+          class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
           style="font-size: {searchFontSize}"
         />
-        {#if $searchQuery}
+        {#if loadingNotes}
+          <div class="absolute right-2 top-1/2 -translate-y-1/2">
+            <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
+          </div>
+        {:else if $searchQuery}
           <button
             on:click={() => searchQuery.set('')}
             class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -257,11 +276,16 @@
           id="search-input-mobile"
           type="text"
           bind:value={$searchQuery}
-          placeholder={$_('search.placeholder')}
-          class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          placeholder={loadingNotes ? `Loading ${loadingProgress.current}/${loadingProgress.total} notes...` : $_('search.placeholder')}
+          disabled={loadingNotes}
+          class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
           style="font-size: {searchFontSize}"
         />
-        {#if $searchQuery}
+        {#if loadingNotes}
+          <div class="absolute right-2 top-1/2 -translate-y-1/2">
+            <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
+          </div>
+        {:else if $searchQuery}
           <button
             on:click={() => searchQuery.set('')}
             class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -371,17 +395,6 @@
     animation: slide-in-left 0.3s ease-out;
   }
 </style>
-
-<ConfirmModal
-  show={showLockConfirm}
-  title={$_('lock.title')}
-  message={$_('lock.message')}
-  confirmText={$_('lock.confirmButton')}
-  cancelText={$_('common.cancel')}
-  confirmClass="bg-blue-600 hover:bg-blue-700"
-  onConfirm={handleLockConfirm}
-  onCancel={handleLockCancel}
-/>
 
 <ConfirmModal
   show={showDisableRememberPasswordConfirm}

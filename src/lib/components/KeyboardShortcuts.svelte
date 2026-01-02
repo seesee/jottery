@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { lock, noteService, searchService } from '../services';
+  import { isLocked, isLocking, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
+  import { lock, noteService, searchService, syncService, syncRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
 
@@ -10,7 +10,29 @@
   export let onFocusSearch: () => void;
   export let onOpenShortcutsHelp: () => void;
 
-  let showLockConfirm = false;
+  async function handleLockNow() {
+    isLocking.set(true);
+
+    try {
+      // Give any pending auto-saves time to complete (EditorPane has 1s debounce)
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      // Trigger sync if enabled (will save all notes to server)
+      const syncMetadata = await syncRepository.getMetadata();
+      if (syncMetadata?.syncEnabled) {
+        console.log('[KeyboardShortcuts] Syncing before lock...');
+        await syncService.syncNow();
+      }
+    } catch (error) {
+      console.error('[KeyboardShortcuts] Error during pre-lock save/sync:', error);
+      // Continue with lock even if sync fails
+    }
+
+    // Lock the application
+    lock();
+    isLocked.set(true);
+    isLocking.set(false);
+  }
 
   function matchesShortcut(event: KeyboardEvent, shortcut: any): boolean {
     // Null check - shortcut might be undefined
@@ -60,7 +82,7 @@
 
     if (matchesShortcut(event, shortcuts.lockApp)) {
       event.preventDefault();
-      showLockConfirm = true;
+      handleLockNow();
       return;
     }
 
@@ -210,16 +232,6 @@
     }
   }
 
-  function handleLockConfirm() {
-    showLockConfirm = false;
-    lock();
-    isLocked.set(true);
-  }
-
-  function handleLockCancel() {
-    showLockConfirm = false;
-  }
-
   onMount(() => {
     window.addEventListener('keydown', handleKeydown);
   });
@@ -228,14 +240,3 @@
     window.removeEventListener('keydown', handleKeydown);
   });
 </script>
-
-<ConfirmModal
-  show={showLockConfirm}
-  title={$_('lock.title')}
-  message={$_('lock.message')}
-  confirmText={$_('lock.confirmButton')}
-  cancelText={$_('common.cancel')}
-  confirmClass="bg-blue-600 hover:bg-blue-700"
-  onConfirm={handleLockConfirm}
-  onCancel={handleLockCancel}
-/>

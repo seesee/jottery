@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS } from '../types';
 
 // Lock state
 export const isLocked = writable<boolean>(true);
+export const isLocking = writable<boolean>(false);
 export const isInitialized = writable<boolean>(false);
 
 // Notes

@@ -42,6 +42,8 @@
   let deviceName = 'My Device';
   let importCredentialsText = '';
   let importing = false;
+  let importProgress = { current: 0, total: 0 };
+  let importResult: { imported: number; skipped: number; errors: string[]; attachments: number; tags: number } | null = null;
   let showCopiedMessage = false;
   let showCredentialsModal = false;
   let credentialsText = '';
@@ -959,22 +961,45 @@
     if (!file) return;
 
     try {
-      const data = await parseImportFile(file);
-      const result = await importNotes(data, 'merge');
+      importing = true;
+      importProgress = { current: 0, total: 0 };
+      importResult = null;
 
-      toast.success(`Import complete!\nImported: ${result.imported}\nSkipped: ${result.skipped}${result.errors.length > 0 ? '\nErrors: ' + result.errors.join('\n') : ''}`);
+      const data = await parseImportFile(file);
+      importProgress.total = data.notes.length;
+
+      const result = await importNotes(data, 'merge', (current, total) => {
+        importProgress = { current, total };
+      });
 
       // Reload notes
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
+
+      // Store result for display in modal
+      importResult = {
+        imported: result.imported,
+        skipped: result.skipped,
+        errors: result.errors,
+        attachments: result.attachments,
+        tags: result.tags.size,
+      };
     } catch (error) {
       console.error('Failed to import notes:', error);
       toast.error('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
+      importing = false;
+      importProgress = { current: 0, total: 0 };
     } finally {
       // Clear file input
       target.value = '';
     }
+  }
+
+  function closeImportModal() {
+    importing = false;
+    importProgress = { current: 0, total: 0 };
+    importResult = null;
   }
 
   // Handle Escape key to close modal
@@ -1384,6 +1409,117 @@
       </div>
     </div>
   {/if}
+{/if}
+
+<!-- Import Progress Modal -->
+{#if importing}
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+        {importResult ? 'Import Complete' : 'Importing Notes'}
+      </h3>
+
+      {#if importResult}
+        <!-- Results Summary -->
+        <div class="space-y-4">
+          <!-- Success icon -->
+          <div class="flex justify-center">
+            <div class="rounded-full bg-green-100 dark:bg-green-900 p-3">
+              <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Statistics -->
+          <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 dark:text-gray-400">Notes imported:</span>
+              <span class="font-semibold text-gray-900 dark:text-white">{importResult.imported}</span>
+            </div>
+            {#if importResult.skipped > 0}
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Notes skipped:</span>
+                <span class="font-semibold text-gray-900 dark:text-white">{importResult.skipped}</span>
+              </div>
+            {/if}
+            {#if importResult.attachments > 0}
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Attachments imported:</span>
+                <span class="font-semibold text-gray-900 dark:text-white">{importResult.attachments}</span>
+              </div>
+            {/if}
+            {#if importResult.tags > 0}
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600 dark:text-gray-400">Unique tags:</span>
+                <span class="font-semibold text-gray-900 dark:text-white">{importResult.tags}</span>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Errors -->
+          {#if importResult.errors.length > 0}
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p class="text-sm font-medium text-red-800 dark:text-red-300 mb-2">
+                {importResult.errors.length} error{importResult.errors.length > 1 ? 's' : ''} occurred:
+              </p>
+              <div class="max-h-32 overflow-y-auto space-y-1">
+                {#each importResult.errors as error}
+                  <p class="text-xs text-red-700 dark:text-red-400">{error}</p>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
+          <!-- Close button -->
+          <button
+            on:click={closeImportModal}
+            class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      {:else}
+        <!-- Progress indicator -->
+        <div class="space-y-4">
+          <!-- Progress bar -->
+          <div class="relative pt-1">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {#if importProgress.total > 0}
+                  Processing {importProgress.current} of {importProgress.total} notes...
+                {:else}
+                  Reading file...
+                {/if}
+              </span>
+              {#if importProgress.total > 0}
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {Math.round((importProgress.current / importProgress.total) * 100)}%
+                </span>
+              {/if}
+            </div>
+            <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-200 dark:bg-gray-700">
+              <div
+                class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-600 transition-all duration-300"
+                style="width: {importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Spinner for indeterminate state -->
+          {#if importProgress.total === 0}
+            <div class="flex justify-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          {/if}
+
+          <p class="text-sm text-gray-600 dark:text-gray-400 text-center">
+            Please wait while we import your notes...
+          </p>
+        </div>
+      {/if}
+    </div>
+  </div>
 {/if}
 
 <!-- Documentation Modal -->

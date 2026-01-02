@@ -155,7 +155,7 @@ class NoteService {
 
       try {
         const decrypted = await Promise.all(
-          batch.map(note => this.decryptNote(note, masterKey.key))
+          batch.map(note => this.decryptNote(note, key))
         );
 
         // Report progress
