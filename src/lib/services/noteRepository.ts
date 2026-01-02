@@ -165,11 +165,24 @@ class IndexedDBNoteRepository implements NoteRepository {
   /**
    * Get all notes that need to be synced
    * Uses needsSync flag to identify notes with any changes (content or UI state)
+   * Optimised with index for large datasets
    */
   async getNotesNeedingSync(): Promise<Note[]> {
     const db = getDB();
-    const allNotes = await db.getAll(STORES.NOTES);
-    return allNotes.filter(note => note.needsSync === true);
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+
+    // Try to use the needsSync index for better performance
+    try {
+      const index = tx.store.index('needsSync');
+      const notes = await index.getAll(true); // Get all notes where needsSync === true
+      await tx.done;
+      return notes;
+    } catch (error) {
+      // Fallback to full scan if index doesn't exist yet (during migration)
+      console.warn('[noteRepository] needsSync index not available, using full scan');
+      const allNotes = await db.getAll(STORES.NOTES);
+      return allNotes.filter(note => note.needsSync === true);
+    }
   }
 
   /**

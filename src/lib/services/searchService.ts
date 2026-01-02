@@ -35,6 +35,25 @@ export function indexNotes(notes: DecryptedNote[]): void {
 }
 
 /**
+ * Update a single note in the search index (incremental update)
+ * This is much faster than re-indexing all notes
+ */
+export function updateNote(note: DecryptedNote): void {
+  index.add({
+    id: note.id,
+    content: note.content,
+    tags: note.tags.join(' '),
+  });
+}
+
+/**
+ * Remove a note from the search index
+ */
+export function removeNote(noteId: string): void {
+  index.remove(noteId);
+}
+
+/**
  * Parse search query string into structured query
  * Supports:
  * - #tag - Notes with tag
@@ -257,6 +276,8 @@ export function getSearchSuggestions(
  */
 export const searchService = {
   indexNotes,
+  updateNote,
+  removeNote,
   parseSearchQuery,
   searchNotes,
   getSearchSuggestions,

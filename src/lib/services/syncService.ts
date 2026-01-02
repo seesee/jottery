@@ -186,14 +186,38 @@ class SyncService {
         lastSyncAt: new Date().toISOString(),
       });
 
-      // 5. Reload notes into app state and rebuild search index
+      // 5. Reload notes into app state and rebuild search index (batched for performance)
       console.log('[SyncService] Reloading notes and rebuilding search index...');
       let currentSettings: any;
       settings.subscribe(s => currentSettings = s)();
-      const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
-      console.log('[SyncService] UI refreshed');
+
+      // Use batched loading to show first notes immediately, load rest in background
+      const firstBatch = await noteService.getAllNotesBatched(
+        currentSettings.sortOrder,
+        50,  // Show first 50 notes immediately
+        (batchedNotes) => {
+          // Background batches update the store incrementally
+          notes.update(currentNotes => {
+            const newNotes = [...currentNotes];
+            batchedNotes.forEach(note => {
+              const index = newNotes.findIndex(n => n.id === note.id);
+              if (index !== -1) {
+                newNotes[index] = note;
+              } else {
+                newNotes.push(note);
+              }
+            });
+            return newNotes;
+          });
+          // Update search index incrementally for background batches
+          batchedNotes.forEach(note => searchService.updateNote(note));
+        }
+      );
+
+      // Set first batch immediately (non-blocking UI)
+      notes.set(firstBatch);
+      searchService.indexNotes(firstBatch);
+      console.log('[SyncService] UI refreshed with first batch, loading remaining notes in background');
 
       return { success: true };
     } catch (error) {

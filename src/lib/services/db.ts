@@ -6,7 +6,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata, NoteVersion } from '../types';
 
 const DB_NAME = 'jottery';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 // Object store names
 export const STORES = {
@@ -140,6 +140,28 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
         } else {
           console.log('[DB] note_versions store already exists, no changes needed');
         }
+      }
+
+      // Version 5: Add needsSync index for faster sync queries
+      if (oldVersion < 5) {
+        console.log('[DB] Applying v5 schema updates (performance indices)...');
+        const transaction = (db as any).transaction;
+        if (transaction && transaction.objectStore(STORES.NOTES)) {
+          const notesStore = transaction.objectStore(STORES.NOTES);
+
+          // Add index for needsSync flag (improves getNotesNeedingSync query)
+          if (!notesStore.indexNames.contains('needsSync')) {
+            notesStore.createIndex('needsSync', 'needsSync');
+            console.log('[DB] Created needsSync index');
+          }
+
+          // Add compound index for efficient sync queries (needsSync + deleted)
+          if (!notesStore.indexNames.contains('needsSync-deleted')) {
+            notesStore.createIndex('needsSync-deleted', ['needsSync', 'deleted']);
+            console.log('[DB] Created needsSync-deleted compound index');
+          }
+        }
+        console.log('[DB] v5 schema updates complete');
       }
 
       console.log('[DB] Upgrade complete');

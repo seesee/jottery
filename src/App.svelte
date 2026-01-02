@@ -37,10 +37,12 @@
       // Create empty note immediately
       const newNote = await noteService.createNote('', []);
 
-      // Reload notes and select the new one
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
+      // Add new note to store (incremental update)
+      notes.update(allNotes => {
+        // Add to beginning if sorted by recent, otherwise add and let virtual list handle it
+        return [newNote, ...allNotes];
+      });
+      searchService.updateNote(newNote);
       selectNote(newNote.id);
 
       // Switch to editor view on mobile

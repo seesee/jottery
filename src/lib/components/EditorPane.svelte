@@ -541,12 +541,21 @@
         showPreview,
       });
 
-      // Reload all notes to refresh the store and UI
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
+      // Get just the updated note (much faster than reloading all notes)
+      const updatedNote = await noteService.getNote($selectedNote.id);
+      if (updatedNote) {
+        // Update only this note in the store
+        notes.update(allNotes => {
+          const index = allNotes.findIndex(n => n.id === updatedNote.id);
+          if (index !== -1) {
+            allNotes[index] = updatedNote;
+          }
+          return allNotes;
+        });
 
-      // Re-index notes for search
-      searchService.indexNotes(allNotes);
+        // Update only this note in search index (incremental update)
+        searchService.updateNote(updatedNote);
+      }
 
       // Trigger background sync after saving
       triggerBackgroundSync();
@@ -572,10 +581,18 @@
     try {
       await noteService.togglePin($selectedNote.id);
 
-      // Reload all notes to refresh the UI
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
+      // Get just the updated note (incremental update)
+      const updatedNote = await noteService.getNote($selectedNote.id);
+      if (updatedNote) {
+        notes.update(allNotes => {
+          const index = allNotes.findIndex(n => n.id === updatedNote.id);
+          if (index !== -1) {
+            allNotes[index] = updatedNote;
+          }
+          return allNotes;
+        });
+        searchService.updateNote(updatedNote);
+      }
 
       // selectedNote will automatically update from the derived store
     } catch (error) {
@@ -596,16 +613,17 @@
 
     try {
       console.log('[EditorPane] Calling noteService.deleteNote...');
-      await noteService.deleteNote($selectedNote.id);
+      const noteId = $selectedNote.id;
+      await noteService.deleteNote(noteId);
       console.log('[EditorPane] Delete successful, clearing selection...');
       handleClose(); // Clear selection and return to list on mobile
 
-      // Reload all notes to refresh the UI
-      console.log('[EditorPane] Reloading notes...');
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      console.log('[EditorPane] Loaded notes count:', allNotes.length);
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
+      // Remove note from store (incremental update)
+      notes.update(allNotes => allNotes.filter(n => n.id !== noteId));
+
+      // Remove from search index
+      searchService.removeNote(noteId);
+
       console.log('[EditorPane] Delete operation complete');
     } catch (error) {
       console.error('[EditorPane] Failed to delete note:', error);
@@ -1645,10 +1663,15 @@
       wordWrap = updatedNote.wordWrap ?? true;
       showPreview = updatedNote.showPreview ?? false;
 
-      // Refresh the note in the notes list
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
+      // Update note in store (incremental update)
+      notes.update(allNotes => {
+        const index = allNotes.findIndex(n => n.id === updatedNote.id);
+        if (index !== -1) {
+          allNotes[index] = updatedNote;
+        }
+        return allNotes;
+      });
+      searchService.updateNote(updatedNote);
     }
   }}
 />
