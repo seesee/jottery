@@ -16,7 +16,7 @@
       {
         "name": "version",
         "ordinal": 2,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "created_at",
@@ -51,7 +51,7 @@
       {
         "name": "word_wrap",
         "ordinal": 9,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "reason",

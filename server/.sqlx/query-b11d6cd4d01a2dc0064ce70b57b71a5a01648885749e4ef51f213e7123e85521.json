@@ -6,12 +6,12 @@
       {
         "name": "total",
         "ordinal": 0,
-        "type_info": "Int"
+        "type_info": "Integer"
       },
       {
         "name": "active",
         "ordinal": 1,
-        "type_info": "Int"
+        "type_info": "Integer"
       }
     ],
     "parameters": {

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT MAX(server_modified_at) as \"last_sync: Option<String>\"\n        FROM notes\n        WHERE user_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_sync: Option<String>",
+        "ordinal": 0,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "debb97082f4cb5ed31de42eb35d234aa152476e2beeb4dd1b95132b903525092"
+}

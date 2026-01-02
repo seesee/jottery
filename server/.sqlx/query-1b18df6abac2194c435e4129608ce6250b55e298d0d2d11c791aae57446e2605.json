@@ -11,12 +11,12 @@
       {
         "name": "is_admin",
         "ordinal": 1,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "is_active",
         "ordinal": 2,
-        "type_info": "Int64"
+        "type_info": "Integer"
       }
     ],
     "parameters": {

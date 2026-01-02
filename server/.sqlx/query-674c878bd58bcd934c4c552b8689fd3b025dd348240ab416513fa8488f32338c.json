@@ -16,17 +16,17 @@
       {
         "name": "approved",
         "ordinal": 2,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "is_admin",
         "ordinal": 3,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "is_active",
         "ordinal": 4,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "created_at",
@@ -46,7 +46,7 @@
       {
         "name": "storage_quota_mb",
         "ordinal": 8,
-        "type_info": "Int64"
+        "type_info": "Integer"
       }
     ],
     "parameters": {

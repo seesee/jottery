@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            COUNT(*) as total,\n            COUNT(CASE WHEN is_active = 1 THEN 1 END) as active,\n            MAX(last_seen_at) as \"last_seen: Option<String>\"\n        FROM clients\n        WHERE user_id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "total",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "active",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_seen: Option<String>",
+        "ordinal": 2,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "9b6703183a73fe3a0fcd629572623c028b57e9f9de81da0ba85f91ccad8a031d"
+}

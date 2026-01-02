@@ -11,7 +11,7 @@
       {
         "name": "storage_quota_mb",
         "ordinal": 1,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "created_at",

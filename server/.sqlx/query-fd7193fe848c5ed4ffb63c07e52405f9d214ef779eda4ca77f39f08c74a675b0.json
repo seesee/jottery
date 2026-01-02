@@ -41,12 +41,12 @@
       {
         "name": "pinned",
         "ordinal": 7,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "deleted",
         "ordinal": 8,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "deleted_at",
@@ -56,17 +56,17 @@
       {
         "name": "version",
         "ordinal": 10,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "server_version",
         "ordinal": 11,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "word_wrap",
         "ordinal": 12,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "syntax_language",
