@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use anyhow::Result;
 use rusqlite::{params, Connection, OptionalExtension};
+use base64::{Engine as _, engine::general_purpose};
 
 use crate::models::{SortOrder, Theme, UserSettings};
 
@@ -23,6 +24,10 @@ impl<'a> SettingsRepository<'a> {
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
+                    // Decode stored password if present
+                    let stored_password: Option<String> = row.get(8)?;
+                    let decoded_password = stored_password.map(|p| decode_password(&p));
+
                     Ok(UserSettings {
                         language: row.get(0)?,
                         theme: parse_theme(&row.get::<_, String>(1)?),
@@ -32,7 +37,7 @@ impl<'a> SettingsRepository<'a> {
                         sync_endpoint: row.get(5)?,
                         auto_sync_interval_minutes: row.get::<_, Option<i32>>(6)?.unwrap_or(5),
                         remember_password: row.get::<_, Option<i32>>(7)?.unwrap_or(0) != 0,
-                        stored_password: row.get(8)?,
+                        stored_password: decoded_password,
                     })
                 },
             )
@@ -44,6 +49,9 @@ impl<'a> SettingsRepository<'a> {
     /// Update user settings
     pub fn update(&self, settings: &UserSettings) -> Result<()> {
         settings.validate().map_err(|e| anyhow::anyhow!("{}", e))?;
+
+        // Encode password if present
+        let encoded_password = settings.stored_password.as_ref().map(|p| encode_password(p));
 
         self.conn.execute(
             "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password)
@@ -57,7 +65,7 @@ impl<'a> SettingsRepository<'a> {
                 &settings.sync_endpoint,
                 settings.auto_sync_interval_minutes,
                 settings.remember_password as i32,
-                &settings.stored_password,
+                &encoded_password,
             ],
         )?;
 
@@ -140,5 +148,33 @@ fn parse_sort_order(s: &str) -> SortOrder {
         "alpha" => SortOrder::Alpha,
         "created" => SortOrder::Created,
         _ => SortOrder::Recent,
+    }
+}
+
+/// Encode password with base64 for minimal obfuscation (NOT encryption)
+/// Note: This provides basic obfuscation only, not real security
+fn encode_password(password: &str) -> String {
+    general_purpose::STANDARD.encode(password.as_bytes())
+}
+
+/// Decode base64 encoded password
+/// Handles both encoded and plaintext for backward compatibility
+fn decode_password(stored: &str) -> String {
+    // Try to decode as base64
+    match general_purpose::STANDARD.decode(stored.as_bytes()) {
+        Ok(decoded) => {
+            // Successfully decoded, convert to string
+            match String::from_utf8(decoded) {
+                Ok(password) => password,
+                Err(_) => {
+                    // Not valid UTF-8 after decoding, assume it's plaintext
+                    stored.to_string()
+                }
+            }
+        }
+        Err(_) => {
+            // Not valid base64, assume it's plaintext (backward compatibility)
+            stored.to_string()
+        }
     }
 }
