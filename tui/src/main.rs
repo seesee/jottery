@@ -669,6 +669,7 @@ fn main() -> Result<()> {
                 .context("User registration failed")?;
 
             println!("\n✓ Registration successful!");
+            // lgtm[rust/clear-text-logging] - user_id is a non-sensitive UUID identifier
             println!("User ID: {}", response.user_id);
             println!("Email: {}", response.email);
             println!("Status: {}", response.status);
@@ -729,6 +730,7 @@ fn main() -> Result<()> {
 
             println!("\n✓ Device registered successfully!");
             println!("Client ID: {}", response.client_id);
+            // lgtm[rust/clear-text-logging] - user_id is a non-sensitive UUID identifier
             println!("User ID: {}", response.user_id);
             println!("Device: {}", response.device_name);
 
