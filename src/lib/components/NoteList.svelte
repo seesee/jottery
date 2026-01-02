@@ -13,7 +13,7 @@
   let savedScrollTop = 0;
 
   // Virtual scrolling state
-  const ESTIMATED_ITEM_HEIGHT = 80; // Estimated height per note item in pixels
+  const ESTIMATED_ITEM_HEIGHT = 80; // Initial estimated height per note item in pixels
   const OVERSCAN = 5; // Number of items to render outside viewport for smooth scrolling
   let viewportHeight = 0;
   let scrollTop = 0;
@@ -23,6 +23,48 @@
   let totalHeight = 0;
   let offsetY = 0;
 
+  // Height cache: stores measured heights for each note ID
+  let heightCache = new Map<string, number>();
+  let itemElements: (HTMLElement | null)[] = [];
+
+  // Get height for a note (measured or estimated)
+  function getItemHeight(index: number): number {
+    if (index < 0 || index >= $filteredNotes.length) return ESTIMATED_ITEM_HEIGHT;
+    const noteId = $filteredNotes[index].id;
+    return heightCache.get(noteId) || ESTIMATED_ITEM_HEIGHT;
+  }
+
+  // Calculate total height based on measured/estimated heights
+  function calculateTotalHeight(): number {
+    let total = 0;
+    for (let i = 0; i < $filteredNotes.length; i++) {
+      total += getItemHeight(i);
+    }
+    return total;
+  }
+
+  // Calculate offset for items before startIndex
+  function calculateOffset(upToIndex: number): number {
+    let offset = 0;
+    for (let i = 0; i < upToIndex && i < $filteredNotes.length; i++) {
+      offset += getItemHeight(i);
+    }
+    return offset;
+  }
+
+  // Find which item index contains a given scroll position
+  function findIndexAtPosition(position: number): number {
+    let currentPos = 0;
+    for (let i = 0; i < $filteredNotes.length; i++) {
+      const itemHeight = getItemHeight(i);
+      if (currentPos + itemHeight > position) {
+        return i;
+      }
+      currentPos += itemHeight;
+    }
+    return Math.max(0, $filteredNotes.length - 1);
+  }
+
   // Calculate visible range based on scroll position
   function updateVisibleRange() {
     if (!scrollContainer) return;
@@ -30,16 +72,47 @@
     viewportHeight = scrollContainer.clientHeight;
     scrollTop = scrollContainer.scrollTop;
 
-    // Calculate which items should be visible
-    const itemCount = $filteredNotes.length;
-    const visibleCount = Math.ceil(viewportHeight / ESTIMATED_ITEM_HEIGHT);
+    // Find start index based on scroll position
+    startIndex = Math.max(0, findIndexAtPosition(scrollTop) - OVERSCAN);
 
-    startIndex = Math.max(0, Math.floor(scrollTop / ESTIMATED_ITEM_HEIGHT) - OVERSCAN);
-    endIndex = Math.min(itemCount, startIndex + visibleCount + (OVERSCAN * 2));
+    // Calculate end index based on viewport height
+    let remainingHeight = viewportHeight;
+    let currentIndex = startIndex;
+    while (remainingHeight > 0 && currentIndex < $filteredNotes.length) {
+      remainingHeight -= getItemHeight(currentIndex);
+      currentIndex++;
+    }
+    endIndex = Math.min($filteredNotes.length, currentIndex + OVERSCAN);
 
     visibleNotes = $filteredNotes.slice(startIndex, endIndex);
-    totalHeight = itemCount * ESTIMATED_ITEM_HEIGHT;
-    offsetY = startIndex * ESTIMATED_ITEM_HEIGHT;
+    totalHeight = calculateTotalHeight();
+    offsetY = calculateOffset(startIndex);
+  }
+
+  // Measure heights of rendered items
+  function measureHeights() {
+    let heightsChanged = false;
+
+    // Measure each visible item
+    for (let i = 0; i < visibleNotes.length; i++) {
+      const element = itemElements[i];
+      const note = visibleNotes[i];
+
+      if (element && note) {
+        const height = element.offsetHeight;
+        const cachedHeight = heightCache.get(note.id);
+
+        if (height > 0 && height !== cachedHeight) {
+          heightCache.set(note.id, height);
+          heightsChanged = true;
+        }
+      }
+    }
+
+    // If heights changed, recalculate visible range
+    if (heightsChanged) {
+      updateVisibleRange();
+    }
   }
 
   // Handle scroll events
@@ -64,8 +137,12 @@
     }
   });
 
-  // Restore scroll position after DOM updates
+  // Restore scroll position after DOM updates and measure heights
   afterUpdate(() => {
+    // Measure heights of rendered items
+    measureHeights();
+
+    // Restore scroll position
     if (scrollContainer && savedScrollTop >= 0) {
       scrollContainer.scrollTop = savedScrollTop;
     }
@@ -158,8 +235,10 @@
       <div style="height: {offsetY}px;"></div>
 
       <!-- Render only visible items -->
-      {#each visibleNotes as note (note.id)}
-        <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+      {#each visibleNotes as note, i (note.id)}
+        <div bind:this={itemElements[i]}>
+          <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+        </div>
       {/each}
     </div>
   {/if}
