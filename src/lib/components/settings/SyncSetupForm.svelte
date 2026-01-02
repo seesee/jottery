@@ -169,9 +169,15 @@
                         placeholder="••••••••••••"
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        This password is for server authentication only
-                      </p>
+                      <div class="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded p-2">
+                        <p class="text-xs text-amber-800 dark:text-amber-200 font-medium flex items-start gap-1">
+                          <span>💡</span>
+                          <span><strong>Recommended:</strong> Use a DIFFERENT password from your notes encryption password.</span>
+                        </p>
+                        <p class="text-xs text-amber-700 dark:text-amber-300 mt-1 ml-5">
+                          This password is sent to the server for authentication. Your notes password should never leave your device.
+                        </p>
+                      </div>
                     </div>
                     <button
                       on:click={onRegisterUser}
