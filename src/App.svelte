@@ -185,28 +185,14 @@
         50, // First 50 notes load immediately
         (moreBatch) => {
           // Callback for subsequent batches (runs in background)
-          notes.update(currentNotes => {
-            const combined = [...currentNotes, ...moreBatch];
-
-            // Re-index search with updated notes
-            searchService.indexNotes(combined);
-
-            // Update filtered notes
-            performSearch();
-
-            return combined;
-          });
+          // Just append to notes - reactive statement will handle search/filter
+          notes.update(currentNotes => [...currentNotes, ...moreBatch]);
         }
       );
 
       // Set first batch immediately - UI renders fast!
+      // Reactive statement will handle search indexing and filtering
       notes.set(firstBatch);
-
-      // Index first batch for search
-      searchService.indexNotes(firstBatch);
-
-      // Update filtered notes
-      performSearch();
     } catch (error) {
       console.error('Failed to load notes:', error);
     }
@@ -247,6 +233,8 @@
     // Reference both to make this block reactive to changes in either
     $searchQuery;
     if ($notes.length > 0) {
+      // Re-index notes for search whenever notes change
+      searchService.indexNotes($notes);
       performSearch();
     } else {
       filteredNotes.set([]);
