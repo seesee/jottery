@@ -10,8 +10,8 @@
   import AttachmentList from './AttachmentList.svelte';
   import FileUpload from './FileUpload.svelte';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
+  import PdfViewer from './PdfViewer.svelte';
   import { marked } from 'marked';
-  import { getHljsInstance, preloadLanguages } from '../utils/syntaxHighlighter';
   import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
 
@@ -59,6 +59,17 @@
   // Track blob URLs for cleanup
   let blobUrls: Set<string> = new Set();
 
+  // Attachment preview state
+  let previewAttachment: Attachment | null = null;
+  let previewContent: string | null = null;
+  let previewType: 'image' | 'text' | 'pdf' | 'audio' | 'video' | 'unsupported' | null = null;
+  let isLoadingPreview = false;
+
+  // Lazy load highlight.js when preview is shown
+  $: if (showPreview && !highlightJsLoaded && !loadingHighlightJs) {
+    loadHighlightJs();
+  }
+
   // Compute preview HTML
   $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
 
@@ -81,14 +92,30 @@
   $: noteInfoShortcut = formatShortcutForTooltip(shortcuts?.noteInfo);
   $: versionHistoryShortcut = formatShortcutForTooltip(shortcuts?.versionHistory);
 
-  // Get hljs instance
-  const hljs = getHljsInstance();
+  // Lazy-loaded highlight.js for syntax highlighting
+  let hljs: any = null;
+  let loadingHighlightJs = false;
+  let highlightJsLoaded = false;
 
-  // Preload enabled syntax languages
-  $: if ($settings.enabledSyntaxLanguages) {
-    preloadLanguages($settings.enabledSyntaxLanguages).catch(err => {
-      console.error('Failed to preload syntax languages:', err);
-    });
+  async function loadHighlightJs() {
+    if (highlightJsLoaded || loadingHighlightJs) return;
+
+    loadingHighlightJs = true;
+    try {
+      const syntaxHighlighter = await import('../utils/syntaxHighlighter');
+      hljs = syntaxHighlighter.getHljsInstance();
+
+      // Preload enabled syntax languages
+      if ($settings.enabledSyntaxLanguages) {
+        await syntaxHighlighter.preloadLanguages($settings.enabledSyntaxLanguages);
+      }
+
+      highlightJsLoaded = true;
+    } catch (error) {
+      console.error('Failed to load syntax highlighter:', error);
+    } finally {
+      loadingHighlightJs = false;
+    }
   }
 
   // Generate available language options (plain + enabled languages)
@@ -119,6 +146,52 @@
         const renderer = new marked.Renderer();
         const originalCode = renderer.code.bind(renderer);
         const originalImage = renderer.image.bind(renderer);
+        const originalLink = renderer.link.bind(renderer);
+
+        // Custom link renderer to handle attachment: URLs
+        renderer.link = function(token) {
+          const href = token.href;
+          const title = token.title || '';
+          const text = token.text || '';
+
+          // Check if this is an attachment URL
+          if (href && href.startsWith('attachment:')) {
+            const attachmentRef = href.substring('attachment:'.length);
+
+            // Find the attachment
+            let attachment = attachments.find(a => {
+              if (a.id === attachmentRef) return true;
+              const idWithoutHyphens = a.id.replace(/-/g, '');
+              if (attachmentRef.startsWith(idWithoutHyphens)) return true;
+              if (a.data === attachmentRef) return true;
+              const dataWithoutHyphens = a.data.replace(/-/g, '');
+              if (attachmentRef.startsWith(dataWithoutHyphens)) return true;
+              return false;
+            });
+
+            if (attachment) {
+              // Create a clickable div with attachment ID
+              const icon = attachment.mimeType.includes('pdf') ? '📄' :
+                          attachment.mimeType.startsWith('image/') ? '🖼️' :
+                          attachment.mimeType.startsWith('video/') ? '🎥' :
+                          attachment.mimeType.startsWith('audio/') ? '🎵' : '📎';
+              return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}">
+                <span class="text-2xl mr-2">${icon}</span>
+                <span class="font-medium text-gray-900 dark:text-gray-100">${text || attachmentRef}</span>
+                <span class="ml-2 text-gray-600 dark:text-gray-400 text-sm">(${(attachment.size / 1024).toFixed(1)} KB)</span>
+              </div>`;
+            } else {
+              // Attachment not found by ID - create placeholder with filename for async resolution
+              return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-filename="${attachmentRef}" data-loaded="false">
+                <span class="text-2xl mr-2">📎</span>
+                <span class="font-medium text-gray-900 dark:text-gray-100">${text || attachmentRef}</span>
+              </div>`;
+            }
+          }
+
+          // For non-attachment links, use default renderer
+          return originalLink.call(this, token);
+        };
 
         // Custom image renderer to handle attachment: URLs
         renderer.image = function(token) {
@@ -166,11 +239,13 @@
                 return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
               } else {
                 // For non-image attachments, create a download link
-                const icon = attachment.mimeType.includes('pdf') ? '📄' : '📎';
-                return `<div class="attachment-download" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}" style="padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; dark:bg-gray-800; cursor: pointer;">
-                  <span style="font-size: 24px; margin-right: 8px;">${icon}</span>
-                  <span style="font-weight: 500;">${text || attachmentRef}</span>
-                  <span style="margin-left: 8px; color: #666; font-size: 0.9em;">(${(attachment.size / 1024).toFixed(1)} KB)</span>
+                const icon = attachment.mimeType.includes('pdf') ? '📄' :
+                            attachment.mimeType.startsWith('video/') ? '🎥' :
+                            attachment.mimeType.startsWith('audio/') ? '🎵' : '📎';
+                return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}">
+                  <span class="text-2xl mr-2">${icon}</span>
+                  <span class="font-medium text-gray-900 dark:text-gray-100">${text || attachmentRef}</span>
+                  <span class="ml-2 text-gray-600 dark:text-gray-400 text-sm">(${(attachment.size / 1024).toFixed(1)} KB)</span>
                 </div>`;
               }
             }
@@ -188,32 +263,36 @@
           console.log('[Preview] Code block:', {
             language,
             codeLength: code?.length,
-            hasLanguage: !!language
+            hasLanguage: !!language,
+            hljsLoaded: !!hljs
           });
 
-          // Highlight the code if language is specified
-          if (language && hljs.getLanguage(language)) {
-            try {
-              console.log('[Preview] Highlighting with language:', language);
-              const highlighted = hljs.highlight(code, { language }).value;
-              return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
-            } catch (err) {
-              console.error('Syntax highlighting error:', err);
+          // Only use syntax highlighting if hljs is loaded
+          if (hljs) {
+            // Highlight the code if language is specified
+            if (language && hljs.getLanguage(language)) {
+              try {
+                console.log('[Preview] Highlighting with language:', language);
+                const highlighted = hljs.highlight(code, { language }).value;
+                return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+              } catch (err) {
+                console.error('Syntax highlighting error:', err);
+              }
+            }
+
+            // Auto-detect if no language specified
+            if (code) {
+              try {
+                console.log('[Preview] Auto-detecting language for code block');
+                const highlighted = hljs.highlightAuto(code).value;
+                return `<pre><code class="hljs">${highlighted}</code></pre>`;
+              } catch (err) {
+                console.error('Auto-highlight error:', err);
+              }
             }
           }
 
-          // Auto-detect if no language specified
-          if (code) {
-            try {
-              console.log('[Preview] Auto-detecting language for code block');
-              const highlighted = hljs.highlightAuto(code).value;
-              return `<pre><code class="hljs">${highlighted}</code></pre>`;
-            } catch (err) {
-              console.error('Auto-highlight error:', err);
-            }
-          }
-
-          // Fallback to default rendering
+          // Fallback to plain code block if hljs not loaded or highlighting failed
           console.log('[Preview] Falling back to default rendering');
           return originalCode.call(this, token);
         };
@@ -618,6 +697,95 @@
     }
   }
 
+  // Check if attachment can be previewed
+  function canPreviewAttachment(mimeType: string): boolean {
+    if (mimeType.startsWith('image/')) return true;
+    if (mimeType.startsWith('text/')) return true;
+    if (mimeType.includes('json')) return true;
+    if (mimeType.includes('javascript')) return true;
+    if (mimeType.includes('xml')) return true;
+    if (mimeType.includes('pdf')) return true;
+    if (mimeType.startsWith('audio/')) return true;
+    if (mimeType.startsWith('video/')) return true;
+    return false;
+  }
+
+  // Get preview type for attachment
+  function getAttachmentPreviewType(mimeType: string): typeof previewType {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.includes('pdf')) return 'pdf';
+    if (mimeType.startsWith('text/') ||
+        mimeType.includes('json') ||
+        mimeType.includes('javascript') ||
+        mimeType.includes('xml')) return 'text';
+    return 'unsupported';
+  }
+
+  // Show attachment preview
+  async function handlePreviewAttachment(attachment: Attachment) {
+    if (!canPreviewAttachment(attachment.mimeType)) {
+      // If can't preview, just download
+      await handleDownloadAttachment(attachment);
+      return;
+    }
+
+    isLoadingPreview = true;
+    previewAttachment = attachment;
+    previewType = getAttachmentPreviewType(attachment.mimeType);
+    previewContent = null;
+
+    try {
+      // Get the decrypted data (returns Blob)
+      const blob = await attachmentService.getAttachmentData(attachment);
+
+      if (previewType === 'image' || previewType === 'audio' || previewType === 'video' || previewType === 'pdf') {
+        // Create blob URL for media files
+        previewContent = URL.createObjectURL(blob);
+      } else if (previewType === 'text') {
+        // Convert blob to text for text files
+        const arrayBuffer = await blob.arrayBuffer();
+        const text = new TextDecoder().decode(arrayBuffer);
+        previewContent = text;
+      }
+    } catch (error) {
+      console.error('Failed to load preview:', error);
+      previewType = 'unsupported';
+    } finally {
+      isLoadingPreview = false;
+    }
+  }
+
+  // Close attachment preview
+  function closeAttachmentPreview() {
+    // Revoke blob URLs to free memory
+    if (previewContent && (previewType === 'image' || previewType === 'audio' || previewType === 'video' || previewType === 'pdf')) {
+      URL.revokeObjectURL(previewContent);
+    }
+
+    previewAttachment = null;
+    previewContent = null;
+    previewType = null;
+  }
+
+  // Download attachment
+  async function handleDownloadAttachment(attachment: Attachment) {
+    try {
+      await attachmentService.downloadAttachment(attachment);
+    } catch (error) {
+      console.error('Failed to download attachment:', error);
+      toast.error(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Download from preview
+  async function handleDownloadFromPreview() {
+    if (previewAttachment) {
+      await handleDownloadAttachment(previewAttachment);
+    }
+  }
+
   async function handleCopy() {
     if (!content) return;
 
@@ -934,40 +1102,72 @@
 
       div.addEventListener('click', async () => {
         try {
-          // Use data attribute for blob key, fall back to ID
-          const blobKey = attachmentData || attachmentId;
-          const blob = await attachmentRepository.getBlob(blobKey);
           const attachment = attachments.find(a => a.id === attachmentId);
-
-          if (blob && attachment) {
-            const blobUrl = URL.createObjectURL(new Blob([blob]));
-            const a = document.createElement('a');
-            a.href = blobUrl;
-
-            // Decrypt filename for download
-            try {
-              const masterKey = keyManager.getMasterKey();
-              if (masterKey) {
-                const encryptedFilename = JSON.parse(attachment.filename);
-                const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-                a.download = decryptedFilename;
-              } else {
-                a.download = 'attachment';
-              }
-            } catch (err) {
-              console.error('Failed to decrypt filename:', err);
-              a.download = 'attachment';
-            }
-
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
+          if (attachment) {
+            // Open preview instead of downloading
+            await handlePreviewAttachment(attachment);
           }
         } catch (error) {
-          console.error(`Failed to download attachment ${attachmentId}:`, error);
+          console.error(`Failed to preview attachment ${attachmentId}:`, error);
         }
       });
+    }
+
+    // Process download links by filename (need to resolve by decrypting filenames)
+    const downloadsByFilename = previewContainer.querySelectorAll('.attachment-download[data-attachment-filename]');
+    for (const div of downloadsByFilename) {
+      const filename = div.getAttribute('data-attachment-filename');
+      if (!filename) continue;
+
+      // Skip if already loaded
+      if (div.getAttribute('data-loaded') === 'true') continue;
+
+      try {
+        // Find attachment by decrypted filename
+        let foundAttachment = null;
+
+        for (const attachment of attachments) {
+          try {
+            const encryptedFilename = JSON.parse(attachment.filename);
+            const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
+
+            if (decryptedFilename === filename) {
+              foundAttachment = attachment;
+              break;
+            }
+          } catch (err) {
+            console.error('Failed to decrypt filename for attachment:', attachment.id, err);
+          }
+        }
+
+        if (foundAttachment) {
+          // Update the div with the attachment ID and mark as loaded
+          div.setAttribute('data-attachment-id', foundAttachment.id);
+          div.setAttribute('data-attachment-data', foundAttachment.data);
+          div.setAttribute('data-loaded', 'true');
+          div.removeAttribute('data-attachment-filename');
+
+          // Skip if already has click handler
+          if (div.classList.contains('clickable')) continue;
+
+          div.classList.add('clickable');
+
+          div.addEventListener('click', async () => {
+            try {
+              await handlePreviewAttachment(foundAttachment);
+            } catch (error) {
+              console.error(`Failed to preview attachment ${foundAttachment.id}:`, error);
+            }
+          });
+        } else {
+          console.error(`No attachment found with filename: ${filename}`);
+          div.setAttribute('data-loaded', 'true');
+          div.classList.add('opacity-60');
+        }
+      } catch (error) {
+        console.error(`Failed to resolve attachment by filename ${filename}:`, error);
+        div.setAttribute('data-loaded', 'true');
+      }
     }
   });
 </script>
@@ -1425,3 +1625,102 @@
     }
   }}
 />
+
+<!-- Attachment Preview Modal -->
+{#if previewAttachment}
+  <div
+    class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+    on:click={closeAttachmentPreview}
+    on:keydown={(e) => e.key === 'Enter' && closeAttachmentPreview()}
+    role="button"
+    tabindex="-1"
+    aria-label="Close preview"
+  >
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col"
+      on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
+      tabindex="0"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="flex-1 min-w-0">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+            Attachment Preview
+          </h2>
+        </div>
+        <div class="flex gap-2 ml-4">
+          <button
+            on:click={handleDownloadFromPreview}
+            class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+          >
+            Download
+          </button>
+          <button
+            on:click={closeAttachmentPreview}
+            class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            aria-label="Close"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-auto {previewType === 'image' ? '' : 'p-4'}">
+        {#if isLoadingPreview}
+          <div class="flex items-center justify-center h-full">
+            <div class="text-gray-500 dark:text-gray-400">Loading preview...</div>
+          </div>
+        {:else if previewType === 'image' && previewContent}
+          <div class="w-full h-full flex items-center justify-center p-4">
+            <img
+              src={previewContent}
+              alt="Attachment preview"
+              class="max-w-full max-h-full object-contain"
+              style="max-height: calc(90vh - 120px);"
+            />
+          </div>
+        {:else if previewType === 'text' && previewContent}
+          <pre class="text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded overflow-auto max-h-full"><code class="text-gray-900 dark:text-gray-100">{previewContent}</code></pre>
+        {:else if previewType === 'pdf' && previewContent}
+          <PdfViewer
+            pdfUrl={previewContent}
+            filename="attachment.pdf"
+          />
+        {:else if previewType === 'audio' && previewContent}
+          <div class="flex items-center justify-center h-full">
+            <audio controls class="w-full max-w-xl">
+              <source src={previewContent} type={previewAttachment.mimeType} />
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+        {:else if previewType === 'video' && previewContent}
+          <div class="flex items-center justify-center h-full">
+            <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
+              <source src={previewContent} type={previewAttachment.mimeType} />
+              <track kind="captions" />
+              Your browser does not support video playback.
+            </video>
+          </div>
+        {:else}
+          <div class="flex items-center justify-center h-full">
+            <div class="text-center text-gray-500 dark:text-gray-400">
+              <p class="mb-4">Preview not available for this file type.</p>
+              <button
+                on:click={handleDownloadFromPreview}
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Download to view
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}

@@ -147,7 +147,7 @@
   }
 
   // Stop auto-lock and auto-sync when locked
-  $: if ($isLocked) {
+  $: if ($isLocked && initialized) {
     stopAutoLock();
     syncService.disableAutoSync();
     // Sync on lock to push any changes before going away

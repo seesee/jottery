@@ -401,6 +401,79 @@ const exportData = {
 fs.writeFileSync('backup.json', JSON.stringify(exportData, null, 2));
 ```
 
+## Using Attachments in Markdown
+
+Jottery supports embedding attachments directly in your markdown notes. This allows you to create rich documents with inline images, PDFs, and other file types.
+
+### Attachment Syntax
+
+Use markdown link syntax to reference attachments by their filename:
+
+**Images** (will be displayed inline when previewing markdown):
+```markdown
+![description](attachment:filename.png)
+```
+
+**Other files** (PDFs, documents, etc. - will show as clickable links):
+```markdown
+[Attachment: filename.pdf](attachment:filename.pdf)
+```
+
+### How to Get the Markdown Link
+
+1. **Upload an attachment** to your note using the attachment area at the bottom
+2. **Click the 📋 (clipboard) button** next to the attachment
+3. **Paste the markdown link** into your note content
+
+The correct syntax will be copied automatically:
+- Images use `![filename](attachment:filename)` syntax
+- Other files use `[Attachment: filename](attachment:filename)` syntax
+
+### Preview Behaviour
+
+When you preview a markdown note with attachment links:
+
+- **Images** are rendered inline (displayed directly in the preview)
+- **PDFs, audio, and video** show as clickable cards that open a full preview modal
+- **Text files** can be previewed in the modal as well
+- **Other file types** show a download link
+
+### Supported Previews
+
+- **Images**: PNG, JPG, GIF, SVG, WebP
+- **PDFs**: Full page-by-page viewer with zoom controls
+- **Audio**: MP3, WAV, OGG, etc.
+- **Video**: MP4, WebM, etc.
+- **Text**: TXT, JSON, XML, source code files
+- **Unsupported types**: Download button to view externally
+
+### Example
+
+```markdown
+# Project Documentation
+
+Here's the architecture diagram:
+
+![System architecture](attachment:architecture.png)
+
+And here's the detailed specification:
+
+[Attachment: specifications.pdf](attachment:specifications.pdf)
+
+## Audio Notes
+
+Meeting recording:
+
+[Attachment: meeting-2025-01-02.mp3](attachment:meeting-2025-01-02.mp3)
+```
+
+### Notes
+
+- Attachment filenames are **encrypted** in the database
+- The markdown preview decrypts and resolves filenames automatically
+- Renaming attachments will break existing markdown links (references are by filename)
+- You can reference the same attachment multiple times in one note
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -3,6 +3,7 @@
   import { attachmentService } from '../services';
   import { onMount } from 'svelte';
   import { toast } from '../utils/toast.svelte';
+  import PdfViewer from './PdfViewer.svelte';
 
   export let attachments: Attachment[] = [];
   export let onDelete: (attachment: Attachment) => void;
@@ -137,6 +138,24 @@
     onDelete(attachment);
   }
 
+  // Copy markdown link to clipboard
+  async function handleCopyMarkdown(attachment: Attachment) {
+    const filename = filenames.get(attachment.id) || 'attachment';
+
+    // Use image syntax for images, regular link for others
+    const markdown = attachment.mimeType.startsWith('image/')
+      ? `![${filename}](attachment:${filename})`
+      : `[Attachment: ${filename}](attachment:${filename})`;
+
+    try {
+      await navigator.clipboard.writeText(markdown);
+      toast.success('Markdown link copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy markdown:', error);
+      toast.error('Failed to copy markdown link');
+    }
+  }
+
   // Get file icon based on MIME type
   function getFileIcon(mimeType: string): string {
     if (mimeType.startsWith('image/')) return '🖼️';
@@ -227,6 +246,13 @@
           >
             ⬇️
           </button>
+          <button
+            on:click={() => handleCopyMarkdown(attachment)}
+            class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+            title="Copy markdown link"
+          >
+            📋
+          </button>
           {#if !readonly}
             <button
               on:click={() => handleDelete(attachment)}
@@ -311,11 +337,10 @@
         {:else if previewType === 'text' && previewContent}
           <pre class="text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded overflow-auto max-h-full"><code class="text-gray-900 dark:text-gray-100">{previewContent}</code></pre>
         {:else if previewType === 'pdf' && previewContent}
-          <iframe
-            src={previewContent}
-            class="w-full h-full min-h-[60vh] border-0"
-            title="PDF Preview"
-          ></iframe>
+          <PdfViewer
+            pdfUrl={previewContent}
+            filename={filenames.get(previewAttachment.id) || 'document.pdf'}
+          />
         {:else if previewType === 'audio' && previewContent}
           <div class="flex items-center justify-center h-full">
             <audio controls class="w-full max-w-xl">

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { readFileSync, writeFileSync } from 'fs';
 
 // Read version from package.json
@@ -31,7 +32,13 @@ export default defineConfig({
   plugins: [
     svelte(),
     viteSingleFile(),
-    generateVersionFile()
+    generateVersionFile(),
+    visualizer({
+      filename: 'dist/stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+    })
   ],
   server: {
     port: 3000,
