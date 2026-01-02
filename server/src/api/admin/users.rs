@@ -95,7 +95,7 @@ pub async fn get_user(
         SELECT
             COUNT(*) as total,
             COUNT(CASE WHEN is_active = 1 THEN 1 END) as active,
-            MAX(last_seen_at) as last_seen
+            MAX(last_seen_at) as "last_seen: Option<String>"
         FROM clients
         WHERE user_id = ?
         "#,
@@ -130,7 +130,7 @@ pub async fn get_user(
     // Get last sync time (when server last received an update)
     let last_sync = sqlx::query!(
         r#"
-        SELECT MAX(server_modified_at) as last_sync
+        SELECT MAX(server_modified_at) as "last_sync: Option<String>"
         FROM notes
         WHERE user_id = ?
         "#,

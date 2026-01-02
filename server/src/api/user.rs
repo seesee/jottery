@@ -193,20 +193,19 @@ pub async fn get_account_info(
     })?;
 
     // Get last sync time
-    let last_sync = sqlx::query_scalar!(
-        "SELECT MAX(last_seen_at) FROM clients WHERE user_id = ?",
-        user_id
+    let last_sync: Option<String> = sqlx::query_scalar(
+        "SELECT MAX(last_seen_at) FROM clients WHERE user_id = ?"
     )
-    .fetch_one(&state.pool)
+    .bind(user_id)
+    .fetch_optional(&state.pool)
     .await
-    .ok()
-    .flatten();
+    .unwrap_or(None);
 
     Ok(Json(UserAccountInfo {
         email: user.email,
         note_count: note_count as i64,
-        attachment_count: attachment_count.map(|c| c as i64).unwrap_or(0),
-        storage_used_bytes: storage_used.map(|s| s as i64).unwrap_or(0),
+        attachment_count: attachment_count as i64,
+        storage_used_bytes: storage_used as i64,
         storage_quota_mb: user.storage_quota_mb.unwrap_or(1000) as i64,
         created_at: user.created_at,
         last_sync_at: last_sync,
