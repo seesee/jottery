@@ -664,6 +664,33 @@
     }
   }
 
+  async function handleToggleSyncFeature(enabled: boolean) {
+    try {
+      console.log(`[SettingsModal] Toggling sync feature: ${enabled}`);
+
+      // Update settings
+      await settingsRepository.update({
+        syncEnabled: enabled,
+      });
+
+      // Update local state
+      settings.update(s => ({
+        ...s,
+        syncEnabled: enabled,
+      }));
+
+      // If disabling and sync is active, stop auto-sync
+      if (!enabled && syncStatus?.isEnabled) {
+        syncService.disableAutoSync();
+      }
+
+      console.log(`[SettingsModal] Sync feature ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Failed to toggle sync feature:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to toggle sync';
+    }
+  }
+
 
   function formatShortcutDisplay(shortcut: KeyboardShortcut | undefined): string {
     if (!shortcut) return 'Not set';
@@ -1155,6 +1182,8 @@
         <!-- SYNC TAB -->
         {#if currentTab === 'sync'}
           <SyncTab
+            syncFeatureEnabled={$settings.syncEnabled}
+            onToggleSyncFeature={handleToggleSyncFeature}
             bind:syncStatus
             bind:syncEndpoint
             bind:deviceName
