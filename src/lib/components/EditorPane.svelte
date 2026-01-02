@@ -1160,13 +1160,40 @@
             }
           });
         } else {
+          // Attachment not found - show error message
           console.error(`No attachment found with filename: ${filename}`);
           div.setAttribute('data-loaded', 'true');
-          div.classList.add('opacity-60');
+          div.removeAttribute('data-attachment-filename');
+
+          // Update content to show error
+          div.innerHTML = `
+            <span class="text-2xl mr-2">⚠️</span>
+            <div class="flex-1">
+              <span class="font-medium text-red-700 dark:text-red-400">Attachment not found</span>
+              <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
+            </div>
+          `;
+
+          // Update styling to show error state
+          div.classList.remove('bg-gray-50', 'dark:bg-gray-800', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'cursor-pointer', 'border-gray-300', 'dark:border-gray-600');
+          div.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-300', 'dark:border-red-700', 'cursor-not-allowed');
         }
       } catch (error) {
         console.error(`Failed to resolve attachment by filename ${filename}:`, error);
         div.setAttribute('data-loaded', 'true');
+        div.removeAttribute('data-attachment-filename');
+
+        // Show error state for resolution failure
+        div.innerHTML = `
+          <span class="text-2xl mr-2">⚠️</span>
+          <div class="flex-1">
+            <span class="font-medium text-red-700 dark:text-red-400">Error loading attachment</span>
+            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
+          </div>
+        `;
+
+        div.classList.remove('bg-gray-50', 'dark:bg-gray-800', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'cursor-pointer', 'border-gray-300', 'dark:border-gray-600');
+        div.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-300', 'dark:border-red-700', 'cursor-not-allowed');
       }
     }
   });
