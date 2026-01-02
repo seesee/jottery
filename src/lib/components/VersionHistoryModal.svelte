@@ -4,6 +4,7 @@
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
+  import { toast } from '../utils/toast.svelte';
 
   export let show: boolean = false;
   export let noteId: string | undefined = undefined;
@@ -109,7 +110,7 @@
       onClose();
     } catch (error) {
       console.error('Failed to restore version:', error);
-      alert('Failed to restore version: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to restore version: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 

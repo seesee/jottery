@@ -13,6 +13,7 @@
   import RecycleBin from './lib/components/RecycleBin.svelte';
   import KeyboardShortcutsHelp from './lib/components/KeyboardShortcutsHelp.svelte';
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
+  import Toast from './lib/components/Toast.svelte';
 
   let initialized = false;
   let showSettings = false;
@@ -309,5 +310,8 @@
       onFocusSearch={handleFocusSearch}
       onOpenShortcutsHelp={handleOpenShortcutsHelp}
     />
+
+    <!-- Toast Notifications -->
+    <Toast />
   </div>
 {/if}

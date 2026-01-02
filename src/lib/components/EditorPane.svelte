@@ -13,6 +13,7 @@
   import { marked } from 'marked';
   import { getHljsInstance, preloadLanguages } from '../utils/syntaxHighlighter';
   import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
+  import { toast } from '../utils/toast.svelte';
 
   export let onBackToList: (() => void) | undefined = undefined;
 
@@ -575,7 +576,7 @@
         // Validate file
         const validation = attachmentService.validateFile(file);
         if (!validation.valid) {
-          alert(`${file.name}: ${validation.error}`);
+          toast.error(`${file.name}: ${validation.error}`);
           continue;
         }
 
@@ -584,7 +585,7 @@
           newAttachments.push(attachment);
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
-          alert(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
@@ -607,7 +608,7 @@
       handleInput(); // Trigger auto-save
     } catch (error) {
       console.error('Failed to delete attachment:', error);
-      alert(`Failed to delete attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Failed to delete attachment: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

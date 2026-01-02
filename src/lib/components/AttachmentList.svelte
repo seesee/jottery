@@ -2,6 +2,7 @@
   import type { Attachment } from '../types';
   import { attachmentService } from '../services';
   import { onMount } from 'svelte';
+  import { toast } from '../utils/toast.svelte';
 
   export let attachments: Attachment[] = [];
   export let onDelete: (attachment: Attachment) => void;
@@ -119,7 +120,7 @@
       await attachmentService.downloadAttachment(attachment);
     } catch (error) {
       console.error('Failed to download attachment:', error);
-      alert(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

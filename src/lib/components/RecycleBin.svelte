@@ -4,6 +4,7 @@
   import type { DecryptedNote } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
+  import { toast } from '../utils/toast.svelte';
 
   export let show: boolean = false;
   export let onClose: () => void;
@@ -32,7 +33,7 @@
       await loadDeletedNotes();
     } catch (error) {
       console.error('Failed to restore note:', error);
-      alert('Failed to restore note: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to restore note: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -52,7 +53,7 @@
       await loadDeletedNotes();
     } catch (error) {
       console.error('Failed to delete note:', error);
-      alert('Failed to delete note: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to delete note: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -70,7 +71,7 @@
       deletedNotes = [];
     } catch (error) {
       console.error('Failed to empty recycle bin:', error);
-      alert('Failed to empty recycle bin: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to empty recycle bin: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 

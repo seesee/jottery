@@ -11,6 +11,7 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab } from './settings';
+  import { toast } from '../utils/toast.svelte';
 
   export let show = false;
   export let onClose: () => void = () => {};
@@ -786,10 +787,11 @@
         enabledSyntaxLanguages,
       }));
 
+      toast.success('Settings saved');
       onClose();
     } catch (error) {
       console.error('Failed to save settings:', error);
-      alert('Failed to save settings: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to save settings: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       saving = false;
     }
@@ -810,7 +812,7 @@
       window.location.reload();
     } catch (error) {
       console.error('Failed to delete database:', error);
-      alert('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -926,7 +928,7 @@
       await downloadExport(data);
     } catch (error) {
       console.error('Failed to export notes:', error);
-      alert('Failed to export notes: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to export notes: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -943,7 +945,7 @@
       const data = await parseImportFile(file);
       const result = await importNotes(data, 'merge');
 
-      alert(`Import complete!\nImported: ${result.imported}\nSkipped: ${result.skipped}\n${result.errors.length > 0 ? 'Errors: ' + result.errors.join('\n') : ''}`);
+      toast.success(`Import complete!\nImported: ${result.imported}\nSkipped: ${result.skipped}${result.errors.length > 0 ? '\nErrors: ' + result.errors.join('\n') : ''}`);
 
       // Reload notes
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
@@ -951,7 +953,7 @@
       searchService.indexNotes(allNotes);
     } catch (error) {
       console.error('Failed to import notes:', error);
-      alert('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       // Clear file input
       target.value = '';
