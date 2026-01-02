@@ -84,6 +84,9 @@
   let showDocumentation = false;
   let selectedArchitecture = detectArchitecture();
 
+  // About tab stats
+  let noteStats: { total: number; active: number; deleted: number; pinned: number; } | null = null;
+
   // Tab state
   type Tab = 'general' | 'editor' | 'keyboard' | 'sync' | 'advanced' | 'about';
   let currentTab: Tab = 'general';
@@ -922,6 +925,20 @@
     }
   }
 
+  async function loadNoteStats() {
+    try {
+      noteStats = await noteService.getStats();
+    } catch (error) {
+      console.error('Failed to load note stats:', error);
+      noteStats = null;
+    }
+  }
+
+  // Load stats when switching to About tab
+  $: if (currentTab === 'about' && show && !noteStats) {
+    loadNoteStats();
+  }
+
   async function handleExport() {
     try {
       const data = await exportAllNotes();
@@ -1168,6 +1185,8 @@
           <AboutTab
             bind:showDocumentation
             onShowDocumentation={() => showDocumentation = true}
+            stats={noteStats}
+            notes={$notes}
           />
         {/if}
       </div>
