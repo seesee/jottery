@@ -36,7 +36,6 @@ fn main() {
 
     let hash = password_hash.to_string();
 
-    println!("Password: {}", password);
     println!("Hash: {}", hash);
     println!();
     println!("To update admin password in database:");

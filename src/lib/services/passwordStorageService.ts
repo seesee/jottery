@@ -8,9 +8,14 @@ const STORAGE_KEY = 'jottery_stored_password';
 
 /**
  * Store password in localStorage (INSECURE)
+ * @security This is an intentional design choice for user convenience.
+ * Users are explicitly warned about the security implications.
  */
 export function storePassword(password: string): void {
   try {
+    // lgtm[js/clear-text-storage-of-sensitive-data]
+    // codeql[js/clear-text-storage-of-sensitive-data]
+    // Intentional cleartext storage - user has opted in with full warning
     localStorage.setItem(STORAGE_KEY, password);
   } catch (error) {
     console.error('Failed to store password:', error);

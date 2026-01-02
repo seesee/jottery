@@ -1,0 +1,8 @@
+name: "CodeQL Config"
+
+paths-ignore:
+  - 'public/pdf.worker.min.mjs'  # Vendored third-party library (PDF.js)
+
+# Note: The following are intentional design choices with user warnings:
+# - src/lib/services/passwordStorageService.ts: Optional "remember password" feature
+#   Users are explicitly warned about cleartext localStorage storage

@@ -1,3 +1,2 @@
-
-# Use bd merge for beads JSONL files
-.beads/issues.jsonl merge=beads
+# Mark vendored/generated files to exclude from diff and language stats
+public/pdf.worker.min.mjs linguist-vendored

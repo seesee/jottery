@@ -7,7 +7,7 @@ fn main() {
     let password = "changeme";
     match hash_password(password) {
         Ok(hash) => {
-            println!("Password: {}", password);
+            // Note: Password is "changeme" (hardcoded above)
             println!("Hash: {}", hash);
         }
         Err(e) => {
