@@ -179,11 +179,31 @@
 
   async function loadNotes() {
     try {
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
-      notes.set(allNotes);
+      // Load first batch immediately for fast perceived performance
+      const firstBatch = await noteService.getAllNotesBatched(
+        $settings.sortOrder,
+        50, // First 50 notes load immediately
+        (moreBatch) => {
+          // Callback for subsequent batches (runs in background)
+          notes.update(currentNotes => {
+            const combined = [...currentNotes, ...moreBatch];
 
-      // Index notes for search
-      searchService.indexNotes(allNotes);
+            // Re-index search with updated notes
+            searchService.indexNotes(combined);
+
+            // Update filtered notes
+            performSearch();
+
+            return combined;
+          });
+        }
+      );
+
+      // Set first batch immediately - UI renders fast!
+      notes.set(firstBatch);
+
+      // Index first batch for search
+      searchService.indexNotes(firstBatch);
 
       // Update filtered notes
       performSearch();

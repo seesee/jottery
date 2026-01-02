@@ -94,6 +94,121 @@ class NoteService {
   }
 
   /**
+   * Get all active notes with batched decryption for better perceived performance
+   * Decrypts first batch immediately, then continues in background
+   * @param sortOrder - How to sort notes
+   * @param batchSize - Number of notes in first batch (default: 50)
+   * @param onProgress - Callback for subsequent batches
+   * @returns First batch of decrypted notes
+   */
+  async getAllNotesBatched(
+    sortOrder: SortOrder = 'recent',
+    batchSize: number = 50,
+    onProgress?: (notes: DecryptedNote[]) => void
+  ): Promise<DecryptedNote[]> {
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new Error('Application is locked. Please unlock to view notes.');
+    }
+
+    // Get all encrypted notes
+    const notes = await noteRepository.getAllActive();
+
+    // Sort encrypted notes first (by metadata) to maintain correct order
+    const sortedNotes = this.sortEncryptedNotes(notes, sortOrder);
+
+    // Decrypt first batch immediately
+    const firstBatch = sortedNotes.slice(0, batchSize);
+    const firstDecrypted = await Promise.all(
+      firstBatch.map(note => this.decryptNote(note, masterKey.key))
+    );
+
+    // Decrypt remaining batches in background
+    if (sortedNotes.length > batchSize && onProgress) {
+      // Don't await - let this run in background
+      this.decryptRemainingBatches(
+        sortedNotes.slice(batchSize),
+        masterKey.key,
+        batchSize,
+        onProgress
+      );
+    }
+
+    return firstDecrypted;
+  }
+
+  /**
+   * Decrypt remaining notes in batches (runs in background)
+   */
+  private async decryptRemainingBatches(
+    notes: Note[],
+    key: CryptoKey,
+    batchSize: number,
+    onProgress: (notes: DecryptedNote[]) => void
+  ): Promise<void> {
+    const totalBatches = Math.ceil(notes.length / batchSize);
+
+    for (let i = 0; i < totalBatches; i++) {
+      const start = i * batchSize;
+      const end = Math.min(start + batchSize, notes.length);
+      const batch = notes.slice(start, end);
+
+      try {
+        const decrypted = await Promise.all(
+          batch.map(note => this.decryptNote(note, masterKey.key))
+        );
+
+        // Report progress
+        onProgress(decrypted);
+
+        // Small delay between batches to avoid blocking UI
+        await new Promise(resolve => setTimeout(resolve, 10));
+      } catch (error) {
+        console.error(`Failed to decrypt batch ${i + 1}/${totalBatches}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Sort encrypted notes by metadata (for batched decryption)
+   */
+  private sortEncryptedNotes(notes: Note[], sortOrder: SortOrder): Note[] {
+    const sorted = [...notes];
+
+    // Separate pinned and unpinned
+    const pinned = sorted.filter(n => n.pinned);
+    const unpinned = sorted.filter(n => !n.pinned);
+
+    // Sort each group by metadata
+    const sortFn = this.getEncryptedSortFunction(sortOrder);
+    pinned.sort(sortFn);
+    unpinned.sort(sortFn);
+
+    // Pinned notes always come first
+    return [...pinned, ...unpinned];
+  }
+
+  /**
+   * Get sort function for encrypted notes (uses metadata only)
+   */
+  private getEncryptedSortFunction(sortOrder: SortOrder) {
+    switch (sortOrder) {
+      case 'recent':
+        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+      case 'oldest':
+        return (a: Note, b: Note) => a.modifiedAt.localeCompare(b.modifiedAt);
+      case 'created':
+        return (a: Note, b: Note) => b.createdAt.localeCompare(a.createdAt);
+      case 'alpha':
+        // For alpha sort, we need decrypted content, so just use modified for now
+        // The final sort will happen after all notes are decrypted
+        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+      default:
+        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+    }
+  }
+
+  /**
    * Get pinned notes (decrypted)
    */
   async getPinnedNotes(): Promise<DecryptedNote[]> {
