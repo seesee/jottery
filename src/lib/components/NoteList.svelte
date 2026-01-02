@@ -1,7 +1,7 @@
 <script lang="ts">
   import { filteredNotes, notes, searchQuery, selectedNoteId, settings } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
-  import { beforeUpdate, afterUpdate } from 'svelte';
+  import { beforeUpdate, afterUpdate, onMount } from 'svelte';
   import { noteRepository } from '../services/noteRepository';
   import { noteService } from '../services/noteService';
   import { keyManager } from '../services/keyManager';
@@ -11,6 +11,51 @@
 
   let scrollContainer: HTMLDivElement;
   let savedScrollTop = 0;
+
+  // Virtual scrolling state
+  const ESTIMATED_ITEM_HEIGHT = 80; // Estimated height per note item in pixels
+  const OVERSCAN = 5; // Number of items to render outside viewport for smooth scrolling
+  let viewportHeight = 0;
+  let scrollTop = 0;
+  let startIndex = 0;
+  let endIndex = 0;
+  let visibleNotes: DecryptedNote[] = [];
+  let totalHeight = 0;
+  let offsetY = 0;
+
+  // Calculate visible range based on scroll position
+  function updateVisibleRange() {
+    if (!scrollContainer) return;
+
+    viewportHeight = scrollContainer.clientHeight;
+    scrollTop = scrollContainer.scrollTop;
+
+    // Calculate which items should be visible
+    const itemCount = $filteredNotes.length;
+    const visibleCount = Math.ceil(viewportHeight / ESTIMATED_ITEM_HEIGHT);
+
+    startIndex = Math.max(0, Math.floor(scrollTop / ESTIMATED_ITEM_HEIGHT) - OVERSCAN);
+    endIndex = Math.min(itemCount, startIndex + visibleCount + (OVERSCAN * 2));
+
+    visibleNotes = $filteredNotes.slice(startIndex, endIndex);
+    totalHeight = itemCount * ESTIMATED_ITEM_HEIGHT;
+    offsetY = startIndex * ESTIMATED_ITEM_HEIGHT;
+  }
+
+  // Handle scroll events
+  function handleScroll() {
+    updateVisibleRange();
+  }
+
+  // Update visible range when filtered notes change
+  $: if ($filteredNotes) {
+    updateVisibleRange();
+  }
+
+  // Initialize on mount
+  onMount(() => {
+    updateVisibleRange();
+  });
 
   // Save scroll position before DOM updates
   beforeUpdate(() => {
@@ -86,6 +131,7 @@
 <div
   bind:this={scrollContainer}
   class="h-full overflow-y-auto bg-white dark:bg-gray-900"
+  on:scroll={handleScroll}
   on:keydown={handleKeydown}
   role="list"
   tabindex="-1"
@@ -106,8 +152,15 @@
       </div>
     </div>
   {:else}
-    {#each $filteredNotes as note (note.id)}
-      <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
-    {/each}
+    <!-- Virtual scrolling container -->
+    <div style="height: {totalHeight}px; position: relative;">
+      <!-- Offset for items before viewport -->
+      <div style="height: {offsetY}px;"></div>
+
+      <!-- Render only visible items -->
+      {#each visibleNotes as note (note.id)}
+        <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+      {/each}
+    </div>
   {/if}
 </div>
