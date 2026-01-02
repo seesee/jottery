@@ -1185,6 +1185,7 @@
           <AboutTab
             bind:showDocumentation
             onShowDocumentation={() => showDocumentation = true}
+            onClose={onClose}
             stats={noteStats}
             notes={$notes}
           />

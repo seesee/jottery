@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { DecryptedNote } from '../../types';
   import { tagService } from '../../services';
+  import { searchQuery } from '../../stores/appStore';
 
   export let showDocumentation: boolean;
   export let onShowDocumentation: () => void;
+  export let onClose: () => void;
   export let stats: { total: number; active: number; deleted: number; pinned: number; } | null = null;
   export let notes: DecryptedNote[] = [];
 
@@ -33,6 +35,12 @@
     return 'opacity-70';
   }
 
+  // Handle tag click - search for tag and close modal
+  function handleTagClick(tag: string) {
+    searchQuery.set(`#${tag}`);
+    onClose();
+  }
+
   $: maxCount = popularTags.length > 0 ? popularTags[0].count : 0;
 </script>
 
@@ -41,6 +49,20 @@
   <div>
     <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Version</h4>
     <p class="text-lg text-gray-900 dark:text-white font-mono">v{__APP_VERSION__}</p>
+  </div>
+
+  <!-- Documentation -->
+  <div>
+    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Documentation</h4>
+    <button
+      on:click={onShowDocumentation}
+      class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+    >
+      📚 View Documentation
+    </button>
+    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+      Learn how to use Jottery effectively
+    </p>
   </div>
 
   <!-- Statistics -->
@@ -75,32 +97,19 @@
     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
       <div class="flex flex-wrap gap-2">
         {#each popularTags as { tag, count }}
-          <span
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 font-medium transition-all hover:bg-blue-200 dark:hover:bg-blue-900/50 {getTagSize(count, maxCount)} {getTagOpacity(count, maxCount)}"
-            title="{count} note{count === 1 ? '' : 's'}"
+          <button
+            on:click={() => handleTagClick(tag)}
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 font-medium transition-all hover:bg-blue-200 dark:hover:bg-blue-900/50 active:bg-blue-300 dark:active:bg-blue-700 cursor-pointer {getTagSize(count, maxCount)} {getTagOpacity(count, maxCount)}"
+            title="Click to search for #{tag} ({count} note{count === 1 ? '' : 's'})"
           >
             <span class="text-blue-600 dark:text-blue-400">#</span>{tag}
             <span class="text-xs opacity-75">({count})</span>
-          </span>
+          </button>
         {/each}
       </div>
     </div>
   </div>
   {/if}
-
-  <!-- Documentation -->
-  <div>
-    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Documentation</h4>
-    <button
-      on:click={onShowDocumentation}
-      class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
-    >
-      📚 View Documentation
-    </button>
-    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-      Learn how to use Jottery effectively
-    </p>
-  </div>
 
   <!-- Terminal Client Info -->
   <div>
