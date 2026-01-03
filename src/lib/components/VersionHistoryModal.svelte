@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import { versionRepository, noteRepository, cryptoService, keyManager, decryptJSON } from '../services';
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
@@ -126,7 +127,7 @@
   }
 
   function formatReason(reason: string): string {
-    return reason === 'sync' ? 'Auto Sync' : 'Manual Sync';
+    return reason === 'sync' ? $_('versionHistory.autoSync') : $_('versionHistory.manualSync');
   }
 
   // Load versions when modal opens or noteId changes
@@ -147,11 +148,11 @@
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-6xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
       <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Version History</h2>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{$_('versionHistory.title')}</h2>
         <button
           on:click={onClose}
           class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
-          aria-label="Close version history"
+          aria-label={$_('versionHistory.closeLabel')}
         >
           ✕
         </button>
@@ -163,13 +164,13 @@
           <div class="flex-1 flex items-center justify-center py-8">
             <div class="text-center">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p class="mt-2 text-gray-600 dark:text-gray-400">Loading versions...</p>
+              <p class="mt-2 text-gray-600 dark:text-gray-400">{$_('versionHistory.loading')}</p>
             </div>
           </div>
         {:else if versions.length === 0}
           <div class="flex-1 flex items-center justify-center py-8">
             <div class="text-center">
-              <p class="text-lg text-gray-600 dark:text-gray-400">No version history</p>
+              <p class="text-lg text-gray-600 dark:text-gray-400">{$_('versionHistory.noVersions')}</p>
               <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">Versions will be created during sync</p>
             </div>
           </div>
@@ -186,7 +187,7 @@
                     <span class="font-medium text-gray-900 dark:text-gray-100">
                       v{version.version}
                       {#if currentVersion === version.version}
-                        <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">(current)</span>
+                        <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">{$_('versionHistory.current')}</span>
                       {/if}
                     </span>
                   </div>
@@ -288,9 +289,9 @@
   <ConfirmModal
     show={showRestoreConfirm}
     title="Restore Version"
-    message="Are you sure you want to restore this version? Your current note will be saved as a new version before restoring."
-    confirmText="Restore"
-    cancelText="Cancel"
+    message={$_('versionHistory.restoreConfirm.message')}
+    confirmText={$_('versionHistory.restoreConfirm.confirmButton')}
+    cancelText={$_('common.cancel')}
     confirmClass="bg-blue-600 hover:bg-blue-700"
     onConfirm={confirmRestore}
     onCancel={() => {
