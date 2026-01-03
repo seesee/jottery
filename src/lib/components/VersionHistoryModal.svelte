@@ -1,11 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, get } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { versionRepository, noteRepository, cryptoService, keyManager, decryptJSON } from '../services';
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
+
+  // Helper to get formatted date synchronously (for use in templates)
+  function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
+    return get(formatDate(date, options));
+  }
 
   export let show: boolean = false;
   export let noteId: string | undefined = undefined;
@@ -196,8 +201,7 @@
                     </span>
                   </div>
                   <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {@const createdDateStore = formatDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    {$createdDateStore}
+                    {getFormattedDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                     {formatReason(version.reason)}

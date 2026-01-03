@@ -1,11 +1,16 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { onMount } from 'svelte';
+  import { onMount, get } from 'svelte';
   import { noteService } from '../services';
   import type { DecryptedNote } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
+
+  // Helper to get formatted date synchronously (for use in templates)
+  function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
+    return get(formatDate(date, options));
+  }
 
   export let show: boolean = false;
   export let onClose: () => void;
@@ -146,8 +151,7 @@
                       {getTitle(note)}
                     </h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {@const deletedDateStore = note.deletedAt ? formatDate(note.deletedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null}
-                      {$_('recycleBin.deleted')} {deletedDateStore ? $deletedDateStore : $_('recycleBin.unknown')}
+                      {$_('recycleBin.deleted')} {note.deletedAt ? getFormattedDate(note.deletedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : $_('recycleBin.unknown')}
                     </p>
                     {#if note.tags.length > 0}
                       <div class="flex gap-1 mt-2">
