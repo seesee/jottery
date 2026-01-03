@@ -42,7 +42,7 @@
               console.error('[UnlockScreen] Auto-unlock failed:', err);
               // Clear invalid stored password
               passwordStorageService.clear();
-              error = 'Stored password is invalid. Please enter your password.';
+              error = 'Stored password is invalid. Please re-enter your password.';
             } finally {
               loading = false;
             }
