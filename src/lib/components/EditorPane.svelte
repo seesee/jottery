@@ -125,7 +125,7 @@
 
   // Generate available language options (plain + enabled languages)
   $: availableLanguages = [
-    { id: 'plain', name: 'Plain Text' },
+    { id: 'plain', name: $_('editor.plainText') },
     ...($settings.enabledSyntaxLanguages || [])
       .map(langId => {
         const lang = ALL_LANGUAGES.find(l => l.id === langId);
