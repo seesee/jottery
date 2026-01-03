@@ -26,7 +26,6 @@ register('da', () => import('../../locales/da.json'));
 register('no', () => import('../../locales/no.json'));
 register('fi', () => import('../../locales/fi.json'));
 register('el', () => import('../../locales/el.json'));
-register('cy', () => import('../../locales/cy.json'));
 
 // Available locales
 export const AVAILABLE_LOCALES = [
@@ -50,7 +49,6 @@ export const AVAILABLE_LOCALES = [
   { code: 'no', name: 'Norsk' },
   { code: 'fi', name: 'Suomi' },
   { code: 'el', name: 'Ελληνικά' },
-  { code: 'cy', name: 'Cymraeg' },
 ];
 
 // Default locale

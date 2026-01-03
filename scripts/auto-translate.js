@@ -43,7 +43,6 @@ const TARGET_LANGUAGES = {
   'no': 'Norwegian',
   'fi': 'Finnish',
   'el': 'Greek',
-  'cy': 'Welsh',
 };
 
 // LibreTranslate API endpoint (free, no API key)
