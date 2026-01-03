@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
+
   // Setup configuration
   export let syncEndpoint: string;
   export let deviceName: string;
@@ -30,7 +32,7 @@
 <!-- Setup: Endpoint and Device Name -->
 <div>
   <label for="sync-endpoint" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    Sync Server Endpoint
+    {$_('settings.syncSetup.endpoint.label')}
   </label>
   <input
     id="sync-endpoint"
@@ -40,23 +42,23 @@
     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
   />
   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-    URL of your self-hosted Jottery sync server
+    {$_('settings.syncSetup.endpoint.help')}
   </p>
 </div>
 
 <div>
   <label for="sync-device-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    Device Name
+    {$_('settings.syncSetup.deviceName.label')}
   </label>
   <input
     id="sync-device-name"
     type="text"
     bind:value={deviceName}
-    placeholder="My Laptop"
+    placeholder={$_('settings.syncSetup.deviceName.placeholder')}
     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
   />
   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-    A name to identify this device
+    {$_('settings.syncSetup.deviceName.help')}
   </p>
 </div>
 
@@ -64,7 +66,7 @@
 {#if registrationMode === 'select'}
                 <div class="space-y-3">
                   <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Choose how to set up sync:
+                    {$_('settings.syncSetup.chooseMethod')}
                   </div>
 
                   <!-- Option 1: Import Credentials (Most Secure) -->
@@ -73,15 +75,15 @@
                       <span class="text-2xl">🔐</span>
                       <div class="flex-1">
                         <div class="font-semibold text-green-900 dark:text-green-100 mb-1">
-                          Import Sync Credentials
+                          {$_('settings.syncSetup.importCredentials.title')}
                         </div>
                         <div class="text-xs text-green-800 dark:text-green-200 mb-2">
-                          <strong>For additional devices:</strong> Most secure method
+                          {@html $_('settings.syncSetup.importCredentials.subtitle')}
                         </div>
                         <div class="text-xs text-green-700 dark:text-green-300 space-y-1">
-                          <div>✓ Zero-knowledge encryption (server cannot decrypt your notes)</div>
-                          <div>✓ Copy credentials from your first device</div>
-                          <div>✓ All devices use the same encryption key</div>
+                          <div>{$_('settings.syncSetup.importCredentials.benefit1')}</div>
+                          <div>{$_('settings.syncSetup.importCredentials.benefit2')}</div>
+                          <div>{$_('settings.syncSetup.importCredentials.benefit3')}</div>
                         </div>
                       </div>
                     </div>
@@ -89,7 +91,7 @@
                       on:click={() => registrationMode = 'importCredentials'}
                       class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
                     >
-                      📋 Import Credentials from Another Device
+                      {$_('settings.syncSetup.importCredentials.button')}
                     </button>
                   </div>
 
@@ -99,15 +101,15 @@
                       <span class="text-2xl">🌐</span>
                       <div class="flex-1">
                         <div class="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                          Register with a Sync Server
+                          {$_('settings.syncSetup.registerServer.title')}
                         </div>
                         <div class="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                          <strong>For your first device only:</strong> Creates your account
+                          {@html $_('settings.syncSetup.registerServer.subtitle')}
                         </div>
                         <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                          <div>✓ Creates email/password account</div>
-                          <div>✓ Enables sync for this device</div>
-                          <div>✓ Requires admin approval</div>
+                          <div>{$_('settings.syncSetup.registerServer.benefit1')}</div>
+                          <div>{$_('settings.syncSetup.registerServer.benefit2')}</div>
+                          <div>{$_('settings.syncSetup.registerServer.benefit3')}</div>
                         </div>
                       </div>
                     </div>
@@ -115,7 +117,7 @@
                       on:click={() => registrationMode = 'newUser'}
                       class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
                     >
-                      🚀 Register New Account
+                      {$_('settings.syncSetup.registerServer.button')}
                     </button>
                   </div>
 
@@ -123,10 +125,10 @@
                   <div class="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-3">
                     <div class="text-xs text-gray-700 dark:text-gray-300 space-y-2">
                       <div>
-                        <strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server cannot read your content.
+                        {@html $_('settings.syncSetup.privacyNote')}
                       </div>
                       <div>
-                        <strong>💡 Self-host?</strong> Run your own server - <a href="https://github.com/seesee/jottery" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">see GitHub</a>
+                        {@html $_('settings.syncSetup.selfHostNote')}
                       </div>
                     </div>
                   </div>
@@ -135,47 +137,47 @@
                 <div class="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 space-y-3">
                   <div class="flex items-center justify-between mb-2">
                     <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                      Register New User Account
+                      {$_('settings.syncSetup.registration.title')}
                     </h4>
                     <button
                       on:click={onResetRegistrationFlow}
                       class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                     >
-                      ← Back
+                      {$_('settings.syncSetup.back')}
                     </button>
                   </div>
 
                   {#if registrationStep === 'email'}
                     <div>
                       <label for="user-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Email Address
+                        {$_('settings.syncSetup.registration.emailLabel')}
                       </label>
                       <input
                         id="user-email"
                         type="email"
                         bind:value={userEmail}
-                        placeholder="you@example.com"
+                        placeholder={$_('settings.syncSetup.registration.emailPlaceholder')}
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
                       <label for="user-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Password (min 12 characters)
+                        {$_('settings.syncSetup.registration.passwordLabel')}
                       </label>
                       <input
                         id="user-password"
                         type="password"
                         bind:value={userPassword}
-                        placeholder="••••••••••••"
+                        placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <div class="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded p-2">
                         <p class="text-xs text-amber-800 dark:text-amber-200 font-medium flex items-start gap-1">
                           <span>💡</span>
-                          <span><strong>Recommended:</strong> Use a DIFFERENT password from your notes encryption password.</span>
+                          <span>{@html $_('settings.syncSetup.registration.passwordWarningTitle')}</span>
                         </p>
                         <p class="text-xs text-amber-700 dark:text-amber-300 mt-1 ml-5">
-                          This password is sent to the server for authentication. Your notes password should never leave your device.
+                          {$_('settings.syncSetup.registration.passwordWarningText')}
                         </p>
                       </div>
                     </div>
@@ -184,7 +186,7 @@
                       disabled={!syncEndpoint || !userEmail || !userPassword || registeringUser}
                       class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
                     >
-                      {registeringUser ? 'Registering...' : 'Register User Account'}
+                      {registeringUser ? $_('settings.syncSetup.registration.registering') : $_('settings.syncSetup.registration.registerButton')}
                     </button>
                   {:else if registrationStep === 'pending'}
                     <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
@@ -192,13 +194,13 @@
                         <span class="text-xl">⏳</span>
                         <div>
                           <div class="font-semibold text-sm text-yellow-900 dark:text-yellow-100">
-                            Pending Admin Approval
+                            {$_('settings.syncSetup.registration.pendingTitle')}
                           </div>
                           <p class="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
                             {userRegistrationMessage}
                           </p>
                           <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
-                            Contact your administrator to approve your account. Once approved, click below to complete setup.
+                            {$_('settings.syncSetup.registration.pendingText')}
                           </p>
                         </div>
                       </div>
@@ -208,12 +210,12 @@
                       disabled={registeringDevice}
                       class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
                     >
-                      {registeringDevice ? 'Completing Setup...' : 'I\'ve Been Approved - Complete Setup'}
+                      {registeringDevice ? $_('settings.syncSetup.registration.completingSetup') : $_('settings.syncSetup.registration.approvedButton')}
                     </button>
                   {:else if registrationStep === 'device'}
                     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3 mb-3">
                       <div class="text-xs text-green-800 dark:text-green-200">
-                        ⏳ Registering device and syncing...
+                        {$_('settings.syncSetup.registration.deviceRegistering')}
                       </div>
                     </div>
                   {:else if registrationStep === 'complete'}
@@ -222,13 +224,13 @@
                         <span class="text-xl">✅</span>
                         <div>
                           <div class="font-semibold text-sm text-green-900 dark:text-green-100">
-                            Sync Enabled Successfully!
+                            {$_('settings.syncSetup.registration.successTitle')}
                           </div>
                           <p class="text-xs text-green-800 dark:text-green-200 mt-2">
-                            Your device is now registered and <strong>all your existing notes have been synced to the server</strong>. Any future changes will sync automatically.
+                            {@html $_('settings.syncSetup.registration.successText')}
                           </p>
                           <p class="text-xs text-green-700 dark:text-green-300 mt-2 font-medium">
-                            📋 To add another device: Click "Export Sync Credentials" below and import them on your other device.
+                            {$_('settings.syncSetup.registration.successNextSteps')}
                           </p>
                         </div>
                       </div>
@@ -237,7 +239,7 @@
                       on:click={onResetRegistrationFlow}
                       class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors mt-2"
                     >
-                      Done
+                      {$_('settings.syncSetup.registration.done')}
                     </button>
                   {/if}
                 </div>
@@ -245,43 +247,43 @@
                 <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
                   <div class="flex items-center justify-between mb-2">
                     <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                      Link Account (Optional)
+                      {$_('settings.syncSetup.linkAccount.title')}
                     </h4>
                     <button
                       on:click={onResetRegistrationFlow}
                       class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                     >
-                      ← Back
+                      {$_('settings.syncSetup.back')}
                     </button>
                   </div>
 
                   <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3 mb-3">
                     <p class="text-xs text-blue-800 dark:text-blue-200">
-                      ℹ️ This feature is for future use (admin dashboard access, subscription management). It does <strong>not</strong> enable sync on this device.
+                      {@html $_('settings.syncSetup.linkAccount.infoText')}
                     </p>
                   </div>
 
                   <div>
                     <label for="existing-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Email Address
+                      {$_('settings.syncSetup.linkAccount.emailLabel')}
                     </label>
                     <input
                       id="existing-email"
                       type="email"
                       bind:value={userEmail}
-                      placeholder="you@example.com"
+                      placeholder={$_('settings.syncSetup.registration.emailPlaceholder')}
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
                     <label for="existing-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Password
+                      {$_('settings.syncSetup.linkAccount.passwordLabel')}
                     </label>
                     <input
                       id="existing-password"
                       type="password"
                       bind:value={userPassword}
-                      placeholder="••••••••••••"
+                      placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -289,42 +291,42 @@
                     disabled
                     class="w-full px-4 py-2 bg-gray-400 text-white text-sm font-medium rounded-md cursor-not-allowed"
                   >
-                    Coming Soon
+                    {$_('settings.syncSetup.linkAccount.comingSoon')}
                   </button>
                   <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    Account linking will be enabled in a future update
+                    {$_('settings.syncSetup.linkAccount.futureUpdate')}
                   </p>
                 </div>
 {:else if registrationMode === 'importCredentials'}
                 <div class="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20 space-y-3">
                   <div class="flex items-center justify-between mb-2">
                     <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                      Import Credentials
+                      {$_('settings.syncSetup.import.title')}
                     </h4>
                     <button
                       on:click={onResetRegistrationFlow}
                       class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                     >
-                      ← Back
+                      {$_('settings.syncSetup.back')}
                     </button>
                   </div>
 
                   <p class="text-xs text-gray-600 dark:text-gray-400">
-                    Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.
+                    {$_('settings.syncSetup.import.instructions')}
                   </p>
 
                   <div class="bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded p-2">
                     <p class="text-xs text-orange-800 dark:text-orange-200 font-medium">
-                      ⚠️ IMPORTANT: You must use the SAME password on all devices!
+                      {$_('settings.syncSetup.import.warningTitle')}
                     </p>
                     <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                      If you use a different password, notes will not decrypt.
+                      {$_('settings.syncSetup.import.warningText')}
                     </p>
                   </div>
 
                   <textarea
                     bind:value={importCredentialsText}
-                    placeholder="Paste base64 credentials here..."
+                    placeholder={$_('settings.syncSetup.import.placeholder')}
                     rows="4"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
                   ></textarea>
@@ -333,7 +335,7 @@
                     disabled={!importCredentialsText.trim() || importing}
                     class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
                   >
-                    {importing ? 'Importing...' : '📥 Import and Lock'}
+                    {importing ? $_('settings.syncSetup.import.importing') : $_('settings.syncSetup.import.button')}
                   </button>
                 </div>
               {/if}
@@ -345,7 +347,7 @@
                     <span class="text-xl">⚠️</span>
                     <div>
                       <div class="font-semibold text-sm text-red-900 dark:text-red-100">
-                        Error
+                        {$_('settings.syncSetup.error')}
                       </div>
                       <p class="text-xs text-red-800 dark:text-red-200 mt-1">
                         {syncError}
