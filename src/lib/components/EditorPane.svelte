@@ -1516,8 +1516,8 @@
 {:else}
   <div class="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
     <div class="text-center">
-      <p class="text-lg mb-2">No note selected</p>
-      <p class="text-sm">Select a note from the list or create a new one</p>
+      <p class="text-lg mb-2">{$_('editor.noNoteSelected')}</p>
+      <p class="text-sm">{$_('editor.noNoteSelectedHint')}</p>
     </div>
   </div>
 {/if}

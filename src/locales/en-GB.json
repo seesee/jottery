@@ -43,6 +43,8 @@
     "clear": "CLEAR SEARCH"
   },
   "editor": {
+    "noNoteSelected": "NO NOTE SELECTED",
+    "noNoteSelectedHint": "SELECT A NOTE FROM THE LIST OR CREATE A NEW ONE",
     "tags": "TAGS",
     "addTags": "ADD TAGS...",
     "plainText": "PLAIN TEXT",
