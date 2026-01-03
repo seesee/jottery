@@ -1318,34 +1318,34 @@
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4">
-          ⚠️ Security Warning
+          {$_('settings.rememberPasswordModal.title')}
         </h3>
 
         <div class="mb-4 text-sm text-gray-700 dark:text-gray-300 space-y-2">
           <p class="font-semibold">
-            Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.
+            {$_('settings.rememberPasswordModal.insecureWarning')}
           </p>
           <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-            <li>Anyone with access to your device can read it</li>
-            <li>Browser extensions can access it</li>
-            <li>It may survive browser cache clearing</li>
-            <li>Auto-lock will be disabled</li>
+            <li>{$_('settings.rememberPasswordModal.riskDevice')}</li>
+            <li>{$_('settings.rememberPasswordModal.riskExtensions')}</li>
+            <li>{$_('settings.rememberPasswordModal.riskCache')}</li>
+            <li>{$_('settings.rememberPasswordModal.riskAutolock')}</li>
           </ul>
           <p class="font-semibold text-orange-700 dark:text-orange-300">
-            Only enable this if you fully understand the security risks.
+            {$_('settings.rememberPasswordModal.confirmWarning')}
           </p>
         </div>
 
         <div class="mb-4">
           <label for="remember-password-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Enter your password to confirm:
+            {$_('settings.rememberPasswordModal.confirmPassword')}
           </label>
           <input
             id="remember-password-confirm"
             type="password"
             bind:value={rememberPasswordConfirmInput}
             on:keydown={(e) => e.key === 'Enter' && confirmEnableRememberPassword()}
-            placeholder="Your password"
+            placeholder="{$_('settings.rememberPasswordModal.passwordPlaceholder')}"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
           {#if rememberPasswordError}
@@ -1358,13 +1358,13 @@
             on:click={cancelEnableRememberPassword}
             class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
-            Cancel
+            {$_('settings.rememberPasswordModal.cancelButton')}
           </button>
           <button
             on:click={confirmEnableRememberPassword}
             class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md transition-colors"
           >
-            I Understand, Enable Anyway
+            {$_('settings.rememberPasswordModal.enableButton')}
           </button>
         </div>
       </div>
@@ -1392,7 +1392,7 @@
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-            📋 Sync Credentials
+            {$_('settings.syncCredentials.title')}
           </h3>
           <button
             on:click={() => showCredentialsModal = false}
@@ -1408,7 +1408,7 @@
         <!-- Content -->
         <div class="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
           <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
-            Copy the text below and paste it into another Jottery client using "Use Existing Credentials":
+            {$_('settings.syncCredentials.instructions')}
           </p>
 
           <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
@@ -1417,12 +1417,12 @@
 
           <div class="mt-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
             <p class="text-sm text-orange-800 dark:text-orange-200">
-              ⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!
+              {@html $_('settings.syncCredentials.samePasswordWarning')}
             </p>
           </div>
 
           <p class="mt-3 text-xs text-gray-600 dark:text-gray-400">
-            The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.
+            {$_('settings.syncCredentials.clipboardNote')}
           </p>
         </div>
 
@@ -1432,7 +1432,7 @@
             on:click={() => showCredentialsModal = false}
             class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
           >
-            Close
+            {$_('settings.syncCredentials.closeButton')}
           </button>
         </div>
       </div>
