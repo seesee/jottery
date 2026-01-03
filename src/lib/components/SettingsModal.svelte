@@ -1278,10 +1278,10 @@
   <!-- Delete Database Confirmation Modal -->
   <ConfirmModal
     show={showDeleteConfirm}
-    title="Delete All Data"
-    message="This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone.{'\n\n'}Type DELETE to confirm:"
-    confirmText="Delete Everything"
-    cancelText="Cancel"
+    title={$_('confirm.deleteAllData.title')}
+    message={$_('confirm.deleteAllData.message')}
+    confirmText={$_('confirm.deleteAllData.confirmButton')}
+    cancelText={$_('confirm.deleteAllData.cancelButton')}
     confirmClass="bg-red-600 hover:bg-red-700"
     requireTextMatch="DELETE"
     onConfirm={confirmDeleteDatabase}
@@ -1291,10 +1291,10 @@
   <!-- Disconnect Sync Confirmation Modal -->
   <ConfirmModal
     show={showDisconnectSyncConfirm}
-    title="Disconnect from Sync Server?"
-    message="This will disconnect this device from the sync server and clear all sync credentials.{'\n\n'}Your notes will NOT be deleted and will remain on this device.{'\n\n'}You can reconnect to a sync server later."
-    confirmText="Disconnect"
-    cancelText="Cancel"
+    title={$_('confirm.disconnectSync.title')}
+    message={$_('confirm.disconnectSync.message')}
+    confirmText={$_('confirm.disconnectSync.confirmButton')}
+    cancelText={$_('confirm.disconnectSync.cancelButton')}
     confirmClass="bg-orange-600 hover:bg-orange-700"
     onConfirm={confirmDisconnectSync}
     onCancel={() => showDisconnectSyncConfirm = false}
@@ -1303,10 +1303,10 @@
   <!-- Delete Server Notes Confirmation Modal -->
   <ConfirmModal
     show={showDeleteServerNotesConfirm}
-    title="Delete All Notes from Server?"
-    message="This will permanently delete ALL your notes from the sync server. This action cannot be undone.{'\n\n'}Your local notes will remain on this device and will NOT be deleted.{'\n\n'}Type DELETE to confirm:"
-    confirmText="Delete from Server"
-    cancelText="Cancel"
+    title={$_('confirm.deleteServerNotes.title')}
+    message={$_('confirm.deleteServerNotes.message')}
+    confirmText={$_('confirm.deleteServerNotes.confirmButton')}
+    cancelText={$_('confirm.deleteServerNotes.cancelButton')}
     confirmClass="bg-red-600 hover:bg-red-700"
     requireTextMatch="DELETE"
     onConfirm={handleDeleteAllNotes}

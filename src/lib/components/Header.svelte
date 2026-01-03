@@ -398,10 +398,10 @@
 
 <ConfirmModal
   show={showDisableRememberPasswordConfirm}
-  title="Disable Remember Password?"
-  message="This will clear your stored password and lock the application.\n\nYou will need to enter your password the next time you access the app."
-  confirmText="Disable and Lock"
-  cancelText="Cancel"
+  title={$_('confirm.disableRememberPassword.title')}
+  message={$_('confirm.disableRememberPassword.message')}
+  confirmText={$_('confirm.disableRememberPassword.confirmButton')}
+  cancelText={$_('confirm.disableRememberPassword.cancelButton')}
   confirmClass="bg-orange-600 hover:bg-orange-700"
   onConfirm={handleDisableRememberPasswordConfirm}
   onCancel={handleDisableRememberPasswordCancel}
