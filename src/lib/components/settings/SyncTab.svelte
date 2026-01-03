@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import SyncSetupForm from './SyncSetupForm.svelte';
   import SyncStatusPanel from './SyncStatusPanel.svelte';
   import type { SyncStatus } from '../../types';
