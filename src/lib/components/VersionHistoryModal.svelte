@@ -171,7 +171,7 @@
           <div class="flex-1 flex items-center justify-center py-8">
             <div class="text-center">
               <p class="text-lg text-gray-600 dark:text-gray-400">{$_('versionHistory.noVersions')}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">Versions will be created during sync</p>
+              <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">{$_('versionHistory.versionsCreatedDuringSync')}</p>
             </div>
           </div>
         {:else}
@@ -211,21 +211,21 @@
                   <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 text-sm flex-shrink-0">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
-                        <span class="text-gray-600 dark:text-gray-400">Version:</span>
+                        <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.version')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">v{selectedVersion.version}</span>
                       </div>
                       <div>
-                        <span class="text-gray-600 dark:text-gray-400">Characters:</span>
+                        <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.characters')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">{selectedVersion.characterCount?.toLocaleString() || 0}</span>
                       </div>
                       <div>
-                        <span class="text-gray-600 dark:text-gray-400">Created:</span>
+                        <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.created')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
                           {formatDate(selectedVersion.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <div>
-                        <span class="text-gray-600 dark:text-gray-400">Synced:</span>
+                        <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.synced')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
                           {formatDate(selectedVersion.syncedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -233,7 +233,7 @@
                     </div>
                     {#if selectedVersion.tags.length > 0}
                       <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                        <span class="text-gray-600 dark:text-gray-400">Tags:</span>
+                        <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.tags')}</span>
                         <div class="flex gap-1 mt-1 flex-wrap">
                           {#each selectedVersion.tags as tag}
                             <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs">
@@ -247,7 +247,7 @@
 
                   <!-- Content Preview -->
                   <div class="flex-1 flex flex-col min-h-0">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content Preview</h3>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{$_('versionHistory.contentPreview')}</h3>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 overflow-y-auto flex-1">
                       <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100 font-mono">{getPreviewContent(selectedVersion.content)}</pre>
                     </div>
@@ -256,7 +256,7 @@
               </div>
             {:else}
               <div class="flex-1 flex items-center justify-center">
-                <p class="text-gray-500 dark:text-gray-400">Select a version to preview</p>
+                <p class="text-gray-500 dark:text-gray-400">{$_('versionHistory.selectToPreview')}</p>
               </div>
             {/if}
           </div>
@@ -270,14 +270,14 @@
             on:click={onClose}
             class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           >
-            Close
+            {$_('common.close')}
           </button>
           {#if selectedVersion && selectedVersion.version !== currentVersion}
             <button
               on:click={handleRestoreClick}
               class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 text-white font-medium rounded-md transition-colors"
             >
-              Restore This Version
+              {$_('versionHistory.restoreButton')}
             </button>
           {/if}
         </div>
@@ -288,7 +288,7 @@
   <!-- Restore Confirmation Modal -->
   <ConfirmModal
     show={showRestoreConfirm}
-    title="Restore Version"
+    title={$_('versionHistory.restoreConfirm.title')}
     message={$_('versionHistory.restoreConfirm.message')}
     confirmText={$_('versionHistory.restoreConfirm.confirmButton')}
     cancelText={$_('common.cancel')}
