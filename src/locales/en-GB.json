@@ -29,7 +29,8 @@
     "selectNote": "SELECT A NOTE FROM THE LIST OR CREATE A NEW ONE",
     "created": "CREATED",
     "modified": "MODIFIED",
-    "attachments": "ATTACHMENTS"
+    "attachments": "ATTACHMENTS",
+    "filterByTag": "FILTER BY #{tag}"
   },
   "search": {
     "placeholder": "SEARCH NOTES...",
@@ -42,7 +43,13 @@
     "syntaxHighlight": "SYNTAX HIGHLIGHTING",
     "wordWrap": "WRAP",
     "noWrap": "NO WRAP",
-    "toggleWordWrap": "TOGGLE WORD WRAP"
+    "toggleWordWrap": "TOGGLE WORD WRAP",
+    "status": {
+      "uploading": "UPLOADING...",
+      "processingNotes": "PROCESSING {current} OF {total} NOTES...",
+      "readingFile": "READING FILE...",
+      "loadingPreview": "LOADING PREVIEW..."
+    }
   },
   "settings": {
     "title": "SETTINGS",
@@ -62,7 +69,53 @@
     "exportNotes": "EXPORT NOTES",
     "importNotes": "IMPORT NOTES",
     "deleteDatabase": "DELETE DATABASE",
-    "keyboardShortcuts": "KEYBOARD SHORTCUTS"
+    "keyboardShortcuts": "KEYBOARD SHORTCUTS",
+    "syncSetup": {
+      "endpoint": {
+        "label": "SYNC SERVER ENDPOINT",
+        "help": "URL OF YOUR SELF-HOSTED JOTTERY SYNC SERVER"
+      },
+      "deviceName": {
+        "label": "DEVICE NAME",
+        "placeholder": "MY LAPTOP",
+        "help": "A NAME TO IDENTIFY THIS DEVICE"
+      },
+      "chooseMethod": "CHOOSE HOW TO SET UP SYNC:",
+      "importCredentials": {
+        "title": "IMPORT SYNC CREDENTIALS",
+        "subtitle": "<STRONG>FOR ADDITIONAL DEVICES:</STRONG> MOST SECURE METHOD",
+        "benefit1": "✓ ZERO-KNOWLEDGE ENCRYPTION (SERVER CANNOT DECRYPT YOUR NOTES)",
+        "benefit2": "✓ COPY CREDENTIALS FROM YOUR FIRST DEVICE",
+        "benefit3": "✓ ALL DEVICES USE THE SAME ENCRYPTION KEY",
+        "button": "📋 IMPORT CREDENTIALS FROM ANOTHER DEVICE"
+      },
+      "registerServer": {
+        "title": "REGISTER WITH A SYNC SERVER",
+        "subtitle": "<STRONG>FOR YOUR FIRST DEVICE ONLY:</STRONG> CREATES YOUR ACCOUNT",
+        "benefit1": "✓ CREATES EMAIL/PASSWORD ACCOUNT",
+        "benefit2": "✓ ENABLES SYNC FOR THIS DEVICE",
+        "benefit3": "✓ REQUIRES ADMIN APPROVAL",
+        "button": "🚀 REGISTER NEW ACCOUNT"
+      },
+      "privacyNote": "<STRONG>🔒 PRIVACY:</STRONG> ALL YOUR NOTES ARE ENCRYPTED END-TO-END. THE SERVER ONLY STORES ENCRYPTED DATA AND CANNOT READ YOUR CONTENT.",
+      "selfHostNote": "<STRONG>💡 SELF-HOST?</STRONG> RUN YOUR OWN SERVER - <A HREF=\"HTTPS://GITHUB.COM/YOURUSERNAME/JOTTERY\" TARGET=\"_BLANK\" CLASS=\"UNDERLINE\">SEE GITHUB</A>"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "SYNTAX HIGHLIGHTING",
+      "syntaxHelp": "SELECT WHICH PROGRAMMING LANGUAGES TO ENABLE FOR SYNTAX HIGHLIGHTING IN MARKDOWN CODE BLOCKS AND PREVIEWS. CORE LANGUAGES ARE ALWAYS ENABLED.",
+      "languagesEnabled": "{count} LANGUAGES ENABLED",
+      "estimatedSize": "ESTIMATED SIZE: ~{size} KB",
+      "resetToCore": "RESET TO CORE",
+      "enableAll": "ENABLE ALL",
+      "coreLanguages": "CORE LANGUAGES",
+      "alwaysEnabled": "(ALWAYS ENABLED)",
+      "popularLanguages": "POPULAR LANGUAGES",
+      "webLanguages": "WEB LANGUAGES",
+      "systemsLanguages": "SYSTEMS LANGUAGES",
+      "dataLanguages": "DATA LANGUAGES",
+      "otherLanguages": "OTHER LANGUAGES",
+      "enabledCount": "{enabled}/{total} ENABLED"
+    }
   },
   "unlock": {
     "welcome": "WELCOME TO JOTTERY",
@@ -90,7 +143,26 @@
     "empty": "RECYCLE BIN IS EMPTY",
     "restore": "RESTORE",
     "deletePermanently": "DELETE PERMANENTLY",
-    "emptyBin": "EMPTY RECYCLE BIN"
+    "emptyBin": "EMPTY RECYCLE BIN",
+    "loading": "LOADING...",
+    "footer": {
+      "single": "{count} NOTE IN RECYCLE BIN. NOTES ARE AUTOMATICALLY PURGED AFTER 30 DAYS.",
+      "multiple": "{count} NOTES IN RECYCLE BIN. NOTES ARE AUTOMATICALLY PURGED AFTER 30 DAYS."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "PERMANENTLY DELETE NOTE",
+        "message": "ARE YOU SURE YOU WANT TO PERMANENTLY DELETE THIS NOTE? THIS ACTION CANNOT BE UNDONE.",
+        "confirmButton": "DELETE FOREVER"
+      },
+      "emptyBin": {
+        "title": "EMPTY RECYCLE BIN",
+        "message": "PERMANENTLY DELETE ALL {count} {notes}? THIS ACTION CANNOT BE UNDONE.",
+        "note": "NOTE",
+        "notes": "NOTES",
+        "confirmButton": "EMPTY BIN"
+      }
+    }
   },
   "attachments": {
     "title": "ATTACHMENTS",
@@ -98,7 +170,16 @@
     "dropHere": "DROP FILES HERE OR CLICK TO BROWSE",
     "uploading": "UPLOADING...",
     "download": "DOWNLOAD",
-    "validationError": "FILE VALIDATION ERROR"
+    "validationError": "FILE VALIDATION ERROR",
+    "clickToView": "CLICK TO VIEW ATTACHMENTS",
+    "clickToHide": "CLICK TO HIDE ATTACHMENTS",
+    "preview": {
+      "title": "ATTACHMENT PREVIEW",
+      "loading": "LOADING PREVIEW...",
+      "notAvailable": "PREVIEW NOT AVAILABLE FOR THIS FILE TYPE.",
+      "audioNotSupported": "YOUR BROWSER DOES NOT SUPPORT AUDIO PLAYBACK.",
+      "videoNotSupported": "YOUR BROWSER DOES NOT SUPPORT VIDEO PLAYBACK."
+    }
   },
   "keyboard": {
     "title": "KEYBOARD SHORTCUTS",
@@ -125,11 +206,54 @@
     "title": "RELEASES",
     "description": "DOWNLOAD THE JOTTERY TUI FOR YOUR PLATFORM."
   },
+  "fileUpload": {
+    "dropHere": "DROP FILES HERE",
+    "clickOrDrag": "<SPAN CLASS=\"FONT-MEDIUM\">CLICK TO UPLOAD</SPAN> OR DRAG AND DROP",
+    "maxFileSize": "MAX FILE SIZE: 10MB"
+  },
+  "pdfViewer": {
+    "loading": "LOADING PDF VIEWER...",
+    "pageOfPages": "PAGE {current} OF {total}",
+    "previousPage": "PREVIOUS PAGE",
+    "nextPage": "NEXT PAGE",
+    "zoomOut": "ZOOM OUT",
+    "zoomIn": "ZOOM IN"
+  },
+  "versionHistory": {
+    "title": "VERSION HISTORY",
+    "closeLabel": "CLOSE VERSION HISTORY",
+    "loading": "LOADING VERSIONS...",
+    "noVersions": "NO VERSION HISTORY",
+    "versionsCreatedDuringSync": "VERSIONS WILL BE CREATED DURING SYNC",
+    "current": "(CURRENT)",
+    "autoSync": "AUTO SYNC",
+    "manualSync": "MANUAL SYNC",
+    "version": "VERSION:",
+    "characters": "CHARACTERS:",
+    "created": "CREATED:",
+    "synced": "SYNCED:",
+    "tags": "TAGS:",
+    "contentPreview": "CONTENT PREVIEW",
+    "selectToPreview": "SELECT A VERSION TO PREVIEW",
+    "restoreButton": "RESTORE THIS VERSION",
+    "restoreConfirm": {
+      "title": "RESTORE VERSION",
+      "message": "ARE YOU SURE YOU WANT TO RESTORE THIS VERSION? YOUR CURRENT NOTE WILL BE SAVED AS A NEW VERSION BEFORE RESTORING.",
+      "confirmButton": "RESTORE"
+    }
+  },
+  "header": {
+    "menu": "MENU",
+    "loadingNotes": "LOADING {current}/{total} NOTES...",
+    "creatingNote": "CREATING NOTE...",
+    "addContentFirst": "ADD CONTENT TO CURRENT NOTE FIRST"
+  },
   "confirm": {
     "deleteDatabase": {
       "title": "DELETE DATABASE",
       "message": "⚠️ WARNING: THIS WILL PERMANENTLY DELETE ALL YOUR ENCRYPTED NOTES AND ATTACHMENTS. THIS CANNOT BE UNDONE!\n\nARE YOU SURE YOU WANT TO DELETE THE DATABASE?",
       "confirmButton": "DELETE DATABASE"
-    }
+    },
+    "requireText": "TYPE <STRONG>{text}</STRONG> TO CONFIRM:"
   }
 }
