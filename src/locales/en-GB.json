@@ -222,6 +222,7 @@
   },
   "keyboard": {
     "title": "KEYBOARD SHORTCUTS",
+    "closeLabel": "CLOSE SHORTCUTS HELP",
     "global": "GLOBAL",
     "noteList": "NOTE LIST",
     "editor": "EDITOR",
@@ -239,7 +240,10 @@
     "copyNote": "COPY NOTE CONTENT",
     "findInNote": "FIND IN NOTE (CODEMIRROR)",
     "replaceInNote": "REPLACE IN NOTE (CODEMIRROR)",
-    "macNote": "ON MACOS, USE CMD INSTEAD OF CTRL."
+    "macNote": "ON MACOS, USE CMD INSTEAD OF CTRL.",
+    "note": "NOTE:",
+    "cmd": "CMD",
+    "ctrl": "CTRL"
   },
   "releases": {
     "title": "RELEASES",

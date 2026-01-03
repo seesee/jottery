@@ -222,6 +222,7 @@
   },
   "keyboard": {
     "title": "Keyboard Shortcuts",
+    "closeLabel": "Close shortcuts help",
     "global": "Global",
     "noteList": "Note List",
     "editor": "Editor",
@@ -239,7 +240,10 @@
     "copyNote": "Copy note content",
     "findInNote": "Find in note (CodeMirror)",
     "replaceInNote": "Replace in note (CodeMirror)",
-    "macNote": "On macOS, use Cmd instead of Ctrl."
+    "macNote": "On macOS, use Cmd instead of Ctrl.",
+    "note": "Note:",
+    "cmd": "Cmd",
+    "ctrl": "Ctrl"
   },
   "releases": {
     "title": "Releases",
