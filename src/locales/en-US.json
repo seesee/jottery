@@ -50,6 +50,9 @@
     "wordWrap": "Wrap",
     "noWrap": "No Wrap",
     "toggleWordWrap": "Toggle word wrap",
+    "backToNotes": "Back to notes",
+    "moreActions": "More actions",
+    "closeNote": "Close note (Esc)",
     "status": {
       "uploading": "Uploading...",
       "processingNotes": "Processing {current} of {total} notes...",

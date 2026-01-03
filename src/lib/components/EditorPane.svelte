@@ -1237,8 +1237,8 @@
         <button
           on:click={onBackToList}
           class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
-          title="Back to notes"
-          aria-label="Back to notes"
+          title={$_('editor.backToNotes')}
+          aria-label={$_('editor.backToNotes')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -1270,7 +1270,7 @@
         value={language}
         on:change={handleLanguageChange}
         class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
-        title="Syntax highlighting"
+        title={$_('editor.syntaxHighlight')}
       >
         {#each availableLanguages as lang}
           <option value={lang.id}>{lang.name}</option>
@@ -1301,7 +1301,7 @@
         <button
           on:click={toggleMoreMenu}
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-          title="More actions"
+          title={$_('editor.moreActions')}
           aria-label="More actions"
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -1402,7 +1402,7 @@
       <button
         on:click={handleClose}
         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
-        title="Close note (Esc)"
+        title={$_('editor.closeNote')}
         aria-label="Close note"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
