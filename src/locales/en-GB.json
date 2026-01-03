@@ -1,134 +1,135 @@
 {
   "app": {
-    "name": "Jottery",
-    "tagline": "Privacy-focused • Local-first • Encrypted"
+    "name": "JOTTERY",
+    "tagline": "PRIVACY-FOCUSED • LOCAL-FIRST • ENCRYPTED"
   },
   "common": {
-    "loading": "Loading...",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "confirm": "Confirm",
-    "close": "Close",
-    "lock": "Lock",
-    "unlock": "Unlock",
-    "settings": "Settings",
-    "search": "Search",
-    "error": "Error"
+    "loading": "LOADING...",
+    "save": "SAVE",
+    "cancel": "CANCEL",
+    "delete": "DELETE",
+    "confirm": "CONFIRM",
+    "close": "CLOSE",
+    "lock": "LOCK",
+    "unlock": "UNLOCK",
+    "settings": "SETTINGS",
+    "search": "SEARCH",
+    "error": "ERROR"
   },
   "note": {
-    "new": "New",
-    "create": "Create new note",
-    "delete": "Delete note",
-    "pin": "Pin",
-    "pinned": "Pinned",
-    "unpin": "Unpin",
-    "copy": "Copy",
-    "copyContent": "Copy note content",
-    "noNoteSelected": "No note selected",
-    "selectNote": "Select a note from the list or create a new one",
-    "created": "Created",
-    "modified": "Modified",
-    "attachments": "Attachments"
+    "new": "NEW",
+    "create": "CREATE NEW NOTE",
+    "delete": "DELETE NOTE",
+    "pin": "PIN",
+    "pinned": "PINNED",
+    "unpin": "UNPIN",
+    "copy": "COPY",
+    "copyContent": "COPY NOTE CONTENT",
+    "noNoteSelected": "NO NOTE SELECTED",
+    "selectNote": "SELECT A NOTE FROM THE LIST OR CREATE A NEW ONE",
+    "created": "CREATED",
+    "modified": "MODIFIED",
+    "attachments": "ATTACHMENTS"
   },
   "search": {
-    "placeholder": "Search notes...",
-    "clear": "Clear search"
+    "placeholder": "SEARCH NOTES...",
+    "clear": "CLEAR SEARCH"
   },
   "editor": {
-    "tags": "Tags",
-    "addTags": "Add tags...",
-    "plainText": "Plain Text",
-    "syntaxHighlight": "Syntax highlighting",
-    "wordWrap": "Wrap",
-    "noWrap": "No Wrap",
-    "toggleWordWrap": "Toggle word wrap"
+    "tags": "TAGS",
+    "addTags": "ADD TAGS...",
+    "plainText": "PLAIN TEXT",
+    "syntaxHighlight": "SYNTAX HIGHLIGHTING",
+    "wordWrap": "WRAP",
+    "noWrap": "NO WRAP",
+    "toggleWordWrap": "TOGGLE WORD WRAP"
   },
   "settings": {
-    "title": "Settings",
-    "theme": "Theme",
-    "themeLight": "Light",
-    "themeDark": "Dark",
-    "themeAuto": "Auto",
-    "autoLockTimeout": "Auto-lock timeout (minutes)",
-    "sortOrder": "Default sort order",
-    "sortRecent": "Most recent",
-    "sortOldest": "Oldest first",
-    "sortAlpha": "Alphabetical",
-    "sortCreated": "Creation date",
-    "language": "Language",
-    "saveSettings": "Save Settings",
-    "saving": "Saving...",
-    "exportNotes": "Export Notes",
-    "importNotes": "Import Notes",
-    "deleteDatabase": "Delete Database",
-    "keyboardShortcuts": "Keyboard Shortcuts"
+    "title": "SETTINGS",
+    "theme": "THEME",
+    "themeLight": "LIGHT",
+    "themeDark": "DARK",
+    "themeAuto": "AUTO",
+    "autoLockTimeout": "AUTO-LOCK TIMEOUT (MINUTES)",
+    "sortOrder": "DEFAULT SORT ORDER",
+    "sortRecent": "MOST RECENT",
+    "sortOldest": "OLDEST FIRST",
+    "sortAlpha": "ALPHABETICAL",
+    "sortCreated": "CREATION DATE",
+    "language": "LANGUAGE",
+    "saveSettings": "SAVE SETTINGS",
+    "saving": "SAVING...",
+    "exportNotes": "EXPORT NOTES",
+    "importNotes": "IMPORT NOTES",
+    "deleteDatabase": "DELETE DATABASE",
+    "keyboardShortcuts": "KEYBOARD SHORTCUTS"
   },
   "unlock": {
-    "welcome": "Welcome to Jottery",
-    "enterPassword": "Enter your password to unlock",
-    "setupPassword": "Set up your master password",
-    "password": "Password",
-    "confirmPassword": "Confirm Password",
-    "createPassword": "Create Password",
-    "unlock": "Unlock",
-    "processing": "Processing...",
-    "passwordMinLength": "Password must be at least 8 characters",
-    "passwordMismatch": "Passwords do not match",
-    "incorrectPassword": "Incorrect password",
-    "warning": "Important: Your password cannot be recovered. If you lose it, your data will be permanently inaccessible.",
-    "failedAttempts": "Incorrect password. After 3 failed attempts, you may need to delete the database and start over.",
-    "deleteAndStartOver": "Delete Database & Start Over"
+    "welcome": "WELCOME TO JOTTERY",
+    "enterPassword": "ENTER YOUR PASSWORD TO UNLOCK",
+    "setupPassword": "SET UP YOUR MASTER PASSWORD",
+    "password": "PASSWORD",
+    "confirmPassword": "CONFIRM PASSWORD",
+    "createPassword": "CREATE PASSWORD",
+    "unlock": "UNLOCK",
+    "processing": "PROCESSING...",
+    "passwordMinLength": "PASSWORD MUST BE AT LEAST 8 CHARACTERS",
+    "passwordMismatch": "PASSWORDS DO NOT MATCH",
+    "incorrectPassword": "INCORRECT PASSWORD",
+    "warning": "IMPORTANT: YOUR PASSWORD CANNOT BE RECOVERED. IF YOU LOSE IT, YOUR DATA WILL BE PERMANENTLY INACCESSIBLE.",
+    "failedAttempts": "INCORRECT PASSWORD. AFTER 3 FAILED ATTEMPTS, YOU MAY NEED TO DELETE THE DATABASE AND START OVER.",
+    "deleteAndStartOver": "DELETE DATABASE & START OVER"
   },
   "lock": {
-    "title": "Lock Application",
-    "message": "Lock the application? Unsaved changes will be lost.",
-    "confirmButton": "Lock"
+    "title": "LOCK APPLICATION",
+    "message": "LOCK THE APPLICATION? UNSAVED CHANGES WILL BE LOST.",
+    "confirmButton": "LOCK"
   },
   "recycleBin": {
-    "title": "Recycle Bin",
-    "empty": "Recycle bin is empty",
-    "restore": "Restore",
-    "deletePermanently": "Delete Permanently",
-    "emptyBin": "Empty Recycle Bin"
+    "title": "RECYCLE BIN",
+    "empty": "RECYCLE BIN IS EMPTY",
+    "restore": "RESTORE",
+    "deletePermanently": "DELETE PERMANENTLY",
+    "emptyBin": "EMPTY RECYCLE BIN"
   },
   "attachments": {
-    "title": "Attachments",
-    "upload": "Upload files",
-    "dropHere": "Drop files here or click to browse",
-    "uploading": "Uploading...",
-    "download": "Download",
-    "validationError": "File validation error"
+    "title": "ATTACHMENTS",
+    "upload": "UPLOAD FILES",
+    "dropHere": "DROP FILES HERE OR CLICK TO BROWSE",
+    "uploading": "UPLOADING...",
+    "download": "DOWNLOAD",
+    "validationError": "FILE VALIDATION ERROR"
   },
   "keyboard": {
-    "title": "Keyboard Shortcuts",
-    "global": "Global",
-    "noteList": "Note List",
-    "editor": "Editor",
-    "focusSearch": "Focus search",
-    "createNote": "Create new note",
-    "lockApp": "Lock application",
-    "openSettings": "Open settings",
-    "showShortcuts": "Show keyboard shortcuts",
-    "navigateNotes": "Navigate notes",
-    "navigateVim": "Navigate notes (vim-style)",
-    "openNote": "Open selected note",
-    "deleteNote": "Delete selected note",
-    "pinNote": "Pin/unpin selected note",
-    "closeNote": "Close note",
-    "copyNote": "Copy note content",
-    "findInNote": "Find in note (CodeMirror)",
-    "replaceInNote": "Replace in note (CodeMirror)",
-    "macNote": "On macOS, use Cmd instead of Ctrl."
+    "title": "KEYBOARD SHORTCUTS",
+    "global": "GLOBAL",
+    "noteList": "NOTE LIST",
+    "editor": "EDITOR",
+    "focusSearch": "FOCUS SEARCH",
+    "createNote": "CREATE NEW NOTE",
+    "lockApp": "LOCK APPLICATION",
+    "openSettings": "OPEN SETTINGS",
+    "showShortcuts": "SHOW KEYBOARD SHORTCUTS",
+    "navigateNotes": "NAVIGATE NOTES",
+    "navigateVim": "NAVIGATE NOTES (VIM-STYLE)",
+    "openNote": "OPEN SELECTED NOTE",
+    "deleteNote": "DELETE SELECTED NOTE",
+    "pinNote": "PIN/UNPIN SELECTED NOTE",
+    "closeNote": "CLOSE NOTE",
+    "copyNote": "COPY NOTE CONTENT",
+    "findInNote": "FIND IN NOTE (CODEMIRROR)",
+    "replaceInNote": "REPLACE IN NOTE (CODEMIRROR)",
+    "macNote": "ON MACOS, USE CMD INSTEAD OF CTRL."
   },
   "releases": {
-        "title": "Releases",
-        "description": "Download the Jottery TUI for your platform."
-      },
-      "confirm": {
-        "deleteDatabase": {
-          "title": "Delete Database",
-          "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
-          "confirmButton": "Delete Database"
-        }
-      }}
+    "title": "RELEASES",
+    "description": "DOWNLOAD THE JOTTERY TUI FOR YOUR PLATFORM."
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "DELETE DATABASE",
+      "message": "⚠️ WARNING: THIS WILL PERMANENTLY DELETE ALL YOUR ENCRYPTED NOTES AND ATTACHMENTS. THIS CANNOT BE UNDONE!\n\nARE YOU SURE YOU WANT TO DELETE THE DATABASE?",
+      "confirmButton": "DELETE DATABASE"
+    }
+  }
+}
