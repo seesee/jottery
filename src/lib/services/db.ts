@@ -74,7 +74,7 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
   console.log(`[Jottery Client v${__APP_VERSION__}] Opening database. Current version: ${DB_VERSION}`);
 
   dbInstance = await openDB<JotteryDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion, newVersion) {
+    upgrade(db, oldVersion, newVersion, transaction) {
       console.log(`[DB] Upgrading database from v${oldVersion} to v${newVersion}`);
 
       // Version 1: Initial schema
@@ -145,8 +145,9 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
       // Version 5: Add needsSync index for faster sync queries
       if (oldVersion < 5) {
         console.log('[DB] Applying v5 schema updates (performance indices)...');
-        const transaction = (db as any).transaction;
-        if (transaction && transaction.objectStore(STORES.NOTES)) {
+
+        // Access the notes object store through the upgrade transaction
+        if (db.objectStoreNames.contains(STORES.NOTES)) {
           const notesStore = transaction.objectStore(STORES.NOTES);
 
           // Add index for needsSync flag (improves getNotesNeedingSync query)
