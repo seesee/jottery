@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { onMount, get } from 'svelte';
+  import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { noteService } from '../services';
   import type { DecryptedNote } from '../types';
   import { formatDate } from '../utils/dateFormat';
