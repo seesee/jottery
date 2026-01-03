@@ -97,6 +97,10 @@
       "downloadToView": "DOWNLOAD TO VIEW"
     }
   },
+  "noteList": {
+    "deleteNote": "DELETE NOTE",
+    "filterByTag": "FILTER BY #{tag}"
+  },
   "settings": {
     "title": "SETTINGS",
     "closeLabel": "CLOSE SETTINGS",

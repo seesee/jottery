@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import type { DecryptedNote } from '../types';
   import { selectNote, selectedNoteId, searchQuery } from '../stores/appStore';
   import { formatTimestamp } from '../utils/timezone';
@@ -83,8 +84,8 @@
         role="button"
         tabindex="0"
         class="absolute top-2 right-2 p-0.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
-        title="Delete note"
-        aria-label="Delete note"
+        title={$_('noteList.deleteNote')}
+        aria-label={$_('noteList.deleteNote')}
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -110,7 +111,7 @@
             role="button"
             tabindex="0"
             class="bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer"
-            title="Filter by #{tag}"
+            title={$_('noteList.filterByTag', { values: { tag } })}
           >
             #{tag}
           </span>
