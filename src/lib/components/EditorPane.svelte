@@ -93,6 +93,10 @@
   $: noteInfoShortcut = formatShortcutForTooltip(shortcuts?.noteInfo);
   $: versionHistoryShortcut = formatShortcutForTooltip(shortcuts?.versionHistory);
 
+  // Reactive date formatting stores
+  $: createdAtFormatted = $selectedNote ? formatDateTime($selectedNote.createdAt) : null;
+  $: modifiedAtFormatted = $selectedNote ? formatDateTime($selectedNote.modifiedAt) : null;
+
   // Lazy-loaded highlight.js for syntax highlighting
   let hljs: any = null;
   let loadingHighlightJs = false;
@@ -1507,8 +1511,8 @@
     {#if $selectedNote}
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex justify-between">
-        <span>{$_('note.created')}: {$formatDateTime($selectedNote.createdAt)}</span>
-        <span>{$_('note.modified')}: {$formatDateTime($selectedNote.modifiedAt)}</span>
+        <span>{$_('note.created')}: {createdAtFormatted ? $createdAtFormatted : ''}</span>
+        <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>
       </div>
     </div>
     {/if}
@@ -1582,12 +1586,12 @@
         {#if $selectedNote}
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.created')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{$formatDateTime($selectedNote.createdAt)}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{createdAtFormatted ? $createdAtFormatted : ''}</div>
         </div>
 
         <div>
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.modified')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{$formatDateTime($selectedNote.modifiedAt)}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{modifiedAtFormatted ? $modifiedAtFormatted : ''}</div>
         </div>
         {/if}
 

@@ -134,6 +134,10 @@
   $: if (show && noteId) {
     loadVersions();
   }
+
+  // Reactive date formatting stores for selected version
+  $: selectedVersionCreatedAt = selectedVersion ? formatDate(selectedVersion.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+  $: selectedVersionSyncedAt = selectedVersion ? formatDate(selectedVersion.syncedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
 </script>
 
 {#if show}
@@ -192,7 +196,8 @@
                     </span>
                   </div>
                   <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {$formatDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {@const createdDateStore = formatDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {$createdDateStore}
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                     {formatReason(version.reason)}
@@ -221,13 +226,13 @@
                       <div>
                         <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.created')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                          {$formatDate(selectedVersion.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {selectedVersionCreatedAt ? $selectedVersionCreatedAt : ''}
                         </span>
                       </div>
                       <div>
                         <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.synced')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                          {$formatDate(selectedVersion.syncedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {selectedVersionSyncedAt ? $selectedVersionSyncedAt : ''}
                         </span>
                       </div>
                     </div>
