@@ -240,6 +240,22 @@
     "validationError": "FILE VALIDATION ERROR",
     "clickToView": "CLICK TO VIEW ATTACHMENTS",
     "clickToHide": "CLICK TO HIDE ATTACHMENTS",
+    "noAttachments": "NO ATTACHMENTS",
+    "loading": "LOADING...",
+    "attachment": "ATTACHMENT",
+    "thumbnail": "THUMBNAIL",
+    "clickToPreview": "CLICK TO PREVIEW",
+    "clickToPreviewHint": "• CLICK TO PREVIEW",
+    "copyMarkdown": "COPY MARKDOWN LINK",
+    "delete": "DELETE",
+    "close": "CLOSE",
+    "closePreview": "CLOSE PREVIEW",
+    "downloadToView": "DOWNLOAD TO VIEW",
+    "markdownCopied": "MARKDOWN LINK COPIED TO CLIPBOARD",
+    "error": {
+      "download": "FAILED TO DOWNLOAD ATTACHMENT",
+      "copyMarkdown": "FAILED TO COPY MARKDOWN LINK"
+    },
     "preview": {
       "title": "ATTACHMENT PREVIEW",
       "loading": "LOADING PREVIEW...",

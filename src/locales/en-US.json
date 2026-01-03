@@ -240,6 +240,22 @@
     "validationError": "File validation error",
     "clickToView": "Click to view attachments",
     "clickToHide": "Click to hide attachments",
+    "noAttachments": "No attachments",
+    "loading": "Loading...",
+    "attachment": "attachment",
+    "thumbnail": "Thumbnail",
+    "clickToPreview": "Click to preview",
+    "clickToPreviewHint": "• Click to preview",
+    "copyMarkdown": "Copy markdown link",
+    "delete": "Delete",
+    "close": "Close",
+    "closePreview": "Close preview",
+    "downloadToView": "Download to view",
+    "markdownCopied": "Markdown link copied to clipboard",
+    "error": {
+      "download": "Failed to download attachment",
+      "copyMarkdown": "Failed to copy markdown link"
+    },
     "preview": {
       "title": "Attachment preview",
       "loading": "Loading preview...",
