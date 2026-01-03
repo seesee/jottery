@@ -186,27 +186,40 @@
   "recycleBin": {
     "title": "Recycle Bin",
     "empty": "Recycle bin is empty",
+    "emptyDescription": "Deleted notes will appear here",
     "restore": "Restore",
+    "restoreTitle": "Restore note",
     "deletePermanently": "Delete Permanently",
-    "emptyBin": "Empty Recycle Bin",
+    "deletePermanentlyTitle": "Permanently delete",
+    "deleteForever": "Delete Forever",
+    "emptyBin": "Empty Bin",
     "loading": "Loading...",
+    "closeLabel": "Close recycle bin",
+    "deleted": "Deleted:",
+    "unknown": "Unknown",
+    "untitled": "Untitled",
     "footer": {
       "single": "{count} note in recycle bin. Notes are automatically purged after 30 days.",
       "multiple": "{count} notes in recycle bin. Notes are automatically purged after 30 days."
     },
     "confirm": {
       "deleteNote": {
-        "title": "Permanently delete note",
-        "message": "Are you sure you want to permanently delete this note? This action cannot be undone.",
-        "confirmButton": "Delete forever"
+        "title": "Permanently Delete Note",
+        "message": "This will permanently delete this note. This cannot be undone!",
+        "confirmButton": "Delete Forever"
       },
       "emptyBin": {
-        "title": "Empty recycle bin",
-        "message": "Permanently delete all {count} {notes}? This action cannot be undone.",
+        "title": "Empty Recycle Bin",
+        "message": "Permanently delete all {count} {notes} in recycle bin? This cannot be undone!",
         "note": "note",
         "notes": "notes",
-        "confirmButton": "Empty bin"
+        "confirmButton": "Empty Bin"
       }
+    },
+    "error": {
+      "restore": "Failed to restore note",
+      "delete": "Failed to delete note",
+      "emptyBin": "Failed to empty recycle bin"
     }
   },
   "attachments": {

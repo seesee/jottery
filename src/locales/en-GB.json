@@ -186,10 +186,18 @@
   "recycleBin": {
     "title": "RECYCLE BIN",
     "empty": "RECYCLE BIN IS EMPTY",
+    "emptyDescription": "DELETED NOTES WILL APPEAR HERE",
     "restore": "RESTORE",
+    "restoreTitle": "RESTORE NOTE",
     "deletePermanently": "DELETE PERMANENTLY",
-    "emptyBin": "EMPTY RECYCLE BIN",
+    "deletePermanentlyTitle": "PERMANENTLY DELETE",
+    "deleteForever": "DELETE FOREVER",
+    "emptyBin": "EMPTY BIN",
     "loading": "LOADING...",
+    "closeLabel": "CLOSE RECYCLE BIN",
+    "deleted": "DELETED:",
+    "unknown": "UNKNOWN",
+    "untitled": "UNTITLED",
     "footer": {
       "single": "{count} NOTE IN RECYCLE BIN. NOTES ARE AUTOMATICALLY PURGED AFTER 30 DAYS.",
       "multiple": "{count} NOTES IN RECYCLE BIN. NOTES ARE AUTOMATICALLY PURGED AFTER 30 DAYS."
@@ -197,16 +205,21 @@
     "confirm": {
       "deleteNote": {
         "title": "PERMANENTLY DELETE NOTE",
-        "message": "ARE YOU SURE YOU WANT TO PERMANENTLY DELETE THIS NOTE? THIS ACTION CANNOT BE UNDONE.",
+        "message": "THIS WILL PERMANENTLY DELETE THIS NOTE. THIS CANNOT BE UNDONE!",
         "confirmButton": "DELETE FOREVER"
       },
       "emptyBin": {
         "title": "EMPTY RECYCLE BIN",
-        "message": "PERMANENTLY DELETE ALL {count} {notes}? THIS ACTION CANNOT BE UNDONE.",
+        "message": "PERMANENTLY DELETE ALL {count} {notes} IN RECYCLE BIN? THIS CANNOT BE UNDONE!",
         "note": "NOTE",
         "notes": "NOTES",
         "confirmButton": "EMPTY BIN"
       }
+    },
+    "error": {
+      "restore": "FAILED TO RESTORE NOTE",
+      "delete": "FAILED TO DELETE NOTE",
+      "emptyBin": "FAILED TO EMPTY RECYCLE BIN"
     }
   },
   "attachments": {
