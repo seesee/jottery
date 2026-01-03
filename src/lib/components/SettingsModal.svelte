@@ -1093,11 +1093,11 @@
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
       <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Settings</h2>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{$_('settings.title')}</h2>
         <button
           on:click={onClose}
           class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
-          aria-label="Close settings"
+          aria-label={$_('settings.closeLabel')}
         >
           ✕
         </button>
@@ -1109,37 +1109,37 @@
           on:click={() => currentTab = 'general'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'general' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          General
+          {$_('settings.tabs.general')}
         </button>
         <button
           on:click={() => currentTab = 'editor'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'editor' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Editor
+          {$_('settings.tabs.editor')}
         </button>
         <button
           on:click={() => currentTab = 'keyboard'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'keyboard' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Keyboard Shortcuts
+          {$_('settings.tabs.keyboard')}
         </button>
         <button
           on:click={() => currentTab = 'sync'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'sync' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Sync
+          {$_('settings.tabs.sync')}
         </button>
         <button
           on:click={() => currentTab = 'advanced'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'advanced' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Advanced
+          {$_('settings.tabs.advanced')}
         </button>
         <button
           on:click={() => currentTab = 'about'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'about' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          About
+          {$_('settings.tabs.about')}
         </button>
       </div>
 

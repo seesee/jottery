@@ -59,6 +59,15 @@
   },
   "settings": {
     "title": "Settings",
+    "closeLabel": "Close settings",
+    "tabs": {
+      "general": "General",
+      "editor": "Editor",
+      "keyboard": "Keyboard Shortcuts",
+      "sync": "Sync",
+      "advanced": "Advanced",
+      "about": "About"
+    },
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
