@@ -294,5 +294,11 @@
       "confirmButton": "Delete database"
     },
     "requireText": "Type <strong>{text}</strong> to confirm:"
+  },
+  "updateBanner": {
+    "title": "New version available",
+    "message": "Reload to get the latest features and improvements",
+    "reloadButton": "Reload now",
+    "dismissLabel": "Dismiss"
   }
 }

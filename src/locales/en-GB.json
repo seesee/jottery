@@ -294,5 +294,11 @@
       "confirmButton": "DELETE DATABASE"
     },
     "requireText": "TYPE <STRONG>{text}</STRONG> TO CONFIRM:"
+  },
+  "updateBanner": {
+    "title": "NEW VERSION AVAILABLE",
+    "message": "RELOAD TO GET THE LATEST FEATURES AND IMPROVEMENTS",
+    "reloadButton": "RELOAD NOW",
+    "dismissLabel": "DISMISS"
   }
 }

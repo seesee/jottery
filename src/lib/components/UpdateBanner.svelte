@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { updateAvailable, newVersionInfo, appUpdateService } from '../services';
 
   function handleReload() {
@@ -19,13 +20,13 @@
         </svg>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium">
-            New version available
+            {$_('updateBanner.title')}
             {#if $newVersionInfo}
               <span class="font-normal opacity-90">(v{$newVersionInfo.version})</span>
             {/if}
           </p>
           <p class="text-xs opacity-90 hidden tablet:block">
-            Reload to get the latest features and improvements
+            {$_('updateBanner.message')}
           </p>
         </div>
       </div>
@@ -35,12 +36,12 @@
           on:click={handleReload}
           class="px-4 py-2 min-h-10 bg-white text-blue-600 dark:bg-blue-800 dark:text-white font-medium text-sm rounded-md hover:bg-blue-50 dark:hover:bg-blue-900 active:bg-blue-100 dark:active:bg-blue-950 transition-colors"
         >
-          Reload Now
+          {$_('updateBanner.reloadButton')}
         </button>
         <button
           on:click={handleDismiss}
           class="p-2 min-h-10 min-w-10 hover:bg-blue-700 dark:hover:bg-blue-800 active:bg-blue-800 dark:active:bg-blue-900 rounded-md transition-colors"
-          aria-label="Dismiss"
+          aria-label={$_('updateBanner.dismissLabel')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
