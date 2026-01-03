@@ -124,6 +124,19 @@
     "saving": "Saving...",
     "exportNotes": "Export Notes",
     "importNotes": "Import Notes",
+    "importDialog": {
+      "importing": "Importing Notes",
+      "complete": "Import Complete",
+      "notesImported": "Notes imported:",
+      "notesSkipped": "Notes skipped:",
+      "attachmentsImported": "Attachments imported:",
+      "uniqueTags": "Unique tags:",
+      "errorsOccurred": "{count} error{plural} occurred:",
+      "done": "Done",
+      "processingNotes": "Processing {current} of {total} notes...",
+      "readingFile": "Reading file...",
+      "pleaseWait": "Please wait while we import your notes..."
+    },
     "deleteDatabase": "Delete Database",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "syncSetup": {

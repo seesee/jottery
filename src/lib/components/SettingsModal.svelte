@@ -1445,7 +1445,7 @@
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
       <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-        {importResult ? 'Import Complete' : 'Importing Notes'}
+        {importResult ? $_('settings.importDialog.complete') : $_('settings.importDialog.importing')}
       </h3>
 
       {#if importResult}
@@ -1463,24 +1463,24 @@
           <!-- Statistics -->
           <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400">Notes imported:</span>
+              <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.notesImported')}</span>
               <span class="font-semibold text-gray-900 dark:text-white">{importResult.imported}</span>
             </div>
             {#if importResult.skipped > 0}
               <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Notes skipped:</span>
+                <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.notesSkipped')}</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{importResult.skipped}</span>
               </div>
             {/if}
             {#if importResult.attachments > 0}
               <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Attachments imported:</span>
+                <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.attachmentsImported')}</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{importResult.attachments}</span>
               </div>
             {/if}
             {#if importResult.tags > 0}
               <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Unique tags:</span>
+                <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.uniqueTags')}</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{importResult.tags}</span>
               </div>
             {/if}
@@ -1490,7 +1490,7 @@
           {#if importResult.errors.length > 0}
             <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
               <p class="text-sm font-medium text-red-800 dark:text-red-300 mb-2">
-                {importResult.errors.length} error{importResult.errors.length > 1 ? 's' : ''} occurred:
+                {$_('settings.importDialog.errorsOccurred', { values: { count: importResult.errors.length, plural: importResult.errors.length > 1 ? 's' : '' } })}
               </p>
               <div class="max-h-32 overflow-y-auto space-y-1">
                 {#each importResult.errors as error}
@@ -1505,7 +1505,7 @@
             on:click={closeImportModal}
             class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
           >
-            Done
+            {$_('settings.importDialog.done')}
           </button>
         </div>
       {:else}
@@ -1516,9 +1516,9 @@
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {#if importProgress.total > 0}
-                  Processing {importProgress.current} of {importProgress.total} notes...
+                  {$_('settings.importDialog.processingNotes', { values: { current: importProgress.current, total: importProgress.total } })}
                 {:else}
-                  Reading file...
+                  {$_('settings.importDialog.readingFile')}
                 {/if}
               </span>
               {#if importProgress.total > 0}
@@ -1543,7 +1543,7 @@
           {/if}
 
           <p class="text-sm text-gray-600 dark:text-gray-400 text-center">
-            Please wait while we import your notes...
+            {$_('settings.importDialog.pleaseWait')}
           </p>
         </div>
       {/if}
