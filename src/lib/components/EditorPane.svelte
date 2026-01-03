@@ -1286,10 +1286,10 @@
         >
           {#if showPreview}
             <span>📝</span>
-            <span>Edit</span>
+            <span>{$_('editor.edit')}</span>
           {:else}
             <span>👁️</span>
-            <span>Preview</span>
+            <span>{$_('editor.preview')}</span>
           {/if}
         </button>
       {/if}
@@ -1317,7 +1317,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>↶</span>
-                <span>Undo</span>
+                <span>{$_('editor.undo')}</span>
               </button>
 
               <button
@@ -1325,7 +1325,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>↷</span>
-                <span>Redo</span>
+                <span>{$_('editor.redo')}</span>
               </button>
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -1336,10 +1336,10 @@
               >
                 {#if wordWrap}
                   <span>↩️</span>
-                  <span>Word Wrap: On</span>
+                  <span>{$_('editor.wordWrapOn')}</span>
                 {:else}
                   <span>➡️</span>
-                  <span>Word Wrap: Off</span>
+                  <span>{$_('editor.wordWrapOff')}</span>
                 {/if}
               </button>
 
@@ -1348,7 +1348,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>📋</span>
-                <span class="flex-1">Copy Content</span>
+                <span class="flex-1">{$_('editor.copyContent')}</span>
                 {#if copyNoteShortcut}
                   <span class="text-xs text-gray-500 dark:text-gray-400">{copyNoteShortcut}</span>
                 {/if}
@@ -1359,7 +1359,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>💾</span>
-                <span class="flex-1">Export to File</span>
+                <span class="flex-1">{$_('editor.exportToFile')}</span>
               </button>
 
               <button
@@ -1367,7 +1367,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>ℹ️</span>
-                <span class="flex-1">Info</span>
+                <span class="flex-1">{$_('editor.info')}</span>
                 {#if noteInfoShortcut}
                   <span class="text-xs text-gray-500 dark:text-gray-400">{noteInfoShortcut}</span>
                 {/if}
@@ -1378,7 +1378,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>📜</span>
-                <span class="flex-1">Version History</span>
+                <span class="flex-1">{$_('editor.versionHistory')}</span>
                 {#if versionHistoryShortcut}
                   <span class="text-xs text-gray-500 dark:text-gray-400">{versionHistoryShortcut}</span>
                 {/if}
@@ -1391,7 +1391,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
               >
                 <span>🗑️</span>
-                <span>Delete Note</span>
+                <span>{$_('editor.deleteNote')}</span>
               </button>
             </div>
           </div>
@@ -1420,7 +1420,7 @@
           handleInput();
         }}
         {availableTags}
-        placeholder="Add tags..."
+        placeholder={$_('editor.addTags')}
         onTagClick={handleTagClick}
       />
     </div>
@@ -1463,7 +1463,7 @@
           class="w-full px-3 py-2 flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
         >
           <span>
-            📎 Attachments ({attachments.length})
+            📎 {$_('editor.attachmentsHeader', { values: { count: attachments.length } })}
           </span>
           <span class="text-xs transform transition-transform {isAttachmentsExpanded ? 'rotate-180' : ''}">
             ▼
@@ -1490,7 +1490,7 @@
 
             {#if isUploading}
               <div class="text-sm text-blue-600 dark:text-blue-400">
-                Uploading...
+                {$_('editor.uploading')}
               </div>
             {/if}
           </div>
@@ -1507,8 +1507,8 @@
     {#if $selectedNote}
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex justify-between">
-        <span>Created: {formatDateTime($selectedNote.createdAt)}</span>
-        <span>Modified: {formatDateTime($selectedNote.modifiedAt)}</span>
+        <span>{$_('note.created')}: {formatDateTime($selectedNote.createdAt)}</span>
+        <span>{$_('note.modified')}: {formatDateTime($selectedNote.modifiedAt)}</span>
       </div>
     </div>
     {/if}
@@ -1541,11 +1541,11 @@
       tabindex="0"
     >
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Note Information</h2>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{$_('editor.noteInformation')}</h2>
         <button
           on:click={() => showInfoModal = false}
           class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          aria-label="Close"
+          aria-label={$_('common.close')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1555,50 +1555,50 @@
 
       <div class="space-y-3 text-sm">
         <div class="grid grid-cols-2 gap-2">
-          <div class="text-gray-600 dark:text-gray-400">Characters:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.characters')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.characters.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Characters (no spaces):</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.charactersNoSpaces')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.charactersNoSpaces.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Words:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.words')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.words.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Lines:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.lines')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.lines.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Tags:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.tags')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.tags}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Attachments:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.attachmentsCount')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.attachments}</div>
         </div>
 
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Syntax:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('editor.syntax')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100 capitalize">{language.replace('-', ' ')}</div>
         </div>
 
         {#if $selectedNote}
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Created:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.created')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.createdAt)}</div>
         </div>
 
         <div>
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Modified:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.modified')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.modifiedAt)}</div>
         </div>
         {/if}
 
         {#if $selectedNote}
         <div>
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Version:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('versionHistory.version')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">v{$selectedNote.version}</div>
         </div>
 
         <div>
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Note ID:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('editor.noteId')}</div>
           <div class="font-mono text-xs text-gray-900 dark:text-gray-100 break-all">{$selectedNote.id}</div>
         </div>
         {/if}
@@ -1607,9 +1607,9 @@
       <div class="mt-6 flex justify-end">
         <button
           on:click={() => showInfoModal = false}
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          class="px-4 py-2 min-h-11 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          Close
+          {$_('common.close')}
         </button>
       </div>
     </div>
