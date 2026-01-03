@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { locale } from 'svelte-i18n';
+
   export let show = false;
   export let onClose: () => void = () => {};
 
@@ -7,6 +9,9 @@
       onClose();
     }
   }
+
+  // Determine which content to show based on locale
+  $: isGB = $locale === 'en-GB';
 </script>
 
 {#if show}
@@ -96,7 +101,7 @@
         <section>
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Keyboard Shortcuts</h3>
           <p class="text-gray-700 dark:text-gray-300 mb-3">
-            All keyboard shortcuts are customizable in Settings. Default shortcuts:
+            All keyboard shortcuts are {isGB ? 'customisable' : 'customizable'} in Settings. Default shortcuts:
           </p>
           <table class="w-full text-sm text-gray-700 dark:text-gray-300">
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
