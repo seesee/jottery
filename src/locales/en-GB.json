@@ -30,7 +30,13 @@
     "created": "CREATED",
     "modified": "MODIFIED",
     "attachments": "ATTACHMENTS",
-    "filterByTag": "FILTER BY #{tag}"
+    "filterByTag": "FILTER BY #{tag}",
+    "noNotesYet": "NO NOTES YET",
+    "createFirstNote": "CREATE YOUR FIRST NOTE TO GET STARTED",
+    "noResultsFound": "NO RESULTS FOUND",
+    "tryDifferentSearch": "TRY A DIFFERENT SEARCH QUERY",
+    "noNotes": "NO NOTES",
+    "somethingWentWrong": "SOMETHING WENT WRONG"
   },
   "search": {
     "placeholder": "SEARCH NOTES...",
