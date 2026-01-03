@@ -343,7 +343,27 @@
     "incorrectPassword": "Incorrect password",
     "warning": "Important: Your password cannot be recovered. If you lose it, your data will be permanently inaccessible.",
     "failedAttempts": "Incorrect password. After 3 failed attempts, you may need to delete the database and start over.",
-    "deleteAndStartOver": "Delete Database & Start Over"
+    "deleteAndStartOver": "Delete Database & Start Over",
+    "storedPasswordInvalid": "Stored password is invalid. Please re-enter your password.",
+    "landingPage": {
+      "privateEncrypted": {
+        "title": "🔒 Private & Encrypted",
+        "description": "Jottery is a privacy-focused note-taking app. All your notes are <strong>encrypted locally</strong> on your device using your master password. No one can read your notes without your password—not even if they access your device's storage."
+      },
+      "localFirst": {
+        "title": "💾 Local-First Storage",
+        "description": "Your notes are stored directly in your browser's local database. Jottery works completely <strong>offline</strong> and doesn't require an internet connection or account to use."
+      },
+      "optionalSync": {
+        "title": "☁️ Optional Sync Server",
+        "description": "Want to sync across devices? Jottery can optionally sync with a self-hosted server. Your notes and tags are <strong>encrypted before syncing</strong>—the server only stores encrypted data it cannot read."
+      },
+      "selfHosting": {
+        "title": "🏠 Self-Hosting",
+        "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
+        "viewOnGitHub": "View on GitHub"
+      }
+    }
   },
   "lock": {
     "title": "Lock Application",
