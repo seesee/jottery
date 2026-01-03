@@ -355,3 +355,102 @@ Export format is JSON with decrypted content:
 - **Integration Tests**: IndexedDB operations, import/export, sync process, encryption round-trips
 - **E2E Tests**: User workflows, cross-browser compatibility, offline functionality, large datasets
 - **Security Tests**: Encryption strength, key derivation timing, XSS vulnerabilities, CSP compliance
+
+## Git Workflow and Commit Practices
+
+**CRITICAL: NEVER LOSE WORK - COMMIT EARLY AND OFTEN**
+
+### Mandatory Commit Rules
+
+1. **Commit After Each Logical Change**
+   - ✅ Fixed a bug? Commit immediately.
+   - ✅ Added a feature? Commit immediately.
+   - ✅ Updated translation strings? Commit immediately.
+   - ✅ Modified multiple related files? Commit them together as one logical unit.
+
+2. **NEVER Use `git reset --hard` on Uncommitted Work**
+   - ❌ **FORBIDDEN**: `git reset --hard` destroys uncommitted changes permanently
+   - ✅ Use `git reset --soft` or `git reset --mixed` to preserve working directory
+   - ✅ Use `git stash` to temporarily save uncommitted work
+   - ✅ Always commit work before any destructive git operations
+
+3. **Before Switching Branches**
+   - ✅ **ALWAYS** commit all work on current branch first
+   - ✅ Or use `git stash` to save uncommitted changes
+   - ❌ **NEVER** switch branches with uncommitted changes unless they're trivial
+
+4. **Commit Message Guidelines**
+   - Use clear, descriptive commit messages
+   - Format: `<type>: <description>` (e.g., "fix: decrypt notes before adding to store")
+   - Include context and rationale when needed
+   - Add attribution footer for AI-assisted commits
+
+5. **Incremental Development Pattern**
+   ```bash
+   # Bad: Make 10 changes, then try to commit everything
+   # Risk: Lose all work if something goes wrong
+
+   # Good: Make change, commit, repeat
+   git add <files>
+   git commit -m "feat: add translation keys to PdfViewer component"
+
+   # Make next change
+   git add <files>
+   git commit -m "feat: add translation keys to VersionHistoryModal"
+
+   # Continue iterating...
+   ```
+
+6. **Safety Checks Before Destructive Operations**
+   ```bash
+   # Before git reset --hard, git clean, or other destructive commands:
+   git status                    # Check for uncommitted changes
+   git stash                     # Save changes if needed
+   # Then proceed with destructive operation
+   ```
+
+7. **Work-in-Progress Commits Are OK**
+   - ✅ Commit unfinished work with "WIP: " prefix
+   - ✅ Better to have WIP commits than lose work
+   - ✅ Can squash or amend commits later during cleanup
+
+### Recovery from Lost Work
+
+If work is accidentally lost:
+1. Check `git reflog` for recent HEAD positions
+2. Check `git stash list` for stashed changes
+3. Check editor auto-save/backup files
+4. Redo the work (last resort)
+
+### Example Workflow for Multi-File Feature
+
+```bash
+# Working on i18n feature affecting multiple files
+
+# Step 1: Update translation file
+# Edit: src/locales/en-GB.json
+git add src/locales/en-GB.json
+git commit -m "i18n: add PDF viewer translation keys"
+
+# Step 2: Update first component
+# Edit: src/lib/components/PdfViewer.svelte
+git add src/lib/components/PdfViewer.svelte
+git commit -m "i18n: translate PdfViewer component"
+
+# Step 3: Update second component
+# Edit: src/lib/components/VersionHistoryModal.svelte
+git add src/lib/components/VersionHistoryModal.svelte
+git commit -m "i18n: translate VersionHistoryModal component"
+
+# Continue for each logical unit...
+# Each commit is a checkpoint you can return to
+```
+
+### Branch Management
+
+- **main**: Production-ready code, always deployable
+- **feature/***: Feature branches, commit frequently
+- **Before merging**: Ensure all work is committed
+- **After merging**: Clean up feature branch if needed
+
+**Remember: Commits are cheap. Lost work is expensive. When in doubt, commit.**
