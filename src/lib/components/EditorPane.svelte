@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
+  import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote, searchQuery } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, attachmentRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
@@ -1496,7 +1497,7 @@
         {:else if attachments.length > 0}
           <!-- Collapsed view - show attachment count -->
           <div class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400">
-            Click to {isAttachmentsExpanded ? 'hide' : 'view'} attachments
+            {$_(isAttachmentsExpanded ? 'attachments.clickToHide' : 'attachments.clickToView')}
           </div>
         {/if}
       </div>
