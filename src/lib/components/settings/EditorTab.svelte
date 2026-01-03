@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { ALL_LANGUAGES, CORE_LANGUAGES, calculateTotalSize } from '../../utils/syntaxLanguages';
 
   export let enabledSyntaxLanguages: string[];
@@ -6,10 +7,9 @@
 
 <div class="space-y-6">
   <div>
-    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Syntax Highlighting</h3>
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{$_('settings.editorTab.syntaxHighlighting')}</h3>
     <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-      Select which programming languages to enable for syntax highlighting in markdown code blocks and previews.
-      Core languages are always enabled.
+      {$_('settings.editorTab.syntaxHelp')}
     </p>
 
     <!-- Summary Stats -->
@@ -17,10 +17,10 @@
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-medium text-gray-900 dark:text-white">
-            {enabledSyntaxLanguages.length} languages enabled
+            {$_('settings.editorTab.languagesEnabled', { values: { count: enabledSyntaxLanguages.length } })}
           </p>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Estimated size: ~{calculateTotalSize(enabledSyntaxLanguages)} KB
+            {$_('settings.editorTab.estimatedSize', { values: { size: calculateTotalSize(enabledSyntaxLanguages) } })}
           </p>
         </div>
         <div class="flex gap-2">
@@ -28,13 +28,13 @@
             on:click={() => enabledSyntaxLanguages = CORE_LANGUAGES.map(l => l.id)}
             class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-50 dark:hover:bg-gray-500"
           >
-            Reset to Core
+            {$_('settings.editorTab.resetToCore')}
           </button>
           <button
             on:click={() => enabledSyntaxLanguages = ALL_LANGUAGES.map(l => l.id)}
             class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-50 dark:hover:bg-gray-500"
           >
-            Enable All
+            {$_('settings.editorTab.enableAll')}
           </button>
         </div>
       </div>
@@ -45,8 +45,8 @@
       <!-- Core Languages (Always Enabled) -->
       <div>
         <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-          Core Languages
-          <span class="text-xs text-gray-500 dark:text-gray-400">(Always enabled)</span>
+          {$_('settings.editorTab.coreLanguages')}
+          <span class="text-xs text-gray-500 dark:text-gray-400">{$_('settings.editorTab.alwaysEnabled')}</span>
         </h4>
         <div class="grid grid-cols-1 tablet:grid-cols-2 gap-2">
           {#each CORE_LANGUAGES as lang}
@@ -73,7 +73,7 @@
 
       <!-- Popular Languages -->
       <div>
-        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Popular Languages</h4>
+        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">{$_('settings.editorTab.popularLanguages')}</h4>
         <div class="grid grid-cols-1 tablet:grid-cols-2 gap-2">
           {#each ALL_LANGUAGES.filter(l => l.category === 'popular') as lang}
             <label class="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
@@ -104,16 +104,21 @@
       </div>
 
       <!-- Other Language Categories -->
-      {#each ['web', 'systems', 'data', 'other'] as category}
-        {@const categoryLangs = ALL_LANGUAGES.filter(l => l.category === category)}
+      {#each [
+        { id: 'web', key: 'settings.editorTab.webLanguages' },
+        { id: 'systems', key: 'settings.editorTab.systemsLanguages' },
+        { id: 'data', key: 'settings.editorTab.dataLanguages' },
+        { id: 'other', key: 'settings.editorTab.otherLanguages' }
+      ] as category}
+        {@const categoryLangs = ALL_LANGUAGES.filter(l => l.category === category.id)}
         {#if categoryLangs.length > 0}
           <details class="group">
             <summary class="cursor-pointer list-none">
               <div class="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-2">
                 <span class="group-open:rotate-90 transition-transform">▶</span>
-                <span class="capitalize">{category} Languages</span>
+                <span>{$_(category.key)}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">
-                  ({categoryLangs.filter(l => enabledSyntaxLanguages.includes(l.id)).length}/{categoryLangs.length} enabled)
+                  {$_('settings.editorTab.enabledCount', { values: { enabled: categoryLangs.filter(l => enabledSyntaxLanguages.includes(l.id)).length, total: categoryLangs.length } })}
                 </span>
               </div>
             </summary>
