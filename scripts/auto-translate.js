@@ -34,15 +34,9 @@ const TARGET_LANGUAGES = {
   'zh': 'Chinese',
   'ko': 'Korean',
   'ru': 'Russian',
-  'ar': 'Arabic',
   'nl': 'Dutch',
   'pl': 'Polish',
   'tr': 'Turkish',
-  'sv': 'Swedish',
-  'da': 'Danish',
-  'no': 'Norwegian',
-  'fi': 'Finnish',
-  'el': 'Greek',
 };
 
 // LibreTranslate API endpoint (free, no API key)
