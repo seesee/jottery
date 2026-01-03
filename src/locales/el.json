@@ -1,0 +1,555 @@
+{
+  "app": {
+    "name": "Jottery",
+    "tagline": "Privacy-focused • Local-first • Encrypted"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "settings": "Settings",
+    "search": "Search",
+    "error": "Error"
+  },
+  "note": {
+    "new": "New",
+    "create": "Create new note",
+    "delete": "Delete note",
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "unpin": "Unpin",
+    "copy": "Copy",
+    "copyContent": "Copy note content",
+    "noNoteSelected": "No note selected",
+    "selectNote": "Select a note from the list or create a new one",
+    "created": "Created",
+    "modified": "Modified",
+    "attachments": "Attachments",
+    "filterByTag": "Filter by #{tag}",
+    "noNotesYet": "No notes yet",
+    "createFirstNote": "Create your first note to get started",
+    "noResultsFound": "No results found",
+    "tryDifferentSearch": "Try a different search query",
+    "noNotes": "No notes",
+    "somethingWentWrong": "Something went wrong"
+  },
+  "search": {
+    "placeholder": "Search notes...",
+    "clear": "Clear search"
+  },
+  "editor": {
+    "noNoteSelected": "No note selected",
+    "noNoteSelectedHint": "Select a note from the list or create a new one",
+    "attachmentPreview": "Attachment Preview",
+    "download": "Download",
+    "tags": "Tags",
+    "addTags": "Add tags...",
+    "plainText": "Plain Text",
+    "syntaxHighlight": "Syntax highlighting",
+    "wordWrap": "Wrap",
+    "noWrap": "No Wrap",
+    "toggleWordWrap": "Toggle word wrap",
+    "backToNotes": "Back to notes",
+    "moreActions": "More actions",
+    "closeNote": "Close note (Esc)",
+    "preview": "Preview",
+    "edit": "Edit",
+    "undo": "Undo",
+    "redo": "Redo",
+    "wordWrapOn": "Word Wrap: On",
+    "wordWrapOff": "Word Wrap: Off",
+    "copyContent": "Copy Content",
+    "exportToFile": "Export to File",
+    "info": "Info",
+    "versionHistory": "Version History",
+    "deleteNote": "Delete Note",
+    "noteInformation": "Note Information",
+    "characters": "Characters:",
+    "charactersNoSpaces": "Characters (no spaces):",
+    "words": "Words:",
+    "lines": "Lines:",
+    "attachmentsCount": "Attachments:",
+    "syntax": "Syntax:",
+    "noteId": "Note ID:",
+    "uploading": "Uploading...",
+    "attachmentsHeader": "Attachments ({count})",
+    "status": {
+      "uploading": "Uploading...",
+      "processingNotes": "Processing {current} of {total} notes...",
+      "readingFile": "Reading file...",
+      "loadingPreview": "Loading preview...",
+      "loading": "Loading..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "Save note first",
+      "pinNote": "Pin note",
+      "unpinNote": "Unpin note"
+    },
+    "errors": {
+      "loadingAttachment": "Error loading attachment",
+      "videoNotSupported": "Your browser does not support video playback.",
+      "previewNotAvailable": "Preview not available for this file type.",
+      "downloadToView": "Download to view"
+    }
+  },
+  "noteList": {
+    "deleteNote": "Delete note",
+    "filterByTag": "Filter by #{tag}"
+  },
+  "tagInput": {
+    "removeTag": "Remove tag"
+  },
+  "settings": {
+    "title": "Settings",
+    "closeLabel": "Close settings",
+    "tabs": {
+      "general": "General",
+      "editor": "Editor",
+      "keyboard": "Keyboard Shortcuts",
+      "sync": "Sync",
+      "advanced": "Advanced",
+      "about": "About"
+    },
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
+    "timezone": "Timezone",
+    "timezoneDescription": "All timestamps are stored in UTC and displayed in your selected timezone",
+    "timezoneLocal": "Local (Browser Timezone)",
+    "layoutMode": "Layout Mode",
+    "layoutModeDescription": "Override the automatic layout detection for this device",
+    "layoutModeAuto": "Auto (Responsive)",
+    "layoutModeMobile": "Force Mobile Layout",
+    "layoutModeDesktop": "Force Desktop Layout",
+    "fontSize": "Editor Font Size",
+    "fontSizeDescription": "Auto uses larger font on mobile to prevent browser zoom",
+    "fontSizeAuto": "Auto (Mobile-aware: 16px on mobile, 14px desktop)",
+    "fontSizeSmall": "Small (12px)",
+    "fontSizeMedium": "Medium (14px)",
+    "fontSizeLarge": "Large (16px)",
+    "autoLockTimeout": "Auto-lock timeout (minutes)",
+    "sortOrder": "Default sort order",
+    "sortRecent": "Most recent",
+    "sortOldest": "Oldest first",
+    "sortAlpha": "Alphabetical",
+    "sortCreated": "Creation date",
+    "language": "Language",
+    "rememberPassword": "Remember Password (Insecure)",
+    "rememberPasswordWarning": "Store your password on this device to skip entering it on every visit. WARNING: This stores your password in plain text in localStorage, which is highly insecure.",
+    "rememberPasswordNote": "Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.",
+    "rememberPasswordModal": {
+      "title": "⚠️ Security Warning",
+      "insecureWarning": "Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.",
+      "riskDevice": "Anyone with access to your device can read it",
+      "riskExtensions": "Browser extensions can access it",
+      "riskCache": "It may survive browser cache clearing",
+      "riskAutolock": "Auto-lock will be disabled",
+      "confirmWarning": "Only enable this if you fully understand the security risks.",
+      "confirmPassword": "Enter your password to confirm:",
+      "passwordPlaceholder": "Your password",
+      "cancelButton": "Cancel",
+      "enableButton": "I Understand, Enable Anyway"
+    },
+    "syncCredentials": {
+      "title": "📋 Sync Credentials",
+      "instructions": "Copy the text below and paste it into another Jottery client using \"Use Existing Credentials\":",
+      "samePasswordWarning": "⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!",
+      "clipboardNote": "The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.",
+      "closeButton": "Close"
+    },
+    "saveSettings": "Save Settings",
+    "saving": "Saving...",
+    "settingsSaved": "Settings saved",
+    "settingsSaveFailed": "Failed to save settings: {error}",
+    "deleteDatabaseFailed": "Failed to delete database: {error}",
+    "exportFailed": "Failed to export notes: {error}",
+    "importFailed": "Failed to import notes: {error}",
+    "exportNotes": "Export Notes",
+    "importNotes": "Import Notes",
+    "importDialog": {
+      "importing": "Importing Notes",
+      "complete": "Import Complete",
+      "notesImported": "Notes imported:",
+      "notesSkipped": "Notes skipped:",
+      "attachmentsImported": "Attachments imported:",
+      "uniqueTags": "Unique tags:",
+      "errorsOccurred": "{count} error{plural} occurred:",
+      "done": "Done",
+      "processingNotes": "Processing {current} of {total} notes...",
+      "readingFile": "Reading file...",
+      "pleaseWait": "Please wait while we import your notes..."
+    },
+    "deleteDatabase": "Delete Database",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "syncSetup": {
+      "endpoint": {
+        "label": "Sync server endpoint",
+        "help": "URL of your self-hosted Jottery sync server"
+      },
+      "deviceName": {
+        "label": "Device name",
+        "placeholder": "My Laptop",
+        "help": "A name to identify this device"
+      },
+      "chooseMethod": "Choose how to set up sync:",
+      "importCredentials": {
+        "title": "Import sync credentials",
+        "subtitle": "<strong>For additional devices:</strong> Most secure method",
+        "benefit1": "✓ Zero-knowledge encryption (server cannot decrypt your notes)",
+        "benefit2": "✓ Copy credentials from your first device",
+        "benefit3": "✓ All devices use the same encryption key",
+        "button": "📋 Import credentials from another device"
+      },
+      "registerServer": {
+        "title": "Register with a sync server",
+        "subtitle": "<strong>For your first device only:</strong> Creates your account",
+        "benefit1": "✓ Creates email/password account",
+        "benefit2": "✓ Enables sync for this device",
+        "benefit3": "✓ Requires admin approval",
+        "button": "🚀 Register new account"
+      },
+      "privacyNote": "<strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server only stores encrypted data and cannot read your content.",
+      "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>",
+      "back": "← Back",
+      "registration": {
+        "title": "Register new user account",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "passwordLabel": "Password (min 12 characters)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<strong>Recommended:</strong> Use a DIFFERENT password from your notes encryption password.",
+        "passwordWarningText": "This password is sent to the server for authentication. Your notes password should never leave your device.",
+        "registerButton": "Register user account",
+        "registering": "Registering...",
+        "pendingTitle": "Pending admin approval",
+        "pendingText": "Contact your administrator to approve your account. Once approved, click below to complete setup.",
+        "approvedButton": "I've been approved - Complete setup",
+        "completingSetup": "Completing setup...",
+        "deviceRegistering": "⏳ Registering device and syncing...",
+        "successTitle": "Sync enabled successfully!",
+        "successText": "Your device is now registered and <strong>all your existing notes have been synced to the server</strong>. Any future changes will sync automatically.",
+        "successNextSteps": "📋 To add another device: Click \"Export sync credentials\" below and import them on your other device.",
+        "done": "Done"
+      },
+      "linkAccount": {
+        "title": "Link account (optional)",
+        "infoText": "ℹ️ This feature is for future use (admin dashboard access, subscription management). It does <strong>not</strong> enable sync on this device.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Password",
+        "comingSoon": "Coming soon",
+        "futureUpdate": "Account linking will be enabled in a future update"
+      },
+      "import": {
+        "title": "Import credentials",
+        "instructions": "Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.",
+        "warningTitle": "⚠️ IMPORTANT: You must use the SAME password on all devices!",
+        "warningText": "If you use a different password, notes will not decrypt.",
+        "placeholder": "Paste base64 credentials here...",
+        "button": "📥 Import and lock",
+        "importing": "Importing..."
+      },
+      "error": "Error"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "Syntax highlighting",
+      "syntaxHelp": "Select which programming languages to enable for syntax highlighting in Markdown code blocks and previews. Core languages are always enabled.",
+      "languagesEnabled": "{count} languages enabled",
+      "estimatedSize": "Estimated size: ~{size} KB",
+      "resetToCore": "Reset to core",
+      "enableAll": "Enable all",
+      "coreLanguages": "Core languages",
+      "alwaysEnabled": "(always enabled)",
+      "popularLanguages": "Popular languages",
+      "webLanguages": "Web languages",
+      "systemsLanguages": "Systems languages",
+      "dataLanguages": "Data languages",
+      "otherLanguages": "Other languages",
+      "enabledCount": "{enabled}/{total} enabled"
+    },
+    "keyboardTab": {
+      "description": "Customise keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
+      "resetToDefaults": "Reset to Defaults",
+      "viewAllShortcuts": "View All Shortcuts",
+      "quickReference": "Quick reference of all keyboard shortcuts",
+      "focusSearch": "Focus Search",
+      "createNewNote": "Create New Note",
+      "lockApplication": "Lock Application",
+      "openSettings": "Open Settings",
+      "showShortcutsHelp": "Show Shortcuts Help",
+      "copyNoteContent": "Copy Note Content",
+      "undo": "Undo",
+      "redo": "Redo",
+      "versionHistory": "Version History",
+      "noteInfo": "Note Info",
+      "pressKey": "Press a key...",
+      "notSet": "Not set"
+    },
+    "syncTab": {
+      "enableSync": "Enable Sync",
+      "syncDescription": "Sync your notes across devices using a self-hosted server",
+      "syncDisabled": "Sync is Disabled (Privacy Mode)",
+      "syncDisabledDescription": "Sync is opt-in and disabled by default for maximum privacy.",
+      "syncDisabledDetails": "When disabled, Jottery will not make any network requests to sync servers. All your notes remain completely local to this device.",
+      "toEnableSync": "To enable sync: Toggle the switch above and configure your sync server.",
+      "privacyNote": "Privacy: Even when enabled, all notes are end-to-end encrypted. The sync server cannot read your content."
+    },
+    "advancedTab": {
+      "importExport": "Import/Export",
+      "exportDescription": "Export notes as decrypted JSON. Import will merge notes with existing data.",
+      "downloadTerminalClient": "Download Terminal Client",
+      "terminalClientDescription": "Use the terminal client to access your notes from the command line",
+      "selectPlatform": "Select platform...",
+      "download": "Download",
+      "deleteAllData": "Delete All Data",
+      "deleteAllDataWarning": "This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone."
+    },
+    "aboutTab": {
+      "version": "Version",
+      "documentation": "Documentation",
+      "viewDocumentation": "View Documentation",
+      "documentationDescription": "Learn how to use Jottery effectively",
+      "statistics": "Statistics",
+      "activeNotes": "Active Notes",
+      "pinnedNotes": "Pinned Notes",
+      "inRecycleBin": "In Recycle Bin",
+      "totalNotes": "Total Notes",
+      "popularTags": "Popular Tags",
+      "terminalClient": "Terminal Client",
+      "terminalClientDescription": "Access your notes from the command line with the Jottery terminal client. The TUI provides a fast, keyboard-driven interface for managing your notes.",
+      "terminalClientDownload": "Download the terminal client from the Advanced tab.",
+      "aboutJottery": "About Jottery",
+      "aboutDescription": "Jottery is a privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with rich content, syntax highlighting, and encryption.",
+      "viewOnGithub": "View on GitHub",
+      "license": "Licensed under the MIT License."
+    }
+  },
+  "unlock": {
+    "welcome": "Welcome to Jottery",
+    "enterPassword": "Enter your password to unlock",
+    "setupPassword": "Set up your master password",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "createPassword": "Create Password",
+    "unlock": "Unlock",
+    "processing": "Processing...",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "incorrectPassword": "Incorrect password",
+    "warning": "Important: Your password cannot be recovered. If you lose it, your data will be permanently inaccessible.",
+    "failedAttempts": "Incorrect password. After 3 failed attempts, you may need to delete the database and start over.",
+    "deleteAndStartOver": "Delete Database & Start Over",
+    "storedPasswordInvalid": "Stored password is invalid. Please re-enter your password.",
+    "landingPage": {
+      "privateEncrypted": {
+        "title": "🔒 Private & Encrypted",
+        "description": "Jottery is a privacy-focused note-taking app. All your notes are <strong>encrypted locally</strong> on your device using your master password. No one can read your notes without your password—not even if they access your device's storage."
+      },
+      "localFirst": {
+        "title": "💾 Local-First Storage",
+        "description": "Your notes are stored directly in your browser's local database. Jottery works completely <strong>offline</strong> and doesn't require an internet connection or account to use."
+      },
+      "optionalSync": {
+        "title": "☁️ Optional Sync Server",
+        "description": "Want to sync across devices? Jottery can optionally sync with a self-hosted server. Your notes and tags are <strong>encrypted before syncing</strong>—the server only stores encrypted data it cannot read."
+      },
+      "selfHosting": {
+        "title": "🏠 Self-Hosting",
+        "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
+        "viewOnGitHub": "View on GitHub"
+      }
+    }
+  },
+  "lock": {
+    "title": "Lock Application",
+    "message": "Lock the application? Unsaved changes will be lost.",
+    "confirmButton": "Lock"
+  },
+  "recycleBin": {
+    "title": "Recycle Bin",
+    "empty": "Recycle bin is empty",
+    "emptyDescription": "Deleted notes will appear here",
+    "restore": "Restore",
+    "restoreTitle": "Restore note",
+    "deletePermanently": "Delete Permanently",
+    "deletePermanentlyTitle": "Permanently delete",
+    "deleteForever": "Delete Forever",
+    "emptyBin": "Empty Bin",
+    "loading": "Loading...",
+    "closeLabel": "Close recycle bin",
+    "deleted": "Deleted:",
+    "unknown": "Unknown",
+    "untitled": "Untitled",
+    "footer": {
+      "single": "{count} note in recycle bin. Notes are automatically purged after 30 days.",
+      "multiple": "{count} notes in recycle bin. Notes are automatically purged after 30 days."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "Permanently Delete Note",
+        "message": "This will permanently delete this note. This cannot be undone!",
+        "confirmButton": "Delete Forever"
+      },
+      "emptyBin": {
+        "title": "Empty Recycle Bin",
+        "message": "Permanently delete all {count} {notes} in recycle bin? This cannot be undone!",
+        "note": "note",
+        "notes": "notes",
+        "confirmButton": "Empty Bin"
+      }
+    },
+    "error": {
+      "restore": "Failed to restore note",
+      "delete": "Failed to delete note",
+      "emptyBin": "Failed to empty recycle bin"
+    }
+  },
+  "attachments": {
+    "title": "Attachments",
+    "upload": "Upload files",
+    "dropHere": "Drop files here or click to browse",
+    "uploading": "Uploading...",
+    "download": "Download",
+    "validationError": "File validation error",
+    "clickToView": "Click to view attachments",
+    "clickToHide": "Click to hide attachments",
+    "noAttachments": "No attachments",
+    "loading": "Loading...",
+    "attachment": "attachment",
+    "thumbnail": "Thumbnail",
+    "clickToPreview": "Click to preview",
+    "clickToPreviewHint": "• Click to preview",
+    "copyMarkdown": "Copy markdown link",
+    "delete": "Delete",
+    "close": "Close",
+    "closePreview": "Close preview",
+    "downloadToView": "Download to view",
+    "markdownCopied": "Markdown link copied to clipboard",
+    "error": {
+      "download": "Failed to download attachment",
+      "copyMarkdown": "Failed to copy markdown link"
+    },
+    "preview": {
+      "title": "Attachment preview",
+      "loading": "Loading preview...",
+      "notAvailable": "Preview not available for this file type.",
+      "audioNotSupported": "Your browser does not support audio playback.",
+      "videoNotSupported": "Your browser does not support video playback."
+    }
+  },
+  "keyboard": {
+    "title": "Keyboard Shortcuts",
+    "closeLabel": "Close shortcuts help",
+    "global": "Global",
+    "noteList": "Note List",
+    "editor": "Editor",
+    "focusSearch": "Focus search",
+    "createNote": "Create new note",
+    "lockApp": "Lock application",
+    "openSettings": "Open settings",
+    "showShortcuts": "Show keyboard shortcuts",
+    "navigateNotes": "Navigate notes",
+    "navigateVim": "Navigate notes (vim-style)",
+    "openNote": "Open selected note",
+    "deleteNote": "Delete selected note",
+    "pinNote": "Pin/unpin selected note",
+    "closeNote": "Close note",
+    "copyNote": "Copy note content",
+    "findInNote": "Find in note (CodeMirror)",
+    "replaceInNote": "Replace in note (CodeMirror)",
+    "macNote": "On macOS, use Cmd instead of Ctrl.",
+    "note": "Note:",
+    "cmd": "Cmd",
+    "ctrl": "Ctrl"
+  },
+  "releases": {
+    "title": "Releases",
+    "description": "Download the Jottery TUI for your platform."
+  },
+  "fileUpload": {
+    "dropHere": "Drop files here",
+    "clickOrDrag": "<span class=\"font-medium\">Click to upload</span> or drag and drop",
+    "maxFileSize": "Max file size: 10MB"
+  },
+  "pdfViewer": {
+    "loading": "Loading PDF viewer...",
+    "pageOfPages": "Page {current} of {total}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in"
+  },
+  "versionHistory": {
+    "title": "Version history",
+    "closeLabel": "Close version history",
+    "loading": "Loading versions...",
+    "noVersions": "No version history",
+    "versionsCreatedDuringSync": "Versions will be created during sync",
+    "current": "(current)",
+    "autoSync": "Auto sync",
+    "manualSync": "Manual sync",
+    "version": "Version:",
+    "characters": "Characters:",
+    "created": "Created:",
+    "synced": "Synced:",
+    "tags": "Tags:",
+    "contentPreview": "Content preview",
+    "selectToPreview": "Select a version to preview",
+    "restoreButton": "Restore this version",
+    "restoreConfirm": {
+      "title": "Restore version",
+      "message": "Are you sure you want to restore this version? Your current note will be saved as a new version before restoring.",
+      "confirmButton": "Restore"
+    }
+  },
+  "header": {
+    "menu": "Menu",
+    "loadingNotes": "Loading {current}/{total} notes...",
+    "creatingNote": "Creating note...",
+    "addContentFirst": "Add content to current note first"
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Delete database",
+      "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
+      "confirmButton": "Delete database"
+    },
+    "deleteAllData": {
+      "title": "Delete All Data",
+      "message": "This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone.\n\nType DELETE to confirm:",
+      "confirmButton": "Delete Everything",
+      "cancelButton": "Cancel"
+    },
+    "disconnectSync": {
+      "title": "Disconnect from Sync Server?",
+      "message": "This will disconnect this device from the sync server and clear all sync credentials.\n\nYour notes will NOT be deleted and will remain on this device.\n\nYou can reconnect to a sync server later.",
+      "confirmButton": "Disconnect",
+      "cancelButton": "Cancel"
+    },
+    "deleteServerNotes": {
+      "title": "Delete All Notes from Server?",
+      "message": "This will permanently delete ALL your notes from the sync server. This action cannot be undone.\n\nYour local notes will remain on this device and will NOT be deleted.\n\nType DELETE to confirm:",
+      "confirmButton": "Delete from Server",
+      "cancelButton": "Cancel"
+    },
+    "disableRememberPassword": {
+      "title": "Disable Remember Password?",
+      "message": "This will clear your stored password and lock the application.\n\nYou will need to enter your password the next time you access the app.",
+      "confirmButton": "Disable and Lock",
+      "cancelButton": "Cancel"
+    },
+    "requireText": "Type <strong>{text}</strong> to confirm:",
+    "deleteKeyword": "DELETE"
+  },
+  "updateBanner": {
+    "title": "New version available",
+    "message": "Reload to get the latest features and improvements",
+    "reloadButton": "Reload now",
+    "dismissLabel": "Dismiss"
+  }
+}

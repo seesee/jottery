@@ -1,19 +1,7 @@
 #!/usr/bin/env node
 /**
- * Automated translation script for Jottery locale files
- *
- * This script uses the free DeepL API or Google Translate to automatically
- * translate locale strings while preserving placeholders and structure.
- *
- * Setup:
- *   1. Get a free DeepL API key from https://www.deepl.com/pro-api
- *   2. Set environment variable: export DEEPL_API_KEY="your-key-here"
- *
- * Usage:
- *   node scripts/auto-translate.js
- *
- * Or use LibreTranslate (free, no API key needed):
- *   node scripts/auto-translate.js --service=libretranslate
+ * Translate Greek locale file only
+ * (Welsh not supported by LibreTranslate)
  */
 
 import fs from 'fs/promises';
@@ -23,42 +11,15 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Target languages with their codes
-const TARGET_LANGUAGES = {
-  'es': 'Spanish',
-  'fr': 'French',
-  'de': 'German',
-  'it': 'Italian',
-  'pt': 'Portuguese',
-  'ja': 'Japanese',
-  'zh': 'Chinese',
-  'ko': 'Korean',
-  'ru': 'Russian',
-  'ar': 'Arabic',
-  'nl': 'Dutch',
-  'pl': 'Polish',
-  'tr': 'Turkish',
-  'sv': 'Swedish',
-  'da': 'Danish',
-  'no': 'Norwegian',
-  'fi': 'Finnish',
-  'el': 'Greek',
-  'cy': 'Welsh',
-};
-
-// LibreTranslate API endpoint (free, no API key)
 const LIBRETRANSLATE_URL = 'https://libretranslate.com/translate';
-
-// Simple delay function
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// Extract placeholders from string
 function extractPlaceholders(text) {
   const placeholders = [];
   const patterns = [
-    /\{[^}]+\}/g,  // {variable}
-    /<[^>]+>/g,     // <html>
-    /\$\{[^}]+\}/g, // ${variable}
+    /\{[^}]+\}/g,
+    /<[^>]+>/g,
+    /\$\{[^}]+\}/g,
   ];
 
   patterns.forEach(pattern => {
@@ -71,7 +32,6 @@ function extractPlaceholders(text) {
   return [...new Set(placeholders)];
 }
 
-// Replace placeholders with markers
 function protectPlaceholders(text) {
   const placeholders = extractPlaceholders(text);
   let protectedText = text;
@@ -83,10 +43,9 @@ function protectPlaceholders(text) {
     markers.push({ marker, original: placeholder });
   });
 
-  return { protected: protectedText, markers };
+  return { protectedText, markers };
 }
 
-// Restore placeholders
 function restorePlaceholders(text, markers) {
   let restored = text;
   markers.forEach(({ marker, original }) => {
@@ -95,7 +54,6 @@ function restorePlaceholders(text, markers) {
   return restored;
 }
 
-// Translate using LibreTranslate (free, no API key)
 async function translateWithLibreTranslate(text, targetLang) {
   try {
     const response = await fetch(LIBRETRANSLATE_URL, {
@@ -117,7 +75,6 @@ async function translateWithLibreTranslate(text, targetLang) {
   }
 }
 
-// Recursive function to translate all strings in an object
 async function translateObject(obj, targetLang, progress = { current: 0, total: 0 }) {
   const result = {};
 
@@ -125,17 +82,14 @@ async function translateObject(obj, targetLang, progress = { current: 0, total: 
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       result[key] = await translateObject(value, targetLang, progress);
     } else if (typeof value === 'string' && value.length > 0) {
-      // Protect placeholders
-      const { protected: protectedText, markers } = protectPlaceholders(value);
+      const { protectedText, markers } = protectPlaceholders(value);
 
-      // Translate
       progress.current++;
       process.stdout.write(`\r  Progress: ${progress.current}/${progress.total} strings`);
 
       const translated = await translateWithLibreTranslate(protectedText, targetLang);
-      await delay(200); // Rate limiting
+      await delay(200);
 
-      // Restore placeholders
       result[key] = restorePlaceholders(translated, markers);
     } else {
       result[key] = value;
@@ -145,7 +99,6 @@ async function translateObject(obj, targetLang, progress = { current: 0, total: 
   return result;
 }
 
-// Count total strings
 function countStrings(obj) {
   let count = 0;
   for (const value of Object.values(obj)) {
@@ -159,42 +112,28 @@ function countStrings(obj) {
 }
 
 async function main() {
-  console.log('Jottery Automated Translation\n');
+  console.log('Translating Greek locale file\n');
   console.log('====================================\n');
 
-  // Read source file
   const sourceFile = path.join(__dirname, '../src/locales/en-US.json');
   const sourceData = JSON.parse(await fs.readFile(sourceFile, 'utf8'));
 
   const totalStrings = countStrings(sourceData);
   console.log(`Source file: en-US.json (${totalStrings} strings)\n`);
-  console.log('Using LibreTranslate (free service)\n');
-  console.log('⚠️  Note: Free translation may take time due to rate limits');
-  console.log('⚠️  Results should be reviewed by native speakers\n');
 
-  // Translate each language
-  for (const [langCode, langName] of Object.entries(TARGET_LANGUAGES)) {
-    console.log(`\nTranslating to ${langName} (${langCode})...`);
+  console.log('Translating to Greek (el)...');
+  const progress = { current: 0, total: totalStrings };
+  const translated = await translateObject(sourceData, 'el', progress);
 
-    const progress = { current: 0, total: totalStrings };
-    const translated = await translateObject(sourceData, langCode, progress);
+  const outputFile = path.join(__dirname, '../src/locales/el.json');
+  await fs.writeFile(
+    outputFile,
+    JSON.stringify(translated, null, 2) + '\n',
+    'utf8'
+  );
 
-    // Write file
-    const outputFile = path.join(__dirname, '../src/locales', `${langCode}.json`);
-    await fs.writeFile(
-      outputFile,
-      JSON.stringify(translated, null, 2) + '\n',
-      'utf8'
-    );
-
-    console.log(`\n  ✓ Saved: ${langCode}.json`);
-  }
-
-  console.log('\n\n✅ Translation complete!\n');
-  console.log('Next steps:');
-  console.log('  1. Review translations with native speakers');
-  console.log('  2. Update src/lib/services/i18nService.ts');
-  console.log('  3. Test each language in the app\n');
+  console.log('\n  ✓ Saved: el.json');
+  console.log('\n✅ Greek translation complete!\n');
 }
 
 main().catch(console.error);

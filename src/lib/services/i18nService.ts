@@ -21,6 +21,12 @@ register('ar', () => import('../../locales/ar.json'));
 register('nl', () => import('../../locales/nl.json'));
 register('pl', () => import('../../locales/pl.json'));
 register('tr', () => import('../../locales/tr.json'));
+register('sv', () => import('../../locales/sv.json'));
+register('da', () => import('../../locales/da.json'));
+register('no', () => import('../../locales/no.json'));
+register('fi', () => import('../../locales/fi.json'));
+register('el', () => import('../../locales/el.json'));
+register('cy', () => import('../../locales/cy.json'));
 
 // Available locales
 export const AVAILABLE_LOCALES = [
@@ -39,6 +45,12 @@ export const AVAILABLE_LOCALES = [
   { code: 'nl', name: 'Nederlands' },
   { code: 'pl', name: 'Polski' },
   { code: 'tr', name: 'Türkçe' },
+  { code: 'sv', name: 'Svenska' },
+  { code: 'da', name: 'Dansk' },
+  { code: 'no', name: 'Norsk' },
+  { code: 'fi', name: 'Suomi' },
+  { code: 'el', name: 'Ελληνικά' },
+  { code: 'cy', name: 'Cymraeg' },
 ];
 
 // Default locale
