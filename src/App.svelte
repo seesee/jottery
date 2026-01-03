@@ -37,13 +37,19 @@
       // Create empty note immediately
       const newNote = await noteService.createNote('', []);
 
-      // Add new note to store (incremental update)
+      // Decrypt the note before adding to store
+      const decryptedNote = await noteService.getNote(newNote.id);
+      if (!decryptedNote) {
+        throw new Error('Failed to retrieve newly created note');
+      }
+
+      // Add decrypted note to store (incremental update)
       notes.update(allNotes => {
         // Add to beginning if sorted by recent, otherwise add and let virtual list handle it
-        return [newNote, ...allNotes];
+        return [decryptedNote, ...allNotes];
       });
-      searchService.updateNote(newNote);
-      selectNote(newNote.id);
+      searchService.updateNote(decryptedNote);
+      selectNote(decryptedNote.id);
 
       // Switch to editor view on mobile
       mobileView = 'editor';
