@@ -2,22 +2,19 @@
  * Timezone utilities for formatting timestamps
  */
 
-import { get } from 'svelte/store';
+import { derived, type Readable } from 'svelte/store';
+import { locale } from 'svelte-i18n';
 import { settings } from '../stores/appStore';
 
 /**
- * Format a timestamp in the user's selected timezone
- * @param isoString ISO 8601 timestamp string (UTC)
- * @param format 'full' | 'date' | 'time' | 'relative'
- * @returns Formatted timestamp string
+ * Internal function to format timestamps
  */
-export function formatTimestamp(
+function _formatTimestamp(
   isoString: string,
-  format: 'full' | 'date' | 'time' | 'relative' = 'full'
+  format: 'full' | 'date' | 'time' | 'relative',
+  currentLocale: string,
+  timezone: string
 ): string {
-  const $settings = get(settings);
-  const timezone = $settings.timezone || 'local';
-
   const date = new Date(isoString);
 
   // Get the timezone to use
@@ -25,7 +22,7 @@ export function formatTimestamp(
 
   switch (format) {
     case 'full':
-      return new Intl.DateTimeFormat('en-GB', {
+      return new Intl.DateTimeFormat(currentLocale, {
         timeZone: tz,
         year: 'numeric',
         month: 'short',
@@ -33,11 +30,10 @@ export function formatTimestamp(
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: false,
       }).format(date);
 
     case 'date':
-      return new Intl.DateTimeFormat('en-GB', {
+      return new Intl.DateTimeFormat(currentLocale, {
         timeZone: tz,
         year: 'numeric',
         month: 'short',
@@ -45,16 +41,15 @@ export function formatTimestamp(
       }).format(date);
 
     case 'time':
-      return new Intl.DateTimeFormat('en-GB', {
+      return new Intl.DateTimeFormat(currentLocale, {
         timeZone: tz,
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: false,
       }).format(date);
 
     case 'relative':
-      return formatRelativeTime(date);
+      return _formatRelativeTime(date, currentLocale);
 
     default:
       return isoString;
@@ -62,9 +57,26 @@ export function formatTimestamp(
 }
 
 /**
- * Format a timestamp as relative time (e.g., "2 minutes ago")
+ * Format a timestamp in the user's selected timezone (reactive)
+ * @param isoString ISO 8601 timestamp string (UTC)
+ * @param format 'full' | 'date' | 'time' | 'relative'
+ * @returns Reactive formatted timestamp store
  */
-function formatRelativeTime(date: Date): string {
+export function formatTimestamp(
+  isoString: string,
+  format: 'full' | 'date' | 'time' | 'relative' = 'full'
+): Readable<string> {
+  return derived([locale, settings], ([$locale, $settings]) => {
+    const currentLocale = $locale || 'en-GB';
+    const timezone = $settings.timezone || 'local';
+    return _formatTimestamp(isoString, format, currentLocale, timezone);
+  });
+}
+
+/**
+ * Internal function to format relative time
+ */
+function _formatRelativeTime(date: Date, currentLocale: string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
@@ -72,17 +84,25 @@ function formatRelativeTime(date: Date): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
+  const rtf = new Intl.RelativeTimeFormat(currentLocale, { numeric: 'auto' });
+
   if (diffSec < 60) {
-    return 'just now';
+    return rtf.format(0, 'second'); // "now" or locale equivalent
   } else if (diffMin < 60) {
-    return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+    return rtf.format(-diffMin, 'minute');
   } else if (diffHour < 24) {
-    return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    return rtf.format(-diffHour, 'hour');
   } else if (diffDay < 7) {
-    return `${diffDay} day${diffDay !== 1 ? 's' : ''} ago`;
+    return rtf.format(-diffDay, 'day');
   } else {
-    // For older dates, show the actual date
-    return formatTimestamp(date.toISOString(), 'date');
+    // For older dates, show the actual date - but we need timezone too
+    // Since we're inside the derived function, we can't call formatTimestamp
+    // Just format as a simple date
+    return new Intl.DateTimeFormat(currentLocale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date);
   }
 }
 
