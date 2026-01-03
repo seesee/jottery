@@ -82,7 +82,19 @@
       "uploading": "Uploading...",
       "processingNotes": "Processing {current} of {total} notes...",
       "readingFile": "Reading file...",
-      "loadingPreview": "Loading preview..."
+      "loadingPreview": "Loading preview...",
+      "loading": "Loading..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "Save note first",
+      "pinNote": "Pin note",
+      "unpinNote": "Unpin note"
+    },
+    "errors": {
+      "loadingAttachment": "Error loading attachment",
+      "videoNotSupported": "Your browser does not support video playback.",
+      "previewNotAvailable": "Preview not available for this file type.",
+      "downloadToView": "Download to view"
     }
   },
   "settings": {
@@ -124,6 +136,26 @@
     "rememberPassword": "Remember Password (Insecure)",
     "rememberPasswordWarning": "Store your password on this device to skip entering it on every visit. WARNING: This stores your password in plain text in localStorage, which is highly insecure.",
     "rememberPasswordNote": "Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.",
+    "rememberPasswordModal": {
+      "title": "⚠️ Security Warning",
+      "insecureWarning": "Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.",
+      "riskDevice": "Anyone with access to your device can read it",
+      "riskExtensions": "Browser extensions can access it",
+      "riskCache": "It may survive browser cache clearing",
+      "riskAutolock": "Auto-lock will be disabled",
+      "confirmWarning": "Only enable this if you fully understand the security risks.",
+      "confirmPassword": "Enter your password to confirm:",
+      "passwordPlaceholder": "Your password",
+      "cancelButton": "Cancel",
+      "enableButton": "I Understand, Enable Anyway"
+    },
+    "syncCredentials": {
+      "title": "📋 Sync Credentials",
+      "instructions": "Copy the text below and paste it into another Jottery client using \"Use Existing Credentials\":",
+      "samePasswordWarning": "⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!",
+      "clipboardNote": "The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.",
+      "closeButton": "Close"
+    },
     "saveSettings": "Save Settings",
     "saving": "Saving...",
     "settingsSaved": "Settings saved",

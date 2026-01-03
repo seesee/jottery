@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
+  import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote, searchQuery } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, attachmentRepository, keyManager, cryptoService } from '../services';
@@ -233,7 +234,7 @@
             // Store the reference in the data attribute for async resolution
             if (!attachment) {
               // Return placeholder that will be resolved by filename in afterUpdate
-              return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+              return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3E${get(_)('editor.status.loading')}%3C/text%3E%3C/svg%3E" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
             }
 
             if (attachment) {
@@ -241,7 +242,7 @@
               if (attachment.mimeType.startsWith('image/')) {
                 // Return a placeholder with data URL to avoid CSP errors
                 // Store the actual attachment.data value (blob storage key) in data attribute
-                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3E${get(_)('editor.status.loading')}%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
               } else {
                 // For non-image attachments, create a download link
                 const icon = attachment.mimeType.includes('pdf') ? '📄' :
@@ -1210,7 +1211,7 @@
         div.innerHTML = `
           <span class="text-2xl mr-2">⚠️</span>
           <div class="flex-1">
-            <span class="font-medium text-red-700 dark:text-red-400">Error loading attachment</span>
+            <span class="font-medium text-red-700 dark:text-red-400">${get(_)('editor.errors.loadingAttachment')}</span>
             <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
           </div>
         `;
@@ -1255,8 +1256,8 @@
         on:click={handleTogglePin}
         disabled={$isDraftMode}
         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-        title={$isDraftMode ? 'Save note first' : ($selectedNote?.pinned ? 'Unpin note' : 'Pin note')}
-        aria-label={$isDraftMode ? 'Save note first' : ($selectedNote?.pinned ? 'Unpin note' : 'Pin note')}
+        title={$isDraftMode ? $_('editor.tooltips.saveNoteFirst') : ($selectedNote?.pinned ? $_('editor.tooltips.unpinNote') : $_('editor.tooltips.pinNote'))}
+        aria-label={$isDraftMode ? $_('editor.tooltips.saveNoteFirst') : ($selectedNote?.pinned ? $_('editor.tooltips.unpinNote') : $_('editor.tooltips.pinNote'))}
       >
         {#if $selectedNote?.pinned}
           <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
@@ -1286,7 +1287,7 @@
         <button
           on:click={handlePreviewToggle}
           class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 flex items-center gap-1.5"
-          title={showPreview ? 'Edit Mode' : 'Preview'}
+          title={showPreview ? $_('editor.edit') : $_('editor.preview')}
         >
           {#if showPreview}
             <span>📝</span>
@@ -1729,7 +1730,7 @@
       <div class="flex-1 overflow-auto {previewType === 'image' ? '' : 'p-4'}">
         {#if isLoadingPreview}
           <div class="flex items-center justify-center h-full">
-            <div class="text-gray-500 dark:text-gray-400">Loading preview...</div>
+            <div class="text-gray-500 dark:text-gray-400">{$_('editor.status.loadingPreview')}</div>
           </div>
         {:else if previewType === 'image' && previewContent}
           <div class="w-full h-full flex items-center justify-center p-4">
@@ -1759,18 +1760,18 @@
             <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
               <source src={previewContent} type={previewAttachment.mimeType} />
               <track kind="captions" />
-              Your browser does not support video playback.
+              {$_('editor.errors.videoNotSupported')}
             </video>
           </div>
         {:else}
           <div class="flex items-center justify-center h-full">
             <div class="text-center text-gray-500 dark:text-gray-400">
-              <p class="mb-4">Preview not available for this file type.</p>
+              <p class="mb-4">{$_('editor.errors.previewNotAvailable')}</p>
               <button
                 on:click={handleDownloadFromPreview}
                 class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Download to view
+                {$_('editor.errors.downloadToView')}
               </button>
             </div>
           </div>

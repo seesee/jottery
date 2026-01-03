@@ -82,7 +82,19 @@
       "uploading": "UPLOADING...",
       "processingNotes": "PROCESSING {current} OF {total} NOTES...",
       "readingFile": "READING FILE...",
-      "loadingPreview": "LOADING PREVIEW..."
+      "loadingPreview": "LOADING PREVIEW...",
+      "loading": "LOADING..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "SAVE NOTE FIRST",
+      "pinNote": "PIN NOTE",
+      "unpinNote": "UNPIN NOTE"
+    },
+    "errors": {
+      "loadingAttachment": "ERROR LOADING ATTACHMENT",
+      "videoNotSupported": "YOUR BROWSER DOES NOT SUPPORT VIDEO PLAYBACK.",
+      "previewNotAvailable": "PREVIEW NOT AVAILABLE FOR THIS FILE TYPE.",
+      "downloadToView": "DOWNLOAD TO VIEW"
     }
   },
   "settings": {
@@ -124,6 +136,26 @@
     "rememberPassword": "REMEMBER PASSWORD (INSECURE)",
     "rememberPasswordWarning": "STORE YOUR PASSWORD ON THIS DEVICE TO SKIP ENTERING IT ON EVERY VISIT. WARNING: THIS STORES YOUR PASSWORD IN PLAIN TEXT IN LOCALSTORAGE, WHICH IS HIGHLY INSECURE.",
     "rememberPasswordNote": "AUTO-LOCK WILL BE DISABLED WHEN THIS IS ENABLED. DISABLING THIS WILL IMMEDIATELY LOCK THE APPLICATION.",
+    "rememberPasswordModal": {
+      "title": "⚠️ SECURITY WARNING",
+      "insecureWarning": "ENABLING THIS FEATURE WILL STORE YOUR PASSWORD IN PLAIN TEXT IN LOCALSTORAGE, WHICH IS HIGHLY INSECURE.",
+      "riskDevice": "ANYONE WITH ACCESS TO YOUR DEVICE CAN READ IT",
+      "riskExtensions": "BROWSER EXTENSIONS CAN ACCESS IT",
+      "riskCache": "IT MAY SURVIVE BROWSER CACHE CLEARING",
+      "riskAutolock": "AUTO-LOCK WILL BE DISABLED",
+      "confirmWarning": "ONLY ENABLE THIS IF YOU FULLY UNDERSTAND THE SECURITY RISKS.",
+      "confirmPassword": "ENTER YOUR PASSWORD TO CONFIRM:",
+      "passwordPlaceholder": "YOUR PASSWORD",
+      "cancelButton": "CANCEL",
+      "enableButton": "I UNDERSTAND, ENABLE ANYWAY"
+    },
+    "syncCredentials": {
+      "title": "📋 SYNC CREDENTIALS",
+      "instructions": "COPY THE TEXT BELOW AND PASTE IT INTO ANOTHER JOTTERY CLIENT USING \"USE EXISTING CREDENTIALS\":",
+      "samePasswordWarning": "⚠️ <STRONG>IMPORTANT:</STRONG> ALL DEVICES MUST USE THE SAME PASSWORD TO DECRYPT NOTES!",
+      "clipboardNote": "THE CLIPBOARD COPY MAY HAVE FAILED (ESPECIALLY OVER SSH OR IN SOME BROWSERS). YOU CAN MANUALLY SELECT AND COPY THE TEXT ABOVE.",
+      "closeButton": "CLOSE"
+    },
     "saveSettings": "SAVE SETTINGS",
     "saving": "SAVING...",
     "settingsSaved": "SETTINGS SAVED",
