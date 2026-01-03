@@ -29,7 +29,8 @@
     "selectNote": "Select a note from the list or create a new one",
     "created": "Created",
     "modified": "Modified",
-    "attachments": "Attachments"
+    "attachments": "Attachments",
+    "filterByTag": "Filter by #{tag}"
   },
   "search": {
     "placeholder": "Search notes...",
@@ -42,7 +43,13 @@
     "syntaxHighlight": "Syntax highlighting",
     "wordWrap": "Wrap",
     "noWrap": "No Wrap",
-    "toggleWordWrap": "Toggle word wrap"
+    "toggleWordWrap": "Toggle word wrap",
+    "status": {
+      "uploading": "Uploading...",
+      "processingNotes": "Processing {current} of {total} notes...",
+      "readingFile": "Reading file...",
+      "loadingPreview": "Loading preview..."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -62,7 +69,53 @@
     "exportNotes": "Export Notes",
     "importNotes": "Import Notes",
     "deleteDatabase": "Delete Database",
-    "keyboardShortcuts": "Keyboard Shortcuts"
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "syncSetup": {
+      "endpoint": {
+        "label": "Sync server endpoint",
+        "help": "URL of your self-hosted Jottery sync server"
+      },
+      "deviceName": {
+        "label": "Device name",
+        "placeholder": "My Laptop",
+        "help": "A name to identify this device"
+      },
+      "chooseMethod": "Choose how to set up sync:",
+      "importCredentials": {
+        "title": "Import sync credentials",
+        "subtitle": "<strong>For additional devices:</strong> Most secure method",
+        "benefit1": "✓ Zero-knowledge encryption (server cannot decrypt your notes)",
+        "benefit2": "✓ Copy credentials from your first device",
+        "benefit3": "✓ All devices use the same encryption key",
+        "button": "📋 Import credentials from another device"
+      },
+      "registerServer": {
+        "title": "Register with a sync server",
+        "subtitle": "<strong>For your first device only:</strong> Creates your account",
+        "benefit1": "✓ Creates email/password account",
+        "benefit2": "✓ Enables sync for this device",
+        "benefit3": "✓ Requires admin approval",
+        "button": "🚀 Register new account"
+      },
+      "privacyNote": "<strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server only stores encrypted data and cannot read your content.",
+      "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "Syntax highlighting",
+      "syntaxHelp": "Select which programming languages to enable for syntax highlighting in Markdown code blocks and previews. Core languages are always enabled.",
+      "languagesEnabled": "{count} languages enabled",
+      "estimatedSize": "Estimated size: ~{size} KB",
+      "resetToCore": "Reset to core",
+      "enableAll": "Enable all",
+      "coreLanguages": "Core languages",
+      "alwaysEnabled": "(always enabled)",
+      "popularLanguages": "Popular languages",
+      "webLanguages": "Web languages",
+      "systemsLanguages": "Systems languages",
+      "dataLanguages": "Data languages",
+      "otherLanguages": "Other languages",
+      "enabledCount": "{enabled}/{total} enabled"
+    }
   },
   "unlock": {
     "welcome": "Welcome to Jottery",
@@ -90,7 +143,26 @@
     "empty": "Recycle bin is empty",
     "restore": "Restore",
     "deletePermanently": "Delete Permanently",
-    "emptyBin": "Empty Recycle Bin"
+    "emptyBin": "Empty Recycle Bin",
+    "loading": "Loading...",
+    "footer": {
+      "single": "{count} note in recycle bin. Notes are automatically purged after 30 days.",
+      "multiple": "{count} notes in recycle bin. Notes are automatically purged after 30 days."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "Permanently delete note",
+        "message": "Are you sure you want to permanently delete this note? This action cannot be undone.",
+        "confirmButton": "Delete forever"
+      },
+      "emptyBin": {
+        "title": "Empty recycle bin",
+        "message": "Permanently delete all {count} {notes}? This action cannot be undone.",
+        "note": "note",
+        "notes": "notes",
+        "confirmButton": "Empty bin"
+      }
+    }
   },
   "attachments": {
     "title": "Attachments",
@@ -98,7 +170,16 @@
     "dropHere": "Drop files here or click to browse",
     "uploading": "Uploading...",
     "download": "Download",
-    "validationError": "File validation error"
+    "validationError": "File validation error",
+    "clickToView": "Click to view attachments",
+    "clickToHide": "Click to hide attachments",
+    "preview": {
+      "title": "Attachment preview",
+      "loading": "Loading preview...",
+      "notAvailable": "Preview not available for this file type.",
+      "audioNotSupported": "Your browser does not support audio playback.",
+      "videoNotSupported": "Your browser does not support video playback."
+    }
   },
   "keyboard": {
     "title": "Keyboard Shortcuts",
@@ -122,13 +203,57 @@
     "macNote": "On macOS, use Cmd instead of Ctrl."
   },
   "releases": {
-        "title": "Releases",
-        "description": "Download the Jottery TUI for your platform."
-      },
-      "confirm": {
-        "deleteDatabase": {
-          "title": "Delete Database",
-          "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
-          "confirmButton": "Delete Database"
-        }
-      }}
+    "title": "Releases",
+    "description": "Download the Jottery TUI for your platform."
+  },
+  "fileUpload": {
+    "dropHere": "Drop files here",
+    "clickOrDrag": "<span class=\"font-medium\">Click to upload</span> or drag and drop",
+    "maxFileSize": "Max file size: 10MB"
+  },
+  "pdfViewer": {
+    "loading": "Loading PDF viewer...",
+    "pageOfPages": "Page {current} of {total}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in"
+  },
+  "versionHistory": {
+    "title": "Version history",
+    "closeLabel": "Close version history",
+    "loading": "Loading versions...",
+    "noVersions": "No version history",
+    "versionsCreatedDuringSync": "Versions will be created during sync",
+    "current": "(current)",
+    "autoSync": "Auto sync",
+    "manualSync": "Manual sync",
+    "version": "Version:",
+    "characters": "Characters:",
+    "created": "Created:",
+    "synced": "Synced:",
+    "tags": "Tags:",
+    "contentPreview": "Content preview",
+    "selectToPreview": "Select a version to preview",
+    "restoreButton": "Restore this version",
+    "restoreConfirm": {
+      "title": "Restore version",
+      "message": "Are you sure you want to restore this version? Your current note will be saved as a new version before restoring.",
+      "confirmButton": "Restore"
+    }
+  },
+  "header": {
+    "menu": "Menu",
+    "loadingNotes": "Loading {current}/{total} notes...",
+    "creatingNote": "Creating note...",
+    "addContentFirst": "Add content to current note first"
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Delete database",
+      "message": "⚠️ WARNING: This will permanently delete all your encrypted notes and attachments. This cannot be undone!\n\nAre you sure you want to delete the database?",
+      "confirmButton": "Delete database"
+    },
+    "requireText": "Type <strong>{text}</strong> to confirm:"
+  }
+}
