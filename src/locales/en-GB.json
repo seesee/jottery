@@ -45,6 +45,8 @@
   "editor": {
     "noNoteSelected": "NO NOTE SELECTED",
     "noNoteSelectedHint": "SELECT A NOTE FROM THE LIST OR CREATE A NEW ONE",
+    "attachmentPreview": "ATTACHMENT PREVIEW",
+    "download": "DOWNLOAD",
     "tags": "TAGS",
     "addTags": "ADD TAGS...",
     "plainText": "PLAIN TEXT",

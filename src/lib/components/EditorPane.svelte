@@ -1703,7 +1703,7 @@
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex-1 min-w-0">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-            Attachment Preview
+            {$_('editor.attachmentPreview')}
           </h2>
         </div>
         <div class="flex gap-2 ml-4">
@@ -1711,7 +1711,7 @@
             on:click={handleDownloadFromPreview}
             class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
           >
-            Download
+            {$_('editor.download')}
           </button>
           <button
             on:click={closeAttachmentPreview}
