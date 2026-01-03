@@ -244,7 +244,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
  * Default user settings
  */
 export const DEFAULT_SETTINGS: UserSettings = {
-  language: 'en-GB',
+  language: '', // Empty = auto-detect browser language
   theme: 'auto',
   layoutMode: 'auto',
   sortOrder: 'recent',

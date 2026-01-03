@@ -1283,7 +1283,7 @@
     confirmText={$_('confirm.deleteAllData.confirmButton')}
     cancelText={$_('confirm.deleteAllData.cancelButton')}
     confirmClass="bg-red-600 hover:bg-red-700"
-    requireTextMatch="DELETE"
+    requireTextMatch={$_('confirm.deleteKeyword')}
     onConfirm={confirmDeleteDatabase}
     onCancel={() => showDeleteConfirm = false}
   />
@@ -1308,7 +1308,7 @@
     confirmText={$_('confirm.deleteServerNotes.confirmButton')}
     cancelText={$_('confirm.deleteServerNotes.cancelButton')}
     confirmClass="bg-red-600 hover:bg-red-700"
-    requireTextMatch="DELETE"
+    requireTextMatch={$_('confirm.deleteKeyword')}
     onConfirm={handleDeleteAllNotes}
     onCancel={() => showDeleteServerNotesConfirm = false}
   />

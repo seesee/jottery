@@ -543,7 +543,8 @@
       "confirmButton": "DISABLE AND LOCK",
       "cancelButton": "CANCEL"
     },
-    "requireText": "TYPE <STRONG>{text}</STRONG> TO CONFIRM:"
+    "requireText": "TYPE <STRONG>{text}</STRONG> TO CONFIRM:",
+    "deleteKeyword": "DELETE"
   },
   "updateBanner": {
     "title": "NEW VERSION AVAILABLE",
