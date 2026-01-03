@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import type { DecryptedNote } from '../../types';
   import { tagService } from '../../services';
   import { searchQuery } from '../../stores/appStore';
