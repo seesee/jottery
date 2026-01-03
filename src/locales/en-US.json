@@ -101,6 +101,9 @@
     "deleteNote": "Delete note",
     "filterByTag": "Filter by #{tag}"
   },
+  "tagInput": {
+    "removeTag": "Remove tag"
+  },
   "settings": {
     "title": "Settings",
     "closeLabel": "Close settings",
