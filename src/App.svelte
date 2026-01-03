@@ -143,8 +143,9 @@
   }
 
   // Watch for language changes
-  $: if ($settings && $settings.language) {
-    locale.set($settings.language);
+  $: if ($settings) {
+    const newLocale = getInitialLocale($settings.language);
+    locale.set(newLocale);
   }
 
   // Watch lock status and load notes when unlocked
