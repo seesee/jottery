@@ -98,7 +98,46 @@
         "button": "🚀 Register new account"
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server only stores encrypted data and cannot read your content.",
-      "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>"
+      "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>",
+      "back": "← Back",
+      "registration": {
+        "title": "Register new user account",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "passwordLabel": "Password (min 12 characters)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<strong>Recommended:</strong> Use a DIFFERENT password from your notes encryption password.",
+        "passwordWarningText": "This password is sent to the server for authentication. Your notes password should never leave your device.",
+        "registerButton": "Register user account",
+        "registering": "Registering...",
+        "pendingTitle": "Pending admin approval",
+        "pendingText": "Contact your administrator to approve your account. Once approved, click below to complete setup.",
+        "approvedButton": "I've been approved - Complete setup",
+        "completingSetup": "Completing setup...",
+        "deviceRegistering": "⏳ Registering device and syncing...",
+        "successTitle": "Sync enabled successfully!",
+        "successText": "Your device is now registered and <strong>all your existing notes have been synced to the server</strong>. Any future changes will sync automatically.",
+        "successNextSteps": "📋 To add another device: Click \"Export sync credentials\" below and import them on your other device.",
+        "done": "Done"
+      },
+      "linkAccount": {
+        "title": "Link account (optional)",
+        "infoText": "ℹ️ This feature is for future use (admin dashboard access, subscription management). It does <strong>not</strong> enable sync on this device.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Password",
+        "comingSoon": "Coming soon",
+        "futureUpdate": "Account linking will be enabled in a future update"
+      },
+      "import": {
+        "title": "Import credentials",
+        "instructions": "Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.",
+        "warningTitle": "⚠️ IMPORTANT: You must use the SAME password on all devices!",
+        "warningText": "If you use a different password, notes will not decrypt.",
+        "placeholder": "Paste base64 credentials here...",
+        "button": "📥 Import and lock",
+        "importing": "Importing..."
+      },
+      "error": "Error"
     },
     "editorTab": {
       "syntaxHighlighting": "Syntax highlighting",

@@ -98,7 +98,46 @@
         "button": "🚀 REGISTER NEW ACCOUNT"
       },
       "privacyNote": "<STRONG>🔒 PRIVACY:</STRONG> ALL YOUR NOTES ARE ENCRYPTED END-TO-END. THE SERVER ONLY STORES ENCRYPTED DATA AND CANNOT READ YOUR CONTENT.",
-      "selfHostNote": "<STRONG>💡 SELF-HOST?</STRONG> RUN YOUR OWN SERVER - <A HREF=\"HTTPS://GITHUB.COM/YOURUSERNAME/JOTTERY\" TARGET=\"_BLANK\" CLASS=\"UNDERLINE\">SEE GITHUB</A>"
+      "selfHostNote": "<STRONG>💡 SELF-HOST?</STRONG> RUN YOUR OWN SERVER - <A HREF=\"HTTPS://GITHUB.COM/YOURUSERNAME/JOTTERY\" TARGET=\"_BLANK\" CLASS=\"UNDERLINE\">SEE GITHUB</A>",
+      "back": "← BACK",
+      "registration": {
+        "title": "REGISTER NEW USER ACCOUNT",
+        "emailLabel": "EMAIL ADDRESS",
+        "emailPlaceholder": "YOU@EXAMPLE.COM",
+        "passwordLabel": "PASSWORD (MIN 12 CHARACTERS)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<STRONG>RECOMMENDED:</STRONG> USE A DIFFERENT PASSWORD FROM YOUR NOTES ENCRYPTION PASSWORD.",
+        "passwordWarningText": "THIS PASSWORD IS SENT TO THE SERVER FOR AUTHENTICATION. YOUR NOTES PASSWORD SHOULD NEVER LEAVE YOUR DEVICE.",
+        "registerButton": "REGISTER USER ACCOUNT",
+        "registering": "REGISTERING...",
+        "pendingTitle": "PENDING ADMIN APPROVAL",
+        "pendingText": "CONTACT YOUR ADMINISTRATOR TO APPROVE YOUR ACCOUNT. ONCE APPROVED, CLICK BELOW TO COMPLETE SETUP.",
+        "approvedButton": "I'VE BEEN APPROVED - COMPLETE SETUP",
+        "completingSetup": "COMPLETING SETUP...",
+        "deviceRegistering": "⏳ REGISTERING DEVICE AND SYNCING...",
+        "successTitle": "SYNC ENABLED SUCCESSFULLY!",
+        "successText": "YOUR DEVICE IS NOW REGISTERED AND <STRONG>ALL YOUR EXISTING NOTES HAVE BEEN SYNCED TO THE SERVER</STRONG>. ANY FUTURE CHANGES WILL SYNC AUTOMATICALLY.",
+        "successNextSteps": "📋 TO ADD ANOTHER DEVICE: CLICK \"EXPORT SYNC CREDENTIALS\" BELOW AND IMPORT THEM ON YOUR OTHER DEVICE.",
+        "done": "DONE"
+      },
+      "linkAccount": {
+        "title": "LINK ACCOUNT (OPTIONAL)",
+        "infoText": "ℹ️ THIS FEATURE IS FOR FUTURE USE (ADMIN DASHBOARD ACCESS, SUBSCRIPTION MANAGEMENT). IT DOES <STRONG>NOT</STRONG> ENABLE SYNC ON THIS DEVICE.",
+        "emailLabel": "EMAIL ADDRESS",
+        "passwordLabel": "PASSWORD",
+        "comingSoon": "COMING SOON",
+        "futureUpdate": "ACCOUNT LINKING WILL BE ENABLED IN A FUTURE UPDATE"
+      },
+      "import": {
+        "title": "IMPORT CREDENTIALS",
+        "instructions": "PASTE THE CREDENTIALS FROM YOUR FIRST DEVICE. THE APP WILL LOCK AND YOU'LL NEED TO UNLOCK WITH YOUR PASSWORD.",
+        "warningTitle": "⚠️ IMPORTANT: YOU MUST USE THE SAME PASSWORD ON ALL DEVICES!",
+        "warningText": "IF YOU USE A DIFFERENT PASSWORD, NOTES WILL NOT DECRYPT.",
+        "placeholder": "PASTE BASE64 CREDENTIALS HERE...",
+        "button": "📥 IMPORT AND LOCK",
+        "importing": "IMPORTING..."
+      },
+      "error": "ERROR"
     },
     "editorTab": {
       "syntaxHighlighting": "SYNTAX HIGHLIGHTING",
