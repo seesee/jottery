@@ -192,7 +192,7 @@
                     </span>
                   </div>
                   <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {formatDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {$formatDate(version.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                     {formatReason(version.reason)}
@@ -221,13 +221,13 @@
                       <div>
                         <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.created')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                          {formatDate(selectedVersion.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {$formatDate(selectedVersion.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <div>
                         <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.synced')}</span>
                         <span class="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                          {formatDate(selectedVersion.syncedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {$formatDate(selectedVersion.syncedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </div>

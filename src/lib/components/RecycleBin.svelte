@@ -146,7 +146,7 @@
                       {getTitle(note)}
                     </h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {$_('recycleBin.deleted')} {note.deletedAt ? formatDate(note.deletedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : $_('recycleBin.unknown')}
+                      {$_('recycleBin.deleted')} {note.deletedAt ? $formatDate(note.deletedAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : $_('recycleBin.unknown')}
                     </p>
                     {#if note.tags.length > 0}
                       <div class="flex gap-1 mt-2">

@@ -819,11 +819,11 @@
         enabledSyntaxLanguages,
       }));
 
-      toast.success('Settings saved');
+      toast.success($_('settings.settingsSaved'));
       onClose();
     } catch (error) {
       console.error('Failed to save settings:', error);
-      toast.error('Failed to save settings: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.settingsSaveFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       saving = false;
     }
@@ -844,7 +844,7 @@
       window.location.reload();
     } catch (error) {
       console.error('Failed to delete database:', error);
-      toast.error('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.deleteDatabaseFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -974,7 +974,7 @@
       await downloadExport(data);
     } catch (error) {
       console.error('Failed to export notes:', error);
-      toast.error('Failed to export notes: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.exportFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -1014,7 +1014,7 @@
       };
     } catch (error) {
       console.error('Failed to import notes:', error);
-      toast.error('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.importFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
       importing = false;
       importProgress = { current: 0, total: 0 };
     } finally {

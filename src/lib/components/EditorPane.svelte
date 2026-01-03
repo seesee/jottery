@@ -1507,8 +1507,8 @@
     {#if $selectedNote}
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex justify-between">
-        <span>{$_('note.created')}: {formatDateTime($selectedNote.createdAt)}</span>
-        <span>{$_('note.modified')}: {formatDateTime($selectedNote.modifiedAt)}</span>
+        <span>{$_('note.created')}: {$formatDateTime($selectedNote.createdAt)}</span>
+        <span>{$_('note.modified')}: {$formatDateTime($selectedNote.modifiedAt)}</span>
       </div>
     </div>
     {/if}
@@ -1582,12 +1582,12 @@
         {#if $selectedNote}
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.created')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.createdAt)}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{$formatDateTime($selectedNote.createdAt)}</div>
         </div>
 
         <div>
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.modified')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.modifiedAt)}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{$formatDateTime($selectedNote.modifiedAt)}</div>
         </div>
         {/if}
 

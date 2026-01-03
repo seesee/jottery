@@ -122,6 +122,11 @@
     "rememberPasswordNote": "Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.",
     "saveSettings": "Save Settings",
     "saving": "Saving...",
+    "settingsSaved": "Settings saved",
+    "settingsSaveFailed": "Failed to save settings: {error}",
+    "deleteDatabaseFailed": "Failed to delete database: {error}",
+    "exportFailed": "Failed to export notes: {error}",
+    "importFailed": "Failed to import notes: {error}",
     "exportNotes": "Export Notes",
     "importNotes": "Import Notes",
     "importDialog": {
