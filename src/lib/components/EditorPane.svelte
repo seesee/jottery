@@ -1854,7 +1854,7 @@
       <!-- Footer with Add Button -->
       <div class="border-t border-gray-200 dark:border-gray-700 p-4">
         <FileUpload
-          onUpload={handleAttachmentUpload}
+          onUpload={handleFileUpload}
           disabled={isUploading}
         />
       </div>
