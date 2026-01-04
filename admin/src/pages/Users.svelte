@@ -4,6 +4,7 @@
   import { onMount } from 'svelte';
   import { toast } from '../lib/toast.svelte';
   import ConfirmModal from '../components/ConfirmModal.svelte';
+  import { _ } from 'svelte-i18n';
 
   let users = $state<UserListItem[]>([]);
   let loading = $state(true);
@@ -21,7 +22,7 @@
       const response = await api.listUsers();
       users = response.users;
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to load users';
+      error = err instanceof Error ? err.message : $_('users.failedToLoad');
     } finally {
       loading = false;
     }
@@ -56,27 +57,30 @@
     try {
       if (type === 'approve') {
         await api.approveUser(userId);
-        toast.success(`User ${email} approved successfully`);
+        toast.success($_('users.toast.approved', { values: { email } }));
       } else if (type === 'deactivate') {
         await api.deactivateUser(userId);
-        toast.success(`User ${email} deactivated`);
+        toast.success($_('users.toast.deactivated', { values: { email } }));
       } else if (type === 'activate') {
         await api.activateUser(userId);
-        toast.success(`User ${email} activated`);
+        toast.success($_('users.toast.activated', { values: { email } }));
       } else if (type === 'delete') {
         await api.deleteUser(userId);
-        toast.success(`User ${email} deleted`);
+        toast.success($_('users.toast.deleted', { values: { email } }));
       } else if (type === 'toggleAdmin') {
         await api.toggleAdmin(userId, isAdmin!);
-        const action = isAdmin ? 'promoted to admin' : 'demoted from admin';
-        toast.success(`User ${email} ${action}`);
+        if (isAdmin) {
+          toast.success($_('users.toast.promotedToAdmin', { values: { email } }));
+        } else {
+          toast.success($_('users.toast.demotedFromAdmin', { values: { email } }));
+        }
       }
       await loadUsers();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error(`Failed to ${type} user: ${err.message}`);
+        toast.error($_('users.toast.failedToAction', { values: { action: type, error: err.message } }));
       } else {
-        toast.error(`Failed to ${type} user`);
+        toast.error($_('users.toast.failedGeneric', { values: { action: type } }));
       }
     }
   }
@@ -96,15 +100,15 @@
 
   function getStatusBadge(user: UserListItem) {
     if (!user.approved) {
-      return { text: 'Pending', class: 'bg-yellow-100 text-yellow-800' };
+      return { text: $_('users.status.pending'), class: 'bg-yellow-100 text-yellow-800' };
     }
     if (!user.isActive) {
-      return { text: 'Inactive', class: 'bg-gray-100 text-gray-800' };
+      return { text: $_('users.status.inactive'), class: 'bg-gray-100 text-gray-800' };
     }
     if (user.isAdmin) {
-      return { text: 'Admin', class: 'bg-purple-100 text-purple-800' };
+      return { text: $_('users.status.admin'), class: 'bg-purple-100 text-purple-800' };
     }
-    return { text: 'Active', class: 'bg-green-100 text-green-800' };
+    return { text: $_('users.status.active'), class: 'bg-green-100 text-green-800' };
   }
 
   onMount(() => {
@@ -121,13 +125,13 @@
 
 <div class="space-y-6">
   <div class="flex justify-between items-center">
-    <h1 class="text-3xl font-bold text-gray-900">Users</h1>
+    <h1 class="text-3xl font-bold text-gray-900">{$_('users.title')}</h1>
     <button
       onclick={loadUsers}
       class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400"
       disabled={loading}
     >
-      {loading ? 'Refreshing...' : 'Refresh'}
+      {loading ? $_('common.refreshing') : $_('common.refresh')}
     </button>
   </div>
 
@@ -143,35 +147,35 @@
       onclick={() => filter = 'all'}
       class="px-4 py-2 rounded-md {filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
     >
-      All ({users.length})
+      {$_('users.filters.all')} ({users.length})
     </button>
     <button
       onclick={() => filter = 'pending'}
       class="px-4 py-2 rounded-md {filter === 'pending' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
     >
-      Pending ({users.filter(u => !u.approved).length})
+      {$_('users.filters.pending')} ({users.filter(u => !u.approved).length})
     </button>
     <button
       onclick={() => filter = 'approved'}
       class="px-4 py-2 rounded-md {filter === 'approved' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
     >
-      Approved ({users.filter(u => u.approved && u.isActive).length})
+      {$_('users.filters.approved')} ({users.filter(u => u.approved && u.isActive).length})
     </button>
     <button
       onclick={() => filter = 'inactive'}
       class="px-4 py-2 rounded-md {filter === 'inactive' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
     >
-      Inactive ({users.filter(u => !u.isActive).length})
+      {$_('users.filters.inactive')} ({users.filter(u => !u.isActive).length})
     </button>
   </div>
 
   {#if loading && users.length === 0}
     <div class="flex justify-center items-center py-12">
-      <div class="text-gray-500">Loading users...</div>
+      <div class="text-gray-500">{$_('users.loadingUsers')}</div>
     </div>
   {:else if filteredUsers.length === 0}
     <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-      No users found
+      {$_('users.noUsersFound')}
     </div>
   {:else}
     <!-- Users Table -->
@@ -180,22 +184,22 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Email
+              {$_('users.table.email')}
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
+              {$_('users.table.status')}
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Devices
+              {$_('users.table.devices')}
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Notes
+              {$_('users.table.notes')}
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Created
+              {$_('users.table.created')}
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
+              {$_('users.table.actions')}
             </th>
           </tr>
         </thead>
@@ -227,7 +231,7 @@
                       onclick={() => requestApprove(user.id, user.email)}
                       class="text-green-600 hover:text-green-900"
                     >
-                      Approve
+                      {$_('users.actions.approve')}
                     </button>
                   {/if}
 
@@ -236,17 +240,17 @@
                       <button
                         onclick={() => requestToggleAdmin(user.id, user.email, false)}
                         class="text-purple-600 hover:text-purple-900"
-                        title="Demote from admin"
+                        title={$_('users.actions.demoteFromAdmin')}
                       >
-                        Remove Admin
+                        {$_('users.actions.removeAdmin')}
                       </button>
                     {:else}
                       <button
                         onclick={() => requestToggleAdmin(user.id, user.email, true)}
                         class="text-purple-600 hover:text-purple-900"
-                        title="Promote to admin"
+                        title={$_('users.actions.promoteToAdmin')}
                       >
-                        Make Admin
+                        {$_('users.actions.makeAdmin')}
                       </button>
                     {/if}
                   {/if}
@@ -256,23 +260,23 @@
                       onclick={() => requestDeactivate(user.id, user.email)}
                       class="text-yellow-600 hover:text-yellow-900"
                     >
-                      Deactivate
+                      {$_('users.actions.deactivate')}
                     </button>
                   {:else}
                     <button
                       onclick={() => requestActivate(user.id, user.email)}
                       class="text-green-600 hover:text-green-900"
                     >
-                      Activate
+                      {$_('users.actions.activate')}
                     </button>
                   {/if}
 
                   <button
                     onclick={() => requestDelete(user.id, user.email)}
                     class="text-red-600 hover:text-red-900"
-                    title="Delete user"
+                    title={$_('users.actions.deleteUser')}
                   >
-                    Delete
+                    {$_('users.actions.delete')}
                   </button>
                 </div>
               </td>
@@ -285,22 +289,23 @@
 </div>
 
 {#if confirmAction}
-  {@const actionText = confirmAction.type === 'approve' ? 'Approve' :
-                        confirmAction.type === 'deactivate' ? 'Deactivate' :
-                        confirmAction.type === 'activate' ? 'Activate' :
-                        confirmAction.type === 'delete' ? 'Delete' :
-                        confirmAction.isAdmin ? 'Promote to Admin' : 'Demote from Admin'}
+  {@const actionText = confirmAction.type === 'approve' ? $_('users.confirm.approve') :
+                        confirmAction.type === 'deactivate' ? $_('users.confirm.deactivate') :
+                        confirmAction.type === 'activate' ? $_('users.confirm.activate') :
+                        confirmAction.type === 'delete' ? $_('users.confirm.delete') :
+                        confirmAction.isAdmin ? $_('users.confirm.promoteToAdmin') : $_('users.confirm.demoteFromAdmin')}
   {@const message = confirmAction.type === 'delete'
-    ? `Are you sure you want to permanently delete user ${confirmAction.email}? This action cannot be undone.`
+    ? $_('users.confirm.messages.delete', { values: { email: confirmAction.email } })
     : confirmAction.type === 'toggleAdmin' && confirmAction.isAdmin
-    ? `Are you sure you want to promote ${confirmAction.email} to admin? They will have full access to all admin functions.`
+    ? $_('users.confirm.messages.promoteToAdmin', { values: { email: confirmAction.email } })
     : confirmAction.type === 'toggleAdmin' && !confirmAction.isAdmin
-    ? `Are you sure you want to remove admin privileges from ${confirmAction.email}?`
-    : `Are you sure you want to ${confirmAction.type} user ${confirmAction.email}?`}
+    ? $_('users.confirm.messages.demoteFromAdmin', { values: { email: confirmAction.email } })
+    : $_('users.confirm.messages.genericAction', { values: { action: confirmAction.type, email: confirmAction.email } })}
   <ConfirmModal
-    title="{actionText} User"
+    title={actionText}
     message={message}
     confirmText={actionText}
+    cancelText={$_('common.cancel')}
     onConfirm={executeAction}
     onCancel={() => confirmAction = null}
   />

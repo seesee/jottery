@@ -2,6 +2,7 @@
   import { api } from '../lib/api';
   import type { StatsResponse } from '../lib/api';
   import { onMount } from 'svelte';
+  import { _ } from 'svelte-i18n';
 
   // Access the version from the global __APP_VERSION__ variable
   declare const __APP_VERSION__: string;
@@ -16,7 +17,7 @@
       error = null;
       stats = await api.getStats();
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to load statistics';
+      error = err instanceof Error ? err.message : $_('dashboard.failedToLoad');
     } finally {
       loading = false;
     }
@@ -29,13 +30,13 @@
 
 <div class="space-y-6">
   <div class="flex justify-between items-center">
-    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <h1 class="text-3xl font-bold text-gray-900">{$_('dashboard.title')}</h1>
     <button
       onclick={loadStats}
       class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400"
       disabled={loading}
     >
-      {loading ? 'Refreshing...' : 'Refresh'}
+      {loading ? $_('common.refreshing') : $_('common.refresh')}
     </button>
   </div>
 
@@ -47,7 +48,7 @@
 
   {#if loading && !stats}
     <div class="flex justify-center items-center py-12">
-      <div class="text-gray-500">Loading statistics...</div>
+      <div class="text-gray-500">{$_('dashboard.loadingStats')}</div>
     </div>
   {:else if stats}
     <!-- Statistics Grid -->
@@ -56,7 +57,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-gray-600">Total Users</p>
+            <p class="text-sm font-medium text-gray-600">{$_('dashboard.stats.totalUsers')}</p>
             <p class="text-3xl font-bold text-gray-900 mt-2">{stats.users.total}</p>
           </div>
           <div class="bg-blue-100 rounded-full p-3">
@@ -66,8 +67,8 @@
           </div>
         </div>
         <div class="mt-4 text-sm text-gray-600">
-          <span class="text-green-600 font-medium">{stats.users.approved}</span> approved,
-          <span class="text-yellow-600 font-medium">{stats.users.pending}</span> pending
+          <span class="text-green-600 font-medium">{stats.users.approved}</span> {$_('dashboard.stats.approved')},
+          <span class="text-yellow-600 font-medium">{stats.users.pending}</span> {$_('dashboard.stats.pending')}
         </div>
       </div>
 
@@ -75,7 +76,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-gray-600">Active Devices</p>
+            <p class="text-sm font-medium text-gray-600">{$_('dashboard.stats.activeDevices')}</p>
             <p class="text-3xl font-bold text-gray-900 mt-2">{stats.devices.active}</p>
           </div>
           <div class="bg-green-100 rounded-full p-3">
@@ -85,7 +86,7 @@
           </div>
         </div>
         <div class="mt-4 text-sm text-gray-600">
-          {stats.devices.total} total devices
+          {$_('dashboard.stats.totalDevices', { values: { count: stats.devices.total } })}
         </div>
       </div>
 
@@ -93,7 +94,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-gray-600">Total Notes</p>
+            <p class="text-sm font-medium text-gray-600">{$_('dashboard.stats.totalNotes')}</p>
             <p class="text-3xl font-bold text-gray-900 mt-2">{stats.notes.total}</p>
           </div>
           <div class="bg-purple-100 rounded-full p-3">
@@ -103,7 +104,7 @@
           </div>
         </div>
         <div class="mt-4 text-sm text-gray-600">
-          Across all users
+          {$_('dashboard.stats.acrossAllUsers')}
         </div>
       </div>
 
@@ -111,7 +112,7 @@
       <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm font-medium text-gray-600">Storage</p>
+            <p class="text-sm font-medium text-gray-600">{$_('dashboard.stats.storage')}</p>
             <p class="text-3xl font-bold text-gray-900 mt-2">
               {(stats.storage.totalBytes / 1024 / 1024).toFixed(1)} MB
             </p>
@@ -123,25 +124,25 @@
           </div>
         </div>
         <div class="mt-4 text-sm text-gray-600">
-          {(stats.storage.quotaBytes / 1024 / 1024).toFixed(0)} MB quota
+          {$_('dashboard.stats.mbQuota', { values: { quota: (stats.storage.quotaBytes / 1024 / 1024).toFixed(0) } })}
         </div>
       </div>
     </div>
 
     <!-- Recent Activity Section (Placeholder) -->
     <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-semibold text-gray-900 mb-4">Server Information</h2>
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">{$_('dashboard.serverInfo.title')}</h2>
       <div class="space-y-3 text-sm text-gray-600">
         <div class="flex justify-between">
-          <span>Server Version:</span>
+          <span>{$_('dashboard.serverInfo.version')}</span>
           <span class="font-medium text-gray-900">v{__APP_VERSION__}</span>
         </div>
         <div class="flex justify-between">
-          <span>Active Users:</span>
+          <span>{$_('dashboard.serverInfo.activeUsers')}</span>
           <span class="font-medium text-gray-900">{stats.users.active}</span>
         </div>
         <div class="flex justify-between">
-          <span>Pending Approvals:</span>
+          <span>{$_('dashboard.serverInfo.pendingApprovals')}</span>
           <span class="font-medium text-gray-900">{stats.users.pending}</span>
         </div>
       </div>
