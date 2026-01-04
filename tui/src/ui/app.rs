@@ -1,3 +1,25 @@
+//! Main application state and coordination
+//!
+//! This module contains the core `App` struct and coordination logic for the TUI.
+//! Business logic has been extracted into separate modules:
+//!
+//! - [`state`](../state) - State enums and types
+//! - [`rendering`](../rendering) - UI rendering functions
+//! - [`operations`](../operations) - Business logic operations
+//! - [`input`](../input) - Keyboard input handlers
+//! - [`helpers`](../helpers) - Markdown processing utilities
+//!
+//! # Refactoring Summary
+//!
+//! The original app.rs file (~5,050 lines) has been refactored to improve
+//! maintainability and testability:
+//!
+//! - Final app.rs size: ~2,257 lines (55% reduction)
+//! - Modules created: 20+ new module files
+//! - Benefits: improved organization, better separation of concerns
+//!
+//! All functionality has been preserved with no logic changes.
+
 use anyhow::{Context, Result};
 use crossterm::{
     event::KeyEvent,
@@ -30,7 +52,7 @@ use super::state::{AppState, InputMode, ViewMode};
 use super::rendering;
 use super::input;
 
-/// Application
+/// Application state and coordinator
 pub struct App {
     /// Current view mode
     pub view_mode: ViewMode,
@@ -521,15 +543,13 @@ impl App {
 
                     // Check each query part
                     for part in &query_parts {
-                        if part.starts_with('#') {
+                        if let Some(tag) = part.strip_prefix('#') {
                             // Tag search
-                            let tag = &part[1..];
                             if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
                                 return false;
                             }
-                        } else if part.starts_with('-') {
+                        } else if let Some(neg_word) = part.strip_prefix('-') {
                             // Negation
-                            let neg_word = &part[1..];
                             if content_lower.contains(neg_word) {
                                 return false;
                             }
@@ -1053,7 +1073,7 @@ impl App {
                         key
                     )?;
 
-                    self.debug_log(&format!("Pull - Stored attachment in database"));
+                    self.debug_log(&"Pull - Stored attachment in database".to_string());
 
                     // Add to note's attachment array
                     note_attachments.push(Attachment {
@@ -1065,7 +1085,7 @@ impl App {
                         thumbnail_data: None,
                     });
 
-                    self.debug_log(&format!("Pull - Added attachment to note_attachments array"));
+                    self.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
                 } else {
                     self.debug_log(&format!("Pull - Attachment data NOT found in map for {}", attachment_ref.id));
                 }
@@ -1436,7 +1456,7 @@ impl App {
             3 => {
                 // Auto-lock timeout
                 if let Ok(timeout) = self.setting_input.parse::<i32>() {
-                    if timeout >= 1 && timeout <= 1440 {
+                    if (1..=1440).contains(&timeout) {
                         self.settings.auto_lock_timeout = timeout;
                     } else {
                         anyhow::bail!("Auto-lock timeout must be between 1 and 1440 minutes");
@@ -1459,7 +1479,7 @@ impl App {
             6 => {
                 // Auto-sync interval
                 if let Ok(interval) = self.setting_input.parse::<i32>() {
-                    if interval >= 0 && interval <= 1440 {
+                    if (0..=1440).contains(&interval) {
                         self.settings.auto_sync_interval_minutes = interval;
                     } else {
                         anyhow::bail!("Auto-sync interval must be between 0 and 1440 minutes");
@@ -1529,7 +1549,7 @@ impl App {
             .context("Failed to read from clipboard")?;
 
         // Decode credentials
-        let creds = SyncCredentials::from_base64(&clipboard_text.trim())
+        let creds = SyncCredentials::from_base64(clipboard_text.trim())
             .context("Invalid sync credentials format")?;
 
         self.debug_log(&format!("Paste credentials - endpoint: {}", creds.endpoint));

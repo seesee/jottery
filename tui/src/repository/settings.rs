@@ -117,7 +117,7 @@ impl<'a> SettingsRepository<'a> {
 
     /// Set auto-lock timeout (in minutes)
     pub fn set_auto_lock_timeout(&self, minutes: i32) -> Result<()> {
-        if minutes < 1 || minutes > 1440 {
+        if !(1..=1440).contains(&minutes) {
             anyhow::bail!("Auto-lock timeout must be between 1 and 1440 minutes");
         }
 

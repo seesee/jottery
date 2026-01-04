@@ -1,5 +1,7 @@
-/// Color scheme definitions for the TUI
-/// Supports popular terminal color schemes used in other applications
+//! Color scheme definitions for the TUI
+//!
+//! This module provides color scheme definitions that support popular terminal
+//! color schemes used in other applications.
 
 use ratatui::style::Color;
 

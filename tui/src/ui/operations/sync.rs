@@ -442,7 +442,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     key
                 )?;
 
-                app.debug_log(&format!("Pull - Stored attachment in database"));
+                app.debug_log(&"Pull - Stored attachment in database".to_string());
 
                 // Add to note's attachment array
                 note_attachments.push(Attachment {
@@ -454,7 +454,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     thumbnail_data: None,
                 });
 
-                app.debug_log(&format!("Pull - Added attachment to note_attachments array"));
+                app.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
             } else {
                 app.debug_log(&format!("Pull - Attachment data NOT found in map for {}", attachment_ref.id));
             }

@@ -15,16 +15,13 @@ pub struct EncryptionMetadata {
 
 /// Encryption algorithm identifier
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default)]
 pub enum EncryptionAlgorithm {
     #[serde(rename = "AES-256-GCM")]
+    #[default]
     Aes256Gcm,
 }
 
-impl Default for EncryptionAlgorithm {
-    fn default() -> Self {
-        Self::Aes256Gcm
-    }
-}
 
 impl std::fmt::Display for EncryptionAlgorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

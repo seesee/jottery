@@ -73,7 +73,7 @@ impl CryptoService {
 
         Ok(EncryptedData {
             ciphertext: general_purpose::STANDARD.encode(&ciphertext),
-            nonce: general_purpose::STANDARD.encode(&nonce),
+            nonce: general_purpose::STANDARD.encode(nonce),
             tag: String::new(), // GCM includes tag in ciphertext
         })
     }
@@ -120,7 +120,7 @@ impl CryptoService {
 
         Ok(EncryptedData {
             ciphertext: general_purpose::STANDARD.encode(&ciphertext),
-            nonce: general_purpose::STANDARD.encode(&nonce),
+            nonce: general_purpose::STANDARD.encode(nonce),
             tag: String::new(),
         })
     }

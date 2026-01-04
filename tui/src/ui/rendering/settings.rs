@@ -55,7 +55,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         };
 
         Line::from(vec![
-            Span::styled(prefix, label_style.clone()),
+            Span::styled(prefix, label_style),
             Span::styled(label, label_style),
             Span::styled(display_value, value_style),
         ])

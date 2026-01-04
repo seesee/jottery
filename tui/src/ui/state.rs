@@ -1,3 +1,8 @@
+//! Application state enums and types
+//!
+//! This module defines the core state machine for the TUI application,
+//! including app states, input modes, and view modes.
+
 /// Application state
 pub enum AppState {
     /// Locked - password input screen

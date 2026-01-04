@@ -60,15 +60,13 @@ pub fn filtered_notes(app: &App) -> Vec<&Note> {
 
                 // Check each query part
                 for part in &query_parts {
-                    if part.starts_with('#') {
+                    if let Some(tag) = part.strip_prefix('#') {
                         // Tag search
-                        let tag = &part[1..];
                         if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
                             return false;
                         }
-                    } else if part.starts_with('-') {
+                    } else if let Some(neg_word) = part.strip_prefix('-') {
                         // Negation
-                        let neg_word = &part[1..];
                         if content_lower.contains(neg_word) {
                             return false;
                         }

@@ -1,3 +1,7 @@
+//! Terminal event handling
+//!
+//! This module defines terminal events and event polling for the TUI application.
+
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 use std::time::Duration;
 

@@ -1,3 +1,8 @@
+//! Terminal initialization and management
+//!
+//! This module provides the TUI terminal wrapper for setting up and tearing down
+//! the terminal interface.
+
 use anyhow::Result;
 use crossterm::{
     execute,

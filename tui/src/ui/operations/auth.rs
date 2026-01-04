@@ -5,7 +5,6 @@ use rust_i18n::t;
 use std::time::Instant;
 
 use crate::{
-    crypto::CryptoService,
     db::Database,
     repository::{EncryptionRepository, SettingsRepository, sync::SyncRepository},
 };

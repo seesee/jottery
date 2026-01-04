@@ -1,3 +1,8 @@
+//! Syntax highlighting utilities
+//!
+//! This module provides syntax highlighting functionality for code blocks and markdown
+//! rendering using syntect and pulldown-cmark.
+
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};

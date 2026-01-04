@@ -1,3 +1,8 @@
+//! Helper functions for markdown processing
+//!
+//! This module provides utilities for stripping and rendering markdown
+//! content in the terminal using pulldown-cmark and ratatui.
+
 use std::fs::File;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
@@ -41,7 +46,7 @@ pub fn strip_markdown(text: &str) -> String {
                 let mut link_text = String::new();
                 let mut found_closing = false;
 
-                while let Some(c) = chars.next() {
+                for c in chars.by_ref() {
                     if c == ']' {
                         found_closing = true;
                         break;
@@ -53,7 +58,7 @@ pub fn strip_markdown(text: &str) -> String {
                     // Skip the (url) part
                     if chars.peek() == Some(&'(') {
                         chars.next(); // skip (
-                        while let Some(c) = chars.next() {
+                        for c in chars.by_ref() {
                             if c == ')' {
                                 break;
                             }

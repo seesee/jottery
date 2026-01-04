@@ -42,17 +42,15 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
         } else {
             "Tags: (none - press 't' to add)".to_string()
         }
+    } else if matches!(app.input_mode, InputMode::Tag) {
+        format!("Tags: {} {}_",
+            app.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" "),
+            app.tag_input
+        )
     } else {
-        if matches!(app.input_mode, InputMode::Tag) {
-            format!("Tags: {} {}_",
-                app.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" "),
-                app.tag_input
-            )
-        } else {
-            format!("Tags: {}",
-                app.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
-            )
-        }
+        format!("Tags: {}",
+            app.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
+        )
     };
 
     let tags_style = if matches!(app.input_mode, InputMode::Tag) {
@@ -93,22 +91,19 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
     frame.render_widget(help, chunks[2]);
 
     // Show cursor
-    match app.input_mode {
-        InputMode::Tag => {
-            // Cursor after tag input
-            let tag_prefix_len = if app.current_tags.is_empty() {
-                "Tags: ".len()
-            } else {
-                format!("Tags: {} ",
-                    app.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
-                ).len()
-            };
+    if let InputMode::Tag = app.input_mode {
+        // Cursor after tag input
+        let tag_prefix_len = if app.current_tags.is_empty() {
+            "Tags: ".len()
+        } else {
+            format!("Tags: {} ",
+                app.current_tags.iter().map(|t| format!("#{}", t)).collect::<Vec<_>>().join(" ")
+            ).len()
+        };
 
-            frame.set_cursor_position((
-                chunks[0].x + tag_prefix_len as u16 + app.tag_input.len() as u16,
-                chunks[0].y,
-            ));
-        }
-        _ => {}
+        frame.set_cursor_position((
+            chunks[0].x + tag_prefix_len as u16 + app.tag_input.len() as u16,
+            chunks[0].y,
+        ));
     }
 }

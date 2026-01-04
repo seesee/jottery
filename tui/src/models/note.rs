@@ -25,10 +25,12 @@ pub struct Note {
 /// Syntax highlighting language options
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum SyntaxLanguage {
     Plain,
     Javascript,
     Python,
+    #[default]
     Markdown,
     Json,
     Html,
@@ -38,11 +40,6 @@ pub enum SyntaxLanguage {
     Perl,
 }
 
-impl Default for SyntaxLanguage {
-    fn default() -> Self {
-        Self::Markdown
-    }
-}
 
 impl SyntaxLanguage {
     /// Get the next syntax language in the cycle

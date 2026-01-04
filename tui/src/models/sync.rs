@@ -68,6 +68,7 @@ impl std::fmt::Display for SyncStatus {
 
 /// Current sync status for UI display
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct SyncStatusDisplay {
     pub is_enabled: bool,
     pub is_syncing: bool,
@@ -79,20 +80,6 @@ pub struct SyncStatusDisplay {
     pub sync_endpoint: Option<String>,
 }
 
-impl Default for SyncStatusDisplay {
-    fn default() -> Self {
-        Self {
-            is_enabled: false,
-            is_syncing: false,
-            last_sync_at: None,
-            last_error: None,
-            pending_notes: 0,
-            conflict_count: 0,
-            client_id: None,
-            sync_endpoint: None,
-        }
-    }
-}
 
 /// Push request payload
 #[derive(Debug, Clone, Serialize, Deserialize)]

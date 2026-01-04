@@ -109,18 +109,15 @@ impl Theme {
 /// Sort options for note list
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum SortOrder {
+    #[default]
     Recent,    // Most recently modified first
     Oldest,    // Oldest modified first
     Alpha,     // Alphabetical by content preview
     Created,   // Most recently created first
 }
 
-impl Default for SortOrder {
-    fn default() -> Self {
-        Self::Recent
-    }
-}
 
 impl std::fmt::Display for SortOrder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -144,7 +144,7 @@ pub fn save_setting_value(app: &mut App) -> Result<()> {
         3 => {
             // Auto-lock timeout
             if let Ok(timeout) = app.setting_input.parse::<i32>() {
-                if timeout >= 1 && timeout <= 1440 {
+                if (1..=1440).contains(&timeout) {
                     app.settings.auto_lock_timeout = timeout;
                 } else {
                     anyhow::bail!("Auto-lock timeout must be between 1 and 1440 minutes");
@@ -167,7 +167,7 @@ pub fn save_setting_value(app: &mut App) -> Result<()> {
         6 => {
             // Auto-sync interval
             if let Ok(interval) = app.setting_input.parse::<i32>() {
-                if interval >= 0 && interval <= 1440 {
+                if (0..=1440).contains(&interval) {
                     app.settings.auto_sync_interval_minutes = interval;
                 } else {
                     anyhow::bail!("Auto-sync interval must be between 0 and 1440 minutes");
@@ -237,7 +237,7 @@ pub fn paste_sync_credentials(app: &mut App) -> Result<()> {
         .context("Failed to read from clipboard")?;
 
     // Decode credentials
-    let creds = SyncCredentials::from_base64(&clipboard_text.trim())
+    let creds = SyncCredentials::from_base64(clipboard_text.trim())
         .context("Invalid sync credentials format")?;
 
     app.debug_log(&format!("Paste credentials - endpoint: {}", creds.endpoint));
