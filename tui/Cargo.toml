@@ -17,7 +17,7 @@ sqlcipher = ["rusqlite/sqlcipher", "native-tls", "openssl", "openssl-sys"]
 
 [dependencies]
 # TUI Framework
-ratatui = "0.29"
+ratatui = "0.30"
 crossterm = "0.28"
 
 # Database
@@ -75,7 +75,7 @@ tempfile = "3.13"
 arboard = "3.4"
 
 # Syntax highlighting
-syntect = "5.2"
+syntect = "5.3"
 
 # Markdown parsing
 pulldown-cmark = "0.12"
