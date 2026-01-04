@@ -6,6 +6,9 @@ mod models;
 mod repository;
 mod ui;
 
+// Initialize rust-i18n
+rust_i18n::i18n!("locales");
+
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;

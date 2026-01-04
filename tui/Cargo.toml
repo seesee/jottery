@@ -80,6 +80,9 @@ syntect = "5.2"
 # Markdown parsing
 pulldown-cmark = "0.12"
 
+# Internationalization
+rust-i18n = "3"
+
 [dev-dependencies]
 
 [profile.release]

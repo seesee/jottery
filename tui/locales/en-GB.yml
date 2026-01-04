@@ -1,0 +1,221 @@
+en-GB:
+  # Application metadata
+  app:
+    name: "Jottery"
+    description: "A privacy-focused, encrypted note-taking TUI"
+
+  # Common UI strings
+  common:
+    loading: "Loading..."
+    saving: "Saving..."
+    cancel: "Cancel"
+    confirm: "Confirm"
+    yes: "Yes"
+    no: "No"
+    ok: "OK"
+    close: "Close"
+    quit: "Quit"
+    back: "Back"
+
+  # Password and authentication
+  password:
+    prompt: "Password: "
+    enter: "Enter password"
+    confirm: "Confirm password"
+    empty_error: "Password cannot be empty"
+    mismatch_error: "Passwords do not match"
+    unlock_failed: "Failed to unlock: %{error}"
+    change_success: "Password changed successfully"
+
+  # Main menu / Navigation
+  menu:
+    notes: "Notes"
+    new_note: "New Note"
+    settings: "Settings"
+    help: "Help"
+    quit: "Quit"
+    search: "Search"
+
+  # Note operations
+  note:
+    new: "New note"
+    save: "Save"
+    saved: "Note saved"
+    save_failed: "Failed to save note: %{error}"
+    delete: "Delete note"
+    deleted: "Note deleted"
+    delete_failed: "Failed to delete note: %{error}"
+    reload_failed: "Failed to reload notes: %{error}"
+    pin: "Pin note"
+    unpin: "Unpin note"
+    pinned: "Pinned"
+    pin_failed: "Failed to update pin status: %{error}"
+    no_notes: "No notes found"
+    total: "%{count} notes"
+
+  # Note editor
+  editor:
+    title: "Title"
+    content: "Content"
+    tags: "Tags"
+    created: "Created"
+    modified: "Modified"
+    launch_external: "Launch external editor"
+    external_failed: "Failed to launch editor: %{error}"
+    external_exit_error: "Editor exited with non-zero status"
+    temp_file_error: "Failed to create temporary file"
+    temp_write_error: "Failed to write to temporary file"
+    temp_read_error: "Failed to read temporary file"
+    default_editor: "vi"
+
+  # Attachments
+  attachment:
+    add: "Add attachment"
+    add_failed: "Failed to add attachment: %{error}"
+    view: "View attachment"
+    view_failed: "Failed to view attachment: %{error}"
+    delete: "Delete attachment"
+    no_attachments: "No attachments"
+    total: "%{count} attachments"
+
+  # Version history
+  version:
+    history: "Version History"
+    restore: "Restore version"
+    restored: "Restored version %{number}"
+    restore_failed: "Failed to restore version: %{error}"
+    no_versions: "No version history"
+    current: "Current version"
+
+  # Search
+  search:
+    prompt: "Search notes..."
+    no_results: "No results found"
+    results: "%{count} results"
+
+  # Settings
+  settings:
+    title: "Settings"
+    language: "Language"
+    theme: "Theme"
+    color_scheme: "Colour scheme"
+    auto_lock: "Auto-lock timeout"
+    minutes: "minutes"
+    sync: "Sync"
+    sync_enabled: "Sync enabled"
+    sync_endpoint: "Sync endpoint"
+    device_name: "Device name"
+
+  # Sync operations
+  sync:
+    push: "Push to server"
+    pull: "Pull from server"
+    pushing: "Pushing changes..."
+    pulling: "Pulling changes..."
+    success: "Sync successful"
+    failed: "Sync failed: %{error}"
+    no_api_key: "No API key configured"
+    account_deactivated: "Your account has been deactivated or is pending admin approval. Please contact the administrator."
+    invalid_key: "Invalid API key or authentication failed. Try re-registering your device."
+    conflict: "Sync conflict detected. Some notes have conflicting changes on the server."
+    request_failed: "Failed to send sync request"
+    response_parse_failed: "Failed to parse sync response"
+
+  # Colour schemes
+  color_scheme:
+    default_dark: "Default Dark"
+    default_light: "Default Light"
+    monokai: "Monokai"
+    solarized_dark: "Solarized Dark"
+    solarized_light: "Solarized Light"
+    nord: "Nord"
+    dracula: "Dracula"
+    gruvbox_dark: "Gruvbox Dark"
+    gruvbox_light: "Gruvbox Light"
+    tokyo_night: "Tokyo Night"
+    catppuccin: "Catppuccin"
+
+  # Syntax languages
+  syntax:
+    javascript: "JavaScript"
+    python: "Python"
+    markdown: "Markdown"
+    json: "JSON"
+    html: "HTML"
+    css: "CSS"
+    sql: "SQL"
+    bash: "Bash"
+    perl: "Perl"
+    rust: "Rust"
+    go: "Go"
+    java: "Java"
+    c: "C"
+    cpp: "C++"
+    none: "None"
+    change_language: "Change syntax language"
+    change_failed: "Failed to update syntax language: %{error}"
+
+  # Error messages
+  error:
+    generic: "An error occurred"
+    unexpected: "An unexpected error occurred"
+    database: "Database error: %{error}"
+    encryption: "Encryption error: %{error}"
+    network: "Network error: %{error}"
+    file_not_found: "File not found"
+    permission_denied: "Permission denied"
+    invalid_input: "Invalid input"
+    operation_failed: "Operation failed: %{error}"
+
+  # Help text
+  help:
+    title: "Keyboard Shortcuts"
+    general: "General"
+    notes: "Notes"
+    editor: "Editor"
+    navigation: "Navigation"
+    quit_app: "Quit application"
+    new_note: "Create new note"
+    save_note: "Save current note"
+    delete_note: "Delete current note"
+    search_notes: "Search notes"
+    toggle_pin: "Toggle pin status"
+    next_note: "Next note"
+    prev_note: "Previous note"
+    scroll_up: "Scroll up"
+    scroll_down: "Scroll down"
+    page_up: "Page up"
+    page_down: "Page down"
+
+  # CLI commands
+  cli:
+    list: "List notes"
+    show: "Show note"
+    new: "Create new note"
+    edit: "Edit note"
+    delete: "Delete note"
+    search: "Search notes"
+    export: "Export notes"
+    import: "Import notes"
+    sync: "Sync with server"
+    register: "Register device"
+
+  # Status messages
+  status:
+    locked: "Locked"
+    unlocked: "Unlocked"
+    syncing: "Syncing..."
+    synced: "Synced"
+    offline: "Offline"
+    modified: "Modified"
+    saved: "Saved"
+
+  # Date and time formatting
+  time:
+    just_now: "just now"
+    minutes_ago: "%{count} minutes ago"
+    hours_ago: "%{count} hours ago"
+    days_ago: "%{count} days ago"
+    date_format: "%Y-%m-%d"
+    time_format: "%H:%M:%S"
+    datetime_format: "%Y-%m-%d %H:%M:%S"
