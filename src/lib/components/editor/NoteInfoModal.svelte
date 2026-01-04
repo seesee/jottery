@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import type { Readable } from 'svelte/store';
 
   // State props
   export let show: boolean;
@@ -14,8 +15,8 @@
   export let language: string;
   export let noteId: string;
   export let noteVersion: number;
-  export let createdAtFormatted: string | null;
-  export let modifiedAtFormatted: string | null;
+  export let createdAtFormatted: Readable<string> | null;
+  export let modifiedAtFormatted: Readable<string> | null;
 
   // Callbacks
   export let onClose: () => void;
@@ -80,12 +81,12 @@
 
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.created')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{createdAtFormatted || ''}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{createdAtFormatted ? $createdAtFormatted : ''}</div>
         </div>
 
         <div>
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.modified')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{modifiedAtFormatted || ''}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{modifiedAtFormatted ? $modifiedAtFormatted : ''}</div>
         </div>
 
         <div>
