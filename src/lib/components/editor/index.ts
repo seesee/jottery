@@ -4,3 +4,4 @@ export { default as EditorToolbar } from './EditorToolbar.svelte';
 export { default as EditorContent } from './EditorContent.svelte';
 export { default as AttachmentsPanel } from './AttachmentsPanel.svelte';
 export { default as NoteInfoModal } from './NoteInfoModal.svelte';
+export { default as MobileAttachmentsModal } from './MobileAttachmentsModal.svelte';
