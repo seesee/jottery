@@ -20,6 +20,7 @@ register('ru', () => import('../../locales/ru.json'));
 register('nl', () => import('../../locales/nl.json'));
 register('pl', () => import('../../locales/pl.json'));
 register('tr', () => import('../../locales/tr.json'));
+register('el', () => import('../../locales/el.json'));
 
 // Available locales
 export const AVAILABLE_LOCALES = [
@@ -37,6 +38,7 @@ export const AVAILABLE_LOCALES = [
   { code: 'nl', name: 'Nederlands' },
   { code: 'pl', name: 'Polski' },
   { code: 'tr', name: 'Türkçe' },
+  { code: 'el', name: 'Ελληνικά' },
 ];
 
 // Default locale

@@ -37,6 +37,7 @@ const TARGET_LANGUAGES = {
   'nl': 'Dutch',
   'pl': 'Polish',
   'tr': 'Turkish',
+  'el': 'Greek',
 };
 
 // LibreTranslate API endpoint (free, no API key)
