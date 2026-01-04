@@ -551,5 +551,11 @@
     "message": "RELOAD TO GET THE LATEST FEATURES AND IMPROVEMENTS",
     "reloadButton": "RELOAD NOW",
     "dismissLabel": "DISMISS"
+  },
+  "pullToRefresh": {
+    "pull": "PULL DOWN TO SYNC",
+    "release": "RELEASE TO SYNC",
+    "syncing": "SYNCING...",
+    "region": "PULL TO REFRESH"
   }
 }
