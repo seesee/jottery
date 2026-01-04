@@ -2,18 +2,12 @@
 /**
  * Automated translation script for Jottery locale files
  *
- * This script uses the free DeepL API or Google Translate to automatically
+ * This script uses the free LibreTranslate API to automatically
  * translate locale strings while preserving placeholders and structure.
  *
- * Setup:
- *   1. Get a free DeepL API key from https://www.deepl.com/pro-api
- *   2. Set environment variable: export DEEPL_API_KEY="your-key-here"
- *
  * Usage:
- *   node scripts/auto-translate.js
- *
- * Or use LibreTranslate (free, no API key needed):
- *   node scripts/auto-translate.js --service=libretranslate
+ *   node scripts/auto-translate.js                    # Translate main app locales
+ *   node scripts/auto-translate.js --target=admin     # Translate admin app locales
  */
 
 import fs from 'fs/promises';
@@ -153,15 +147,40 @@ function countStrings(obj) {
 }
 
 async function main() {
+  // Parse command-line arguments
+  const args = process.argv.slice(2);
+  const targetArg = args.find(arg => arg.startsWith('--target='));
+  const target = targetArg ? targetArg.split('=')[1] : 'app';
+
+  if (!['app', 'admin'].includes(target)) {
+    console.error('Error: --target must be either "app" or "admin"');
+    process.exit(1);
+  }
+
+  // Determine paths based on target
+  const config = target === 'admin'
+    ? {
+        sourceFile: path.join(__dirname, '../admin/src/locales/en-GB.json'),
+        outputDir: path.join(__dirname, '../admin/src/locales'),
+        sourceLocale: 'en-GB',
+        appName: 'Admin App',
+      }
+    : {
+        sourceFile: path.join(__dirname, '../src/locales/en-US.json'),
+        outputDir: path.join(__dirname, '../src/locales'),
+        sourceLocale: 'en-US',
+        appName: 'Main App',
+      };
+
   console.log('Jottery Automated Translation\n');
   console.log('====================================\n');
+  console.log(`Target: ${config.appName}\n`);
 
   // Read source file
-  const sourceFile = path.join(__dirname, '../src/locales/en-US.json');
-  const sourceData = JSON.parse(await fs.readFile(sourceFile, 'utf8'));
+  const sourceData = JSON.parse(await fs.readFile(config.sourceFile, 'utf8'));
 
   const totalStrings = countStrings(sourceData);
-  console.log(`Source file: en-US.json (${totalStrings} strings)\n`);
+  console.log(`Source file: ${config.sourceLocale}.json (${totalStrings} strings)\n`);
   console.log('Using LibreTranslate (free service)\n');
   console.log('⚠️  Note: Free translation may take time due to rate limits');
   console.log('⚠️  Results should be reviewed by native speakers\n');
@@ -174,7 +193,7 @@ async function main() {
     const translated = await translateObject(sourceData, langCode, progress);
 
     // Write file
-    const outputFile = path.join(__dirname, '../src/locales', `${langCode}.json`);
+    const outputFile = path.join(config.outputDir, `${langCode}.json`);
     await fs.writeFile(
       outputFile,
       JSON.stringify(translated, null, 2) + '\n',
@@ -187,8 +206,7 @@ async function main() {
   console.log('\n\n✅ Translation complete!\n');
   console.log('Next steps:');
   console.log('  1. Review translations with native speakers');
-  console.log('  2. Update src/lib/services/i18nService.ts');
-  console.log('  3. Test each language in the app\n');
+  console.log('  2. Test each language in the app\n');
 }
 
 main().catch(console.error);
