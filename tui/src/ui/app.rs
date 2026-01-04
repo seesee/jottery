@@ -5,6 +5,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear as TerminalClear, ClearType},
     cursor::MoveTo,
 };
+use rust_i18n::t;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
@@ -766,17 +767,17 @@ impl App {
                 // Validate password confirmation for new databases
                 if self.is_new_database {
                     if self.password_input.is_empty() {
-                        self.error = Some("Password cannot be empty".to_string());
+                        self.error = Some(t!("password.empty_error").to_string());
                         return Ok(());
                     }
                     if self.password_input != self.password_confirm {
-                        self.error = Some("Passwords do not match".to_string());
+                        self.error = Some(t!("password.mismatch_error").to_string());
                         return Ok(());
                     }
                 }
 
                 if let Err(e) = self.unlock() {
-                    self.error = Some(format!("Failed to unlock: {}", e));
+                    self.error = Some(t!("password.unlock_failed", error = e.to_string()).to_string());
                     self.password_input.clear();
                     self.password_confirm.clear();
                 }
@@ -823,7 +824,7 @@ impl App {
 
                     if !path.is_empty() {
                         if let Err(e) = self.add_attachment_to_current_note(&path) {
-                            self.error = Some(format!("Failed to add attachment: {}", e));
+                            self.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
                         }
                     }
                 }
@@ -875,11 +876,11 @@ impl App {
                                 self.note_input = new_content;
                                 // Save the note
                                 if let Err(e) = self.save_note() {
-                                    self.error = Some(format!("Failed to save note: {}", e));
+                                    self.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
                                 }
                                 // Reload notes to refresh the list
                                 if let Err(e) = self.load_notes() {
-                                    self.error = Some(format!("Failed to reload notes: {}", e));
+                                    self.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                                 }
                             }
 
@@ -972,11 +973,11 @@ impl App {
                             self.note_input = new_content;
                             // Save the note
                             if let Err(e) = self.save_note() {
-                                self.error = Some(format!("Failed to save note: {}", e));
+                                self.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
                             }
                             // Reload notes to refresh the list
                             if let Err(e) = self.load_notes() {
-                                self.error = Some(format!("Failed to reload notes: {}", e));
+                                self.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                             }
                         }
                     }
@@ -988,14 +989,14 @@ impl App {
                             let version_number = self.loaded_versions[self.selected_version].version;
                             match self.restore_version(version_number) {
                                 Ok(()) => {
-                                    self.error = Some(format!("Restored version {}", version_number));
+                                    self.error = Some(t!("version.restored", number = version_number).to_string());
                                     self.view_mode = ViewMode::NoteList;
                                     self.loaded_versions.clear();
                                     self.versions_note_id = None;
                                     self.version_preview_scroll_offset = 0;
                                 }
                                 Err(e) => {
-                                    self.error = Some(format!("Failed to restore version: {}", e));
+                                    self.error = Some(t!("version.restore_failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -1008,7 +1009,7 @@ impl App {
                             if self.selected_attachment < note.attachments.len() {
                                 let attachment = note.attachments[self.selected_attachment].clone();
                                 if let Err(e) = self.view_attachment(&attachment) {
-                                    self.error = Some(format!("Failed to view attachment: {}", e));
+                                    self.error = Some(t!("attachment.view_failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -1034,11 +1035,11 @@ impl App {
                             self.note_input = new_content;
                             // Save the note
                             if let Err(e) = self.save_note() {
-                                self.error = Some(format!("Failed to save note: {}", e));
+                                self.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
                             }
                             // Reload notes to refresh the list
                             if let Err(e) = self.load_notes() {
-                                self.error = Some(format!("Failed to reload notes: {}", e));
+                                self.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                             }
                         }
 
@@ -1137,7 +1138,7 @@ impl App {
                             if let (Some(db), Some(key)) = (&self.db, &self.key) {
                                 let repo = NoteRepository::new(db.connection());
                                 if let Err(e) = repo.update(note, key) {
-                                    self.error = Some(format!("Failed to update pin status: {}", e));
+                                    self.error = Some(t!("note.pin_failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -1178,7 +1179,7 @@ impl App {
                             if let (Some(db), Some(key)) = (&self.db, &self.key) {
                                 let repo = NoteRepository::new(db.connection());
                                 if let Err(e) = repo.update(note, key) {
-                                    self.error = Some(format!("Failed to update syntax language: {}", e));
+                                    self.error = Some(t!("syntax.change_failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -1198,7 +1199,7 @@ impl App {
                             if let (Some(db), Some(key)) = (&self.db, &self.key) {
                                 let repo = NoteRepository::new(db.connection());
                                 if let Err(e) = repo.update(note, key) {
-                                    self.error = Some(format!("Failed to update syntax language: {}", e));
+                                    self.error = Some(t!("syntax.change_failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -1214,13 +1215,13 @@ impl App {
                             self.selected_note = 0;
                             self.preview_scroll_offset = 0;
                             if let Err(e) = self.load_deleted_notes() {
-                                self.error = Some(format!("Failed to load deleted notes: {}", e));
+                                self.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                             }
                         }
                         ViewMode::RecycleBin => {
                             // Restore selected note
                             if let Err(e) = self.restore_note() {
-                                self.error = Some(format!("Failed to restore note: {}", e));
+                                self.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                             }
                         }
                         ViewMode::AttachmentViewer => {
@@ -1235,7 +1236,7 @@ impl App {
                     // Empty recycle bin (only in recycle bin view)
                     if matches!(self.view_mode, ViewMode::RecycleBin) {
                         if let Err(e) = self.empty_trash() {
-                            self.error = Some(format!("Failed to empty trash: {}", e));
+                            self.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
                         }
                     }
                 }
@@ -1284,7 +1285,7 @@ impl App {
                     // In attachment viewer: delete selected attachment
                     if matches!(self.view_mode, ViewMode::AttachmentViewer) {
                         if let Err(e) = self.delete_current_attachment() {
-                            self.error = Some(format!("Failed to delete attachment: {}", e));
+                            self.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
                         }
                     }
                     // Delete selected note (only in note list view)
@@ -1319,7 +1320,7 @@ impl App {
                             self.selected_attachment = 0;
                         } else {
                             self.debug_log("  No attachments - setting error");
-                            self.error = Some("No attachments in this note".to_string());
+                            self.error = Some(t!("attachment.no_attachments").to_string());
                         }
                     } else {
                         self.debug_log("  Filtered is empty or selected_note out of bounds");
@@ -1331,9 +1332,9 @@ impl App {
                     if !filtered.is_empty() && self.selected_note < filtered.len() {
                         let note_id = filtered[self.selected_note].id.clone();
                         if let Err(e) = self.load_versions_for_note(&note_id) {
-                            self.error = Some(format!("Failed to load versions: {}", e));
+                            self.error = Some(t!("version.restore_failed", error = e.to_string()).to_string());
                         } else if self.loaded_versions.is_empty() {
-                            self.error = Some("No version history for this note".to_string());
+                            self.error = Some(t!("version.no_versions").to_string());
                         } else {
                             self.view_mode = ViewMode::VersionHistory;
                             self.selected_version = 0;
@@ -1350,7 +1351,7 @@ impl App {
                             if attachment_index < note.attachments.len() {
                                 let attachment = note.attachments[attachment_index].clone();
                                 if let Err(e) = self.view_attachment(&attachment) {
-                                    self.error = Some(format!("Failed to view attachment: {}", e));
+                                    self.error = Some(t!("attachment.view_failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -1364,7 +1365,7 @@ impl App {
                             self.input_mode = InputMode::AttachmentPath;
                             self.attachment_path_input.clear();
                         } else {
-                            self.error = Some("No note selected".to_string());
+                            self.error = Some(t!("note.no_notes").to_string());
                         }
                     }
                 }
@@ -1372,7 +1373,7 @@ impl App {
                     // Remove selected attachment (only in note list view)
                     if matches!(self.view_mode, ViewMode::NoteList) {
                         if let Err(e) = self.remove_attachment_from_current_note() {
-                            self.error = Some(format!("Failed to remove attachment: {}", e));
+                            self.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
                         }
                     }
                 }
@@ -1615,7 +1616,7 @@ impl App {
                     KeyCode::Enter => {
                         // Verify password and save if correct
                         if self.setting_input.is_empty() {
-                            self.error = Some("Password cannot be empty.".to_string());
+                            self.error = Some(t!("password.empty_error").to_string());
                         } else {
                             // Verify password by attempting to derive the key
                             match self.verify_password_for_remember(&self.setting_input) {
@@ -3543,7 +3544,7 @@ impl App {
         let (note_id, attachment_id, filename) = {
             let filtered = self.filtered_notes();
             if filtered.is_empty() || self.selected_note >= filtered.len() {
-                anyhow::bail!("No note selected");
+                anyhow::bail!("{}", t!("note.no_notes"));
             }
 
             let note = filtered[self.selected_note];
@@ -3647,7 +3648,7 @@ impl App {
             id
         } else {
             log_debug("add_attachment: No note selected");
-            anyhow::bail!("No note selected");
+            anyhow::bail!("{}", t!("note.no_notes"));
         };
 
         // Store encrypted attachment
@@ -3700,7 +3701,7 @@ impl App {
         let note_id = if !filtered.is_empty() && self.selected_note < filtered.len() {
             filtered[self.selected_note].id.clone()
         } else {
-            anyhow::bail!("No note selected");
+            anyhow::bail!("{}", t!("note.no_notes"));
         };
 
         let db = self.db.as_ref().context("Database not available")?;
@@ -3714,7 +3715,7 @@ impl App {
 
         // Check if there are attachments
         if note.attachments.is_empty() {
-            anyhow::bail!("No attachments to remove");
+            anyhow::bail!("{}", t!("attachment.no_attachments"));
         }
 
         // Validate selected_attachment index

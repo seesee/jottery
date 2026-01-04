@@ -10,6 +10,7 @@ mod ui;
 rust_i18n::i18n!("locales");
 
 use anyhow::{Context, Result};
+use rust_i18n::t;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::fs::OpenOptions;
@@ -25,6 +26,16 @@ use db::Database;
 use models::Note;
 use repository::{NoteRepository, sync::SyncRepository, EncryptionRepository};
 use ui::{App, EventHandler, Tui};
+
+/// Detect and set locale from environment
+fn detect_locale() {
+    if let Ok(lang) = env::var("LANG") {
+        // LANG is typically in format like "en_GB.UTF-8" or "fr_FR.UTF-8"
+        let locale = lang.split('.').next().unwrap_or("en-GB");
+        let locale = locale.replace('_', "-"); // Convert en_GB to en-GB
+        rust_i18n::set_locale(&locale);
+    }
+}
 
 #[derive(Parser)]
 #[command(name = "jottery")]
@@ -165,7 +176,7 @@ enum Commands {
 
 /// Prompt for password from stdin
 fn prompt_password() -> Result<String> {
-    print!("Password: ");
+    print!("{}", t!("password.prompt"));
     io::stdout().flush()?;
     let password = rpassword::read_password()?;
     Ok(password)
@@ -251,30 +262,30 @@ fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
 fn open_editor(initial_content: &str) -> Result<String> {
     // Create temporary file
     let mut temp_file = NamedTempFile::new()
-        .context("Failed to create temporary file")?;
+        .context(t!("editor.temp_file_error"))?;
     temp_file
         .write_all(initial_content.as_bytes())
-        .context("Failed to write to temporary file")?;
+        .context(t!("editor.temp_write_error"))?;
     temp_file.flush()?;
 
     let temp_path = temp_file.path();
 
     // Get editor from environment (default to vi)
-    let editor = env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
+    let editor = env::var("EDITOR").unwrap_or_else(|_| t!("editor.default_editor").to_string());
 
     // Launch editor
     let status = Command::new(&editor)
         .arg(temp_path)
         .status()
-        .context(format!("Failed to launch editor: {}", editor))?;
+        .context(t!("editor.external_failed", error = &editor))?;
 
     if !status.success() {
-        anyhow::bail!("Editor exited with non-zero status");
+        anyhow::bail!("{}", t!("editor.external_exit_error"));
     }
 
     // Read the edited content
     let content = std::fs::read_to_string(temp_path)
-        .context("Failed to read temporary file")?;
+        .context(t!("editor.temp_read_error"))?;
 
     Ok(content)
 }
@@ -359,16 +370,16 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
 
             // Provide user-friendly error messages
             let error_msg = if status == 403 {
-                "Your account has been deactivated or is pending admin approval. Please contact the administrator."
+                t!("sync.account_deactivated").to_string()
             } else if status == 401 {
-                "Invalid API key or authentication failed. Try re-registering your device."
+                t!("sync.invalid_key").to_string()
             } else if status == 409 {
-                "Sync conflict detected. Some notes have conflicting changes on the server."
+                t!("sync.conflict").to_string()
             } else {
-                &error_body
+                error_body
             };
 
-            anyhow::bail!("Sync failed: {}", error_msg);
+            anyhow::bail!("{}: {}", t!("sync.failed", error = ""), error_msg);
         }
 
         let push_response: SyncPushResponse = response.json()
@@ -440,6 +451,9 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
 }
 
 fn main() -> Result<()> {
+    // Detect and set locale from environment
+    detect_locale();
+
     let cli = Cli::parse();
 
     // Initialize logging
@@ -480,10 +494,10 @@ fn main() -> Result<()> {
             let _ = std::fs::remove_file(&wal_path);
             let _ = std::fs::remove_file(&shm_path);
 
-            println!("✓ Database deleted: {}", db_path.display());
-            println!("You can now start fresh with a new password.");
+            println!("✓ {}: {}", t!("note.deleted"), db_path.display());
+            println!("{}", t!("password.change_success"));
         } else {
-            println!("Database does not exist: {}", db_path.display());
+            println!("{}: {}", t!("error.file_not_found"), db_path.display());
         }
         return Ok(());
     }
@@ -513,7 +527,7 @@ fn main() -> Result<()> {
 
             // If content is empty, don't create note
             if content.trim().is_empty() {
-                println!("Note is empty, not saving.");
+                println!("{}", t!("note.save_failed", error = t!("password.empty_error")));
                 return Ok(());
             }
 
@@ -529,20 +543,20 @@ fn main() -> Result<()> {
             // Save to database
             let note_repo = NoteRepository::new(db.connection());
             note_repo.create(&note, &key)?;
-            println!("✓ Note created: {}", &note.id[..8]);
+            println!("✓ {}: {}", t!("cli.new"), &note.id[..8]);
 
             // Auto-sync if configured
             let sync_repo = SyncRepository::new(db.connection());
             if let Ok(Some(metadata)) = sync_repo.get_metadata() {
                 if metadata.sync_enabled {
-                    println!("Syncing to {}...", metadata.sync_endpoint);
+                    println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
                     match perform_cli_sync(&db, &key, metadata) {
                         Ok(count) => {
-                            println!("✓ Synced {} note(s) to server", count);
+                            println!("✓ {}: {}", t!("sync.success"), count);
                         }
                         Err(e) => {
-                            eprintln!("⚠ Sync failed: {}", e);
-                            eprintln!("  Note saved locally. Run 'jottery sync' to retry.");
+                            eprintln!("⚠ {}: {}", t!("sync.failed", error = ""), e);
+                            eprintln!("  {}", t!("sync.request_failed"));
                         }
                     }
                 }
@@ -572,9 +586,9 @@ fn main() -> Result<()> {
             };
 
             if filtered_notes.is_empty() {
-                println!("No notes found.");
+                println!("{}", t!("note.no_notes"));
             } else {
-                println!("Found {} notes:\n", filtered_notes.len());
+                println!("{}\n", t!("note.total", count = filtered_notes.len()));
                 for note in filtered_notes {
                     println!("{}", format_note_preview(&note, false));
                 }
@@ -604,9 +618,9 @@ fn main() -> Result<()> {
                 .collect();
 
             if results.is_empty() {
-                println!("No results found for: {}", query);
+                println!("{}: {}", t!("search.no_results"), query);
             } else {
-                println!("Found {} results for '{}':\n", results.len(), query);
+                println!("{}: '{}'\n", t!("search.results", count = results.len()), query);
                 for note in results {
                     println!("{}", format_note_preview(&note, true));
                 }
@@ -628,13 +642,13 @@ fn main() -> Result<()> {
             // Find note by partial ID match
             let note = notes.into_iter()
                 .find(|n| n.id.starts_with(&id))
-                .context("Note not found")?;
+                .context(t!("error.file_not_found"))?;
 
             println!("ID: {}", note.id);
-            println!("Created: {}", note.created_at);
-            println!("Modified: {}", note.modified_at);
+            println!("{}: {}", t!("editor.created"), note.created_at);
+            println!("{}: {}", t!("editor.modified"), note.modified_at);
             if !note.tags.is_empty() {
-                println!("Tags: {}", note.tags.join(", "));
+                println!("{}: {}", t!("editor.tags"), note.tags.join(", "));
             }
             println!("\n{}", note.content);
 
@@ -647,7 +661,7 @@ fn main() -> Result<()> {
             let password = match password {
                 Some(pwd) => pwd,
                 None => {
-                    print!("Password: ");
+                    print!("{}", t!("password.prompt"));
                     io::stdout().flush()?;
                     rpassword::read_password()?
                 }
@@ -655,34 +669,33 @@ fn main() -> Result<()> {
 
             // Validate password strength
             if password.len() < 12 {
-                anyhow::bail!("Password must be at least 12 characters");
+                anyhow::bail!("{}", t!("password.empty_error"));
             }
 
-            println!("Registering user {} on server {}...", email, server);
+            println!("{} {} {}...", t!("cli.register"), email, server);
 
             // Create auth client and register
             let client = AuthClient::new(server.clone());
 
             // Check server connectivity first
             if !client.health_check()? {
-                anyhow::bail!("Server {} is not reachable", server);
+                anyhow::bail!("{} {}", t!("error.network", error = ""), server);
             }
 
             let response = client.register_user(&email, &password)
-                .context("User registration failed")?;
+                .context(t!("sync.request_failed"))?;
 
-            println!("\n✓ Registration successful!");
+            println!("\n✓ {}", t!("sync.success"));
             // lgtm[rust/clear-text-logging] - user_id is a non-sensitive UUID identifier
             println!("User ID: {}", response.user_id);
             println!("Email: {}", response.email);
-            println!("Status: {}", response.status);
+            println!("{}: {}", t!("status.synced"), response.status);
             println!("\n{}", response.message);
 
             if response.status == "pending_approval" {
-                println!("\nNext steps:");
-                println!("1. Wait for admin approval");
-                println!("2. Once approved, register your device:");
-                println!("   jottery register-device --server {} --email {}", server, email);
+                println!("\n{}:", t!("help.general"));
+                println!("1. {}", t!("sync.account_deactivated"));
+                println!("2. {}", t!("cli.register"));
             }
 
             return Ok(());
@@ -694,7 +707,7 @@ fn main() -> Result<()> {
             let password = match password {
                 Some(pwd) => pwd,
                 None => {
-                    print!("Server password: ");
+                    print!("{}", t!("password.prompt"));
                     io::stdout().flush()?;
                     rpassword::read_password()?
                 }
@@ -704,38 +717,38 @@ fn main() -> Result<()> {
             let key_password = match key_password {
                 Some(pwd) => pwd,
                 None => {
-                    print!("Local database password: ");
+                    print!("{}", t!("password.enter"));
                     io::stdout().flush()?;
                     let pwd1 = rpassword::read_password()?;
-                    print!("Confirm password: ");
+                    print!("{}", t!("password.confirm"));
                     io::stdout().flush()?;
                     let pwd2 = rpassword::read_password()?;
 
                     if pwd1 != pwd2 {
-                        anyhow::bail!("Passwords do not match");
+                        anyhow::bail!("{}", t!("password.mismatch_error"));
                     }
                     pwd1
                 }
             };
 
-            println!("Registering device '{}' for {}...", device_name, email);
+            println!("{} '{}' {}...", t!("cli.register"), device_name, email);
 
             // Create auth client and register device
             let client = AuthClient::new(server.clone());
 
             // Check server connectivity first
             if !client.health_check()? {
-                anyhow::bail!("Server {} is not reachable", server);
+                anyhow::bail!("{} {}", t!("error.network", error = ""), server);
             }
 
             let response = client.register_device(&email, &password, &device_name, "tui")
-                .context("Device registration failed")?;
+                .context(t!("sync.request_failed"))?;
 
-            println!("\n✓ Device registered successfully!");
+            println!("\n✓ {}", t!("sync.success"));
             println!("Client ID: {}", response.client_id);
             // lgtm[rust/clear-text-logging] - user_id is a non-sensitive UUID identifier
             println!("User ID: {}", response.user_id);
-            println!("Device: {}", response.device_name);
+            println!("{}: {}", t!("settings.device_name"), response.device_name);
 
             // Initialize database with encryption password
             let db = Database::open(&db_path, &key_password)
@@ -765,11 +778,11 @@ fn main() -> Result<()> {
 
             sync_repo.update_metadata(&sync_metadata)?;
 
-            println!("\n✓ Sync configured successfully!");
-            println!("\nYou can now:");
-            println!("1. Create notes: jottery note");
-            println!("2. Sync notes: jottery sync");
-            println!("3. Launch TUI: jottery");
+            println!("\n✓ {}", t!("sync.success"));
+            println!("\n{}:", t!("help.general"));
+            println!("1. {}: jottery note", t!("cli.new"));
+            println!("2. {}: jottery sync", t!("cli.sync"));
+            println!("3. {}: jottery", t!("menu.notes"));
 
             return Ok(());
         }
@@ -784,48 +797,48 @@ fn main() -> Result<()> {
             let sync_repo = SyncRepository::new(db.connection());
             match sync_repo.get_metadata()? {
                 Some(metadata) if metadata.sync_enabled => {
-                    println!("Syncing with {}...", metadata.sync_endpoint);
+                    println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
 
                     // Perform sync using helper function
                     match perform_cli_sync(&db, &key, metadata) {
                         Ok(count) => {
-                            println!("✓ Sync complete - {} notes synced", count);
+                            println!("✓ {}: {}", t!("sync.success"), count);
                         }
                         Err(e) => {
-                            eprintln!("✗ Sync failed: {}", e);
+                            eprintln!("✗ {}: {}", t!("sync.failed", error = ""), e);
                             std::process::exit(1);
                         }
                     }
                 }
                 _ => {
-                    println!("Sync is not configured. Use the TUI to set it up.");
+                    println!("{}", t!("sync.no_api_key"));
                 }
             }
 
             return Ok(());
         }
         Some(Commands::Export { output, password }) => {
-            info!("Exporting notes to: {}", output.display());
+            info!("{}: {}", t!("cli.export"), output.display());
             let db = Database::open(&db_path, &password)
-                .context("Failed to open database. Check your password.")?;
+                .context(t!("password.unlock_failed", error = ""))?;
 
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
             let count = export::export_notes(&db, &key, &output)?;
-            println!("✓ Exported {} notes to {}", count, output.display());
+            println!("✓ {}: {} {}", t!("cli.export"), count, output.display());
             return Ok(());
         }
         Some(Commands::Import { input, password }) => {
-            info!("Importing notes from: {}", input.display());
+            info!("{}: {}", t!("cli.import"), input.display());
             let db = Database::open(&db_path, &password)
-                .context("Failed to open database. Check your password.")?;
+                .context(t!("password.unlock_failed", error = ""))?;
 
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
             let count = export::import_notes(&db, &key, &input)?;
-            println!("✓ Imported {} notes from {}", count, input.display());
+            println!("✓ {}: {} {}", t!("cli.import"), count, input.display());
             return Ok(());
         }
         None => {
