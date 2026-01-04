@@ -16,6 +16,7 @@
   import { marked } from 'marked';
   import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
+  import { } from './editor'; // Barrel export for editor components (to be populated)
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
