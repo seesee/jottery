@@ -6,8 +6,8 @@ mod models;
 mod repository;
 mod ui;
 
-// Initialize rust-i18n
-rust_i18n::i18n!("locales");
+// Initialize rust-i18n with fallback to en-GB
+rust_i18n::i18n!("locales", fallback = "en-GB");
 
 use anyhow::{Context, Result};
 use rust_i18n::t;
@@ -31,9 +31,21 @@ use ui::{App, EventHandler, Tui};
 fn detect_locale() {
     if let Ok(lang) = env::var("LANG") {
         // LANG is typically in format like "en_GB.UTF-8" or "fr_FR.UTF-8"
-        let locale = lang.split('.').next().unwrap_or("en-GB");
-        let locale = locale.replace('_', "-"); // Convert en_GB to en-GB
-        rust_i18n::set_locale(&locale);
+        // Extract just the locale part (before the dot)
+        let locale_part = lang.split('.').next().unwrap_or("en-GB");
+
+        // For most languages, use just the language code (fr, es, de, etc.)
+        // For en_GB, keep the full locale code as en-GB
+        let locale = if locale_part.starts_with("en_GB") || locale_part.starts_with("en-GB") {
+            "en-GB"
+        } else {
+            // Extract just the language code (first part before _ or -)
+            locale_part.split('_').next()
+                .or_else(|| locale_part.split('-').next())
+                .unwrap_or("en-GB")
+        };
+
+        rust_i18n::set_locale(locale);
     }
 }
 
