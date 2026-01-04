@@ -203,12 +203,12 @@
   <div class="space-y-2">
     {#each attachments as attachment (attachment.id)}
       <div
-        class="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        class="attachment-item flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <!-- Thumbnail or icon - clickable for preview -->
         <button
           on:click={() => handlePreview(attachment)}
-          class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600 overflow-hidden hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer"
+          class="attachment-thumbnail flex-shrink-0 w-12 h-12 flex items-center justify-center bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600 overflow-hidden hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer"
           title={$_('attachments.clickToPreview')}
         >
           {#if thumbnails.get(attachment.id)}
@@ -239,17 +239,17 @@
         </button>
 
         <!-- Actions -->
-        <div class="flex gap-1">
+        <div class="attachment-actions flex gap-1">
           <button
             on:click={() => handleDownload(attachment)}
-            class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            class="attachment-button px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
             title={$_('attachments.download')}
           >
             ⬇️
           </button>
           <button
             on:click={() => handleCopyMarkdown(attachment)}
-            class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+            class="attachment-button px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
             title={$_('attachments.copyMarkdown')}
           >
             📋
@@ -257,7 +257,7 @@
           {#if !readonly}
             <button
               on:click={() => handleDelete(attachment)}
-              class="px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+              class="attachment-button px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
               title={$_('attachments.delete')}
             >
               🗑️
@@ -374,3 +374,35 @@
     </div>
   </div>
 {/if}
+
+<style>
+  /* Mobile improvements for better touch targets and spacing */
+  @media (max-width: 768px) {
+    .attachment-item {
+      padding: 12px;
+      gap: 12px;
+      min-height: 72px;
+    }
+
+    .attachment-thumbnail {
+      min-width: 48px;
+      min-height: 48px;
+      width: 48px;
+      height: 48px;
+    }
+
+    .attachment-actions {
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .attachment-button {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+</style>
