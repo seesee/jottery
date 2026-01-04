@@ -2,16 +2,30 @@
   import { _ } from 'svelte-i18n';
   import { filteredNotes, notes, searchQuery, selectedNoteId, settings } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
+  import PullToRefresh from './PullToRefresh.svelte';
   import { beforeUpdate, afterUpdate, onMount } from 'svelte';
   import { noteRepository } from '../services/noteRepository';
   import { noteService } from '../services/noteService';
   import { keyManager } from '../services/keyManager';
+  import { syncService } from '../services/syncService';
+  import { isMobileTouchDevice } from '../utils/device';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
 
   export let onNoteSelect: (() => void) | undefined = undefined;
 
   let scrollContainer: HTMLDivElement;
   let savedScrollTop = 0;
+
+  // Pull-to-refresh support
+  let isMobile = false;
+
+  // Handle pull-to-refresh
+  async function handleRefresh() {
+    // Only sync if enabled
+    if ($settings.syncEnabled) {
+      await syncService.syncNow();
+    }
+  }
 
   // Virtual scrolling state
   const ESTIMATED_ITEM_HEIGHT = 80; // Initial estimated height per note item in pixels
@@ -156,6 +170,7 @@
 
   // Initialize on mount
   onMount(() => {
+    isMobile = isMobileTouchDevice();
     updateVisibleRange();
   });
 
@@ -233,42 +248,86 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
-  bind:this={scrollContainer}
-  class="h-full overflow-y-auto bg-white dark:bg-gray-900"
-  on:scroll={handleScroll}
-  on:keydown={handleKeydown}
-  role="list"
-  tabindex="-1"
->
-  {#if $filteredNotes.length === 0}
-    <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
-      <div>
-        {#if $notes.length === 0}
-          <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
-          <p class="text-sm">{$_('note.createFirstNote')}</p>
-        {:else if $searchQuery.trim()}
-          <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
-          <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
-        {:else}
-          <p class="text-lg mb-2">{$_('note.noNotes')}</p>
-          <p class="text-sm">{$_('note.somethingWentWrong')}</p>
-        {/if}
-      </div>
-    </div>
-  {:else}
-    <!-- Virtual scrolling container -->
-    <div style="height: {totalHeight}px; position: relative;">
-      <!-- Offset for items before viewport -->
-      <div style="height: {offsetY}px;"></div>
-
-      <!-- Render only visible items -->
-      {#each visibleNotes as note, i (note.id)}
-        <div bind:this={itemElements[i]}>
-          <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+{#if isMobile && $settings.syncEnabled}
+  <PullToRefresh onRefresh={handleRefresh} enabled={$settings.syncEnabled}>
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div
+      bind:this={scrollContainer}
+      class="h-full overflow-y-auto bg-white dark:bg-gray-900"
+      on:scroll={handleScroll}
+      on:keydown={handleKeydown}
+      role="list"
+      tabindex="-1"
+    >
+      {#if $filteredNotes.length === 0}
+        <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
+          <div>
+            {#if $notes.length === 0}
+              <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
+              <p class="text-sm">{$_('note.createFirstNote')}</p>
+            {:else if $searchQuery.trim()}
+              <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
+              <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
+            {:else}
+              <p class="text-lg mb-2">{$_('note.noNotes')}</p>
+              <p class="text-sm">{$_('note.somethingWentWrong')}</p>
+            {/if}
+          </div>
         </div>
-      {/each}
+      {:else}
+        <!-- Virtual scrolling container -->
+        <div style="height: {totalHeight}px; position: relative;">
+          <!-- Offset for items before viewport -->
+          <div style="height: {offsetY}px;"></div>
+
+          <!-- Render only visible items -->
+          {#each visibleNotes as note, i (note.id)}
+            <div bind:this={itemElements[i]}>
+              <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
-  {/if}
-</div>
+  </PullToRefresh>
+{:else}
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    bind:this={scrollContainer}
+    class="h-full overflow-y-auto bg-white dark:bg-gray-900"
+    on:scroll={handleScroll}
+    on:keydown={handleKeydown}
+    role="list"
+    tabindex="-1"
+  >
+    {#if $filteredNotes.length === 0}
+      <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
+        <div>
+          {#if $notes.length === 0}
+            <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
+            <p class="text-sm">{$_('note.createFirstNote')}</p>
+          {:else if $searchQuery.trim()}
+            <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
+            <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
+          {:else}
+            <p class="text-lg mb-2">{$_('note.noNotes')}</p>
+            <p class="text-sm">{$_('note.somethingWentWrong')}</p>
+          {/if}
+        </div>
+      </div>
+    {:else}
+      <!-- Virtual scrolling container -->
+      <div style="height: {totalHeight}px; position: relative;">
+        <!-- Offset for items before viewport -->
+        <div style="height: {offsetY}px;"></div>
+
+        <!-- Render only visible items -->
+        {#each visibleNotes as note, i (note.id)}
+          <div bind:this={itemElements[i]}>
+            <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
+{/if}
