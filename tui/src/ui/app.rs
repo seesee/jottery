@@ -1610,7 +1610,7 @@ impl App {
                         // Cancel password verification
                         self.setting_input.clear();
                         self.input_mode = InputMode::Normal;
-                        self.sync_status = Some("Password storage not enabled.".to_string());
+                        self.sync_status = Some(t!("password.remember_disabled").to_string());
                         self.sync_status_set_at = Some(Instant::now());
                     }
                     KeyCode::Enter => {
@@ -1629,16 +1629,16 @@ impl App {
                                     if let Err(e) = self.store_password_for_autounlock(&password_to_store) {
                                         self.error = Some(format!("Failed to store password: {}", e));
                                     } else {
-                                        self.sync_status = Some("Password stored for auto-unlock. WARNING: Accessible to anyone with device access!".to_string());
+                                        self.sync_status = Some(t!("password.remember_enabled").to_string());
                                         self.sync_status_set_at = Some(Instant::now());
                                     }
                                 }
                                 Ok(false) => {
-                                    self.error = Some("Incorrect password. Try again.".to_string());
+                                    self.error = Some(t!("password.incorrect").to_string());
                                     self.setting_input.clear();
                                 }
                                 Err(e) => {
-                                    self.error = Some(format!("Password verification failed: {}", e));
+                                    self.error = Some(t!("password.verification_failed", error = e.to_string()).to_string());
                                     self.setting_input.clear();
                                     self.input_mode = InputMode::Normal;
                                 }
@@ -1742,7 +1742,7 @@ impl App {
             if let Err(e) = self.store_password_for_autounlock(&password_to_store) {
                 self.error = Some(format!("Failed to store password: {}", e));
             } else {
-                self.sync_status = Some("Password stored for auto-unlock. WARNING: Accessible to anyone with device access!".to_string());
+                self.sync_status = Some(t!("password.remember_enabled").to_string());
                 self.sync_status_set_at = Some(Instant::now());
             }
         }
@@ -1845,7 +1845,7 @@ impl App {
                 settings_repo.update(&self.settings)?;
             }
 
-            self.sync_status = Some("Password storage disabled. You will be prompted on next start.".to_string());
+            self.sync_status = Some(t!("password.remember_disabled").to_string());
             self.sync_status_set_at = Some(Instant::now());
         } else {
             // Enable: this should be done through a confirmation flow
@@ -2075,21 +2075,21 @@ impl App {
         // Check if sync is configured
         if !self.settings.sync_enabled {
             self.debug_log("trigger_sync - Sync not enabled, returning");
-            self.sync_status = Some("Sync not enabled. Press 's' to configure in settings.".to_string());
+            self.sync_status = Some(t!("sync.not_enabled").to_string());
             self.sync_status_set_at = Some(Instant::now());
             return;
         }
 
         if self.settings.sync_endpoint.is_none() {
             self.debug_log("trigger_sync - Sync endpoint not configured, returning");
-            self.sync_status = Some("Sync endpoint not configured. Configure in database settings table.".to_string());
+            self.sync_status = Some(t!("sync.endpoint_not_configured").to_string());
             self.sync_status_set_at = Some(Instant::now());
             return;
         }
 
         // Perform sync
         self.debug_log("trigger_sync - Starting sync");
-        self.sync_status = Some("Syncing...".to_string());
+        self.sync_status = Some(t!("status.syncing").to_string());
         self.sync_status_set_at = Some(Instant::now());
 
         match self.perform_sync(false) {
@@ -2098,7 +2098,8 @@ impl App {
                 if let Err(e) = self.load_notes() {
                     self.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
                 }
-                self.sync_status = Some(format!("Sync complete! {} {} synced", result, if result == 1 { "note" } else { "notes" }));
+                let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
+                self.sync_status = Some(t!("sync.complete", count = result, unit = unit).to_string());
                 self.sync_status_set_at = Some(Instant::now());
             }
             Err(e) => {
@@ -2116,21 +2117,21 @@ impl App {
         // Check if sync is configured
         if !self.settings.sync_enabled {
             self.debug_log("force_full_sync - Sync not enabled, returning");
-            self.sync_status = Some("Sync not enabled. Press 's' to configure in settings.".to_string());
+            self.sync_status = Some(t!("sync.not_enabled").to_string());
             self.sync_status_set_at = Some(Instant::now());
             return;
         }
 
         if self.settings.sync_endpoint.is_none() {
             self.debug_log("force_full_sync - Sync endpoint not configured, returning");
-            self.sync_status = Some("Sync endpoint not configured. Configure in database settings table.".to_string());
+            self.sync_status = Some(t!("sync.endpoint_not_configured").to_string());
             self.sync_status_set_at = Some(Instant::now());
             return;
         }
 
         // Perform force sync
         self.debug_log("force_full_sync - Starting force full sync");
-        self.sync_status = Some("Force syncing all notes...".to_string());
+        self.sync_status = Some(t!("sync.force_syncing").to_string());
         self.sync_status_set_at = Some(Instant::now());
 
         match self.perform_sync(true) {
@@ -2139,7 +2140,8 @@ impl App {
                 if let Err(e) = self.load_notes() {
                     self.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
                 }
-                self.sync_status = Some(format!("Force sync complete! {} {} synced from server", result, if result == 1 { "note" } else { "notes" }));
+                let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
+                self.sync_status = Some(t!("sync.force_complete", count = result, unit = unit).to_string());
                 self.sync_status_set_at = Some(Instant::now());
             }
             Err(e) => {
@@ -2796,14 +2798,14 @@ impl App {
                     if let Err(e) = self.forget_stored_password() {
                         self.error = Some(format!("Failed to forget password: {}", e));
                     } else {
-                        self.sync_status = Some("Password storage disabled. You will be prompted on next start.".to_string());
+                        self.sync_status = Some(t!("password.remember_disabled").to_string());
                         self.sync_status_set_at = Some(Instant::now());
                     }
                 } else {
                     // Currently OFF -> prompt for password to enable
                     self.setting_input.clear();
                     self.input_mode = InputMode::PasswordVerify;
-                    self.sync_status = Some("Enter your password to enable auto-unlock:".to_string());
+                    self.sync_status = Some(t!("password.enter_to_enable").to_string());
                     self.sync_status_set_at = Some(Instant::now());
                 }
             }
@@ -2857,14 +2859,14 @@ impl App {
                     if let Err(e) = self.forget_stored_password() {
                         self.error = Some(format!("Failed to forget password: {}", e));
                     } else {
-                        self.sync_status = Some("Password storage disabled. You will be prompted on next start.".to_string());
+                        self.sync_status = Some(t!("password.remember_disabled").to_string());
                         self.sync_status_set_at = Some(Instant::now());
                     }
                 } else {
                     // Currently OFF -> prompt for password to enable
                     self.setting_input.clear();
                     self.input_mode = InputMode::PasswordVerify;
-                    self.sync_status = Some("Enter your password to enable auto-unlock:".to_string());
+                    self.sync_status = Some(t!("password.enter_to_enable").to_string());
                     self.sync_status_set_at = Some(Instant::now());
                 }
             }
@@ -3046,7 +3048,7 @@ impl App {
             self.state = AppState::Locked;
 
             // Show message about what happened
-            self.error = Some("Salt synchronized! Please re-enter your password to unlock with the new encryption salt.".to_string());
+            self.error = Some(t!("sync.salt_sync").to_string());
         }
 
         Ok(())
@@ -3187,7 +3189,7 @@ impl App {
                 if let Err(e) = self.process_credentials_input(&input) {
                     self.error = Some(format!("Failed to paste credentials: {}", e));
                 } else {
-                    self.sync_status = Some("Sync credentials configured successfully!".to_string());
+                    self.sync_status = Some(t!("sync.paste_success").to_string());
                 }
             }
             KeyCode::Char(c) => {
@@ -3272,7 +3274,7 @@ impl App {
             self.state = AppState::Locked;
 
             // Show message about what happened
-            self.error = Some("Salt synchronized! Please re-enter your password to unlock with the new encryption salt.".to_string());
+            self.error = Some(t!("sync.salt_sync").to_string());
         }
 
         Ok(())
@@ -3834,9 +3836,9 @@ impl App {
         let size = frame.area();
 
         let title = if self.is_new_database {
-            format!("Jottery TUI v{} - Create Password", env!("CARGO_PKG_VERSION"))
+            format!("Jottery TUI v{} - {}", env!("CARGO_PKG_VERSION"), t!("password.create_title"))
         } else {
-            format!("Jottery TUI v{} - Unlock", env!("CARGO_PKG_VERSION"))
+            format!("Jottery TUI v{} - {}", env!("CARGO_PKG_VERSION"), t!("password.unlock_title"))
         };
 
         let block = Block::default()
@@ -3881,7 +3883,7 @@ impl App {
         let password_text = "*".repeat(self.password_input.len());
         let password = Paragraph::new(password_text)
             .style(password_style)
-            .block(Block::default().title("Password").borders(Borders::ALL));
+            .block(Block::default().title(t!("password.enter")).borders(Borders::ALL));
         frame.render_widget(password, chunks[0]);
 
         if self.is_new_database {
@@ -3895,11 +3897,11 @@ impl App {
             let confirm_text = "*".repeat(self.password_confirm.len());
             let confirm = Paragraph::new(confirm_text)
                 .style(confirm_style)
-                .block(Block::default().title("Confirm Password").borders(Borders::ALL));
+                .block(Block::default().title(t!("password.confirm")).borders(Borders::ALL));
             frame.render_widget(confirm, chunks[1]);
 
             // Help text
-            let help = Paragraph::new("Tab: switch fields | Enter: create")
+            let help = Paragraph::new(t!("help.tab_switch"))
                 .style(Style::default().fg(self.color_scheme.muted))
                 .alignment(Alignment::Center);
             frame.render_widget(help, chunks[2]);
@@ -3921,7 +3923,7 @@ impl App {
             if let Some(err) = &self.error {
                 let error = Paragraph::new(err.clone())
                     .style(Style::default().fg(self.color_scheme.error))
-                    .block(Block::default().title("Error").borders(Borders::ALL));
+                    .block(Block::default().title(t!("error.generic")).borders(Borders::ALL));
                 frame.render_widget(error, chunks[3]);
             }
         } else {
@@ -3933,9 +3935,9 @@ impl App {
 
             // Remember password checkbox
             let checkbox_text = if self.remember_password_checkbox {
-                "[X] Remember password (Ctrl+R to toggle)"
+                format!("[X] {}", t!("password.remember_toggle"))
             } else {
-                "[ ] Remember password (Ctrl+R to toggle)"
+                format!("[ ] {}", t!("password.remember_toggle"))
             };
             let checkbox = Paragraph::new(checkbox_text)
                 .style(if self.remember_password_checkbox {
@@ -3948,9 +3950,9 @@ impl App {
 
             // Help text with security warning
             let help_text = if self.remember_password_checkbox {
-                "WARNING: Password will be accessible to anyone with physical access to this device!"
+                t!("password.remember_warning")
             } else {
-                "Enter: unlock | Ctrl+Q: quit"
+                t!("help.enter_unlock")
             };
             let help = Paragraph::new(help_text)
                 .style(if self.remember_password_checkbox {
@@ -3965,7 +3967,7 @@ impl App {
             if let Some(err) = &self.error {
                 let error = Paragraph::new(err.clone())
                     .style(Style::default().fg(self.color_scheme.error))
-                    .block(Block::default().title("Error").borders(Borders::ALL));
+                    .block(Block::default().title(t!("error.generic")).borders(Borders::ALL));
                 frame.render_widget(error, chunks[3]);
             }
         }
@@ -4731,49 +4733,49 @@ impl App {
 
         let settings_text = vec![
             Line::from(vec![
-                Span::styled("Application Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("settings.title"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
-            field_line(0, "Language:              ".to_string(), self.settings.language.clone()),
-            field_line(1, "Color Scheme:          ".to_string(), format!("{} (press Enter to cycle)", self.settings.theme)),
-            field_line(2, "Sort Order:            ".to_string(), format!("{} (press Enter to cycle)", self.settings.sort_order)),
-            field_line(3, "Auto-lock Timeout:     ".to_string(), format!("{} minutes", self.settings.auto_lock_timeout)),
+            field_line(0, format!("{}:              ", t!("settings.language")), self.settings.language.clone()),
+            field_line(1, format!("{}:          ", t!("settings.color_scheme")), format!("{} ({})", self.settings.theme, t!("settings.press_enter_cycle"))),
+            field_line(2, format!("{}:            ", t!("menu.search")), format!("{} ({})", self.settings.sort_order, t!("settings.press_enter_cycle"))),
+            field_line(3, format!("{}:     ", t!("settings.auto_lock")), format!("{} {}", self.settings.auto_lock_timeout, t!("settings.minutes"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Sync Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("settings.sync"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
-            field_line(4, "Sync Enabled:          ".to_string(), format!("{} (press Enter to toggle)", if self.settings.sync_enabled { "Yes" } else { "No" })),
-            field_line(5, "Sync Endpoint:         ".to_string(), self.settings.sync_endpoint.clone().unwrap_or_else(|| "Not configured".to_string())),
-            field_line(6, "Auto-sync Interval:    ".to_string(), format!("{} minutes (0 = disabled)", self.settings.auto_sync_interval_minutes)),
+            field_line(4, format!("{}:          ", t!("settings.sync_enabled")), format!("{} ({})", if self.settings.sync_enabled { t!("common.yes") } else { t!("common.no") }, t!("settings.press_enter_toggle"))),
+            field_line(5, format!("{}:         ", t!("settings.sync_endpoint")), self.settings.sync_endpoint.clone().unwrap_or_else(|| t!("sync.no_api_key").to_string())),
+            field_line(6, format!("{}:    ", t!("settings.auto_sync_interval")), format!("{} {} (0 = {})", self.settings.auto_sync_interval_minutes, t!("settings.minutes"), t!("settings.disabled"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Security Settings", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.general"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
             Line::from(""),
-            field_line(7, "Remember Password:     ".to_string(), if self.settings.remember_password {
-                "Yes (press Enter to disable)".to_string()
+            field_line(7, format!("{}:     ", t!("password.remember")), if self.settings.remember_password {
+                format!("{} ({})", t!("common.yes"), t!("settings.press_enter_toggle"))
             } else {
-                "No (press Enter to enable)".to_string()
+                format!("{} ({})", t!("common.no"), t!("settings.press_enter_toggle"))
             }),
             Line::from(""),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Instructions: ", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{}: ", t!("settings.instructions")), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  • Use ↑/↓ or j/k to navigate between fields"),
-            Line::from("  • Press Enter, i, or Space to edit a field"),
-            Line::from("  • For text fields: type and press Enter to save, Esc to cancel"),
-            Line::from("  • For toggles and cycles: press Enter to change value immediately"),
-            Line::from("  • Remember Password: Enter prompts for password (if enabling) or disables (if enabled)"),
-            Line::from("  • Press 'y' to trigger manual sync"),
-            Line::from("  • Press 'Y' (Shift+y) to force full resync (pull all notes from server)"),
+            Line::from(format!("  • {}", t!("settings.instructions_navigation"))),
+            Line::from(format!("  • {}", t!("settings.instructions_edit"))),
+            Line::from(format!("  • {}", t!("settings.instructions_text"))),
+            Line::from(format!("  • {}", t!("settings.instructions_toggle"))),
+            Line::from(format!("  • {}", t!("settings.instructions_remember"))),
+            Line::from(format!("  • {}", t!("settings.instructions_sync"))),
+            Line::from(format!("  • {}", t!("settings.instructions_force_sync"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("Sync Credentials (for multi-device setup): ", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{}: ", t!("settings.sync")), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  • Press 'p' to paste sync credentials from another device"),
-            Line::from("  • Press 'c' to copy sync credentials to share with another device"),
+            Line::from(format!("  • {}", t!("settings.instructions_paste"))),
+            Line::from(format!("  • {}", t!("settings.instructions_copy"))),
         ];
 
         // Add status and error messages if present
@@ -4781,14 +4783,14 @@ impl App {
         if let Some(status) = &self.sync_status {
             all_lines.push(Line::from(""));
             all_lines.push(Line::from(vec![
-                Span::styled("Status: ", Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{}: ", t!("status.synced")), Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)),
                 Span::styled(status.clone(), Style::default().fg(self.color_scheme.success)),
             ]));
         }
         if let Some(err) = &self.error {
             all_lines.push(Line::from(""));
             all_lines.push(Line::from(vec![
-                Span::styled("Error: ", Style::default().fg(self.color_scheme.error).add_modifier(Modifier::BOLD)),
+                Span::styled(format!("{}: ", t!("error.generic")), Style::default().fg(self.color_scheme.error).add_modifier(Modifier::BOLD)),
                 Span::styled(err.clone(), Style::default().fg(self.color_scheme.error)),
             ]));
         }
@@ -4822,86 +4824,86 @@ impl App {
         let size = frame.area();
 
         let block = Block::default()
-            .title("Keyboard Shortcuts - Press ? or q to close")
+            .title(format!("{} - {}", t!("help.title"), t!("help.subtitle")))
             .borders(Borders::ALL)
             .style(Style::default().fg(self.color_scheme.accent));
 
         let help_text = vec![
             Line::from(vec![
-                Span::styled("UNLOCK SCREEN", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.unlock_screen"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  Type                  Enter password"),
-            Line::from("  Enter                 Unlock database"),
-            Line::from("  Tab                   Switch password/confirm (new DB)"),
-            Line::from("  Backspace             Delete character"),
-            Line::from("  Ctrl+q / Esc          Quit application"),
+            Line::from(format!("  {}", t!("help.type_password"))),
+            Line::from(format!("  {}", t!("help.enter_to_unlock"))),
+            Line::from(format!("  {}", t!("help.tab_to_switch"))),
+            Line::from(format!("  {}", t!("help.backspace"))),
+            Line::from(format!("  {}", t!("help.ctrl_q_esc"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE LIST", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.note_list"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  /                     Enter search mode"),
-            Line::from("  y                     Sync notes (if configured)"),
-            Line::from("  s                     Show settings"),
-            Line::from("  n                     Create new note"),
-            Line::from("  i / Enter             Open note in $EDITOR"),
-            Line::from("  d                     Delete selected note"),
-            Line::from("  j / ↓                 Move down"),
-            Line::from("  k / ↑                 Move up"),
-            Line::from("  ?                     Show this help"),
-            Line::from("  Ctrl+q                Quit application"),
+            Line::from(format!("  {}", t!("help.slash_search"))),
+            Line::from(format!("  {}", t!("help.y_sync"))),
+            Line::from(format!("  {}", t!("help.s_settings"))),
+            Line::from(format!("  {}", t!("help.n_new"))),
+            Line::from(format!("  {}", t!("help.i_enter_open"))),
+            Line::from(format!("  {}", t!("help.d_delete"))),
+            Line::from(format!("  {}", t!("help.j_down"))),
+            Line::from(format!("  {}", t!("help.k_up"))),
+            Line::from(format!("  {}", t!("help.question_help"))),
+            Line::from(format!("  {}", t!("help.ctrl_q_quit"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("SEARCH MODE", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.search_mode"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  Type                  Enter search query"),
-            Line::from("  #tag                  Search by tag"),
-            Line::from("  -word                 Exclude word (negation)"),
-            Line::from("  word1 word2           Match all words (AND)"),
-            Line::from("  Enter                 Open note in $EDITOR"),
-            Line::from("  Esc                   Exit search mode"),
-            Line::from("  ↑ / ↓                 Navigate results"),
+            Line::from(format!("  {}", t!("help.type_search"))),
+            Line::from(format!("  {}", t!("help.search_tag"))),
+            Line::from(format!("  {}", t!("help.search_exclude"))),
+            Line::from(format!("  {}", t!("help.search_and"))),
+            Line::from(format!("  {}", t!("help.enter_open_editor"))),
+            Line::from(format!("  {}", t!("help.esc_exit_search"))),
+            Line::from(format!("  {}", t!("help.arrows_navigate"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE PREVIEW - VIEW MODE", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.note_preview_view"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  Enter / e             Edit with external $EDITOR"),
-            Line::from("  t                     Enter tag mode"),
-            Line::from("  ?                     Show this help"),
-            Line::from("  q / Esc               Save and return to list"),
+            Line::from(format!("  {}", t!("help.enter_e_edit"))),
+            Line::from(format!("  {}", t!("help.t_tag_mode"))),
+            Line::from(format!("  {}", t!("help.question_help"))),
+            Line::from(format!("  {}", t!("help.q_esc_save"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("NOTE PREVIEW - TAG MODE", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.note_preview_tag"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  Type                  Enter tag name"),
-            Line::from("  Enter                 Add tag"),
-            Line::from("  Backspace (empty)     Remove last tag"),
-            Line::from("  Backspace             Delete character from input"),
-            Line::from("  Esc                   Exit to normal mode"),
+            Line::from(format!("  {}", t!("help.type_tag"))),
+            Line::from(format!("  {}", t!("help.enter_add_tag"))),
+            Line::from(format!("  {}", t!("help.backspace_remove"))),
+            Line::from(format!("  {}", t!("help.backspace_delete"))),
+            Line::from(format!("  {}", t!("help.esc_normal"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("SETTINGS", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.settings"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  j/k or ↑/↓            Navigate between fields"),
-            Line::from("  Enter / i / Space     Edit selected field"),
-            Line::from("  Enter                 Save text/number fields, cycle/toggle other fields"),
-            Line::from("  Esc                   Cancel editing (text/number fields)"),
-            Line::from("  p                     Paste sync credentials (shows text input)"),
-            Line::from("  c                     Copy sync credentials (shows text to copy)"),
-            Line::from("  s / q                 Close settings panel"),
+            Line::from(format!("  {}", t!("help.jk_navigate"))),
+            Line::from(format!("  {}", t!("help.enter_edit"))),
+            Line::from(format!("  {}", t!("help.enter_save"))),
+            Line::from(format!("  {}", t!("help.esc_cancel"))),
+            Line::from(format!("  {}", t!("help.p_paste"))),
+            Line::from(format!("  {}", t!("help.c_copy"))),
+            Line::from(format!("  {}", t!("help.s_q_close"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("ATTACHMENTS", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.attachments"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  A                     Add attachment (enter file path)"),
-            Line::from("  a + number            View attachment (a1, a2, ...)"),
-            Line::from("  Shift+j / Shift+k     Navigate attachments"),
-            Line::from("  X                     Remove selected attachment"),
-            Line::from("  Note: Images use chafa if available, otherwise system default app"),
+            Line::from(format!("  {}", t!("help.A_add_attachment"))),
+            Line::from(format!("  {}", t!("help.a_view_attachment"))),
+            Line::from(format!("  {}", t!("help.shift_jk_attachment"))),
+            Line::from(format!("  {}", t!("help.X_remove_attachment"))),
+            Line::from(format!("  {}", t!("help.note_images"))),
             Line::from(""),
             Line::from(vec![
-                Span::styled("GLOBAL", Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
+                Span::styled(t!("help.global"), Style::default().fg(self.color_scheme.title).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  ?                     Show this help screen"),
+            Line::from(format!("  {}", t!("help.question_global"))),
         ];
 
         let paragraph = Paragraph::new(help_text)
@@ -4936,7 +4938,7 @@ impl App {
 
         // Create border block
         let block = Block::default()
-            .title(" Sync Credentials (Copy This Text) ")
+            .title(format!(" {} ", t!("sync.credentials_title")))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(self.color_scheme.title));
 
@@ -4953,7 +4955,7 @@ impl App {
         let text = vec![
             Line::from(""),
             Line::from(Span::styled(
-                "Copy the text below and paste it into another Jottery client:",
+                t!("sync.credentials_instruction"),
                 Style::default().fg(self.color_scheme.accent),
             )),
             Line::from(""),
@@ -4967,14 +4969,9 @@ impl App {
         frame.render_widget(paragraph, chunks[0]);
 
         // Render help text
-        let help = Paragraph::new(Line::from(vec![
-            Span::styled("Press ", Style::default().fg(self.color_scheme.muted)),
-            Span::styled("Esc", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
-            Span::styled(" or ", Style::default().fg(self.color_scheme.muted)),
-            Span::styled("Enter", Style::default().fg(self.color_scheme.accent).add_modifier(Modifier::BOLD)),
-            Span::styled(" to close", Style::default().fg(self.color_scheme.muted)),
-        ]))
-        .alignment(Alignment::Center);
+        let help = Paragraph::new(t!("help.press_esc_or_enter"))
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(self.color_scheme.muted));
 
         frame.render_widget(help, chunks[1]);
     }
@@ -5004,7 +5001,7 @@ impl App {
 
         // Create border block
         let block = Block::default()
-            .title(" Paste Sync Credentials ")
+            .title(format!(" {} ", t!("sync.paste_title")))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(self.color_scheme.title));
 
@@ -5023,7 +5020,7 @@ impl App {
 
         // Render instruction text
         let instruction = Paragraph::new(Line::from(Span::styled(
-            "Paste the base64 credentials text from another Jottery client:",
+            t!("sync.paste_instruction"),
             Style::default().fg(self.color_scheme.accent),
         )));
         frame.render_widget(instruction, chunks[0]);
@@ -5039,14 +5036,9 @@ impl App {
         frame.render_widget(input, chunks[1]);
 
         // Render help text
-        let help = Paragraph::new(Line::from(vec![
-            Span::styled("Press ", Style::default().fg(self.color_scheme.muted)),
-            Span::styled("Enter", Style::default().fg(self.color_scheme.success).add_modifier(Modifier::BOLD)),
-            Span::styled(" to paste | ", Style::default().fg(self.color_scheme.muted)),
-            Span::styled("Esc", Style::default().fg(self.color_scheme.error).add_modifier(Modifier::BOLD)),
-            Span::styled(" to cancel", Style::default().fg(self.color_scheme.muted)),
-        ]))
-        .alignment(Alignment::Center);
+        let help = Paragraph::new(t!("help.press_enter_paste"))
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(self.color_scheme.muted));
 
         frame.render_widget(help, chunks[2]);
     }
