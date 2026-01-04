@@ -330,7 +330,7 @@
           <!-- Mobile: Single view (list OR editor) -->
           <div class="w-full">
             {#if mobileView === 'list'}
-              <NoteList onNoteSelect={handleNoteSelect} />
+              <NoteList onNoteSelect={handleNoteSelect} {loadingNotes} {loadingProgress} />
             {:else}
               <EditorPane onBackToList={handleBackToList} forceMobileLayout={true} />
             {/if}
@@ -340,7 +340,7 @@
           <div class="flex w-full">
             <!-- Note List Sidebar -->
             <div class="w-80 border-r border-gray-200 dark:border-gray-700">
-              <NoteList />
+              <NoteList {loadingNotes} {loadingProgress} />
             </div>
 
             <!-- Editor -->

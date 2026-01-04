@@ -12,6 +12,8 @@
   import type { DecryptedNote, KeyboardShortcut } from '../types';
 
   export let onNoteSelect: (() => void) | undefined = undefined;
+  export let loadingNotes: boolean = false;
+  export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
 
   let scrollContainer: HTMLDivElement;
   let savedScrollTop = 0;
@@ -262,7 +264,16 @@
       {#if $filteredNotes.length === 0}
         <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
           <div>
-            {#if $notes.length === 0}
+            {#if loadingNotes}
+              <!-- Loading state with progress -->
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p class="text-lg mb-2">{$_('common.loading')}</p>
+              {#if loadingProgress.total > 0}
+                <p class="text-sm">
+                  {$_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } })}
+                </p>
+              {/if}
+            {:else if $notes.length === 0}
               <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
               <p class="text-sm">{$_('note.createFirstNote')}</p>
             {:else if $searchQuery.trim()}
@@ -303,7 +314,16 @@
     {#if $filteredNotes.length === 0}
       <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
         <div>
-          {#if $notes.length === 0}
+          {#if loadingNotes}
+            <!-- Loading state with progress -->
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-lg mb-2">{$_('common.loading')}</p>
+            {#if loadingProgress.total > 0}
+              <p class="text-sm">
+                {$_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } })}
+              </p>
+            {/if}
+          {:else if $notes.length === 0}
             <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
             <p class="text-sm">{$_('note.createFirstNote')}</p>
           {:else if $searchQuery.trim()}
