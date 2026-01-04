@@ -24,21 +24,21 @@ register('tr', () => import('../../locales/tr.json'));
 
 // Available locales (alphabetical by English name, except English variants first)
 export const AVAILABLE_LOCALES = [
-  { code: 'en-GB', name: 'English (UK)' },
-  { code: 'en-US', name: 'English (US)' },
-  { code: 'zh', name: '简体中文' },
-  { code: 'nl', name: 'Nederlands' },
-  { code: 'fr', name: 'Français' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'el', name: 'Ελληνικά' },
-  { code: 'it', name: 'Italiano' },
-  { code: 'ja', name: '日本語' },
-  { code: 'ko', name: '한국어' },
-  { code: 'pl', name: 'Polski' },
-  { code: 'pt', name: 'Português' },
-  { code: 'ru', name: 'Русский' },
-  { code: 'es', name: 'Español' },
-  { code: 'tr', name: 'Türkçe' },
+  { code: 'en-GB', name: '🇬🇧 English (UK)' },
+  { code: 'en-US', name: '🇺🇸 English (US)' },
+  { code: 'zh', name: '🇨🇳 简体中文' },
+  { code: 'nl', name: '🇳🇱 Nederlands' },
+  { code: 'fr', name: '🇫🇷 Français' },
+  { code: 'de', name: '🇩🇪 Deutsch' },
+  { code: 'el', name: '🇬🇷 Ελληνικά' },
+  { code: 'it', name: '🇮🇹 Italiano' },
+  { code: 'ja', name: '🇯🇵 日本語' },
+  { code: 'ko', name: '🇰🇷 한국어' },
+  { code: 'pl', name: '🇵🇱 Polski' },
+  { code: 'pt', name: '🇵🇹 Português' },
+  { code: 'ru', name: '🇷🇺 Русский' },
+  { code: 'es', name: '🇪🇸 Español' },
+  { code: 'tr', name: '🇹🇷 Türkçe' },
 ];
 
 // Default locale
