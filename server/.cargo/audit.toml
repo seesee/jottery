@@ -1,0 +1,10 @@
+# Cargo audit configuration
+# Ignoring known advisories that don't affect our usage
+
+[advisories]
+# RSA Marvin Attack (RUSTSEC-2023-0071)
+# This vulnerability is in sqlx-mysql's authentication code.
+# We only use SQLite, never MySQL, so this cannot be exploited.
+# The dependency is pulled in by sqlx's macros feature.
+# Accepted: 2026-01-04
+ignore = ["RUSTSEC-2023-0071"]
