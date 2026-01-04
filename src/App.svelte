@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isDraftMode, enterDraftMode } from './lib/stores/appStore';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService } from './lib/services';
   import { startAutoLock, stopAutoLock, updateAutoLockTimeout } from './lib/services/autoLockService';
@@ -23,12 +23,9 @@
   let showShortcutsHelp = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
 
-  // Track window width for responsive layout
-  let windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
-
   // Determine which layout to use based on layoutMode setting
   $: useMobileLayout = $settings.layoutMode === 'mobile' ||
-    ($settings.layoutMode === 'auto' && windowWidth <= 767);
+    ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
 
   let creatingNote = false;
 
@@ -111,11 +108,6 @@
     }
   }
 
-  // Resize handler for responsive layout
-  function handleResize() {
-    windowWidth = window.innerWidth;
-  }
-
   onMount(async () => {
     try {
       // Initialize database
@@ -139,17 +131,10 @@
       // Start version checking (only in production)
       appUpdateService.startChecking();
 
-      // Listen for window resize events to update layout
-      window.addEventListener('resize', handleResize);
-
       initialized = true;
     } catch (error) {
       console.error('Failed to initialize app:', error);
     }
-  });
-
-  onDestroy(() => {
-    window.removeEventListener('resize', handleResize);
   });
 
   // Watch for theme changes
@@ -333,7 +318,6 @@
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
-        onBackToList={useMobileLayout && mobileView === 'editor' ? handleBackToList : undefined}
         forceMobileLayout={useMobileLayout}
         disableNewNote={creatingNote}
         {loadingNotes}
@@ -347,7 +331,7 @@
             {#if mobileView === 'list'}
               <NoteList onNoteSelect={handleNoteSelect} />
             {:else}
-              <EditorPane onBackToList={handleBackToList} forceMobileLayout={true} />
+              <EditorPane onBackToList={handleBackToList} />
             {/if}
           </div>
         {:else}

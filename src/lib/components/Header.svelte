@@ -9,7 +9,6 @@
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
-  export let onBackToList: (() => void) | undefined = undefined; // Mobile: back to list handler
   export let forceMobileLayout: boolean = false;
   export let disableNewNote: boolean = false;
   export let loadingNotes: boolean = false;
@@ -117,32 +116,17 @@
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
   <div class="flex items-center gap-2 {forceMobileLayout ? 'gap-2' : 'tablet:gap-4'}">
     {#if forceMobileLayout}
-      <!-- Mobile: Back Button or Hamburger Menu -->
-      {#if onBackToList}
-        <!-- Show back button when viewing a note -->
-        <button
-          on:click={onBackToList}
-          class="min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={$_('common.back')}
-          aria-label={$_('common.back')}
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      {:else}
-        <!-- Show hamburger menu when viewing list -->
-        <button
-          on:click={toggleMobileMenu}
-          class="min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={$_('header.menu')}
-          aria-label={$_('header.menu')}
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      {/if}
+      <!-- Mobile: Hamburger Menu Button -->
+      <button
+        on:click={toggleMobileMenu}
+        class="min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+        title={$_('header.menu')}
+        aria-label={$_('header.menu')}
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
     {:else}
       <button
         on:click={toggleMobileMenu}
