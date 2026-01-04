@@ -1,4 +1,5 @@
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{delete, get, post},
     Router,
 };
@@ -123,6 +124,7 @@ async fn main() {
         // Add state
         .with_state(app_state)
         // Add middleware
+        .layer(DefaultBodyLimit::max(config.max_payload_size))
         .layer(CompressionLayer::new())
         .layer(
             CorsLayer::new()

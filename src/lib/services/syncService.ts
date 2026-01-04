@@ -25,6 +25,7 @@ import { cryptoService, encryptJSON, decryptJSON } from './crypto';
 import { noteService } from './noteService';
 import { searchService } from './searchService';
 import { notes, settings } from '../stores/appStore';
+import { toast } from '../utils/toast.svelte';
 
 const API_VERSION = 'v1';
 
@@ -376,6 +377,14 @@ class SyncService {
 
     if (!response.ok) {
       const errorText = await response.text();
+
+      // Handle specific HTTP status codes
+      if (response.status === 413) {
+        const errorMessage = 'Upload too large. Please reduce attachment sizes or sync fewer notes at once. Maximum size: 5MB';
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+
       throw new Error(`Push failed: ${response.statusText} - ${errorText}`);
     }
 
@@ -457,6 +466,14 @@ class SyncService {
 
     if (!response.ok) {
       const errorText = await response.text();
+
+      // Handle specific HTTP status codes
+      if (response.status === 413) {
+        const errorMessage = 'Server response too large. Please contact your administrator.';
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+
       throw new Error(`Pull failed: ${response.statusText} - ${errorText}`);
     }
 

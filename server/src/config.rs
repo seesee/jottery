@@ -4,7 +4,6 @@ use std::env;
 pub struct Config {
     pub database_url: String,
     pub port: u16,
-    #[allow(dead_code)]
     pub max_payload_size: usize,
 }
 
@@ -20,9 +19,9 @@ impl Config {
                 .parse()
                 .unwrap_or(3030),
             max_payload_size: env::var("MAX_PAYLOAD_SIZE")
-                .unwrap_or_else(|_| "10485760".to_string())
+                .unwrap_or_else(|_| "5242880".to_string())
                 .parse()
-                .unwrap_or(10_485_760),
+                .unwrap_or(5_242_880), // 5MB default
         })
     }
 }
