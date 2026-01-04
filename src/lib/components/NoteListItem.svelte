@@ -66,7 +66,7 @@
   on:click={handleClick}
   on:mouseenter={() => isHovered = true}
   on:mouseleave={() => isHovered = false}
-  class="w-full text-left note-list-item min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}"
+  class="w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}"
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -83,7 +83,7 @@
         on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}
         role="button"
         tabindex="0"
-        class="delete-button absolute text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+        class="absolute top-2 right-2 p-0.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
         title={$_('noteList.deleteNote')}
         aria-label={$_('noteList.deleteNote')}
       >
@@ -100,17 +100,17 @@
     </p>
   {/if}
 
-  <div class="note-footer flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
+  <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
     <span class="flex-shrink-0">{$formattedDateStore}</span>
     {#if note.tags.length > 0}
-      <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
+      <div class="flex gap-1 flex-wrap justify-end ml-2">
         {#each note.tags.slice(0, 2) as tag}
           <span
             on:click={(e) => handleTagClick(e, tag)}
             on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
             role="button"
             tabindex="0"
-            class="note-tag bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer"
+            class="bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer"
             title={$_('noteList.filterByTag', { values: { tag } })}
           >
             #{tag}
@@ -131,40 +131,5 @@
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-
-  /* Mobile improvements for better touch targets and spacing */
-  @media (max-width: 768px) {
-    .note-list-item {
-      padding: 12px 16px;
-      min-height: 80px;
-    }
-
-    .delete-button {
-      top: 8px;
-      right: 8px;
-      padding: 8px;
-      min-width: 44px;
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .note-footer {
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .note-tags {
-      gap: 8px;
-    }
-
-    .note-tag {
-      padding: 8px 12px;
-      min-height: 36px;
-      display: inline-flex;
-      align-items: center;
-    }
   }
 </style>

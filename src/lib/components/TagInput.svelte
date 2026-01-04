@@ -80,10 +80,10 @@
 </script>
 
 <div class="relative">
-  <div class="tag-input-container flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 min-h-[2.5rem]">
+  <div class="flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 min-h-[2.5rem]">
     <!-- Existing tags -->
     {#each tags as tag, index}
-      <span class="tag-pill inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-md">
+      <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-md">
         <span
           on:click={() => onTagClick?.(tag)}
           class="{onTagClick ? 'cursor-pointer hover:underline' : ''}"
@@ -100,7 +100,7 @@
         </span>
         <button
           on:click={() => removeTag(index)}
-          class="tag-remove hover:text-blue-600 dark:hover:text-blue-400"
+          class="hover:text-blue-600 dark:hover:text-blue-400"
           title={$_('tagInput.removeTag')}
         >
           ×
@@ -139,30 +139,5 @@
   /* Prevent layout shift when suggestions appear */
   .relative {
     position: relative;
-  }
-
-  /* Mobile improvements for better touch targets and spacing */
-  @media (max-width: 768px) {
-    .tag-input-container {
-      padding: 8px 12px;
-      gap: 8px;
-      min-height: 44px;
-    }
-
-    .tag-pill {
-      padding: 8px 12px;
-      gap: 8px;
-      min-height: 36px;
-    }
-
-    .tag-remove {
-      padding: 4px;
-      min-width: 24px;
-      min-height: 24px;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
   }
 </style>
