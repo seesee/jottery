@@ -16,7 +16,7 @@
   import { marked } from 'marked';
   import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
-  import { } from './editor'; // Barrel export for editor components (to be populated)
+  import { EditorFooter } from './editor';
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
@@ -1535,12 +1535,7 @@
 
     <!-- Metadata Footer -->
     {#if $selectedNote}
-    <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
-      <div class="flex justify-between">
-        <span>{$_('note.created')}: {createdAtFormatted ? $createdAtFormatted : ''}</span>
-        <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>
-      </div>
-    </div>
+      <EditorFooter {createdAtFormatted} {modifiedAtFormatted} />
     {/if}
   </div>
 {:else}
