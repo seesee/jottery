@@ -5,6 +5,7 @@ pub mod app;
 pub mod color_scheme;
 pub mod event;
 pub mod helpers;
+pub mod operations;
 pub mod rendering;
 pub mod state;
 pub mod syntax;

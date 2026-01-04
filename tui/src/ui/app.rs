@@ -70,23 +70,23 @@ pub struct App {
     /// Settings input buffer (for string/number fields)
     pub setting_input: String,
     /// Database path
-    db_path: PathBuf,
+    pub(crate) db_path: PathBuf,
     /// Database connection (when unlocked)
-    db: Option<Database>,
+    pub(crate) db: Option<Database>,
     /// Master key (when unlocked)
-    key: Option<[u8; 32]>,
+    pub(crate) key: Option<[u8; 32]>,
     /// Key manager
-    key_manager: KeyManager,
+    pub(crate) key_manager: KeyManager,
     /// Crypto service
-    crypto: CryptoService,
+    pub(crate) crypto: CryptoService,
     /// Loaded notes
-    notes: Vec<Note>,
+    pub(crate) notes: Vec<Note>,
     /// Selected note index
     pub selected_note: usize,
     /// Preview scroll offset (number of lines scrolled down)
     pub preview_scroll_offset: usize,
     /// Currently editing note ID (None = creating new note)
-    editing_note_id: Option<String>,
+    pub(crate) editing_note_id: Option<String>,
     /// Settings
     pub settings: UserSettings,
     /// Sync credentials input buffer (for manual paste)
@@ -96,9 +96,9 @@ pub struct App {
     /// Syntax highlighter for code preview
     pub syntax_highlighter: crate::ui::syntax::SyntaxHighlighter,
     /// Last auto-sync time (for periodic sync)
-    last_auto_sync: Option<Instant>,
+    pub(crate) last_auto_sync: Option<Instant>,
     /// When sync status was set (for auto-clearing)
-    sync_status_set_at: Option<Instant>,
+    pub(crate) sync_status_set_at: Option<Instant>,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
     /// Selected attachment index in preview pane
@@ -106,9 +106,9 @@ pub struct App {
     /// File path input buffer (when adding attachments)
     pub attachment_path_input: String,
     /// Whether chafa is available for image preview (lazy-loaded)
-    chafa_available: Option<bool>,
+    pub(crate) chafa_available: Option<bool>,
     /// Track if 'a' key was pressed (for a1, a2 sequence)
-    last_key_was_a: bool,
+    pub(crate) last_key_was_a: bool,
     /// Show force resync confirmation modal
     pub show_force_sync_confirm: bool,
     /// Loaded versions for version history viewer
@@ -116,7 +116,7 @@ pub struct App {
     /// Selected version index in version history viewer
     pub selected_version: usize,
     /// Note ID for which versions are loaded (to detect when to reload)
-    versions_note_id: Option<String>,
+    pub(crate) versions_note_id: Option<String>,
     /// Scroll offset for version preview content
     pub version_preview_scroll_offset: usize,
 }
@@ -176,7 +176,7 @@ impl App {
     }
 
     /// Write to debug log if enabled
-    fn debug_log(&self, message: &str) {
+    pub(crate) fn debug_log(&self, message: &str) {
         if let Some(log) = &self.debug_log {
             if let Ok(mut file) = log.lock() {
                 let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
