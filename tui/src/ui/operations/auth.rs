@@ -108,61 +108,6 @@ pub fn unlock(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Attempt to auto-unlock using stored password
-/// Returns Ok(true) if successfully unlocked, Ok(false) if no stored password, Err on failure
-pub fn try_auto_unlock(app: &mut App) -> Result<bool> {
-    // First, we need to read settings with a dummy password just to check if remember_password is enabled
-    // This is a chicken-and-egg problem: we need the password to read settings, but settings contain the password!
-    // Solution: Use a constant "bootstrap" password to encrypt the stored_password field specifically
-
-    // For now, try to open database with empty password to see if it exists
-    if !app.db_path.exists() {
-        return Ok(false); // New database, can't auto-unlock
-    }
-
-    // Try to open with a known constant to read settings (this will fail but we'll handle it)
-    // Actually, this won't work with SQLCipher. We need a different approach.
-    // The password must be stored in a separate unencrypted file.
-
-    // Check for stored password in a separate config file
-    let config_dir = app.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-    let remember_file = config_dir.join(".jottery_remember");
-
-    if !remember_file.exists() {
-        return Ok(false); // No stored password
-    }
-
-    // Read and decrypt stored password
-    let encrypted_password = std::fs::read_to_string(&remember_file)
-        .context("Failed to read stored password file")?;
-
-    if encrypted_password.trim().is_empty() {
-        return Ok(false);
-    }
-
-    // Decrypt using device-specific constant key
-    let device_key = get_device_key(app);
-    let encrypted_data: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_password)
-        .context("Failed to parse stored password")?;
-    let password = app.crypto.decrypt_text(&encrypted_data, &device_key)
-        .context("Failed to decrypt stored password")?;
-
-    // Try to unlock with this password
-    app.password_input = password;
-    match unlock(app) {
-        Ok(()) => {
-            app.debug_log("Auto-unlock successful");
-            Ok(true)
-        }
-        Err(e) => {
-            app.password_input.clear();
-            // Delete invalid stored password file
-            let _ = std::fs::remove_file(&remember_file);
-            Err(e).context("Auto-unlock failed")
-        }
-    }
-}
-
 /// Get device-specific encryption key for storing password
 /// WARNING: This is not cryptographically secure, just obfuscation
 pub fn get_device_key(_app: &App) -> [u8; 32] {
