@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
-    "status": "Status",
-    "created": "Created"
+    "refresh": "刷新",
+    "refreshing": "刷新中...",
+    "cancel": "取消",
+    "confirm": "确认",
+    "loading": "加载中...",
+    "email": "电子邮件",
+    "password": "密码",
+    "actions": "操作",
+    "status": "状态",
+    "created": "创建时间"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "仪表板",
+    "users": "用户",
+    "settings": "设置",
+    "logout": "退出登录"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "登录以管理您的服务器",
+    "email": "电子邮件",
+    "password": "密码",
+    "signIn": "登录",
+    "signingIn": "登录中...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "电子邮件或密码无效",
+      "adminRequired": "需要管理员访问权限",
+      "unexpected": "发生意外错误"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "确认退出登录",
+    "confirmMessage": "您确定要退出登录吗？"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "仪表板",
+    "loadingStats": "正在加载统计信息...",
+    "failedToLoad": "加载统计信息失败",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "总用户数",
+      "approved": "已批准",
+      "pending": "待处理",
+      "activeDevices": "活跃设备",
+      "totalDevices": "总共{count}个设备",
+      "totalNotes": "总笔记数",
+      "acrossAllUsers": "所有用户",
+      "storage": "存储空间",
+      "mbQuota": "{quota} MB配额"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "服务器信息",
+      "version": "服务器版本：",
+      "activeUsers": "活跃用户：",
+      "pendingApprovals": "待批准："
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "用户",
+    "loadingUsers": "正在加载用户...",
+    "noUsersFound": "未找到用户",
+    "failedToLoad": "加载用户失败",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "全部",
+      "pending": "待处理",
+      "approved": "已批准",
+      "inactive": "未激活"
     },
     "table": {
-      "email": "Email",
-      "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "email": "电子邮件",
+      "status": "状态",
+      "devices": "设备",
+      "notes": "笔记",
+      "created": "创建时间",
+      "actions": "操作"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "待处理",
+      "active": "活跃",
+      "inactive": "未激活",
+      "admin": "管理员"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "批准",
+      "makeAdmin": "设为管理员",
+      "removeAdmin": "移除管理员",
+      "deactivate": "停用",
+      "activate": "激活",
+      "delete": "删除",
+      "demoteFromAdmin": "从管理员降级",
+      "promoteToAdmin": "提升为管理员",
+      "deleteUser": "删除用户"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "批准",
+      "deactivate": "停用",
+      "activate": "激活",
+      "delete": "删除",
+      "promoteToAdmin": "提升为管理员",
+      "demoteFromAdmin": "从管理员降级",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "您确定要永久删除用户{email}吗？此操作无法撤销。",
+        "promoteToAdmin": "您确定要将{email}提升为管理员吗？他们将拥有所有管理功能的完全访问权限。",
+        "demoteFromAdmin": "您确定要移除{email}的管理员权限吗？",
+        "genericAction": "您确定要对用户{email}执行{action}操作吗？"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "用户{email}已成功批准",
+      "deactivated": "用户{email}已停用",
+      "activated": "用户{email}已激活",
+      "deleted": "用户{email}已删除",
+      "promotedToAdmin": "用户{email}已提升为管理员",
+      "demotedFromAdmin": "用户{email}已从管理员降级",
+      "failedToAction": "无法{action}用户：{error}",
+      "failedGeneric": "无法{action}用户"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "设置",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "更改密码",
+      "description": "更新您的管理员密码。密码必须至少包含12个字符。",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认新密码",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "输入当前密码",
+        "new": "输入新密码（至少12个字符）",
+        "confirm": "确认新密码"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "更改密码",
+      "buttonChanging": "更改中...",
+      "cancel": "取消",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "当前密码为必填项",
+        "newRequired": "新密码为必填项",
+        "minLength": "新密码必须至少包含12个字符",
+        "mismatch": "密码不匹配",
+        "failed": "更改密码失败"
       },
-      "success": "Password changed successfully"
+      "success": "密码更改成功"
     }
   }
 }

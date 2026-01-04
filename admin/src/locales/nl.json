@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
+    "refresh": "Verversen",
+    "refreshing": "Vernieuwen...",
+    "cancel": "Annuleren",
+    "confirm": "Bevestigen",
+    "loading": "Laden...",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "actions": "Acties",
     "status": "Status",
-    "created": "Created"
+    "created": "Aangemaakt"
   },
   "nav": {
     "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "users": "Gebruikers",
+    "settings": "Instellingen",
+    "logout": "Uitloggen"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "Log in om uw server te beheren",
+    "email": "E-mail",
+    "password": "Wachtwoord",
+    "signIn": "Inloggen",
+    "signingIn": "Inloggen...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "Ongeldig e-mailadres of wachtwoord",
+      "adminRequired": "Beheerderstoegang vereist",
+      "unexpected": "Er is een onverwachte fout opgetreden"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "Uitloggen bevestigen",
+    "confirmMessage": "Weet u zeker dat u wilt uitloggen?"
   },
   "dashboard": {
     "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "loadingStats": "Statistieken laden...",
+    "failedToLoad": "Laden van statistieken mislukt",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "Totaal aantal gebruikers",
+      "approved": "goedgekeurd",
+      "pending": "in behandeling",
+      "activeDevices": "Actieve apparaten",
+      "totalDevices": "{count} apparaten in totaal",
+      "totalNotes": "Totaal aantal notities",
+      "acrossAllUsers": "Voor alle gebruikers",
+      "storage": "Opslag",
+      "mbQuota": "{quota} MB quotum"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "Serverinformatie",
+      "version": "Serverversie:",
+      "activeUsers": "Actieve gebruikers:",
+      "pendingApprovals": "In behandeling:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "Gebruikers",
+    "loadingUsers": "Gebruikers laden...",
+    "noUsersFound": "Geen gebruikers gevonden",
+    "failedToLoad": "Laden van gebruikers mislukt",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "Alle",
+      "pending": "In behandeling",
+      "approved": "Goedgekeurd",
+      "inactive": "Inactief"
     },
     "table": {
-      "email": "Email",
+      "email": "E-mail",
       "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "devices": "Apparaten",
+      "notes": "Notities",
+      "created": "Aangemaakt",
+      "actions": "Acties"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "In behandeling",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "admin": "Beheerder"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "Goedkeuren",
+      "makeAdmin": "Beheerder maken",
+      "removeAdmin": "Beheerder verwijderen",
+      "deactivate": "Deactiveren",
+      "activate": "Activeren",
+      "delete": "Verwijderen",
+      "demoteFromAdmin": "Degraderen van beheerder",
+      "promoteToAdmin": "Promoveren tot beheerder",
+      "deleteUser": "Gebruiker verwijderen"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "Goedkeuren",
+      "deactivate": "Deactiveren",
+      "activate": "Activeren",
+      "delete": "Verwijderen",
+      "promoteToAdmin": "Promoveren tot beheerder",
+      "demoteFromAdmin": "Degraderen van beheerder",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "Weet u zeker dat u gebruiker {email} permanent wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "promoteToAdmin": "Weet u zeker dat u {email} wilt promoveren tot beheerder? Ze krijgen volledige toegang tot alle beheerfuncties.",
+        "demoteFromAdmin": "Weet u zeker dat u de beheerdersrechten van {email} wilt intrekken?",
+        "genericAction": "Weet u zeker dat u gebruiker {email} wilt {action}?"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "Gebruiker {email} succesvol goedgekeurd",
+      "deactivated": "Gebruiker {email} gedeactiveerd",
+      "activated": "Gebruiker {email} geactiveerd",
+      "deleted": "Gebruiker {email} verwijderd",
+      "promotedToAdmin": "Gebruiker {email} gepromoveerd tot beheerder",
+      "demotedFromAdmin": "Gebruiker {email} gedegradeerd van beheerder",
+      "failedToAction": "Kon gebruiker niet {action}: {error}",
+      "failedGeneric": "Kon gebruiker niet {action}"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "Instellingen",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "Wachtwoord wijzigen",
+      "description": "Update uw beheerderswachtwoord. Het wachtwoord moet minimaal 12 tekens lang zijn.",
+      "currentPassword": "Huidig wachtwoord",
+      "newPassword": "Nieuw wachtwoord",
+      "confirmPassword": "Bevestig nieuw wachtwoord",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "Voer huidig wachtwoord in",
+        "new": "Voer nieuw wachtwoord in (min. 12 tekens)",
+        "confirm": "Bevestig nieuw wachtwoord"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "Wachtwoord wijzigen",
+      "buttonChanging": "Wijzigen...",
+      "cancel": "Annuleren",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "Huidig wachtwoord is vereist",
+        "newRequired": "Nieuw wachtwoord is vereist",
+        "minLength": "Nieuw wachtwoord moet minimaal 12 tekens lang zijn",
+        "mismatch": "Wachtwoorden komen niet overeen",
+        "failed": "Wachtwoord wijzigen mislukt"
       },
-      "success": "Password changed successfully"
+      "success": "Wachtwoord succesvol gewijzigd"
     }
   }
 }

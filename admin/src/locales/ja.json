@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
-    "status": "Status",
-    "created": "Created"
+    "refresh": "更新",
+    "refreshing": "更新中...",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "loading": "読み込み中...",
+    "email": "メール",
+    "password": "パスワード",
+    "actions": "アクション",
+    "status": "ステータス",
+    "created": "作成日"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "ダッシュボード",
+    "users": "ユーザー",
+    "settings": "設定",
+    "logout": "ログアウト"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "サーバーを管理するにはログインしてください",
+    "email": "メール",
+    "password": "パスワード",
+    "signIn": "ログイン",
+    "signingIn": "ログイン中...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "メールまたはパスワードが無効です",
+      "adminRequired": "管理者アクセスが必要です",
+      "unexpected": "予期しないエラーが発生しました"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "ログアウトの確認",
+    "confirmMessage": "ログアウトしてもよろしいですか？"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "ダッシュボード",
+    "loadingStats": "統計を読み込み中...",
+    "failedToLoad": "統計の読み込みに失敗しました",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "総ユーザー数",
+      "approved": "承認済み",
+      "pending": "保留中",
+      "activeDevices": "アクティブデバイス",
+      "totalDevices": "合計{count}台のデバイス",
+      "totalNotes": "総ノート数",
+      "acrossAllUsers": "全ユーザー",
+      "storage": "ストレージ",
+      "mbQuota": "{quota} MBのクォータ"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "サーバー情報",
+      "version": "サーバーバージョン:",
+      "activeUsers": "アクティブユーザー:",
+      "pendingApprovals": "保留中の承認:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "ユーザー",
+    "loadingUsers": "ユーザーを読み込み中...",
+    "noUsersFound": "ユーザーが見つかりません",
+    "failedToLoad": "ユーザーの読み込みに失敗しました",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "すべて",
+      "pending": "保留中",
+      "approved": "承認済み",
+      "inactive": "非アクティブ"
     },
     "table": {
-      "email": "Email",
-      "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "email": "メール",
+      "status": "ステータス",
+      "devices": "デバイス",
+      "notes": "ノート",
+      "created": "作成日",
+      "actions": "アクション"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "保留中",
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "admin": "管理者"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "承認",
+      "makeAdmin": "管理者にする",
+      "removeAdmin": "管理者を削除",
+      "deactivate": "無効化",
+      "activate": "有効化",
+      "delete": "削除",
+      "demoteFromAdmin": "管理者から降格",
+      "promoteToAdmin": "管理者に昇格",
+      "deleteUser": "ユーザーを削除"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "承認",
+      "deactivate": "無効化",
+      "activate": "有効化",
+      "delete": "削除",
+      "promoteToAdmin": "管理者に昇格",
+      "demoteFromAdmin": "管理者から降格",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "ユーザー{email}を完全に削除してもよろしいですか？この操作は元に戻せません。",
+        "promoteToAdmin": "{email}を管理者に昇格してもよろしいですか？すべての管理機能へのフルアクセスが付与されます。",
+        "demoteFromAdmin": "{email}から管理者権限を削除してもよろしいですか？",
+        "genericAction": "ユーザー{email}を{action}してもよろしいですか？"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "ユーザー{email}が正常に承認されました",
+      "deactivated": "ユーザー{email}が無効化されました",
+      "activated": "ユーザー{email}が有効化されました",
+      "deleted": "ユーザー{email}が削除されました",
+      "promotedToAdmin": "ユーザー{email}が管理者に昇格されました",
+      "demotedFromAdmin": "ユーザー{email}が管理者から降格されました",
+      "failedToAction": "ユーザーの{action}に失敗しました: {error}",
+      "failedGeneric": "ユーザーの{action}に失敗しました"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "設定",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "パスワードの変更",
+      "description": "管理者パスワードを更新してください。パスワードは12文字以上である必要があります。",
+      "currentPassword": "現在のパスワード",
+      "newPassword": "新しいパスワード",
+      "confirmPassword": "新しいパスワードの確認",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "現在のパスワードを入力",
+        "new": "新しいパスワードを入力（最低12文字）",
+        "confirm": "新しいパスワードを確認"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "パスワードを変更",
+      "buttonChanging": "変更中...",
+      "cancel": "キャンセル",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "現在のパスワードは必須です",
+        "newRequired": "新しいパスワードは必須です",
+        "minLength": "新しいパスワードは12文字以上である必要があります",
+        "mismatch": "パスワードが一致しません",
+        "failed": "パスワードの変更に失敗しました"
       },
-      "success": "Password changed successfully"
+      "success": "パスワードが正常に変更されました"
     }
   }
 }

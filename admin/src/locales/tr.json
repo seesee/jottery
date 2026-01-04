@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
-    "status": "Status",
-    "created": "Created"
+    "refresh": "Yenile",
+    "refreshing": "Yenileniyor...",
+    "cancel": "İptal",
+    "confirm": "Onayla",
+    "loading": "Yükleniyor...",
+    "email": "E-posta",
+    "password": "Parola",
+    "actions": "Eylemler",
+    "status": "Durum",
+    "created": "Oluşturulma"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "Panel",
+    "users": "Kullanıcılar",
+    "settings": "Ayarlar",
+    "logout": "Çıkış yap"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "Sunucunuzu yönetmek için giriş yapın",
+    "email": "E-posta",
+    "password": "Parola",
+    "signIn": "Giriş yap",
+    "signingIn": "Giriş yapılıyor...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "Geçersiz e-posta veya parola",
+      "adminRequired": "Yönetici erişimi gerekli",
+      "unexpected": "Beklenmeyen bir hata oluştu"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "Çıkışı onayla",
+    "confirmMessage": "Çıkış yapmak istediğinizden emin misiniz?"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "Panel",
+    "loadingStats": "İstatistikler yükleniyor...",
+    "failedToLoad": "İstatistikler yüklenemedi",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "Toplam kullanıcı",
+      "approved": "onaylandı",
+      "pending": "beklemede",
+      "activeDevices": "Aktif cihazlar",
+      "totalDevices": "Toplam {count} cihaz",
+      "totalNotes": "Toplam not",
+      "acrossAllUsers": "Tüm kullanıcılar",
+      "storage": "Depolama",
+      "mbQuota": "{quota} MB kota"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "Sunucu bilgileri",
+      "version": "Sunucu sürümü:",
+      "activeUsers": "Aktif kullanıcılar:",
+      "pendingApprovals": "Bekleyen onaylar:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "Kullanıcılar",
+    "loadingUsers": "Kullanıcılar yükleniyor...",
+    "noUsersFound": "Kullanıcı bulunamadı",
+    "failedToLoad": "Kullanıcılar yüklenemedi",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "Tümü",
+      "pending": "Beklemede",
+      "approved": "Onaylı",
+      "inactive": "Pasif"
     },
     "table": {
-      "email": "Email",
-      "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "email": "E-posta",
+      "status": "Durum",
+      "devices": "Cihazlar",
+      "notes": "Notlar",
+      "created": "Oluşturulma",
+      "actions": "Eylemler"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "Beklemede",
+      "active": "Aktif",
+      "inactive": "Pasif",
+      "admin": "Yönetici"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "Onayla",
+      "makeAdmin": "Yönetici yap",
+      "removeAdmin": "Yöneticiyi kaldır",
+      "deactivate": "Devre dışı bırak",
+      "activate": "Etkinleştir",
+      "delete": "Sil",
+      "demoteFromAdmin": "Yöneticiden indir",
+      "promoteToAdmin": "Yöneticiye terfi ettir",
+      "deleteUser": "Kullanıcıyı sil"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "Onayla",
+      "deactivate": "Devre dışı bırak",
+      "activate": "Etkinleştir",
+      "delete": "Sil",
+      "promoteToAdmin": "Yöneticiye terfi ettir",
+      "demoteFromAdmin": "Yöneticiden indir",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "{email} kullanıcısını kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "promoteToAdmin": "{email} kullanıcısını yöneticiye terfi ettirmek istediğinizden emin misiniz? Tüm yönetim işlevlerine tam erişim elde edecekler.",
+        "demoteFromAdmin": "{email} kullanıcısının yönetici ayrıcalıklarını kaldırmak istediğinizden emin misiniz?",
+        "genericAction": "{email} kullanıcısı için {action} işlemini yapmak istediğinizden emin misiniz?"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "Kullanıcı {email} başarıyla onaylandı",
+      "deactivated": "Kullanıcı {email} devre dışı bırakıldı",
+      "activated": "Kullanıcı {email} etkinleştirildi",
+      "deleted": "Kullanıcı {email} silindi",
+      "promotedToAdmin": "Kullanıcı {email} yöneticiye terfi ettirildi",
+      "demotedFromAdmin": "Kullanıcı {email} yöneticiden indirildi",
+      "failedToAction": "Kullanıcı {action} işlemi başarısız oldu: {error}",
+      "failedGeneric": "Kullanıcı {action} işlemi başarısız oldu"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "Ayarlar",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "Parola değiştir",
+      "description": "Yönetici parolanızı güncelleyin. Parola en az 12 karakter uzunluğunda olmalıdır.",
+      "currentPassword": "Mevcut parola",
+      "newPassword": "Yeni parola",
+      "confirmPassword": "Yeni parolayı onayla",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "Mevcut parolayı girin",
+        "new": "Yeni parolayı girin (en az 12 karakter)",
+        "confirm": "Yeni parolayı onaylayın"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "Parolayı değiştir",
+      "buttonChanging": "Değiştiriliyor...",
+      "cancel": "İptal",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "Mevcut parola gerekli",
+        "newRequired": "Yeni parola gerekli",
+        "minLength": "Yeni parola en az 12 karakter uzunluğunda olmalıdır",
+        "mismatch": "Parolalar eşleşmiyor",
+        "failed": "Parola değiştirilemedi"
       },
-      "success": "Password changed successfully"
+      "success": "Parola başarıyla değiştirildi"
     }
   }
 }

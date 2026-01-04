@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
+    "refresh": "Ανανέωση",
+    "refreshing": "Ανανέωση...",
+    "cancel": "Ακύρωση",
+    "confirm": "Επιβεβαίωση",
+    "loading": "Φόρτωση...",
     "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
-    "status": "Status",
-    "created": "Created"
+    "password": "Κωδικός πρόσβασης",
+    "actions": "Ενέργειες",
+    "status": "Κατάσταση",
+    "created": "Δημιουργήθηκε"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "Πίνακας ελέγχου",
+    "users": "Χρήστες",
+    "settings": "Ρυθμίσεις",
+    "logout": "Αποσύνδεση"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
+    "subtitle": "Συνδεθείτε για να διαχειριστείτε τον διακομιστή σας",
     "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "password": "Κωδικός πρόσβασης",
+    "signIn": "Σύνδεση",
+    "signingIn": "Σύνδεση...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "Μη έγκυρο email ή κωδικός πρόσβασης",
+      "adminRequired": "Απαιτείται πρόσβαση διαχειριστή",
+      "unexpected": "Παρουσιάστηκε μη αναμενόμενο σφάλμα"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "Επιβεβαίωση αποσύνδεσης",
+    "confirmMessage": "Είστε βέβαιοι ότι θέλετε να αποσυνδεθείτε;"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "Πίνακας ελέγχου",
+    "loadingStats": "Φόρτωση στατιστικών...",
+    "failedToLoad": "Αποτυχία φόρτωσης στατιστικών",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "Σύνολο χρηστών",
+      "approved": "εγκεκριμένοι",
+      "pending": "σε αναμονή",
+      "activeDevices": "Ενεργές συσκευές",
+      "totalDevices": "{count} συσκευές συνολικά",
+      "totalNotes": "Σύνολο σημειώσεων",
+      "acrossAllUsers": "Σε όλους τους χρήστες",
+      "storage": "Αποθηκευτικός χώρος",
+      "mbQuota": "{quota} MB όριο"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "Πληροφορίες διακομιστή",
+      "version": "Έκδοση διακομιστή:",
+      "activeUsers": "Ενεργοί χρήστες:",
+      "pendingApprovals": "Εγκρίσεις σε αναμονή:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "Χρήστες",
+    "loadingUsers": "Φόρτωση χρηστών...",
+    "noUsersFound": "Δεν βρέθηκαν χρήστες",
+    "failedToLoad": "Αποτυχία φόρτωσης χρηστών",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "Όλοι",
+      "pending": "Σε αναμονή",
+      "approved": "Εγκεκριμένοι",
+      "inactive": "Ανενεργοί"
     },
     "table": {
       "email": "Email",
-      "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "status": "Κατάσταση",
+      "devices": "Συσκευές",
+      "notes": "Σημειώσεις",
+      "created": "Δημιουργήθηκε",
+      "actions": "Ενέργειες"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "Σε αναμονή",
+      "active": "Ενεργός",
+      "inactive": "Ανενεργός",
+      "admin": "Διαχειριστής"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "Έγκριση",
+      "makeAdmin": "Ορισμός ως διαχειριστή",
+      "removeAdmin": "Αφαίρεση διαχειριστή",
+      "deactivate": "Απενεργοποίηση",
+      "activate": "Ενεργοποίηση",
+      "delete": "Διαγραφή",
+      "demoteFromAdmin": "Υποβιβασμός από διαχειριστή",
+      "promoteToAdmin": "Προαγωγή σε διαχειριστή",
+      "deleteUser": "Διαγραφή χρήστη"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "Έγκριση",
+      "deactivate": "Απενεργοποίηση",
+      "activate": "Ενεργοποίηση",
+      "delete": "Διαγραφή",
+      "promoteToAdmin": "Προαγωγή σε διαχειριστή",
+      "demoteFromAdmin": "Υποβιβασμός από διαχειριστή",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "Είστε βέβαιοι ότι θέλετε να διαγράψετε οριστικά τον χρήστη {email}; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+        "promoteToAdmin": "Είστε βέβαιοι ότι θέλετε να προάγετε τον {email} σε διαχειριστή; Θα έχει πλήρη πρόσβαση σε όλες τις λειτουργίες διαχείρισης.",
+        "demoteFromAdmin": "Είστε βέβαιοι ότι θέλετε να αφαιρέσετε τα δικαιώματα διαχειριστή από τον {email};",
+        "genericAction": "Είστε βέβαιοι ότι θέλετε να κάνετε {action} στον χρήστη {email};"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "Ο χρήστης {email} εγκρίθηκε επιτυχώς",
+      "deactivated": "Ο χρήστης {email} απενεργοποιήθηκε",
+      "activated": "Ο χρήστης {email} ενεργοποιήθηκε",
+      "deleted": "Ο χρήστης {email} διαγράφηκε",
+      "promotedToAdmin": "Ο χρήστης {email} προήχθη σε διαχειριστή",
+      "demotedFromAdmin": "Ο χρήστης {email} υποβιβάστηκε από διαχειριστή",
+      "failedToAction": "Αποτυχία {action} χρήστη: {error}",
+      "failedGeneric": "Αποτυχία {action} χρήστη"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "Ρυθμίσεις",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "Αλλαγή κωδικού πρόσβασης",
+      "description": "Ενημερώστε τον κωδικό πρόσβασης διαχειριστή. Ο κωδικός πρέπει να έχει τουλάχιστον 12 χαρακτήρες.",
+      "currentPassword": "Τρέχων κωδικός πρόσβασης",
+      "newPassword": "Νέος κωδικός πρόσβασης",
+      "confirmPassword": "Επιβεβαίωση νέου κωδικού",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "Εισάγετε τον τρέχοντα κωδικό",
+        "new": "Εισάγετε νέο κωδικό (τουλάχιστον 12 χαρακτήρες)",
+        "confirm": "Επιβεβαιώστε τον νέο κωδικό"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "Αλλαγή κωδικού",
+      "buttonChanging": "Αλλαγή...",
+      "cancel": "Ακύρωση",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "Απαιτείται ο τρέχων κωδικός πρόσβασης",
+        "newRequired": "Απαιτείται νέος κωδικός πρόσβασης",
+        "minLength": "Ο νέος κωδικός πρέπει να έχει τουλάχιστον 12 χαρακτήρες",
+        "mismatch": "Οι κωδικοί δεν ταιριάζουν",
+        "failed": "Αποτυχία αλλαγής κωδικού"
       },
-      "success": "Password changed successfully"
+      "success": "Ο κωδικός άλλαξε επιτυχώς"
     }
   }
 }

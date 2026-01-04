@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
+    "refresh": "Atualizar",
+    "refreshing": "Atualizando...",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "loading": "Carregando...",
+    "email": "E-mail",
+    "password": "Senha",
+    "actions": "Ações",
     "status": "Status",
-    "created": "Created"
+    "created": "Criado"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "Painel",
+    "users": "Utilizadores",
+    "settings": "Configurações",
+    "logout": "Sair"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "Faça login para gerir o seu servidor",
+    "email": "E-mail",
+    "password": "Senha",
+    "signIn": "Entrar",
+    "signingIn": "Entrando...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "E-mail ou senha inválidos",
+      "adminRequired": "Acesso de administrador necessário",
+      "unexpected": "Ocorreu um erro inesperado"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "Confirmar saída",
+    "confirmMessage": "Tem a certeza de que deseja sair?"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "Painel",
+    "loadingStats": "Carregando estatísticas...",
+    "failedToLoad": "Falha ao carregar estatísticas",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "Utilizadores totais",
+      "approved": "aprovado",
+      "pending": "pendente",
+      "activeDevices": "Dispositivos ativos",
+      "totalDevices": "{count} dispositivos no total",
+      "totalNotes": "Notas totais",
+      "acrossAllUsers": "Em todos os utilizadores",
+      "storage": "Armazenamento",
+      "mbQuota": "{quota} MB de quota"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "Informações do servidor",
+      "version": "Versão do servidor:",
+      "activeUsers": "Utilizadores ativos:",
+      "pendingApprovals": "Aprovações pendentes:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "Utilizadores",
+    "loadingUsers": "Carregando utilizadores...",
+    "noUsersFound": "Nenhum utilizador encontrado",
+    "failedToLoad": "Falha ao carregar utilizadores",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "Todos",
+      "pending": "Pendentes",
+      "approved": "Aprovados",
+      "inactive": "Inativos"
     },
     "table": {
-      "email": "Email",
+      "email": "E-mail",
       "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "devices": "Dispositivos",
+      "notes": "Notas",
+      "created": "Criado",
+      "actions": "Ações"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
+      "pending": "Pendente",
+      "active": "Ativo",
+      "inactive": "Inativo",
       "admin": "Admin"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "Aprovar",
+      "makeAdmin": "Tornar admin",
+      "removeAdmin": "Remover admin",
+      "deactivate": "Desativar",
+      "activate": "Ativar",
+      "delete": "Eliminar",
+      "demoteFromAdmin": "Rebaixar de admin",
+      "promoteToAdmin": "Promover a admin",
+      "deleteUser": "Eliminar utilizador"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "Aprovar",
+      "deactivate": "Desativar",
+      "activate": "Ativar",
+      "delete": "Eliminar",
+      "promoteToAdmin": "Promover a admin",
+      "demoteFromAdmin": "Rebaixar de admin",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "Tem a certeza de que deseja eliminar permanentemente o utilizador {email}? Esta ação não pode ser revertida.",
+        "promoteToAdmin": "Tem a certeza de que deseja promover {email} a administrador? Terão acesso completo a todas as funções de administração.",
+        "demoteFromAdmin": "Tem a certeza de que deseja remover os privilégios de administrador de {email}?",
+        "genericAction": "Tem a certeza de que deseja {action} o utilizador {email}?"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "Utilizador {email} aprovado com sucesso",
+      "deactivated": "Utilizador {email} desativado",
+      "activated": "Utilizador {email} ativado",
+      "deleted": "Utilizador {email} eliminado",
+      "promotedToAdmin": "Utilizador {email} promovido a admin",
+      "demotedFromAdmin": "Utilizador {email} rebaixado de admin",
+      "failedToAction": "Falha ao {action} utilizador: {error}",
+      "failedGeneric": "Falha ao {action} utilizador"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "Configurações",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "Alterar senha",
+      "description": "Atualize a sua senha de administrador. A senha deve ter pelo menos 12 caracteres.",
+      "currentPassword": "Senha atual",
+      "newPassword": "Nova senha",
+      "confirmPassword": "Confirmar nova senha",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "Introduza a senha atual",
+        "new": "Introduza a nova senha (mín. 12 caracteres)",
+        "confirm": "Confirme a nova senha"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "Alterar senha",
+      "buttonChanging": "Alterando...",
+      "cancel": "Cancelar",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "A senha atual é obrigatória",
+        "newRequired": "A nova senha é obrigatória",
+        "minLength": "A nova senha deve ter pelo menos 12 caracteres",
+        "mismatch": "As senhas não correspondem",
+        "failed": "Falha ao alterar a senha"
       },
-      "success": "Password changed successfully"
+      "success": "Senha alterada com sucesso"
     }
   }
 }

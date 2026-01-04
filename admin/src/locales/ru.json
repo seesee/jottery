@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
-    "status": "Status",
-    "created": "Created"
+    "refresh": "Обновить",
+    "refreshing": "Обновление...",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "loading": "Загрузка...",
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "actions": "Действия",
+    "status": "Статус",
+    "created": "Создано"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "Панель управления",
+    "users": "Пользователи",
+    "settings": "Настройки",
+    "logout": "Выйти"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "Войдите для управления сервером",
+    "email": "Электронная почта",
+    "password": "Пароль",
+    "signIn": "Войти",
+    "signingIn": "Вход...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "Неверный адрес электронной почты или пароль",
+      "adminRequired": "Требуется доступ администратора",
+      "unexpected": "Произошла непредвиденная ошибка"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "Подтвердить выход",
+    "confirmMessage": "Вы уверены, что хотите выйти?"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "Панель управления",
+    "loadingStats": "Загрузка статистики...",
+    "failedToLoad": "Не удалось загрузить статистику",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "Всего пользователей",
+      "approved": "одобрено",
+      "pending": "ожидает",
+      "activeDevices": "Активные устройства",
+      "totalDevices": "Всего устройств: {count}",
+      "totalNotes": "Всего заметок",
+      "acrossAllUsers": "Для всех пользователей",
+      "storage": "Хранилище",
+      "mbQuota": "Квота {quota} МБ"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "Информация о сервере",
+      "version": "Версия сервера:",
+      "activeUsers": "Активные пользователи:",
+      "pendingApprovals": "Ожидают одобрения:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "Пользователи",
+    "loadingUsers": "Загрузка пользователей...",
+    "noUsersFound": "Пользователи не найдены",
+    "failedToLoad": "Не удалось загрузить пользователей",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "Все",
+      "pending": "Ожидающие",
+      "approved": "Одобренные",
+      "inactive": "Неактивные"
     },
     "table": {
-      "email": "Email",
-      "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "email": "Электронная почта",
+      "status": "Статус",
+      "devices": "Устройства",
+      "notes": "Заметки",
+      "created": "Создано",
+      "actions": "Действия"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "Ожидает",
+      "active": "Активен",
+      "inactive": "Неактивен",
+      "admin": "Администратор"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "Одобрить",
+      "makeAdmin": "Сделать администратором",
+      "removeAdmin": "Убрать администратора",
+      "deactivate": "Деактивировать",
+      "activate": "Активировать",
+      "delete": "Удалить",
+      "demoteFromAdmin": "Понизить из администраторов",
+      "promoteToAdmin": "Повысить до администратора",
+      "deleteUser": "Удалить пользователя"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "Одобрить",
+      "deactivate": "Деактивировать",
+      "activate": "Активировать",
+      "delete": "Удалить",
+      "promoteToAdmin": "Повысить до администратора",
+      "demoteFromAdmin": "Понизить из администраторов",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "Вы уверены, что хотите удалить пользователя {email} навсегда? Это действие нельзя отменить.",
+        "promoteToAdmin": "Вы уверены, что хотите повысить {email} до администратора? У него будет полный доступ ко всем функциям администрирования.",
+        "demoteFromAdmin": "Вы уверены, что хотите отозвать права администратора у {email}?",
+        "genericAction": "Вы уверены, что хотите {action} пользователя {email}?"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "Пользователь {email} успешно одобрен",
+      "deactivated": "Пользователь {email} деактивирован",
+      "activated": "Пользователь {email} активирован",
+      "deleted": "Пользователь {email} удалён",
+      "promotedToAdmin": "Пользователь {email} повышен до администратора",
+      "demotedFromAdmin": "Пользователь {email} понижен из администраторов",
+      "failedToAction": "Не удалось {action} пользователя: {error}",
+      "failedGeneric": "Не удалось {action} пользователя"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "Настройки",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "Изменить пароль",
+      "description": "Обновите пароль администратора. Пароль должен содержать не менее 12 символов.",
+      "currentPassword": "Текущий пароль",
+      "newPassword": "Новый пароль",
+      "confirmPassword": "Подтвердите новый пароль",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "Введите текущий пароль",
+        "new": "Введите новый пароль (мин. 12 символов)",
+        "confirm": "Подтвердите новый пароль"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "Изменить пароль",
+      "buttonChanging": "Изменение...",
+      "cancel": "Отмена",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "Требуется текущий пароль",
+        "newRequired": "Требуется новый пароль",
+        "minLength": "Новый пароль должен содержать не менее 12 символов",
+        "mismatch": "Пароли не совпадают",
+        "failed": "Не удалось изменить пароль"
       },
-      "success": "Password changed successfully"
+      "success": "Пароль успешно изменён"
     }
   }
 }

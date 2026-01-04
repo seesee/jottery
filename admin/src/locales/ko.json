@@ -3,151 +3,151 @@
     "name": "Jottery Admin"
   },
   "common": {
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "loading": "Loading...",
-    "email": "Email",
-    "password": "Password",
-    "actions": "Actions",
-    "status": "Status",
-    "created": "Created"
+    "refresh": "새로 고침",
+    "refreshing": "새로 고침 중...",
+    "cancel": "취소",
+    "confirm": "확인",
+    "loading": "로딩 중...",
+    "email": "이메일",
+    "password": "비밀번호",
+    "actions": "작업",
+    "status": "상태",
+    "created": "생성일"
   },
   "nav": {
-    "dashboard": "Dashboard",
-    "users": "Users",
-    "settings": "Settings",
-    "logout": "Log out"
+    "dashboard": "대시보드",
+    "users": "사용자",
+    "settings": "설정",
+    "logout": "로그아웃"
   },
   "login": {
     "title": "Jottery Admin",
-    "subtitle": "Sign in to manage your server",
-    "email": "Email",
-    "password": "Password",
-    "signIn": "Sign in",
-    "signingIn": "Signing in...",
+    "subtitle": "서버를 관리하려면 로그인하세요",
+    "email": "이메일",
+    "password": "비밀번호",
+    "signIn": "로그인",
+    "signingIn": "로그인 중...",
     "placeholder": {
       "email": "admin@localhost",
       "password": "••••••••"
     },
     "errors": {
-      "invalidCredentials": "Invalid email or password",
-      "adminRequired": "Admin access required",
-      "unexpected": "An unexpected error occurred"
+      "invalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다",
+      "adminRequired": "관리자 접근 권한이 필요합니다",
+      "unexpected": "예기치 않은 오류가 발생했습니다"
     }
   },
   "logout": {
-    "confirmTitle": "Confirm Logout",
-    "confirmMessage": "Are you sure you want to log out?"
+    "confirmTitle": "로그아웃 확인",
+    "confirmMessage": "로그아웃하시겠습니까?"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "loadingStats": "Loading statistics...",
-    "failedToLoad": "Failed to load statistics",
+    "title": "대시보드",
+    "loadingStats": "통계 로딩 중...",
+    "failedToLoad": "통계 로드 실패",
     "stats": {
-      "totalUsers": "Total Users",
-      "approved": "approved",
-      "pending": "pending",
-      "activeDevices": "Active Devices",
-      "totalDevices": "{count} total devices",
-      "totalNotes": "Total Notes",
-      "acrossAllUsers": "Across all users",
-      "storage": "Storage",
-      "mbQuota": "{quota} MB quota"
+      "totalUsers": "총 사용자 수",
+      "approved": "승인됨",
+      "pending": "대기 중",
+      "activeDevices": "활성 기기",
+      "totalDevices": "총 {count}개 기기",
+      "totalNotes": "총 노트 수",
+      "acrossAllUsers": "모든 사용자",
+      "storage": "저장소",
+      "mbQuota": "{quota} MB 할당량"
     },
     "serverInfo": {
-      "title": "Server Information",
-      "version": "Server Version:",
-      "activeUsers": "Active Users:",
-      "pendingApprovals": "Pending Approvals:"
+      "title": "서버 정보",
+      "version": "서버 버전:",
+      "activeUsers": "활성 사용자:",
+      "pendingApprovals": "승인 대기:"
     }
   },
   "users": {
-    "title": "Users",
-    "loadingUsers": "Loading users...",
-    "noUsersFound": "No users found",
-    "failedToLoad": "Failed to load users",
+    "title": "사용자",
+    "loadingUsers": "사용자 로딩 중...",
+    "noUsersFound": "사용자를 찾을 수 없습니다",
+    "failedToLoad": "사용자 로드 실패",
     "filters": {
-      "all": "All",
-      "pending": "Pending",
-      "approved": "Approved",
-      "inactive": "Inactive"
+      "all": "전체",
+      "pending": "대기 중",
+      "approved": "승인됨",
+      "inactive": "비활성"
     },
     "table": {
-      "email": "Email",
-      "status": "Status",
-      "devices": "Devices",
-      "notes": "Notes",
-      "created": "Created",
-      "actions": "Actions"
+      "email": "이메일",
+      "status": "상태",
+      "devices": "기기",
+      "notes": "노트",
+      "created": "생성일",
+      "actions": "작업"
     },
     "status": {
-      "pending": "Pending",
-      "active": "Active",
-      "inactive": "Inactive",
-      "admin": "Admin"
+      "pending": "대기 중",
+      "active": "활성",
+      "inactive": "비활성",
+      "admin": "관리자"
     },
     "actions": {
-      "approve": "Approve",
-      "makeAdmin": "Make Admin",
-      "removeAdmin": "Remove Admin",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "demoteFromAdmin": "Demote from admin",
-      "promoteToAdmin": "Promote to admin",
-      "deleteUser": "Delete user"
+      "approve": "승인",
+      "makeAdmin": "관리자로 지정",
+      "removeAdmin": "관리자 제거",
+      "deactivate": "비활성화",
+      "activate": "활성화",
+      "delete": "삭제",
+      "demoteFromAdmin": "관리자에서 강등",
+      "promoteToAdmin": "관리자로 승격",
+      "deleteUser": "사용자 삭제"
     },
     "confirm": {
-      "approve": "Approve",
-      "deactivate": "Deactivate",
-      "activate": "Activate",
-      "delete": "Delete",
-      "promoteToAdmin": "Promote to Admin",
-      "demoteFromAdmin": "Demote from Admin",
+      "approve": "승인",
+      "deactivate": "비활성화",
+      "activate": "활성화",
+      "delete": "삭제",
+      "promoteToAdmin": "관리자로 승격",
+      "demoteFromAdmin": "관리자에서 강등",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
-        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
+        "delete": "사용자 {email}을(를) 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+        "promoteToAdmin": "{email}을(를) 관리자로 승격하시겠습니까? 모든 관리 기능에 대한 전체 액세스 권한이 부여됩니다.",
+        "demoteFromAdmin": "{email}의 관리자 권한을 제거하시겠습니까?",
+        "genericAction": "사용자 {email}에 대해 {action}을(를) 실행하시겠습니까?"
       }
     },
     "toast": {
-      "approved": "User {email} approved successfully",
-      "deactivated": "User {email} deactivated",
-      "activated": "User {email} activated",
-      "deleted": "User {email} deleted",
-      "promotedToAdmin": "User {email} promoted to admin",
-      "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "approved": "사용자 {email}이(가) 성공적으로 승인되었습니다",
+      "deactivated": "사용자 {email}이(가) 비활성화되었습니다",
+      "activated": "사용자 {email}이(가) 활성화되었습니다",
+      "deleted": "사용자 {email}이(가) 삭제되었습니다",
+      "promotedToAdmin": "사용자 {email}이(가) 관리자로 승격되었습니다",
+      "demotedFromAdmin": "사용자 {email}이(가) 관리자에서 강등되었습니다",
+      "failedToAction": "사용자 {action} 실패: {error}",
+      "failedGeneric": "사용자 {action} 실패"
     }
   },
   "settings": {
-    "title": "Settings",
+    "title": "설정",
     "changePassword": {
-      "title": "Change Password",
-      "description": "Update your admin password. Password must be at least 12 characters long.",
-      "currentPassword": "Current Password",
-      "newPassword": "New Password",
-      "confirmPassword": "Confirm New Password",
+      "title": "비밀번호 변경",
+      "description": "관리자 비밀번호를 업데이트하세요. 비밀번호는 최소 12자 이상이어야 합니다.",
+      "currentPassword": "현재 비밀번호",
+      "newPassword": "새 비밀번호",
+      "confirmPassword": "새 비밀번호 확인",
       "placeholder": {
-        "current": "Enter current password",
-        "new": "Enter new password (min 12 characters)",
-        "confirm": "Confirm new password"
+        "current": "현재 비밀번호 입력",
+        "new": "새 비밀번호 입력 (최소 12자)",
+        "confirm": "새 비밀번호 확인"
       },
-      "button": "Change Password",
-      "buttonChanging": "Changing...",
-      "cancel": "Cancel",
+      "button": "비밀번호 변경",
+      "buttonChanging": "변경 중...",
+      "cancel": "취소",
       "errors": {
-        "currentRequired": "Current password is required",
-        "newRequired": "New password is required",
-        "minLength": "New password must be at least 12 characters",
-        "mismatch": "Passwords do not match",
-        "failed": "Failed to change password"
+        "currentRequired": "현재 비밀번호가 필요합니다",
+        "newRequired": "새 비밀번호가 필요합니다",
+        "minLength": "새 비밀번호는 최소 12자 이상이어야 합니다",
+        "mismatch": "비밀번호가 일치하지 않습니다",
+        "failed": "비밀번호 변경 실패"
       },
-      "success": "Password changed successfully"
+      "success": "비밀번호가 성공적으로 변경되었습니다"
     }
   }
 }
