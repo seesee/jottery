@@ -4,6 +4,9 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [svelte({ hot: !process.env.VITEST })],
+  define: {
+    __APP_VERSION__: JSON.stringify('test'),
+  },
   test: {
     globals: true,
     environment: 'happy-dom',
