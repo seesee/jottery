@@ -1,0 +1,153 @@
+{
+  "app": {
+    "name": "Jottery Admin"
+  },
+  "common": {
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "email": "Email",
+    "password": "Password",
+    "actions": "Actions",
+    "status": "Status",
+    "created": "Created"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "login": {
+    "title": "Jottery Admin",
+    "subtitle": "Sign in to manage your server",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "placeholder": {
+      "email": "admin@localhost",
+      "password": "••••••••"
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "adminRequired": "Admin access required",
+      "unexpected": "An unexpected error occurred"
+    }
+  },
+  "logout": {
+    "confirmTitle": "Confirm Logout",
+    "confirmMessage": "Are you sure you want to log out?"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "loadingStats": "Loading statistics...",
+    "failedToLoad": "Failed to load statistics",
+    "stats": {
+      "totalUsers": "Total Users",
+      "approved": "approved",
+      "pending": "pending",
+      "activeDevices": "Active Devices",
+      "totalDevices": "{count} total devices",
+      "totalNotes": "Total Notes",
+      "acrossAllUsers": "Across all users",
+      "storage": "Storage",
+      "mbQuota": "{quota} MB quota"
+    },
+    "serverInfo": {
+      "title": "Server Information",
+      "version": "Server Version:",
+      "activeUsers": "Active Users:",
+      "pendingApprovals": "Pending Approvals:"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "loadingUsers": "Loading users...",
+    "noUsersFound": "No users found",
+    "failedToLoad": "Failed to load users",
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "inactive": "Inactive"
+    },
+    "table": {
+      "email": "Email",
+      "status": "Status",
+      "devices": "Devices",
+      "notes": "Notes",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "active": "Active",
+      "inactive": "Inactive",
+      "admin": "Admin"
+    },
+    "actions": {
+      "approve": "Approve",
+      "makeAdmin": "Make Admin",
+      "removeAdmin": "Remove Admin",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "demoteFromAdmin": "Demote from admin",
+      "promoteToAdmin": "Promote to admin",
+      "deleteUser": "Delete user"
+    },
+    "confirm": {
+      "approve": "Approve",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "promoteToAdmin": "Promote to Admin",
+      "demoteFromAdmin": "Demote from Admin",
+      "messages": {
+        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
+        "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
+        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
+        "genericAction": "Are you sure you want to {action} user {email}?"
+      }
+    },
+    "toast": {
+      "approved": "User {email} approved successfully",
+      "deactivated": "User {email} deactivated",
+      "activated": "User {email} activated",
+      "deleted": "User {email} deleted",
+      "promotedToAdmin": "User {email} promoted to admin",
+      "demotedFromAdmin": "User {email} demoted from admin",
+      "failedToAction": "Failed to {action} user: {error}",
+      "failedGeneric": "Failed to {action} user"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "changePassword": {
+      "title": "Change Password",
+      "description": "Update your admin password. Password must be at least 12 characters long.",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "placeholder": {
+        "current": "Enter current password",
+        "new": "Enter new password (min 12 characters)",
+        "confirm": "Confirm new password"
+      },
+      "button": "Change Password",
+      "buttonChanging": "Changing...",
+      "cancel": "Cancel",
+      "errors": {
+        "currentRequired": "Current password is required",
+        "newRequired": "New password is required",
+        "minLength": "New password must be at least 12 characters",
+        "mismatch": "Passwords do not match",
+        "failed": "Failed to change password"
+      },
+      "success": "Password changed successfully"
+    }
+  }
+}
