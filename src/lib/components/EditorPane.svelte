@@ -16,7 +16,7 @@
   import { marked } from 'marked';
   import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
-  import { EditorFooter, EditorToolbar, EditorContent } from './editor';
+  import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel } from './editor';
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
@@ -1265,51 +1265,15 @@
 
     <!-- Attachments Section - Only show if attachments exist or dragging files (hidden on mobile) -->
     {#if !forceMobileLayout && (attachments.length > 0 || isDraggingFile)}
-      <div class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-        <!-- Header - Always visible -->
-        <button
-          on:click={toggleAttachments}
-          class="w-full px-3 py-2 flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
-        >
-          <span>
-            📎 {$_('editor.attachmentsHeader', { values: { count: attachments.length } })}
-          </span>
-          <span class="text-xs transform transition-transform {isAttachmentsExpanded ? 'rotate-180' : ''}">
-            ▼
-          </span>
-        </button>
-
-        <!-- Expanded content or drop zone -->
-        {#if isAttachmentsExpanded || isDraggingFile}
-          <div class="px-3 pb-3 max-h-64 overflow-y-auto space-y-3">
-            <!-- File Upload - Show when expanded or dragging -->
-            <FileUpload
-              onUpload={handleFileUpload}
-              disabled={isUploading}
-            />
-
-            <!-- Attachment List -->
-            {#if attachments.length > 0}
-              <AttachmentList
-                {attachments}
-                onDelete={handleDeleteAttachment}
-                readonly={false}
-              />
-            {/if}
-
-            {#if isUploading}
-              <div class="text-sm text-blue-600 dark:text-blue-400">
-                {$_('editor.uploading')}
-              </div>
-            {/if}
-          </div>
-        {:else if attachments.length > 0}
-          <!-- Collapsed view - show attachment count -->
-          <div class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400">
-            {$_(isAttachmentsExpanded ? 'attachments.clickToHide' : 'attachments.clickToView')}
-          </div>
-        {/if}
-      </div>
+      <AttachmentsPanel
+        {attachments}
+        isExpanded={isAttachmentsExpanded}
+        {isDraggingFile}
+        {isUploading}
+        onToggleExpanded={toggleAttachments}
+        onDelete={handleDeleteAttachment}
+        onFileUpload={handleFileUpload}
+      />
     {/if}
 
     <!-- Metadata Footer -->
