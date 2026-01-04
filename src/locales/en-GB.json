@@ -14,7 +14,8 @@
     "unlock": "Unlock",
     "settings": "Settings",
     "search": "Search",
-    "error": "Error"
+    "error": "Error",
+    "back": "Back"
   },
   "note": {
     "new": "New",
@@ -78,6 +79,8 @@
     "noteId": "Note ID:",
     "uploading": "Uploading...",
     "attachmentsHeader": "Attachments ({count})",
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet",
     "status": {
       "uploading": "Uploading...",
       "processingNotes": "Processing {current} of {total} notes...",

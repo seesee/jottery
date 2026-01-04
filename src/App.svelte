@@ -318,6 +318,7 @@
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
+        onBackToList={useMobileLayout && mobileView === 'editor' ? handleBackToList : undefined}
         forceMobileLayout={useMobileLayout}
         disableNewNote={creatingNote}
         {loadingNotes}
@@ -331,7 +332,7 @@
             {#if mobileView === 'list'}
               <NoteList onNoteSelect={handleNoteSelect} />
             {:else}
-              <EditorPane onBackToList={handleBackToList} />
+              <EditorPane onBackToList={handleBackToList} forceMobileLayout={true} />
             {/if}
           </div>
         {:else}
