@@ -1204,8 +1204,6 @@
   });
 </script>
 
-<svelte:window on:click={handleClickOutside} />
-
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"

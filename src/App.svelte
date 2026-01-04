@@ -124,9 +124,8 @@
 
       // If language was auto-detected (empty string), save the detected locale
       if (!userSettings.language || userSettings.language === '') {
-        userSettings.language = initialLocale;
-        await settingsRepository.save(userSettings);
-        settings.set(userSettings);
+        const updated = await settingsRepository.update({ language: initialLocale });
+        settings.set(updated);
       }
 
       // Apply theme
