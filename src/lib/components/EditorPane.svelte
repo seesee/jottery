@@ -1842,7 +1842,7 @@
             {attachments}
             readonly={false}
             onDelete={handleDeleteAttachment}
-            onPreview={handleAttachmentPreview}
+            onPreview={handlePreviewAttachment}
           />
         {:else}
           <div class="text-center text-gray-500 dark:text-gray-400 py-8">
