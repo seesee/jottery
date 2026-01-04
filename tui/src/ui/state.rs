@@ -1,0 +1,58 @@
+/// Application state
+pub enum AppState {
+    /// Locked - password input screen
+    Locked,
+    /// Unlocked - main note list
+    NoteList,
+    /// Viewing/editing a note
+    NoteView,
+    /// Settings panel
+    Settings {
+        /// Previous state to return to
+        previous: Box<AppState>,
+    },
+    /// Help screen
+    Help {
+        /// Previous state to return to
+        previous: Box<AppState>,
+    },
+    /// Show sync credentials as text (for manual copy)
+    ShowSyncCredentials {
+        credentials: String,
+        previous: Box<AppState>,
+    },
+    /// Input sync credentials as text (for manual paste)
+    InputSyncCredentials {
+        previous: Box<AppState>,
+    },
+    /// Quit
+    Quit,
+}
+
+/// Current input mode
+pub enum InputMode {
+    /// Normal mode (navigation)
+    Normal,
+    /// Insert mode (typing)
+    Insert,
+    /// Tag mode (adding tags)
+    Tag,
+    /// Settings edit mode
+    SettingsEdit,
+    /// Password verification mode (for enabling remember password)
+    PasswordVerify,
+    /// Attachment path input mode (entering file path to attach)
+    AttachmentPath,
+}
+
+/// Current view mode
+pub enum ViewMode {
+    /// Normal note list view
+    NoteList,
+    /// Recycle bin view (deleted notes)
+    RecycleBin,
+    /// Attachment viewer modal
+    AttachmentViewer,
+    /// Version history viewer modal
+    VersionHistory,
+}
