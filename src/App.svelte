@@ -353,13 +353,13 @@
         {:else}
           <!-- Desktop: Side-by-side layout -->
           <div class="flex w-full">
-            <!-- Note List Sidebar - responsive width -->
-            <div class="w-70 desktop:w-80 border-r border-gray-200 dark:border-gray-700">
+            <!-- Note List Sidebar -->
+            <div class="w-80 border-r border-gray-200 dark:border-gray-700">
               <NoteList />
             </div>
 
-            <!-- Editor - takes remaining space, min-w-0 prevents overflow -->
-            <div class="flex-1 min-w-0">
+            <!-- Editor -->
+            <div class="flex-1">
               <EditorPane />
             </div>
           </div>
