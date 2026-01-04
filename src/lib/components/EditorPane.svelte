@@ -1306,6 +1306,23 @@
         </button>
       {/if}
 
+      <!-- Attachments Button (Mobile only) -->
+      {#if forceMobileLayout}
+        <button
+          on:click={handleShowAttachments}
+          class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 flex items-center gap-1.5"
+          title={$_('editor.attachments')}
+        >
+          <span>📎</span>
+          <span>{$_('editor.attachments')}</span>
+          {#if attachments.length > 0}
+            <span class="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded">
+              {attachments.length}
+            </span>
+          {/if}
+        </button>
+      {/if}
+
       <div class="flex-1"></div>
 
       <!-- More Menu -->
@@ -1395,19 +1412,6 @@
                   <span class="text-xs text-gray-500 dark:text-gray-400">{versionHistoryShortcut}</span>
                 {/if}
               </button>
-
-              {#if forceMobileLayout}
-                <button
-                  on:click={handleShowAttachments}
-                  class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                >
-                  <span>📎</span>
-                  <span class="flex-1">{$_('editor.attachments')}</span>
-                  {#if attachments.length > 0}
-                    <span class="text-xs text-gray-500 dark:text-gray-400">({attachments.length})</span>
-                  {/if}
-                </button>
-              {/if}
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
