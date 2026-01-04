@@ -331,7 +331,7 @@
             {#if mobileView === 'list'}
               <NoteList onNoteSelect={handleNoteSelect} />
             {:else}
-              <EditorPane onBackToList={handleBackToList} />
+              <EditorPane onBackToList={handleBackToList} forceMobileLayout={true} />
             {/if}
           </div>
         {:else}
