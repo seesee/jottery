@@ -23,21 +23,21 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Target languages with their codes
+// Target languages with their codes (alphabetical by English name)
 const TARGET_LANGUAGES = {
-  'es': 'Spanish',
+  'zh': 'Chinese',
+  'nl': 'Dutch',
   'fr': 'French',
   'de': 'German',
-  'it': 'Italian',
-  'pt': 'Portuguese',
-  'ja': 'Japanese',
-  'zh': 'Chinese',
-  'ko': 'Korean',
-  'ru': 'Russian',
-  'nl': 'Dutch',
-  'pl': 'Polish',
-  'tr': 'Turkish',
   'el': 'Greek',
+  'it': 'Italian',
+  'ja': 'Japanese',
+  'ko': 'Korean',
+  'pl': 'Polish',
+  'pt': 'Portuguese',
+  'ru': 'Russian',
+  'es': 'Spanish',
+  'tr': 'Turkish',
 };
 
 // LibreTranslate API endpoint (free, no API key)
