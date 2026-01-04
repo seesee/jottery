@@ -158,7 +158,7 @@
     },
     "syncCredentials": {
       "title": "📋 同步凭据",
-      "instructions": "复制下面的文本并将其粘贴到另一个 Jottery 客户端,使用"使用现有凭据":",
+      "instructions": "复制下面的文本并将其粘贴到另一个 Jottery 客户端,使用\"使用现有凭据\":",
       "samePasswordWarning": "⚠️ <strong>重要:</strong> 所有设备必须使用相同的密码才能解密笔记!",
       "clipboardNote": "剪贴板复制可能失败(尤其是通过 SSH 或在某些浏览器中)。您可以手动选择并复制上面的文本。",
       "closeButton": "关闭"
@@ -234,7 +234,7 @@
         "deviceRegistering": "⏳ 正在注册设备并同步...",
         "successTitle": "同步已成功启用!",
         "successText": "您的设备现已注册,<strong>所有现有笔记已同步到服务器</strong>。未来的更改将自动同步。",
-        "successNextSteps": "📋 添加另一台设备:点击下方的"导出同步凭据"并将其导入到您的其他设备。",
+        "successNextSteps": "📋 添加另一台设备:点击下方的\"导出同步凭据\"并将其导入到您的其他设备。",
         "done": "完成"
       },
       "linkAccount": {
