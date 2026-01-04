@@ -1,6 +1,7 @@
 <script lang="ts">
   import { auth } from '../lib/auth.svelte';
   import { ApiError } from '../lib/api';
+  import { _ } from 'svelte-i18n';
 
   let email = $state('');
   let password = $state('');
@@ -18,14 +19,14 @@
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          error = 'Invalid email or password';
+          error = $_('login.errors.invalidCredentials');
         } else if (err.status === 403) {
-          error = 'Admin access required';
+          error = $_('login.errors.adminRequired');
         } else {
           error = err.message;
         }
       } else {
-        error = 'An unexpected error occurred';
+        error = $_('login.errors.unexpected');
       }
     } finally {
       loading = false;
@@ -36,8 +37,8 @@
 <div class="min-h-screen flex items-center justify-center bg-gray-100">
   <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
     <div class="text-center mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">Jottery Admin</h1>
-      <p class="text-gray-600 mt-2">Sign in to manage your server</p>
+      <h1 class="text-3xl font-bold text-gray-900">{$_('login.title')}</h1>
+      <p class="text-gray-600 mt-2">{$_('login.subtitle')}</p>
     </div>
 
     <form onsubmit={handleSubmit} class="space-y-6">
@@ -49,7 +50,7 @@
 
       <div>
         <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-          Email
+          {$_('login.email')}
         </label>
         <input
           id="email"
@@ -58,13 +59,13 @@
           bind:value={email}
           disabled={loading}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-          placeholder="admin@localhost"
+          placeholder={$_('login.placeholder.email')}
         />
       </div>
 
       <div>
         <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-          Password
+          {$_('login.password')}
         </label>
         <input
           id="password"
@@ -73,7 +74,7 @@
           bind:value={password}
           disabled={loading}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-          placeholder="••••••••"
+          placeholder={$_('login.placeholder.password')}
         />
       </div>
 
@@ -82,7 +83,7 @@
         disabled={loading}
         class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
       >
-        {loading ? 'Signing in...' : 'Sign in'}
+        {loading ? $_('login.signingIn') : $_('login.signIn')}
       </button>
     </form>
   </div>
