@@ -122,6 +122,13 @@
       initI18n(initialLocale);
       locale.set(initialLocale);
 
+      // If language was auto-detected (empty string), save the detected locale
+      if (!userSettings.language || userSettings.language === '') {
+        userSettings.language = initialLocale;
+        await settingsRepository.save(userSettings);
+        settings.set(userSettings);
+      }
+
       // Apply theme
       applyTheme(userSettings.theme);
 
