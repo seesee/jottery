@@ -14,7 +14,8 @@
     "unlock": "Unlock",
     "settings": "Settings",
     "search": "Search",
-    "error": "Error"
+    "error": "Error",
+    "back": "Back"
   },
   "note": {
     "new": "New",
@@ -78,6 +79,8 @@
     "noteId": "Note ID:",
     "uploading": "Uploading...",
     "attachmentsHeader": "Attachments ({count})",
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet",
     "status": {
       "uploading": "Uploading...",
       "processingNotes": "Processing {current} of {total} notes...",
@@ -273,7 +276,7 @@
       "enabledCount": "{enabled}/{total} enabled"
     },
     "keyboardTab": {
-      "description": "Customise keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
+      "description": "Customize keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
       "resetToDefaults": "Reset to Defaults",
       "viewAllShortcuts": "View All Shortcuts",
       "quickReference": "Quick reference of all keyboard shortcuts",
@@ -324,7 +327,7 @@
       "terminalClientDescription": "Access your notes from the command line with the Jottery terminal client. The TUI provides a fast, keyboard-driven interface for managing your notes.",
       "terminalClientDownload": "Download the terminal client from the Advanced tab.",
       "aboutJottery": "About Jottery",
-      "aboutDescription": "Jottery is a privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with rich content, syntax highlighting, and encryption.",
+      "aboutDescription": "Jottery is a privacy-focused, self-hosted scratch pad application for capturing, organizing, and searching notes with rich content, syntax highlighting, and encryption.",
       "viewOnGithub": "View on GitHub",
       "license": "Licensed under the MIT License."
     }
