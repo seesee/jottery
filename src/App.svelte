@@ -318,6 +318,7 @@
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
+        onBackToList={useMobileLayout && mobileView === 'editor' ? handleBackToList : undefined}
         forceMobileLayout={useMobileLayout}
         disableNewNote={creatingNote}
         {loadingNotes}
