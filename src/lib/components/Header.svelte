@@ -120,8 +120,8 @@
       <button
         on:click={toggleMobileMenu}
         class="min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-        title="Menu"
-        aria-label="Open menu"
+        title={$_('header.menu')}
+        aria-label={$_('header.menu')}
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -131,8 +131,8 @@
       <button
         on:click={toggleMobileMenu}
         class="tablet:hidden min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-        title="Menu"
-        aria-label="Open menu"
+        title={$_('header.menu')}
+        aria-label={$_('header.menu')}
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -150,7 +150,7 @@
           id="search-input"
           type="text"
           bind:value={$searchQuery}
-          placeholder={loadingNotes ? `Loading ${loadingProgress.current}/${loadingProgress.total} notes...` : $_('search.placeholder')}
+          placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
           disabled={loadingNotes}
           class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
           style="font-size: {searchFontSize}"
@@ -193,7 +193,7 @@
           on:click={handleNewNoteClick}
           disabled={disableNewNote}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={disableNewNote ? 'Creating note...' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
+          title={disableNewNote ? $_('header.creatingNote') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,7 +219,7 @@
           on:click={handleNewNoteClick}
           disabled={disableNewNote}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={disableNewNote ? 'Creating note...' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
+          title={disableNewNote ? $_('header.creatingNote') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +236,7 @@
         on:click={handleNewNoteClick}
         disabled={$isDraftMode}
         class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title={$isDraftMode ? 'Add content to current note first' : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
+        title={$isDraftMode ? $_('header.addContentFirst') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
       >
         + {$_('note.new')}
       </button>
@@ -276,7 +276,7 @@
           id="search-input-mobile"
           type="text"
           bind:value={$searchQuery}
-          placeholder={loadingNotes ? `Loading ${loadingProgress.current}/${loadingProgress.total} notes...` : $_('search.placeholder')}
+          placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
           disabled={loadingNotes}
           class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
           style="font-size: {searchFontSize}"
@@ -315,7 +315,7 @@
       <div class="flex flex-col h-full">
         <!-- Drawer Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white">Menu</h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">{$_('header.menu')}</h2>
           <button
             on:click={closeMobileMenu}
             class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
@@ -398,10 +398,10 @@
 
 <ConfirmModal
   show={showDisableRememberPasswordConfirm}
-  title="Disable Remember Password?"
-  message="This will clear your stored password and lock the application.\n\nYou will need to enter your password the next time you access the app."
-  confirmText="Disable and Lock"
-  cancelText="Cancel"
+  title={$_('confirm.disableRememberPassword.title')}
+  message={$_('confirm.disableRememberPassword.message')}
+  confirmText={$_('confirm.disableRememberPassword.confirmButton')}
+  cancelText={$_('confirm.disableRememberPassword.cancelButton')}
   confirmClass="bg-orange-600 hover:bg-orange-700"
   onConfirm={handleDisableRememberPasswordConfirm}
   onCancel={handleDisableRememberPasswordCancel}

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
+  import { get } from 'svelte/store';
+  import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote, searchQuery } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, attachmentRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
@@ -92,6 +94,10 @@
   $: noteInfoShortcut = formatShortcutForTooltip(shortcuts?.noteInfo);
   $: versionHistoryShortcut = formatShortcutForTooltip(shortcuts?.versionHistory);
 
+  // Reactive date formatting stores
+  $: createdAtFormatted = $selectedNote ? formatDateTime($selectedNote.createdAt) : null;
+  $: modifiedAtFormatted = $selectedNote ? formatDateTime($selectedNote.modifiedAt) : null;
+
   // Lazy-loaded highlight.js for syntax highlighting
   let hljs: any = null;
   let loadingHighlightJs = false;
@@ -120,7 +126,7 @@
 
   // Generate available language options (plain + enabled languages)
   $: availableLanguages = [
-    { id: 'plain', name: 'Plain Text' },
+    { id: 'plain', name: $_('editor.plainText') },
     ...($settings.enabledSyntaxLanguages || [])
       .map(langId => {
         const lang = ALL_LANGUAGES.find(l => l.id === langId);
@@ -228,7 +234,7 @@
             // Store the reference in the data attribute for async resolution
             if (!attachment) {
               // Return placeholder that will be resolved by filename in afterUpdate
-              return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+              return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3E${get(_)('editor.status.loading')}%3C/text%3E%3C/svg%3E" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
             }
 
             if (attachment) {
@@ -236,7 +242,7 @@
               if (attachment.mimeType.startsWith('image/')) {
                 // Return a placeholder with data URL to avoid CSP errors
                 // Store the actual attachment.data value (blob storage key) in data attribute
-                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3ELoading...%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3E${get(_)('editor.status.loading')}%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
               } else {
                 // For non-image attachments, create a download link
                 const icon = attachment.mimeType.includes('pdf') ? '📄' :
@@ -1205,7 +1211,7 @@
         div.innerHTML = `
           <span class="text-2xl mr-2">⚠️</span>
           <div class="flex-1">
-            <span class="font-medium text-red-700 dark:text-red-400">Error loading attachment</span>
+            <span class="font-medium text-red-700 dark:text-red-400">${get(_)('editor.errors.loadingAttachment')}</span>
             <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
           </div>
         `;
@@ -1236,8 +1242,8 @@
         <button
           on:click={onBackToList}
           class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
-          title="Back to notes"
-          aria-label="Back to notes"
+          title={$_('editor.backToNotes')}
+          aria-label={$_('editor.backToNotes')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -1250,8 +1256,8 @@
         on:click={handleTogglePin}
         disabled={$isDraftMode}
         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-        title={$isDraftMode ? 'Save note first' : ($selectedNote?.pinned ? 'Unpin note' : 'Pin note')}
-        aria-label={$isDraftMode ? 'Save note first' : ($selectedNote?.pinned ? 'Unpin note' : 'Pin note')}
+        title={$isDraftMode ? $_('editor.tooltips.saveNoteFirst') : ($selectedNote?.pinned ? $_('editor.tooltips.unpinNote') : $_('editor.tooltips.pinNote'))}
+        aria-label={$isDraftMode ? $_('editor.tooltips.saveNoteFirst') : ($selectedNote?.pinned ? $_('editor.tooltips.unpinNote') : $_('editor.tooltips.pinNote'))}
       >
         {#if $selectedNote?.pinned}
           <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
@@ -1269,7 +1275,7 @@
         value={language}
         on:change={handleLanguageChange}
         class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
-        title="Syntax highlighting"
+        title={$_('editor.syntaxHighlight')}
       >
         {#each availableLanguages as lang}
           <option value={lang.id}>{lang.name}</option>
@@ -1281,14 +1287,14 @@
         <button
           on:click={handlePreviewToggle}
           class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 flex items-center gap-1.5"
-          title={showPreview ? 'Edit Mode' : 'Preview'}
+          title={showPreview ? $_('editor.edit') : $_('editor.preview')}
         >
           {#if showPreview}
             <span>📝</span>
-            <span>Edit</span>
+            <span>{$_('editor.edit')}</span>
           {:else}
             <span>👁️</span>
-            <span>Preview</span>
+            <span>{$_('editor.preview')}</span>
           {/if}
         </button>
       {/if}
@@ -1300,7 +1306,7 @@
         <button
           on:click={toggleMoreMenu}
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-          title="More actions"
+          title={$_('editor.moreActions')}
           aria-label="More actions"
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -1316,7 +1322,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>↶</span>
-                <span>Undo</span>
+                <span>{$_('editor.undo')}</span>
               </button>
 
               <button
@@ -1324,7 +1330,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>↷</span>
-                <span>Redo</span>
+                <span>{$_('editor.redo')}</span>
               </button>
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -1335,10 +1341,10 @@
               >
                 {#if wordWrap}
                   <span>↩️</span>
-                  <span>Word Wrap: On</span>
+                  <span>{$_('editor.wordWrapOn')}</span>
                 {:else}
                   <span>➡️</span>
-                  <span>Word Wrap: Off</span>
+                  <span>{$_('editor.wordWrapOff')}</span>
                 {/if}
               </button>
 
@@ -1347,7 +1353,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>📋</span>
-                <span class="flex-1">Copy Content</span>
+                <span class="flex-1">{$_('editor.copyContent')}</span>
                 {#if copyNoteShortcut}
                   <span class="text-xs text-gray-500 dark:text-gray-400">{copyNoteShortcut}</span>
                 {/if}
@@ -1358,7 +1364,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>💾</span>
-                <span class="flex-1">Export to File</span>
+                <span class="flex-1">{$_('editor.exportToFile')}</span>
               </button>
 
               <button
@@ -1366,7 +1372,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>ℹ️</span>
-                <span class="flex-1">Info</span>
+                <span class="flex-1">{$_('editor.info')}</span>
                 {#if noteInfoShortcut}
                   <span class="text-xs text-gray-500 dark:text-gray-400">{noteInfoShortcut}</span>
                 {/if}
@@ -1377,7 +1383,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <span>📜</span>
-                <span class="flex-1">Version History</span>
+                <span class="flex-1">{$_('editor.versionHistory')}</span>
                 {#if versionHistoryShortcut}
                   <span class="text-xs text-gray-500 dark:text-gray-400">{versionHistoryShortcut}</span>
                 {/if}
@@ -1390,7 +1396,7 @@
                 class="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
               >
                 <span>🗑️</span>
-                <span>Delete Note</span>
+                <span>{$_('editor.deleteNote')}</span>
               </button>
             </div>
           </div>
@@ -1401,7 +1407,7 @@
       <button
         on:click={handleClose}
         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
-        title="Close note (Esc)"
+        title={$_('editor.closeNote')}
         aria-label="Close note"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1419,7 +1425,7 @@
           handleInput();
         }}
         {availableTags}
-        placeholder="Add tags..."
+        placeholder={$_('editor.addTags')}
         onTagClick={handleTagClick}
       />
     </div>
@@ -1462,7 +1468,7 @@
           class="w-full px-3 py-2 flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 transition-colors"
         >
           <span>
-            📎 Attachments ({attachments.length})
+            📎 {$_('editor.attachmentsHeader', { values: { count: attachments.length } })}
           </span>
           <span class="text-xs transform transition-transform {isAttachmentsExpanded ? 'rotate-180' : ''}">
             ▼
@@ -1489,14 +1495,14 @@
 
             {#if isUploading}
               <div class="text-sm text-blue-600 dark:text-blue-400">
-                Uploading...
+                {$_('editor.uploading')}
               </div>
             {/if}
           </div>
         {:else if attachments.length > 0}
           <!-- Collapsed view - show attachment count -->
           <div class="px-3 pb-2 text-xs text-gray-500 dark:text-gray-400">
-            Click to {isAttachmentsExpanded ? 'hide' : 'view'} attachments
+            {$_(isAttachmentsExpanded ? 'attachments.clickToHide' : 'attachments.clickToView')}
           </div>
         {/if}
       </div>
@@ -1506,8 +1512,8 @@
     {#if $selectedNote}
     <div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
       <div class="flex justify-between">
-        <span>Created: {formatDateTime($selectedNote.createdAt)}</span>
-        <span>Modified: {formatDateTime($selectedNote.modifiedAt)}</span>
+        <span>{$_('note.created')}: {createdAtFormatted ? $createdAtFormatted : ''}</span>
+        <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>
       </div>
     </div>
     {/if}
@@ -1515,8 +1521,8 @@
 {:else}
   <div class="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
     <div class="text-center">
-      <p class="text-lg mb-2">No note selected</p>
-      <p class="text-sm">Select a note from the list or create a new one</p>
+      <p class="text-lg mb-2">{$_('editor.noNoteSelected')}</p>
+      <p class="text-sm">{$_('editor.noNoteSelectedHint')}</p>
     </div>
   </div>
 {/if}
@@ -1540,11 +1546,11 @@
       tabindex="0"
     >
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Note Information</h2>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{$_('editor.noteInformation')}</h2>
         <button
           on:click={() => showInfoModal = false}
           class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-          aria-label="Close"
+          aria-label={$_('common.close')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1554,50 +1560,50 @@
 
       <div class="space-y-3 text-sm">
         <div class="grid grid-cols-2 gap-2">
-          <div class="text-gray-600 dark:text-gray-400">Characters:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.characters')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.characters.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Characters (no spaces):</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.charactersNoSpaces')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.charactersNoSpaces.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Words:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.words')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.words.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Lines:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.lines')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.lines.toLocaleString()}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Tags:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.tags')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.tags}</div>
 
-          <div class="text-gray-600 dark:text-gray-400">Attachments:</div>
+          <div class="text-gray-600 dark:text-gray-400">{$_('editor.attachmentsCount')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">{noteStats.attachments}</div>
         </div>
 
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Syntax:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('editor.syntax')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100 capitalize">{language.replace('-', ' ')}</div>
         </div>
 
         {#if $selectedNote}
         <div class="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Created:</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.createdAt)}</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.created')}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{createdAtFormatted ? $createdAtFormatted : ''}</div>
         </div>
 
         <div>
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Modified:</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">{formatDateTime($selectedNote.modifiedAt)}</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('note.modified')}</div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">{modifiedAtFormatted ? $modifiedAtFormatted : ''}</div>
         </div>
         {/if}
 
         {#if $selectedNote}
         <div>
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Version:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('versionHistory.version')}</div>
           <div class="font-medium text-gray-900 dark:text-gray-100">v{$selectedNote.version}</div>
         </div>
 
         <div>
-          <div class="text-gray-600 dark:text-gray-400 mb-2">Note ID:</div>
+          <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('editor.noteId')}</div>
           <div class="font-mono text-xs text-gray-900 dark:text-gray-100 break-all">{$selectedNote.id}</div>
         </div>
         {/if}
@@ -1606,9 +1612,9 @@
       <div class="mt-6 flex justify-end">
         <button
           on:click={() => showInfoModal = false}
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          class="px-4 py-2 min-h-11 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          Close
+          {$_('common.close')}
         </button>
       </div>
     </div>
@@ -1698,7 +1704,7 @@
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex-1 min-w-0">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-            Attachment Preview
+            {$_('editor.attachmentPreview')}
           </h2>
         </div>
         <div class="flex gap-2 ml-4">
@@ -1706,7 +1712,7 @@
             on:click={handleDownloadFromPreview}
             class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
           >
-            Download
+            {$_('editor.download')}
           </button>
           <button
             on:click={closeAttachmentPreview}
@@ -1724,7 +1730,7 @@
       <div class="flex-1 overflow-auto {previewType === 'image' ? '' : 'p-4'}">
         {#if isLoadingPreview}
           <div class="flex items-center justify-center h-full">
-            <div class="text-gray-500 dark:text-gray-400">Loading preview...</div>
+            <div class="text-gray-500 dark:text-gray-400">{$_('editor.status.loadingPreview')}</div>
           </div>
         {:else if previewType === 'image' && previewContent}
           <div class="w-full h-full flex items-center justify-center p-4">
@@ -1754,18 +1760,18 @@
             <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
               <source src={previewContent} type={previewAttachment.mimeType} />
               <track kind="captions" />
-              Your browser does not support video playback.
+              {$_('editor.errors.videoNotSupported')}
             </video>
           </div>
         {:else}
           <div class="flex items-center justify-center h-full">
             <div class="text-center text-gray-500 dark:text-gray-400">
-              <p class="mb-4">Preview not available for this file type.</p>
+              <p class="mb-4">{$_('editor.errors.previewNotAvailable')}</p>
               <button
                 on:click={handleDownloadFromPreview}
                 class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Download to view
+                {$_('editor.errors.downloadToView')}
               </button>
             </div>
           </div>

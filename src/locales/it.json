@@ -1,0 +1,555 @@
+{
+  "app": {
+    "name": "Jottery",
+    "tagline": "Incentrato sulla privacy • Locale prima • Crittografato"
+  },
+  "common": {
+    "loading": "Caricamento...",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "confirm": "Conferma",
+    "close": "Chiudi",
+    "lock": "Blocca",
+    "unlock": "Sblocca",
+    "settings": "Impostazioni",
+    "search": "Cerca",
+    "error": "Errore"
+  },
+  "note": {
+    "new": "Nuova",
+    "create": "Crea nuova nota",
+    "delete": "Elimina nota",
+    "pin": "Fissa",
+    "pinned": "Fissata",
+    "unpin": "Rimuovi",
+    "copy": "Copia",
+    "copyContent": "Copia contenuto della nota",
+    "noNoteSelected": "Nessuna nota selezionata",
+    "selectNote": "Seleziona una nota dall'elenco o creane una nuova",
+    "created": "Creata",
+    "modified": "Modificata",
+    "attachments": "Allegati",
+    "filterByTag": "Filtra per #{tag}",
+    "noNotesYet": "Nessuna nota ancora",
+    "createFirstNote": "Crea la tua prima nota per iniziare",
+    "noResultsFound": "Nessun risultato trovato",
+    "tryDifferentSearch": "Prova una query di ricerca diversa",
+    "noNotes": "Nessuna nota",
+    "somethingWentWrong": "Qualcosa è andato storto"
+  },
+  "search": {
+    "placeholder": "Cerca note...",
+    "clear": "Cancella ricerca"
+  },
+  "editor": {
+    "noNoteSelected": "Nessuna nota selezionata",
+    "noNoteSelectedHint": "Seleziona una nota dall'elenco o creane una nuova",
+    "attachmentPreview": "Anteprima allegato",
+    "download": "Scarica",
+    "tags": "Tag",
+    "addTags": "Aggiungi tag...",
+    "plainText": "Testo semplice",
+    "syntaxHighlight": "Evidenziazione sintassi",
+    "wordWrap": "A capo",
+    "noWrap": "Senza a capo",
+    "toggleWordWrap": "Attiva/disattiva a capo automatico",
+    "backToNotes": "Torna alle note",
+    "moreActions": "Altre azioni",
+    "closeNote": "Chiudi nota (Esc)",
+    "preview": "Anteprima",
+    "edit": "Modifica",
+    "undo": "Annulla",
+    "redo": "Ripeti",
+    "wordWrapOn": "A capo automatico: Attivo",
+    "wordWrapOff": "A capo automatico: Disattivo",
+    "copyContent": "Copia contenuto",
+    "exportToFile": "Esporta in file",
+    "info": "Info",
+    "versionHistory": "Cronologia versioni",
+    "deleteNote": "Elimina nota",
+    "noteInformation": "Informazioni nota",
+    "characters": "Caratteri:",
+    "charactersNoSpaces": "Caratteri (senza spazi):",
+    "words": "Parole:",
+    "lines": "Righe:",
+    "attachmentsCount": "Allegati:",
+    "syntax": "Sintassi:",
+    "noteId": "ID nota:",
+    "uploading": "Caricamento...",
+    "attachmentsHeader": "Allegati ({count})",
+    "status": {
+      "uploading": "Caricamento...",
+      "processingNotes": "Elaborazione di {current} su {total} note...",
+      "readingFile": "Lettura file...",
+      "loadingPreview": "Caricamento anteprima...",
+      "loading": "Caricamento..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "Salva prima la nota",
+      "pinNote": "Fissa nota",
+      "unpinNote": "Rimuovi fissaggio"
+    },
+    "errors": {
+      "loadingAttachment": "Errore nel caricamento dell'allegato",
+      "videoNotSupported": "Il tuo browser non supporta la riproduzione video.",
+      "previewNotAvailable": "Anteprima non disponibile per questo tipo di file.",
+      "downloadToView": "Scarica per visualizzare"
+    }
+  },
+  "noteList": {
+    "deleteNote": "Elimina nota",
+    "filterByTag": "Filtra per #{tag}"
+  },
+  "tagInput": {
+    "removeTag": "Rimuovi tag"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "closeLabel": "Chiudi impostazioni",
+    "tabs": {
+      "general": "Generale",
+      "editor": "Editor",
+      "keyboard": "Scorciatoie tastiera",
+      "sync": "Sincronizzazione",
+      "advanced": "Avanzate",
+      "about": "Informazioni"
+    },
+    "theme": "Tema",
+    "themeLight": "Chiaro",
+    "themeDark": "Scuro",
+    "themeAuto": "Automatico",
+    "timezone": "Fuso orario",
+    "timezoneDescription": "Tutti i timestamp sono memorizzati in UTC e visualizzati nel fuso orario selezionato",
+    "timezoneLocal": "Locale (Fuso orario del browser)",
+    "layoutMode": "Modalità layout",
+    "layoutModeDescription": "Sovrascrive il rilevamento automatico del layout per questo dispositivo",
+    "layoutModeAuto": "Automatico (Responsivo)",
+    "layoutModeMobile": "Forza layout mobile",
+    "layoutModeDesktop": "Forza layout desktop",
+    "fontSize": "Dimensione carattere editor",
+    "fontSizeDescription": "Automatico usa caratteri più grandi su mobile per prevenire lo zoom del browser",
+    "fontSizeAuto": "Automatico (Adattivo mobile: 16px su mobile, 14px desktop)",
+    "fontSizeSmall": "Piccolo (12px)",
+    "fontSizeMedium": "Medio (14px)",
+    "fontSizeLarge": "Grande (16px)",
+    "autoLockTimeout": "Timeout blocco automatico (minuti)",
+    "sortOrder": "Ordinamento predefinito",
+    "sortRecent": "Più recenti",
+    "sortOldest": "Più vecchi",
+    "sortAlpha": "Alfabetico",
+    "sortCreated": "Data di creazione",
+    "language": "Lingua",
+    "rememberPassword": "Ricorda password (Non sicuro)",
+    "rememberPasswordWarning": "Memorizza la password su questo dispositivo per evitare di inserirla ad ogni visita. ATTENZIONE: Questo memorizza la password in testo semplice in localStorage, il che è altamente insicuro.",
+    "rememberPasswordNote": "Il blocco automatico verrà disabilitato quando questa opzione è attiva. Disabilitando questa opzione l'applicazione verrà immediatamente bloccata.",
+    "rememberPasswordModal": {
+      "title": "⚠️ Avviso di sicurezza",
+      "insecureWarning": "L'abilitazione di questa funzione memorizzerà la password in testo semplice in localStorage, il che è ALTAMENTE INSICURO.",
+      "riskDevice": "Chiunque abbia accesso al dispositivo può leggerla",
+      "riskExtensions": "Le estensioni del browser possono accedervi",
+      "riskCache": "Potrebbe sopravvivere alla cancellazione della cache del browser",
+      "riskAutolock": "Il blocco automatico verrà disabilitato",
+      "confirmWarning": "Abilita solo se comprendi pienamente i rischi per la sicurezza.",
+      "confirmPassword": "Inserisci la password per confermare:",
+      "passwordPlaceholder": "La tua password",
+      "cancelButton": "Annulla",
+      "enableButton": "Comprendo, abilita comunque"
+    },
+    "syncCredentials": {
+      "title": "📋 Credenziali di sincronizzazione",
+      "instructions": "Copia il testo sottostante e incollalo in un altro client Jottery utilizzando \"Usa credenziali esistenti\":",
+      "samePasswordWarning": "⚠️ <strong>Importante:</strong> Tutti i dispositivi devono usare la STESSA password per decifrare le note!",
+      "clipboardNote": "La copia negli appunti potrebbe essere fallita (specialmente tramite SSH o in alcuni browser). Puoi selezionare e copiare manualmente il testo sopra.",
+      "closeButton": "Chiudi"
+    },
+    "saveSettings": "Salva impostazioni",
+    "saving": "Salvataggio...",
+    "settingsSaved": "Impostazioni salvate",
+    "settingsSaveFailed": "Impossibile salvare le impostazioni: {error}",
+    "deleteDatabaseFailed": "Impossibile eliminare il database: {error}",
+    "exportFailed": "Impossibile esportare le note: {error}",
+    "importFailed": "Impossibile importare le note: {error}",
+    "exportNotes": "Esporta note",
+    "importNotes": "Importa note",
+    "importDialog": {
+      "importing": "Importazione note",
+      "complete": "Importazione completata",
+      "notesImported": "Note importate:",
+      "notesSkipped": "Note saltate:",
+      "attachmentsImported": "Allegati importati:",
+      "uniqueTags": "Tag unici:",
+      "errorsOccurred": "{count} errore{plural} verificato:",
+      "done": "Fatto",
+      "processingNotes": "Elaborazione di {current} su {total} note...",
+      "readingFile": "Lettura file...",
+      "pleaseWait": "Attendere mentre importiamo le note..."
+    },
+    "deleteDatabase": "Elimina database",
+    "keyboardShortcuts": "Scorciatoie tastiera",
+    "syncSetup": {
+      "endpoint": {
+        "label": "Endpoint server di sincronizzazione",
+        "help": "URL del server di sincronizzazione Jottery self-hosted"
+      },
+      "deviceName": {
+        "label": "Nome dispositivo",
+        "placeholder": "Il mio laptop",
+        "help": "Un nome per identificare questo dispositivo"
+      },
+      "chooseMethod": "Scegli come configurare la sincronizzazione:",
+      "importCredentials": {
+        "title": "Importa credenziali di sincronizzazione",
+        "subtitle": "<strong>Per dispositivi aggiuntivi:</strong> Metodo più sicuro",
+        "benefit1": "✓ Crittografia a conoscenza zero (il server non può decifrare le note)",
+        "benefit2": "✓ Copia credenziali dal primo dispositivo",
+        "benefit3": "✓ Tutti i dispositivi usano la stessa chiave di crittografia",
+        "button": "📋 Importa credenziali da un altro dispositivo"
+      },
+      "registerServer": {
+        "title": "Registrati a un server di sincronizzazione",
+        "subtitle": "<strong>Solo per il primo dispositivo:</strong> Crea il tuo account",
+        "benefit1": "✓ Crea account email/password",
+        "benefit2": "✓ Abilita la sincronizzazione per questo dispositivo",
+        "benefit3": "✓ Richiede approvazione dell'amministratore",
+        "button": "🚀 Registra nuovo account"
+      },
+      "privacyNote": "<strong>🔒 Privacy:</strong> Tutte le note sono crittografate end-to-end. Il server memorizza solo dati crittografati e non può leggere il contenuto.",
+      "selfHostNote": "<strong>💡 Self-host?</strong> Esegui il tuo server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">vedi GitHub</a>",
+      "back": "← Indietro",
+      "registration": {
+        "title": "Registra nuovo account utente",
+        "emailLabel": "Indirizzo email",
+        "emailPlaceholder": "tu@example.com",
+        "passwordLabel": "Password (minimo 12 caratteri)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<strong>Consigliato:</strong> Usa una password DIVERSA da quella di crittografia delle note.",
+        "passwordWarningText": "Questa password viene inviata al server per l'autenticazione. La password delle note non dovrebbe mai lasciare il dispositivo.",
+        "registerButton": "Registra account utente",
+        "registering": "Registrazione...",
+        "pendingTitle": "In attesa di approvazione dell'amministratore",
+        "pendingText": "Contatta l'amministratore per approvare il tuo account. Una volta approvato, clicca sotto per completare la configurazione.",
+        "approvedButton": "Sono stato approvato - Completa configurazione",
+        "completingSetup": "Completamento configurazione...",
+        "deviceRegistering": "⏳ Registrazione dispositivo e sincronizzazione...",
+        "successTitle": "Sincronizzazione abilitata con successo!",
+        "successText": "Il dispositivo è ora registrato e <strong>tutte le note esistenti sono state sincronizzate sul server</strong>. Eventuali modifiche future verranno sincronizzate automaticamente.",
+        "successNextSteps": "📋 Per aggiungere un altro dispositivo: Clicca \"Esporta credenziali di sincronizzazione\" sotto e importale sull'altro dispositivo.",
+        "done": "Fatto"
+      },
+      "linkAccount": {
+        "title": "Collega account (opzionale)",
+        "infoText": "ℹ️ Questa funzione è per uso futuro (accesso dashboard amministratore, gestione abbonamenti). <strong>Non</strong> abilita la sincronizzazione su questo dispositivo.",
+        "emailLabel": "Indirizzo email",
+        "passwordLabel": "Password",
+        "comingSoon": "Prossimamente",
+        "futureUpdate": "Il collegamento account verrà abilitato in un futuro aggiornamento"
+      },
+      "import": {
+        "title": "Importa credenziali",
+        "instructions": "Incolla le credenziali dal primo dispositivo. L'app verrà bloccata e dovrai sbloccarla con la password.",
+        "warningTitle": "⚠️ IMPORTANTE: Devi usare la STESSA password su tutti i dispositivi!",
+        "warningText": "Se usi una password diversa, le note non verranno decifrate.",
+        "placeholder": "Incolla credenziali base64 qui...",
+        "button": "📥 Importa e blocca",
+        "importing": "Importazione..."
+      },
+      "error": "Errore"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "Evidenziazione sintassi",
+      "syntaxHelp": "Seleziona quali linguaggi di programmazione abilitare per l'evidenziazione della sintassi nei blocchi di codice Markdown e nelle anteprime. I linguaggi principali sono sempre abilitati.",
+      "languagesEnabled": "{count} linguaggi abilitati",
+      "estimatedSize": "Dimensione stimata: ~{size} KB",
+      "resetToCore": "Ripristina ai principali",
+      "enableAll": "Abilita tutti",
+      "coreLanguages": "Linguaggi principali",
+      "alwaysEnabled": "(sempre abilitati)",
+      "popularLanguages": "Linguaggi popolari",
+      "webLanguages": "Linguaggi web",
+      "systemsLanguages": "Linguaggi di sistema",
+      "dataLanguages": "Linguaggi dati",
+      "otherLanguages": "Altri linguaggi",
+      "enabledCount": "{enabled}/{total} abilitati"
+    },
+    "keyboardTab": {
+      "description": "Personalizza le scorciatoie da tastiera. Clicca su una scorciatoia per modificarla, quindi premi la combinazione di tasti desiderata.",
+      "resetToDefaults": "Ripristina predefinite",
+      "viewAllShortcuts": "Visualizza tutte le scorciatoie",
+      "quickReference": "Riferimento rapido di tutte le scorciatoie da tastiera",
+      "focusSearch": "Attiva ricerca",
+      "createNewNote": "Crea nuova nota",
+      "lockApplication": "Blocca applicazione",
+      "openSettings": "Apri impostazioni",
+      "showShortcutsHelp": "Mostra aiuto scorciatoie",
+      "copyNoteContent": "Copia contenuto nota",
+      "undo": "Annulla",
+      "redo": "Ripeti",
+      "versionHistory": "Cronologia versioni",
+      "noteInfo": "Info nota",
+      "pressKey": "Premi un tasto...",
+      "notSet": "Non impostato"
+    },
+    "syncTab": {
+      "enableSync": "Abilita sincronizzazione",
+      "syncDescription": "Sincronizza le note tra dispositivi usando un server self-hosted",
+      "syncDisabled": "Sincronizzazione disabilitata (Modalità privacy)",
+      "syncDisabledDescription": "La sincronizzazione è opt-in e disabilitata per impostazione predefinita per la massima privacy.",
+      "syncDisabledDetails": "Quando disabilitata, Jottery non effettuerà richieste di rete ai server di sincronizzazione. Tutte le note rimangono completamente locali su questo dispositivo.",
+      "toEnableSync": "Per abilitare la sincronizzazione: Attiva l'interruttore sopra e configura il server di sincronizzazione.",
+      "privacyNote": "Privacy: Anche quando abilitata, tutte le note sono crittografate end-to-end. Il server di sincronizzazione non può leggere i contenuti."
+    },
+    "advancedTab": {
+      "importExport": "Importa/Esporta",
+      "exportDescription": "Esporta note come JSON decifrato. L'importazione unirà le note con i dati esistenti.",
+      "downloadTerminalClient": "Scarica client terminale",
+      "terminalClientDescription": "Usa il client terminale per accedere alle note dalla riga di comando",
+      "selectPlatform": "Seleziona piattaforma...",
+      "download": "Scarica",
+      "deleteAllData": "Elimina tutti i dati",
+      "deleteAllDataWarning": "Questo eliminerà PERMANENTEMENTE TUTTE le note, le impostazioni e le chiavi di crittografia. Questa azione non può essere annullata."
+    },
+    "aboutTab": {
+      "version": "Versione",
+      "documentation": "Documentazione",
+      "viewDocumentation": "Visualizza documentazione",
+      "documentationDescription": "Impara a usare Jottery in modo efficace",
+      "statistics": "Statistiche",
+      "activeNotes": "Note attive",
+      "pinnedNotes": "Note fissate",
+      "inRecycleBin": "Nel cestino",
+      "totalNotes": "Totale note",
+      "popularTags": "Tag popolari",
+      "terminalClient": "Client terminale",
+      "terminalClientDescription": "Accedi alle note dalla riga di comando con il client terminale Jottery. Il TUI fornisce un'interfaccia veloce guidata da tastiera per gestire le note.",
+      "terminalClientDownload": "Scarica il client terminale dalla scheda Avanzate.",
+      "aboutJottery": "Informazioni su Jottery",
+      "aboutDescription": "Jottery è un'applicazione scratch pad self-hosted incentrata sulla privacy per catturare, organizzare e cercare note con contenuti ricchi, evidenziazione della sintassi e crittografia.",
+      "viewOnGithub": "Visualizza su GitHub",
+      "license": "Licenza MIT."
+    }
+  },
+  "unlock": {
+    "welcome": "Benvenuto in Jottery",
+    "enterPassword": "Inserisci la password per sbloccare",
+    "setupPassword": "Configura la password principale",
+    "password": "Password",
+    "confirmPassword": "Conferma password",
+    "createPassword": "Crea password",
+    "unlock": "Sblocca",
+    "processing": "Elaborazione...",
+    "passwordMinLength": "La password deve essere di almeno 8 caratteri",
+    "passwordMismatch": "Le password non corrispondono",
+    "incorrectPassword": "Password errata",
+    "warning": "Importante: La password non può essere recuperata. Se la perdi, i dati saranno permanentemente inaccessibili.",
+    "failedAttempts": "Password errata. Dopo 3 tentativi falliti, potrebbe essere necessario eliminare il database e ricominciare.",
+    "deleteAndStartOver": "Elimina database e ricomincia",
+    "storedPasswordInvalid": "La password memorizzata non è valida. Reinserisci la password.",
+    "landingPage": {
+      "privateEncrypted": {
+        "title": "🔒 Privato e crittografato",
+        "description": "Jottery è un'app per prendere appunti incentrata sulla privacy. Tutte le note sono <strong>crittografate localmente</strong> sul dispositivo usando la password principale. Nessuno può leggere le note senza la password, nemmeno accedendo allo storage del dispositivo."
+      },
+      "localFirst": {
+        "title": "💾 Storage locale prima",
+        "description": "Le note sono memorizzate direttamente nel database locale del browser. Jottery funziona completamente <strong>offline</strong> e non richiede una connessione internet o un account per essere usato."
+      },
+      "optionalSync": {
+        "title": "☁️ Server di sincronizzazione opzionale",
+        "description": "Vuoi sincronizzare tra dispositivi? Jottery può opzionalmente sincronizzare con un server self-hosted. Le note e i tag sono <strong>crittografati prima della sincronizzazione</strong>: il server memorizza solo dati crittografati che non può leggere."
+      },
+      "selfHosting": {
+        "title": "🏠 Self-hosting",
+        "description": "Vuoi eseguire il tuo server di sincronizzazione? Jottery è open source e facile da self-hostare.",
+        "viewOnGitHub": "Visualizza su GitHub"
+      }
+    }
+  },
+  "lock": {
+    "title": "Blocca applicazione",
+    "message": "Bloccare l'applicazione? Le modifiche non salvate andranno perse.",
+    "confirmButton": "Blocca"
+  },
+  "recycleBin": {
+    "title": "Cestino",
+    "empty": "Il cestino è vuoto",
+    "emptyDescription": "Le note eliminate appariranno qui",
+    "restore": "Ripristina",
+    "restoreTitle": "Ripristina nota",
+    "deletePermanently": "Elimina permanentemente",
+    "deletePermanentlyTitle": "Elimina permanentemente",
+    "deleteForever": "Elimina per sempre",
+    "emptyBin": "Svuota cestino",
+    "loading": "Caricamento...",
+    "closeLabel": "Chiudi cestino",
+    "deleted": "Eliminata:",
+    "unknown": "Sconosciuto",
+    "untitled": "Senza titolo",
+    "footer": {
+      "single": "{count} nota nel cestino. Le note vengono eliminate automaticamente dopo 30 giorni.",
+      "multiple": "{count} note nel cestino. Le note vengono eliminate automaticamente dopo 30 giorni."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "Elimina nota permanentemente",
+        "message": "Questo eliminerà permanentemente questa nota. Non può essere annullato!",
+        "confirmButton": "Elimina per sempre"
+      },
+      "emptyBin": {
+        "title": "Svuota cestino",
+        "message": "Eliminare permanentemente tutte le {count} {notes} nel cestino? Non può essere annullato!",
+        "note": "nota",
+        "notes": "note",
+        "confirmButton": "Svuota cestino"
+      }
+    },
+    "error": {
+      "restore": "Impossibile ripristinare la nota",
+      "delete": "Impossibile eliminare la nota",
+      "emptyBin": "Impossibile svuotare il cestino"
+    }
+  },
+  "attachments": {
+    "title": "Allegati",
+    "upload": "Carica file",
+    "dropHere": "Rilascia i file qui o clicca per sfogliare",
+    "uploading": "Caricamento...",
+    "download": "Scarica",
+    "validationError": "Errore di validazione file",
+    "clickToView": "Clicca per visualizzare gli allegati",
+    "clickToHide": "Clicca per nascondere gli allegati",
+    "noAttachments": "Nessun allegato",
+    "loading": "Caricamento...",
+    "attachment": "allegato",
+    "thumbnail": "Miniatura",
+    "clickToPreview": "Clicca per anteprima",
+    "clickToPreviewHint": "• Clicca per anteprima",
+    "copyMarkdown": "Copia link markdown",
+    "delete": "Elimina",
+    "close": "Chiudi",
+    "closePreview": "Chiudi anteprima",
+    "downloadToView": "Scarica per visualizzare",
+    "markdownCopied": "Link markdown copiato negli appunti",
+    "error": {
+      "download": "Impossibile scaricare l'allegato",
+      "copyMarkdown": "Impossibile copiare il link markdown"
+    },
+    "preview": {
+      "title": "Anteprima allegato",
+      "loading": "Caricamento anteprima...",
+      "notAvailable": "Anteprima non disponibile per questo tipo di file.",
+      "audioNotSupported": "Il tuo browser non supporta la riproduzione audio.",
+      "videoNotSupported": "Il tuo browser non supporta la riproduzione video."
+    }
+  },
+  "keyboard": {
+    "title": "Scorciatoie tastiera",
+    "closeLabel": "Chiudi aiuto scorciatoie",
+    "global": "Globali",
+    "noteList": "Elenco note",
+    "editor": "Editor",
+    "focusSearch": "Attiva ricerca",
+    "createNote": "Crea nuova nota",
+    "lockApp": "Blocca applicazione",
+    "openSettings": "Apri impostazioni",
+    "showShortcuts": "Mostra scorciatoie tastiera",
+    "navigateNotes": "Naviga note",
+    "navigateVim": "Naviga note (stile vim)",
+    "openNote": "Apri nota selezionata",
+    "deleteNote": "Elimina nota selezionata",
+    "pinNote": "Fissa/rimuovi nota selezionata",
+    "closeNote": "Chiudi nota",
+    "copyNote": "Copia contenuto nota",
+    "findInNote": "Trova nella nota (CodeMirror)",
+    "replaceInNote": "Sostituisci nella nota (CodeMirror)",
+    "macNote": "Su macOS, usa Cmd invece di Ctrl.",
+    "note": "Nota:",
+    "cmd": "Cmd",
+    "ctrl": "Ctrl"
+  },
+  "releases": {
+    "title": "Rilasci",
+    "description": "Scarica il TUI Jottery per la tua piattaforma."
+  },
+  "fileUpload": {
+    "dropHere": "Rilascia i file qui",
+    "clickOrDrag": "<span class=\"font-medium\">Clicca per caricare</span> o trascina e rilascia",
+    "maxFileSize": "Dimensione max file: 10MB"
+  },
+  "pdfViewer": {
+    "loading": "Caricamento visualizzatore PDF...",
+    "pageOfPages": "Pagina {current} di {total}",
+    "previousPage": "Pagina precedente",
+    "nextPage": "Pagina successiva",
+    "zoomOut": "Riduci",
+    "zoomIn": "Ingrandisci"
+  },
+  "versionHistory": {
+    "title": "Cronologia versioni",
+    "closeLabel": "Chiudi cronologia versioni",
+    "loading": "Caricamento versioni...",
+    "noVersions": "Nessuna cronologia versioni",
+    "versionsCreatedDuringSync": "Le versioni verranno create durante la sincronizzazione",
+    "current": "(corrente)",
+    "autoSync": "Sincronizzazione automatica",
+    "manualSync": "Sincronizzazione manuale",
+    "version": "Versione:",
+    "characters": "Caratteri:",
+    "created": "Creata:",
+    "synced": "Sincronizzata:",
+    "tags": "Tag:",
+    "contentPreview": "Anteprima contenuto",
+    "selectToPreview": "Seleziona una versione per l'anteprima",
+    "restoreButton": "Ripristina questa versione",
+    "restoreConfirm": {
+      "title": "Ripristina versione",
+      "message": "Sei sicuro di voler ripristinare questa versione? La nota corrente verrà salvata come nuova versione prima del ripristino.",
+      "confirmButton": "Ripristina"
+    }
+  },
+  "header": {
+    "menu": "Menu",
+    "loadingNotes": "Caricamento {current}/{total} note...",
+    "creatingNote": "Creazione nota...",
+    "addContentFirst": "Aggiungi prima contenuto alla nota corrente"
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Elimina database",
+      "message": "⚠️ ATTENZIONE: Questo eliminerà permanentemente tutte le note crittografate e gli allegati. Non può essere annullato!\n\nSei sicuro di voler eliminare il database?",
+      "confirmButton": "Elimina database"
+    },
+    "deleteAllData": {
+      "title": "Elimina tutti i dati",
+      "message": "Questo eliminerà permanentemente TUTTE le note, le impostazioni e le chiavi di crittografia. Questa azione non può essere annullata.\n\nDigita DELETE per confermare:",
+      "confirmButton": "Elimina tutto",
+      "cancelButton": "Annulla"
+    },
+    "disconnectSync": {
+      "title": "Disconnetti dal server di sincronizzazione?",
+      "message": "Questo disconnetterà questo dispositivo dal server di sincronizzazione e cancellerà tutte le credenziali di sincronizzazione.\n\nLe note NON verranno eliminate e rimarranno su questo dispositivo.\n\nPuoi riconnetterti a un server di sincronizzazione in seguito.",
+      "confirmButton": "Disconnetti",
+      "cancelButton": "Annulla"
+    },
+    "deleteServerNotes": {
+      "title": "Eliminare tutte le note dal server?",
+      "message": "Questo eliminerà permanentemente TUTTE le note dal server di sincronizzazione. Questa azione non può essere annullata.\n\nLe note locali rimarranno su questo dispositivo e NON verranno eliminate.\n\nDigita DELETE per confermare:",
+      "confirmButton": "Elimina dal server",
+      "cancelButton": "Annulla"
+    },
+    "disableRememberPassword": {
+      "title": "Disabilitare ricorda password?",
+      "message": "Questo cancellerà la password memorizzata e bloccherà l'applicazione.\n\nDovrai inserire la password la prossima volta che accedi all'app.",
+      "confirmButton": "Disabilita e blocca",
+      "cancelButton": "Annulla"
+    },
+    "requireText": "Digita <strong>{text}</strong> per confermare:",
+    "deleteKeyword": "DELETE"
+  },
+  "updateBanner": {
+    "title": "Nuova versione disponibile",
+    "message": "Ricarica per ottenere le ultime funzionalità e miglioramenti",
+    "reloadButton": "Ricarica ora",
+    "dismissLabel": "Chiudi"
+  }
+}

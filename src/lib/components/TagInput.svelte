@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
+
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};
   export let placeholder: string = 'Add tags...';
@@ -99,7 +101,7 @@
         <button
           on:click={() => removeTag(index)}
           class="hover:text-blue-600 dark:hover:text-blue-400"
-          title="Remove tag"
+          title={$_('tagInput.removeTag')}
         >
           ×
         </button>

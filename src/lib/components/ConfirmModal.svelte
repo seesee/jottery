@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
+
   export let show: boolean = false;
   export let title: string = 'Confirm';
   export let message: string;
@@ -64,7 +66,7 @@
         {#if requireTextMatch}
           <div class="mt-4">
             <label for="confirm-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Type <strong>{requireTextMatch}</strong> to confirm:
+              {@html $_('confirm.requireText', { values: { text: requireTextMatch } })}
             </label>
             <input
               id="confirm-input"

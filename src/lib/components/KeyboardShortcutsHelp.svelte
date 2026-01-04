@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { settings } from '../stores/appStore';
   import type { KeyboardShortcut } from '../types';
 
@@ -29,32 +30,32 @@
 
   $: shortcuts = [
     {
-      category: 'Global',
+      category: $_('keyboard.global'),
       items: [
-        { keys: formatShortcut($settings.keyboardShortcuts?.focusSearch || { key: 'k', ctrl: true }), description: 'Focus search' },
-        { keys: formatShortcut($settings.keyboardShortcuts?.newNote || { key: 'n', alt: true }), description: 'Create new note' },
-        { keys: formatShortcut($settings.keyboardShortcuts?.lockApp || { key: 'l', alt: true }), description: 'Lock application' },
-        { keys: formatShortcut($settings.keyboardShortcuts?.openSettings || { key: ',', ctrl: true }), description: 'Open settings' },
-        { keys: formatShortcut($settings.keyboardShortcuts?.showShortcuts || { key: '/', alt: true }), description: 'Show keyboard shortcuts' },
+        { keys: formatShortcut($settings.keyboardShortcuts?.focusSearch || { key: 'k', ctrl: true }), description: $_('keyboard.focusSearch') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.newNote || { key: 'n', alt: true }), description: $_('keyboard.createNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.lockApp || { key: 'l', alt: true }), description: $_('keyboard.lockApp') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.openSettings || { key: ',', ctrl: true }), description: $_('keyboard.openSettings') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.showShortcuts || { key: '/', alt: true }), description: $_('keyboard.showShortcuts') },
       ]
     },
     {
-      category: 'Note List',
+      category: $_('keyboard.noteList'),
       items: [
-        { keys: ['↑/↓'], description: 'Navigate notes' },
-        { keys: ['J/K'], description: 'Navigate notes (vim-style)' },
-        { keys: ['Enter'], description: 'Open selected note' },
-        { keys: ['Delete'], description: 'Delete selected note' },
-        { keys: ['P'], description: 'Pin/unpin selected note' },
+        { keys: ['↑/↓'], description: $_('keyboard.navigateNotes') },
+        { keys: ['J/K'], description: $_('keyboard.navigateVim') },
+        { keys: ['Enter'], description: $_('keyboard.openNote') },
+        { keys: ['Delete'], description: $_('keyboard.deleteNote') },
+        { keys: ['P'], description: $_('keyboard.pinNote') },
       ]
     },
     {
-      category: 'Editor',
+      category: $_('keyboard.editor'),
       items: [
-        { keys: ['Esc'], description: 'Close note' },
-        { keys: formatShortcut($settings.keyboardShortcuts?.copyNote || { key: 'c', alt: true }), description: 'Copy note content' },
-        { keys: ['Ctrl/Cmd', 'F'], description: 'Find in note (CodeMirror)' },
-        { keys: ['Ctrl/Cmd', 'H'], description: 'Replace in note (CodeMirror)' },
+        { keys: ['Esc'], description: $_('keyboard.closeNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.copyNote || { key: 'c', alt: true }), description: $_('keyboard.copyNote') },
+        { keys: ['Ctrl/Cmd', 'F'], description: $_('keyboard.findInNote') },
+        { keys: ['Ctrl/Cmd', 'H'], description: $_('keyboard.replaceInNote') },
       ]
     }
   ];
@@ -72,11 +73,11 @@
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
       <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Keyboard Shortcuts</h2>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{$_('keyboard.title')}</h2>
         <button
           on:click={onClose}
           class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
-          aria-label="Close shortcuts help"
+          aria-label={$_('keyboard.closeLabel')}
         >
           ✕
         </button>
@@ -111,7 +112,7 @@
         <!-- Additional Info -->
         <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6">
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            <strong>Note:</strong> On macOS, use <kbd class="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">Cmd</kbd> instead of <kbd class="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">Ctrl</kbd>.
+            <strong>{$_('keyboard.note')}</strong> {$_('keyboard.macNote')}
           </p>
         </div>
       </div>
@@ -122,7 +123,7 @@
           on:click={onClose}
           class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 text-white font-medium rounded-md transition-colors"
         >
-          Close
+          {$_('common.close')}
         </button>
       </div>
     </div>

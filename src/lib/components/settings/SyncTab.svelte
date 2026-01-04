@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import SyncSetupForm from './SyncSetupForm.svelte';
   import SyncStatusPanel from './SyncStatusPanel.svelte';
   import type { SyncStatus } from '../../types';
@@ -70,10 +71,10 @@
     <div class="flex items-center justify-between">
       <div class="flex-1">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-          Enable Sync
+          {$_('settings.syncTab.enableSync')}
         </h3>
         <p class="text-xs text-gray-600 dark:text-gray-400">
-          Sync your notes across devices using a self-hosted server
+          {$_('settings.syncTab.syncDescription')}
         </p>
       </div>
       <label class="relative inline-flex items-center cursor-pointer">
@@ -95,25 +96,23 @@
         <span class="text-2xl">🔒</span>
         <div class="flex-1">
           <h4 class="font-semibold text-sm text-gray-900 dark:text-white mb-2">
-            Sync is Disabled (Privacy Mode)
+            {$_('settings.syncTab.syncDisabled')}
           </h4>
           <div class="text-xs text-gray-600 dark:text-gray-400 space-y-2">
             <p>
-              Sync is <strong>opt-in and disabled by default</strong> for maximum privacy.
+              {@html $_('settings.syncTab.syncDisabledDescription')}
             </p>
             <p>
-              When disabled, Jottery will not make any network requests to sync servers.
-              All your notes remain completely local to this device.
+              {$_('settings.syncTab.syncDisabledDetails')}
             </p>
             <p>
-              <strong>To enable sync:</strong> Toggle the switch above and configure your sync server.
+              {@html $_('settings.syncTab.toEnableSync')}
             </p>
           </div>
 
           <div class="mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
             <p class="text-xs text-blue-800 dark:text-blue-200">
-              <strong>ℹ️ Privacy:</strong> Even when enabled, all notes are end-to-end encrypted.
-              The sync server cannot read your content.
+              {@html $_('settings.syncTab.privacyNote')}
             </p>
           </div>
         </div>

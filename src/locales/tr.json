@@ -1,0 +1,555 @@
+{
+  "app": {
+    "name": "Jottery",
+    "tagline": "Gizlilik odaklı • Yerel öncelikli • Şifreli"
+  },
+  "common": {
+    "loading": "Yükleniyor...",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "confirm": "Onayla",
+    "close": "Kapat",
+    "lock": "Kilitle",
+    "unlock": "Kilidi Aç",
+    "settings": "Ayarlar",
+    "search": "Ara",
+    "error": "Hata"
+  },
+  "note": {
+    "new": "Yeni",
+    "create": "Yeni not oluştur",
+    "delete": "Notu sil",
+    "pin": "Sabitle",
+    "pinned": "Sabitlendi",
+    "unpin": "Sabitlemeyi kaldır",
+    "copy": "Kopyala",
+    "copyContent": "Not içeriğini kopyala",
+    "noNoteSelected": "Not seçilmedi",
+    "selectNote": "Listeden bir not seçin veya yeni bir tane oluşturun",
+    "created": "Oluşturuldu",
+    "modified": "Değiştirildi",
+    "attachments": "Ekler",
+    "filterByTag": "#{tag} etiketine göre filtrele",
+    "noNotesYet": "Henüz not yok",
+    "createFirstNote": "Başlamak için ilk notunuzu oluşturun",
+    "noResultsFound": "Sonuç bulunamadı",
+    "tryDifferentSearch": "Farklı bir arama deneyin",
+    "noNotes": "Not yok",
+    "somethingWentWrong": "Bir şeyler ters gitti"
+  },
+  "search": {
+    "placeholder": "Notlarda ara...",
+    "clear": "Aramayı temizle"
+  },
+  "editor": {
+    "noNoteSelected": "Not seçilmedi",
+    "noNoteSelectedHint": "Listeden bir not seçin veya yeni bir tane oluşturun",
+    "attachmentPreview": "Ek Önizlemesi",
+    "download": "İndir",
+    "tags": "Etiketler",
+    "addTags": "Etiket ekle...",
+    "plainText": "Düz Metin",
+    "syntaxHighlight": "Sözdizimi vurgulama",
+    "wordWrap": "Satır kaydırma",
+    "noWrap": "Satır kaydırma yok",
+    "toggleWordWrap": "Satır kaydırmayı değiştir",
+    "backToNotes": "Notlara dön",
+    "moreActions": "Daha fazla işlem",
+    "closeNote": "Notu kapat (Esc)",
+    "preview": "Önizleme",
+    "edit": "Düzenle",
+    "undo": "Geri al",
+    "redo": "Yinele",
+    "wordWrapOn": "Satır Kaydırma: Açık",
+    "wordWrapOff": "Satır Kaydırma: Kapalı",
+    "copyContent": "İçeriği Kopyala",
+    "exportToFile": "Dosyaya Aktar",
+    "info": "Bilgi",
+    "versionHistory": "Sürüm Geçmişi",
+    "deleteNote": "Notu Sil",
+    "noteInformation": "Not Bilgisi",
+    "characters": "Karakter:",
+    "charactersNoSpaces": "Karakter (boşluksuz):",
+    "words": "Kelime:",
+    "lines": "Satır:",
+    "attachmentsCount": "Ek:",
+    "syntax": "Sözdizimi:",
+    "noteId": "Not ID:",
+    "uploading": "Yükleniyor...",
+    "attachmentsHeader": "Ekler ({count})",
+    "status": {
+      "uploading": "Yükleniyor...",
+      "processingNotes": "{total} nottan {current}. işleniyor...",
+      "readingFile": "Dosya okunuyor...",
+      "loadingPreview": "Önizleme yükleniyor...",
+      "loading": "Yükleniyor..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "Önce notu kaydet",
+      "pinNote": "Notu sabitle",
+      "unpinNote": "Notu sabitlemeyi kaldır"
+    },
+    "errors": {
+      "loadingAttachment": "Ek yüklenirken hata",
+      "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor.",
+      "previewNotAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
+      "downloadToView": "Görüntülemek için indirin"
+    }
+  },
+  "noteList": {
+    "deleteNote": "Notu sil",
+    "filterByTag": "#{tag} etiketine göre filtrele"
+  },
+  "tagInput": {
+    "removeTag": "Etiketi kaldır"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "closeLabel": "Ayarları kapat",
+    "tabs": {
+      "general": "Genel",
+      "editor": "Düzenleyici",
+      "keyboard": "Klavye Kısayolları",
+      "sync": "Senkronizasyon",
+      "advanced": "Gelişmiş",
+      "about": "Hakkında"
+    },
+    "theme": "Tema",
+    "themeLight": "Açık",
+    "themeDark": "Koyu",
+    "themeAuto": "Otomatik",
+    "timezone": "Saat dilimi",
+    "timezoneDescription": "Tüm zaman damgaları UTC olarak saklanır ve seçilen saat diliminizde gösterilir",
+    "timezoneLocal": "Yerel (Tarayıcı saat dilimi)",
+    "layoutMode": "Düzen Modu",
+    "layoutModeDescription": "Bu cihaz için otomatik düzen algılamayı geçersiz kıl",
+    "layoutModeAuto": "Otomatik (Duyarlı)",
+    "layoutModeMobile": "Mobil Düzeni Zorla",
+    "layoutModeDesktop": "Masaüstü Düzenini Zorla",
+    "fontSize": "Düzenleyici Yazı Tipi Boyutu",
+    "fontSizeDescription": "Otomatik, tarayıcı yakınlaştırmasını önlemek için mobilde daha büyük yazı tipi kullanır",
+    "fontSizeAuto": "Otomatik (Mobil: 16px, Masaüstü: 14px)",
+    "fontSizeSmall": "Küçük (12px)",
+    "fontSizeMedium": "Orta (14px)",
+    "fontSizeLarge": "Büyük (16px)",
+    "autoLockTimeout": "Otomatik kilitleme zaman aşımı (dakika)",
+    "sortOrder": "Varsayılan sıralama düzeni",
+    "sortRecent": "En yeni",
+    "sortOldest": "En eski",
+    "sortAlpha": "Alfabetik",
+    "sortCreated": "Oluşturulma tarihi",
+    "language": "Dil",
+    "rememberPassword": "Şifreyi Hatırla (Güvensiz)",
+    "rememberPasswordWarning": "Her ziyarette şifre girmeyi atlamak için şifrenizi bu cihazda saklayın. UYARI: Şifrenizi localStorage'da düz metin olarak saklar, bu çok güvensizdir.",
+    "rememberPasswordNote": "Bu etkinleştirildiğinde otomatik kilitleme devre dışı bırakılır. Bunu devre dışı bırakmak uygulamayı hemen kilitler.",
+    "rememberPasswordModal": {
+      "title": "⚠️ Güvenlik Uyarısı",
+      "insecureWarning": "Bu özelliği etkinleştirmek şifrenizi localStorage'da düz metin olarak saklayacaktır, bu ÇOK GÜVENSİZDİR.",
+      "riskDevice": "Cihazınıza erişimi olan herkes okuyabilir",
+      "riskExtensions": "Tarayıcı uzantıları erişebilir",
+      "riskCache": "Tarayıcı önbelleğini temizledikten sonra kalabilir",
+      "riskAutolock": "Otomatik kilitleme devre dışı bırakılır",
+      "confirmWarning": "Bunu yalnızca güvenlik risklerini tam olarak anlıyorsanız etkinleştirin.",
+      "confirmPassword": "Onaylamak için şifrenizi girin:",
+      "passwordPlaceholder": "Şifreniz",
+      "cancelButton": "İptal",
+      "enableButton": "Anlıyorum, Yine de Etkinleştir"
+    },
+    "syncCredentials": {
+      "title": "📋 Senkronizasyon Kimlik Bilgileri",
+      "instructions": "Aşağıdaki metni kopyalayın ve \"Mevcut Kimlik Bilgilerini Kullan\" seçeneğini kullanarak başka bir Jottery istemcisine yapıştırın:",
+      "samePasswordWarning": "⚠️ <strong>Önemli:</strong> Notların şifresini çözmek için tüm cihazlar AYNI şifreyi kullanmalıdır!",
+      "clipboardNote": "Panoya kopyalama başarısız olmuş olabilir (özellikle SSH üzerinden veya bazı tarayıcılarda). Yukarıdaki metni manuel olarak seçip kopyalayabilirsiniz.",
+      "closeButton": "Kapat"
+    },
+    "saveSettings": "Ayarları Kaydet",
+    "saving": "Kaydediliyor...",
+    "settingsSaved": "Ayarlar kaydedildi",
+    "settingsSaveFailed": "Ayarlar kaydedilemedi: {error}",
+    "deleteDatabaseFailed": "Veritabanı silinemedi: {error}",
+    "exportFailed": "Notlar dışa aktarılamadı: {error}",
+    "importFailed": "Notlar içe aktarılamadı: {error}",
+    "exportNotes": "Notları Dışa Aktar",
+    "importNotes": "Notları İçe Aktar",
+    "importDialog": {
+      "importing": "Notlar İçe Aktarılıyor",
+      "complete": "İçe Aktarma Tamamlandı",
+      "notesImported": "İçe aktarılan notlar:",
+      "notesSkipped": "Atlanan notlar:",
+      "attachmentsImported": "İçe aktarılan ekler:",
+      "uniqueTags": "Benzersiz etiketler:",
+      "errorsOccurred": "{count} hata oluştu:",
+      "done": "Bitti",
+      "processingNotes": "{total} nottan {current}. işleniyor...",
+      "readingFile": "Dosya okunuyor...",
+      "pleaseWait": "Notlarınızı içe aktarırken lütfen bekleyin..."
+    },
+    "deleteDatabase": "Veritabanını Sil",
+    "keyboardShortcuts": "Klavye Kısayolları",
+    "syncSetup": {
+      "endpoint": {
+        "label": "Senkronizasyon sunucusu uç noktası",
+        "help": "Kendi barındırdığınız Jottery senkronizasyon sunucusunun URL'si"
+      },
+      "deviceName": {
+        "label": "Cihaz adı",
+        "placeholder": "Dizüstü Bilgisayarım",
+        "help": "Bu cihazı tanımlamak için bir ad"
+      },
+      "chooseMethod": "Senkronizasyonu nasıl kuracağınızı seçin:",
+      "importCredentials": {
+        "title": "Senkronizasyon kimlik bilgilerini içe aktar",
+        "subtitle": "<strong>Ek cihazlar için:</strong> En güvenli yöntem",
+        "benefit1": "✓ Sıfır bilgi şifreleme (sunucu notlarınızın şifresini çözemez)",
+        "benefit2": "✓ İlk cihazınızdan kimlik bilgilerini kopyalayın",
+        "benefit3": "✓ Tüm cihazlar aynı şifreleme anahtarını kullanır",
+        "button": "📋 Başka bir cihazdan kimlik bilgilerini içe aktar"
+      },
+      "registerServer": {
+        "title": "Senkronizasyon sunucusuna kaydol",
+        "subtitle": "<strong>Yalnızca ilk cihazınız için:</strong> Hesabınızı oluşturur",
+        "benefit1": "✓ E-posta/şifre hesabı oluşturur",
+        "benefit2": "✓ Bu cihaz için senkronizasyonu etkinleştirir",
+        "benefit3": "✓ Yönetici onayı gerektirir",
+        "button": "🚀 Yeni hesap kaydet"
+      },
+      "privacyNote": "<strong>🔒 Gizlilik:</strong> Tüm notlarınız uçtan uca şifrelenir. Sunucu yalnızca şifreli verileri saklar ve içeriğinizi okuyamaz.",
+      "selfHostNote": "<strong>💡 Kendi sunucunuz?</strong> Kendi sunucunuzu çalıştırın - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHub'a bakın</a>",
+      "back": "← Geri",
+      "registration": {
+        "title": "Yeni kullanıcı hesabı kaydet",
+        "emailLabel": "E-posta adresi",
+        "emailPlaceholder": "siz@ornek.com",
+        "passwordLabel": "Şifre (en az 12 karakter)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<strong>Önerilen:</strong> Not şifreleme şifrenizden FARKLI bir şifre kullanın.",
+        "passwordWarningText": "Bu şifre kimlik doğrulama için sunucuya gönderilir. Not şifreniz cihazınızdan asla ayrılmamalıdır.",
+        "registerButton": "Kullanıcı hesabı kaydet",
+        "registering": "Kaydediliyor...",
+        "pendingTitle": "Yönetici onayı bekleniyor",
+        "pendingText": "Hesabınızı onaylaması için yöneticinizle iletişime geçin. Onaylandıktan sonra kurulumu tamamlamak için aşağıya tıklayın.",
+        "approvedButton": "Onaylandım - Kurulumu tamamla",
+        "completingSetup": "Kurulum tamamlanıyor...",
+        "deviceRegistering": "⏳ Cihaz kaydediliyor ve senkronize ediliyor...",
+        "successTitle": "Senkronizasyon başarıyla etkinleştirildi!",
+        "successText": "Cihazınız şimdi kayıtlı ve <strong>mevcut tüm notlarınız sunucuya senkronize edildi</strong>. Gelecekteki değişiklikler otomatik olarak senkronize edilecek.",
+        "successNextSteps": "📋 Başka bir cihaz eklemek için: Aşağıdaki \"Senkronizasyon kimlik bilgilerini dışa aktar\" seçeneğine tıklayın ve diğer cihazınıza aktarın.",
+        "done": "Bitti"
+      },
+      "linkAccount": {
+        "title": "Hesabı bağla (isteğe bağlı)",
+        "infoText": "ℹ️ Bu özellik gelecekteki kullanım içindir (yönetici paneli erişimi, abonelik yönetimi). Bu cihazda senkronizasyonu <strong>etkinleştirmez</strong>.",
+        "emailLabel": "E-posta adresi",
+        "passwordLabel": "Şifre",
+        "comingSoon": "Yakında",
+        "futureUpdate": "Hesap bağlama gelecekteki bir güncellemede etkinleştirilecek"
+      },
+      "import": {
+        "title": "Kimlik bilgilerini içe aktar",
+        "instructions": "İlk cihazınızdaki kimlik bilgilerini yapıştırın. Uygulama kilitlenecek ve şifrenizle kilidi açmanız gerekecek.",
+        "warningTitle": "⚠️ ÖNEMLİ: Tüm cihazlarda AYNI şifreyi kullanmalısınız!",
+        "warningText": "Farklı bir şifre kullanırsanız, notların şifresi çözülmez.",
+        "placeholder": "Buraya base64 kimlik bilgilerini yapıştırın...",
+        "button": "📥 İçe aktar ve kilitle",
+        "importing": "İçe aktarılıyor..."
+      },
+      "error": "Hata"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "Sözdizimi vurgulama",
+      "syntaxHelp": "Markdown kod bloklarında ve önizlemelerde sözdizimi vurgulamayı etkinleştirmek için hangi programlama dillerini seçin. Temel diller her zaman etkindir.",
+      "languagesEnabled": "{count} dil etkin",
+      "estimatedSize": "Tahmini boyut: ~{size} KB",
+      "resetToCore": "Temele sıfırla",
+      "enableAll": "Tümünü etkinleştir",
+      "coreLanguages": "Temel diller",
+      "alwaysEnabled": "(her zaman etkin)",
+      "popularLanguages": "Popüler diller",
+      "webLanguages": "Web dilleri",
+      "systemsLanguages": "Sistem dilleri",
+      "dataLanguages": "Veri dilleri",
+      "otherLanguages": "Diğer diller",
+      "enabledCount": "{enabled}/{total} etkin"
+    },
+    "keyboardTab": {
+      "description": "Klavye kısayollarını özelleştirin. Değiştirmek için bir kısayola tıklayın, ardından istediğiniz tuş kombinasyonuna basın.",
+      "resetToDefaults": "Varsayılanlara Sıfırla",
+      "viewAllShortcuts": "Tüm Kısayolları Görüntüle",
+      "quickReference": "Tüm klavye kısayollarının hızlı referansı",
+      "focusSearch": "Aramaya Odaklan",
+      "createNewNote": "Yeni Not Oluştur",
+      "lockApplication": "Uygulamayı Kilitle",
+      "openSettings": "Ayarları Aç",
+      "showShortcutsHelp": "Kısayol Yardımını Göster",
+      "copyNoteContent": "Not İçeriğini Kopyala",
+      "undo": "Geri Al",
+      "redo": "Yinele",
+      "versionHistory": "Sürüm Geçmişi",
+      "noteInfo": "Not Bilgisi",
+      "pressKey": "Bir tuşa basın...",
+      "notSet": "Ayarlanmadı"
+    },
+    "syncTab": {
+      "enableSync": "Senkronizasyonu Etkinleştir",
+      "syncDescription": "Kendi barındırdığınız bir sunucu kullanarak notlarınızı cihazlar arasında senkronize edin",
+      "syncDisabled": "Senkronizasyon Devre Dışı (Gizlilik Modu)",
+      "syncDisabledDescription": "Senkronizasyon isteğe bağlıdır ve maksimum gizlilik için varsayılan olarak devre dışıdır.",
+      "syncDisabledDetails": "Devre dışı bırakıldığında, Jottery senkronizasyon sunucularına ağ istekleri yapmaz. Tüm notlarınız bu cihazda tamamen yerel kalır.",
+      "toEnableSync": "Senkronizasyonu etkinleştirmek için: Yukarıdaki anahtarı değiştirin ve senkronizasyon sunucunuzu yapılandırın.",
+      "privacyNote": "Gizlilik: Etkinleştirildiğinde bile, tüm notlar uçtan uca şifrelenir. Senkronizasyon sunucusu içeriğinizi okuyamaz."
+    },
+    "advancedTab": {
+      "importExport": "İçe/Dışa Aktar",
+      "exportDescription": "Notları şifresi çözülmüş JSON olarak dışa aktarın. İçe aktarma, notları mevcut verilerle birleştirir.",
+      "downloadTerminalClient": "Terminal İstemcisini İndir",
+      "terminalClientDescription": "Komut satırından notlarınıza erişmek için terminal istemcisini kullanın",
+      "selectPlatform": "Platform seçin...",
+      "download": "İndir",
+      "deleteAllData": "Tüm Verileri Sil",
+      "deleteAllDataWarning": "Bu, TÜM notları, ayarları ve şifreleme anahtarlarını kalıcı olarak siler. Bu işlem geri alınamaz."
+    },
+    "aboutTab": {
+      "version": "Sürüm",
+      "documentation": "Belgeler",
+      "viewDocumentation": "Belgeleri Görüntüle",
+      "documentationDescription": "Jottery'yi etkili bir şekilde nasıl kullanacağınızı öğrenin",
+      "statistics": "İstatistikler",
+      "activeNotes": "Aktif Notlar",
+      "pinnedNotes": "Sabitlenmiş Notlar",
+      "inRecycleBin": "Geri Dönüşümde",
+      "totalNotes": "Toplam Not",
+      "popularTags": "Popüler Etiketler",
+      "terminalClient": "Terminal İstemcisi",
+      "terminalClientDescription": "Jottery terminal istemcisi ile komut satırından notlarınıza erişin. TUI, notlarınızı yönetmek için hızlı, klavye odaklı bir arayüz sağlar.",
+      "terminalClientDownload": "Terminal istemcisini Gelişmiş sekmesinden indirin.",
+      "aboutJottery": "Jottery Hakkında",
+      "aboutDescription": "Jottery, zengin içerik, sözdizimi vurgulama ve şifreleme ile notları yakalamak, düzenlemek ve aramak için gizlilik odaklı, kendi barındırılan bir not defteri uygulamasıdır.",
+      "viewOnGithub": "GitHub'da Görüntüle",
+      "license": "MIT Lisansı altında lisanslanmıştır."
+    }
+  },
+  "unlock": {
+    "welcome": "Jottery'ye Hoş Geldiniz",
+    "enterPassword": "Kilidi açmak için şifrenizi girin",
+    "setupPassword": "Ana şifrenizi ayarlayın",
+    "password": "Şifre",
+    "confirmPassword": "Şifreyi Onayla",
+    "createPassword": "Şifre Oluştur",
+    "unlock": "Kilidi Aç",
+    "processing": "İşleniyor...",
+    "passwordMinLength": "Şifre en az 8 karakter olmalıdır",
+    "passwordMismatch": "Şifreler eşleşmiyor",
+    "incorrectPassword": "Yanlış şifre",
+    "warning": "Önemli: Şifreniz kurtarılamaz. Kaybederseniz, verilerinize kalıcı olarak erişilemez olacaktır.",
+    "failedAttempts": "Yanlış şifre. 3 başarısız denemeden sonra veritabanını silip baştan başlamanız gerekebilir.",
+    "deleteAndStartOver": "Veritabanını Sil ve Baştan Başla",
+    "storedPasswordInvalid": "Saklanan şifre geçersiz. Lütfen şifrenizi yeniden girin.",
+    "landingPage": {
+      "privateEncrypted": {
+        "title": "🔒 Özel ve Şifreli",
+        "description": "Jottery, gizlilik odaklı bir not alma uygulamasıdır. Tüm notlarınız, ana şifrenizi kullanarak cihazınızda <strong>yerel olarak şifrelenir</strong>. Şifreniz olmadan kimse notlarınızı okuyamaz—cihazınızın deposuna erişseler bile."
+      },
+      "localFirst": {
+        "title": "💾 Önce Yerel Depolama",
+        "description": "Notlarınız doğrudan tarayıcınızın yerel veritabanında saklanır. Jottery tamamen <strong>çevrimdışı</strong> çalışır ve internet bağlantısı veya hesap gerektirmez."
+      },
+      "optionalSync": {
+        "title": "☁️ İsteğe Bağlı Senkronizasyon Sunucusu",
+        "description": "Cihazlar arasında senkronize etmek ister misiniz? Jottery, isteğe bağlı olarak kendi barındırdığınız bir sunucuyla senkronize olabilir. Notlarınız ve etiketleriniz <strong>senkronizasyondan önce şifrelenir</strong>—sunucu yalnızca okuyamadığı şifreli verileri saklar."
+      },
+      "selfHosting": {
+        "title": "🏠 Kendi Barındırma",
+        "description": "Kendi senkronizasyon sunucunuzu çalıştırmak ister misiniz? Jottery açık kaynaktır ve kendi kendine barındırması kolaydır.",
+        "viewOnGitHub": "GitHub'da Görüntüle"
+      }
+    }
+  },
+  "lock": {
+    "title": "Uygulamayı Kilitle",
+    "message": "Uygulama kilitlensin mi? Kaydedilmemiş değişiklikler kaybolacak.",
+    "confirmButton": "Kilitle"
+  },
+  "recycleBin": {
+    "title": "Geri Dönüşüm Kutusu",
+    "empty": "Geri dönüşüm kutusu boş",
+    "emptyDescription": "Silinen notlar burada görünecek",
+    "restore": "Geri Yükle",
+    "restoreTitle": "Notu geri yükle",
+    "deletePermanently": "Kalıcı Olarak Sil",
+    "deletePermanentlyTitle": "Kalıcı olarak sil",
+    "deleteForever": "Sonsuza Dek Sil",
+    "emptyBin": "Kutuyu Boşalt",
+    "loading": "Yükleniyor...",
+    "closeLabel": "Geri dönüşüm kutusunu kapat",
+    "deleted": "Silindi:",
+    "unknown": "Bilinmeyen",
+    "untitled": "Başlıksız",
+    "footer": {
+      "single": "Geri dönüşüm kutusunda {count} not var. Notlar 30 gün sonra otomatik olarak silinir.",
+      "multiple": "Geri dönüşüm kutusunda {count} not var. Notlar 30 gün sonra otomatik olarak silinir."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "Notu Kalıcı Olarak Sil",
+        "message": "Bu, bu notu kalıcı olarak silecektir. Bu geri alınamaz!",
+        "confirmButton": "Sonsuza Dek Sil"
+      },
+      "emptyBin": {
+        "title": "Geri Dönüşüm Kutusunu Boşalt",
+        "message": "Geri dönüşüm kutusundaki tüm {count} {notes} kalıcı olarak silinsin mi? Bu geri alınamaz!",
+        "note": "not",
+        "notes": "not",
+        "confirmButton": "Kutuyu Boşalt"
+      }
+    },
+    "error": {
+      "restore": "Not geri yüklenemedi",
+      "delete": "Not silinemedi",
+      "emptyBin": "Geri dönüşüm kutusu boşaltılamadı"
+    }
+  },
+  "attachments": {
+    "title": "Ekler",
+    "upload": "Dosya yükle",
+    "dropHere": "Dosyaları buraya bırakın veya göz atmak için tıklayın",
+    "uploading": "Yükleniyor...",
+    "download": "İndir",
+    "validationError": "Dosya doğrulama hatası",
+    "clickToView": "Ekleri görmek için tıklayın",
+    "clickToHide": "Ekleri gizlemek için tıklayın",
+    "noAttachments": "Ek yok",
+    "loading": "Yükleniyor...",
+    "attachment": "ek",
+    "thumbnail": "Küçük Resim",
+    "clickToPreview": "Önizlemek için tıklayın",
+    "clickToPreviewHint": "• Önizlemek için tıklayın",
+    "copyMarkdown": "Markdown bağlantısını kopyala",
+    "delete": "Sil",
+    "close": "Kapat",
+    "closePreview": "Önizlemeyi kapat",
+    "downloadToView": "Görmek için indirin",
+    "markdownCopied": "Markdown bağlantısı panoya kopyalandı",
+    "error": {
+      "download": "Ek indirilemedi",
+      "copyMarkdown": "Markdown bağlantısı kopyalanamadı"
+    },
+    "preview": {
+      "title": "Ek önizlemesi",
+      "loading": "Önizleme yükleniyor...",
+      "notAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
+      "audioNotSupported": "Tarayıcınız ses oynatmayı desteklemiyor.",
+      "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor."
+    }
+  },
+  "keyboard": {
+    "title": "Klavye Kısayolları",
+    "closeLabel": "Kısayol yardımını kapat",
+    "global": "Genel",
+    "noteList": "Not Listesi",
+    "editor": "Düzenleyici",
+    "focusSearch": "Aramaya odaklan",
+    "createNote": "Yeni not oluştur",
+    "lockApp": "Uygulamayı kilitle",
+    "openSettings": "Ayarları aç",
+    "showShortcuts": "Klavye kısayollarını göster",
+    "navigateNotes": "Notlarda gezin",
+    "navigateVim": "Notlarda gezin (vim tarzı)",
+    "openNote": "Seçili notu aç",
+    "deleteNote": "Seçili notu sil",
+    "pinNote": "Seçili notu sabitle/sabitlemeyi kaldır",
+    "closeNote": "Notu kapat",
+    "copyNote": "Not içeriğini kopyala",
+    "findInNote": "Notta bul (CodeMirror)",
+    "replaceInNote": "Notta değiştir (CodeMirror)",
+    "macNote": "macOS'ta Ctrl yerine Cmd kullanın.",
+    "note": "Not:",
+    "cmd": "Cmd",
+    "ctrl": "Ctrl"
+  },
+  "releases": {
+    "title": "Sürümler",
+    "description": "Platformunuz için Jottery TUI'yi indirin."
+  },
+  "fileUpload": {
+    "dropHere": "Dosyaları buraya bırakın",
+    "clickOrDrag": "<span class=\"font-medium\">Yüklemek için tıklayın</span> veya sürükleyip bırakın",
+    "maxFileSize": "Maks. dosya boyutu: 10MB"
+  },
+  "pdfViewer": {
+    "loading": "PDF görüntüleyici yükleniyor...",
+    "pageOfPages": "Sayfa {current} / {total}",
+    "previousPage": "Önceki sayfa",
+    "nextPage": "Sonraki sayfa",
+    "zoomOut": "Uzaklaştır",
+    "zoomIn": "Yakınlaştır"
+  },
+  "versionHistory": {
+    "title": "Sürüm geçmişi",
+    "closeLabel": "Sürüm geçmişini kapat",
+    "loading": "Sürümler yükleniyor...",
+    "noVersions": "Sürüm geçmişi yok",
+    "versionsCreatedDuringSync": "Sürümler senkronizasyon sırasında oluşturulacak",
+    "current": "(mevcut)",
+    "autoSync": "Otomatik senkronizasyon",
+    "manualSync": "Manuel senkronizasyon",
+    "version": "Sürüm:",
+    "characters": "Karakter:",
+    "created": "Oluşturuldu:",
+    "synced": "Senkronize edildi:",
+    "tags": "Etiketler:",
+    "contentPreview": "İçerik önizlemesi",
+    "selectToPreview": "Önizlemek için bir sürüm seçin",
+    "restoreButton": "Bu sürümü geri yükle",
+    "restoreConfirm": {
+      "title": "Sürümü geri yükle",
+      "message": "Bu sürümü geri yüklemek istediğinizden emin misiniz? Mevcut notunuz geri yüklemeden önce yeni bir sürüm olarak kaydedilecektir.",
+      "confirmButton": "Geri Yükle"
+    }
+  },
+  "header": {
+    "menu": "Menü",
+    "loadingNotes": "{current}/{total} not yükleniyor...",
+    "creatingNote": "Not oluşturuluyor...",
+    "addContentFirst": "Önce mevcut nota içerik ekleyin"
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Veritabanını sil",
+      "message": "⚠️ UYARI: Bu, şifrelenmiş TÜM notlarınızı ve eklerinizi kalıcı olarak silecektir. Bu geri alınamaz!\n\nVeritabanını silmek istediğinizden emin misiniz?",
+      "confirmButton": "Veritabanını sil"
+    },
+    "deleteAllData": {
+      "title": "Tüm Verileri Sil",
+      "message": "Bu, TÜM notları, ayarları ve şifreleme anahtarlarını kalıcı olarak siler. Bu işlem geri alınamaz.\n\nOnaylamak için DELETE yazın:",
+      "confirmButton": "Her Şeyi Sil",
+      "cancelButton": "İptal"
+    },
+    "disconnectSync": {
+      "title": "Senkronizasyon Sunucusundan Bağlantıyı Kes?",
+      "message": "Bu, bu cihazın senkronizasyon sunucusundan bağlantısını kesecek ve tüm senkronizasyon kimlik bilgilerini temizleyecektir.\n\nNotlarınız SİLİNMEZ ve bu cihazda kalacaktır.\n\nDaha sonra bir senkronizasyon sunucusuna yeniden bağlanabilirsiniz.",
+      "confirmButton": "Bağlantıyı Kes",
+      "cancelButton": "İptal"
+    },
+    "deleteServerNotes": {
+      "title": "Sunucudaki Tüm Notları Sil?",
+      "message": "Bu, senkronizasyon sunucusundan TÜM notlarınızı kalıcı olarak silecektir. Bu işlem geri alınamaz.\n\nYerel notlarınız bu cihazda kalacak ve SİLİNMEYECEKTİR.\n\nOnaylamak için DELETE yazın:",
+      "confirmButton": "Sunucudan Sil",
+      "cancelButton": "İptal"
+    },
+    "disableRememberPassword": {
+      "title": "Şifre Hatırlamayı Devre Dışı Bırak?",
+      "message": "Bu, saklanan şifrenizi temizleyecek ve uygulamayı kilitleyecektir.\n\nUygulamaya bir sonraki erişiminizde şifrenizi girmeniz gerekecektir.",
+      "confirmButton": "Devre Dışı Bırak ve Kilitle",
+      "cancelButton": "İptal"
+    },
+    "requireText": "Onaylamak için <strong>{text}</strong> yazın:",
+    "deleteKeyword": "DELETE"
+  },
+  "updateBanner": {
+    "title": "Yeni sürüm mevcut",
+    "message": "En son özellikleri ve iyileştirmeleri almak için yenileyin",
+    "reloadButton": "Şimdi yenile",
+    "dismissLabel": "Kapat"
+  }
+}

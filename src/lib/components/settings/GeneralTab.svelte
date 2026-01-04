@@ -70,7 +70,7 @@
 <!-- Timezone -->
 <div>
   <label for="setting-timezone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    Timezone
+    {$_('settings.timezone')}
   </label>
   <select
     id="setting-timezone"
@@ -82,7 +82,7 @@
     {/each}
   </select>
   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-    All timestamps are stored in UTC and displayed in your selected timezone
+    {$_('settings.timezoneDescription')}
   </p>
 </div>
 
@@ -105,39 +105,39 @@
 <!-- Layout Mode -->
 <div>
   <label for="setting-layout-mode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    Layout Mode
+    {$_('settings.layoutMode')}
   </label>
   <select
     id="setting-layout-mode"
     bind:value={layoutMode}
     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
   >
-    <option value="auto">Auto (Responsive)</option>
-    <option value="mobile">Force Mobile Layout</option>
-    <option value="desktop">Force Desktop Layout</option>
+    <option value="auto">{$_('settings.layoutModeAuto')}</option>
+    <option value="mobile">{$_('settings.layoutModeMobile')}</option>
+    <option value="desktop">{$_('settings.layoutModeDesktop')}</option>
   </select>
   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-    Override the automatic layout detection for this device
+    {$_('settings.layoutModeDescription')}
   </p>
 </div>
 
 <!-- Font Size -->
 <div>
   <label for="setting-font-size" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-    Editor Font Size
+    {$_('settings.fontSize')}
   </label>
   <select
     id="setting-font-size"
     bind:value={fontSize}
     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
   >
-    <option value="auto">Auto (Mobile-aware: 16px on mobile, 14px desktop)</option>
-    <option value="small">Small (12px)</option>
-    <option value="medium">Medium (14px)</option>
-    <option value="large">Large (16px)</option>
+    <option value="auto">{$_('settings.fontSizeAuto')}</option>
+    <option value="small">{$_('settings.fontSizeSmall')}</option>
+    <option value="medium">{$_('settings.fontSizeMedium')}</option>
+    <option value="large">{$_('settings.fontSizeLarge')}</option>
   </select>
   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-    Auto uses larger font on mobile to prevent browser zoom
+    {$_('settings.fontSizeDescription')}
   </p>
 </div>
 
@@ -178,13 +178,13 @@
   <div class="flex items-start justify-between">
     <div class="flex-1">
       <h4 class="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
-        🔓 Remember Password (Insecure)
+        🔓 {$_('settings.rememberPassword')}
       </h4>
       <p class="text-sm text-orange-700 dark:text-orange-300 mb-2">
-        Store your password on this device to skip entering it on every visit. <strong>WARNING:</strong> This stores your password in plain text in localStorage, which is highly insecure.
+        {@html $_('settings.rememberPasswordWarning')}
       </p>
       <p class="text-xs text-orange-600 dark:text-orange-400">
-        Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.
+        {$_('settings.rememberPasswordNote')}
       </p>
     </div>
     <label class="relative inline-flex items-center cursor-pointer ml-4">

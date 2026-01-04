@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { attachmentService } from '../services';
 
   export let onUpload: (files: FileList) => void;
@@ -92,13 +93,13 @@
     <div class="text-2xl mb-2">📎</div>
     <div class="text-sm">
       {#if isDragging}
-        <span class="font-medium text-blue-600 dark:text-blue-400">Drop files here</span>
+        <span class="font-medium text-blue-600 dark:text-blue-400">{$_('fileUpload.dropHere')}</span>
       {:else}
-        <span class="font-medium">Click to upload</span> or drag and drop
+        {@html $_('fileUpload.clickOrDrag')}
       {/if}
     </div>
     <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-      Max file size: 10MB
+      {$_('fileUpload.maxFileSize')}
     </div>
   </div>
 </div>

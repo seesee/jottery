@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import type { Attachment } from '../types';
   import { attachmentService } from '../services';
   import { onMount } from 'svelte';
@@ -121,7 +122,7 @@
       await attachmentService.downloadAttachment(attachment);
     } catch (error) {
       console.error('Failed to download attachment:', error);
-      toast.error(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`${$_('attachments.error.download')}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -140,7 +141,7 @@
 
   // Copy markdown link to clipboard
   async function handleCopyMarkdown(attachment: Attachment) {
-    const filename = filenames.get(attachment.id) || 'attachment';
+    const filename = filenames.get(attachment.id) || $_('attachments.attachment');
 
     // Use image syntax for images, regular link for others
     const markdown = attachment.mimeType.startsWith('image/')
@@ -149,10 +150,10 @@
 
     try {
       await navigator.clipboard.writeText(markdown);
-      toast.success('Markdown link copied to clipboard');
+      toast.success($_('attachments.markdownCopied'));
     } catch (error) {
       console.error('Failed to copy markdown:', error);
-      toast.error('Failed to copy markdown link');
+      toast.error($_('attachments.error.copyMarkdown'));
     }
   }
 
@@ -172,7 +173,7 @@
     try {
       return await attachmentService.getDecryptedFilename(attachment);
     } catch (error) {
-      return 'attachment';
+      return $_('attachments.attachment');
     }
   }
 
@@ -208,12 +209,12 @@
         <button
           on:click={() => handlePreview(attachment)}
           class="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600 overflow-hidden hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer"
-          title="Click to preview"
+          title={$_('attachments.clickToPreview')}
         >
           {#if thumbnails.get(attachment.id)}
             <img
               src={thumbnails.get(attachment.id)}
-              alt="Thumbnail"
+              alt={$_('attachments.thumbnail')}
               class="w-full h-full object-cover"
             />
           {:else}
@@ -227,12 +228,12 @@
           class="flex-1 min-w-0 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
         >
           <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-            {filenames.get(attachment.id) || 'Loading...'}
+            {filenames.get(attachment.id) || $_('attachments.loading')}
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400">
             {attachmentService.formatFileSize(attachment.size)}
             {#if canPreview(attachment.mimeType)}
-              <span class="ml-2 text-blue-600 dark:text-blue-400">• Click to preview</span>
+              <span class="ml-2 text-blue-600 dark:text-blue-400">{$_('attachments.clickToPreviewHint')}</span>
             {/if}
           </div>
         </button>
@@ -242,14 +243,14 @@
           <button
             on:click={() => handleDownload(attachment)}
             class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-            title="Download"
+            title={$_('attachments.download')}
           >
             ⬇️
           </button>
           <button
             on:click={() => handleCopyMarkdown(attachment)}
             class="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
-            title="Copy markdown link"
+            title={$_('attachments.copyMarkdown')}
           >
             📋
           </button>
@@ -257,7 +258,7 @@
             <button
               on:click={() => handleDelete(attachment)}
               class="px-2 py-1 text-xs bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-              title="Delete"
+              title={$_('attachments.delete')}
             >
               🗑️
             </button>
@@ -268,7 +269,7 @@
   </div>
 {:else}
   <div class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
-    No attachments
+    {$_('attachments.noAttachments')}
   </div>
 {/if}
 
@@ -280,7 +281,7 @@
     on:keydown={(e) => e.key === 'Enter' && closePreview()}
     role="button"
     tabindex="-1"
-    aria-label="Close preview"
+    aria-label={$_('attachments.closePreview')}
   >
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col"
@@ -294,7 +295,7 @@
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex-1 min-w-0">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-            {filenames.get(previewAttachment.id) || 'Attachment Preview'}
+            {filenames.get(previewAttachment.id) || $_('attachments.preview.title')}
           </h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">
             {attachmentService.formatFileSize(previewAttachment.size)}
@@ -305,12 +306,12 @@
             on:click={handleDownloadFromPreview}
             class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
           >
-            ⬇️ Download
+            ⬇️ {$_('attachments.download')}
           </button>
           <button
             on:click={closePreview}
             class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            aria-label="Close"
+            aria-label={$_('attachments.close')}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -323,7 +324,7 @@
       <div class="flex-1 overflow-auto {previewType === 'image' ? '' : 'p-4'}">
         {#if isLoadingPreview}
           <div class="flex items-center justify-center h-full">
-            <div class="text-gray-500 dark:text-gray-400">Loading preview...</div>
+            <div class="text-gray-500 dark:text-gray-400">{$_('attachments.preview.loading')}</div>
           </div>
         {:else if previewType === 'image' && previewContent}
           <div class="w-full h-full flex items-center justify-center p-4">
@@ -345,7 +346,7 @@
           <div class="flex items-center justify-center h-full">
             <audio controls class="w-full max-w-xl">
               <source src={previewContent} type={previewAttachment.mimeType} />
-              Your browser does not support audio playback.
+              {$_('attachments.preview.audioNotSupported')}
             </audio>
           </div>
         {:else if previewType === 'video' && previewContent}
@@ -353,18 +354,18 @@
             <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
               <source src={previewContent} type={previewAttachment.mimeType} />
               <track kind="captions" />
-              Your browser does not support video playback.
+              {$_('attachments.preview.videoNotSupported')}
             </video>
           </div>
         {:else}
           <div class="flex items-center justify-center h-full">
             <div class="text-center text-gray-500 dark:text-gray-400">
-              <p class="mb-4">Preview not available for this file type.</p>
+              <p class="mb-4">{$_('attachments.preview.notAvailable')}</p>
               <button
                 on:click={handleDownloadFromPreview}
                 class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Download to view
+                {$_('attachments.downloadToView')}
               </button>
             </div>
           </div>

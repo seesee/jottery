@@ -819,11 +819,11 @@
         enabledSyntaxLanguages,
       }));
 
-      toast.success('Settings saved');
+      toast.success($_('settings.settingsSaved'));
       onClose();
     } catch (error) {
       console.error('Failed to save settings:', error);
-      toast.error('Failed to save settings: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.settingsSaveFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       saving = false;
     }
@@ -844,7 +844,7 @@
       window.location.reload();
     } catch (error) {
       console.error('Failed to delete database:', error);
-      toast.error('Failed to delete database: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.deleteDatabaseFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -974,7 +974,7 @@
       await downloadExport(data);
     } catch (error) {
       console.error('Failed to export notes:', error);
-      toast.error('Failed to export notes: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.exportFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -1014,7 +1014,7 @@
       };
     } catch (error) {
       console.error('Failed to import notes:', error);
-      toast.error('Failed to import notes: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('settings.importFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
       importing = false;
       importProgress = { current: 0, total: 0 };
     } finally {
@@ -1093,11 +1093,11 @@
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
       <div class="border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between flex-shrink-0">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Settings</h2>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{$_('settings.title')}</h2>
         <button
           on:click={onClose}
           class="min-h-11 min-w-11 p-3 -m-2 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors text-gray-500 dark:text-gray-400"
-          aria-label="Close settings"
+          aria-label={$_('settings.closeLabel')}
         >
           ✕
         </button>
@@ -1109,37 +1109,37 @@
           on:click={() => currentTab = 'general'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'general' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          General
+          {$_('settings.tabs.general')}
         </button>
         <button
           on:click={() => currentTab = 'editor'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'editor' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Editor
+          {$_('settings.tabs.editor')}
         </button>
         <button
           on:click={() => currentTab = 'keyboard'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'keyboard' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Keyboard Shortcuts
+          {$_('settings.tabs.keyboard')}
         </button>
         <button
           on:click={() => currentTab = 'sync'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'sync' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Sync
+          {$_('settings.tabs.sync')}
         </button>
         <button
           on:click={() => currentTab = 'advanced'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'advanced' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          Advanced
+          {$_('settings.tabs.advanced')}
         </button>
         <button
           on:click={() => currentTab = 'about'}
           class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'about' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
         >
-          About
+          {$_('settings.tabs.about')}
         </button>
       </div>
 
@@ -1278,12 +1278,12 @@
   <!-- Delete Database Confirmation Modal -->
   <ConfirmModal
     show={showDeleteConfirm}
-    title="Delete All Data"
-    message="This will permanently delete ALL notes, settings, and encryption keys. This action cannot be undone.{'\n\n'}Type DELETE to confirm:"
-    confirmText="Delete Everything"
-    cancelText="Cancel"
+    title={$_('confirm.deleteAllData.title')}
+    message={$_('confirm.deleteAllData.message')}
+    confirmText={$_('confirm.deleteAllData.confirmButton')}
+    cancelText={$_('confirm.deleteAllData.cancelButton')}
     confirmClass="bg-red-600 hover:bg-red-700"
-    requireTextMatch="DELETE"
+    requireTextMatch={$_('confirm.deleteKeyword')}
     onConfirm={confirmDeleteDatabase}
     onCancel={() => showDeleteConfirm = false}
   />
@@ -1291,10 +1291,10 @@
   <!-- Disconnect Sync Confirmation Modal -->
   <ConfirmModal
     show={showDisconnectSyncConfirm}
-    title="Disconnect from Sync Server?"
-    message="This will disconnect this device from the sync server and clear all sync credentials.{'\n\n'}Your notes will NOT be deleted and will remain on this device.{'\n\n'}You can reconnect to a sync server later."
-    confirmText="Disconnect"
-    cancelText="Cancel"
+    title={$_('confirm.disconnectSync.title')}
+    message={$_('confirm.disconnectSync.message')}
+    confirmText={$_('confirm.disconnectSync.confirmButton')}
+    cancelText={$_('confirm.disconnectSync.cancelButton')}
     confirmClass="bg-orange-600 hover:bg-orange-700"
     onConfirm={confirmDisconnectSync}
     onCancel={() => showDisconnectSyncConfirm = false}
@@ -1303,12 +1303,12 @@
   <!-- Delete Server Notes Confirmation Modal -->
   <ConfirmModal
     show={showDeleteServerNotesConfirm}
-    title="Delete All Notes from Server?"
-    message="This will permanently delete ALL your notes from the sync server. This action cannot be undone.{'\n\n'}Your local notes will remain on this device and will NOT be deleted.{'\n\n'}Type DELETE to confirm:"
-    confirmText="Delete from Server"
-    cancelText="Cancel"
+    title={$_('confirm.deleteServerNotes.title')}
+    message={$_('confirm.deleteServerNotes.message')}
+    confirmText={$_('confirm.deleteServerNotes.confirmButton')}
+    cancelText={$_('confirm.deleteServerNotes.cancelButton')}
     confirmClass="bg-red-600 hover:bg-red-700"
-    requireTextMatch="DELETE"
+    requireTextMatch={$_('confirm.deleteKeyword')}
     onConfirm={handleDeleteAllNotes}
     onCancel={() => showDeleteServerNotesConfirm = false}
   />
@@ -1318,34 +1318,34 @@
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4">
-          ⚠️ Security Warning
+          {$_('settings.rememberPasswordModal.title')}
         </h3>
 
         <div class="mb-4 text-sm text-gray-700 dark:text-gray-300 space-y-2">
           <p class="font-semibold">
-            Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.
+            {$_('settings.rememberPasswordModal.insecureWarning')}
           </p>
           <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-            <li>Anyone with access to your device can read it</li>
-            <li>Browser extensions can access it</li>
-            <li>It may survive browser cache clearing</li>
-            <li>Auto-lock will be disabled</li>
+            <li>{$_('settings.rememberPasswordModal.riskDevice')}</li>
+            <li>{$_('settings.rememberPasswordModal.riskExtensions')}</li>
+            <li>{$_('settings.rememberPasswordModal.riskCache')}</li>
+            <li>{$_('settings.rememberPasswordModal.riskAutolock')}</li>
           </ul>
           <p class="font-semibold text-orange-700 dark:text-orange-300">
-            Only enable this if you fully understand the security risks.
+            {$_('settings.rememberPasswordModal.confirmWarning')}
           </p>
         </div>
 
         <div class="mb-4">
           <label for="remember-password-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Enter your password to confirm:
+            {$_('settings.rememberPasswordModal.confirmPassword')}
           </label>
           <input
             id="remember-password-confirm"
             type="password"
             bind:value={rememberPasswordConfirmInput}
             on:keydown={(e) => e.key === 'Enter' && confirmEnableRememberPassword()}
-            placeholder="Your password"
+            placeholder="{$_('settings.rememberPasswordModal.passwordPlaceholder')}"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
           {#if rememberPasswordError}
@@ -1358,13 +1358,13 @@
             on:click={cancelEnableRememberPassword}
             class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
-            Cancel
+            {$_('settings.rememberPasswordModal.cancelButton')}
           </button>
           <button
             on:click={confirmEnableRememberPassword}
             class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md transition-colors"
           >
-            I Understand, Enable Anyway
+            {$_('settings.rememberPasswordModal.enableButton')}
           </button>
         </div>
       </div>
@@ -1392,7 +1392,7 @@
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-            📋 Sync Credentials
+            {$_('settings.syncCredentials.title')}
           </h3>
           <button
             on:click={() => showCredentialsModal = false}
@@ -1408,7 +1408,7 @@
         <!-- Content -->
         <div class="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
           <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
-            Copy the text below and paste it into another Jottery client using "Use Existing Credentials":
+            {$_('settings.syncCredentials.instructions')}
           </p>
 
           <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
@@ -1417,12 +1417,12 @@
 
           <div class="mt-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
             <p class="text-sm text-orange-800 dark:text-orange-200">
-              ⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!
+              {@html $_('settings.syncCredentials.samePasswordWarning')}
             </p>
           </div>
 
           <p class="mt-3 text-xs text-gray-600 dark:text-gray-400">
-            The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.
+            {$_('settings.syncCredentials.clipboardNote')}
           </p>
         </div>
 
@@ -1432,7 +1432,7 @@
             on:click={() => showCredentialsModal = false}
             class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
           >
-            Close
+            {$_('settings.syncCredentials.closeButton')}
           </button>
         </div>
       </div>
@@ -1445,7 +1445,7 @@
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
       <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-        {importResult ? 'Import Complete' : 'Importing Notes'}
+        {importResult ? $_('settings.importDialog.complete') : $_('settings.importDialog.importing')}
       </h3>
 
       {#if importResult}
@@ -1463,24 +1463,24 @@
           <!-- Statistics -->
           <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-2">
             <div class="flex justify-between text-sm">
-              <span class="text-gray-600 dark:text-gray-400">Notes imported:</span>
+              <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.notesImported')}</span>
               <span class="font-semibold text-gray-900 dark:text-white">{importResult.imported}</span>
             </div>
             {#if importResult.skipped > 0}
               <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Notes skipped:</span>
+                <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.notesSkipped')}</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{importResult.skipped}</span>
               </div>
             {/if}
             {#if importResult.attachments > 0}
               <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Attachments imported:</span>
+                <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.attachmentsImported')}</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{importResult.attachments}</span>
               </div>
             {/if}
             {#if importResult.tags > 0}
               <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Unique tags:</span>
+                <span class="text-gray-600 dark:text-gray-400">{$_('settings.importDialog.uniqueTags')}</span>
                 <span class="font-semibold text-gray-900 dark:text-white">{importResult.tags}</span>
               </div>
             {/if}
@@ -1490,7 +1490,7 @@
           {#if importResult.errors.length > 0}
             <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
               <p class="text-sm font-medium text-red-800 dark:text-red-300 mb-2">
-                {importResult.errors.length} error{importResult.errors.length > 1 ? 's' : ''} occurred:
+                {$_('settings.importDialog.errorsOccurred', { values: { count: importResult.errors.length, plural: importResult.errors.length > 1 ? 's' : '' } })}
               </p>
               <div class="max-h-32 overflow-y-auto space-y-1">
                 {#each importResult.errors as error}
@@ -1505,7 +1505,7 @@
             on:click={closeImportModal}
             class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
           >
-            Done
+            {$_('settings.importDialog.done')}
           </button>
         </div>
       {:else}
@@ -1516,9 +1516,9 @@
             <div class="flex items-center justify-between mb-2">
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {#if importProgress.total > 0}
-                  Processing {importProgress.current} of {importProgress.total} notes...
+                  {$_('settings.importDialog.processingNotes', { values: { current: importProgress.current, total: importProgress.total } })}
                 {:else}
-                  Reading file...
+                  {$_('settings.importDialog.readingFile')}
                 {/if}
               </span>
               {#if importProgress.total > 0}
@@ -1543,7 +1543,7 @@
           {/if}
 
           <p class="text-sm text-gray-600 dark:text-gray-400 text-center">
-            Please wait while we import your notes...
+            {$_('settings.importDialog.pleaseWait')}
           </p>
         </div>
       {/if}

@@ -142,9 +142,10 @@
     applyTheme($settings.theme);
   }
 
-  // Watch for language changes
-  $: if ($settings && $settings.language) {
-    locale.set($settings.language);
+  // Watch for language changes (only after initialization to avoid race condition)
+  $: if ($settings && initialized) {
+    const newLocale = getInitialLocale($settings.language);
+    locale.set(newLocale);
   }
 
   // Watch lock status and load notes when unlocked

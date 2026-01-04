@@ -1,0 +1,555 @@
+{
+  "app": {
+    "name": "Jottery",
+    "tagline": "Privacidad primero • Local primero • Cifrado"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "lock": "Bloquear",
+    "unlock": "Desbloquear",
+    "settings": "Configuración",
+    "search": "Buscar",
+    "error": "Error"
+  },
+  "note": {
+    "new": "Nueva",
+    "create": "Crear nueva nota",
+    "delete": "Eliminar nota",
+    "pin": "Fijar",
+    "pinned": "Fijada",
+    "unpin": "Desfijar",
+    "copy": "Copiar",
+    "copyContent": "Copiar contenido de la nota",
+    "noNoteSelected": "Ninguna nota seleccionada",
+    "selectNote": "Seleccione una nota de la lista o cree una nueva",
+    "created": "Creada",
+    "modified": "Modificada",
+    "attachments": "Archivos adjuntos",
+    "filterByTag": "Filtrar por #{tag}",
+    "noNotesYet": "Aún no hay notas",
+    "createFirstNote": "Cree su primera nota para comenzar",
+    "noResultsFound": "No se encontraron resultados",
+    "tryDifferentSearch": "Intente con una búsqueda diferente",
+    "noNotes": "Sin notas",
+    "somethingWentWrong": "Algo salió mal"
+  },
+  "search": {
+    "placeholder": "Buscar notas...",
+    "clear": "Limpiar búsqueda"
+  },
+  "editor": {
+    "noNoteSelected": "Ninguna nota seleccionada",
+    "noNoteSelectedHint": "Seleccione una nota de la lista o cree una nueva",
+    "attachmentPreview": "Vista previa de archivo adjunto",
+    "download": "Descargar",
+    "tags": "Etiquetas",
+    "addTags": "Agregar etiquetas...",
+    "plainText": "Texto plano",
+    "syntaxHighlight": "Resaltado de sintaxis",
+    "wordWrap": "Ajustar",
+    "noWrap": "Sin ajustar",
+    "toggleWordWrap": "Alternar ajuste de línea",
+    "backToNotes": "Volver a notas",
+    "moreActions": "Más acciones",
+    "closeNote": "Cerrar nota (Esc)",
+    "preview": "Vista previa",
+    "edit": "Editar",
+    "undo": "Deshacer",
+    "redo": "Rehacer",
+    "wordWrapOn": "Ajuste de línea: Activado",
+    "wordWrapOff": "Ajuste de línea: Desactivado",
+    "copyContent": "Copiar contenido",
+    "exportToFile": "Exportar a archivo",
+    "info": "Información",
+    "versionHistory": "Historial de versiones",
+    "deleteNote": "Eliminar nota",
+    "noteInformation": "Información de la nota",
+    "characters": "Caracteres:",
+    "charactersNoSpaces": "Caracteres (sin espacios):",
+    "words": "Palabras:",
+    "lines": "Líneas:",
+    "attachmentsCount": "Archivos adjuntos:",
+    "syntax": "Sintaxis:",
+    "noteId": "ID de nota:",
+    "uploading": "Subiendo...",
+    "attachmentsHeader": "Archivos adjuntos ({count})",
+    "status": {
+      "uploading": "Subiendo...",
+      "processingNotes": "Procesando {current} de {total} notas...",
+      "readingFile": "Leyendo archivo...",
+      "loadingPreview": "Cargando vista previa...",
+      "loading": "Cargando..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "Guardar nota primero",
+      "pinNote": "Fijar nota",
+      "unpinNote": "Desfijar nota"
+    },
+    "errors": {
+      "loadingAttachment": "Error al cargar archivo adjunto",
+      "videoNotSupported": "Su navegador no admite reproducción de video.",
+      "previewNotAvailable": "Vista previa no disponible para este tipo de archivo.",
+      "downloadToView": "Descargue para ver"
+    }
+  },
+  "noteList": {
+    "deleteNote": "Eliminar nota",
+    "filterByTag": "Filtrar por #{tag}"
+  },
+  "tagInput": {
+    "removeTag": "Eliminar etiqueta"
+  },
+  "settings": {
+    "title": "Configuración",
+    "closeLabel": "Cerrar configuración",
+    "tabs": {
+      "general": "General",
+      "editor": "Editor",
+      "keyboard": "Atajos de teclado",
+      "sync": "Sincronización",
+      "advanced": "Avanzado",
+      "about": "Acerca de"
+    },
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeAuto": "Automático",
+    "timezone": "Zona horaria",
+    "timezoneDescription": "Todas las marcas de tiempo se almacenan en UTC y se muestran en su zona horaria seleccionada",
+    "timezoneLocal": "Local (zona horaria del navegador)",
+    "layoutMode": "Modo de diseño",
+    "layoutModeDescription": "Anular la detección automática de diseño para este dispositivo",
+    "layoutModeAuto": "Automático (Adaptable)",
+    "layoutModeMobile": "Forzar diseño móvil",
+    "layoutModeDesktop": "Forzar diseño de escritorio",
+    "fontSize": "Tamaño de fuente del editor",
+    "fontSizeDescription": "Automático usa fuente más grande en móvil para evitar zoom del navegador",
+    "fontSizeAuto": "Automático (Adaptable: 16px en móvil, 14px en escritorio)",
+    "fontSizeSmall": "Pequeña (12px)",
+    "fontSizeMedium": "Mediana (14px)",
+    "fontSizeLarge": "Grande (16px)",
+    "autoLockTimeout": "Tiempo de bloqueo automático (minutos)",
+    "sortOrder": "Orden de clasificación predeterminado",
+    "sortRecent": "Más recientes",
+    "sortOldest": "Más antiguas primero",
+    "sortAlpha": "Alfabético",
+    "sortCreated": "Fecha de creación",
+    "language": "Idioma",
+    "rememberPassword": "Recordar contraseña (Inseguro)",
+    "rememberPasswordWarning": "Almacenar su contraseña en este dispositivo para omitir ingresarla en cada visita. ADVERTENCIA: Esto almacena su contraseña en texto plano en localStorage, lo cual es altamente inseguro.",
+    "rememberPasswordNote": "El bloqueo automático se deshabilitará cuando esto esté habilitado. Deshabilitar esto bloqueará inmediatamente la aplicación.",
+    "rememberPasswordModal": {
+      "title": "⚠️ Advertencia de seguridad",
+      "insecureWarning": "Habilitar esta función almacenará su contraseña en texto plano en localStorage, lo cual es ALTAMENTE INSEGURO.",
+      "riskDevice": "Cualquiera con acceso a su dispositivo puede leerla",
+      "riskExtensions": "Las extensiones del navegador pueden acceder a ella",
+      "riskCache": "Puede sobrevivir a la limpieza de caché del navegador",
+      "riskAutolock": "El bloqueo automático se deshabilitará",
+      "confirmWarning": "Solo habilite esto si comprende completamente los riesgos de seguridad.",
+      "confirmPassword": "Ingrese su contraseña para confirmar:",
+      "passwordPlaceholder": "Su contraseña",
+      "cancelButton": "Cancelar",
+      "enableButton": "Lo entiendo, habilitar de todos modos"
+    },
+    "syncCredentials": {
+      "title": "📋 Credenciales de sincronización",
+      "instructions": "Copie el texto a continuación y péguelo en otro cliente Jottery usando \"Usar credenciales existentes\":",
+      "samePasswordWarning": "⚠️ <strong>Importante:</strong> ¡Todos los dispositivos deben usar la MISMA contraseña para descifrar las notas!",
+      "clipboardNote": "La copia al portapapeles puede haber fallado (especialmente por SSH o en algunos navegadores). Puede seleccionar y copiar manualmente el texto anterior.",
+      "closeButton": "Cerrar"
+    },
+    "saveSettings": "Guardar configuración",
+    "saving": "Guardando...",
+    "settingsSaved": "Configuración guardada",
+    "settingsSaveFailed": "Error al guardar configuración: {error}",
+    "deleteDatabaseFailed": "Error al eliminar base de datos: {error}",
+    "exportFailed": "Error al exportar notas: {error}",
+    "importFailed": "Error al importar notas: {error}",
+    "exportNotes": "Exportar notas",
+    "importNotes": "Importar notas",
+    "importDialog": {
+      "importing": "Importando notas",
+      "complete": "Importación completa",
+      "notesImported": "Notas importadas:",
+      "notesSkipped": "Notas omitidas:",
+      "attachmentsImported": "Archivos adjuntos importados:",
+      "uniqueTags": "Etiquetas únicas:",
+      "errorsOccurred": "{count} error{plural} ocurrido{plural}:",
+      "done": "Hecho",
+      "processingNotes": "Procesando {current} de {total} notas...",
+      "readingFile": "Leyendo archivo...",
+      "pleaseWait": "Por favor espere mientras importamos sus notas..."
+    },
+    "deleteDatabase": "Eliminar base de datos",
+    "keyboardShortcuts": "Atajos de teclado",
+    "syncSetup": {
+      "endpoint": {
+        "label": "Punto de conexión del servidor de sincronización",
+        "help": "URL de su servidor de sincronización Jottery auto-alojado"
+      },
+      "deviceName": {
+        "label": "Nombre del dispositivo",
+        "placeholder": "Mi portátil",
+        "help": "Un nombre para identificar este dispositivo"
+      },
+      "chooseMethod": "Elija cómo configurar la sincronización:",
+      "importCredentials": {
+        "title": "Importar credenciales de sincronización",
+        "subtitle": "<strong>Para dispositivos adicionales:</strong> Método más seguro",
+        "benefit1": "✓ Cifrado de conocimiento cero (el servidor no puede descifrar sus notas)",
+        "benefit2": "✓ Copie credenciales desde su primer dispositivo",
+        "benefit3": "✓ Todos los dispositivos usan la misma clave de cifrado",
+        "button": "📋 Importar credenciales desde otro dispositivo"
+      },
+      "registerServer": {
+        "title": "Registrarse en un servidor de sincronización",
+        "subtitle": "<strong>Solo para su primer dispositivo:</strong> Crea su cuenta",
+        "benefit1": "✓ Crea cuenta de correo/contraseña",
+        "benefit2": "✓ Habilita sincronización para este dispositivo",
+        "benefit3": "✓ Requiere aprobación del administrador",
+        "button": "🚀 Registrar nueva cuenta"
+      },
+      "privacyNote": "<strong>🔒 Privacidad:</strong> Todas sus notas están cifradas de extremo a extremo. El servidor solo almacena datos cifrados y no puede leer su contenido.",
+      "selfHostNote": "<strong>💡 ¿Auto-alojar?</strong> Ejecute su propio servidor - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">ver GitHub</a>",
+      "back": "← Atrás",
+      "registration": {
+        "title": "Registrar nueva cuenta de usuario",
+        "emailLabel": "Dirección de correo electrónico",
+        "emailPlaceholder": "usted@ejemplo.com",
+        "passwordLabel": "Contraseña (mín. 12 caracteres)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<strong>Recomendado:</strong> Use una contraseña DIFERENTE de la contraseña de cifrado de sus notas.",
+        "passwordWarningText": "Esta contraseña se envía al servidor para autenticación. La contraseña de sus notas nunca debe salir de su dispositivo.",
+        "registerButton": "Registrar cuenta de usuario",
+        "registering": "Registrando...",
+        "pendingTitle": "Pendiente de aprobación del administrador",
+        "pendingText": "Contacte a su administrador para aprobar su cuenta. Una vez aprobada, haga clic a continuación para completar la configuración.",
+        "approvedButton": "He sido aprobado - Completar configuración",
+        "completingSetup": "Completando configuración...",
+        "deviceRegistering": "⏳ Registrando dispositivo y sincronizando...",
+        "successTitle": "¡Sincronización habilitada exitosamente!",
+        "successText": "Su dispositivo está ahora registrado y <strong>todas sus notas existentes se han sincronizado con el servidor</strong>. Cualquier cambio futuro se sincronizará automáticamente.",
+        "successNextSteps": "📋 Para agregar otro dispositivo: Haga clic en \"Exportar credenciales de sincronización\" a continuación e impórtelas en su otro dispositivo.",
+        "done": "Hecho"
+      },
+      "linkAccount": {
+        "title": "Vincular cuenta (opcional)",
+        "infoText": "ℹ️ Esta función es para uso futuro (acceso al panel de administración, gestión de suscripciones). <strong>No</strong> habilita la sincronización en este dispositivo.",
+        "emailLabel": "Dirección de correo electrónico",
+        "passwordLabel": "Contraseña",
+        "comingSoon": "Próximamente",
+        "futureUpdate": "La vinculación de cuentas se habilitará en una actualización futura"
+      },
+      "import": {
+        "title": "Importar credenciales",
+        "instructions": "Pegue las credenciales de su primer dispositivo. La aplicación se bloqueará y necesitará desbloquear con su contraseña.",
+        "warningTitle": "⚠️ IMPORTANTE: ¡Debe usar la MISMA contraseña en todos los dispositivos!",
+        "warningText": "Si usa una contraseña diferente, las notas no se descifrarán.",
+        "placeholder": "Pegue credenciales en base64 aquí...",
+        "button": "📥 Importar y bloquear",
+        "importing": "Importando..."
+      },
+      "error": "Error"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "Resaltado de sintaxis",
+      "syntaxHelp": "Seleccione qué lenguajes de programación habilitar para el resaltado de sintaxis en bloques de código Markdown y vistas previas. Los lenguajes principales siempre están habilitados.",
+      "languagesEnabled": "{count} lenguajes habilitados",
+      "estimatedSize": "Tamaño estimado: ~{size} KB",
+      "resetToCore": "Restablecer a principales",
+      "enableAll": "Habilitar todos",
+      "coreLanguages": "Lenguajes principales",
+      "alwaysEnabled": "(siempre habilitado)",
+      "popularLanguages": "Lenguajes populares",
+      "webLanguages": "Lenguajes web",
+      "systemsLanguages": "Lenguajes de sistemas",
+      "dataLanguages": "Lenguajes de datos",
+      "otherLanguages": "Otros lenguajes",
+      "enabledCount": "{enabled}/{total} habilitados"
+    },
+    "keyboardTab": {
+      "description": "Personalice los atajos de teclado. Haga clic en un atajo para cambiarlo, luego presione la combinación de teclas deseada.",
+      "resetToDefaults": "Restablecer a predeterminados",
+      "viewAllShortcuts": "Ver todos los atajos",
+      "quickReference": "Referencia rápida de todos los atajos de teclado",
+      "focusSearch": "Enfocar búsqueda",
+      "createNewNote": "Crear nueva nota",
+      "lockApplication": "Bloquear aplicación",
+      "openSettings": "Abrir configuración",
+      "showShortcutsHelp": "Mostrar ayuda de atajos",
+      "copyNoteContent": "Copiar contenido de nota",
+      "undo": "Deshacer",
+      "redo": "Rehacer",
+      "versionHistory": "Historial de versiones",
+      "noteInfo": "Información de nota",
+      "pressKey": "Presione una tecla...",
+      "notSet": "No establecido"
+    },
+    "syncTab": {
+      "enableSync": "Habilitar sincronización",
+      "syncDescription": "Sincronice sus notas entre dispositivos usando un servidor auto-alojado",
+      "syncDisabled": "La sincronización está deshabilitada (Modo de privacidad)",
+      "syncDisabledDescription": "La sincronización es opcional y está deshabilitada de forma predeterminada para máxima privacidad.",
+      "syncDisabledDetails": "Cuando está deshabilitada, Jottery no realizará ninguna solicitud de red a servidores de sincronización. Todas sus notas permanecen completamente locales en este dispositivo.",
+      "toEnableSync": "Para habilitar sincronización: Active el interruptor arriba y configure su servidor de sincronización.",
+      "privacyNote": "Privacidad: Incluso cuando está habilitada, todas las notas están cifradas de extremo a extremo. El servidor de sincronización no puede leer su contenido."
+    },
+    "advancedTab": {
+      "importExport": "Importar/Exportar",
+      "exportDescription": "Exporte notas como JSON descifrado. La importación fusionará las notas con los datos existentes.",
+      "downloadTerminalClient": "Descargar cliente de terminal",
+      "terminalClientDescription": "Use el cliente de terminal para acceder a sus notas desde la línea de comandos",
+      "selectPlatform": "Seleccionar plataforma...",
+      "download": "Descargar",
+      "deleteAllData": "Eliminar todos los datos",
+      "deleteAllDataWarning": "Esto eliminará permanentemente TODAS las notas, configuraciones y claves de cifrado. Esta acción no se puede deshacer."
+    },
+    "aboutTab": {
+      "version": "Versión",
+      "documentation": "Documentación",
+      "viewDocumentation": "Ver documentación",
+      "documentationDescription": "Aprenda a usar Jottery eficazmente",
+      "statistics": "Estadísticas",
+      "activeNotes": "Notas activas",
+      "pinnedNotes": "Notas fijadas",
+      "inRecycleBin": "En papelera de reciclaje",
+      "totalNotes": "Total de notas",
+      "popularTags": "Etiquetas populares",
+      "terminalClient": "Cliente de terminal",
+      "terminalClientDescription": "Acceda a sus notas desde la línea de comandos con el cliente de terminal Jottery. La interfaz TUI proporciona una interfaz rápida impulsada por teclado para administrar sus notas.",
+      "terminalClientDownload": "Descargue el cliente de terminal desde la pestaña Avanzado.",
+      "aboutJottery": "Acerca de Jottery",
+      "aboutDescription": "Jottery es una aplicación de bloc de notas auto-alojada enfocada en la privacidad para capturar, organizar y buscar notas con contenido enriquecido, resaltado de sintaxis y cifrado.",
+      "viewOnGithub": "Ver en GitHub",
+      "license": "Licenciado bajo la Licencia MIT."
+    }
+  },
+  "unlock": {
+    "welcome": "Bienvenido a Jottery",
+    "enterPassword": "Ingrese su contraseña para desbloquear",
+    "setupPassword": "Configure su contraseña maestra",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "createPassword": "Crear contraseña",
+    "unlock": "Desbloquear",
+    "processing": "Procesando...",
+    "passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "incorrectPassword": "Contraseña incorrecta",
+    "warning": "Importante: Su contraseña no se puede recuperar. Si la pierde, sus datos serán permanentemente inaccesibles.",
+    "failedAttempts": "Contraseña incorrecta. Después de 3 intentos fallidos, es posible que deba eliminar la base de datos y comenzar de nuevo.",
+    "deleteAndStartOver": "Eliminar base de datos y comenzar de nuevo",
+    "storedPasswordInvalid": "La contraseña almacenada no es válida. Por favor vuelva a ingresar su contraseña.",
+    "landingPage": {
+      "privateEncrypted": {
+        "title": "🔒 Privado y cifrado",
+        "description": "Jottery es una aplicación de toma de notas enfocada en la privacidad. Todas sus notas están <strong>cifradas localmente</strong> en su dispositivo usando su contraseña maestra. Nadie puede leer sus notas sin su contraseña, ni siquiera si acceden al almacenamiento de su dispositivo."
+      },
+      "localFirst": {
+        "title": "💾 Almacenamiento local primero",
+        "description": "Sus notas se almacenan directamente en la base de datos local de su navegador. Jottery funciona completamente <strong>sin conexión</strong> y no requiere conexión a internet ni cuenta para usarse."
+      },
+      "optionalSync": {
+        "title": "☁️ Servidor de sincronización opcional",
+        "description": "¿Quiere sincronizar entre dispositivos? Jottery puede sincronizar opcionalmente con un servidor auto-alojado. Sus notas y etiquetas están <strong>cifradas antes de sincronizar</strong>: el servidor solo almacena datos cifrados que no puede leer."
+      },
+      "selfHosting": {
+        "title": "🏠 Auto-alojamiento",
+        "description": "¿Quiere ejecutar su propio servidor de sincronización? Jottery es de código abierto y fácil de auto-alojar.",
+        "viewOnGitHub": "Ver en GitHub"
+      }
+    }
+  },
+  "lock": {
+    "title": "Bloquear aplicación",
+    "message": "¿Bloquear la aplicación? Los cambios no guardados se perderán.",
+    "confirmButton": "Bloquear"
+  },
+  "recycleBin": {
+    "title": "Papelera de reciclaje",
+    "empty": "La papelera de reciclaje está vacía",
+    "emptyDescription": "Las notas eliminadas aparecerán aquí",
+    "restore": "Restaurar",
+    "restoreTitle": "Restaurar nota",
+    "deletePermanently": "Eliminar permanentemente",
+    "deletePermanentlyTitle": "Eliminar permanentemente",
+    "deleteForever": "Eliminar para siempre",
+    "emptyBin": "Vaciar papelera",
+    "loading": "Cargando...",
+    "closeLabel": "Cerrar papelera de reciclaje",
+    "deleted": "Eliminada:",
+    "unknown": "Desconocido",
+    "untitled": "Sin título",
+    "footer": {
+      "single": "{count} nota en la papelera de reciclaje. Las notas se purgan automáticamente después de 30 días.",
+      "multiple": "{count} notas en la papelera de reciclaje. Las notas se purgan automáticamente después de 30 días."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "Eliminar nota permanentemente",
+        "message": "Esto eliminará permanentemente esta nota. ¡Esto no se puede deshacer!",
+        "confirmButton": "Eliminar para siempre"
+      },
+      "emptyBin": {
+        "title": "Vaciar papelera de reciclaje",
+        "message": "¿Eliminar permanentemente todas las {count} {notes} en la papelera de reciclaje? ¡Esto no se puede deshacer!",
+        "note": "nota",
+        "notes": "notas",
+        "confirmButton": "Vaciar papelera"
+      }
+    },
+    "error": {
+      "restore": "Error al restaurar nota",
+      "delete": "Error al eliminar nota",
+      "emptyBin": "Error al vaciar papelera de reciclaje"
+    }
+  },
+  "attachments": {
+    "title": "Archivos adjuntos",
+    "upload": "Subir archivos",
+    "dropHere": "Suelte archivos aquí o haga clic para explorar",
+    "uploading": "Subiendo...",
+    "download": "Descargar",
+    "validationError": "Error de validación de archivo",
+    "clickToView": "Haga clic para ver archivos adjuntos",
+    "clickToHide": "Haga clic para ocultar archivos adjuntos",
+    "noAttachments": "Sin archivos adjuntos",
+    "loading": "Cargando...",
+    "attachment": "archivo adjunto",
+    "thumbnail": "Miniatura",
+    "clickToPreview": "Haga clic para vista previa",
+    "clickToPreviewHint": "• Haga clic para vista previa",
+    "copyMarkdown": "Copiar enlace markdown",
+    "delete": "Eliminar",
+    "close": "Cerrar",
+    "closePreview": "Cerrar vista previa",
+    "downloadToView": "Descargue para ver",
+    "markdownCopied": "Enlace markdown copiado al portapapeles",
+    "error": {
+      "download": "Error al descargar archivo adjunto",
+      "copyMarkdown": "Error al copiar enlace markdown"
+    },
+    "preview": {
+      "title": "Vista previa de archivo adjunto",
+      "loading": "Cargando vista previa...",
+      "notAvailable": "Vista previa no disponible para este tipo de archivo.",
+      "audioNotSupported": "Su navegador no admite reproducción de audio.",
+      "videoNotSupported": "Su navegador no admite reproducción de video."
+    }
+  },
+  "keyboard": {
+    "title": "Atajos de teclado",
+    "closeLabel": "Cerrar ayuda de atajos",
+    "global": "Global",
+    "noteList": "Lista de notas",
+    "editor": "Editor",
+    "focusSearch": "Enfocar búsqueda",
+    "createNote": "Crear nueva nota",
+    "lockApp": "Bloquear aplicación",
+    "openSettings": "Abrir configuración",
+    "showShortcuts": "Mostrar atajos de teclado",
+    "navigateNotes": "Navegar notas",
+    "navigateVim": "Navegar notas (estilo vim)",
+    "openNote": "Abrir nota seleccionada",
+    "deleteNote": "Eliminar nota seleccionada",
+    "pinNote": "Fijar/desfijar nota seleccionada",
+    "closeNote": "Cerrar nota",
+    "copyNote": "Copiar contenido de nota",
+    "findInNote": "Buscar en nota (CodeMirror)",
+    "replaceInNote": "Reemplazar en nota (CodeMirror)",
+    "macNote": "En macOS, use Cmd en lugar de Ctrl.",
+    "note": "Nota:",
+    "cmd": "Cmd",
+    "ctrl": "Ctrl"
+  },
+  "releases": {
+    "title": "Versiones",
+    "description": "Descargue el TUI de Jottery para su plataforma."
+  },
+  "fileUpload": {
+    "dropHere": "Suelte archivos aquí",
+    "clickOrDrag": "<span class=\"font-medium\">Haga clic para subir</span> o arrastre y suelte",
+    "maxFileSize": "Tamaño máximo de archivo: 10MB"
+  },
+  "pdfViewer": {
+    "loading": "Cargando visor de PDF...",
+    "pageOfPages": "Página {current} de {total}",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "zoomOut": "Alejar",
+    "zoomIn": "Acercar"
+  },
+  "versionHistory": {
+    "title": "Historial de versiones",
+    "closeLabel": "Cerrar historial de versiones",
+    "loading": "Cargando versiones...",
+    "noVersions": "Sin historial de versiones",
+    "versionsCreatedDuringSync": "Las versiones se crearán durante la sincronización",
+    "current": "(actual)",
+    "autoSync": "Sincronización automática",
+    "manualSync": "Sincronización manual",
+    "version": "Versión:",
+    "characters": "Caracteres:",
+    "created": "Creada:",
+    "synced": "Sincronizada:",
+    "tags": "Etiquetas:",
+    "contentPreview": "Vista previa de contenido",
+    "selectToPreview": "Seleccione una versión para vista previa",
+    "restoreButton": "Restaurar esta versión",
+    "restoreConfirm": {
+      "title": "Restaurar versión",
+      "message": "¿Está seguro de que desea restaurar esta versión? Su nota actual se guardará como una nueva versión antes de restaurar.",
+      "confirmButton": "Restaurar"
+    }
+  },
+  "header": {
+    "menu": "Menú",
+    "loadingNotes": "Cargando {current}/{total} notas...",
+    "creatingNote": "Creando nota...",
+    "addContentFirst": "Agregue contenido a la nota actual primero"
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Eliminar base de datos",
+      "message": "⚠️ ADVERTENCIA: Esto eliminará permanentemente todas sus notas cifradas y archivos adjuntos. ¡Esto no se puede deshacer!\n\n¿Está seguro de que desea eliminar la base de datos?",
+      "confirmButton": "Eliminar base de datos"
+    },
+    "deleteAllData": {
+      "title": "Eliminar todos los datos",
+      "message": "Esto eliminará permanentemente TODAS las notas, configuraciones y claves de cifrado. Esta acción no se puede deshacer.\n\nEscriba DELETE para confirmar:",
+      "confirmButton": "Eliminar todo",
+      "cancelButton": "Cancelar"
+    },
+    "disconnectSync": {
+      "title": "¿Desconectar del servidor de sincronización?",
+      "message": "Esto desconectará este dispositivo del servidor de sincronización y eliminará todas las credenciales de sincronización.\n\nSus notas NO se eliminarán y permanecerán en este dispositivo.\n\nPuede volver a conectarse a un servidor de sincronización más tarde.",
+      "confirmButton": "Desconectar",
+      "cancelButton": "Cancelar"
+    },
+    "deleteServerNotes": {
+      "title": "¿Eliminar todas las notas del servidor?",
+      "message": "Esto eliminará permanentemente TODAS sus notas del servidor de sincronización. Esta acción no se puede deshacer.\n\nSus notas locales permanecerán en este dispositivo y NO se eliminarán.\n\nEscriba DELETE para confirmar:",
+      "confirmButton": "Eliminar del servidor",
+      "cancelButton": "Cancelar"
+    },
+    "disableRememberPassword": {
+      "title": "¿Deshabilitar recordar contraseña?",
+      "message": "Esto eliminará su contraseña almacenada y bloqueará la aplicación.\n\nDeberá ingresar su contraseña la próxima vez que acceda a la aplicación.",
+      "confirmButton": "Deshabilitar y bloquear",
+      "cancelButton": "Cancelar"
+    },
+    "requireText": "Escriba <strong>{text}</strong> para confirmar:",
+    "deleteKeyword": "DELETE"
+  },
+  "updateBanner": {
+    "title": "Nueva versión disponible",
+    "message": "Recargue para obtener las últimas funciones y mejoras",
+    "reloadButton": "Recargar ahora",
+    "dismissLabel": "Descartar"
+  }
+}

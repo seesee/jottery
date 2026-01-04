@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { filteredNotes, notes, searchQuery, selectedNoteId, settings } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import { beforeUpdate, afterUpdate, onMount } from 'svelte';
@@ -245,14 +246,14 @@
     <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
       <div>
         {#if $notes.length === 0}
-          <p class="text-lg mb-2">No notes yet</p>
-          <p class="text-sm">Create your first note to get started</p>
+          <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
+          <p class="text-sm">{$_('note.createFirstNote')}</p>
         {:else if $searchQuery.trim()}
-          <p class="text-lg mb-2">No results found</p>
-          <p class="text-sm">Try a different search query</p>
+          <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
+          <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
         {:else}
-          <p class="text-lg mb-2">No notes</p>
-          <p class="text-sm">Something went wrong</p>
+          <p class="text-lg mb-2">{$_('note.noNotes')}</p>
+          <p class="text-sm">{$_('note.somethingWentWrong')}</p>
         {/if}
       </div>
     </div>

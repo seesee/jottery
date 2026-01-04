@@ -1,0 +1,555 @@
+{
+  "app": {
+    "name": "Jottery",
+    "tagline": "Datenschutzorientiert • Lokal zuerst • Verschlüsselt"
+  },
+  "common": {
+    "loading": "Wird geladen...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "confirm": "Bestätigen",
+    "close": "Schließen",
+    "lock": "Sperren",
+    "unlock": "Entsperren",
+    "settings": "Einstellungen",
+    "search": "Suchen",
+    "error": "Fehler"
+  },
+  "note": {
+    "new": "Neu",
+    "create": "Neue Notiz erstellen",
+    "delete": "Notiz löschen",
+    "pin": "Anheften",
+    "pinned": "Angeheftet",
+    "unpin": "Loslösen",
+    "copy": "Kopieren",
+    "copyContent": "Notizinhalt kopieren",
+    "noNoteSelected": "Keine Notiz ausgewählt",
+    "selectNote": "Wählen Sie eine Notiz aus der Liste oder erstellen Sie eine neue",
+    "created": "Erstellt",
+    "modified": "Geändert",
+    "attachments": "Anhänge",
+    "filterByTag": "Nach #{tag} filtern",
+    "noNotesYet": "Noch keine Notizen",
+    "createFirstNote": "Erstellen Sie Ihre erste Notiz, um zu beginnen",
+    "noResultsFound": "Keine Ergebnisse gefunden",
+    "tryDifferentSearch": "Versuchen Sie eine andere Suchanfrage",
+    "noNotes": "Keine Notizen",
+    "somethingWentWrong": "Etwas ist schiefgelaufen"
+  },
+  "search": {
+    "placeholder": "Notizen durchsuchen...",
+    "clear": "Suche löschen"
+  },
+  "editor": {
+    "noNoteSelected": "Keine Notiz ausgewählt",
+    "noNoteSelectedHint": "Wählen Sie eine Notiz aus der Liste oder erstellen Sie eine neue",
+    "attachmentPreview": "Anhangsvorschau",
+    "download": "Herunterladen",
+    "tags": "Schlagwörter",
+    "addTags": "Schlagwörter hinzufügen...",
+    "plainText": "Klartext",
+    "syntaxHighlight": "Syntaxhervorhebung",
+    "wordWrap": "Zeilenumbruch",
+    "noWrap": "Kein Umbruch",
+    "toggleWordWrap": "Zeilenumbruch umschalten",
+    "backToNotes": "Zurück zu Notizen",
+    "moreActions": "Weitere Aktionen",
+    "closeNote": "Notiz schließen (Esc)",
+    "preview": "Vorschau",
+    "edit": "Bearbeiten",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "wordWrapOn": "Zeilenumbruch: Ein",
+    "wordWrapOff": "Zeilenumbruch: Aus",
+    "copyContent": "Inhalt kopieren",
+    "exportToFile": "In Datei exportieren",
+    "info": "Informationen",
+    "versionHistory": "Versionsverlauf",
+    "deleteNote": "Notiz löschen",
+    "noteInformation": "Notizinformationen",
+    "characters": "Zeichen:",
+    "charactersNoSpaces": "Zeichen (ohne Leerzeichen):",
+    "words": "Wörter:",
+    "lines": "Zeilen:",
+    "attachmentsCount": "Anhänge:",
+    "syntax": "Syntax:",
+    "noteId": "Notiz-ID:",
+    "uploading": "Wird hochgeladen...",
+    "attachmentsHeader": "Anhänge ({count})",
+    "status": {
+      "uploading": "Wird hochgeladen...",
+      "processingNotes": "Verarbeite {current} von {total} Notizen...",
+      "readingFile": "Datei wird gelesen...",
+      "loadingPreview": "Vorschau wird geladen...",
+      "loading": "Wird geladen..."
+    },
+    "tooltips": {
+      "saveNoteFirst": "Notiz zuerst speichern",
+      "pinNote": "Notiz anheften",
+      "unpinNote": "Notiz loslösen"
+    },
+    "errors": {
+      "loadingAttachment": "Fehler beim Laden des Anhangs",
+      "videoNotSupported": "Ihr Browser unterstützt keine Videowiedergabe.",
+      "previewNotAvailable": "Vorschau für diesen Dateityp nicht verfügbar.",
+      "downloadToView": "Zum Anzeigen herunterladen"
+    }
+  },
+  "noteList": {
+    "deleteNote": "Notiz löschen",
+    "filterByTag": "Nach #{tag} filtern"
+  },
+  "tagInput": {
+    "removeTag": "Schlagwort entfernen"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "closeLabel": "Einstellungen schließen",
+    "tabs": {
+      "general": "Allgemein",
+      "editor": "Editor",
+      "keyboard": "Tastenkombinationen",
+      "sync": "Synchronisation",
+      "advanced": "Erweitert",
+      "about": "Über"
+    },
+    "theme": "Design",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "themeAuto": "Automatisch",
+    "timezone": "Zeitzone",
+    "timezoneDescription": "Alle Zeitstempel werden in UTC gespeichert und in Ihrer ausgewählten Zeitzone angezeigt",
+    "timezoneLocal": "Lokal (Browser-Zeitzone)",
+    "layoutMode": "Layout-Modus",
+    "layoutModeDescription": "Automatische Layout-Erkennung für dieses Gerät überschreiben",
+    "layoutModeAuto": "Automatisch (Responsiv)",
+    "layoutModeMobile": "Mobiles Layout erzwingen",
+    "layoutModeDesktop": "Desktop-Layout erzwingen",
+    "fontSize": "Editor-Schriftgröße",
+    "fontSizeDescription": "Automatisch verwendet größere Schrift auf Mobilgeräten, um Browser-Zoom zu vermeiden",
+    "fontSizeAuto": "Automatisch (Mobilgeräte-fähig: 16px mobil, 14px Desktop)",
+    "fontSizeSmall": "Klein (12px)",
+    "fontSizeMedium": "Mittel (14px)",
+    "fontSizeLarge": "Groß (16px)",
+    "autoLockTimeout": "Automatische Sperrzeit (Minuten)",
+    "sortOrder": "Standard-Sortierreihenfolge",
+    "sortRecent": "Neueste",
+    "sortOldest": "Älteste zuerst",
+    "sortAlpha": "Alphabetisch",
+    "sortCreated": "Erstellungsdatum",
+    "language": "Sprache",
+    "rememberPassword": "Passwort merken (Unsicher)",
+    "rememberPasswordWarning": "Speichern Sie Ihr Passwort auf diesem Gerät, um die Eingabe bei jedem Besuch zu überspringen. WARNUNG: Dies speichert Ihr Passwort im Klartext in localStorage, was sehr unsicher ist.",
+    "rememberPasswordNote": "Die automatische Sperre wird deaktiviert, wenn dies aktiviert ist. Das Deaktivieren dieser Funktion sperrt die Anwendung sofort.",
+    "rememberPasswordModal": {
+      "title": "⚠️ Sicherheitswarnung",
+      "insecureWarning": "Das Aktivieren dieser Funktion speichert Ihr Passwort im Klartext in localStorage, was SEHR UNSICHER ist.",
+      "riskDevice": "Jeder mit Zugriff auf Ihr Gerät kann es lesen",
+      "riskExtensions": "Browser-Erweiterungen können darauf zugreifen",
+      "riskCache": "Es kann das Löschen des Browser-Cache überleben",
+      "riskAutolock": "Die automatische Sperre wird deaktiviert",
+      "confirmWarning": "Aktivieren Sie dies nur, wenn Sie die Sicherheitsrisiken vollständig verstehen.",
+      "confirmPassword": "Geben Sie Ihr Passwort zur Bestätigung ein:",
+      "passwordPlaceholder": "Ihr Passwort",
+      "cancelButton": "Abbrechen",
+      "enableButton": "Ich verstehe, trotzdem aktivieren"
+    },
+    "syncCredentials": {
+      "title": "📋 Synchronisierungs-Anmeldedaten",
+      "instructions": "Kopieren Sie den folgenden Text und fügen Sie ihn in einen anderen Jottery-Client ein, indem Sie \"Vorhandene Anmeldedaten verwenden\" wählen:",
+      "samePasswordWarning": "⚠️ <strong>Wichtig:</strong> Alle Geräte müssen dasselbe Passwort verwenden, um die Notizen zu entschlüsseln!",
+      "clipboardNote": "Das Kopieren in die Zwischenablage ist möglicherweise fehlgeschlagen (insbesondere über SSH oder in einigen Browsern). Sie können den obigen Text manuell auswählen und kopieren.",
+      "closeButton": "Schließen"
+    },
+    "saveSettings": "Einstellungen speichern",
+    "saving": "Wird gespeichert...",
+    "settingsSaved": "Einstellungen gespeichert",
+    "settingsSaveFailed": "Fehler beim Speichern der Einstellungen: {error}",
+    "deleteDatabaseFailed": "Fehler beim Löschen der Datenbank: {error}",
+    "exportFailed": "Fehler beim Exportieren der Notizen: {error}",
+    "importFailed": "Fehler beim Importieren der Notizen: {error}",
+    "exportNotes": "Notizen exportieren",
+    "importNotes": "Notizen importieren",
+    "importDialog": {
+      "importing": "Notizen werden importiert",
+      "complete": "Import abgeschlossen",
+      "notesImported": "Importierte Notizen:",
+      "notesSkipped": "Übersprungene Notizen:",
+      "attachmentsImported": "Importierte Anhänge:",
+      "uniqueTags": "Eindeutige Schlagwörter:",
+      "errorsOccurred": "{count} Fehler aufgetreten:",
+      "done": "Fertig",
+      "processingNotes": "Verarbeite {current} von {total} Notizen...",
+      "readingFile": "Datei wird gelesen...",
+      "pleaseWait": "Bitte warten Sie, während wir Ihre Notizen importieren..."
+    },
+    "deleteDatabase": "Datenbank löschen",
+    "keyboardShortcuts": "Tastenkombinationen",
+    "syncSetup": {
+      "endpoint": {
+        "label": "Synchronisierungsserver-Endpunkt",
+        "help": "URL Ihres selbst gehosteten Jottery-Synchronisierungsservers"
+      },
+      "deviceName": {
+        "label": "Gerätename",
+        "placeholder": "Mein Laptop",
+        "help": "Ein Name zur Identifizierung dieses Geräts"
+      },
+      "chooseMethod": "Wählen Sie, wie die Synchronisation eingerichtet werden soll:",
+      "importCredentials": {
+        "title": "Synchronisierungs-Anmeldedaten importieren",
+        "subtitle": "<strong>Für zusätzliche Geräte:</strong> Sicherste Methode",
+        "benefit1": "✓ Zero-Knowledge-Verschlüsselung (Server kann Ihre Notizen nicht entschlüsseln)",
+        "benefit2": "✓ Anmeldedaten von Ihrem ersten Gerät kopieren",
+        "benefit3": "✓ Alle Geräte verwenden denselben Verschlüsselungsschlüssel",
+        "button": "📋 Anmeldedaten von anderem Gerät importieren"
+      },
+      "registerServer": {
+        "title": "Bei einem Synchronisierungsserver registrieren",
+        "subtitle": "<strong>Nur für Ihr erstes Gerät:</strong> Erstellt Ihr Konto",
+        "benefit1": "✓ Erstellt E-Mail/Passwort-Konto",
+        "benefit2": "✓ Aktiviert Synchronisation für dieses Gerät",
+        "benefit3": "✓ Erfordert Administrator-Genehmigung",
+        "button": "🚀 Neues Konto registrieren"
+      },
+      "privacyNote": "<strong>🔒 Datenschutz:</strong> Alle Ihre Notizen sind Ende-zu-Ende verschlüsselt. Der Server speichert nur verschlüsselte Daten und kann Ihren Inhalt nicht lesen.",
+      "selfHostNote": "<strong>💡 Self-Hosting?</strong> Betreiben Sie Ihren eigenen Server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">siehe GitHub</a>",
+      "back": "← Zurück",
+      "registration": {
+        "title": "Neues Benutzerkonto registrieren",
+        "emailLabel": "E-Mail-Adresse",
+        "emailPlaceholder": "sie@beispiel.de",
+        "passwordLabel": "Passwort (min. 12 Zeichen)",
+        "passwordPlaceholder": "••••••••••••",
+        "passwordWarningTitle": "<strong>Empfohlen:</strong> Verwenden Sie ein ANDERES Passwort als Ihr Notizverschlüsselungs-Passwort.",
+        "passwordWarningText": "Dieses Passwort wird zur Authentifizierung an den Server gesendet. Ihr Notizen-Passwort sollte niemals Ihr Gerät verlassen.",
+        "registerButton": "Benutzerkonto registrieren",
+        "registering": "Wird registriert...",
+        "pendingTitle": "Ausstehende Administrator-Genehmigung",
+        "pendingText": "Kontaktieren Sie Ihren Administrator, um Ihr Konto zu genehmigen. Sobald es genehmigt ist, klicken Sie unten, um die Einrichtung abzuschließen.",
+        "approvedButton": "Ich wurde genehmigt - Einrichtung abschließen",
+        "completingSetup": "Einrichtung wird abgeschlossen...",
+        "deviceRegistering": "⏳ Gerät wird registriert und synchronisiert...",
+        "successTitle": "Synchronisation erfolgreich aktiviert!",
+        "successText": "Ihr Gerät ist jetzt registriert und <strong>alle Ihre vorhandenen Notizen wurden mit dem Server synchronisiert</strong>. Alle zukünftigen Änderungen werden automatisch synchronisiert.",
+        "successNextSteps": "📋 Um ein weiteres Gerät hinzuzufügen: Klicken Sie unten auf \"Synchronisierungs-Anmeldedaten exportieren\" und importieren Sie sie auf Ihrem anderen Gerät.",
+        "done": "Fertig"
+      },
+      "linkAccount": {
+        "title": "Konto verknüpfen (optional)",
+        "infoText": "ℹ️ Diese Funktion ist für zukünftige Verwendung (Administrator-Dashboard-Zugriff, Abonnementverwaltung). Sie aktiviert die Synchronisation auf diesem Gerät <strong>nicht</strong>.",
+        "emailLabel": "E-Mail-Adresse",
+        "passwordLabel": "Passwort",
+        "comingSoon": "Demnächst",
+        "futureUpdate": "Die Kontoverknüpfung wird in einem zukünftigen Update aktiviert"
+      },
+      "import": {
+        "title": "Anmeldedaten importieren",
+        "instructions": "Fügen Sie die Anmeldedaten von Ihrem ersten Gerät ein. Die Anwendung wird gesperrt und Sie müssen sie mit Ihrem Passwort entsperren.",
+        "warningTitle": "⚠️ WICHTIG: Sie müssen auf allen Geräten dasselbe Passwort verwenden!",
+        "warningText": "Wenn Sie ein anderes Passwort verwenden, werden die Notizen nicht entschlüsselt.",
+        "placeholder": "Base64-Anmeldedaten hier einfügen...",
+        "button": "📥 Importieren und sperren",
+        "importing": "Wird importiert..."
+      },
+      "error": "Fehler"
+    },
+    "editorTab": {
+      "syntaxHighlighting": "Syntaxhervorhebung",
+      "syntaxHelp": "Wählen Sie aus, welche Programmiersprachen für die Syntaxhervorhebung in Markdown-Codeblöcken und Vorschauen aktiviert werden sollen. Kernsprachen sind immer aktiviert.",
+      "languagesEnabled": "{count} Sprachen aktiviert",
+      "estimatedSize": "Geschätzte Größe: ~{size} KB",
+      "resetToCore": "Auf Kernsprachen zurücksetzen",
+      "enableAll": "Alle aktivieren",
+      "coreLanguages": "Kernsprachen",
+      "alwaysEnabled": "(immer aktiviert)",
+      "popularLanguages": "Beliebte Sprachen",
+      "webLanguages": "Web-Sprachen",
+      "systemsLanguages": "System-Sprachen",
+      "dataLanguages": "Datensprachen",
+      "otherLanguages": "Andere Sprachen",
+      "enabledCount": "{enabled}/{total} aktiviert"
+    },
+    "keyboardTab": {
+      "description": "Tastenkombinationen anpassen. Klicken Sie auf eine Tastenkombination, um sie zu ändern, und drücken Sie dann die gewünschte Tastenkombination.",
+      "resetToDefaults": "Auf Standardwerte zurücksetzen",
+      "viewAllShortcuts": "Alle Tastenkombinationen anzeigen",
+      "quickReference": "Schnellreferenz aller Tastenkombinationen",
+      "focusSearch": "Suche fokussieren",
+      "createNewNote": "Neue Notiz erstellen",
+      "lockApplication": "Anwendung sperren",
+      "openSettings": "Einstellungen öffnen",
+      "showShortcutsHelp": "Tastenkombinationen-Hilfe anzeigen",
+      "copyNoteContent": "Notizinhalt kopieren",
+      "undo": "Rückgängig",
+      "redo": "Wiederholen",
+      "versionHistory": "Versionsverlauf",
+      "noteInfo": "Notizinformationen",
+      "pressKey": "Taste drücken...",
+      "notSet": "Nicht festgelegt"
+    },
+    "syncTab": {
+      "enableSync": "Synchronisation aktivieren",
+      "syncDescription": "Synchronisieren Sie Ihre Notizen geräteübergreifend mit einem selbst gehosteten Server",
+      "syncDisabled": "Synchronisation ist deaktiviert (Datenschutzmodus)",
+      "syncDisabledDescription": "Synchronisation ist opt-in und standardmäßig für maximalen Datenschutz deaktiviert.",
+      "syncDisabledDetails": "Wenn deaktiviert, sendet Jottery keine Netzwerkanfragen an Synchronisierungsserver. Alle Ihre Notizen bleiben vollständig lokal auf diesem Gerät.",
+      "toEnableSync": "Um die Synchronisation zu aktivieren: Schalten Sie den obigen Schalter ein und konfigurieren Sie Ihren Synchronisierungsserver.",
+      "privacyNote": "Datenschutz: Auch wenn aktiviert, sind alle Notizen Ende-zu-Ende verschlüsselt. Der Synchronisierungsserver kann Ihren Inhalt nicht lesen."
+    },
+    "advancedTab": {
+      "importExport": "Importieren/Exportieren",
+      "exportDescription": "Notizen als entschlüsseltes JSON exportieren. Der Import führt Notizen mit vorhandenen Daten zusammen.",
+      "downloadTerminalClient": "Terminal-Client herunterladen",
+      "terminalClientDescription": "Verwenden Sie den Terminal-Client, um von der Befehlszeile auf Ihre Notizen zuzugreifen",
+      "selectPlatform": "Plattform auswählen...",
+      "download": "Herunterladen",
+      "deleteAllData": "Alle Daten löschen",
+      "deleteAllDataWarning": "Dies löscht dauerhaft ALLE Notizen, Einstellungen und Verschlüsselungsschlüssel. Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "aboutTab": {
+      "version": "Version",
+      "documentation": "Dokumentation",
+      "viewDocumentation": "Dokumentation anzeigen",
+      "documentationDescription": "Lernen Sie, Jottery effektiv zu nutzen",
+      "statistics": "Statistiken",
+      "activeNotes": "Aktive Notizen",
+      "pinnedNotes": "Angeheftete Notizen",
+      "inRecycleBin": "Im Papierkorb",
+      "totalNotes": "Notizen insgesamt",
+      "popularTags": "Beliebte Schlagwörter",
+      "terminalClient": "Terminal-Client",
+      "terminalClientDescription": "Greifen Sie mit dem Jottery-Terminal-Client von der Befehlszeile auf Ihre Notizen zu. Die TUI bietet eine schnelle, tastaturgesteuerte Oberfläche zur Verwaltung Ihrer Notizen.",
+      "terminalClientDownload": "Laden Sie den Terminal-Client von der Registerkarte Erweitert herunter.",
+      "aboutJottery": "Über Jottery",
+      "aboutDescription": "Jottery ist eine datenschutzorientierte, selbst gehostete Notizblock-Anwendung zum Erfassen, Organisieren und Durchsuchen von Notizen mit reichhaltigem Inhalt, Syntaxhervorhebung und Verschlüsselung.",
+      "viewOnGithub": "Auf GitHub ansehen",
+      "license": "Lizenziert unter der MIT-Lizenz."
+    }
+  },
+  "unlock": {
+    "welcome": "Willkommen bei Jottery",
+    "enterPassword": "Geben Sie Ihr Passwort zum Entsperren ein",
+    "setupPassword": "Richten Sie Ihr Master-Passwort ein",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "createPassword": "Passwort erstellen",
+    "unlock": "Entsperren",
+    "processing": "Wird verarbeitet...",
+    "passwordMinLength": "Passwort muss mindestens 8 Zeichen lang sein",
+    "passwordMismatch": "Passwörter stimmen nicht überein",
+    "incorrectPassword": "Falsches Passwort",
+    "warning": "Wichtig: Ihr Passwort kann nicht wiederhergestellt werden. Wenn Sie es verlieren, sind Ihre Daten dauerhaft unzugänglich.",
+    "failedAttempts": "Falsches Passwort. Nach 3 fehlgeschlagenen Versuchen müssen Sie möglicherweise die Datenbank löschen und von vorne beginnen.",
+    "deleteAndStartOver": "Datenbank löschen und von vorne beginnen",
+    "storedPasswordInvalid": "Das gespeicherte Passwort ist ungültig. Bitte geben Sie Ihr Passwort erneut ein.",
+    "landingPage": {
+      "privateEncrypted": {
+        "title": "🔒 Privat und verschlüsselt",
+        "description": "Jottery ist eine datenschutzorientierte Notiz-App. Alle Ihre Notizen sind <strong>lokal verschlüsselt</strong> auf Ihrem Gerät mit Ihrem Master-Passwort. Niemand kann Ihre Notizen ohne Ihr Passwort lesen – auch nicht, wenn sie auf den Speicher Ihres Geräts zugreifen."
+      },
+      "localFirst": {
+        "title": "💾 Lokal zuerst Speicherung",
+        "description": "Ihre Notizen werden direkt in der lokalen Datenbank Ihres Browsers gespeichert. Jottery funktioniert vollständig <strong>offline</strong> und benötigt keine Internetverbindung oder Konto zur Nutzung."
+      },
+      "optionalSync": {
+        "title": "☁️ Optionaler Synchronisierungsserver",
+        "description": "Möchten Sie zwischen Geräten synchronisieren? Jottery kann optional mit einem selbst gehosteten Server synchronisieren. Ihre Notizen und Schlagwörter werden <strong>vor der Synchronisation verschlüsselt</strong> – der Server speichert nur verschlüsselte Daten, die er nicht lesen kann."
+      },
+      "selfHosting": {
+        "title": "🏠 Self-Hosting",
+        "description": "Möchten Sie Ihren eigenen Synchronisierungsserver betreiben? Jottery ist Open Source und einfach selbst zu hosten.",
+        "viewOnGitHub": "Auf GitHub ansehen"
+      }
+    }
+  },
+  "lock": {
+    "title": "Anwendung sperren",
+    "message": "Anwendung sperren? Nicht gespeicherte Änderungen gehen verloren.",
+    "confirmButton": "Sperren"
+  },
+  "recycleBin": {
+    "title": "Papierkorb",
+    "empty": "Papierkorb ist leer",
+    "emptyDescription": "Gelöschte Notizen erscheinen hier",
+    "restore": "Wiederherstellen",
+    "restoreTitle": "Notiz wiederherstellen",
+    "deletePermanently": "Dauerhaft löschen",
+    "deletePermanentlyTitle": "Dauerhaft löschen",
+    "deleteForever": "Endgültig löschen",
+    "emptyBin": "Papierkorb leeren",
+    "loading": "Wird geladen...",
+    "closeLabel": "Papierkorb schließen",
+    "deleted": "Gelöscht:",
+    "unknown": "Unbekannt",
+    "untitled": "Ohne Titel",
+    "footer": {
+      "single": "{count} Notiz im Papierkorb. Notizen werden nach 30 Tagen automatisch gelöscht.",
+      "multiple": "{count} Notizen im Papierkorb. Notizen werden nach 30 Tagen automatisch gelöscht."
+    },
+    "confirm": {
+      "deleteNote": {
+        "title": "Notiz dauerhaft löschen",
+        "message": "Dies löscht diese Notiz dauerhaft. Dies kann nicht rückgängig gemacht werden!",
+        "confirmButton": "Endgültig löschen"
+      },
+      "emptyBin": {
+        "title": "Papierkorb leeren",
+        "message": "Alle {count} {notes} im Papierkorb dauerhaft löschen? Dies kann nicht rückgängig gemacht werden!",
+        "note": "Notiz",
+        "notes": "Notizen",
+        "confirmButton": "Papierkorb leeren"
+      }
+    },
+    "error": {
+      "restore": "Fehler beim Wiederherstellen der Notiz",
+      "delete": "Fehler beim Löschen der Notiz",
+      "emptyBin": "Fehler beim Leeren des Papierkorbs"
+    }
+  },
+  "attachments": {
+    "title": "Anhänge",
+    "upload": "Dateien hochladen",
+    "dropHere": "Dateien hier ablegen oder klicken zum Durchsuchen",
+    "uploading": "Wird hochgeladen...",
+    "download": "Herunterladen",
+    "validationError": "Datei-Validierungsfehler",
+    "clickToView": "Klicken, um Anhänge anzuzeigen",
+    "clickToHide": "Klicken, um Anhänge auszublenden",
+    "noAttachments": "Keine Anhänge",
+    "loading": "Wird geladen...",
+    "attachment": "Anhang",
+    "thumbnail": "Miniaturansicht",
+    "clickToPreview": "Klicken für Vorschau",
+    "clickToPreviewHint": "• Klicken für Vorschau",
+    "copyMarkdown": "Markdown-Link kopieren",
+    "delete": "Löschen",
+    "close": "Schließen",
+    "closePreview": "Vorschau schließen",
+    "downloadToView": "Zum Anzeigen herunterladen",
+    "markdownCopied": "Markdown-Link in Zwischenablage kopiert",
+    "error": {
+      "download": "Fehler beim Herunterladen des Anhangs",
+      "copyMarkdown": "Fehler beim Kopieren des Markdown-Links"
+    },
+    "preview": {
+      "title": "Anhangsvorschau",
+      "loading": "Vorschau wird geladen...",
+      "notAvailable": "Vorschau für diesen Dateityp nicht verfügbar.",
+      "audioNotSupported": "Ihr Browser unterstützt keine Audiowiedergabe.",
+      "videoNotSupported": "Ihr Browser unterstützt keine Videowiedergabe."
+    }
+  },
+  "keyboard": {
+    "title": "Tastenkombinationen",
+    "closeLabel": "Tastenkombinationen-Hilfe schließen",
+    "global": "Global",
+    "noteList": "Notizliste",
+    "editor": "Editor",
+    "focusSearch": "Suche fokussieren",
+    "createNote": "Neue Notiz erstellen",
+    "lockApp": "Anwendung sperren",
+    "openSettings": "Einstellungen öffnen",
+    "showShortcuts": "Tastenkombinationen anzeigen",
+    "navigateNotes": "Notizen navigieren",
+    "navigateVim": "Notizen navigieren (vim-Stil)",
+    "openNote": "Ausgewählte Notiz öffnen",
+    "deleteNote": "Ausgewählte Notiz löschen",
+    "pinNote": "Ausgewählte Notiz anheften/loslösen",
+    "closeNote": "Notiz schließen",
+    "copyNote": "Notizinhalt kopieren",
+    "findInNote": "In Notiz suchen (CodeMirror)",
+    "replaceInNote": "In Notiz ersetzen (CodeMirror)",
+    "macNote": "Unter macOS verwenden Sie Cmd anstelle von Strg.",
+    "note": "Hinweis:",
+    "cmd": "Cmd",
+    "ctrl": "Strg"
+  },
+  "releases": {
+    "title": "Versionen",
+    "description": "Laden Sie die Jottery TUI für Ihre Plattform herunter."
+  },
+  "fileUpload": {
+    "dropHere": "Dateien hier ablegen",
+    "clickOrDrag": "<span class=\"font-medium\">Klicken zum Hochladen</span> oder ziehen und ablegen",
+    "maxFileSize": "Maximale Dateigröße: 10 MB"
+  },
+  "pdfViewer": {
+    "loading": "PDF-Viewer wird geladen...",
+    "pageOfPages": "Seite {current} von {total}",
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "zoomOut": "Verkleinern",
+    "zoomIn": "Vergrößern"
+  },
+  "versionHistory": {
+    "title": "Versionsverlauf",
+    "closeLabel": "Versionsverlauf schließen",
+    "loading": "Versionen werden geladen...",
+    "noVersions": "Kein Versionsverlauf",
+    "versionsCreatedDuringSync": "Versionen werden während der Synchronisation erstellt",
+    "current": "(aktuell)",
+    "autoSync": "Automatische Synchronisation",
+    "manualSync": "Manuelle Synchronisation",
+    "version": "Version:",
+    "characters": "Zeichen:",
+    "created": "Erstellt:",
+    "synced": "Synchronisiert:",
+    "tags": "Schlagwörter:",
+    "contentPreview": "Inhaltsvorschau",
+    "selectToPreview": "Version für Vorschau auswählen",
+    "restoreButton": "Diese Version wiederherstellen",
+    "restoreConfirm": {
+      "title": "Version wiederherstellen",
+      "message": "Möchten Sie diese Version wirklich wiederherstellen? Ihre aktuelle Notiz wird vor der Wiederherstellung als neue Version gespeichert.",
+      "confirmButton": "Wiederherstellen"
+    }
+  },
+  "header": {
+    "menu": "Menü",
+    "loadingNotes": "Lade {current}/{total} Notizen...",
+    "creatingNote": "Notiz wird erstellt...",
+    "addContentFirst": "Fügen Sie zuerst Inhalt zur aktuellen Notiz hinzu"
+  },
+  "confirm": {
+    "deleteDatabase": {
+      "title": "Datenbank löschen",
+      "message": "⚠️ WARNUNG: Dies löscht dauerhaft alle Ihre verschlüsselten Notizen und Anhänge. Dies kann nicht rückgängig gemacht werden!\n\nSind Sie sicher, dass Sie die Datenbank löschen möchten?",
+      "confirmButton": "Datenbank löschen"
+    },
+    "deleteAllData": {
+      "title": "Alle Daten löschen",
+      "message": "Dies löscht dauerhaft ALLE Notizen, Einstellungen und Verschlüsselungsschlüssel. Diese Aktion kann nicht rückgängig gemacht werden.\n\nGeben Sie DELETE ein, um zu bestätigen:",
+      "confirmButton": "Alles löschen",
+      "cancelButton": "Abbrechen"
+    },
+    "disconnectSync": {
+      "title": "Vom Synchronisierungsserver trennen?",
+      "message": "Dies trennt dieses Gerät vom Synchronisierungsserver und löscht alle Synchronisierungs-Anmeldedaten.\n\nIhre Notizen werden NICHT gelöscht und bleiben auf diesem Gerät.\n\nSie können sich später wieder mit einem Synchronisierungsserver verbinden.",
+      "confirmButton": "Trennen",
+      "cancelButton": "Abbrechen"
+    },
+    "deleteServerNotes": {
+      "title": "Alle Notizen vom Server löschen?",
+      "message": "Dies löscht dauerhaft ALLE Ihre Notizen vom Synchronisierungsserver. Diese Aktion kann nicht rückgängig gemacht werden.\n\nIhre lokalen Notizen bleiben auf diesem Gerät und werden NICHT gelöscht.\n\nGeben Sie DELETE ein, um zu bestätigen:",
+      "confirmButton": "Vom Server löschen",
+      "cancelButton": "Abbrechen"
+    },
+    "disableRememberPassword": {
+      "title": "Passwort merken deaktivieren?",
+      "message": "Dies löscht Ihr gespeichertes Passwort und sperrt die Anwendung.\n\nSie müssen Ihr Passwort beim nächsten Zugriff auf die App eingeben.",
+      "confirmButton": "Deaktivieren und sperren",
+      "cancelButton": "Abbrechen"
+    },
+    "requireText": "Geben Sie <strong>{text}</strong> ein, um zu bestätigen:",
+    "deleteKeyword": "DELETE"
+  },
+  "updateBanner": {
+    "title": "Neue Version verfügbar",
+    "message": "Neu laden, um die neuesten Funktionen und Verbesserungen zu erhalten",
+    "reloadButton": "Jetzt neu laden",
+    "dismissLabel": "Verwerfen"
+  }
+}

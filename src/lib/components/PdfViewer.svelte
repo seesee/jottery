@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { onMount, onDestroy } from 'svelte';
 
   export let pdfUrl: string;
@@ -117,7 +118,7 @@
     <div class="flex items-center justify-center h-full">
       <div class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p class="text-gray-600 dark:text-gray-400">Loading PDF viewer...</p>
+        <p class="text-gray-600 dark:text-gray-400">{$_('pdfViewer.loading')}</p>
       </div>
     </div>
   {:else}
@@ -128,18 +129,18 @@
         on:click={prevPage}
         disabled={currentPage <= 1}
         class="px-3 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        title="Previous page"
+        title={$_('pdfViewer.previousPage')}
       >
         ←
       </button>
       <span class="text-sm text-gray-700 dark:text-gray-300">
-        Page {currentPage} of {totalPages}
+        {$_('pdfViewer.pageOfPages', { values: { current: currentPage, total: totalPages } })}
       </span>
       <button
         on:click={nextPage}
         disabled={currentPage >= totalPages}
         class="px-3 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        title="Next page"
+        title={$_('pdfViewer.nextPage')}
       >
         →
       </button>
@@ -150,7 +151,7 @@
         on:click={zoomOut}
         disabled={scale <= 0.5}
         class="px-3 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        title="Zoom out"
+        title={$_('pdfViewer.zoomOut')}
       >
         −
       </button>
@@ -161,7 +162,7 @@
         on:click={zoomIn}
         disabled={scale >= 3.0}
         class="px-3 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        title="Zoom in"
+        title={$_('pdfViewer.zoomIn')}
       >
         +
       </button>

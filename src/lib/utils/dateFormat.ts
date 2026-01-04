@@ -2,18 +2,20 @@
  * Date formatting utilities using Intl API for proper i18n and timezone support
  */
 
-import { get } from 'svelte/store';
+import { derived, type Readable } from 'svelte/store';
 import { locale } from 'svelte-i18n';
 import { settings } from '../stores/appStore';
 
 /**
- * Format a date using the current locale and user's timezone setting
+ * Internal function to format dates with locale and timezone
  */
-export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
+function _formatDate(
+  date: Date | string,
+  currentLocale: string,
+  timezone: string,
+  options?: Intl.DateTimeFormatOptions
+): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const currentLocale = get(locale) || 'en-GB';
-  const $settings = get(settings);
-  const timezone = $settings.timezone || 'local';
 
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -29,9 +31,20 @@ export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOpt
 }
 
 /**
+ * Create a reactive formatted date store
+ */
+export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): Readable<string> {
+  return derived([locale, settings], ([$locale, $settings]) => {
+    const currentLocale = $locale || 'en-GB';
+    const timezone = $settings.timezone || 'local';
+    return _formatDate(date, currentLocale, timezone, options);
+  });
+}
+
+/**
  * Format a date as short date (no time)
  */
-export function formatDateShort(date: Date | string): string {
+export function formatDateShort(date: Date | string): Readable<string> {
   return formatDate(date, {
     year: 'numeric',
     month: '2-digit',
@@ -42,7 +55,7 @@ export function formatDateShort(date: Date | string): string {
 /**
  * Format a date as time only
  */
-export function formatTime(date: Date | string): string {
+export function formatTime(date: Date | string): Readable<string> {
   return formatDate(date, {
     hour: '2-digit',
     minute: '2-digit',
@@ -52,7 +65,7 @@ export function formatTime(date: Date | string): string {
 /**
  * Format a date as full date and time
  */
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string): Readable<string> {
   return formatDate(date, {
     year: 'numeric',
     month: '2-digit',
@@ -66,28 +79,31 @@ export function formatDateTime(date: Date | string): string {
 /**
  * Format a relative time (e.g., "2 hours ago")
  */
-export function formatRelativeTime(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  const now = new Date();
-  const diffInMs = now.getTime() - dateObj.getTime();
-  const diffInSeconds = Math.floor(diffInMs / 1000);
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  const diffInDays = Math.floor(diffInHours / 24);
+export function formatRelativeTime(date: Date | string): Readable<string> {
+  return derived([locale, settings], ([$locale, $settings]) => {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const now = new Date();
+    const diffInMs = now.getTime() - dateObj.getTime();
+    const diffInSeconds = Math.floor(diffInMs / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
 
-  const currentLocale = get(locale) || 'en-GB';
-  const rtf = new Intl.RelativeTimeFormat(currentLocale, { numeric: 'auto' });
+    const currentLocale = $locale || 'en-GB';
+    const rtf = new Intl.RelativeTimeFormat(currentLocale, { numeric: 'auto' });
 
-  if (diffInSeconds < 60) {
-    return rtf.format(-diffInSeconds, 'second');
-  } else if (diffInMinutes < 60) {
-    return rtf.format(-diffInMinutes, 'minute');
-  } else if (diffInHours < 24) {
-    return rtf.format(-diffInHours, 'hour');
-  } else if (diffInDays < 30) {
-    return rtf.format(-diffInDays, 'day');
-  } else {
-    // For dates older than 30 days, show absolute date
-    return formatDate(dateObj);
-  }
+    if (diffInSeconds < 60) {
+      return rtf.format(-diffInSeconds, 'second');
+    } else if (diffInMinutes < 60) {
+      return rtf.format(-diffInMinutes, 'minute');
+    } else if (diffInHours < 24) {
+      return rtf.format(-diffInHours, 'hour');
+    } else if (diffInDays < 30) {
+      return rtf.format(-diffInDays, 'day');
+    } else {
+      // For dates older than 30 days, show absolute date
+      const timezone = $settings.timezone || 'local';
+      return _formatDate(dateObj, currentLocale, timezone);
+    }
+  });
 }
