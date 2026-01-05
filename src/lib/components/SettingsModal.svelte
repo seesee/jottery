@@ -78,7 +78,7 @@
 
   // Keyboard shortcut recording
   let recordingShortcut: keyof KeyboardShortcuts | null = null;
-  let tempShortcuts: KeyboardShortcuts = { ...$settings.keyboardShortcuts } || { ...DEFAULT_KEYBOARD_SHORTCUTS };
+  let tempShortcuts: KeyboardShortcuts = { ...DEFAULT_KEYBOARD_SHORTCUTS, ...$settings.keyboardShortcuts };
 
   // Documentation and downloads
   let showDocumentation = false;
@@ -147,7 +147,7 @@
   $: if (show) {
     loadSyncStatus();
     // Reset temp shortcuts to current settings
-    tempShortcuts = { ...$settings.keyboardShortcuts } || { ...DEFAULT_KEYBOARD_SHORTCUTS };
+    tempShortcuts = { ...DEFAULT_KEYBOARD_SHORTCUTS, ...$settings.keyboardShortcuts };
   }
 
   function applyTheme(selectedTheme: Theme) {

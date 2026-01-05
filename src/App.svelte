@@ -4,6 +4,7 @@
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
+  import type { DecryptedNote } from './lib/types';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
