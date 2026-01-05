@@ -15,7 +15,6 @@
     if (shortcut.ctrl) parts.push(navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl');
     if (shortcut.alt) parts.push(navigator.platform.includes('Mac') ? 'Option' : 'Alt');
     if (shortcut.shift) parts.push('Shift');
-    if (shortcut.meta) parts.push('Meta');
     parts.push(shortcut.key.toUpperCase());
 
     return parts.join(' + ');

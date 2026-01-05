@@ -7,7 +7,6 @@
   import { _ } from 'svelte-i18n';
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts } from '../types';
   import { DEFAULT_KEYBOARD_SHORTCUTS } from '../types';
-  import type { SyntaxLanguage } from '../utils/syntaxLanguages';
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab } from './settings';

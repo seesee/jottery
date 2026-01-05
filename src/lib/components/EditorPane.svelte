@@ -1050,8 +1050,9 @@
       // Skip if already processed
       if (div.classList.contains('clickable')) continue;
 
-      div.classList.add('clickable');
-      div.style.cursor = 'pointer';
+      const htmlDiv = div as HTMLElement;
+      htmlDiv.classList.add('clickable');
+      htmlDiv.style.cursor = 'pointer';
 
       div.addEventListener('click', async () => {
         try {
@@ -1418,6 +1419,5 @@
   {isUploading}
   onClose={() => showAttachmentsModal = false}
   onDelete={handleDeleteAttachment}
-  onPreview={handlePreviewAttachment}
   onFileUpload={handleFileUpload}
 />
