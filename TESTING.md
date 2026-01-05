@@ -115,6 +115,15 @@ Svelte error: lifecycle_function_unavailable
 - ✅ Create multiple notes
 - ✅ Select and switch between notes
 
+**Smoke Tests** (`e2e/smoke.spec.ts`)
+- 6 tests passing - Fast sanity checks
+- ✅ App loads without crashing
+- ✅ Can complete basic setup and unlock flow
+- ✅ App reloads successfully
+- ✅ Basic navigation elements are present
+- ✅ JavaScript is working
+- ✅ No critical console errors on load
+
 **Planned Coverage**:
 - Note CRUD operations
 - Search and filtering
@@ -132,7 +141,7 @@ Svelte error: lifecycle_function_unavailable
 
 ## Running Tests
 
-### All Tests
+### All Unit/Integration Tests
 ```bash
 npm test
 ```
@@ -152,10 +161,25 @@ npm test -- --watch
 npm test -- --coverage
 ```
 
+### E2E Tests
+```bash
+# All E2E tests
+npx playwright test
+
+# Smoke tests only (fast sanity checks)
+npx playwright test e2e/smoke.spec.ts
+
+# Specific E2E test file
+npx playwright test e2e/auth.spec.ts
+
+# Run in headed mode (see browser)
+npx playwright test --headed
+```
+
 ## Test Statistics
 
-**Total Tests**: 291 passing, 9 skipped
-**Test Files**: 10 (8 unit/integration + 2 E2E)
+**Total Tests**: 297 passing, 9 skipped
+**Test Files**: 11 (8 unit/integration + 3 E2E)
 **Coverage Goals**: 80% (lines, functions, branches, statements)
 
 ### Breakdown
@@ -169,6 +193,7 @@ npm test -- --coverage
 - Sync Service: 16 tests (6 skipped)
 - E2E Authentication: 5 tests (1 skipped)
 - E2E Note Operations: 6 tests (1 skipped)
+- E2E Smoke Tests: 6 tests (fast sanity checks)
 
 ## Known Limitations
 
