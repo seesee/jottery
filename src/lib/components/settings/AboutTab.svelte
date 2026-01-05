@@ -10,9 +10,6 @@
   export let stats: { total: number; active: number; deleted: number; pinned: number; } | null = null;
   export let notes: DecryptedNote[] = [];
 
-  // Access the version from the global __APP_VERSION__ variable (injected by Vite)
-  const __APP_VERSION__ = (globalThis as any).__APP_VERSION__ as string;
-
   // Calculate popular tags
   $: popularTags = tagService.getPopularTags(notes, 20);
 
