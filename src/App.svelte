@@ -196,7 +196,7 @@
       loadingNotes = true;
 
       // Accumulate all batches before updating UI
-      const allBatches: typeof notes.$state = [];
+      const allBatches: DecryptedNote[] = [];
       const loadedNoteIds = new Set<string>();
 
       // Get total count for progress reporting

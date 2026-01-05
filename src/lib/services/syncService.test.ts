@@ -581,7 +581,7 @@ describe('syncService', () => {
       // TODO: Complex test requiring store and search service setup
       // Create and save local note
       const localNote = createTestNote({ content: 'Local note', tags: ['local'] });
-      await noteRepository.create(localNote, masterKey);
+      await noteRepository.create(localNote);
 
       // Create remote note
       const remoteContent = await cryptoService.encryptText('Remote note', masterKey);

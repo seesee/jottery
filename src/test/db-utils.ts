@@ -29,9 +29,10 @@ export async function initTestDB(password: string = 'test-password'): Promise<{
 
   // Store encryption metadata
   const metadata: EncryptionMetadata = {
-    salt: Array.from(salt),
-    version: 1,
+    salt: btoa(String.fromCharCode(...salt)),
     iterations: 100000,
+    createdAt: new Date().toISOString(),
+    algorithm: 'AES-256-GCM',
   };
   await db.put(STORES.ENCRYPTION, metadata, 'metadata');
 
