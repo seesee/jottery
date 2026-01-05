@@ -41,6 +41,15 @@ fi
 echo "✓ Web client type check passed"
 echo ""
 
+# Run web client E2E tests
+echo "→ Running E2E tests..."
+if ! npm run test:e2e; then
+    echo "✗ E2E tests failed"
+    exit 1
+fi
+echo "✓ E2E tests passed"
+echo ""
+
 # Run TUI tests
 echo "→ Testing TUI client..."
 if ! (cd tui && cargo test); then
