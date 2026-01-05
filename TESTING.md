@@ -93,15 +93,35 @@ Svelte error: lifecycle_function_unavailable
 - Settings tabs
 - Modals (VersionHistory, Documentation, Releases)
 
-### ⏸️ Phase 5: E2E Tests (Pending)
+### 🔄 Phase 5: E2E Tests (In Progress)
+**Playwright Configuration**: Configured for Chromium, Firefox, Safari
+
+**Authentication Tests** (`e2e/auth.spec.ts`)
+- 5 tests passing, 1 needs debugging
+- ✅ Password setup screen on first visit
+- ✅ Create password and unlock app
+- ✅ Password mismatch error during setup
+- ✅ Lock and unlock app cycle
+- ✅ Remember encryption after page reload
+- ⏸️ Wrong password error message (element not found - needs investigation)
+
+**Note Operations Tests** (`e2e/notes.spec.ts`)
+- 6 tests passing, 1 skipped
+- ✅ Create a new note
+- ✅ Edit an existing note
+- ⏸️ Add tags to a note (tag input interaction needs refinement)
+- ✅ Pin a note
+- ✅ Delete a note
+- ✅ Create multiple notes
+- ✅ Select and switch between notes
+
 **Planned Coverage**:
-- User authentication flow
 - Note CRUD operations
 - Search and filtering
 - Tag management
 - Sync workflows
 - Settings management
-- Cross-browser compatibility (Chrome, Firefox, Safari)
+- Cross-browser compatibility
 
 ### ❌ Phase 6: CI/CD Integration (Not Started)
 **Planned**:
@@ -134,8 +154,8 @@ npm test -- --coverage
 
 ## Test Statistics
 
-**Total Tests**: 280 passing, 7 skipped
-**Test Files**: 8
+**Total Tests**: 291 passing, 9 skipped
+**Test Files**: 10 (8 unit/integration + 2 E2E)
 **Coverage Goals**: 80% (lines, functions, branches, statements)
 
 ### Breakdown
@@ -147,6 +167,8 @@ npm test -- --coverage
 - Encryption Repository: 56 tests
 - Sync Repository: 90 tests
 - Sync Service: 16 tests (6 skipped)
+- E2E Authentication: 5 tests (1 skipped)
+- E2E Note Operations: 6 tests (1 skipped)
 
 ## Known Limitations
 
