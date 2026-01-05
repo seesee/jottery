@@ -205,7 +205,7 @@ describe('syncService', () => {
     it('should push modified notes to server', async () => {
       // Create and save test note
       const note = createTestNote({ content: 'Test content', tags: ['test'] });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       let capturedRequest: any;
       server.use(
@@ -220,7 +220,7 @@ describe('syncService', () => {
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, async ({ request }) => {
           capturedRequest = await request.json();
           return HttpResponse.json({
-            accepted: [note.id],
+            accepted: [{ id: note.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
@@ -243,7 +243,7 @@ describe('syncService', () => {
     it.skip('should encrypt note content before push', async () => {
       // TODO: Complex test requiring store setup
       const note = createTestNote({ content: 'Secret content', tags: ['confidential'] });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       let capturedRequest: any;
       server.use(
@@ -258,7 +258,7 @@ describe('syncService', () => {
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, async ({ request }) => {
           capturedRequest = await request.json();
           return HttpResponse.json({
-            accepted: [note.id],
+            accepted: [{ id: note.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
@@ -281,7 +281,7 @@ describe('syncService', () => {
 
     it('should include authorization header in push request', async () => {
       const note = createTestNote({ content: 'Test', tags: [] });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       let capturedHeaders: Headers | undefined;
       server.use(
@@ -369,8 +369,8 @@ describe('syncService', () => {
 
       const remoteNote = {
         id: 'remote-note-id',
-        created_at: new Date().toISOString(),
-        modified_at: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        modifiedAt: new Date().toISOString(),
         content: JSON.stringify(remoteContent),
         tags: [JSON.stringify(remoteTag)],
         attachments: [],
@@ -406,7 +406,7 @@ describe('syncService', () => {
       await syncService.syncNow();
 
       // Verify note was decrypted and stored
-      const note = await noteRepository.get('remote-note-id');
+      const note = await noteRepository.getById('remote-note-id');
       expect(note).toBeDefined();
       expect(note!.content).toBe('Remote content');
       expect(note!.tags).toContain('remote');
@@ -588,8 +588,8 @@ describe('syncService', () => {
       const remoteTag = await cryptoService.encryptText('remote', masterKey);
       const remoteNote = {
         id: 'remote-note-id',
-        created_at: new Date().toISOString(),
-        modified_at: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        modifiedAt: new Date().toISOString(),
         content: JSON.stringify(remoteContent),
         tags: [JSON.stringify(remoteTag)],
         attachments: [],
@@ -627,8 +627,8 @@ describe('syncService', () => {
       expect(result.success).toBe(true);
 
       // Verify both notes exist locally
-      const local = await noteRepository.get(localNote.id);
-      const remote = await noteRepository.get('remote-note-id');
+      const local = await noteRepository.getById(localNote.id);
+      const remote = await noteRepository.getById('remote-note-id');
 
       expect(local).toBeDefined();
       expect(remote).toBeDefined();
