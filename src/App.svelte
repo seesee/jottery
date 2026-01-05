@@ -5,6 +5,7 @@
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
+  import { getCurrentNotebook } from './lib/utils/notebookPath';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
@@ -111,6 +112,14 @@
 
   onMount(async () => {
     try {
+      // Update document title based on notebook
+      const notebook = getCurrentNotebook();
+      if (notebook.id === 'main') {
+        document.title = 'Jottery - Privacy-Focused Notes';
+      } else {
+        document.title = `Jottery - ${notebook.displayName}`;
+      }
+
       // Initialize database
       await initDB();
 

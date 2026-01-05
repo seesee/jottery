@@ -3,6 +3,7 @@
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
   import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, settingsRepository } from '../services';
+  import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
 
@@ -15,6 +16,9 @@
   let showDeleteOption = false;
   let showDeleteConfirm = false;
   let passwordInput: HTMLInputElement;
+
+  // Get current notebook info for display
+  const notebook = getCurrentNotebook();
 
   // Check if needs initialization
   (async () => {
@@ -147,6 +151,11 @@
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {needsInit ? $_('unlock.welcome') : $_('app.name')}
         </h1>
+        {#if notebook.id !== 'main'}
+          <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
+            {notebook.displayName}
+          </p>
+        {/if}
         <p class="text-gray-600 dark:text-gray-400">
           {needsInit ? $_('unlock.setupPassword') : $_('unlock.enterPassword')}
         </p>
