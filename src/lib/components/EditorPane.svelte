@@ -287,7 +287,7 @@
           return originalCode.call(this, token);
         };
 
-        return marked.parse(text, { renderer });
+        return marked.parse(text, { renderer }) as string;
       } catch (error) {
         console.error('Markdown parsing error:', error);
         return `<p>Error rendering markdown: ${error}</p>`;

@@ -26,7 +26,7 @@
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
-  export let language: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash' | 'perl' = 'plain';
+  export let language: string | undefined = 'plain';
   export let readonly: boolean = false;
   export let wordWrap: boolean = true;
   export let isDark: boolean = false;

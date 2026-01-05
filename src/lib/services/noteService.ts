@@ -25,7 +25,7 @@ class NoteService {
       modifiedAt?: string;
       pinned?: boolean;
       wordWrap?: boolean;
-      syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+      syntaxLanguage?: string;
       showPreview?: boolean;
       attachments?: Attachment[];
     }
@@ -234,7 +234,7 @@ class NoteService {
       attachments?: Attachment[];
       pinned?: boolean;
       wordWrap?: boolean;
-      syntaxLanguage?: 'plain' | 'javascript' | 'python' | 'markdown' | 'json' | 'html' | 'css' | 'sql' | 'bash';
+      syntaxLanguage?: string;
       showPreview?: boolean;
     }
   ): Promise<Note> {
