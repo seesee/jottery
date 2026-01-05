@@ -39,7 +39,7 @@ describe('syncService', () => {
     // Set up authenticated key manager
     keyManager.setMasterKey({
       key: masterKey,
-      expiresAt: Date.now() + 3600000, // 1 hour
+      derivedAt: Date.now(),
     });
 
     // Reset MSW handlers
@@ -609,7 +609,7 @@ describe('syncService', () => {
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
           return HttpResponse.json({
-            accepted: [localNote.id],
+            accepted: [{ id: localNote.id }],
             rejected: [],
           } as SyncPushResponse);
         }),

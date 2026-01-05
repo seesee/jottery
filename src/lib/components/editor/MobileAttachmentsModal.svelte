@@ -13,7 +13,6 @@
   // Callbacks
   export let onClose: () => void;
   export let onDelete: (attachment: Attachment) => void;
-  export let onPreview: (attachment: Attachment) => void;
   export let onFileUpload: (files: FileList) => void;
 </script>
 
@@ -58,7 +57,6 @@
             {attachments}
             readonly={false}
             onDelete={onDelete}
-            onPreview={onPreview}
           />
         {:else}
           <div class="text-center text-gray-500 dark:text-gray-400 py-8">
