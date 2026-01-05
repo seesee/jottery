@@ -3,11 +3,11 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import { initI18n } from './lib/services/i18nService';
 
-// Initialize internationalisation
-initI18n();
-
-const app = mount(App, {
-  target: document.getElementById('app')!,
+// Initialize internationalisation and mount app after it's ready
+initI18n().then(() => {
+  const app = mount(App, {
+    target: document.getElementById('app')!,
+  });
 });
 
-export default app;
+export default null;

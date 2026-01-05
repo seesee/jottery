@@ -47,8 +47,8 @@ export const DEFAULT_LOCALE = 'en-GB';
 /**
  * Initialise i18n with a specific locale or auto-detect
  */
-export function initI18n(locale?: string) {
-  init({
+export function initI18n(locale?: string): Promise<void> {
+  return init({
     fallbackLocale: DEFAULT_LOCALE,
     initialLocale: locale || getLocaleFromNavigator() || DEFAULT_LOCALE,
   });
