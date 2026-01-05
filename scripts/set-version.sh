@@ -20,7 +20,65 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-echo "Setting version to $VERSION across all components..."
+echo "Running tests before setting version to $VERSION..."
+echo ""
+
+# Run web client tests
+echo "→ Testing web client..."
+if ! npm test; then
+    echo "✗ Web client tests failed"
+    exit 1
+fi
+echo "✓ Web client tests passed"
+echo ""
+
+# Run web client type check
+echo "→ Type checking web client..."
+if ! npm run check; then
+    echo "✗ Web client type check failed"
+    exit 1
+fi
+echo "✓ Web client type check passed"
+echo ""
+
+# Run TUI tests
+echo "→ Testing TUI client..."
+if ! (cd tui && cargo test); then
+    echo "✗ TUI tests failed"
+    exit 1
+fi
+echo "✓ TUI tests passed"
+echo ""
+
+# Run server tests
+echo "→ Testing server..."
+if ! (cd server && cargo test); then
+    echo "✗ Server tests failed"
+    exit 1
+fi
+echo "✓ Server tests passed"
+echo ""
+
+# Run admin dashboard tests
+echo "→ Testing admin dashboard..."
+if ! (cd admin && npm test); then
+    echo "✗ Admin dashboard tests failed"
+    exit 1
+fi
+echo "✓ Admin dashboard tests passed"
+echo ""
+
+# Run admin dashboard type check
+echo "→ Type checking admin dashboard..."
+if ! (cd admin && npm run check); then
+    echo "✗ Admin dashboard type check failed"
+    exit 1
+fi
+echo "✓ Admin dashboard type check passed"
+echo ""
+
+echo "All tests passed! Setting version to $VERSION across all components..."
+echo ""
 
 # Update package.json (web client)
 if command -v jq &> /dev/null; then
