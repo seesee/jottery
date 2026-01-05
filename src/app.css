@@ -128,8 +128,8 @@ body {
 
 #app {
   width: 100%;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  /* overflow: hidden only applied conditionally via inline styles in App.svelte */
 }
 
 /* Prevent iOS auto-zoom on input focus by ensuring 16px minimum font size */

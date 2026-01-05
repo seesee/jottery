@@ -310,7 +310,7 @@
   <!-- Update banner (appears at top when new version available) -->
   <UpdateBanner />
 
-  <div class="h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div class="h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
     <div class="flex h-full flex-col">
       <Header
         onOpenSettings={handleOpenSettings}
