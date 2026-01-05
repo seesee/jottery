@@ -147,12 +147,40 @@ Svelte error: lifecycle_function_unavailable
 - Settings management
 - Cross-browser compatibility
 
-### ❌ Phase 6: CI/CD Integration (Not Started)
-**Planned**:
-- GitHub Actions workflow
-- Automated test runs on push/PR
-- Coverage reporting
-- Performance regression detection
+### ✅ Phase 6: CI/CD Integration (Complete)
+**GitHub Actions Workflow** (`.github/workflows/test.yml`)
+
+**Jobs:**
+1. **Unit & Integration Tests**
+   - Runs all Vitest tests
+   - Uploads coverage to Codecov
+   - Runs on: push to main, pull requests
+
+2. **E2E Tests (Chromium)**
+   - Runs all Playwright E2E tests
+   - Uploads test reports on failure
+   - Runs on: push to main, pull requests
+
+3. **Smoke Tests (Quick)**
+   - Fast sanity checks only
+   - Catches critical breakage early
+   - Runs on: push to main, pull requests
+
+4. **Type Check**
+   - Runs svelte-check for TypeScript validation
+   - Catches type errors before merge
+   - Runs on: push to main, pull requests
+
+**Triggers:**
+- Push to `main` branch
+- Pull requests to `main` branch
+
+**Test Execution Time:**
+- Smoke tests: ~10 seconds
+- Unit tests: ~5-10 seconds
+- E2E tests: ~45 seconds
+- Type check: ~10 seconds
+- **Total**: ~70 seconds
 
 ## Running Tests
 
