@@ -140,8 +140,6 @@
         marked.setOptions({
           breaks: true, // Convert \n to <br>
           gfm: true, // GitHub Flavored Markdown
-          mangle: false,
-          sanitize: false,
         });
 
         // Set up custom renderer for code blocks and images
