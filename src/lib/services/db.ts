@@ -5,7 +5,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata, NoteVersion } from '../types';
 
-const DB_NAME = 'jottery';
+let DB_NAME = 'jottery'; // Default, can be changed before initialization
 const DB_VERSION = 5;
 
 // Object store names
@@ -224,6 +224,24 @@ export function getDB(): IDBPDatabase<JotteryDB> {
     throw new Error('Database not initialized. Call initDB() first.');
   }
   return dbInstance;
+}
+
+/**
+ * Set the database name (must be called before initDB)
+ * Allows different notebook paths to use different databases
+ */
+export function setDatabaseName(name: string): void {
+  if (dbInstance) {
+    throw new Error('Cannot change database name after initialization');
+  }
+  DB_NAME = name;
+}
+
+/**
+ * Get the current database name
+ */
+export function getDatabaseName(): string {
+  return DB_NAME;
 }
 
 /**
