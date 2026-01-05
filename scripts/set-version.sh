@@ -25,7 +25,7 @@ echo ""
 
 # Run web client tests
 echo "→ Testing web client..."
-if ! npm test; then
+if ! npm run test:run; then
     echo "✗ Web client tests failed"
     exit 1
 fi
