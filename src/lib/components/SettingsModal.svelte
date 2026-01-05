@@ -527,15 +527,7 @@
 
     try {
       const json = atob(importCredentialsText.trim());
-
       const credentials = JSON.parse(json);
-        hasEndpoint: !!credentials.endpoint,
-        hasClientId: !!credentials.clientId,
-        hasApiKey: !!credentials.apiKey,
-        hasSalt: !!credentials.salt,
-        endpoint: credentials.endpoint,
-        clientId: credentials.clientId,
-      });
 
       // Validate structure
       if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey || !credentials.salt) {
@@ -710,20 +702,6 @@
         alt: hasAlt || undefined,
         shift: hasShift || undefined,
       };
-
-        raw: e.key,
-        normalized: normalizedKey,
-        platform: navigator.platform,
-        isMac: isMac,
-        eventModifiers: {
-          ctrlKey: e.ctrlKey,
-          metaKey: e.metaKey,
-          altKey: e.altKey,
-          shiftKey: e.shiftKey
-        },
-        computed: { ctrl: hasCtrl, alt: hasAlt, shift: hasShift },
-        result: newShortcut
-      });
 
       tempShortcuts = {
         ...tempShortcuts,
