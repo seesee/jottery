@@ -2,19 +2,15 @@
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, selectNote, searchQuery } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, attachmentRepository, keyManager, cryptoService } from '../services';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery } from '../stores/appStore';
+  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
-  import CodeEditor from './CodeEditor.svelte';
-  import TagInput from './TagInput.svelte';
-  import AttachmentList from './AttachmentList.svelte';
-  import FileUpload from './FileUpload.svelte';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import PdfViewer from './PdfViewer.svelte';
   import { marked } from 'marked';
-  import { ALL_LANGUAGES, findLanguage } from '../utils/syntaxLanguages';
+  import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
 
