@@ -1,6 +1,7 @@
 <script lang="ts">
   import { searchQuery, isLocked, isLocking, settings, isDraftMode } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
+  import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -18,6 +19,9 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showMobileSearch = false;
+
+  // Get current notebook info for display
+  const notebook = getCurrentNotebook();
 
   // Check if remember password is enabled
   $: rememberPasswordEnabled = $settings.rememberPassword || false;
@@ -154,7 +158,14 @@
     {/if}
 
     <!-- Brand -->
-    <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
+    <div class="flex items-center gap-2">
+      <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
+      {#if notebook.id !== 'main'}
+        <span class="text-xs {forceMobileLayout ? '' : 'tablet:text-sm'} text-blue-600 dark:text-blue-400 font-medium opacity-75">
+          {notebook.displayName}
+        </span>
+      {/if}
+    </div>
 
     {#if !forceMobileLayout}
       <!-- Desktop: Search Bar -->
