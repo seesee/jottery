@@ -106,10 +106,10 @@ Svelte error: lifecycle_function_unavailable
 - ⏸️ Wrong password error message (element not found - needs investigation)
 
 **Note Operations Tests** (`e2e/notes.spec.ts`)
-- 6 tests passing, 1 skipped
+- 7 tests passing
 - ✅ Create a new note
 - ✅ Edit an existing note
-- ⏸️ Add tags to a note (tag input interaction needs refinement)
+- ✅ Add tags to a note
 - ✅ Pin a note
 - ✅ Delete a note
 - ✅ Create multiple notes
@@ -125,13 +125,13 @@ Svelte error: lifecycle_function_unavailable
 - ✅ No critical console errors on load
 
 **Workflow Tests** (`e2e/workflows.spec.ts`)
-- 5 tests passing, 3 skipped
+- 7 tests passing, 1 skipped
 - **Search and Filtering**:
   - ✅ Search notes by text content
   - ✅ Handle empty search results gracefully
 - **Tag Management**:
-  - ⏸️ Create note with tags and filter by tag (tag input needs investigation)
-  - ⏸️ Remove tags from note (tag input needs investigation)
+  - ✅ Create note with tags and filter by tag
+  - ✅ Remove tags from note
 - **Settings**:
   - ✅ Open settings modal
   - ✅ Change theme setting
@@ -199,7 +199,7 @@ npx playwright test --project=chromium
 
 ## Test Statistics
 
-**Total Tests**: 302 passing, 12 skipped
+**Total Tests**: 305 passing, 9 skipped
 **Test Files**: 12 (8 unit/integration + 4 E2E)
 **Coverage Goals**: 80% (lines, functions, branches, statements)
 
@@ -213,9 +213,9 @@ npx playwright test --project=chromium
 - Sync Repository: 90 tests
 - Sync Service: 16 tests (6 skipped)
 - E2E Authentication: 5 tests (1 skipped)
-- E2E Note Operations: 6 tests (1 skipped)
+- E2E Note Operations: 7 tests
 - E2E Smoke Tests: 6 tests (fast sanity checks)
-- E2E Workflow Tests: 5 tests (3 skipped)
+- E2E Workflow Tests: 7 tests (1 skipped)
 
 ## Known Limitations
 

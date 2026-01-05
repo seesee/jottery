@@ -74,7 +74,7 @@ test.describe('Note Operations', () => {
     await expect(noteList.getByText(/Updated content/i)).toBeVisible();
   });
 
-  test.skip('should add tags to a note', async ({ page }) => {
+  test('should add tags to a note', async ({ page }) => {
     // Create a note
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newNoteButton.click();
@@ -82,17 +82,18 @@ test.describe('Note Operations', () => {
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
     await editor.click();
     await editor.pressSequentially('Note with tags');
-
-    // Find tag input by placeholder
-    const tagInput = page.getByPlaceholder(/add tag/i);
-    await tagInput.click();
-    await tagInput.pressSequentially('test-tag');
-    await page.keyboard.press('Enter');
-
     await page.waitForTimeout(2000);
 
-    // Tag should be visible (look for tag badge, not just text)
-    await expect(page.locator('span, div').filter({ hasText: /^test-tag$/ })).toBeVisible();
+    // Find tag input - it's a text input inside .tag-input-container
+    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    await tagInput.click();
+    await tagInput.fill('test-tag');
+    await page.keyboard.press('Enter');
+
+    await page.waitForTimeout(1000);
+
+    // Tag should be visible as a tag pill with # prefix
+    await expect(page.locator('.tag-pill').filter({ hasText: '#test-tag' })).toBeVisible();
   });
 
   test('should pin a note', async ({ page }) => {

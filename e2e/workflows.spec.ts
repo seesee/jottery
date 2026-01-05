@@ -122,7 +122,7 @@ test.describe('Tag Management Workflows', () => {
     await page.waitForTimeout(2000);
   });
 
-  test.skip('should create note with tags and filter by tag', async ({ page }) => {
+  test('should create note with tags and filter by tag', async ({ page }) => {
     // Create a note
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newNoteButton.click();
@@ -132,27 +132,28 @@ test.describe('Tag Management Workflows', () => {
     await editor.pressSequentially('Note about work tasks');
     await page.waitForTimeout(2000);
 
-    // Try to find and use tag input
-    const tagInput = page.getByPlaceholder(/add tag|tag/i);
-    if (await tagInput.isVisible()) {
-      await tagInput.click();
-      await tagInput.pressSequentially('work');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+    // Find tag input - it's a text input with "Add tags..." placeholder inside .tag-input-container
+    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    await expect(tagInput).toBeVisible();
 
-      // Add another tag
-      await tagInput.click();
-      await tagInput.pressSequentially('important');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(2000);
+    // Add first tag
+    await tagInput.click();
+    await tagInput.fill('work');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
 
-      // Tags should be visible
-      await expect(page.locator('[class*="tag"], [data-tag], span').filter({ hasText: /^work$/i })).toBeVisible();
-      await expect(page.locator('[class*="tag"], [data-tag], span').filter({ hasText: /^important$/i })).toBeVisible();
-    }
+    // Add second tag
+    await tagInput.click();
+    await tagInput.fill('important');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
+
+    // Tags should be visible as tag pills with #tagname format
+    await expect(page.locator('.tag-pill').filter({ hasText: '#work' })).toBeVisible();
+    await expect(page.locator('.tag-pill').filter({ hasText: '#important' })).toBeVisible();
   });
 
-  test.skip('should remove tags from note', async ({ page }) => {
+  test('should remove tags from note', async ({ page }) => {
     // Create note with tags
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newNoteButton.click();
@@ -162,30 +163,24 @@ test.describe('Tag Management Workflows', () => {
     await editor.pressSequentially('Tagged note');
     await page.waitForTimeout(2000);
 
-    const tagInput = page.getByPlaceholder(/add tag|tag/i);
-    if (await tagInput.isVisible()) {
-      await tagInput.click();
-      await tagInput.pressSequentially('removeme');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+    // Find and use tag input
+    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    await tagInput.click();
+    await tagInput.fill('removeme');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
 
-      // Tag should be visible
-      const tag = page.locator('[class*="tag"], [data-tag], span').filter({ hasText: /^removeme$/i });
-      await expect(tag).toBeVisible();
+    // Tag should be visible
+    const tag = page.locator('.tag-pill').filter({ hasText: '#removeme' });
+    await expect(tag).toBeVisible();
 
-      // Look for remove button (usually × or close icon)
-      const removeButton = tag.locator('button, [role="button"]').or(
-        page.locator('button, [role="button"]').filter({ hasText: /×|✕|close|remove/i })
-      ).first();
+    // Click the remove button (× symbol) within the tag pill
+    const removeButton = tag.locator('button.tag-remove');
+    await removeButton.click();
+    await page.waitForTimeout(1000);
 
-      if (await removeButton.isVisible()) {
-        await removeButton.click();
-        await page.waitForTimeout(1000);
-
-        // Tag should be removed
-        await expect(tag).not.toBeVisible();
-      }
-    }
+    // Tag should be removed
+    await expect(tag).not.toBeVisible();
   });
 });
 
