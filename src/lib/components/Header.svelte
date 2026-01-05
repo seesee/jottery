@@ -158,14 +158,7 @@
     {/if}
 
     <!-- Brand -->
-    <div class="flex items-center gap-2">
-      <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
-      {#if notebook.id !== 'main'}
-        <span class="text-xs {forceMobileLayout ? '' : 'tablet:text-sm'} text-blue-600 dark:text-blue-400 font-medium opacity-75">
-          {notebook.displayName}
-        </span>
-      {/if}
-    </div>
+    <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
 
     {#if !forceMobileLayout}
       <!-- Desktop: Search Bar -->
@@ -288,6 +281,14 @@
       >
         {rememberPasswordEnabled ? '🔓' : '🔒'} {$_('common.lock')}
       </button>
+
+      {#if notebook.id !== 'main'}
+        <div class="pl-3 border-l border-gray-300 dark:border-gray-600">
+          <span class="text-xs text-blue-600 dark:text-blue-400 font-medium opacity-75">
+            {notebook.displayName}
+          </span>
+        </div>
+      {/if}
     </div>
     {/if}
   </div>
