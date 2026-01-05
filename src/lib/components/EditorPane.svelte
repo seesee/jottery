@@ -140,7 +140,6 @@
         marked.setOptions({
           breaks: true, // Convert \n to <br>
           gfm: true, // GitHub Flavored Markdown
-          headerIds: true,
           mangle: false,
           sanitize: false,
         });
@@ -199,7 +198,7 @@
         // Custom image renderer to handle attachment: URLs
         renderer.image = function(token) {
           const href = token.href;
-          
+          const title = token.title || '';
           const text = token.text || '';
 
           // Check if this is an attachment URL
