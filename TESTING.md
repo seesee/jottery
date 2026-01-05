@@ -97,13 +97,13 @@ Svelte error: lifecycle_function_unavailable
 **Playwright Configuration**: Configured for Chromium, Firefox, Safari
 
 **Authentication Tests** (`e2e/auth.spec.ts`)
-- 5 tests passing, 1 needs debugging
+- 6 tests passing
 - ✅ Password setup screen on first visit
 - ✅ Create password and unlock app
 - ✅ Password mismatch error during setup
 - ✅ Lock and unlock app cycle
 - ✅ Remember encryption after page reload
-- ⏸️ Wrong password error message (element not found - needs investigation)
+- ✅ Wrong password error message
 
 **Note Operations Tests** (`e2e/notes.spec.ts`)
 - 7 tests passing
@@ -199,7 +199,7 @@ npx playwright test --project=chromium
 
 ## Test Statistics
 
-**Total Tests**: 305 passing, 9 skipped
+**Total Tests**: 306 passing, 8 skipped
 **Test Files**: 12 (8 unit/integration + 4 E2E)
 **Coverage Goals**: 80% (lines, functions, branches, statements)
 
@@ -212,7 +212,7 @@ npx playwright test --project=chromium
 - Encryption Repository: 56 tests
 - Sync Repository: 90 tests
 - Sync Service: 16 tests (6 skipped)
-- E2E Authentication: 5 tests (1 skipped)
+- E2E Authentication: 6 tests
 - E2E Note Operations: 7 tests
 - E2E Smoke Tests: 6 tests (fast sanity checks)
 - E2E Workflow Tests: 7 tests (1 skipped)

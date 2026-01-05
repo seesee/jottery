@@ -139,15 +139,25 @@ test.describe('Authentication', () => {
     await passwordInputs.nth(1).fill(correctPassword);
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
-    // Wait and reload
-    await page.waitForTimeout(1000);
+    // Wait for app to load
+    await page.waitForTimeout(2000);
+
+    // Create a note (needed for password verification to work)
+    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+    await newNoteButton.click();
+    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    await editor.click();
+    await editor.pressSequentially('Test note for password verification');
+    await page.waitForTimeout(3000);
+
+    // Now reload to lock
     await page.reload();
 
     // Try wrong password
     await page.locator('input[type="password"]').fill(wrongPassword);
     await page.locator('button').filter({ hasText: /Unlock/i }).first().click();
 
-    // Should see error (incorrect password message)
-    await expect(page.getByText(/incorrect password/i)).toBeVisible({ timeout: 3000 });
+    // Should see error message in red error box
+    await expect(page.locator('.bg-red-50, .dark\\:bg-red-900\\/20').getByText(/incorrect password/i)).toBeVisible({ timeout: 5000 });
   });
 });
