@@ -3,7 +3,6 @@
   import { isLocked, isLocking, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
   import { lock, noteService, searchService, syncService, syncRepository } from '../services';
   import { _ } from 'svelte-i18n';
-  import ConfirmModal from './ConfirmModal.svelte';
 
   export let onNewNote: () => void;
   export let onOpenSettings: () => void;
@@ -38,7 +37,6 @@
     // Null check - shortcut might be undefined
     if (!shortcut || !shortcut.key) return false;
 
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     // On Mac, support both Cmd (metaKey) and Ctrl (ctrlKey) as "Ctrl"
     // On Windows/Linux, just use Ctrl (ctrlKey)
     const hasCtrl = event.metaKey || event.ctrlKey;

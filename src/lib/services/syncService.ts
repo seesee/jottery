@@ -478,7 +478,7 @@ class SyncService {
 
     const result: SyncPullResponse = await response.json();
 
-    console.log(`[SyncService] Pull complete: ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions.length} deletions`);
+    console.log(`[SyncService] Pull complete: ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions?.length || 0} deletions`);
 
     // Debug log tag formats being received
     result.notes.forEach((note, idx) => {
@@ -656,12 +656,14 @@ class SyncService {
     }
 
     // Handle deletions
-    for (const deletion of result.deletions) {
-      const localNote = await noteRepository.getById(deletion.id);
-      if (localNote && !localNote.deleted) {
-        // Server says deleted - soft delete locally
-        console.log(`[SyncService] Soft deleting note from server: ${deletion.id}`);
-        await noteRepository.softDelete(deletion.id);
+    if (result.deletions) {
+      for (const deletion of result.deletions) {
+        const localNote = await noteRepository.getById(deletion.id);
+        if (localNote && !localNote.deleted) {
+          // Server says deleted - soft delete locally
+          console.log(`[SyncService] Soft deleting note from server: ${deletion.id}`);
+          await noteRepository.softDelete(deletion.id);
+        }
       }
     }
 

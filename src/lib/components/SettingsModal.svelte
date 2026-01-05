@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, AVAILABLE_LOCALES, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { authService } from '../services/authService';
-  import { locale, _ } from 'svelte-i18n';
+  import { _ } from 'svelte-i18n';
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts } from '../types';
   import { DEFAULT_KEYBOARD_SHORTCUTS } from '../types';
   import { ALL_LANGUAGES, CORE_LANGUAGES, findLanguage, calculateTotalSize, type SyntaxLanguage } from '../utils/syntaxLanguages';
@@ -38,7 +38,6 @@
   let syncStatus: SyncStatus | null = null;
   let syncing = false;
   let syncError = '';
-  let registering = false;
   let deviceName = 'My Device';
   let importCredentialsText = '';
   let importing = false;
@@ -189,7 +188,6 @@
       return;
     }
 
-    registering = true;
     syncError = '';
     try {
       const response = await syncService.register(syncEndpoint, deviceName.trim());
@@ -201,8 +199,6 @@
     } catch (error) {
       console.error('Registration failed:', error);
       syncError = error instanceof Error ? error.message : 'Registration failed';
-    } finally {
-      registering = false;
     }
   }
 

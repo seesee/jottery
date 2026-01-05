@@ -2,7 +2,7 @@
  * Tests for syncService
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { syncService } from './syncService';
@@ -12,7 +12,7 @@ import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import type { SyncPushResponse, SyncPullResponse, SyncStatusResponse, AuthRegisterResponse } from '../types';
+import type { SyncPushResponse, SyncPullResponse, AuthRegisterResponse } from '../types';
 
 const TEST_ENDPOINT = 'https://sync.example.com';
 const TEST_API_KEY = 'test-api-key-123';

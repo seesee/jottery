@@ -6,7 +6,6 @@
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { noteRepository } from './noteRepository';
 import { initTestDB, cleanupTestDB, createTestNote, createTestNotes } from '../../test/db-utils';
-import type { Note } from '../types';
 
 describe('NoteRepository', () => {
   beforeEach(async () => {

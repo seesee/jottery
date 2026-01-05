@@ -40,7 +40,6 @@
   }
 
   let saveTimeout: number | null = null;
-  let draftCreateTimeout: number | null = null; // Debounce timer for creating draft notes
   let language: string = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
@@ -155,7 +154,7 @@
         // Custom link renderer to handle attachment: URLs
         renderer.link = function(token) {
           const href = token.href;
-          const title = token.title || '';
+          
           const text = token.text || '';
 
           // Check if this is an attachment URL
@@ -200,7 +199,7 @@
         // Custom image renderer to handle attachment: URLs
         renderer.image = function(token) {
           const href = token.href;
-          const title = token.title || '';
+          
           const text = token.text || '';
 
           // Check if this is an attachment URL
@@ -1049,7 +1048,6 @@
     const downloads = previewContainer.querySelectorAll('.attachment-download[data-attachment-id]');
     for (const div of downloads) {
       const attachmentId = div.getAttribute('data-attachment-id');
-      const attachmentData = div.getAttribute('data-attachment-data');
       if (!attachmentId) continue;
 
       // Skip if already processed
@@ -1208,8 +1206,8 @@
       {isDark}
       {availableTags}
       bind:codeEditor
-      onContentChange={(newContent) => handleInput()}
-      onTagsChange={(newTags) => handleInput()}
+      onContentChange={() => handleInput()}
+      onTagsChange={() => handleInput()}
       onTagClick={handleTagClick}
       {previewHtml}
     />

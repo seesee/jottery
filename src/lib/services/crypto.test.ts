@@ -408,12 +408,10 @@ describe('WebCryptoService', () => {
   });
 
   describe('Edge Cases and Error Handling', () => {
-    let masterKey: CryptoKey;
-
     beforeEach(async () => {
       const password = 'test-password';
       const salt = cryptoService.generateSalt();
-      masterKey = await cryptoService.deriveKey({ password, salt, iterations: 100000 });
+      await cryptoService.deriveKey({ password, salt, iterations: 100000 });
     });
 
     test('should handle very long passwords', async () => {
