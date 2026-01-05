@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "echo 'Admin dashboard: No tests configured yet' && exit 0",
+    "check": "echo 'Admin dashboard: No type checking configured yet' && exit 0"
   },
   "dependencies": {
     "svelte": "^5.20.0",
