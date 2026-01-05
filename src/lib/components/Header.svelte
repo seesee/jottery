@@ -281,15 +281,15 @@
       >
         {rememberPasswordEnabled ? '🔓' : '🔒'} {$_('common.lock')}
       </button>
-
-      {#if notebook.id !== 'main'}
-        <div class="pl-3 border-l border-gray-300 dark:border-gray-600">
-          <span class="text-xs text-blue-600 dark:text-blue-400 font-medium opacity-75">
-            {notebook.displayName}
-          </span>
-        </div>
-      {/if}
     </div>
+    {/if}
+
+    {#if notebook.id !== 'main'}
+      <div class="hidden tablet:block ml-auto">
+        <span class="text-xs text-blue-600 dark:text-blue-400 font-medium opacity-75 truncate max-w-[200px] inline-block" title={notebook.displayName}>
+          {notebook.displayName}
+        </span>
+      </div>
     {/if}
   </div>
 
