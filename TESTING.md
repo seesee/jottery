@@ -124,6 +124,21 @@ Svelte error: lifecycle_function_unavailable
 - ✅ JavaScript is working
 - ✅ No critical console errors on load
 
+**Workflow Tests** (`e2e/workflows.spec.ts`)
+- 5 tests passing, 3 skipped
+- **Search and Filtering**:
+  - ✅ Search notes by text content
+  - ✅ Handle empty search results gracefully
+- **Tag Management**:
+  - ⏸️ Create note with tags and filter by tag (tag input needs investigation)
+  - ⏸️ Remove tags from note (tag input needs investigation)
+- **Settings**:
+  - ✅ Open settings modal
+  - ✅ Change theme setting
+  - ⏸️ Change language setting (single option in test env)
+- **Complete User Journey**:
+  - ✅ Full workflow: create, edit, search, delete
+
 **Planned Coverage**:
 - Note CRUD operations
 - Search and filtering
@@ -169,17 +184,23 @@ npx playwright test
 # Smoke tests only (fast sanity checks)
 npx playwright test e2e/smoke.spec.ts
 
+# Workflow tests (search, settings, complete journeys)
+npx playwright test e2e/workflows.spec.ts
+
 # Specific E2E test file
 npx playwright test e2e/auth.spec.ts
 
 # Run in headed mode (see browser)
 npx playwright test --headed
+
+# Run only Chromium (skip Firefox/Safari)
+npx playwright test --project=chromium
 ```
 
 ## Test Statistics
 
-**Total Tests**: 297 passing, 9 skipped
-**Test Files**: 11 (8 unit/integration + 3 E2E)
+**Total Tests**: 302 passing, 12 skipped
+**Test Files**: 12 (8 unit/integration + 4 E2E)
 **Coverage Goals**: 80% (lines, functions, branches, statements)
 
 ### Breakdown
@@ -194,6 +215,7 @@ npx playwright test --headed
 - E2E Authentication: 5 tests (1 skipped)
 - E2E Note Operations: 6 tests (1 skipped)
 - E2E Smoke Tests: 6 tests (fast sanity checks)
+- E2E Workflow Tests: 5 tests (3 skipped)
 
 ## Known Limitations
 
