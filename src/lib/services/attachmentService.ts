@@ -217,9 +217,6 @@ class AttachmentService {
       masterKey.key
     );
 
-    // Get decrypted filename
-    const filename = await this.getDecryptedFilename(attachment);
-
     // Create blob
     return new Blob([decryptedData], { type: attachment.mimeType });
   }

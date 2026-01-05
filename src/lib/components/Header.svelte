@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, selectedNote } from '../stores/appStore';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';

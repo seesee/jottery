@@ -2,7 +2,7 @@
  * Timezone utilities for formatting timestamps
  */
 
-import { derived, type Readable } from 'svelte/store';
+import { derived, get, type Readable } from 'svelte/store';
 import { locale } from 'svelte-i18n';
 import { settings } from '../stores/appStore';
 

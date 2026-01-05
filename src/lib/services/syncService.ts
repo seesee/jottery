@@ -12,7 +12,6 @@ import type {
   AuthRegisterRequest,
   AuthRegisterResponse,
   Note,
-  NoteVersion,
   SyncNoteVersion,
 } from '../types';
 import { syncRepository } from './syncRepository';
@@ -630,21 +629,6 @@ class SyncService {
 
       if (!existingVersion) {
         // New version from server - store it locally
-        // Convert SyncNoteVersion to NoteVersion format for storage
-        const versionToStore: NoteVersion = {
-          versionKey: serverVersion.versionKey,
-          noteId: serverVersion.noteId,
-          version: serverVersion.version,
-          createdAt: serverVersion.createdAt,
-          syncedAt: serverVersion.syncedAt,
-          content: serverVersion.content,
-          tags: serverVersion.tags,
-          attachments: serverVersion.attachments,
-          syntaxLanguage: serverVersion.syntaxLanguage,
-          wordWrap: serverVersion.wordWrap,
-          reason: serverVersion.reason,
-        };
-
         await versionRepository.createVersion(
           {
             id: serverVersion.noteId,

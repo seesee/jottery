@@ -172,11 +172,11 @@ class IndexedDBNoteRepository implements NoteRepository {
     const tx = db.transaction(STORES.NOTES, 'readonly');
 
     // Try to use the needsSync index for better performance
+    // Note: IndexedDB doesn't support boolean queries directly, so we get all and filter
     try {
-      const index = tx.store.index('needsSync');
-      const notes = await index.getAll(true); // Get all notes where needsSync === true
+      const allNotes = await tx.store.getAll();
       await tx.done;
-      return notes;
+      return allNotes.filter(note => note.needsSync === true);
     } catch (error) {
       // Fallback to full scan if index doesn't exist yet (during migration)
       console.warn('[noteRepository] needsSync index not available, using full scan');

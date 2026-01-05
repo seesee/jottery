@@ -235,7 +235,7 @@ export async function importNotes(
         modifiedAt: exportNote.modifiedAt,
         pinned: exportNote.pinned,
         wordWrap: exportNote.wordWrap,
-        syntaxLanguage: exportNote.syntaxLanguage,
+        syntaxLanguage: exportNote.syntaxLanguage as 'markdown' | 'javascript' | 'python' | 'json' | 'css' | 'bash' | 'sql' | 'plain' | 'html' | undefined,
         showPreview: exportNote.showPreview,
         attachments: noteAttachments,
       });
