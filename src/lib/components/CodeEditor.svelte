@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { EditorView, minimalSetup } from 'codemirror';
+  import { EditorView } from 'codemirror';
   import { EditorState, Compartment } from '@codemirror/state';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';

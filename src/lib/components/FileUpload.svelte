@@ -1,6 +1,5 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { attachmentService } from '../services';
 
   export let onUpload: (files: FileList) => void;
   export let disabled: boolean = false;

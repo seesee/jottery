@@ -13,7 +13,6 @@
   const MAX_PULL = 120; // pixels
 
   let touchStartY = 0;
-  let touchStartScrollTop = 0;
 
   function handleTouchStart(e: TouchEvent) {
     if (!enabled || isRefreshing) return;
@@ -21,7 +20,6 @@
     // Only trigger if at top of scroll
     if (container.scrollTop === 0) {
       touchStartY = e.touches[0].clientY;
-      touchStartScrollTop = container.scrollTop;
     }
   }
 
@@ -44,7 +42,6 @@
   async function handleTouchEnd() {
     if (!isPulling || !enabled) {
       touchStartY = 0;
-      touchStartScrollTop = 0;
       isPulling = false;
       pullDistance = 0;
       return;
@@ -62,14 +59,12 @@
         isPulling = false;
         pullDistance = 0;
         touchStartY = 0;
-        touchStartScrollTop = 0;
       }
     } else {
       // Snap back
       isPulling = false;
       pullDistance = 0;
       touchStartY = 0;
-      touchStartScrollTop = 0;
     }
   }
 </script>

@@ -80,14 +80,14 @@ export interface SyncAttachment {
 export interface SyncPushResponse {
   accepted: SyncAccepted[];
   rejected: SyncRejected[];
-  errors: string[];
+  errors?: string[]; // Optional, for backward compatibility
 }
 
 // Accepted note info
 export interface SyncAccepted {
   id: string;
-  serverVersion: number;
-  syncedAt: string;
+  serverVersion?: number; // Optional for backward compatibility
+  syncedAt?: string; // Optional for backward compatibility
 }
 
 // Rejected note info (conflict)
@@ -107,10 +107,10 @@ export interface SyncPullRequest {
 // Pull response from server
 export interface SyncPullResponse {
   notes: SyncNote[];
-  deletions: SyncDeletion[];
+  deletions?: SyncDeletion[]; // Optional for backward compatibility
   attachments: SyncAttachment[];
   versions: SyncNoteVersion[];
-  syncedAt: string;
+  syncedAt?: string; // Optional for backward compatibility
 }
 
 // Deleted note info
@@ -151,5 +151,5 @@ export interface AuthRegisterRequest {
 export interface AuthRegisterResponse {
   apiKey: string;
   clientId: string;
-  createdAt: string;
+  createdAt?: string; // Optional for backward compatibility
 }

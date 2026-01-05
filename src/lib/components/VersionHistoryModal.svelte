@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
   import { versionRepository, noteRepository, cryptoService, keyManager, decryptJSON } from '../services';

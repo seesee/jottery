@@ -42,7 +42,7 @@
     }
   }
 
-  function handleTagClick(event: MouseEvent, tag: string) {
+  function handleTagClick(event: MouseEvent | KeyboardEvent, tag: string) {
     // Stop propagation to prevent note selection
     event.stopPropagation();
     event.preventDefault();
@@ -51,7 +51,7 @@
     searchQuery.set(`#${tag}`);
   }
 
-  function handleDeleteClick(event: MouseEvent) {
+  function handleDeleteClick(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
     event.preventDefault();
 

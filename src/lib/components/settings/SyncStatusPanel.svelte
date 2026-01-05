@@ -62,7 +62,7 @@
                   {syncing || syncStatus?.isSyncing ? 'Syncing...' : '🔄 Sync Now'}
                 </button>
 
-                {#if syncStatus?.pendingNotes > 0}
+                {#if syncStatus?.pendingNotes && syncStatus.pendingNotes > 0}
                   <p class="text-xs text-gray-600 dark:text-gray-400">
                     {syncStatus.pendingNotes} note{syncStatus.pendingNotes !== 1 ? 's' : ''} pending sync
                   </p>

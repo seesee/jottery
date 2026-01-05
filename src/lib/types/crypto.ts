@@ -19,7 +19,7 @@ export interface KeyDerivationParams {
   password: string;
   salt: Uint8Array;
   iterations: number;
-  algorithm: 'PBKDF2' | 'Argon2id';
+  algorithm?: 'PBKDF2' | 'Argon2id'; // Optional, defaults to PBKDF2
 }
 
 /**
