@@ -31,12 +31,10 @@
         if (settings.rememberPassword) {
           const storedPassword = passwordStorageService.get();
           if (storedPassword) {
-            console.log('[UnlockScreen] Stored password found, attempting auto-unlock...');
             loading = true;
             try {
               await unlock(storedPassword);
               isLocked.set(false);
-              console.log('[UnlockScreen] ✓ Auto-unlock successful!');
               // Don't focus input - we're unlocked
               return;
             } catch (err) {
@@ -91,7 +89,6 @@
         const settings = await settingsRepository.get();
         if (settings.rememberPassword) {
           passwordStorageService.store(passwordToStore);
-          console.log('[UnlockScreen] Password stored for future auto-unlock');
         }
       } catch (err) {
         console.error('[UnlockScreen] Failed to store password:', err);

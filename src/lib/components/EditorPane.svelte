@@ -268,19 +268,11 @@
           const code = token.text;
           const language = token.lang;
 
-          console.log('[Preview] Code block:', {
-            language,
-            codeLength: code?.length,
-            hasLanguage: !!language,
-            hljsLoaded: !!hljs
-          });
-
           // Only use syntax highlighting if hljs is loaded
           if (hljs) {
             // Highlight the code if language is specified
             if (language && hljs.getLanguage(language)) {
               try {
-                console.log('[Preview] Highlighting with language:', language);
                 const highlighted = hljs.highlight(code, { language }).value;
                 return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
               } catch (err) {
@@ -291,7 +283,6 @@
             // Auto-detect if no language specified
             if (code) {
               try {
-                console.log('[Preview] Auto-detecting language for code block');
                 const highlighted = hljs.highlightAuto(code).value;
                 return `<pre><code class="hljs">${highlighted}</code></pre>`;
               } catch (err) {
@@ -301,7 +292,6 @@
           }
 
           // Fallback to plain code block if hljs not loaded or highlighting failed
-          console.log('[Preview] Falling back to default rendering');
           return originalCode.call(this, token);
         };
 
@@ -334,20 +324,14 @@
       // Only reset local state when switching to a different note
       // Don't reset when the same note is reloaded (e.g., after save)
       if (noteChanged) {
-      console.log('[EditorPane] Switching to different note');
-      console.log('[EditorPane] From note:', previousNoteId, 'to note:', $selectedNote.id);
-      console.log('[EditorPane] New note showPreview value from DB:', $selectedNote.showPreview);
 
       // Exit draft mode if we were in it
       if ($isDraftMode) {
-        console.log('[EditorPane] Exiting draft mode - note selected');
         exitDraftMode();
       }
 
       // Save and create version for the previous note before switching
       if (previousNoteId && !$isDraftMode) {
-        console.log('[EditorPane] Note switch - hasContentChanged:', hasContentChanged);
-
         // Save immediately (don't wait for debounce)
         if (saveTimeout) {
           clearTimeout(saveTimeout);
@@ -378,17 +362,13 @@
                 wordWrap: wordWrapToSave,
                 showPreview: showPreviewToSave,
               });
-              console.log('[EditorPane] Saved previous note before switching');
 
               // Create version snapshot
-              console.log('[EditorPane] Creating version snapshot (content was modified)');
               await createVersionSnapshot(noteIdToSave);
             } catch (error) {
               console.error('[EditorPane] Error saving/versioning before switch:', error);
             }
           })();
-        } else {
-          console.log('[EditorPane] Skipping save and version (no content changes)');
         }
       } else if (saveTimeout) {
         // Just clear the timeout if in draft mode
@@ -405,7 +385,6 @@
       isEditing = true;
       hasContentChanged = false; // Reset change tracking for new note
 
-      console.log('[EditorPane] Local showPreview set to:', showPreview);
 
       // Focus the editor after switching notes
       setTimeout(() => {
@@ -427,7 +406,6 @@
   } else if (!$isDraftMode) {
     // Closing editor - flush pending save, create version, and trigger sync
     if (previousNoteId) {
-      console.log('[EditorPane] Closing editor - hasContentChanged:', hasContentChanged);
 
       // Save immediately (don't wait for debounce)
       if (saveTimeout) {
@@ -449,10 +427,8 @@
               wordWrap,
               showPreview,
             });
-            console.log('[EditorPane] Saved pending changes before closing');
 
             // Create version snapshot
-            console.log('[EditorPane] Creating version snapshot (content was modified)');
             await createVersionSnapshot(previousNoteId);
 
             await triggerBackgroundSync();
@@ -461,7 +437,6 @@
           }
         })();
       } else {
-        console.log('[EditorPane] Skipping save and version (no content changes)');
         // Still trigger sync even if we didn't save
         triggerBackgroundSync();
       }
@@ -515,7 +490,6 @@
       // Check for duplicate BEFORE incrementing version
       const latestVersion = await versionRepository.getLatestVersion(targetNoteId);
       if (latestVersion && latestVersion.content === currentNote.content) {
-        console.log('[EditorPane] Skipping version creation - no changes since last version');
         return; // Skip if content unchanged
       }
 
@@ -530,7 +504,6 @@
         syncedAt: new Date().toISOString(),
         reason: 'manual-sync',
       });
-      console.log('[EditorPane] Created version snapshot for note:', targetNoteId, 'version:', currentNote.version);
     } catch (error) {
       console.error('[EditorPane] Failed to create version for note:', targetNoteId, error);
     }
@@ -609,18 +582,13 @@
   }
 
   async function handleDelete() {
-    console.log('[EditorPane] handleDelete called');
     if (!$selectedNote) {
-      console.log('[EditorPane] No selected note, returning');
       return;
     }
-    console.log('[EditorPane] Selected note ID:', $selectedNote.id);
 
     try {
-      console.log('[EditorPane] Calling noteService.deleteNote...');
       const noteId = $selectedNote.id;
       await noteService.deleteNote(noteId);
-      console.log('[EditorPane] Delete successful, clearing selection...');
       handleClose(); // Clear selection and return to list on mobile
 
       // Remove note from store (incremental update)
@@ -629,7 +597,6 @@
       // Remove from search index
       searchService.removeNote(noteId);
 
-      console.log('[EditorPane] Delete operation complete');
     } catch (error) {
       console.error('[EditorPane] Failed to delete note:', error);
     }
@@ -660,7 +627,6 @@
 
   function handlePreviewToggle() {
     showPreview = !showPreview;
-    console.log('[EditorPane] Preview toggled to:', showPreview);
     // Save immediately for preview toggle (no debounce)
     if (saveTimeout) clearTimeout(saveTimeout);
     handleSave();
@@ -811,7 +777,6 @@
     try {
       await navigator.clipboard.writeText(content);
       // Could show a toast notification here
-      console.log('Note content copied to clipboard');
     } catch (error) {
       console.error('Failed to copy note:', error);
       // Fallback for older browsers
@@ -824,7 +789,6 @@
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        console.log('Note content copied to clipboard (fallback)');
       } catch (fallbackError) {
         console.error('Failed to copy note (fallback):', fallbackError);
       }
@@ -872,7 +836,6 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    console.log(`Note exported as ${filename}.${extension}`);
   }
 
   function handleShowInfo() {
@@ -1050,17 +1013,13 @@
       try {
         // Find attachment by decrypted filename
         let foundAttachment = null;
-        console.log(`[Preview] Looking for attachment with filename: ${filename}`);
-        console.log(`[Preview] Available attachments:`, attachments.length);
 
         for (const attachment of attachments) {
           try {
             const encryptedFilename = JSON.parse(attachment.filename);
             const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-            console.log(`[Preview] Checking attachment ${attachment.id}: "${decryptedFilename}"`);
 
             if (decryptedFilename === filename) {
-              console.log(`[Preview] Found match! ID: ${attachment.id}, data: ${attachment.data}`);
               foundAttachment = attachment;
               break;
             }
@@ -1070,11 +1029,9 @@
         }
 
         if (foundAttachment) {
-          console.log(`[Preview] Loading blob for attachment: ${foundAttachment.id}`);
           // Load and decrypt the blob using attachmentService
           const blob = await attachmentService.getAttachmentData(foundAttachment);
           const blobUrl = URL.createObjectURL(blob);
-          console.log(`[Preview] Created blob URL: ${blobUrl} for ${filename}`);
           img.setAttribute('src', blobUrl);
           img.setAttribute('data-loaded', 'true');
 

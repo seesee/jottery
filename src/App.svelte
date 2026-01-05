@@ -173,7 +173,6 @@
     try {
       const syncMetadata = await syncRepository.getMetadata();
       if (syncMetadata?.syncEnabled) {
-        console.log('[App] Triggering sync on lock...');
         await syncService.syncNow();
       }
     } catch (error) {
@@ -185,11 +184,9 @@
   $: if (!$isLocked && initialized && $settings) {
     if ($settings.rememberPassword) {
       // Remember password enabled - disable auto-lock
-      console.log('[App] Remember password enabled - disabling auto-lock');
       stopAutoLock();
     } else {
       // Remember password disabled - enable auto-lock
-      console.log('[App] Remember password disabled - enabling auto-lock');
       startAutoLock($settings.autoLockTimeout);
     }
   }
@@ -252,9 +249,6 @@
       // Clear loading state
       loadingNotes = false;
       loadingProgress = { current: 0, total: 0 };
-
-      const elapsed = Date.now() - startTime;
-      console.log(`[App] Loaded ${allNotes.length} notes in ${elapsed}ms`);
     } catch (error) {
       console.error('Failed to load notes:', error);
       loadingNotes = false;
@@ -267,11 +261,9 @@
       const syncMetadata = await syncRepository.getMetadata();
       if (syncMetadata?.syncEnabled) {
         const interval = syncMetadata.autoSyncInterval || 5;
-        console.log(`[App] Starting auto-sync with ${interval} minute interval`);
         syncService.enableAutoSync(interval);
 
         // Trigger sync on unlock to get latest changes
-        console.log('[App] Triggering sync on unlock...');
         syncService.syncNow();
       }
     } catch (error) {

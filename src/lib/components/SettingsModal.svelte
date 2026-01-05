@@ -193,7 +193,6 @@
     syncError = '';
     try {
       const response = await syncService.register(syncEndpoint, deviceName.trim());
-      console.log('[SettingsModal] Registration successful');
 
       // Reload status
       await loadSyncStatus();
@@ -228,7 +227,6 @@
     syncError = '';
     try {
       const response = await authService.registerUser(syncEndpoint, userEmail, userPassword);
-      console.log('[SettingsModal] User registration successful:', response);
 
       registeredUserId = response.userId;
       userRegistrationMessage = response.message;
@@ -245,7 +243,6 @@
 
       // Handle "Email already registered" - allow resuming registration
       if (errorMessage.includes('Email already registered')) {
-        console.log('[SettingsModal] Email already registered, proceeding to device registration step');
         // Assume they might be approved and let device registration handle the auth check
         registrationStep = 'device';
         syncError = ''; // Clear error, let device registration validate approval status
@@ -277,7 +274,6 @@
         userPassword,
         deviceName.trim()
       );
-      console.log('[SettingsModal] Device registration successful:', response);
 
       // Store the credentials similar to existing flow
       const masterKey = keyManager.getMasterKey();
@@ -311,11 +307,8 @@
       await loadSyncStatus();
 
       // Trigger full sync automatically
-      console.log('[SettingsModal] Triggering full sync of ALL notes after device registration...');
       const syncResult = await syncService.syncNow(true);
       if (syncResult.success) {
-        console.log('[SettingsModal] ✓ Initial sync completed successfully');
-        console.log('[SettingsModal] All existing notes have been synced to server');
       } else {
         console.warn('[SettingsModal] ⚠️ Initial sync failed, but device is registered. Error:', syncResult.error);
       }
@@ -356,7 +349,6 @@
     syncError = '';
     try {
       const loginUrl = `${syncEndpoint}/api/v1/user/login`;
-      console.log('[SettingsModal] Attempting login to:', loginUrl);
       const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
@@ -367,7 +359,6 @@
           password: accountPassword,
         }),
       });
-      console.log('[SettingsModal] Login response status:', response.status);
 
       if (!response.ok) {
         let errorMessage = 'Login failed';
@@ -388,7 +379,6 @@
         isAdmin: data.user.isAdmin,
       };
 
-      console.log('[SettingsModal] User logged in successfully:', userSession.email);
 
       // Fetch account info
       await fetchAccountInfo();
@@ -407,8 +397,6 @@
     syncError = '';
     try {
       const accountUrl = `${syncEndpoint}/api/v1/user/account`;
-      console.log('[SettingsModal] Fetching account info from:', accountUrl);
-      console.log('[SettingsModal] Using session token:', userSession.sessionId);
 
       const response = await fetch(accountUrl, {
         headers: {
@@ -416,7 +404,6 @@
         },
       });
 
-      console.log('[SettingsModal] Account info response status:', response.status);
 
       if (!response.ok) {
         let errorMessage = `Failed to fetch account info (${response.status})`;
@@ -430,7 +417,6 @@
       }
 
       accountInfo = await response.json();
-      console.log('[SettingsModal] Account info loaded:', accountInfo);
     } catch (error) {
       console.error('Failed to fetch account info:', error);
       syncError = error instanceof Error ? error.message : 'Failed to load account info';
@@ -456,7 +442,6 @@
         throw new Error('Failed to delete notes');
       }
 
-      console.log('[SettingsModal] All notes deleted from server');
 
       // Refresh account info
       await fetchAccountInfo();
@@ -515,7 +500,6 @@
       // Try to copy to clipboard (best effort - may fail over SSH or in some browsers)
       try {
         await navigator.clipboard.writeText(base64);
-        console.log('[SettingsModal] Credentials copied to clipboard');
       } catch (clipboardError) {
         console.warn('[SettingsModal] Clipboard copy failed (this is OK):', clipboardError);
       }
@@ -524,7 +508,6 @@
       credentialsText = base64;
       showCredentialsModal = true;
 
-      console.log('[SettingsModal] Showing credentials modal');
     } catch (error) {
       console.error('Failed to generate credentials:', error);
       syncError = error instanceof Error ? error.message : 'Failed to generate credentials';
@@ -532,7 +515,6 @@
   }
 
   async function handleImportCredentials() {
-    console.log('[Import] Starting credential import...');
 
     if (!importCredentialsText.trim()) {
       console.error('[Import] No credentials text provided');
@@ -544,12 +526,9 @@
     syncError = '';
 
     try {
-      console.log('[Import] Step 1: Decoding base64...');
       const json = atob(importCredentialsText.trim());
-      console.log('[Import] Base64 decoded, parsing JSON...');
 
       const credentials = JSON.parse(json);
-      console.log('[Import] Credentials parsed:', {
         hasEndpoint: !!credentials.endpoint,
         hasClientId: !!credentials.clientId,
         hasApiKey: !!credentials.apiKey,
@@ -564,32 +543,25 @@
         throw new Error('Invalid credentials format - missing required fields');
       }
 
-      console.log('[Import] Step 2: Storing encryption salt...');
       await encryptionRepository.setMetadata({
         salt: credentials.salt,
         iterations: 100000,
         createdAt: new Date().toISOString(),
         algorithm: 'AES-256-GCM',
       });
-      console.log('[Import] ✓ Encryption salt stored');
 
-      console.log('[Import] Step 3: Storing sync metadata...');
       await syncRepository.updateMetadata({
         clientId: credentials.clientId,
         syncEndpoint: credentials.endpoint,
         syncEnabled: false,
         apiKey: `IMPORT:${credentials.apiKey}`,
       });
-      console.log('[Import] ✓ Sync metadata stored');
 
-      console.log('[Import] Step 4: Updating settings...');
       await settingsRepository.update({
         syncEndpoint: credentials.endpoint,
         syncEnabled: false,
       });
-      console.log('[Import] ✓ Settings updated');
 
-      console.log('[Import] Step 5: Locking app and forcing UI update...');
 
       // Close the modal first
       onClose();
@@ -598,7 +570,6 @@
       lock();
       isLocked.set(true);
 
-      console.log('[Import] ✓ Import complete! App locked. Please unlock with your password.');
 
       // Clear the import text
       importCredentialsText = '';
@@ -637,7 +608,6 @@
   async function confirmDisconnectSync() {
     showDisconnectSyncConfirm = false;
     try {
-      console.log('[SettingsModal] Disconnecting from sync server...');
 
       // Clear sync metadata
       await syncRepository.updateMetadata({
@@ -657,7 +627,6 @@
       syncEndpoint = '';
       await loadSyncStatus();
 
-      console.log('[SettingsModal] Successfully disconnected from sync server');
     } catch (error) {
       console.error('Failed to disconnect from sync:', error);
       syncError = error instanceof Error ? error.message : 'Failed to disconnect';
@@ -666,7 +635,6 @@
 
   async function handleToggleSyncFeature(enabled: boolean) {
     try {
-      console.log(`[SettingsModal] Toggling sync feature: ${enabled}`);
 
       // Update settings
       await settingsRepository.update({
@@ -684,7 +652,6 @@
         syncService.disableAutoSync();
       }
 
-      console.log(`[SettingsModal] Sync feature ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       console.error('Failed to toggle sync feature:', error);
       syncError = error instanceof Error ? error.message : 'Failed to toggle sync';
@@ -744,7 +711,6 @@
         shift: hasShift || undefined,
       };
 
-      console.log('[SettingsModal] Recorded shortcut:', {
         raw: e.key,
         normalized: normalizedKey,
         platform: navigator.platform,
@@ -891,12 +857,10 @@
 
       // Password is correct! Store it
       passwordStorageService.store(rememberPasswordConfirmInput);
-      console.log('[SettingsModal] Password verified and stored successfully');
 
       // Save the setting immediately to persist it
       await settingsRepository.update({ rememberPassword: true });
       settings.update(s => ({ ...s, rememberPassword: true }));
-      console.log('[SettingsModal] rememberPassword setting saved to database');
 
       // Close modal and clear input
       showRememberPasswordWarning = false;
@@ -932,13 +896,11 @@
 
     // Clear stored password
     passwordStorageService.clear();
-    console.log('[SettingsModal] Stored password cleared');
 
     // Save the setting immediately to persist it
     try {
       await settingsRepository.update({ rememberPassword: false });
       settings.update(s => ({ ...s, rememberPassword: false }));
-      console.log('[SettingsModal] rememberPassword setting disabled in database');
     } catch (error) {
       console.error('Failed to save disabled setting:', error);
     }
@@ -1054,25 +1016,19 @@
     if (!syncEndpoint && typeof window !== 'undefined') {
       try {
         const defaultEndpoint = window.location.origin;
-        console.log('[SettingsModal] Checking for sync server at:', defaultEndpoint);
         const response = await fetch(`${defaultEndpoint}/api/v1/sync/status`, {
           method: 'HEAD',
         });
-        console.log('[SettingsModal] Sync status check response:', response.status);
         // If we get any response other than 404, assume sync is available
         // (401 Unauthorized means sync endpoint exists but needs auth)
         if (response.status !== 404) {
-          console.log('[SettingsModal] ✓ Detected sync server at:', defaultEndpoint);
           syncEndpoint = defaultEndpoint;
         } else {
-          console.log('[SettingsModal] No sync server at current origin (404)');
         }
       } catch (error) {
         // Network error - user can manually enter endpoint
-        console.log('[SettingsModal] Network error checking sync server:', error);
       }
     } else if (syncEndpoint) {
-      console.log('[SettingsModal] Sync endpoint already configured:', syncEndpoint);
     }
   });
 

@@ -57,7 +57,6 @@
       // Trigger sync if enabled (will save all notes to server)
       const syncMetadata = await syncRepository.getMetadata();
       if (syncMetadata?.syncEnabled) {
-        console.log('[Header] Syncing before lock...');
         await syncService.syncNow();
       }
     } catch (error) {
@@ -76,13 +75,11 @@
 
     // Clear stored password
     passwordStorageService.clear();
-    console.log('[Header] Stored password cleared');
 
     // Save the setting
     try {
       await settingsRepository.update({ rememberPassword: false });
       settings.update(s => ({ ...s, rememberPassword: false }));
-      console.log('[Header] rememberPassword setting disabled in database');
     } catch (error) {
       console.error('Failed to save disabled setting:', error);
     }

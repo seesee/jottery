@@ -131,7 +131,6 @@ export async function ensureLanguageLoaded(languageId: string): Promise<boolean>
       const langDef = await importLanguage(normalized);
       hljs.registerLanguage(normalized, langDef);
       loadedLanguages.add(normalized);
-      console.log(`[SyntaxHighlighter] Loaded language: ${normalized}`);
     } catch (error) {
       console.warn(`[SyntaxHighlighter] Failed to load language ${normalized}:`, error);
     } finally {
