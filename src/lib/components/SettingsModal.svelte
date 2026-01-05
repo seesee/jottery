@@ -176,33 +176,7 @@
     }
   }
 
-  // Legacy registration (old single-device flow)
-  async function handleRegister() {
-    if (!syncEndpoint) {
-      syncError = 'Please enter a sync endpoint URL';
-      return;
-    }
-
-    if (!deviceName.trim()) {
-      syncError = 'Please provide a device name';
-      return;
-    }
-
-    syncError = '';
-    try {
-      const response = await syncService.register(syncEndpoint, deviceName.trim());
-
-      // Reload status
-      await loadSyncStatus();
-      syncEndpoint = $settings.syncEndpoint || '';
-      syncError = '';
-    } catch (error) {
-      console.error('Registration failed:', error);
-      syncError = error instanceof Error ? error.message : 'Registration failed';
-    }
-  }
-
-  // New multi-user registration flow
+  // Multi-user registration flow
   async function handleRegisterUser() {
     if (!syncEndpoint) {
       syncError = 'Please enter a sync endpoint URL';
@@ -646,23 +620,6 @@
     }
   }
 
-
-  function formatShortcutDisplay(shortcut: KeyboardShortcut | undefined): string {
-    if (!shortcut) return 'Not set';
-
-    const parts: string[] = [];
-    if (shortcut.ctrl) parts.push('Ctrl/Cmd');
-    if (shortcut.alt) parts.push('Alt');
-    if (shortcut.shift) parts.push('Shift');
-
-    const key = shortcut.key.length === 1 && shortcut.key.match(/[a-z]/i)
-      ? shortcut.key.toUpperCase()
-      : shortcut.key;
-    parts.push(key);
-
-    return parts.join(' + ');
-  }
-
   function startRecording(shortcutName: keyof KeyboardShortcuts) {
     recordingShortcut = shortcutName;
 
@@ -676,8 +633,6 @@
       if (['Control', 'Alt', 'Shift', 'Meta', 'Command'].includes(e.key)) {
         return;
       }
-
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
       // Capture the exact modifiers that are pressed
       // On Mac, support both Cmd (metaKey) and Ctrl (ctrlKey) as "Ctrl"
