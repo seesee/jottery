@@ -64,14 +64,24 @@ const calcLanguage = StreamLanguage.define({
 	}
 });
 
-// Syntax highlighting theme
-const calcHighlightStyle = HighlightStyle.define([
+// Syntax highlighting theme (dark mode - VS Code colors)
+const calcHighlightStyleDark = HighlightStyle.define([
 	{ tag: t.comment, color: '#6a9955' }, // Green
 	{ tag: t.number, color: '#b5cea8' }, // Light green
 	{ tag: t.keyword, color: '#4ec9b0' }, // Cyan (built-in functions)
 	{ tag: t.atom, color: '#569cd6' }, // Blue (constants)
 	{ tag: t.variableName, color: '#9cdcfe' }, // Light blue (user variables)
 	{ tag: t.operator, color: '#d4d4d4' } // Light gray
+]);
+
+// Syntax highlighting theme (light mode - high contrast)
+const calcHighlightStyleLight = HighlightStyle.define([
+	{ tag: t.comment, color: '#008000' }, // Dark green
+	{ tag: t.number, color: '#098658' }, // Dark green-blue
+	{ tag: t.keyword, color: '#0070c1' }, // Dark blue (built-in functions)
+	{ tag: t.atom, color: '#0000ff' }, // Blue (constants)
+	{ tag: t.variableName, color: '#001080' }, // Dark blue (user variables)
+	{ tag: t.operator, color: '#000000' } // Black
 ]);
 
 // Line parsing result
@@ -338,10 +348,10 @@ const calcTheme = EditorView.baseTheme({
 });
 
 // Export main extension
-export function calcExtension() {
+export function calcExtension(isDark: boolean = false) {
 	return [
 		new LanguageSupport(calcLanguage),
-		syntaxHighlighting(calcHighlightStyle),
+		syntaxHighlighting(isDark ? calcHighlightStyleDark : calcHighlightStyleLight),
 		calcPlugin,
 		calcTheme
 	];

@@ -81,7 +81,7 @@
   function getLanguageExtension() {
     switch (language) {
       case 'calc':
-        return calcExtension();
+        return calcExtension(isDark);
       case 'javascript':
         return javascript();
       case 'python':
@@ -239,9 +239,14 @@
 
   // Update theme when isDark prop changes
   $: if (editorView && isDark !== undefined) {
-    editorView.dispatch({
-      effects: themeCompartment.reconfigure(isDark ? oneDark : []),
-    });
+    const effects = [themeCompartment.reconfigure(isDark ? oneDark : [])];
+
+    // Also reconfigure calc extension for theme-aware syntax highlighting
+    if (language === 'calc') {
+      effects.push(languageCompartment.reconfigure(getLanguageExtension()));
+    }
+
+    editorView.dispatch({ effects });
   }
 </script>
 
