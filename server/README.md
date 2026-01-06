@@ -117,16 +117,20 @@ The admin dashboard provides comprehensive user and system management:
 
 **Account Management:**
 - Change admin password (requires current password)
-- Session management (7-day expiry)
+- Session management (configurable expiry, default 7 days)
 - Logout functionality
 
 ### Security Recommendations
 
-1. **Change Default Password:** Immediately change `admin@localhost` password after first login
-2. **HTTPS Only:** Always use HTTPS in production (configure with reverse proxy like Nginx)
-3. **Review Users:** Regularly review pending registrations and active users
-4. **Monitor Audit Log:** Check for suspicious sync activity
-5. **Backup Database:** Regular backups include all user data and credentials (passwords are hashed)
+1. **Change Default Admin Credentials:** Set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` in `.env` before deployment, then change password after first login
+2. **Configure CORS:** Set `CORS_ALLOWED_ORIGINS` to your frontend domain(s) in production (comma-separated list)
+3. **HTTPS Only:** Always use HTTPS in production (configure with reverse proxy like Nginx/Caddy)
+4. **Strong Password Hashing:** Adjust `ARGON2_M_COST`, `ARGON2_T_COST`, `ARGON2_P_COST` for your security requirements
+5. **Session Security:** Configure `SESSION_EXPIRY_DAYS` based on your security needs (shorter = more secure)
+6. **Rate Limiting:** Configure rate limiting at the reverse proxy level (see `.env.example` for examples)
+7. **Review Users:** Regularly review pending registrations and active users
+8. **Monitor Audit Log:** Check for suspicious sync activity
+9. **Backup Database:** Regular backups include all user data and credentials (passwords are hashed)
 
 ## API Endpoints
 
@@ -797,13 +801,39 @@ sqlx migrate add <migration_name>
 
 ### Environment Variables
 
-Development `.env` example:
+See `.env.example` for a complete list of configuration options with documentation.
+
+Key environment variables:
 
 ```env
-DATABASE_URL=sqlite:dev.db
-PORT=3000
-RUST_LOG=debug
+# Basic configuration
+DATABASE_URL=sqlite:jottery.db
+PORT=3030
+MAX_PAYLOAD_SIZE=5242880
+
+# CORS security
+CORS_ALLOWED_ORIGINS=https://example.com
+
+# Session security
+SESSION_EXPIRY_DAYS=7
+
+# Default admin account (CHANGE IN PRODUCTION!)
+DEFAULT_ADMIN_EMAIL=admin@localhost
+DEFAULT_ADMIN_PASSWORD=changeme
+
+# Password hashing (Argon2id)
+ARGON2_M_COST=19456  # Memory in KiB
+ARGON2_T_COST=2      # Iterations
+ARGON2_P_COST=1      # Threads
+
+# User settings
+DEFAULT_STORAGE_QUOTA_MB=1000
+
+# Logging
+RUST_LOG=info
 ```
+
+For production deployments, review and customize all security settings in `.env.example`.
 
 ## License
 
