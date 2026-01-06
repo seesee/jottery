@@ -1,5 +1,6 @@
 use axum::{
     extract::DefaultBodyLimit,
+    http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderName},
     routing::{delete, get, post},
     Router,
 };
@@ -22,6 +23,36 @@ use crate::config::Config;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: SqlitePool,
+}
+
+/// Build CORS layer based on configuration
+///
+/// If CORS_ALLOWED_ORIGINS is set, only allow those origins.
+/// Otherwise, allow any origin (useful for development/simple deployments).
+fn build_cors_layer(config: &Config) -> CorsLayer {
+    let mut cors = CorsLayer::new()
+        .allow_methods(Any)
+        .allow_headers(vec![
+            AUTHORIZATION,
+            CONTENT_TYPE,
+            HeaderName::from_static("x-api-key"),
+        ]);
+
+    if let Some(ref origins) = config.cors_allowed_origins {
+        // Use specific origins from configuration
+        tracing::info!("CORS: Allowing specific origins: {:?}", origins);
+        let allowed_origins: Vec<_> = origins
+            .iter()
+            .filter_map(|origin| origin.parse().ok())
+            .collect();
+        cors = cors.allow_origin(allowed_origins);
+    } else {
+        // Default to any origin
+        tracing::warn!("CORS: Allowing any origin (set CORS_ALLOWED_ORIGINS for production)");
+        cors = cors.allow_origin(Any);
+    }
+
+    cors
 }
 
 #[tokio::main]
@@ -126,12 +157,7 @@ async fn main() {
         // Add middleware
         .layer(DefaultBodyLimit::max(config.max_payload_size))
         .layer(CompressionLayer::new())
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
-        );
+        .layer(build_cors_layer(&config));
 
     // Start server
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
