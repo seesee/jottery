@@ -198,22 +198,23 @@ const calcPlugin = ViewPlugin.fromClass(
 		private parser: CalcParser;
 		private evaluator: CalcEvaluator;
 		private builder: DecorationBuilder;
+		private cachedResults: EvaluationResult[] = [];
 
 		constructor(view: EditorView) {
 			this.parser = new CalcParser();
 			this.evaluator = new CalcEvaluator();
 			this.builder = new DecorationBuilder();
-			this.decorations = this.compute(view);
+			this.cachedResults = this.evaluate(view);
+			this.decorations = this.builder.buildDecorations(this.cachedResults, view.state.doc);
 		}
 
 		update(update: ViewUpdate) {
-			// Only recalculate on meaningful document changes
-			// Don't recalculate on cursor movement or whitespace-only changes
 			if (!update.docChanged) {
 				return;
 			}
 
-			// Check if the change was only whitespace (no actual content change)
+			// Check if we need to re-evaluate expressions
+			// or just update decoration positions
 			let hasMeaningfulChange = false;
 			update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
 				const insertedText = inserted.toString();
@@ -224,22 +225,22 @@ const calcPlugin = ViewPlugin.fromClass(
 					hasMeaningfulChange = true;
 				}
 
-				// Meaningful if we deleted anything (even whitespace, as it affects expressions)
+				// Meaningful if we deleted anything
 				if (deletedLength > 0) {
 					hasMeaningfulChange = true;
 				}
 			});
 
-			// Don't recalculate for whitespace-only insertions
-			if (!hasMeaningfulChange) {
-				return;
+			// Re-evaluate if content changed, otherwise just rebuild decorations
+			if (hasMeaningfulChange) {
+				this.cachedResults = this.evaluate(update.view);
 			}
 
-			// Update decorations synchronously to prevent misalignment
-			this.decorations = this.compute(update.view);
+			// Always rebuild decorations to keep positions correct
+			this.decorations = this.builder.buildDecorations(this.cachedResults, update.view.state.doc);
 		}
 
-		compute(view: EditorView): DecorationSet {
+		evaluate(view: EditorView): EvaluationResult[] {
 			// Reset evaluator for fresh scope
 			this.evaluator.reset();
 
@@ -253,8 +254,7 @@ const calcPlugin = ViewPlugin.fromClass(
 				results.push(result);
 			}
 
-			// Build decorations - show all results
-			return this.builder.buildDecorations(results, view.state.doc);
+			return results;
 		}
 
 		destroy() {
