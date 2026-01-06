@@ -399,7 +399,7 @@ pub async fn change_password(
     axum::Extension(user_id): axum::Extension<String>,
     Json(req): Json<ChangePasswordRequest>,
 ) -> AppResult<StatusCode> {
-    use crate::utils::password::{hash_password, verify_password};
+    use crate::utils::password::{hash_password_with_params, verify_password};
     use crate::db::UserRepository;
 
     // Get current user
@@ -426,12 +426,17 @@ pub async fn change_password(
         ));
     }
 
-    // Hash new password
-    let new_password_hash = hash_password(&req.new_password)
-        .map_err(|e| {
-            tracing::error!("Password hashing failed: {}", e);
-            crate::error::AppError::InternalServerError
-        })?;
+    // Hash new password with configured Argon2 parameters
+    let new_password_hash = hash_password_with_params(
+        &req.new_password,
+        state.config.argon2_m_cost,
+        state.config.argon2_t_cost,
+        state.config.argon2_p_cost,
+    )
+    .map_err(|e| {
+        tracing::error!("Password hashing failed: {}", e);
+        crate::error::AppError::InternalServerError
+    })?;
 
     // Update password
     sqlx::query!(

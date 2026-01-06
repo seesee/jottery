@@ -98,8 +98,8 @@ pub async fn login(
         .map(|_| format!("{:02x}", rand::random::<u8>()))
         .collect();
 
-    // Calculate expiry (7 days from now)
-    let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
+    // Calculate expiry (configurable, default 7 days)
+    let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 
     // Create session

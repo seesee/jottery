@@ -23,6 +23,7 @@ use crate::config::Config;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: SqlitePool,
+    pub config: Config,
 }
 
 /// Build CORS layer based on configuration
@@ -87,7 +88,10 @@ async fn main() {
     tracing::info!("Database migrations complete");
 
     // Build application state
-    let app_state = Arc::new(AppState { pool });
+    let app_state = Arc::new(AppState {
+        pool,
+        config: config.clone(),
+    });
 
     // Build protected sync routes with API key auth middleware
     let sync_routes = Router::new()

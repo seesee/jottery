@@ -21,23 +21,29 @@ impl std::fmt::Display for PasswordError {
 
 impl std::error::Error for PasswordError {}
 
-/// Hash a password using Argon2id
+/// Hash a password using Argon2id with custom parameters
 ///
-/// Uses Argon2id with:
-/// - Memory cost: 19456 KiB (19 MiB)
-/// - Time cost: 2 iterations
-/// - Parallelism: 1 thread
+/// # Parameters
+/// - `password`: The password to hash
+/// - `m_cost`: Memory cost in KiB (e.g., 19456 = 19 MiB)
+/// - `t_cost`: Time cost / iterations (e.g., 2)
+/// - `p_cost`: Parallelism / threads (e.g., 1)
 ///
 /// These parameters provide strong security while being reasonable for server-side auth.
-pub fn hash_password(password: &str) -> Result<String, PasswordError> {
+pub fn hash_password_with_params(
+    password: &str,
+    m_cost: u32,
+    t_cost: u32,
+    p_cost: u32,
+) -> Result<String, PasswordError> {
     // Generate random salt
     let salt = SaltString::generate(&mut OsRng);
 
     // Configure Argon2 parameters
     let params = ParamsBuilder::new()
-        .m_cost(19456) // 19 MiB memory
-        .t_cost(2)     // 2 iterations
-        .p_cost(1)     // 1 thread
+        .m_cost(m_cost)
+        .t_cost(t_cost)
+        .p_cost(p_cost)
         .build()
         .map_err(|e| PasswordError::HashError(e.to_string()))?;
 
@@ -54,6 +60,18 @@ pub fn hash_password(password: &str) -> Result<String, PasswordError> {
         .map_err(|e| PasswordError::HashError(e.to_string()))?;
 
     Ok(password_hash.to_string())
+}
+
+/// Hash a password using Argon2id with default parameters
+///
+/// Uses Argon2id with:
+/// - Memory cost: 19456 KiB (19 MiB)
+/// - Time cost: 2 iterations
+/// - Parallelism: 1 thread
+///
+/// For custom parameters, use `hash_password_with_params`.
+pub fn hash_password(password: &str) -> Result<String, PasswordError> {
+    hash_password_with_params(password, 19456, 2, 1)
 }
 
 /// Verify a password against its hash

@@ -11,7 +11,7 @@ use crate::{
         LoginRequest, LoginResponse, RegisterDeviceRequest, RegisterDeviceResponse,
         RegisterUserRequest, RegisterUserResponse, UserInfo,
     },
-    utils::password::{hash_password, verify_password},
+    utils::password::{hash_password_with_params, verify_password},
     AppState,
 };
 
@@ -47,8 +47,14 @@ pub async fn register_user(
         ));
     }
 
-    // Hash password
-    let password_hash = hash_password(&req.password).map_err(|e| {
+    // Hash password with configured Argon2 parameters
+    let password_hash = hash_password_with_params(
+        &req.password,
+        state.config.argon2_m_cost,
+        state.config.argon2_t_cost,
+        state.config.argon2_p_cost,
+    )
+    .map_err(|e| {
         tracing::error!("Password hashing failed: {}", e);
         crate::error::AppError::InternalServerError
     })?;
@@ -216,8 +222,8 @@ pub async fn login(
     // Generate session token
     let session_token = generate_session_token();
 
-    // Calculate expiry (7 days from now)
-    let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
+    // Calculate expiry (configurable, default 7 days)
+    let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 
     // Create session
