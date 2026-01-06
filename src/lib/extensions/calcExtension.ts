@@ -214,8 +214,8 @@ const calcPlugin = ViewPlugin.fromClass(
 				clearTimeout(this.timeout);
 			}
 
-			// Update on document change or selection change (cursor movement)
-			if (update.docChanged || update.selectionSet) {
+			// Update on document change, selection change, or focus change
+			if (update.docChanged || update.selectionSet || update.focusChanged) {
 				this.timeout = window.setTimeout(() => {
 					this.decorations = this.compute(update.view);
 					update.view.requestMeasure(); // Force re-render
@@ -224,9 +224,10 @@ const calcPlugin = ViewPlugin.fromClass(
 		}
 
 		compute(view: EditorView): DecorationSet {
-			// Get current cursor line to exclude from showing results
+			// Get current cursor line to filter error messages
 			const cursorPos = view.state.selection.main.head;
 			const currentLine = view.state.doc.lineAt(cursorPos).number;
+			const editorHasFocus = view.hasFocus;
 
 			// Reset evaluator for fresh scope
 			this.evaluator.reset();
@@ -239,8 +240,10 @@ const calcPlugin = ViewPlugin.fromClass(
 			for (const parsedLine of parsedLines) {
 				const result = this.evaluator.evaluateLine(parsedLine);
 
-				// Skip showing results for the current line being edited
-				if (parsedLine.lineNumber === currentLine) {
+				// Only hide errors for the current line while editor has focus
+				// This prevents distracting error messages while typing
+				// but still shows valid results
+				if (parsedLine.lineNumber === currentLine && editorHasFocus && result.isError) {
 					results.push({
 						lineNumber: parsedLine.lineNumber,
 						result: null,
