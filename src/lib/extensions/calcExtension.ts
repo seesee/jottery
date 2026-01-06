@@ -1,9 +1,88 @@
 import { ViewPlugin, Decoration, EditorView, WidgetType } from '@codemirror/view';
 import type { ViewUpdate, DecorationSet } from '@codemirror/view';
 import { Text } from '@codemirror/state';
+import { HighlightStyle, syntaxHighlighting, LanguageSupport } from '@codemirror/language';
+import { tags as t } from '@lezer/highlight';
+import { StreamLanguage } from '@codemirror/language';
 import * as math from 'mathjs';
 
 const RESULT_PREFIX = '  ';
+
+// Math.js built-in functions and constants
+const BUILTIN_FUNCTIONS = new Set([
+	'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
+	'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
+	'sqrt', 'cbrt', 'abs', 'ceil', 'floor', 'round', 'sign',
+	'exp', 'log', 'log10', 'log2', 'ln',
+	'min', 'max', 'mean', 'median', 'sum', 'prod',
+	'random', 'randomInt',
+	'gcd', 'lcm', 'mod', 'xgcd',
+	'factorial', 'gamma', 'combinations', 'permutations'
+]);
+
+const BUILTIN_CONSTANTS = new Set(['pi', 'e', 'tau', 'phi', 'i', 'true', 'false', 'null', 'Infinity', 'NaN']);
+
+// Simple tokenizer for calc language
+const calcLanguage = StreamLanguage.define({
+	token(stream, state) {
+		// Comments
+		if (stream.match(/^#.*/)) {
+			return 'comment';
+		}
+
+		// Numbers (including decimals and scientific notation)
+		if (stream.match(/^[0-9]+\.?[0-9]*([eE][+-]?[0-9]+)?/)) {
+			return 'number';
+		}
+
+		// Operators and punctuation
+		if (stream.match(/^[+\-*/%^=()[\],]/)) {
+			return 'operator';
+		}
+
+		// Words (functions, constants, variables, units)
+		const wordMatch = stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
+		if (wordMatch) {
+			const word = wordMatch[0];
+			if (BUILTIN_FUNCTIONS.has(word)) {
+				return 'keyword';
+			}
+			if (BUILTIN_CONSTANTS.has(word)) {
+				return 'atom';
+			}
+			return 'variableName';
+		}
+
+		// Skip whitespace
+		if (stream.match(/^\s+/)) {
+			return null;
+		}
+
+		// Default: consume one character
+		stream.next();
+		return null;
+	}
+});
+
+// Syntax highlighting theme
+const calcHighlightStyle = HighlightStyle.define([
+	{ tag: t.comment, color: '#6a9955' }, // Green
+	{ tag: t.number, color: '#b5cea8' }, // Light green
+	{ tag: t.keyword, color: '#4ec9b0' }, // Cyan (built-in functions)
+	{ tag: t.atom, color: '#569cd6' }, // Blue (constants)
+	{ tag: t.variableName, color: '#9cdcfe' }, // Light blue (user variables)
+	{ tag: t.operator, color: '#d4d4d4' } // Light gray
+]);
+
+// Dark theme variant
+const calcHighlightStyleDark = HighlightStyle.define([
+	{ tag: t.comment, color: '#6a9955' },
+	{ tag: t.number, color: '#b5cea8' },
+	{ tag: t.keyword, color: '#4ec9b0' },
+	{ tag: t.atom, color: '#569cd6' },
+	{ tag: t.variableName, color: '#9cdcfe' },
+	{ tag: t.operator, color: '#d4d4d4' }
+]);
 
 // Line parsing result
 interface ParsedLine {
@@ -267,7 +346,12 @@ const calcTheme = EditorView.baseTheme({
 
 // Export main extension
 export function calcExtension() {
-	return [calcPlugin, calcTheme];
+	return [
+		new LanguageSupport(calcLanguage),
+		syntaxHighlighting(calcHighlightStyle),
+		calcPlugin,
+		calcTheme
+	];
 }
 
 // Export classes for testing
