@@ -340,7 +340,7 @@
         {:else if previewType === 'pdf' && previewContent}
           <PdfViewer
             pdfUrl={previewContent}
-            filename={filenames.get(previewAttachment.id) || 'document.pdf'}
+            _filename={filenames.get(previewAttachment.id) || 'document.pdf'}
           />
         {:else if previewType === 'audio' && previewContent}
           <div class="flex items-center justify-center h-full">

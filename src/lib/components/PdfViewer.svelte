@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
 
   export let pdfUrl: string;
-  export let filename: string = 'document.pdf';
+  export let _filename: string = 'document.pdf'; // Kept for API compatibility
 
   let canvasContainer: HTMLDivElement;
   let currentPage = 1;

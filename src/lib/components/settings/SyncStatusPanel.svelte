@@ -8,9 +8,9 @@
   export let syncError: string;
 
   // Copy credentials
-  export let showCopiedMessage: boolean;
-  export let showCredentialsModal: boolean;
-  export let credentialsText: string;
+  export let _showCopiedMessage: boolean;
+  export let _showCredentialsModal: boolean;
+  export let _credentialsText: string;
 
   // Account management
   export let showAccountManagement: boolean;
@@ -32,7 +32,7 @@
 
   // Callbacks
   export let onSyncNow: () => void;
-  export let onDisconnectSync: () => void;
+  export let _onDisconnectSync: () => void;
   export let onCopySyncCredentials: () => void;
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
@@ -94,7 +94,7 @@
   bind:userSession
   bind:accountInfo
   bind:loadingAccountInfo
-  bind:deletingNotes
+  bind:_deletingNotes={deletingNotes}
   {onAccountLogin}
   {onAccountLogout}
   {onShowDeleteServerNotesConfirm}

@@ -24,7 +24,7 @@ const BUILTIN_CONSTANTS = new Set(['pi', 'e', 'tau', 'phi', 'i', 'true', 'false'
 
 // Simple tokenizer for calc language
 const calcLanguage = StreamLanguage.define({
-	token(stream, state) {
+	token(stream, _state) {
 		// Comments
 		if (stream.match(/^#.*/)) {
 			return 'comment';
@@ -42,7 +42,7 @@ const calcLanguage = StreamLanguage.define({
 
 		// Words (functions, constants, variables, units)
 		const wordMatch = stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
-		if (wordMatch) {
+		if (wordMatch && typeof wordMatch !== 'boolean') {
 			const word = wordMatch[0];
 			if (BUILTIN_FUNCTIONS.has(word)) {
 				return 'keyword';
@@ -72,16 +72,6 @@ const calcHighlightStyle = HighlightStyle.define([
 	{ tag: t.atom, color: '#569cd6' }, // Blue (constants)
 	{ tag: t.variableName, color: '#9cdcfe' }, // Light blue (user variables)
 	{ tag: t.operator, color: '#d4d4d4' } // Light gray
-]);
-
-// Dark theme variant
-const calcHighlightStyleDark = HighlightStyle.define([
-	{ tag: t.comment, color: '#6a9955' },
-	{ tag: t.number, color: '#b5cea8' },
-	{ tag: t.keyword, color: '#4ec9b0' },
-	{ tag: t.atom, color: '#569cd6' },
-	{ tag: t.variableName, color: '#9cdcfe' },
-	{ tag: t.operator, color: '#d4d4d4' }
 ]);
 
 // Line parsing result

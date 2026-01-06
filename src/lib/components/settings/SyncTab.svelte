@@ -131,7 +131,7 @@
         bind:userPassword
         bind:registeringUser
         bind:registeringDevice
-        bind:registeredUserId
+        bind:_registeredUserId={registeredUserId}
         bind:userRegistrationMessage
         bind:importCredentialsText
         bind:importing
@@ -147,9 +147,9 @@
         bind:syncStatus
         bind:syncing
         bind:syncError
-        bind:showCopiedMessage
-        bind:showCredentialsModal
-        bind:credentialsText
+        bind:_showCopiedMessage={showCopiedMessage}
+        bind:_showCredentialsModal={showCredentialsModal}
+        bind:_credentialsText={credentialsText}
         bind:showAccountManagement
         bind:accountEmail
         bind:accountPassword
@@ -159,7 +159,7 @@
         bind:loadingAccountInfo
         bind:deletingNotes
         {onSyncNow}
-        {onDisconnectSync}
+        _onDisconnectSync={onDisconnectSync}
         {onCopySyncCredentials}
         {onAccountLogin}
         {onAccountLogout}

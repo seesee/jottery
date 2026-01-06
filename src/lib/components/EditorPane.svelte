@@ -1376,7 +1376,7 @@
         {:else if previewType === 'pdf' && previewContent}
           <PdfViewer
             pdfUrl={previewContent}
-            filename="attachment.pdf"
+            _filename="attachment.pdf"
           />
         {:else if previewType === 'audio' && previewContent}
           <div class="flex items-center justify-center h-full">

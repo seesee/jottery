@@ -1124,7 +1124,7 @@
         <!-- ABOUT TAB -->
         {#if currentTab === 'about'}
           <AboutTab
-            bind:showDocumentation
+            bind:_showDocumentation={showDocumentation}
             onShowDocumentation={() => showDocumentation = true}
             onClose={onClose}
             stats={noteStats}

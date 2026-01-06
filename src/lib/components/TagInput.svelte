@@ -84,11 +84,12 @@
     <!-- Existing tags -->
     {#each tags as tag, index}
       <span class="tag-pill inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-md">
+        <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
         <span
           on:click={() => onTagClick?.(tag)}
           class="{onTagClick ? 'cursor-pointer hover:underline' : ''}"
           role={onTagClick ? 'button' : undefined}
-          tabindex={onTagClick ? 0 : undefined}
+          tabindex={onTagClick ? 0 : -1}
           on:keydown={(e) => {
             if (onTagClick && (e.key === 'Enter' || e.key === ' ')) {
               e.preventDefault();

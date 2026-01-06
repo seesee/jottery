@@ -14,7 +14,7 @@
     lastSyncAt: string | null;
   } | null;
   export let loadingAccountInfo: boolean;
-  export let deletingNotes: boolean;
+  export let _deletingNotes: boolean;
 
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;

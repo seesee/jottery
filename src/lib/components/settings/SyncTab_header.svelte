@@ -2,39 +2,39 @@
   import type { SyncStatus } from '../../types';
 
   // Sync configuration
-  export let syncStatus: SyncStatus | null;
-  export let syncEndpoint: string;
-  export let deviceName: string;
-  export let syncing: boolean;
-  export let syncError: string;
+  export let _syncStatus: SyncStatus | null;
+  export let _syncEndpoint: string;
+  export let _deviceName: string;
+  export let _syncing: boolean;
+  export let _syncError: string;
 
   // Registration state
-  export let registrationMode: 'select' | 'newUser' | 'existingUser';
-  export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
-  export let userEmail: string;
-  export let userPassword: string;
-  export let registeringUser: boolean;
-  export let registeringDevice: boolean;
-  export let registeredUserId: string;
-  export let userRegistrationMessage: string;
+  export let _registrationMode: 'select' | 'newUser' | 'existingUser';
+  export let _registrationStep: 'email' | 'pending' | 'device' | 'complete';
+  export let _userEmail: string;
+  export let _userPassword: string;
+  export let _registeringUser: boolean;
+  export let _registeringDevice: boolean;
+  export let _registeredUserId: string;
+  export let _userRegistrationMessage: string;
 
   // Import credentials
-  export let showImportCredentials: boolean;
-  export let importCredentialsText: string;
-  export let importing: boolean;
+  export let _showImportCredentials: boolean;
+  export let _importCredentialsText: string;
+  export let _importing: boolean;
 
   // Copy credentials
-  export let showCopiedMessage: boolean;
-  export let showCredentialsModal: boolean;
-  export let credentialsText: string;
+  export let _showCopiedMessage: boolean;
+  export let _showCredentialsModal: boolean;
+  export let _credentialsText: string;
 
   // Account management
-  export let showAccountManagement: boolean;
-  export let accountEmail: string;
-  export let accountPassword: string;
-  export let loggingIn: boolean;
-  export let userSession: { sessionId: string; email: string; isAdmin: boolean } | null;
-  export let accountInfo: {
+  export let _showAccountManagement: boolean;
+  export let _accountEmail: string;
+  export let _accountPassword: string;
+  export let _loggingIn: boolean;
+  export let _userSession: { sessionId: string; email: string; isAdmin: boolean } | null;
+  export let _accountInfo: {
     email: string;
     noteCount: number;
     attachmentCount: number;
@@ -43,19 +43,19 @@
     createdAt: string;
     lastSyncAt: string | null;
   } | null;
-  export let loadingAccountInfo: boolean;
-  export let deletingNotes: boolean;
-  export let showDeleteServerNotesConfirm: boolean;
+  export let _loadingAccountInfo: boolean;
+  export let _deletingNotes: boolean;
+  export let _showDeleteServerNotesConfirm: boolean;
 
   // Callbacks
-  export let onRegisterUser: () => void;
-  export let onRegisterDevice: () => void;
-  export let onResetRegistrationFlow: () => void;
-  export let onImportCredentials: () => void;
-  export let onSyncNow: () => void;
-  export let onDisconnectSync: () => void;
-  export let onCopySyncCredentials: () => void;
-  export let onAccountLogin: () => void;
-  export let onAccountLogout: () => void;
-  export let onDeleteServerNotes: () => void;
+  export let _onRegisterUser: () => void;
+  export let _onRegisterDevice: () => void;
+  export let _onResetRegistrationFlow: () => void;
+  export let _onImportCredentials: () => void;
+  export let _onSyncNow: () => void;
+  export let _onDisconnectSync: () => void;
+  export let _onCopySyncCredentials: () => void;
+  export let _onAccountLogin: () => void;
+  export let _onAccountLogout: () => void;
+  export let _onDeleteServerNotes: () => void;
 </script>

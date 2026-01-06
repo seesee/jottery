@@ -12,7 +12,7 @@
   export let userPassword: string;
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
-  export let registeredUserId: string;
+  export let _registeredUserId: string;
   export let userRegistrationMessage: string;
 
   // Import credentials
