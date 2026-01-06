@@ -18,6 +18,7 @@ export const CORE_LANGUAGES: SyntaxLanguage[] = [
   { id: 'javascript', name: 'JavaScript', aliases: ['js', 'jsx', 'mjs', 'cjs'], category: 'core', estimatedSize: 8 },
   { id: 'typescript', name: 'TypeScript', aliases: ['ts', 'tsx'], category: 'core', estimatedSize: 9 },
   { id: 'python', name: 'Python', aliases: ['py', 'gyp', 'ipython'], category: 'core', estimatedSize: 10 },
+  { id: 'perl', name: 'Perl', aliases: ['pl', 'pm'], category: 'core', estimatedSize: 9 },
   { id: 'markdown', name: 'Markdown', aliases: ['md', 'mkdown', 'mkd'], category: 'core', estimatedSize: 5 },
   { id: 'json', name: 'JSON', aliases: ['jsonc'], category: 'core', estimatedSize: 3 },
   { id: 'xml', name: 'HTML/XML', aliases: ['html', 'xhtml', 'rss', 'atom', 'xjb', 'xsd', 'xsl', 'plist', 'svg'], category: 'core', estimatedSize: 7 },
@@ -72,7 +73,6 @@ export const DATA_LANGUAGES: SyntaxLanguage[] = [
  * Other languages
  */
 export const OTHER_LANGUAGES: SyntaxLanguage[] = [
-  { id: 'perl', name: 'Perl', aliases: ['pl', 'pm'], category: 'other', estimatedSize: 9 },
   { id: 'r', name: 'R', aliases: [], category: 'other', estimatedSize: 7 },
   { id: 'matlab', name: 'MATLAB', aliases: [], category: 'other', estimatedSize: 8 },
   { id: 'lua', name: 'Lua', aliases: [], category: 'other', estimatedSize: 5 },

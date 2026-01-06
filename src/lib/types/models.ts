@@ -255,6 +255,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   syncEnabled: false,
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
-  enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'markdown', 'json', 'xml', 'css', 'bash', 'sql', 'calc'], // Core languages + SQL
+  enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'perl', 'markdown', 'json', 'xml', 'css', 'bash', 'sql', 'calc'], // Core languages + SQL
   defaultSyntaxLanguage: 'markdown', // Default language for new notes
 };
