@@ -3,7 +3,6 @@ import type { ViewUpdate, DecorationSet } from '@codemirror/view';
 import { Text } from '@codemirror/state';
 import * as math from 'mathjs';
 
-const DEBOUNCE_MS = 150;
 const RESULT_PREFIX = '  ';
 
 // Line parsing result
@@ -199,7 +198,6 @@ const calcPlugin = ViewPlugin.fromClass(
 		private parser: CalcParser;
 		private evaluator: CalcEvaluator;
 		private builder: DecorationBuilder;
-		private timeout: number | null = null;
 
 		constructor(view: EditorView) {
 			this.parser = new CalcParser();
@@ -237,15 +235,8 @@ const calcPlugin = ViewPlugin.fromClass(
 				return;
 			}
 
-			// Debounce updates to prevent lag while typing
-			if (this.timeout !== null) {
-				clearTimeout(this.timeout);
-			}
-
-			this.timeout = window.setTimeout(() => {
-				this.decorations = this.compute(update.view);
-				update.view.requestMeasure(); // Force re-render
-			}, DEBOUNCE_MS);
+			// Update decorations synchronously to prevent misalignment
+			this.decorations = this.compute(update.view);
 		}
 
 		compute(view: EditorView): DecorationSet {
@@ -267,9 +258,7 @@ const calcPlugin = ViewPlugin.fromClass(
 		}
 
 		destroy() {
-			if (this.timeout !== null) {
-				clearTimeout(this.timeout);
-			}
+			// Cleanup if needed
 		}
 	},
 	{
