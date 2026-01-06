@@ -198,14 +198,12 @@ const calcPlugin = ViewPlugin.fromClass(
 		private parser: CalcParser;
 		private evaluator: CalcEvaluator;
 		private builder: DecorationBuilder;
-		private cachedResults: EvaluationResult[] = [];
 
 		constructor(view: EditorView) {
 			this.parser = new CalcParser();
 			this.evaluator = new CalcEvaluator();
 			this.builder = new DecorationBuilder();
-			this.cachedResults = this.evaluate(view);
-			this.decorations = this.builder.buildDecorations(this.cachedResults, view.state.doc);
+			this.decorations = this.compute(view);
 		}
 
 		update(update: ViewUpdate) {
@@ -213,38 +211,16 @@ const calcPlugin = ViewPlugin.fromClass(
 				return;
 			}
 
-			// Check if we need to re-evaluate expressions
-			// or just update decoration positions
-			let hasMeaningfulChange = false;
-			update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-				const insertedText = inserted.toString();
-				const deletedLength = toA - fromA;
-
-				// Meaningful if we inserted non-whitespace
-				if (/\S/.test(insertedText)) {
-					hasMeaningfulChange = true;
-				}
-
-				// Meaningful if we deleted anything
-				if (deletedLength > 0) {
-					hasMeaningfulChange = true;
-				}
-			});
-
-			// Re-evaluate if content changed, otherwise just rebuild decorations
-			if (hasMeaningfulChange) {
-				this.cachedResults = this.evaluate(update.view);
-			}
-
-			// Always rebuild decorations to keep positions correct
-			this.decorations = this.builder.buildDecorations(this.cachedResults, update.view.state.doc);
+			// Always recompute to keep decorations aligned
+			// Expression evaluation is fast enough that we don't need to cache
+			this.decorations = this.compute(update.view);
 		}
 
-		evaluate(view: EditorView): EvaluationResult[] {
+		compute(view: EditorView): DecorationSet {
 			// Reset evaluator for fresh scope
 			this.evaluator.reset();
 
-			// Parse all lines
+			// Parse all lines (gets current line numbers)
 			const parsedLines = this.parser.parseDocument(view.state.doc);
 
 			// Evaluate in order (top-to-bottom) to maintain variable scope
@@ -254,7 +230,8 @@ const calcPlugin = ViewPlugin.fromClass(
 				results.push(result);
 			}
 
-			return results;
+			// Build decorations with current line positions
+			return this.builder.buildDecorations(results, view.state.doc);
 		}
 
 		destroy() {
