@@ -8,7 +8,6 @@ pub mod utils;
 
 // Re-export AppState for tests
 use sqlx::SqlitePool;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
