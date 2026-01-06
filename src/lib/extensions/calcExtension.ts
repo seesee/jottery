@@ -3,7 +3,7 @@ import type { ViewUpdate, DecorationSet } from '@codemirror/view';
 import { Text } from '@codemirror/state';
 import * as math from 'mathjs';
 
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150;
 const RESULT_PREFIX = '  ';
 
 // Line parsing result
@@ -110,16 +110,7 @@ class CalcEvaluator {
 		try {
 			const result = math.evaluate(parsedLine.expression, this.scope);
 
-			// For assignments, don't show result (variable is stored in scope)
-			if (parsedLine.isAssignment) {
-				return {
-					lineNumber: parsedLine.lineNumber,
-					result: null,
-					isError: false
-				};
-			}
-
-			// Format and return result
+			// Format and return result (including for assignments)
 			return {
 				lineNumber: parsedLine.lineNumber,
 				result: this.formatResult(result),

@@ -110,7 +110,7 @@ describe('CalcEvaluator', () => {
 		};
 
 		const result1 = evaluator.evaluateLine(line1);
-		expect(result1.result).toBeNull(); // Assignments don't show results
+		expect(result1.result).toBe('10'); // Assignments show their value
 
 		const result2 = evaluator.evaluateLine(line2);
 		expect(result2.result).toBe('15');
