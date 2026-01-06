@@ -285,8 +285,32 @@ fn generate_session_token() -> String {
 }
 
 fn is_valid_email(email: &str) -> bool {
-    // Basic email validation
-    email.contains('@') && email.contains('.') && email.len() > 3
+    // Basic email validation: local@domain.tld
+    let parts: Vec<&str> = email.split('@').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+
+    let local = parts[0];
+    let domain = parts[1];
+
+    // Local part must not be empty
+    if local.is_empty() {
+        return false;
+    }
+
+    // Domain must contain a dot and not be empty
+    if domain.is_empty() || !domain.contains('.') {
+        return false;
+    }
+
+    // Domain must have something before and after the dot
+    let domain_parts: Vec<&str> = domain.split('.').collect();
+    if domain_parts.iter().any(|p| p.is_empty()) {
+        return false;
+    }
+
+    true
 }
 
 #[cfg(test)]
