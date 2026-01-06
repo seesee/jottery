@@ -7,7 +7,7 @@ export interface SyntaxLanguage {
   id: string;
   name: string;
   aliases: string[];
-  category: 'core' | 'popular' | 'web' | 'systems' | 'data' | 'other';
+  category: 'core' | 'web' | 'systems' | 'data' | 'other';
   estimatedSize: number; // in KB
 }
 
@@ -27,25 +27,11 @@ export const CORE_LANGUAGES: SyntaxLanguage[] = [
 ];
 
 /**
- * Popular languages available via dynamic import
- */
-export const POPULAR_LANGUAGES: SyntaxLanguage[] = [
-  { id: 'sql', name: 'SQL', aliases: [], category: 'popular', estimatedSize: 8 },
-  { id: 'java', name: 'Java', aliases: ['jsp'], category: 'popular', estimatedSize: 12 },
-  { id: 'csharp', name: 'C#', aliases: ['cs'], category: 'popular', estimatedSize: 10 },
-  { id: 'php', name: 'PHP', aliases: [], category: 'popular', estimatedSize: 11 },
-  { id: 'ruby', name: 'Ruby', aliases: ['rb', 'gemspec', 'podspec', 'thor', 'irb'], category: 'popular', estimatedSize: 9 },
-  { id: 'go', name: 'Go', aliases: ['golang'], category: 'popular', estimatedSize: 8 },
-  { id: 'rust', name: 'Rust', aliases: ['rs'], category: 'popular', estimatedSize: 10 },
-  { id: 'swift', name: 'Swift', aliases: [], category: 'popular', estimatedSize: 11 },
-  { id: 'kotlin', name: 'Kotlin', aliases: ['kt', 'kts'], category: 'popular', estimatedSize: 10 },
-  { id: 'scala', name: 'Scala', aliases: [], category: 'popular', estimatedSize: 9 },
-];
-
-/**
  * Web development languages
  */
 export const WEB_LANGUAGES: SyntaxLanguage[] = [
+  { id: 'php', name: 'PHP', aliases: [], category: 'web', estimatedSize: 11 },
+  { id: 'ruby', name: 'Ruby', aliases: ['rb', 'gemspec', 'podspec', 'thor', 'irb'], category: 'web', estimatedSize: 9 },
   { id: 'scss', name: 'SCSS', aliases: [], category: 'web', estimatedSize: 7 },
   { id: 'sass', name: 'Sass', aliases: [], category: 'web', estimatedSize: 6 },
   { id: 'less', name: 'Less', aliases: [], category: 'web', estimatedSize: 6 },
@@ -57,6 +43,13 @@ export const WEB_LANGUAGES: SyntaxLanguage[] = [
  * Systems programming languages
  */
 export const SYSTEMS_LANGUAGES: SyntaxLanguage[] = [
+  { id: 'java', name: 'Java', aliases: ['jsp'], category: 'systems', estimatedSize: 12 },
+  { id: 'csharp', name: 'C#', aliases: ['cs'], category: 'systems', estimatedSize: 10 },
+  { id: 'go', name: 'Go', aliases: ['golang'], category: 'systems', estimatedSize: 8 },
+  { id: 'rust', name: 'Rust', aliases: ['rs'], category: 'systems', estimatedSize: 10 },
+  { id: 'swift', name: 'Swift', aliases: [], category: 'systems', estimatedSize: 11 },
+  { id: 'kotlin', name: 'Kotlin', aliases: ['kt', 'kts'], category: 'systems', estimatedSize: 10 },
+  { id: 'scala', name: 'Scala', aliases: [], category: 'systems', estimatedSize: 9 },
   { id: 'c', name: 'C', aliases: ['h'], category: 'systems', estimatedSize: 8 },
   { id: 'cpp', name: 'C++', aliases: ['cc', 'c++', 'h++', 'hpp', 'hh', 'hxx', 'cxx'], category: 'systems', estimatedSize: 15 },
   { id: 'objectivec', name: 'Objective-C', aliases: ['mm', 'objc', 'obj-c', 'obj-c++', 'objective-c++'], category: 'systems', estimatedSize: 9 },
@@ -66,6 +59,7 @@ export const SYSTEMS_LANGUAGES: SyntaxLanguage[] = [
  * Data and configuration languages
  */
 export const DATA_LANGUAGES: SyntaxLanguage[] = [
+  { id: 'sql', name: 'SQL', aliases: [], category: 'data', estimatedSize: 8 },
   { id: 'yaml', name: 'YAML', aliases: ['yml'], category: 'data', estimatedSize: 6 },
   { id: 'toml', name: 'TOML', aliases: [], category: 'data', estimatedSize: 5 },
   { id: 'ini', name: 'INI', aliases: [], category: 'data', estimatedSize: 3 },
@@ -96,7 +90,6 @@ export const OTHER_LANGUAGES: SyntaxLanguage[] = [
  */
 export const ALL_LANGUAGES: SyntaxLanguage[] = [
   ...CORE_LANGUAGES,
-  ...POPULAR_LANGUAGES,
   ...WEB_LANGUAGES,
   ...SYSTEMS_LANGUAGES,
   ...DATA_LANGUAGES,

@@ -83,6 +83,7 @@ export interface UserSettings {
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
   keyboardShortcuts?: KeyboardShortcuts; // Custom keyboard shortcuts
   enabledSyntaxLanguages?: string[]; // Enabled syntax highlighting languages (defaults to core languages)
+  defaultSyntaxLanguage?: string; // Default language for new notes (defaults to 'markdown')
 }
 
 /**
@@ -255,4 +256,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
   enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'markdown', 'json', 'xml', 'css', 'bash', 'sql', 'calc'], // Core languages + SQL
+  defaultSyntaxLanguage: 'markdown', // Default language for new notes
 };

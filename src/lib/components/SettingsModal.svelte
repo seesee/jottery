@@ -25,6 +25,7 @@
   let timezone = $settings.timezone || 'local';
   let rememberPassword = $settings.rememberPassword || false;
   let enabledSyntaxLanguages: string[] = $settings.enabledSyntaxLanguages || [];
+  let defaultSyntaxLanguage: string = $settings.defaultSyntaxLanguage || 'markdown';
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -696,6 +697,7 @@
         rememberPassword,
         keyboardShortcuts: tempShortcuts,
         enabledSyntaxLanguages,
+        defaultSyntaxLanguage,
       });
 
       // Update store
@@ -711,6 +713,7 @@
         rememberPassword,
         keyboardShortcuts: tempShortcuts,
         enabledSyntaxLanguages,
+        defaultSyntaxLanguage,
       }));
 
       toast.success($_('settings.settingsSaved'));
@@ -1049,7 +1052,7 @@
 
         <!-- EDITOR TAB -->
         {#if currentTab === 'editor'}
-          <EditorTab bind:enabledSyntaxLanguages />
+          <EditorTab bind:enabledSyntaxLanguages bind:defaultSyntaxLanguage />
         {/if}
 
         <!-- KEYBOARD SHORTCUTS TAB -->
