@@ -80,6 +80,12 @@ test.describe('Smoke Tests', () => {
   test('basic navigation elements are present', async ({ page }) => {
     await page.goto('/');
 
+    // Wait for the app to be hydrated - look for the app root
+    await page.waitForSelector('#app', { state: 'attached' });
+
+    // Wait a bit for Svelte to render the UI
+    await page.waitForTimeout(500);
+
     // Should have some form of navigation or controls
     // Look for common UI elements without being too specific
     const hasButtons = await page.locator('button').count() > 0;
