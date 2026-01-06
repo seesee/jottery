@@ -245,7 +245,7 @@ class ResultWidget extends WidgetType {
 	}
 }
 
-// Decoration Builder: Create inline result widgets
+// Decoration Builder: Create inline result widgets and error line markers
 class DecorationBuilder {
 	buildDecorations(results: EvaluationResult[], doc: Text): DecorationSet {
 		const decorations: any[] = [];
@@ -253,17 +253,23 @@ class DecorationBuilder {
 		for (const result of results) {
 			if (result.result === null) continue;
 
-			// Get line end position
+			// Get line position
 			const line = doc.line(result.lineNumber);
-			const pos = line.to;
 
-			// Create widget decoration
-			const widget = Decoration.widget({
-				widget: new ResultWidget(result.result, result.isError),
-				side: 1 // Position after cursor
-			});
-
-			decorations.push(widget.range(pos));
+			if (result.isError) {
+				// For errors, just mark the line (red gutter)
+				const lineDeco = Decoration.line({
+					class: 'cm-calc-error-line'
+				});
+				decorations.push(lineDeco.range(line.from));
+			} else {
+				// For successful results, show the value
+				const widget = Decoration.widget({
+					widget: new ResultWidget(result.result, result.isError),
+					side: 1 // Position after cursor
+				});
+				decorations.push(widget.range(line.to));
+			}
 		}
 
 		return Decoration.set(decorations, true);
@@ -322,7 +328,7 @@ const calcPlugin = ViewPlugin.fromClass(
 	}
 );
 
-// Theme: Styling for result widgets
+// Theme: Styling for result widgets and error lines
 const calcTheme = EditorView.baseTheme({
 	'.cm-calc-result': {
 		color: '#6b7280', // gray-500
@@ -333,14 +339,11 @@ const calcTheme = EditorView.baseTheme({
 	'.dark .cm-calc-result': {
 		color: '#9ca3af' // gray-400
 	},
-	'.cm-calc-error': {
-		color: '#ef4444', // red-500
-		fontStyle: 'italic',
-		marginLeft: '1em',
-		userSelect: 'none'
+	'.cm-calc-error-line .cm-gutterElement': {
+		color: '#ef4444 !important' // red-500
 	},
-	'.dark .cm-calc-error': {
-		color: '#f87171' // red-400
+	'.dark .cm-calc-error-line .cm-gutterElement': {
+		color: '#f87171 !important' // red-400
 	}
 });
 
