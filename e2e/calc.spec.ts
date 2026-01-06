@@ -153,10 +153,12 @@ test.describe('Calculator Mode', () => {
 		// Wait for debounced evaluation
 		await page.waitForTimeout(500);
 
-		// Check for error display
-		const error = page.locator('.cm-calc-error');
-		await expect(error).toBeVisible();
-		await expect(error).toContainText('Error');
+		// Check for error - errors now show as red line numbers, not inline text
+		const errorLine = page.locator('.cm-calc-error-line');
+		await expect(errorLine).toBeVisible();
+		// No result should be shown for error lines
+		const result = page.locator('.cm-calc-result');
+		await expect(result).toHaveCount(0);
 	});
 
 	test('should handle unit conversions', async ({ page }) => {
@@ -202,10 +204,12 @@ test.describe('Calculator Mode', () => {
 		let result = page.locator('.cm-calc-result');
 		await expect(result).toContainText('15');
 
-		// Edit the calculation
+		// Edit the calculation - clear and type new value
 		await editor.click();
-		await page.keyboard.press('Control+A'); // Select all
-		await editor.pressSequentially('10 + 10');
+		// Triple-click to select all content
+		await editor.click({ clickCount: 3 });
+		// Type new value (this will replace selected text)
+		await page.keyboard.type('10 + 10');
 		await page.waitForTimeout(500);
 
 		// Check updated result
