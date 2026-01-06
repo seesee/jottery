@@ -70,6 +70,7 @@ pub fn hash_password_with_params(
 /// - Parallelism: 1 thread
 ///
 /// For custom parameters, use `hash_password_with_params`.
+#[allow(dead_code)]
 pub fn hash_password(password: &str) -> Result<String, PasswordError> {
     hash_password_with_params(password, 19456, 2, 1)
 }
