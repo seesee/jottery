@@ -209,26 +209,46 @@ const calcPlugin = ViewPlugin.fromClass(
 		}
 
 		update(update: ViewUpdate) {
+			// Only recalculate on meaningful document changes
+			// Don't recalculate on cursor movement or whitespace-only changes
+			if (!update.docChanged) {
+				return;
+			}
+
+			// Check if the change was only whitespace (no actual content change)
+			let hasMeaningfulChange = false;
+			update.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+				const insertedText = inserted.toString();
+				const deletedLength = toA - fromA;
+
+				// Meaningful if we inserted non-whitespace
+				if (/\S/.test(insertedText)) {
+					hasMeaningfulChange = true;
+				}
+
+				// Meaningful if we deleted anything (even whitespace, as it affects expressions)
+				if (deletedLength > 0) {
+					hasMeaningfulChange = true;
+				}
+			});
+
+			// Don't recalculate for whitespace-only insertions
+			if (!hasMeaningfulChange) {
+				return;
+			}
+
 			// Debounce updates to prevent lag while typing
 			if (this.timeout !== null) {
 				clearTimeout(this.timeout);
 			}
 
-			// Update on document change, selection change, or focus change
-			if (update.docChanged || update.selectionSet || update.focusChanged) {
-				this.timeout = window.setTimeout(() => {
-					this.decorations = this.compute(update.view);
-					update.view.requestMeasure(); // Force re-render
-				}, DEBOUNCE_MS);
-			}
+			this.timeout = window.setTimeout(() => {
+				this.decorations = this.compute(update.view);
+				update.view.requestMeasure(); // Force re-render
+			}, DEBOUNCE_MS);
 		}
 
 		compute(view: EditorView): DecorationSet {
-			// Get current cursor line
-			const cursorPos = view.state.selection.main.head;
-			const currentLine = view.state.doc.lineAt(cursorPos).number;
-			const editorHasFocus = view.hasFocus;
-
 			// Reset evaluator for fresh scope
 			this.evaluator.reset();
 
@@ -239,21 +259,10 @@ const calcPlugin = ViewPlugin.fromClass(
 			const results: EvaluationResult[] = [];
 			for (const parsedLine of parsedLines) {
 				const result = this.evaluator.evaluateLine(parsedLine);
-
-				// Don't show ANY decoration for the current line while editor has focus
-				// This prevents visual glitches and distracting updates while typing
-				if (parsedLine.lineNumber === currentLine && editorHasFocus) {
-					results.push({
-						lineNumber: parsedLine.lineNumber,
-						result: null,
-						isError: false
-					});
-				} else {
-					results.push(result);
-				}
+				results.push(result);
 			}
 
-			// Build decorations
+			// Build decorations - show all results
 			return this.builder.buildDecorations(results, view.state.doc);
 		}
 
