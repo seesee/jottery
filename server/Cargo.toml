@@ -23,7 +23,7 @@ path = "src/bin/gen_password_hash.rs"
 # Web framework
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
+tower = "0.5"
 tower-http = { version = "0.5", features = ["cors", "compression-gzip", "fs"] }
 
 # Database
@@ -58,3 +58,4 @@ chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 reqwest = { version = "0.11", features = ["json"] }
+http-body-util = "0.1"
