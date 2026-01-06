@@ -223,7 +223,8 @@ const calcPlugin = ViewPlugin.fromClass(
 				clearTimeout(this.timeout);
 			}
 
-			if (update.docChanged) {
+			// Update on document change or selection change (cursor movement)
+			if (update.docChanged || update.selectionSet) {
 				this.timeout = window.setTimeout(() => {
 					this.decorations = this.compute(update.view);
 					update.view.requestMeasure(); // Force re-render
@@ -232,6 +233,10 @@ const calcPlugin = ViewPlugin.fromClass(
 		}
 
 		compute(view: EditorView): DecorationSet {
+			// Get current cursor line to exclude from showing results
+			const cursorPos = view.state.selection.main.head;
+			const currentLine = view.state.doc.lineAt(cursorPos).number;
+
 			// Reset evaluator for fresh scope
 			this.evaluator.reset();
 
@@ -242,7 +247,17 @@ const calcPlugin = ViewPlugin.fromClass(
 			const results: EvaluationResult[] = [];
 			for (const parsedLine of parsedLines) {
 				const result = this.evaluator.evaluateLine(parsedLine);
-				results.push(result);
+
+				// Skip showing results for the current line being edited
+				if (parsedLine.lineNumber === currentLine) {
+					results.push({
+						lineNumber: parsedLine.lineNumber,
+						result: null,
+						isError: false
+					});
+				} else {
+					results.push(result);
+				}
 			}
 
 			// Build decorations
