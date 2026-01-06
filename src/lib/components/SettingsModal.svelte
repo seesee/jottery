@@ -43,10 +43,8 @@
   let importing = false;
   let importProgress = { current: 0, total: 0 };
   let importResult: { imported: number; skipped: number; errors: string[]; attachments: number; tags: number } | null = null;
-  let showCopiedMessage = false;
   let showCredentialsModal = false;
   let credentialsText = '';
-  let showDisconnectSyncConfirm = false;
 
   // Multi-user registration state
   let registrationMode: 'select' | 'newUser' | 'existingUser' = 'select';
@@ -55,7 +53,6 @@
   let registeringUser = false;
   let registeringDevice = false;
   let registrationStep: 'email' | 'pending' | 'device' | 'complete' = 'email';
-  let registeredUserId = '';
   let userRegistrationMessage = '';
 
   // User account management state
@@ -74,7 +71,6 @@
     lastSyncAt: string | null;
   } | null = null;
   let loadingAccountInfo = false;
-  let deletingNotes = false;
   let showDeleteServerNotesConfirm = false;
 
   // Keyboard shortcut recording
@@ -198,7 +194,6 @@
     try {
       const response = await authService.registerUser(syncEndpoint, userEmail, userPassword);
 
-      registeredUserId = response.userId;
       userRegistrationMessage = response.message;
 
       if (response.status === 'pending_approval') {
@@ -298,7 +293,6 @@
     registrationStep = 'email';
     userEmail = '';
     userPassword = '';
-    registeredUserId = '';
     userRegistrationMessage = '';
     syncError = '';
   }
@@ -398,7 +392,6 @@
   async function handleDeleteAllNotes() {
     if (!userSession || !syncEndpoint) return;
 
-    deletingNotes = true;
     syncError = '';
     try {
       const response = await fetch(`${syncEndpoint}/api/v1/user/notes`, {
@@ -420,8 +413,6 @@
     } catch (error) {
       console.error('Failed to delete notes:', error);
       syncError = error instanceof Error ? error.message : 'Failed to delete notes';
-    } finally {
-      deletingNotes = false;
     }
   }
 
@@ -560,38 +551,6 @@
       syncError = error instanceof Error ? error.message : 'Sync failed';
     } finally {
       syncing = false;
-    }
-  }
-
-  function handleDisconnectSync() {
-    showDisconnectSyncConfirm = true;
-  }
-
-  async function confirmDisconnectSync() {
-    showDisconnectSyncConfirm = false;
-    try {
-
-      // Clear sync metadata
-      await syncRepository.updateMetadata({
-        clientId: undefined,
-        syncEndpoint: undefined,
-        syncEnabled: false,
-        apiKey: undefined,
-      });
-
-      // Update settings
-      await settingsRepository.update({
-        syncEndpoint: undefined,
-        syncEnabled: false,
-      });
-
-      // Update local state
-      syncEndpoint = '';
-      await loadSyncStatus();
-
-    } catch (error) {
-      console.error('Failed to disconnect from sync:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to disconnect';
     }
   }
 
@@ -1082,13 +1041,9 @@
             bind:userPassword
             bind:registeringUser
             bind:registeringDevice
-            bind:registeredUserId
             bind:userRegistrationMessage
             bind:importCredentialsText
             bind:importing
-            bind:showCopiedMessage
-            bind:showCredentialsModal
-            bind:credentialsText
             bind:showAccountManagement
             bind:accountEmail
             bind:accountPassword
@@ -1096,13 +1051,11 @@
             bind:userSession
             bind:accountInfo
             bind:loadingAccountInfo
-            bind:deletingNotes
             onRegisterUser={handleRegisterUser}
             onRegisterDevice={handleRegisterDevice}
             onResetRegistrationFlow={resetRegistrationFlow}
             onImportCredentials={handleImportCredentials}
             onSyncNow={handleSyncNow}
-            onDisconnectSync={handleDisconnectSync}
             onCopySyncCredentials={handleCopySyncCredentials}
             onAccountLogin={handleAccountLogin}
             onAccountLogout={handleAccountLogout}
@@ -1124,7 +1077,6 @@
         <!-- ABOUT TAB -->
         {#if currentTab === 'about'}
           <AboutTab
-            bind:_showDocumentation={showDocumentation}
             onShowDocumentation={() => showDocumentation = true}
             onClose={onClose}
             stats={noteStats}
@@ -1173,18 +1125,6 @@
     requireTextMatch={$_('confirm.deleteKeyword')}
     onConfirm={confirmDeleteDatabase}
     onCancel={() => showDeleteConfirm = false}
-  />
-
-  <!-- Disconnect Sync Confirmation Modal -->
-  <ConfirmModal
-    show={showDisconnectSyncConfirm}
-    title={$_('confirm.disconnectSync.title')}
-    message={$_('confirm.disconnectSync.message')}
-    confirmText={$_('confirm.disconnectSync.confirmButton')}
-    cancelText={$_('confirm.disconnectSync.cancelButton')}
-    confirmClass="bg-orange-600 hover:bg-orange-700"
-    onConfirm={confirmDisconnectSync}
-    onCancel={() => showDisconnectSyncConfirm = false}
   />
 
   <!-- Delete Server Notes Confirmation Modal -->

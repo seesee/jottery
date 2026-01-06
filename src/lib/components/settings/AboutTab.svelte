@@ -4,7 +4,6 @@
   import { tagService } from '../../services';
   import { searchQuery } from '../../stores/appStore';
 
-  export let _showDocumentation: boolean;
   export let onShowDocumentation: () => void;
   export let onClose: () => void;
   export let stats: { total: number; active: number; deleted: number; pinned: number; } | null = null;

@@ -12,7 +12,6 @@
   export let userPassword: string;
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
-  export let _registeredUserId: string;
   export let userRegistrationMessage: string;
 
   // Import credentials

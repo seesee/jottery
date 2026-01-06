@@ -22,17 +22,11 @@
   export let userPassword: string;
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
-  export let registeredUserId: string;
   export let userRegistrationMessage: string;
 
   // Import credentials
   export let importCredentialsText: string;
   export let importing: boolean;
-
-  // Copy credentials
-  export let showCopiedMessage: boolean;
-  export let showCredentialsModal: boolean;
-  export let credentialsText: string;
 
   // Account management
   export let showAccountManagement: boolean;
@@ -50,7 +44,6 @@
     lastSyncAt: string | null;
   } | null;
   export let loadingAccountInfo: boolean;
-  export let deletingNotes: boolean;
 
   // Callbacks
   export let onRegisterUser: () => void;
@@ -58,7 +51,6 @@
   export let onResetRegistrationFlow: () => void;
   export let onImportCredentials: () => void;
   export let onSyncNow: () => void;
-  export let onDisconnectSync: () => void;
   export let onCopySyncCredentials: () => void;
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
@@ -131,7 +123,6 @@
         bind:userPassword
         bind:registeringUser
         bind:registeringDevice
-        bind:_registeredUserId={registeredUserId}
         bind:userRegistrationMessage
         bind:importCredentialsText
         bind:importing
@@ -147,9 +138,6 @@
         bind:syncStatus
         bind:syncing
         bind:syncError
-        bind:_showCopiedMessage={showCopiedMessage}
-        bind:_showCredentialsModal={showCredentialsModal}
-        bind:_credentialsText={credentialsText}
         bind:showAccountManagement
         bind:accountEmail
         bind:accountPassword
@@ -157,9 +145,7 @@
         bind:userSession
         bind:accountInfo
         bind:loadingAccountInfo
-        bind:deletingNotes
         {onSyncNow}
-        _onDisconnectSync={onDisconnectSync}
         {onCopySyncCredentials}
         {onAccountLogin}
         {onAccountLogout}

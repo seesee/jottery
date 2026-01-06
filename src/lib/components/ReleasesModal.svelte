@@ -16,7 +16,11 @@
 </script>
 
 {#if show}
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" on:click={onClose}>
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md" on:click|stopPropagation>
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">{$_('releases.title')}</h2>
       <p class="mb-4 text-gray-700 dark:text-gray-300">{$_('releases.description')}</p>
