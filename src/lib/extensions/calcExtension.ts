@@ -224,7 +224,7 @@ const calcPlugin = ViewPlugin.fromClass(
 		}
 
 		compute(view: EditorView): DecorationSet {
-			// Get current cursor line to filter error messages
+			// Get current cursor line
 			const cursorPos = view.state.selection.main.head;
 			const currentLine = view.state.doc.lineAt(cursorPos).number;
 			const editorHasFocus = view.hasFocus;
@@ -235,15 +235,14 @@ const calcPlugin = ViewPlugin.fromClass(
 			// Parse all lines
 			const parsedLines = this.parser.parseDocument(view.state.doc);
 
-			// Evaluate in order (top-to-bottom)
+			// Evaluate in order (top-to-bottom) to maintain variable scope
 			const results: EvaluationResult[] = [];
 			for (const parsedLine of parsedLines) {
 				const result = this.evaluator.evaluateLine(parsedLine);
 
-				// Only hide errors for the current line while editor has focus
-				// This prevents distracting error messages while typing
-				// but still shows valid results
-				if (parsedLine.lineNumber === currentLine && editorHasFocus && result.isError) {
+				// Don't show ANY decoration for the current line while editor has focus
+				// This prevents visual glitches and distracting updates while typing
+				if (parsedLine.lineNumber === currentLine && editorHasFocus) {
 					results.push({
 						lineNumber: parsedLine.lineNumber,
 						result: null,
