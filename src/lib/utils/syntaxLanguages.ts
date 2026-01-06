@@ -23,6 +23,7 @@ export const CORE_LANGUAGES: SyntaxLanguage[] = [
   { id: 'xml', name: 'HTML/XML', aliases: ['html', 'xhtml', 'rss', 'atom', 'xjb', 'xsd', 'xsl', 'plist', 'svg'], category: 'core', estimatedSize: 7 },
   { id: 'css', name: 'CSS', aliases: [], category: 'core', estimatedSize: 6 },
   { id: 'bash', name: 'Bash/Shell', aliases: ['sh', 'zsh'], category: 'core', estimatedSize: 5 },
+  { id: 'calc', name: 'Calculator (REPL)', aliases: ['repl', 'repl-calc'], category: 'core', estimatedSize: 180 },
 ];
 
 /**

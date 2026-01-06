@@ -12,6 +12,7 @@
   import { StreamLanguage, LanguageDescription, LanguageSupport } from '@codemirror/language';
   import { perl } from '@codemirror/legacy-modes/mode/perl';
   import { shell } from '@codemirror/legacy-modes/mode/shell';
+  import { calcExtension } from '../extensions/calcExtension';
   import { oneDark } from '@codemirror/theme-one-dark';
   import { lineNumbers } from '@codemirror/view';
   import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
@@ -79,6 +80,8 @@
   // Get language extension based on language prop
   function getLanguageExtension() {
     switch (language) {
+      case 'calc':
+        return calcExtension();
       case 'javascript':
         return javascript();
       case 'python':
