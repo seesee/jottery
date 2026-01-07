@@ -6,6 +6,8 @@
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
+  import { notes } from '../stores/appStore';
+  import { searchService } from '../services/searchService';
 
   // Helper to get formatted date synchronously (for use in templates)
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -35,7 +37,23 @@
   async function handleRestore(noteId: string) {
     try {
       await noteService.restoreNote(noteId);
-      // Reload deleted notes
+
+      // Fetch the restored note and add it to the notes store
+      const restoredNote = await noteService.getNote(noteId);
+      if (restoredNote) {
+        notes.update(allNotes => {
+          // Insert after pinned notes
+          const pinnedCount = allNotes.filter(n => n.pinned).length;
+          const newNotes = [...allNotes];
+          newNotes.splice(pinnedCount, 0, restoredNote);
+          return newNotes;
+        });
+
+        // Add to search index
+        searchService.updateNote(restoredNote);
+      }
+
+      // Reload deleted notes list
       await loadDeletedNotes();
     } catch (error) {
       console.error('Failed to restore note:', error);
