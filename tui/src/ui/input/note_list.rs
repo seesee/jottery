@@ -235,20 +235,30 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Char(c) => {
                 app.search_input.push(c);
                 app.selected_note = 0; // Reset selection when search changes
+                let filtered = app.filtered_notes();
+                app.selected_note_id = filtered.first().map(|n| n.id.clone());
             }
             KeyCode::Backspace => {
                 app.search_input.pop();
                 app.selected_note = 0;
+                let filtered = app.filtered_notes();
+                app.selected_note_id = filtered.first().map(|n| n.id.clone());
             }
             KeyCode::Down => {
                 let filtered_count = app.filtered_notes().len();
                 if filtered_count > 0 && app.selected_note < filtered_count - 1 {
                     app.selected_note += 1;
+                    // Update selected note ID after index change
+                    let filtered = app.filtered_notes();
+                    app.selected_note_id = filtered.get(app.selected_note).map(|n| n.id.clone());
                 }
             }
             KeyCode::Up => {
                 if app.selected_note > 0 {
                     app.selected_note -= 1;
+                    // Update selected note ID after index change
+                    let filtered = app.filtered_notes();
+                    app.selected_note_id = filtered.get(app.selected_note).map(|n| n.id.clone());
                 }
             }
             _ => {}
@@ -505,6 +515,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     let note_count = app.filtered_notes().len();
                     if note_count > 0 && app.selected_note < note_count - 1 {
                         app.selected_note += 1;
+                        // Update selected note ID after index change
+                        app.selected_note_id = app.filtered_notes().get(app.selected_note).map(|n| n.id.clone());
                         app.preview_scroll_offset = 0;
                         // Reset focused panel when changing notes
                         app.focused_panel = FocusedPanel::NoteContent;
@@ -532,6 +544,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     // Navigate notes
                     if app.selected_note > 0 {
                         app.selected_note -= 1;
+                        // Update selected note ID after index change
+                        app.selected_note_id = app.filtered_notes().get(app.selected_note).map(|n| n.id.clone());
                         app.preview_scroll_offset = 0;
                         // Reset focused panel when changing notes
                         app.focused_panel = FocusedPanel::NoteContent;

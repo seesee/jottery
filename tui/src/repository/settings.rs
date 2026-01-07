@@ -35,7 +35,7 @@ impl<'a> SettingsRepository<'a> {
                         auto_lock_timeout: row.get(3)?,
                         sync_enabled: row.get::<_, i32>(4)? != 0,
                         sync_endpoint: row.get(5)?,
-                        auto_sync_interval_minutes: row.get::<_, Option<i32>>(6)?.unwrap_or(5),
+                        auto_sync_interval_minutes: row.get::<_, Option<i32>>(6)?.unwrap_or(1),
                         remember_password: row.get::<_, Option<i32>>(7)?.unwrap_or(0) != 0,
                         stored_password: decoded_password,
                     })

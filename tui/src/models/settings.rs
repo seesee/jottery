@@ -18,7 +18,7 @@ pub struct UserSettings {
 }
 
 fn default_auto_sync_interval() -> i32 {
-    5 // Default to 5 minutes like web client
+    1 // Default to 1 minute for responsive sync
 }
 
 /// Theme options (color scheme names)
@@ -162,7 +162,7 @@ impl UserSettings {
             auto_lock_timeout: 15, // 15 minutes
             sync_enabled: false,
             sync_endpoint: None,
-            auto_sync_interval_minutes: 5, // 5 minutes like web client
+            auto_sync_interval_minutes: 1, // 1 minute for responsive sync
             remember_password: false, // Disabled by default for security
             stored_password: None,
         }

@@ -15,7 +15,7 @@ pub struct SyncMetadata {
     pub user_email: Option<String>,     // User email (for multi-user auth)
     pub sync_enabled: bool,
     pub sync_endpoint: String,
-    pub auto_sync_interval: Option<i32>, // Minutes (0 = disabled, default: 5)
+    pub auto_sync_interval: Option<i32>, // Minutes (0 = disabled, default: 1)
 }
 
 impl Default for SyncMetadata {
@@ -29,7 +29,7 @@ impl Default for SyncMetadata {
             user_email: None,
             sync_enabled: false,
             sync_endpoint: String::new(),
-            auto_sync_interval: Some(5),
+            auto_sync_interval: Some(1),
         }
     }
 }

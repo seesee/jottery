@@ -113,6 +113,8 @@ pub struct App {
     pub(crate) notes: Vec<Note>,
     /// Selected note index
     pub selected_note: usize,
+    /// Selected note ID (persists through reloads/syncs)
+    pub(crate) selected_note_id: Option<String>,
     /// Multi-selected note IDs
     pub selected_note_ids: HashSet<String>,
     /// Whether multi-select mode is active
@@ -204,6 +206,7 @@ impl App {
             crypto: CryptoService::new(),
             notes: Vec::new(),
             selected_note: 0,
+            selected_note_id: None,
             selected_note_ids: HashSet::new(),
             is_multi_select_mode: false,
             last_selected_index: None,
@@ -494,26 +497,21 @@ impl App {
     /// Load notes from database
     fn load_notes(&mut self) -> Result<()> {
         if let (Some(db), Some(key)) = (&self.db, &self.key) {
-            // Remember the currently selected note's ID before reload
-            let selected_note_id = if !self.notes.is_empty() && self.selected_note < self.notes.len() {
-                Some(self.notes[self.selected_note].id.clone())
-            } else {
-                None
-            };
-
             let repo = NoteRepository::new(db.connection());
             self.notes = repo.list(false, key)?;
 
-            // Restore selection to the same note if it still exists
-            if let Some(note_id) = selected_note_id {
-                if let Some(index) = self.notes.iter().position(|n| n.id == note_id) {
+            // Restore selection to the same note if it still exists (using persisted ID)
+            if let Some(note_id) = &self.selected_note_id {
+                if let Some(index) = self.notes.iter().position(|n| &n.id == note_id) {
                     self.selected_note = index;
                 } else {
-                    // Note was deleted, select first note
+                    // Note was deleted, select first note and update ID
                     self.selected_note = 0;
+                    self.selected_note_id = self.notes.first().map(|n| n.id.clone());
                 }
             } else {
                 self.selected_note = 0;
+                self.selected_note_id = self.notes.first().map(|n| n.id.clone());
             }
         }
         Ok(())

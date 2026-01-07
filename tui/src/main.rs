@@ -785,7 +785,7 @@ fn main() -> Result<()> {
                 user_email: Some(email.clone()),
                 sync_enabled: true,
                 sync_endpoint: server.clone(),
-                auto_sync_interval: Some(5),
+                auto_sync_interval: Some(1),
             };
 
             sync_repo.update_metadata(&sync_metadata)?;
