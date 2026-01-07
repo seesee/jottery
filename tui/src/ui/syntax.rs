@@ -12,6 +12,7 @@ use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
 use crate::models::SyntaxLanguage;
+use super::calc;
 
 /// Syntax highlighter for note content
 pub struct SyntaxHighlighter {
@@ -38,11 +39,16 @@ impl SyntaxHighlighter {
         }
     }
 
-    /// Highlight text with syntax highlighting or render markdown
+    /// Highlight text with syntax highlighting or render markdown/calc
     pub fn highlight<'a>(&self, text: &'a str, language: SyntaxLanguage) -> Text<'a> {
         // Special handling for markdown - render it instead of highlighting
         if language == SyntaxLanguage::Markdown {
             return self.render_markdown(text);
+        }
+
+        // Special handling for calc - evaluate and render with results
+        if language == SyntaxLanguage::Calc {
+            return calc::render_calc(text);
         }
 
         // Map our SyntaxLanguage enum to syntect syntax names
@@ -57,6 +63,7 @@ impl SyntaxHighlighter {
             SyntaxLanguage::Sql => "SQL",
             SyntaxLanguage::Bash => "Bash",
             SyntaxLanguage::Perl => "Perl",
+            SyntaxLanguage::Calc => "Plain Text", // Won't reach here due to above check
         };
 
         // Try to find the syntax definition

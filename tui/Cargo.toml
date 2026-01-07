@@ -83,6 +83,9 @@ syntect = "5.3"
 # Markdown parsing
 pulldown-cmark = "0.12"
 
+# Math expression evaluation (for calc mode)
+evalexpr = "13.1"
+
 # Internationalization
 rust-i18n = "3"
 

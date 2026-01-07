@@ -15,10 +15,12 @@
 //! - [`helpers`] - Markdown processing utilities
 //! - [`color_scheme`] - Color scheme definitions
 //! - [`syntax`] - Syntax highlighting
+//! - [`calc`] - Calculator expression evaluator
 //! - [`event`] - Terminal event handling
 //! - [`terminal`] - Terminal initialization and management
 
 pub mod app;
+pub mod calc;
 pub mod color_scheme;
 pub mod event;
 pub mod helpers;

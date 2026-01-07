@@ -38,6 +38,7 @@ pub enum SyntaxLanguage {
     Sql,
     Bash,
     Perl,
+    Calc,
 }
 
 
@@ -54,14 +55,15 @@ impl SyntaxLanguage {
             Self::Css => Self::Sql,
             Self::Sql => Self::Bash,
             Self::Bash => Self::Perl,
-            Self::Perl => Self::Plain,
+            Self::Perl => Self::Calc,
+            Self::Calc => Self::Plain,
         }
     }
 
     /// Get the previous syntax language in the cycle
     pub fn prev(self) -> Self {
         match self {
-            Self::Plain => Self::Perl,
+            Self::Plain => Self::Calc,
             Self::Javascript => Self::Plain,
             Self::Python => Self::Javascript,
             Self::Markdown => Self::Python,
@@ -71,6 +73,7 @@ impl SyntaxLanguage {
             Self::Sql => Self::Css,
             Self::Bash => Self::Sql,
             Self::Perl => Self::Bash,
+            Self::Calc => Self::Perl,
         }
     }
 }
@@ -88,6 +91,7 @@ impl std::fmt::Display for SyntaxLanguage {
             Self::Sql => write!(f, "sql"),
             Self::Bash => write!(f, "bash"),
             Self::Perl => write!(f, "perl"),
+            Self::Calc => write!(f, "calc"),
         }
     }
 }
@@ -107,6 +111,7 @@ impl std::str::FromStr for SyntaxLanguage {
             "sql" => Ok(Self::Sql),
             "bash" | "sh" => Ok(Self::Bash),
             "perl" | "pl" => Ok(Self::Perl),
+            "calc" => Ok(Self::Calc),
             _ => Err(format!("Unknown syntax language: {}", s)),
         }
     }
