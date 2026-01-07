@@ -16,6 +16,13 @@
     "search": "검색",
     "error": "오류"
   },
+  "docs": {
+    "title": "문서",
+    "copy": "복사",
+    "copyMarkdown": "문서를 Markdown으로 복사",
+    "copied": "문서가 클립보드에 복사되었습니다",
+    "copyError": "문서 복사 실패"
+  },
   "note": {
     "new": "새로 만들기",
     "create": "새 노트 만들기",

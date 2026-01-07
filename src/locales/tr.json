@@ -16,6 +16,13 @@
     "search": "Ara",
     "error": "Hata"
   },
+  "docs": {
+    "title": "Belgeler",
+    "copy": "Kopyala",
+    "copyMarkdown": "Belgeleri Markdown olarak kopyala",
+    "copied": "Belgeler panoya kopyalandı",
+    "copyError": "Belgeler kopyalanamadı"
+  },
   "note": {
     "new": "Yeni",
     "create": "Yeni not oluştur",

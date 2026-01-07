@@ -16,6 +16,13 @@
     "search": "検索",
     "error": "エラー"
   },
+  "docs": {
+    "title": "ドキュメント",
+    "copy": "コピー",
+    "copyMarkdown": "ドキュメントをMarkdownとしてコピー",
+    "copied": "ドキュメントをクリップボードにコピーしました",
+    "copyError": "ドキュメントのコピーに失敗しました"
+  },
   "note": {
     "new": "新規",
     "create": "新しいノートを作成",

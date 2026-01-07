@@ -16,6 +16,13 @@
     "search": "Buscar",
     "error": "Error"
   },
+  "docs": {
+    "title": "Documentación",
+    "copy": "Copiar",
+    "copyMarkdown": "Copiar documentación como Markdown",
+    "copied": "Documentación copiada al portapapeles",
+    "copyError": "Error al copiar documentación"
+  },
   "note": {
     "new": "Nueva",
     "create": "Crear nueva nota",

@@ -16,6 +16,13 @@
     "search": "Szukaj",
     "error": "Błąd"
   },
+  "docs": {
+    "title": "Dokumentacja",
+    "copy": "Kopiuj",
+    "copyMarkdown": "Kopiuj dokumentację jako Markdown",
+    "copied": "Dokumentacja skopiowana do schowka",
+    "copyError": "Nie udało się skopiować dokumentacji"
+  },
   "note": {
     "new": "Nowa",
     "create": "Utwórz nową notatkę",

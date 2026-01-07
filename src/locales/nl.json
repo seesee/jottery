@@ -16,6 +16,13 @@
     "search": "Zoeken",
     "error": "Fout"
   },
+  "docs": {
+    "title": "Documentatie",
+    "copy": "Kopiëren",
+    "copyMarkdown": "Documentatie kopiëren als Markdown",
+    "copied": "Documentatie gekopieerd naar klembord",
+    "copyError": "Kopiëren van documentatie mislukt"
+  },
   "note": {
     "new": "Nieuw",
     "create": "Nieuwe notitie maken",

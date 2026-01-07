@@ -16,6 +16,13 @@
     "search": "搜索",
     "error": "错误"
   },
+  "docs": {
+    "title": "文档",
+    "copy": "复制",
+    "copyMarkdown": "复制文档为 Markdown",
+    "copied": "文档已复制到剪贴板",
+    "copyError": "复制文档失败"
+  },
   "note": {
     "new": "新建",
     "create": "创建新笔记",

@@ -17,6 +17,13 @@
     "error": "Error",
     "back": "Back"
   },
+  "docs": {
+    "title": "Documentation",
+    "copy": "Copy",
+    "copyMarkdown": "Copy documentation as Markdown",
+    "copied": "Documentation copied to clipboard",
+    "copyError": "Failed to copy documentation"
+  },
   "note": {
     "new": "New",
     "create": "Create new note",
