@@ -517,6 +517,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.selected_note += 1;
                         // Update selected note ID after index change
                         app.selected_note_id = app.filtered_notes().get(app.selected_note).map(|n| n.id.clone());
+                        app.debug_log(&format!("Navigate down: selected_note={}, selected_note_id={:?}",
+                            app.selected_note, app.selected_note_id));
                         app.preview_scroll_offset = 0;
                         // Reset focused panel when changing notes
                         app.focused_panel = FocusedPanel::NoteContent;
@@ -546,6 +548,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.selected_note -= 1;
                         // Update selected note ID after index change
                         app.selected_note_id = app.filtered_notes().get(app.selected_note).map(|n| n.id.clone());
+                        app.debug_log(&format!("Navigate up: selected_note={}, selected_note_id={:?}",
+                            app.selected_note, app.selected_note_id));
                         app.preview_scroll_offset = 0;
                         // Reset focused panel when changing notes
                         app.focused_panel = FocusedPanel::NoteContent;

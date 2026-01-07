@@ -497,21 +497,51 @@ impl App {
     /// Load notes from database
     fn load_notes(&mut self) -> Result<()> {
         if let (Some(db), Some(key)) = (&self.db, &self.key) {
+            let old_selected_note = self.selected_note;
+            let old_selected_note_id = self.selected_note_id.clone();
+
             let repo = NoteRepository::new(db.connection());
             self.notes = repo.list(false, key)?;
 
+            self.debug_log(&format!("load_notes: old_selected_note={}, old_selected_note_id={:?}, notes_count={}",
+                old_selected_note, old_selected_note_id, self.notes.len()));
+
             // Restore selection to the same note if it still exists (using persisted ID)
-            if let Some(note_id) = &self.selected_note_id {
-                if let Some(index) = self.notes.iter().position(|n| &n.id == note_id) {
+            // NOTE: We need to find position in the sorted view (pinned first, then by modified_at)
+            // because selected_note is an index into filtered_notes(), not self.notes
+            if let Some(note_id) = &self.selected_note_id.clone() {
+                // Build sorted view like filtered_notes() does
+                let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
+                sorted_notes.sort_by(|a, b| {
+                    match (a.pinned, b.pinned) {
+                        (true, false) => std::cmp::Ordering::Less,
+                        (false, true) => std::cmp::Ordering::Greater,
+                        _ => b.modified_at.cmp(&a.modified_at),
+                    }
+                });
+
+                if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
                     self.selected_note = index;
+                    self.debug_log(&format!("load_notes: found note {} at sorted index {}", note_id, index));
                 } else {
                     // Note was deleted, select first note and update ID
                     self.selected_note = 0;
-                    self.selected_note_id = self.notes.first().map(|n| n.id.clone());
+                    self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
+                    self.debug_log(&format!("load_notes: note {} NOT FOUND, defaulting to 0", note_id));
                 }
             } else {
                 self.selected_note = 0;
-                self.selected_note_id = self.notes.first().map(|n| n.id.clone());
+                // Get first note from sorted view
+                let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
+                sorted_notes.sort_by(|a, b| {
+                    match (a.pinned, b.pinned) {
+                        (true, false) => std::cmp::Ordering::Less,
+                        (false, true) => std::cmp::Ordering::Greater,
+                        _ => b.modified_at.cmp(&a.modified_at),
+                    }
+                });
+                self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
+                self.debug_log("load_notes: no selected_note_id, defaulting to 0");
             }
         }
         Ok(())

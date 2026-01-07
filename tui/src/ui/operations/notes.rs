@@ -16,17 +16,38 @@ pub fn load_notes(app: &mut App) -> Result<()> {
         app.notes = repo.list(false, key)?;
 
         // Restore selection to the same note if it still exists (using persisted ID)
+        // NOTE: We need to find position in the sorted view (pinned first, then by modified_at)
+        // because selected_note is an index into filtered_notes(), not app.notes
         if let Some(note_id) = &app.selected_note_id.clone() {
-            if let Some(index) = app.notes.iter().position(|n| &n.id == note_id) {
+            // Build sorted view like filtered_notes() does
+            let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
+            sorted_notes.sort_by(|a, b| {
+                match (a.pinned, b.pinned) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => b.modified_at.cmp(&a.modified_at),
+                }
+            });
+
+            if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
                 app.selected_note = index;
             } else {
                 // Note was deleted, select first note and update ID
                 app.selected_note = 0;
-                app.selected_note_id = app.notes.first().map(|n| n.id.clone());
+                app.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
             }
         } else {
             app.selected_note = 0;
-            app.selected_note_id = app.notes.first().map(|n| n.id.clone());
+            // Get first note from sorted view
+            let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
+            sorted_notes.sort_by(|a, b| {
+                match (a.pinned, b.pinned) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => b.modified_at.cmp(&a.modified_at),
+                }
+            });
+            app.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
         }
     }
     Ok(())
