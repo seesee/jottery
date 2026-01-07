@@ -11,8 +11,8 @@ This document outlines the comprehensive testing strategy for Jottery and curren
 - **fake-indexeddb** - IndexedDB mocking for repository tests
 - **happy-dom** - Lightweight DOM implementation
 
-### E2E Tests (Planned)
-- **Playwright** - Cross-browser end-to-end testing
+### E2E Tests
+- **Playwright** - Cross-browser end-to-end testing (Chromium, Firefox, WebKit)
 
 ## Current Test Coverage
 
@@ -93,8 +93,8 @@ Svelte error: lifecycle_function_unavailable
 - Settings tabs
 - Modals (VersionHistory, Documentation, Releases)
 
-### 🔄 Phase 5: E2E Tests (In Progress)
-**Playwright Configuration**: Configured for Chromium, Firefox, Safari
+### ✅ Phase 5: E2E Tests (Complete)
+**Playwright Configuration**: Configured for Chromium, Firefox, WebKit (Safari)
 
 **Authentication Tests** (`e2e/auth.spec.ts`)
 - 6 tests passing
@@ -139,13 +139,34 @@ Svelte error: lifecycle_function_unavailable
 - **Complete User Journey**:
   - ✅ Full workflow: create, edit, search, delete
 
-**Planned Coverage**:
-- Note CRUD operations
-- Search and filtering
-- Tag management
-- Sync workflows
-- Settings management
-- Cross-browser compatibility
+**Bulk Operations Tests** (`e2e/bulk-operations.spec.ts`)
+- 8 tests passing
+- ✅ Select and deselect multiple notes
+- ✅ Select all and deselect all
+- ✅ Bulk pin and unpin notes
+- ✅ Bulk export to JSON
+- ✅ Bulk delete notes
+- ✅ Cancel bulk delete
+- ✅ Combine notes with tags merged by default
+- ✅ Combine notes without merging tags when checkbox unchecked
+
+**Calculator Mode Tests** (`e2e/calc.spec.ts`)
+- 8 tests passing
+- ✅ Basic arithmetic result display
+- ✅ Variables across lines
+- ✅ Math function evaluation
+- ✅ Comment handling
+- ✅ Inline error display
+- ✅ Unit conversions
+- ✅ Result updates on editing
+- ✅ Calc language persistence on note reopen
+
+**Recycle Bin Tests** (`e2e/recycle-bin.spec.ts`)
+- 4 tests passing
+- ✅ Restore note and immediately show in notes list
+- ✅ Restore note and make it searchable
+- ✅ Show empty recycle bin message
+- ✅ Permanently delete note from recycle bin
 
 ### ✅ Phase 6: CI/CD Integration (Complete)
 **GitHub Actions Workflow** (`.github/workflows/test.yml`)
@@ -227,11 +248,14 @@ npx playwright test --project=chromium
 
 ## Test Statistics
 
-**Total Tests**: 306 passing, 8 skipped
-**Test Files**: 12 (8 unit/integration + 4 E2E)
+**Unit/Integration Tests**: 298 passing, 7 skipped (305 total)
+**E2E Tests**: 45 tests × 3 browsers = 135 test runs
+**Test Files**: 16 (9 unit/integration + 7 E2E)
 **Coverage Goals**: 80% (lines, functions, branches, statements)
 
 ### Breakdown
+
+**Unit/Integration Tests:**
 - Crypto: 37 tests
 - Note Repository: 49 tests (1 skipped)
 - Attachment Repository: 35 tests
@@ -239,11 +263,16 @@ npx playwright test --project=chromium
 - Settings Repository: 67 tests
 - Encryption Repository: 56 tests
 - Sync Repository: 90 tests
-- Sync Service: 16 tests (6 skipped)
-- E2E Authentication: 6 tests
-- E2E Note Operations: 7 tests
-- E2E Smoke Tests: 6 tests (fast sanity checks)
-- E2E Workflow Tests: 7 tests (1 skipped)
+- Sync Service: 22 tests (6 skipped)
+
+**E2E Tests:**
+- Authentication: 6 tests
+- Note Operations: 7 tests
+- Smoke Tests: 6 tests (fast sanity checks)
+- Workflow Tests: 7 tests (1 skipped)
+- Bulk Operations: 8 tests
+- Calculator Mode: 8 tests
+- Recycle Bin: 4 tests
 
 ## Known Limitations
 
@@ -294,29 +323,21 @@ npx playwright test --project=chromium
    - Consider Playwright Component Testing
    - Document migration path when ready
 
-2. **E2E Test Suite**
-   - Playwright setup
-   - Critical user workflows
-   - Cross-browser testing
-   - Mobile viewport testing
+2. **Mobile Viewport Testing**
+   - Add mobile viewport E2E tests
+   - Touch interaction testing
+   - Responsive layout verification
 
-3. **CI/CD Integration**
-   - GitHub Actions workflow
-   - Automated testing on PR
-   - Coverage reporting
-   - Performance benchmarks
-
-4. **TUI Testing** (Phase 4 of development)
+3. **TUI Testing**
    - Rust unit tests
    - Integration tests
    - CLI command testing
    - Sync compatibility tests
 
-5. **Server Testing** (Phase 3 of development)
-   - API endpoint tests
-   - Database integration tests
-   - Authentication tests
-   - Multi-user isolation tests
+4. **Performance Benchmarks**
+   - Baseline performance metrics
+   - Large dataset testing
+   - Memory usage monitoring
 
 ## Contributing
 
