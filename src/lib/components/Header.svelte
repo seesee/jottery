@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode } from '../stores/appStore';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
@@ -162,28 +162,35 @@
 
     {#if !forceMobileLayout}
       <!-- Desktop: Search Bar -->
-      <div class="hidden tablet:block flex-1 max-w-md relative">
-        <input
-          id="search-input"
-          type="text"
-          bind:value={$searchQuery}
-          placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
-          disabled={loadingNotes}
-          class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
-          style="font-size: {searchFontSize}"
-        />
-        {#if loadingNotes}
-          <div class="absolute right-2 top-1/2 -translate-y-1/2">
-            <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
-          </div>
-        {:else if $searchQuery}
-          <button
-            on:click={() => searchQuery.set('')}
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-            title={$_('search.clear')}
-          >
-            ✕
-          </button>
+      <div class="hidden tablet:flex items-center gap-2 flex-1 max-w-md">
+        <div class="relative flex-1">
+          <input
+            id="search-input"
+            type="text"
+            bind:value={$searchQuery}
+            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
+            disabled={loadingNotes}
+            class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
+            style="font-size: {searchFontSize}"
+          />
+          {#if loadingNotes}
+            <div class="absolute right-2 top-1/2 -translate-y-1/2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
+            </div>
+          {:else if $searchQuery}
+            <button
+              on:click={() => searchQuery.set('')}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title={$_('search.clear')}
+            >
+              ✕
+            </button>
+          {/if}
+        </div>
+        {#if $searchResultCount.isSearching}
+          <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap" title={$_('search.resultCount')}>
+            {$searchResultCount.matches}/{$searchResultCount.total}
+          </span>
         {/if}
       </div>
 
@@ -296,28 +303,35 @@
   <!-- Mobile: Expandable Search Bar -->
   {#if showMobileSearch}
     <div class="{forceMobileLayout ? '' : 'tablet:hidden'} mt-3 animate-slide-down">
-      <div class="relative">
-        <input
-          id="search-input-mobile"
-          type="text"
-          bind:value={$searchQuery}
-          placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
-          disabled={loadingNotes}
-          class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
-          style="font-size: {searchFontSize}"
-        />
-        {#if loadingNotes}
-          <div class="absolute right-2 top-1/2 -translate-y-1/2">
-            <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
-          </div>
-        {:else if $searchQuery}
-          <button
-            on:click={() => searchQuery.set('')}
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-            title={$_('search.clear')}
-          >
-            ✕
-          </button>
+      <div class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <input
+            id="search-input-mobile"
+            type="text"
+            bind:value={$searchQuery}
+            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
+            disabled={loadingNotes}
+            class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
+            style="font-size: {searchFontSize}"
+          />
+          {#if loadingNotes}
+            <div class="absolute right-2 top-1/2 -translate-y-1/2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
+            </div>
+          {:else if $searchQuery}
+            <button
+              on:click={() => searchQuery.set('')}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title={$_('search.clear')}
+            >
+              ✕
+            </button>
+          {/if}
+        </div>
+        {#if $searchResultCount.isSearching}
+          <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">
+            {$searchResultCount.matches}/{$searchResultCount.total}
+          </span>
         {/if}
       </div>
     </div>

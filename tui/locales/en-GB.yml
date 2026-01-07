@@ -347,6 +347,16 @@ status:
   modified: "Modified"
   saved: "Saved"
 
+# Bulk operations
+bulk:
+  tags_added: "Added tags to %{count} notes: %{tags}"
+  deleted: "Deleted %{count} notes"
+  exported: "Exported %{count} notes to %{path}"
+  operation_failed: "Bulk operation failed: %{error}"
+  confirm_delete: "Delete %{count} notes? (y/n)"
+  enter_tags: "Enter tags (comma-separated):"
+  enter_export_path: "Export path:"
+
 # Date and time formatting
 time:
   just_now: "just now"

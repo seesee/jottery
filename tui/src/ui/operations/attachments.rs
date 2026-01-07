@@ -219,7 +219,7 @@ pub fn delete_current_attachment(app: &mut App) -> Result<()> {
 
     // Get the note ID and attachment info first (without holding a borrow)
     let (note_id, attachment_id, filename) = {
-        let filtered = super::notes::filtered_notes(app);
+        let filtered = app.filtered_notes();
         if filtered.is_empty() || app.selected_note >= filtered.len() {
             anyhow::bail!("{}", t!("note.no_notes"));
         }
@@ -317,7 +317,7 @@ pub fn add_attachment_to_current_note(app: &mut App, file_path: &str) -> Result<
         .to_string();
 
     // Get current note
-    let filtered = super::notes::filtered_notes(app);
+    let filtered = app.filtered_notes();
     log_debug(&format!("add_attachment: filtered_notes count: {}", filtered.len()));
     let note_id = if !filtered.is_empty() && app.selected_note < filtered.len() {
         let id = filtered[app.selected_note].id.clone();
@@ -374,7 +374,7 @@ pub fn add_attachment_to_current_note(app: &mut App, file_path: &str) -> Result<
 /// Remove attachment from the current note
 pub fn remove_attachment_from_current_note(app: &mut App) -> Result<()> {
     // Get current note
-    let filtered = super::notes::filtered_notes(app);
+    let filtered = app.filtered_notes();
     let note_id = if !filtered.is_empty() && app.selected_note < filtered.len() {
         filtered[app.selected_note].id.clone()
     } else {

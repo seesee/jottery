@@ -38,6 +38,16 @@ export const selectedNote = derived(
 // Filtered notes using search service (will be populated when search is performed)
 export const filteredNotes = writable<DecryptedNote[]>([]);
 
+// Search result count (matches/total)
+export const searchResultCount = derived(
+  [filteredNotes, notes, searchQuery],
+  ([$filteredNotes, $notes, $searchQuery]) => ({
+    matches: $filteredNotes.length,
+    total: $notes.length,
+    isSearching: $searchQuery.trim().length > 0
+  })
+);
+
 // Update filtered notes when search query or notes change
 export function updateFilteredNotes(allNotes: DecryptedNote[], query: string) {
   if (!query.trim()) {
@@ -47,6 +57,17 @@ export function updateFilteredNotes(allNotes: DecryptedNote[], query: string) {
     filteredNotes.set(allNotes);
   }
 }
+
+// Multi-select state
+export const selectedNoteIds = writable<Set<string>>(new Set());
+export const isMultiSelectMode = writable<boolean>(false);
+export const lastSelectedIndex = writable<number | null>(null);
+
+// Derived store for selected count
+export const selectedCount = derived(
+  selectedNoteIds,
+  ($selectedNoteIds) => $selectedNoteIds.size
+);
 
 // Actions
 export function selectNote(noteId: string | null) {
@@ -68,4 +89,62 @@ export function enterDraftMode() {
 
 export function exitDraftMode() {
   isDraftMode.set(false);
+}
+
+// Multi-select actions
+
+/**
+ * Toggle a note's selection state
+ */
+export function toggleNoteSelection(noteId: string, noteIndex: number) {
+  selectedNoteIds.update((set) => {
+    const newSet = new Set(set);
+    if (newSet.has(noteId)) {
+      newSet.delete(noteId);
+    } else {
+      newSet.add(noteId);
+    }
+    // Enable multi-select mode if any notes are selected
+    isMultiSelectMode.set(newSet.size > 0);
+    return newSet;
+  });
+  lastSelectedIndex.set(noteIndex);
+}
+
+/**
+ * Select a range of notes (for shift+click)
+ */
+export function selectRange(fromIndex: number, toIndex: number, notesList: DecryptedNote[]) {
+  const start = Math.min(fromIndex, toIndex);
+  const end = Math.max(fromIndex, toIndex);
+
+  selectedNoteIds.update((set) => {
+    const newSet = new Set(set);
+    for (let i = start; i <= end; i++) {
+      if (notesList[i]) {
+        newSet.add(notesList[i].id);
+      }
+    }
+    isMultiSelectMode.set(newSet.size > 0);
+    return newSet;
+  });
+  lastSelectedIndex.set(toIndex);
+}
+
+/**
+ * Select all currently filtered notes
+ */
+export function selectAllFiltered(notesList: DecryptedNote[]) {
+  const ids = new Set(notesList.map((n) => n.id));
+  selectedNoteIds.set(ids);
+  isMultiSelectMode.set(ids.size > 0);
+}
+
+/**
+ * Clear all selections and exit multi-select mode
+ */
+export function clearMultiSelection() {
+  selectedNoteIds.set(new Set());
+  isMultiSelectMode.set(false);
+  lastSelectedIndex.set(null);
 }

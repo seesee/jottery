@@ -144,6 +144,14 @@ export interface SearchQuery {
   orTags?: string[]; // Tags to filter by (OR logic)
   excludeText?: string[]; // Text to exclude
   excludeTags?: string[]; // Tags to exclude
+  // Advanced search modifiers
+  hasAttachment?: boolean; // Filter notes with attachments
+  createdAfter?: string; // ISO date string - notes created after this date
+  createdBefore?: string; // ISO date string - notes created before this date
+  modifiedAfter?: string; // ISO date string - notes modified after this date
+  modifiedBefore?: string; // ISO date string - notes modified before this date
+  wordCountMin?: number; // Minimum word count
+  wordCountMax?: number; // Maximum word count
 }
 
 /**

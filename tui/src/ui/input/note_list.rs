@@ -22,6 +22,82 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         app.sync_status = None;
     }
 
+    // Handle bulk add tags input mode
+    if matches!(app.input_mode, InputMode::BulkAddTags) {
+        match key.code {
+            KeyCode::Enter => {
+                // Add tags to selected notes
+                if !app.bulk_tags_input.is_empty() {
+                    let tags: Vec<String> = app.bulk_tags_input
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+
+                    if !tags.is_empty() {
+                        match operations::bulk::add_tags_to_selected(app, &tags) {
+                            Ok(count) => {
+                                app.sync_status = Some(t!("bulk.tags_added", count = count, tags = tags.join(", ")).to_string());
+                            }
+                            Err(e) => {
+                                app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
+                            }
+                        }
+                    }
+                }
+                app.bulk_tags_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            KeyCode::Esc => {
+                app.bulk_tags_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            KeyCode::Backspace => {
+                app.bulk_tags_input.pop();
+            }
+            KeyCode::Char(c) => {
+                app.bulk_tags_input.push(c);
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
+    // Handle bulk export path input mode
+    if matches!(app.input_mode, InputMode::BulkExportPath) {
+        match key.code {
+            KeyCode::Enter => {
+                // Export selected notes to file
+                if !app.bulk_export_path_input.is_empty() {
+                    let path = std::path::PathBuf::from(&app.bulk_export_path_input);
+                    match operations::bulk::export_selected(app, &path) {
+                        Ok(count) => {
+                            app.sync_status = Some(t!("bulk.exported", count = count, path = app.bulk_export_path_input.clone()).to_string());
+                            app.clear_multi_selection();
+                        }
+                        Err(e) => {
+                            app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
+                        }
+                    }
+                }
+                app.bulk_export_path_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            KeyCode::Esc => {
+                app.bulk_export_path_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            KeyCode::Backspace => {
+                app.bulk_export_path_input.pop();
+            }
+            KeyCode::Char(c) => {
+                app.bulk_export_path_input.push(c);
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
     // Handle attachment path input mode
     if matches!(app.input_mode, InputMode::AttachmentPath) {
         match key.code {
@@ -145,7 +221,18 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Char('y') => {
                 // Handle based on context
-                if app.show_force_sync_confirm {
+                if app.show_bulk_delete_confirm {
+                    // Confirm bulk delete
+                    app.show_bulk_delete_confirm = false;
+                    match operations::bulk::delete_selected(app) {
+                        Ok(deleted) => {
+                            app.sync_status = Some(t!("bulk.deleted", count = deleted).to_string());
+                        }
+                        Err(e) => {
+                            app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
+                        }
+                    }
+                } else if app.show_force_sync_confirm {
                     // Confirm force full sync
                     app.show_force_sync_confirm = false;
                     operations::sync::force_full_sync(app);
@@ -158,9 +245,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Show force full sync confirmation
                 app.show_force_sync_confirm = true;
             }
-            KeyCode::Char('n') if app.show_force_sync_confirm => {
-                // Cancel force sync
+            KeyCode::Char('n') if app.show_force_sync_confirm || app.show_bulk_delete_confirm => {
+                // Cancel confirmations
                 app.show_force_sync_confirm = false;
+                app.show_bulk_delete_confirm = false;
             }
             KeyCode::Char('/') => {
                 // Enter search mode (only in note list view)
@@ -355,8 +443,13 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Char('t') => {
+                // In multi-select mode: add tags to selected notes
+                if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) {
+                    app.input_mode = InputMode::BulkAddTags;
+                    app.bulk_tags_input.clear();
+                }
                 // Edit tags for selected note (only in note list view)
-                if matches!(app.view_mode, ViewMode::NoteList) {
+                else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                     let content = filtered[app.selected_note].content.clone();
@@ -450,9 +543,13 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Esc => {
-                // Cancel force sync confirmation if showing
-                if app.show_force_sync_confirm {
+                // Cancel confirmations if showing
+                if app.show_force_sync_confirm || app.show_bulk_delete_confirm {
                     app.show_force_sync_confirm = false;
+                    app.show_bulk_delete_confirm = false;
+                } else if app.is_multi_select_mode {
+                    // Clear multi-selection
+                    app.clear_multi_selection();
                 } else if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     // Exit attachment viewer
                     app.view_mode = ViewMode::NoteList;
@@ -491,11 +588,20 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
             }
             KeyCode::Char('d') | KeyCode::Delete => {
+                // Handle bulk delete confirmation
+                if app.show_bulk_delete_confirm {
+                    // This is a no-op here; 'y' confirms, 'n'/Esc cancels
+                    return Ok(());
+                }
                 // In attachment viewer: delete selected attachment
                 if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     if let Err(e) = operations::attachments::delete_current_attachment(app) {
                         app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
                     }
+                }
+                // In multi-select mode: show bulk delete confirmation
+                else if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) {
+                    app.show_bulk_delete_confirm = true;
                 }
                 // Delete selected note (only in note list view)
                 else if matches!(app.view_mode, ViewMode::NoteList) {
@@ -513,6 +619,12 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     }
                     }
+                }
+            }
+            KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Ctrl+A: Select all filtered notes (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    app.select_all_filtered();
                 }
             }
             KeyCode::Char('a') => {
@@ -584,6 +696,29 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     if let Err(e) = operations::attachments::remove_attachment_from_current_note(app) {
                         app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
                     }
+                }
+            }
+            KeyCode::Char(' ') => {
+                // Toggle multi-select for current note (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    let selected = app.selected_note;
+                    app.toggle_note_selection(selected);
+                }
+            }
+            KeyCode::Char('V') => {
+                // Shift+V: Range select from last selected to current (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    let selected = app.selected_note;
+                    app.select_range(selected);
+                }
+            }
+            KeyCode::Char('e') => {
+                // In multi-select mode: export selected notes (only in note list view)
+                if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) {
+                    // Generate default filename
+                    let timestamp = chrono::Local::now().format("%Y-%m-%d").to_string();
+                    app.bulk_export_path_input = format!("jottery-export-{}.json", timestamp);
+                    app.input_mode = InputMode::BulkExportPath;
                 }
             }
             _ => {

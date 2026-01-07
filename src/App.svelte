@@ -16,6 +16,7 @@
   import KeyboardShortcutsHelp from './lib/components/KeyboardShortcutsHelp.svelte';
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
   import Toast from './lib/components/Toast.svelte';
+  import BulkOperationsToolbar from './lib/components/BulkOperationsToolbar.svelte';
 
   let initialized = false;
   let loadingNotes = false;
@@ -385,6 +386,9 @@
       onFocusSearch={handleFocusSearch}
       onOpenShortcutsHelp={handleOpenShortcutsHelp}
     />
+
+    <!-- Bulk Operations Toolbar -->
+    <BulkOperationsToolbar />
 
     <!-- Toast Notifications -->
     <Toast />

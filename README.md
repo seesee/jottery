@@ -17,7 +17,15 @@ Most note-taking apps are either too heavy (designed for long-form content) or t
 *   **Self-Hostable**: You have full control over your data by hosting the sync server yourself.
 *   **Device Management**: Register multiple devices per user, each with its own API key.
 *   **Admin Dashboard**: Web-based interface for managing users, viewing statistics, and monitoring server activity.
-*   **Search**: Quickly find your notes with a powerful full-text search.
+*   **Advanced Search**: Powerful full-text search with modifiers:
+    - `has:attachment` - filter notes with attachments
+    - `created:>2024-01-01`, `created:<2024-06-30`, `created:2024-01-01..2024-06-30` - date filters
+    - `modified:>2024-01-01` - modification date filters
+    - `words:>100`, `words:<50`, `words:50..200` - word count filters
+*   **Multi-Select & Bulk Operations**: Select multiple notes (Ctrl/Cmd+click, Shift+click, Ctrl/Cmd+A) for bulk actions:
+    - Add or remove tags from multiple notes
+    - Export selected notes to JSON
+    - Delete multiple notes at once
 *   **Tagging**: Organise your notes with tags.
 *   **Attachments**: Add, preview, and download attachments to your notes.
 *   **Code Snippets**: A rich text editor with support for various programming languages.
@@ -59,6 +67,18 @@ A lightweight and fast terminal user interface for those who prefer to work in t
 - **Pipe content directly** - Capture command output as notes instantly
 - **Auto-sync** - Notes sync to server automatically after creation (if configured)
 - **Tag support** - Add tags to piped content with `-t tag1,tag2`
+
+**TUI Multi-Select & Bulk Operations:**
+- `Space` - Toggle selection of current note
+- `Ctrl+A` - Select all filtered notes
+- `Shift+V` - Range select from last selected to current
+- `Escape` - Clear selection
+- `t` (in multi-select mode) - Add tags to selected notes
+- `d` (in multi-select mode) - Delete selected notes (with confirmation)
+- `e` (in multi-select mode) - Export selected notes to JSON file
+
+**Advanced Search (same modifiers as web client):**
+- `has:attachment`, `created:>DATE`, `modified:>DATE`, `words:>N`, etc.
 
 ### 3. Sync Server
 
@@ -127,7 +147,24 @@ Access the web-based admin dashboard at `http://your-server:3030/admin`
 
 ### With Docker
 
-The easiest way to get started is with Docker. This will build and run the web client and sync server in a single container.
+The easiest way to get started is with Docker. Pre-built multi-architecture images (amd64, arm64) are available.
+
+#### Using Pre-built Image (Recommended)
+
+1.  **Pull and run the image:**
+
+    ```bash
+    docker run -d \
+      --name jottery \
+      -p 8000:80 \
+      -p 3030:3030 \
+      -v jottery-data:/app/data \
+      ghcr.io/seesee/jottery:latest
+    ```
+
+    The web interface will be available at `http://localhost:8000` and the sync server at `http://localhost:3030`.
+
+#### Using Docker Compose
 
 1.  **Clone the repository:**
 
@@ -136,7 +173,7 @@ The easiest way to get started is with Docker. This will build and run the web c
     cd jottery
     ```
 
-2.  **Build and run with Docker Compose:**
+2.  **Run with Docker Compose:**
 
     ```bash
     docker-compose up -d
@@ -144,7 +181,20 @@ The easiest way to get started is with Docker. This will build and run the web c
 
     The web interface will be available at `http://localhost:8000`. The data will be stored in a `data` directory on your host machine.
 
-3.  **Access the admin dashboard:**
+#### Building from Source
+
+If you prefer to build the image yourself:
+
+```bash
+git clone https://github.com/seesee/jottery.git
+cd jottery
+docker build -t jottery .
+docker run -d --name jottery -p 8000:80 -p 3030:3030 -v jottery-data:/app/data jottery
+```
+
+### First-Time Setup
+
+1.  **Access the admin dashboard:**
 
     Navigate to `http://localhost:3030/admin` and login with the default credentials:
     - Email: `admin@localhost`
@@ -152,7 +202,7 @@ The easiest way to get started is with Docker. This will build and run the web c
 
     ⚠️ **IMPORTANT:** Change the default admin password immediately via the admin dashboard.
 
-4.  **Create your first user account:**
+2.  **Create your first user account:**
 
     - Register a new user account via the web UI at `http://localhost:8000`
     - Login to the admin dashboard and approve the new user

@@ -45,56 +45,6 @@ pub fn save_note(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Filter notes based on search query and sort (pinned first, then by modified date)
-pub fn filtered_notes(app: &App) -> Vec<&Note> {
-    let mut notes: Vec<&Note> = if app.search_input.is_empty() {
-        app.notes.iter().collect()
-    } else {
-        let query = app.search_input.to_lowercase();
-        let query_parts: Vec<&str> = query.split_whitespace().collect();
-
-        app.notes
-            .iter()
-            .filter(|note| {
-                let content_lower = note.content.to_lowercase();
-
-                // Check each query part
-                for part in &query_parts {
-                    if let Some(tag) = part.strip_prefix('#') {
-                        // Tag search
-                        if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                            return false;
-                        }
-                    } else if let Some(neg_word) = part.strip_prefix('-') {
-                        // Negation
-                        if content_lower.contains(neg_word) {
-                            return false;
-                        }
-                    } else {
-                        // Regular text search
-                        if !content_lower.contains(part) {
-                            return false;
-                        }
-                    }
-                }
-
-                true
-            })
-            .collect()
-    };
-
-    // Sort: pinned first, then by modified_at descending
-    notes.sort_by(|a, b| {
-        match (a.pinned, b.pinned) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => b.modified_at.cmp(&a.modified_at),
-        }
-    });
-
-    notes
-}
-
 /// Load version history for a note
 pub fn load_versions_for_note(app: &mut App, note_id: &str) -> Result<()> {
     let db = app.db.as_ref().context("Database not available")?;

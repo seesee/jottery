@@ -48,6 +48,10 @@ pub enum InputMode {
     PasswordVerify,
     /// Attachment path input mode (entering file path to attach)
     AttachmentPath,
+    /// Bulk add tags input mode
+    BulkAddTags,
+    /// Bulk export path input mode
+    BulkExportPath,
 }
 
 /// Current view mode

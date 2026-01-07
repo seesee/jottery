@@ -27,6 +27,7 @@ use crossterm::{
 use rust_i18n::t;
 use ratatui::Frame;
 use std::{
+    collections::HashSet,
     fs::File,
     io::Write,
     path::PathBuf,
@@ -45,6 +46,18 @@ use crate::{
 use super::state::{AppState, InputMode, ViewMode};
 use super::rendering;
 use super::input;
+
+/// Search modifiers parsed from query string
+#[derive(Debug, Default)]
+struct SearchModifiers {
+    has_attachment: bool,
+    created_after: Option<String>,
+    created_before: Option<String>,
+    modified_after: Option<String>,
+    modified_before: Option<String>,
+    word_count_min: Option<usize>,
+    word_count_max: Option<usize>,
+}
 
 /// Application state and coordinator
 pub struct App {
@@ -100,6 +113,12 @@ pub struct App {
     pub(crate) notes: Vec<Note>,
     /// Selected note index
     pub selected_note: usize,
+    /// Multi-selected note IDs
+    pub selected_note_ids: HashSet<String>,
+    /// Whether multi-select mode is active
+    pub is_multi_select_mode: bool,
+    /// Last selected index for range selection
+    pub last_selected_index: Option<usize>,
     /// Preview scroll offset (number of lines scrolled down)
     pub preview_scroll_offset: usize,
     /// Currently editing note ID (None = creating new note)
@@ -136,6 +155,12 @@ pub struct App {
     pub(crate) versions_note_id: Option<String>,
     /// Scroll offset for version preview content
     pub version_preview_scroll_offset: usize,
+    /// Bulk tags input buffer (for adding tags to selected notes)
+    pub bulk_tags_input: String,
+    /// Bulk export path input buffer
+    pub bulk_export_path_input: String,
+    /// Show bulk delete confirmation modal
+    pub show_bulk_delete_confirm: bool,
 }
 
 
@@ -171,6 +196,9 @@ impl App {
             crypto: CryptoService::new(),
             notes: Vec::new(),
             selected_note: 0,
+            selected_note_ids: HashSet::new(),
+            is_multi_select_mode: false,
+            last_selected_index: None,
             preview_scroll_offset: 0,
             editing_note_id: None,
             settings: UserSettings::default(),
@@ -189,6 +217,9 @@ impl App {
             selected_version: 0,
             versions_note_id: None,
             version_preview_scroll_offset: 0,
+            bulk_tags_input: String::new(),
+            bulk_export_path_input: String::new(),
+            show_bulk_delete_confirm: false,
         })
     }
 
@@ -458,21 +489,134 @@ impl App {
         Ok(())
     }
 
+    // Multi-select methods
+
+    /// Toggle selection of a note at the given index
+    pub fn toggle_note_selection(&mut self, index: usize) {
+        // Get note IDs first to avoid borrow issues
+        let note_ids: Vec<String> = self.filtered_notes().iter().map(|n| n.id.clone()).collect();
+        if let Some(note_id) = note_ids.get(index) {
+            if self.selected_note_ids.contains(note_id) {
+                self.selected_note_ids.remove(note_id);
+            } else {
+                self.selected_note_ids.insert(note_id.clone());
+            }
+            self.is_multi_select_mode = !self.selected_note_ids.is_empty();
+            self.last_selected_index = Some(index);
+        }
+    }
+
+    /// Select a range of notes from last_selected_index to current index
+    pub fn select_range(&mut self, to_index: usize) {
+        let from_index = self.last_selected_index.unwrap_or(self.selected_note);
+        let start = from_index.min(to_index);
+        let end = from_index.max(to_index);
+
+        // Get note IDs first to avoid borrow issues
+        let note_ids: Vec<String> = self.filtered_notes().iter().map(|n| n.id.clone()).collect();
+        for i in start..=end {
+            if let Some(note_id) = note_ids.get(i) {
+                self.selected_note_ids.insert(note_id.clone());
+            }
+        }
+        self.is_multi_select_mode = !self.selected_note_ids.is_empty();
+        self.last_selected_index = Some(to_index);
+    }
+
+    /// Select all currently filtered notes
+    pub fn select_all_filtered(&mut self) {
+        // Get note IDs first to avoid borrow issues
+        let note_ids: Vec<String> = self.filtered_notes().iter().map(|n| n.id.clone()).collect();
+        for note_id in note_ids {
+            self.selected_note_ids.insert(note_id);
+        }
+        self.is_multi_select_mode = !self.selected_note_ids.is_empty();
+    }
+
+    /// Clear all multi-selection
+    pub fn clear_multi_selection(&mut self) {
+        self.selected_note_ids.clear();
+        self.is_multi_select_mode = false;
+        self.last_selected_index = None;
+    }
+
     /// Filter notes based on search query and sort (pinned first, then by modified date)
     pub fn filtered_notes(&self) -> Vec<&Note> {
         let mut notes: Vec<&Note> = if self.search_input.is_empty() {
             self.notes.iter().collect()
         } else {
             let query = self.search_input.to_lowercase();
-            let query_parts: Vec<&str> = query.split_whitespace().collect();
+
+            // Parse advanced modifiers from query
+            let modifiers = Self::parse_search_modifiers(&query);
+            let remaining_query = Self::remove_modifiers_from_query(&query);
+            let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
 
             self.notes
                 .iter()
                 .filter(|note| {
                     let content_lower = note.content.to_lowercase();
 
-                    // Check each query part
+                    // Apply advanced modifiers first
+
+                    // has:attachment
+                    if modifiers.has_attachment && note.attachments.is_empty() {
+                        return false;
+                    }
+
+                    // created:>DATE (created after)
+                    if let Some(ref date) = modifiers.created_after {
+                        let note_date = note.created_at.format("%Y-%m-%d").to_string();
+                        if note_date.as_str() < date.as_str() {
+                            return false;
+                        }
+                    }
+
+                    // created:<DATE (created before)
+                    if let Some(ref date) = modifiers.created_before {
+                        let note_date = note.created_at.format("%Y-%m-%d").to_string();
+                        if note_date.as_str() > date.as_str() {
+                            return false;
+                        }
+                    }
+
+                    // modified:>DATE (modified after)
+                    if let Some(ref date) = modifiers.modified_after {
+                        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+                        if note_date.as_str() < date.as_str() {
+                            return false;
+                        }
+                    }
+
+                    // modified:<DATE (modified before)
+                    if let Some(ref date) = modifiers.modified_before {
+                        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+                        if note_date.as_str() > date.as_str() {
+                            return false;
+                        }
+                    }
+
+                    // words:>N (minimum word count)
+                    if let Some(min) = modifiers.word_count_min {
+                        let word_count = note.content.split_whitespace().count();
+                        if word_count < min {
+                            return false;
+                        }
+                    }
+
+                    // words:<N (maximum word count)
+                    if let Some(max) = modifiers.word_count_max {
+                        let word_count = note.content.split_whitespace().count();
+                        if word_count > max {
+                            return false;
+                        }
+                    }
+
+                    // Check each remaining query part (text/tag search)
                     for part in &query_parts {
+                        if part.is_empty() {
+                            continue;
+                        }
                         if let Some(tag) = part.strip_prefix('#') {
                             // Tag search
                             if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
@@ -506,6 +650,125 @@ impl App {
         });
 
         notes
+    }
+
+    /// Parse search modifiers from query string
+    fn parse_search_modifiers(query: &str) -> SearchModifiers {
+        use regex::Regex;
+
+        let mut modifiers = SearchModifiers::default();
+
+        // has:attachment
+        if query.contains("has:attachment") {
+            modifiers.has_attachment = true;
+        }
+
+        // created:>DATE
+        if let Some(caps) = Regex::new(r"created:>(\d{4}-\d{2}-\d{2})")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.created_after = Some(caps[1].to_string());
+        }
+
+        // created:<DATE
+        if let Some(caps) = Regex::new(r"created:<(\d{4}-\d{2}-\d{2})")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.created_before = Some(caps[1].to_string());
+        }
+
+        // created:DATE..DATE (range)
+        if let Some(caps) = Regex::new(r"created:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.created_after = Some(caps[1].to_string());
+            modifiers.created_before = Some(caps[2].to_string());
+        }
+
+        // modified:>DATE
+        if let Some(caps) = Regex::new(r"modified:>(\d{4}-\d{2}-\d{2})")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.modified_after = Some(caps[1].to_string());
+        }
+
+        // modified:<DATE
+        if let Some(caps) = Regex::new(r"modified:<(\d{4}-\d{2}-\d{2})")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.modified_before = Some(caps[1].to_string());
+        }
+
+        // modified:DATE..DATE (range)
+        if let Some(caps) = Regex::new(r"modified:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.modified_after = Some(caps[1].to_string());
+            modifiers.modified_before = Some(caps[2].to_string());
+        }
+
+        // words:>N
+        if let Some(caps) = Regex::new(r"words:>(\d+)")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.word_count_min = caps[1].parse().ok();
+        }
+
+        // words:<N
+        if let Some(caps) = Regex::new(r"words:<(\d+)")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.word_count_max = caps[1].parse().ok();
+        }
+
+        // words:N..N (range)
+        if let Some(caps) = Regex::new(r"words:(\d+)\.\.(\d+)")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.word_count_min = caps[1].parse().ok();
+            modifiers.word_count_max = caps[2].parse().ok();
+        }
+
+        modifiers
+    }
+
+    /// Remove search modifiers from query string, leaving only text/tag search terms
+    fn remove_modifiers_from_query(query: &str) -> String {
+        use regex::Regex;
+
+        let mut result = query.to_string();
+
+        // Remove all modifier patterns
+        let patterns = [
+            r"has:attachment",
+            r"created:>\d{4}-\d{2}-\d{2}",
+            r"created:<\d{4}-\d{2}-\d{2}",
+            r"created:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}",
+            r"modified:>\d{4}-\d{2}-\d{2}",
+            r"modified:<\d{4}-\d{2}-\d{2}",
+            r"modified:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}",
+            r"words:>\d+",
+            r"words:<\d+",
+            r"words:\d+\.\.\d+",
+        ];
+
+        for pattern in patterns {
+            if let Ok(re) = Regex::new(pattern) {
+                result = re.replace_all(&result, "").to_string();
+            }
+        }
+
+        // Clean up extra whitespace
+        result.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     /// Trigger manual sync

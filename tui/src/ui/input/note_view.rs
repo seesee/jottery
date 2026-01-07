@@ -73,8 +73,8 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             _ => {}
         },
-        InputMode::AttachmentPath => {
-            // AttachmentPath mode is handled in note list view, not note view
+        InputMode::AttachmentPath | InputMode::BulkAddTags | InputMode::BulkExportPath => {
+            // These modes are handled in note list view, not note view
             // Reset to normal if somehow we end up here
             app.input_mode = InputMode::Normal;
         }

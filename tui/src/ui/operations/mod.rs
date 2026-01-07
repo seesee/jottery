@@ -10,6 +10,7 @@
 //! - **sync**: Bidirectional sync with remote server
 
 pub mod auth;
+pub mod bulk;
 pub mod notes;
 pub mod attachments;
 pub mod settings;

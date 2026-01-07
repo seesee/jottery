@@ -212,8 +212,19 @@ dog*                       - Starts with "dog"
 *dog                       - Ends with "dog"
 *dog*                      - Contains "dog" anywhere
 
+# Advanced modifiers
+has:attachment             - Notes with attachments
+created:>2024-01-01        - Created after date
+created:<2024-06-30        - Created before date
+created:2024-01-01..2024-06-30  - Created in date range
+modified:>2024-01-01       - Modified after date
+words:>100                 - More than 100 words
+words:<50                  - Less than 50 words
+words:50..200              - Between 50 and 200 words
+
 # Combined
 #animals dog -cat          - Tagged #animals, contains "dog", not "cat"
+has:attachment created:>2024-01-01  - With attachments, created this year
 ```
 
 ## UI Architecture
@@ -239,14 +250,15 @@ dog*                       - Starts with "dog"
 ```
 
 ### Key Components
-1. **SearchBar** - Input with search syntax support
-2. **NoteList** - Virtualized list for performance
-3. **NoteListItem** - Preview with auto-generated title, tags, date
+1. **SearchBar** - Input with search syntax support and result count
+2. **NoteList** - Virtualized list for performance with multi-select support
+3. **NoteListItem** - Preview with auto-generated title, tags, date, selection checkbox
 4. **EditorPane** - CodeMirror 6 editor with syntax highlighting
 5. **TagInput** - Tag editor with autocomplete
 6. **AttachmentList** - File attachments with preview/download
 7. **SettingsModal** - Application configuration
 8. **RecycleBin** - View for soft-deleted notes
+9. **BulkOperationsToolbar** - Fixed bottom toolbar for bulk operations on selected notes
 
 ## Keyboard Shortcuts
 
@@ -264,10 +276,46 @@ dog*                       - Starts with "dog"
 - `Delete` - Delete selected note
 - `P` - Pin/unpin selected note
 
+### Multi-Select (Web)
+- `Ctrl/Cmd + Click` - Toggle note selection
+- `Shift + Click` - Select range from last selected
+- `Ctrl/Cmd + A` - Select all filtered notes
+- `Esc` - Clear selection
+
+### Multi-Select (TUI)
+- `Space` - Toggle current note selection
+- `Shift + V` - Select range from last selected
+- `Ctrl + A` - Select all filtered notes
+- `Esc` - Clear selection
+- `t` (in multi-select) - Add tags to selected
+- `d` (in multi-select) - Delete selected (with confirmation)
+- `e` (in multi-select) - Export selected to JSON
+
 ### Editor
 - `Ctrl/Cmd + F` - Find in note
 - `Ctrl/Cmd + H` - Replace in note
 - `Esc` - Close note
+
+## Multi-Select & Bulk Operations
+
+Both web and TUI clients support multi-select for bulk operations on notes.
+
+### Selection Methods
+- **Toggle**: Ctrl/Cmd+click (web) or Space (TUI)
+- **Range**: Shift+click (web) or Shift+V (TUI)
+- **Select All**: Ctrl/Cmd+A selects all filtered notes
+- **Clear**: Escape clears the selection
+
+### Bulk Operations
+When notes are selected, a toolbar appears with these actions:
+- **Add Tags**: Add comma-separated tags to all selected notes
+- **Remove Tags**: Select tags to remove from selected notes
+- **Export**: Download selected notes as JSON file
+- **Delete**: Move selected notes to recycle bin (with confirmation)
+- **Select All**: Link to select all currently filtered notes
+
+### Search Result Count
+When searching, the UI displays `matches/total` (e.g., "87/456") to show how many notes match the current search.
 
 ## Import/Export Format
 

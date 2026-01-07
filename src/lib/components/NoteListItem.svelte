@@ -1,14 +1,26 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import type { DecryptedNote } from '../types';
-  import { selectNote, selectedNoteId, searchQuery } from '../stores/appStore';
+  import {
+    selectNote,
+    selectedNoteId,
+    searchQuery,
+    selectedNoteIds,
+    isMultiSelectMode,
+    lastSelectedIndex,
+    toggleNoteSelection,
+    selectRange,
+  } from '../stores/appStore';
   import { formatTimestamp } from '../utils/timezone';
 
   export let note: DecryptedNote;
+  export let index: number = 0;
+  export let filteredNotes: DecryptedNote[] = [];
   export let onNoteSelect: (() => void) | undefined = undefined;
   export let onDeleteRequest: ((note: DecryptedNote) => void) | undefined = undefined;
 
   $: isSelected = $selectedNoteId === note.id;
+  $: isMultiSelected = $selectedNoteIds.has(note.id);
   let isHovered = false;
 
   // Strip markdown formatting from the title
@@ -34,12 +46,32 @@
   $: preview = note.content.split('\n').slice(1).join(' ').slice(0, previewLength);
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 
-  function handleClick() {
-    selectNote(note.id);
-    // Call mobile navigation callback if provided
-    if (onNoteSelect) {
-      onNoteSelect();
+  function handleClick(event: MouseEvent) {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
+
+    if (ctrlOrCmd) {
+      // Ctrl/Cmd+click: toggle selection
+      toggleNoteSelection(note.id, index);
+    } else if (event.shiftKey && $lastSelectedIndex !== null) {
+      // Shift+click: range selection
+      selectRange($lastSelectedIndex, index, filteredNotes);
+    } else if ($isMultiSelectMode) {
+      // In multi-select mode, normal click toggles selection
+      toggleNoteSelection(note.id, index);
+    } else {
+      // Normal click: single selection
+      selectNote(note.id);
+      // Call mobile navigation callback if provided
+      if (onNoteSelect) {
+        onNoteSelect();
+      }
     }
+  }
+
+  function handleCheckboxClick(event: MouseEvent | KeyboardEvent) {
+    event.stopPropagation();
+    toggleNoteSelection(note.id, index);
   }
 
   function handleTagClick(event: MouseEvent | KeyboardEvent, tag: string) {
@@ -66,10 +98,28 @@
   on:click={handleClick}
   on:mouseenter={() => isHovered = true}
   on:mouseleave={() => isHovered = false}
-  class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''}"
+  class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
+      <!-- Multi-select checkbox -->
+      {#if $isMultiSelectMode || isHovered}
+        <span
+          on:click|stopPropagation={handleCheckboxClick}
+          on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
+          role="checkbox"
+          aria-checked={isMultiSelected}
+          tabindex="0"
+          class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors {isMultiSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-400 dark:border-gray-500 hover:border-blue-400'}"
+          title={$_('bulk.toggleSelect')}
+        >
+          {#if isMultiSelected}
+            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+            </svg>
+          {/if}
+        </span>
+      {/if}
       {#if note.pinned}
         <span class="text-yellow-500 flex-shrink-0">⭐</span>
       {/if}

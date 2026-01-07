@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import { beforeUpdate, afterUpdate, onMount } from 'svelte';
@@ -236,6 +236,23 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
+
+    // Ctrl/Cmd+A: Select all filtered notes
+    if (ctrlOrCmd && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      selectAllFiltered($filteredNotes);
+      return;
+    }
+
+    // Escape: Clear multi-selection
+    if (event.key === 'Escape' && $isMultiSelectMode) {
+      event.preventDefault();
+      clearMultiSelection();
+      return;
+    }
+
     // Handle delete shortcut when a note is selected
     if ($selectedNoteId && $settings.keyboardShortcuts) {
       const deleteShortcut = $settings.keyboardShortcuts.deleteNote;
@@ -294,7 +311,7 @@
           <!-- Render only visible items -->
           {#each visibleNotes as note, i (note.id)}
             <div bind:this={itemElements[i]}>
-              <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} />
             </div>
           {/each}
         </div>
@@ -344,7 +361,7 @@
         <!-- Render only visible items -->
         {#each visibleNotes as note, i (note.id)}
           <div bind:this={itemElements[i]}>
-            <NoteListItem {note} {onNoteSelect} onDeleteRequest={requestDelete} />
+            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} />
           </div>
         {/each}
       </div>

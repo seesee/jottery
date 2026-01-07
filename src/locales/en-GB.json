@@ -41,7 +41,8 @@
   },
   "search": {
     "placeholder": "Search notes...",
-    "clear": "Clear search"
+    "clear": "Clear search",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "No note selected",
@@ -563,5 +564,20 @@
     "release": "Release to sync",
     "syncing": "Syncing...",
     "region": "Pull to refresh"
+  },
+  "bulk": {
+    "toggleSelect": "Toggle selection",
+    "selected": "selected",
+    "addTags": "Add tags",
+    "removeTags": "Remove tags",
+    "delete": "Delete",
+    "export": "Export",
+    "cancel": "Cancel selection",
+    "confirmDelete": "Delete {count} notes?",
+    "confirmDeleteMessage": "This will move {count} notes to the recycle bin.",
+    "enterTags": "Enter tags (comma-separated)",
+    "progress": "{current} of {total}",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all"
   }
 }

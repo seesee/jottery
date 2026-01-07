@@ -36,13 +36,14 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
     let right_pane = main_chunks[1];
 
     // Left pane layout: search bar (optional), list
+    let filtered = app.filtered_notes();
     let title = match app.view_mode {
         ViewMode::RecycleBin => "Recycle Bin".to_string(),
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
         ViewMode::VersionHistory => "Version History".to_string(),
         ViewMode::NoteList => {
-            if app.search_active {
-                format!("Jottery v{} - Notes (Search)", env!("CARGO_PKG_VERSION"))
+            if app.search_active && !app.search_input.is_empty() {
+                format!("Jottery v{} - Notes ({}/{})", env!("CARGO_PKG_VERSION"), filtered.len(), app.notes.len())
             } else {
                 format!("Jottery v{} - Notes", env!("CARGO_PKG_VERSION"))
             }
@@ -77,7 +78,6 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
         .title(title)
         .borders(Borders::ALL);
 
-    let filtered = app.filtered_notes();
     let items: Vec<ListItem> = filtered
         .iter()
         .map(|note| {
