@@ -236,9 +236,14 @@ test.describe('Calculator Mode', () => {
 		await newNoteButton.click();
 		await page.waitForTimeout(1000);
 
-		// Go back to first note (click in note list)
+		// Clear any multi-select mode first
+		await page.keyboard.press('Escape');
+		await page.waitForTimeout(500);
+
+		// Go back to first note - click on the note list item button
 		const noteList = page.getByRole('list');
-		await noteList.getByText(/2 \+ 2/i).click();
+		const firstNoteItem = noteList.locator('button').filter({ hasText: /2 \+ 2/i }).first();
+		await firstNoteItem.click();
 		await page.waitForTimeout(1000);
 
 		// Check that calc language is still selected

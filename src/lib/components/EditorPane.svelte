@@ -381,6 +381,18 @@
                 showPreview: showPreviewToSave,
               });
 
+              // Update the store with saved data so switching back shows correct values
+              const updatedNote = await noteService.getNote(noteIdToSave);
+              if (updatedNote) {
+                notes.update(allNotes => {
+                  const index = allNotes.findIndex(n => n.id === updatedNote.id);
+                  if (index !== -1) {
+                    allNotes[index] = updatedNote;
+                  }
+                  return allNotes;
+                });
+              }
+
               // Create version snapshot
               await createVersionSnapshot(noteIdToSave);
             } catch (error) {
@@ -433,11 +445,14 @@
 
       // Only save and create version if content was actually modified
       if (hasContentChanged) {
+        // Capture previousNoteId before it gets reset
+        const noteIdToSave = previousNoteId;
+
         // Perform the save, then create version
         (async () => {
           try {
             // Save current changes immediately
-            await noteService.updateNote(previousNoteId, {
+            await noteService.updateNote(noteIdToSave, {
               content,
               tags: tags,
               attachments: attachments,
@@ -446,8 +461,20 @@
               showPreview,
             });
 
+            // Update the store with saved data
+            const updatedNote = await noteService.getNote(noteIdToSave);
+            if (updatedNote) {
+              notes.update(allNotes => {
+                const index = allNotes.findIndex(n => n.id === updatedNote.id);
+                if (index !== -1) {
+                  allNotes[index] = updatedNote;
+                }
+                return allNotes;
+              });
+            }
+
             // Create version snapshot
-            await createVersionSnapshot(previousNoteId);
+            await createVersionSnapshot(noteIdToSave);
 
             await triggerBackgroundSync();
           } catch (error) {
@@ -558,6 +585,9 @@
 
       // Trigger background sync after saving
       triggerBackgroundSync();
+
+      // Reset change tracking after successful save
+      hasContentChanged = false;
 
       // selectedNote will automatically update from the derived store
     } catch (error) {
