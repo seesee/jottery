@@ -17,6 +17,13 @@
     "error": "Error",
     "back": "Back"
   },
+  "docs": {
+    "title": "Documentation",
+    "copy": "Copy",
+    "copyMarkdown": "Copy documentation as Markdown",
+    "copied": "Documentation copied to clipboard",
+    "copyError": "Failed to copy documentation"
+  },
   "note": {
     "new": "New",
     "create": "Create new note",
@@ -572,9 +579,13 @@
     "removeTags": "Remove tags",
     "delete": "Delete",
     "export": "Export",
+    "combine": "Combine",
     "cancel": "Cancel selection",
     "confirmDelete": "Delete {count} notes?",
     "confirmDeleteMessage": "This will move {count} notes to the recycle bin.",
+    "confirmCombine": "Combine {count} notes?",
+    "confirmCombineMessage": "This will merge {count} notes into a single note (ordered by creation date, oldest first). Original notes will be moved to the recycle bin.",
+    "combinedSuccess": "Combined {count} notes",
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",
     "selectAll": "Select all",

@@ -9,6 +9,7 @@
   // Modal states
   let showAddTagsModal = false;
   let showRemoveTagsModal = false;
+  let showCombineConfirm = false;
   let showDeleteConfirm = false;
 
   // Tag input
@@ -131,6 +132,23 @@
     }
   }
 
+  async function handleCombine() {
+    const noteIds = Array.from(get(selectedNoteIds));
+    isProcessing = true;
+    showCombineConfirm = false;
+
+    try {
+      await bulkOperationsService.combineNotes(noteIds, handleProgress);
+      toast.success($_('bulk.combinedSuccess', { values: { count: noteIds.length } }));
+      // clearMultiSelection and selectNote are called inside combineNotes
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      isProcessing = false;
+      progress = null;
+    }
+  }
+
   function toggleTagSelection(tag: string) {
     if (selectedTagsToRemove.has(tag)) {
       selectedTagsToRemove.delete(tag);
@@ -224,6 +242,16 @@
             >
               {$_('bulk.export')}
             </button>
+
+            <!-- Combine -->
+            {#if $selectedCount >= 2}
+              <button
+                on:click={() => showCombineConfirm = true}
+                class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 active:bg-purple-800 transition-colors"
+              >
+                {$_('bulk.combine')}
+              </button>
+            {/if}
 
             <!-- Delete -->
             <button
@@ -350,6 +378,18 @@
     </div>
   </div>
 {/if}
+
+<!-- Combine Confirmation Modal -->
+<ConfirmModal
+  show={showCombineConfirm}
+  title={$_('bulk.confirmCombine', { values: { count: $selectedCount } })}
+  message={$_('bulk.confirmCombineMessage', { values: { count: $selectedCount } })}
+  confirmText={$_('bulk.combine')}
+  cancelText={$_('common.cancel')}
+  confirmClass="bg-purple-600 hover:bg-purple-700"
+  onConfirm={handleCombine}
+  onCancel={() => showCombineConfirm = false}
+/>
 
 <!-- Delete Confirmation Modal -->
 <ConfirmModal

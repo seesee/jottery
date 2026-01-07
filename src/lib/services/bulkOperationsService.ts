@@ -4,7 +4,9 @@
 
 import type { DecryptedNote, ExportNote, ExportData } from '../types';
 import { noteRepository } from './noteRepository';
-import { notes, clearMultiSelection } from '../stores/appStore';
+import { noteService } from './noteService';
+import { notes, clearMultiSelection, selectNote } from '../stores/appStore';
+import { searchService } from './searchService';
 import { get } from 'svelte/store';
 
 export interface BulkProgress {
@@ -225,10 +227,89 @@ export function downloadExport(jsonData: string, filename: string = 'jottery-exp
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Combine multiple notes into a single note
+ * - Content is joined with horizontal rule separator
+ * - Notes are ordered by creation date (oldest first)
+ * - Tags and attachments are merged from all notes
+ * - Original notes are soft-deleted
+ */
+export async function combineNotes(
+  noteIds: string[],
+  onProgress?: ProgressCallback
+): Promise<DecryptedNote> {
+  const allNotes = get(notes);
+  const total = noteIds.length;
+
+  // Get selected notes sorted by creation date (oldest first)
+  const selectedNotes = allNotes
+    .filter((n) => noteIds.includes(n.id))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  // Combine content with horizontal rule separator
+  const combinedContent = selectedNotes.map((n) => n.content).join('\n\n---\n\n');
+
+  // Merge all unique tags
+  const combinedTags = [...new Set(selectedNotes.flatMap((n) => n.tags))];
+
+  // Combine all attachments
+  const combinedAttachments = selectedNotes.flatMap((n) => n.attachments);
+
+  // Create new combined note
+  const newNote = await noteService.createNote(combinedContent, combinedTags, {
+    attachments: combinedAttachments,
+    syntaxLanguage: 'markdown',
+  });
+
+  // Get decrypted version of the new note
+  const decryptedNewNote = await noteService.getNote(newNote.id);
+  if (!decryptedNewNote) {
+    throw new Error('Failed to retrieve newly created combined note');
+  }
+
+  // Soft-delete original notes with progress
+  for (let i = 0; i < noteIds.length; i++) {
+    const noteId = noteIds[i];
+    await noteService.deleteNote(noteId);
+    searchService.removeNote(noteId);
+
+    onProgress?.({
+      current: i + 1,
+      total,
+      status: 'running',
+    });
+  }
+
+  // Update store: remove deleted notes, add combined note
+  notes.update((n) => {
+    const filtered = n.filter((note) => !noteIds.includes(note.id));
+    // Insert after pinned notes
+    const pinnedCount = filtered.filter((note) => note.pinned).length;
+    filtered.splice(pinnedCount, 0, decryptedNewNote);
+    return filtered;
+  });
+
+  // Add new note to search index
+  searchService.updateNote(decryptedNewNote);
+
+  // Clear multi-selection and select the new note
+  clearMultiSelection();
+  selectNote(decryptedNewNote.id);
+
+  onProgress?.({
+    current: total,
+    total,
+    status: 'complete',
+  });
+
+  return decryptedNewNote;
+}
+
 export const bulkOperationsService = {
   addTagsToNotes,
   removeTagsFromNotes,
   deleteNotes,
   exportNotes,
   downloadExport,
+  combineNotes,
 };
