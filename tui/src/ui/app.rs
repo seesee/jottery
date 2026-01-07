@@ -494,9 +494,27 @@ impl App {
     /// Load notes from database
     fn load_notes(&mut self) -> Result<()> {
         if let (Some(db), Some(key)) = (&self.db, &self.key) {
+            // Remember the currently selected note's ID before reload
+            let selected_note_id = if !self.notes.is_empty() && self.selected_note < self.notes.len() {
+                Some(self.notes[self.selected_note].id.clone())
+            } else {
+                None
+            };
+
             let repo = NoteRepository::new(db.connection());
             self.notes = repo.list(false, key)?;
-            self.selected_note = 0;
+
+            // Restore selection to the same note if it still exists
+            if let Some(note_id) = selected_note_id {
+                if let Some(index) = self.notes.iter().position(|n| n.id == note_id) {
+                    self.selected_note = index;
+                } else {
+                    // Note was deleted, select first note
+                    self.selected_note = 0;
+                }
+            } else {
+                self.selected_note = 0;
+            }
         }
         Ok(())
     }

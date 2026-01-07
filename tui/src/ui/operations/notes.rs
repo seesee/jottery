@@ -9,12 +9,30 @@ use crate::{
 
 use super::super::app::App;
 
-/// Load notes from database
+/// Load notes from database, preserving current selection
 pub fn load_notes(app: &mut App) -> Result<()> {
     if let (Some(db), Some(key)) = (&app.db, &app.key) {
+        // Remember the currently selected note's ID before reload
+        let selected_note_id = if !app.notes.is_empty() && app.selected_note < app.notes.len() {
+            Some(app.notes[app.selected_note].id.clone())
+        } else {
+            None
+        };
+
         let repo = NoteRepository::new(db.connection());
         app.notes = repo.list(false, key)?;
-        app.selected_note = 0;
+
+        // Restore selection to the same note if it still exists
+        if let Some(note_id) = selected_note_id {
+            if let Some(index) = app.notes.iter().position(|n| n.id == note_id) {
+                app.selected_note = index;
+            } else {
+                // Note was deleted, select first note
+                app.selected_note = 0;
+            }
+        } else {
+            app.selected_note = 0;
+        }
     }
     Ok(())
 }
