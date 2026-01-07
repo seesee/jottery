@@ -157,10 +157,19 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
         .alignment(Alignment::Center);
     frame.render_widget(help, help_area);
 
-    // Right pane: note preview
+    // Right pane: note preview with timestamp footer
+    // Split into main preview area and timestamp footer (2 lines: timestamp + border)
+    let preview_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(2)])
+        .split(right_pane);
+
+    let preview_area = preview_layout[0];
+    let timestamp_area = preview_layout[1];
+
     let preview_block = Block::default()
         .title("Preview")
-        .borders(Borders::ALL);
+        .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT);
 
     if !filtered.is_empty() && app.selected_note < filtered.len() {
         let note = filtered[app.selected_note];
@@ -273,10 +282,53 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
             .block(preview_block)
             .wrap(Wrap { trim: false })
             .scroll((app.preview_scroll_offset as u16, 0));
-        frame.render_widget(preview, right_pane);
+        frame.render_widget(preview, preview_area);
+
+        // Render timestamp footer with left-aligned Created and right-aligned Modified
+        let created_str = note.created_at.format("%d/%m/%Y, %H:%M:%S").to_string();
+        let modified_str = note.modified_at.format("%d/%m/%Y, %H:%M:%S").to_string();
+
+        let created_label = format!("Created: {}", created_str);
+        let modified_label = format!("Modified: {}", modified_str);
+
+        // Calculate padding between left and right timestamps
+        let available_width = timestamp_area.width.saturating_sub(2) as usize; // -2 for borders
+        let total_text_len = created_label.len() + modified_label.len();
+        let padding = if available_width > total_text_len {
+            available_width - total_text_len
+        } else {
+            1
+        };
+
+        let timestamp_line = Line::from(vec![
+            Span::styled("│", Style::default().fg(app.color_scheme.border)),
+            Span::styled(created_label, Style::default().fg(app.color_scheme.muted)),
+            Span::raw(" ".repeat(padding)),
+            Span::styled(modified_label, Style::default().fg(app.color_scheme.muted)),
+            Span::styled("│", Style::default().fg(app.color_scheme.border)),
+        ]);
+
+        // Add bottom border line
+        let border_line = Line::from(vec![
+            Span::styled("└", Style::default().fg(app.color_scheme.border)),
+            Span::styled("─".repeat(available_width), Style::default().fg(app.color_scheme.border)),
+            Span::styled("┘", Style::default().fg(app.color_scheme.border)),
+        ]);
+
+        // Create a 2-line footer: timestamp + bottom border
+        let timestamp_footer = Paragraph::new(vec![timestamp_line, border_line]);
+        frame.render_widget(timestamp_footer, Rect {
+            x: timestamp_area.x,
+            y: timestamp_area.y,
+            width: timestamp_area.width,
+            height: 2,
+        });
     } else {
+        let preview_block_empty = Block::default()
+            .title("Preview")
+            .borders(Borders::ALL);
         let preview = Paragraph::new("No notes")
-            .block(preview_block)
+            .block(preview_block_empty)
             .alignment(Alignment::Center);
         frame.render_widget(preview, right_pane);
     }
