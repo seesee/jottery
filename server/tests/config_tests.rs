@@ -182,16 +182,18 @@ mod security_validation {
     #[test]
     fn test_default_admin_credentials_warning() {
         // Document that default credentials are insecure
+        // NOTE: Default credentials are documented in CLAUDE.md and migrations
+        // They MUST be changed before production deployment
         let default_email = "admin@localhost";
         let default_password = "changeme";
 
-        println!("\n⚠️  WARNING: Default admin credentials");
-        println!("    Email: {}", default_email);
-        println!("    Password: {}", default_password);
-        println!("    These MUST be changed before production deployment!");
-
+        // Verify the documented defaults match (without logging sensitive values)
         assert_eq!(default_email, "admin@localhost");
-        assert_eq!(default_password, "changeme");
+        assert!(!default_password.is_empty(), "Default password must be set");
+        assert!(
+            default_password.len() >= 6,
+            "Default password must be at least 6 characters"
+        );
     }
 
     #[test]

@@ -234,8 +234,7 @@ async fn test_user_registration_weak_password() {
         assert_eq!(
             response.status(),
             StatusCode::BAD_REQUEST,
-            "Password '{}' should be rejected (too short)",
-            password
+            "Weak password should be rejected (too short)"
         );
     }
 }
