@@ -81,6 +81,92 @@ pub fn expand_tilde(path: &str) -> Result<PathBuf> {
     }
 }
 
+/// Get path completions for Tab completion
+/// Returns a list of possible completions for the given partial path
+pub fn get_path_completions(partial: &str) -> Vec<String> {
+    if partial.is_empty() {
+        // Show current directory contents
+        if let Ok(entries) = std::fs::read_dir(".") {
+            return entries
+                .filter_map(|e| e.ok())
+                .map(|e| {
+                    let name = e.file_name().to_string_lossy().to_string();
+                    if e.path().is_dir() {
+                        format!("{}/", name)
+                    } else {
+                        name
+                    }
+                })
+                .take(20)
+                .collect();
+        }
+        return Vec::new();
+    }
+
+    // Expand ~ for matching
+    let expanded = if partial.starts_with("~/") {
+        if let Ok(home) = env::var("HOME") {
+            format!("{}{}", home, &partial[1..])
+        } else {
+            partial.to_string()
+        }
+    } else {
+        partial.to_string()
+    };
+
+    let path = std::path::Path::new(&expanded);
+
+    // Determine directory and prefix to match
+    let (dir, prefix) = if path.is_dir() && partial.ends_with('/') {
+        // Listing contents of a directory
+        (path.to_path_buf(), String::new())
+    } else if let Some(parent) = path.parent() {
+        // Matching files in parent directory
+        let prefix = path.file_name()
+            .map(|f| f.to_string_lossy().to_string())
+            .unwrap_or_default();
+        (parent.to_path_buf(), prefix)
+    } else {
+        // Root or current directory
+        (std::path::PathBuf::from("."), expanded.clone())
+    };
+
+    // Read directory and filter by prefix
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        let mut completions: Vec<String> = entries
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name().to_string_lossy().to_string();
+                prefix.is_empty() || name.starts_with(&prefix)
+            })
+            .map(|e| {
+                let name = e.file_name().to_string_lossy().to_string();
+                let is_dir = e.path().is_dir();
+
+                // Build the full completion path
+                let completion = if partial.starts_with("~/") {
+                    // Preserve ~/ prefix
+                    let home = env::var("HOME").unwrap_or_default();
+                    let parent_str = dir.to_string_lossy();
+                    let relative = parent_str.strip_prefix(&home).unwrap_or(&parent_str);
+                    format!("~{}/{}{}", relative, name, if is_dir { "/" } else { "" })
+                } else if dir == std::path::PathBuf::from(".") {
+                    format!("{}{}", name, if is_dir { "/" } else { "" })
+                } else {
+                    format!("{}/{}{}", dir.display(), name, if is_dir { "/" } else { "" })
+                };
+                completion
+            })
+            .take(20)
+            .collect();
+
+        completions.sort();
+        completions
+    } else {
+        Vec::new()
+    }
+}
+
 /// View an attachment (decrypt to temp file, then view with appropriate tool)
 pub fn view_attachment(app: &mut App, attachment: &Attachment) -> Result<()> {
     let db = app.db.as_ref().context("Database not available")?;

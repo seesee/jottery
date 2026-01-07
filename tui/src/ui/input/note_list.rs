@@ -8,7 +8,7 @@ use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
 use crate::ui::app::App;
 use crate::ui::operations;
-use crate::ui::state::{AppState, InputMode, ViewMode};
+use crate::ui::state::{AppState, FocusedPanel, InputMode, ViewMode};
 
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
@@ -102,27 +102,85 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     if matches!(app.input_mode, InputMode::AttachmentPath) {
         match key.code {
             KeyCode::Enter => {
-                // Add attachment from file path
-                let path = app.attachment_path_input.clone();
-                app.attachment_path_input.clear();
-                app.input_mode = InputMode::Normal;
+                // If completions are showing and one is selected, use it
+                if !app.path_completions.is_empty() && app.path_completion_index < app.path_completions.len() {
+                    app.attachment_path_input = app.path_completions[app.path_completion_index].clone();
+                    app.path_completions.clear();
+                    app.path_completion_index = 0;
+                    // If it's a directory, show its contents
+                    if app.attachment_path_input.ends_with('/') {
+                        app.path_completions = operations::attachments::get_path_completions(&app.attachment_path_input);
+                    }
+                } else {
+                    // Add attachment from file path
+                    let path = app.attachment_path_input.clone();
+                    app.attachment_path_input.clear();
+                    app.path_completions.clear();
+                    app.path_completion_index = 0;
+                    app.input_mode = InputMode::Normal;
 
-                if !path.is_empty() {
-                    if let Err(e) = operations::attachments::add_attachment_to_current_note(app, &path) {
-                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                    if !path.is_empty() {
+                        if let Err(e) = operations::attachments::add_attachment_to_current_note(app, &path) {
+                            app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                        }
                     }
                 }
             }
             KeyCode::Esc => {
                 // Cancel attachment input
                 app.attachment_path_input.clear();
+                app.path_completions.clear();
+                app.path_completion_index = 0;
                 app.input_mode = InputMode::Normal;
+            }
+            KeyCode::Tab => {
+                // Trigger/cycle path completion
+                if app.path_completions.is_empty() {
+                    // Get new completions
+                    app.path_completions = operations::attachments::get_path_completions(&app.attachment_path_input);
+                    app.path_completion_index = 0;
+                } else {
+                    // Cycle to next completion
+                    app.path_completion_index = (app.path_completion_index + 1) % app.path_completions.len();
+                }
+            }
+            KeyCode::BackTab => {
+                // Cycle backwards through completions
+                if !app.path_completions.is_empty() {
+                    if app.path_completion_index == 0 {
+                        app.path_completion_index = app.path_completions.len() - 1;
+                    } else {
+                        app.path_completion_index -= 1;
+                    }
+                }
+            }
+            KeyCode::Down => {
+                // Navigate down in completions
+                if !app.path_completions.is_empty() {
+                    app.path_completion_index = (app.path_completion_index + 1) % app.path_completions.len();
+                }
+            }
+            KeyCode::Up => {
+                // Navigate up in completions
+                if !app.path_completions.is_empty() {
+                    if app.path_completion_index == 0 {
+                        app.path_completion_index = app.path_completions.len() - 1;
+                    } else {
+                        app.path_completion_index -= 1;
+                    }
+                }
             }
             KeyCode::Backspace => {
                 app.attachment_path_input.pop();
+                // Clear completions when input changes
+                app.path_completions.clear();
+                app.path_completion_index = 0;
             }
             KeyCode::Char(c) => {
                 app.attachment_path_input.push(c);
+                // Clear completions when input changes
+                app.path_completions.clear();
+                app.path_completion_index = 0;
             }
             _ => {}
         }
@@ -323,6 +381,19 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     }
                 }
+                // View attachment when attachment panel is focused
+                else if matches!(app.view_mode, ViewMode::NoteList) && app.focused_panel == FocusedPanel::Attachments {
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note = filtered[app.selected_note];
+                        if app.selected_attachment < note.attachments.len() {
+                            let attachment = note.attachments[app.selected_attachment].clone();
+                            if let Err(e) = operations::attachments::view_attachment(app, &attachment) {
+                                app.error = Some(t!("attachment.view_failed", error = e.to_string()).to_string());
+                            }
+                        }
+                    }
+                }
                 // Edit selected note directly with external editor (only in note list view)
                 else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
@@ -357,8 +428,28 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
+            KeyCode::Tab => {
+                // Toggle focus between note content and attachments panel
+                if matches!(app.view_mode, ViewMode::NoteList) && !app.is_multi_select_mode {
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note = filtered[app.selected_note];
+                        // Only allow focus on attachments if note has attachments
+                        if !note.attachments.is_empty() {
+                            app.focused_panel = match app.focused_panel {
+                                FocusedPanel::NoteContent => FocusedPanel::Attachments,
+                                FocusedPanel::Attachments => FocusedPanel::NoteContent,
+                            };
+                            // Reset attachment selection when switching to attachments
+                            if app.focused_panel == FocusedPanel::Attachments {
+                                app.selected_attachment = 0;
+                            }
+                        }
+                    }
+                }
+            }
             KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                // Navigate attachments down (Shift+j)
+                // Navigate attachments down (Shift+j) - legacy, kept for compatibility
                 let filtered = app.filtered_notes();
                 if !filtered.is_empty() && app.selected_note < filtered.len() {
                     let note = filtered[app.selected_note];
@@ -368,7 +459,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                // Navigate attachments up (Shift+k)
+                // Navigate attachments up (Shift+k) - legacy, kept for compatibility
                 if app.selected_attachment > 0 {
                     app.selected_attachment -= 1;
                 }
@@ -389,12 +480,23 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.selected_version += 1;
                         app.version_preview_scroll_offset = 0; // Reset scroll when changing versions
                     }
+                } else if app.focused_panel == FocusedPanel::Attachments {
+                    // Navigate attachments when attachment panel is focused
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note = filtered[app.selected_note];
+                        if !note.attachments.is_empty() && app.selected_attachment < note.attachments.len() - 1 {
+                            app.selected_attachment += 1;
+                        }
+                    }
                 } else {
                     // Navigate notes
                     let note_count = app.filtered_notes().len();
                     if note_count > 0 && app.selected_note < note_count - 1 {
                         app.selected_note += 1;
                         app.preview_scroll_offset = 0;
+                        // Reset focused panel when changing notes
+                        app.focused_panel = FocusedPanel::NoteContent;
                     }
                 }
             }
@@ -410,11 +512,18 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.selected_version -= 1;
                         app.version_preview_scroll_offset = 0; // Reset scroll when changing versions
                     }
+                } else if app.focused_panel == FocusedPanel::Attachments {
+                    // Navigate attachments when attachment panel is focused
+                    if app.selected_attachment > 0 {
+                        app.selected_attachment -= 1;
+                    }
                 } else {
                     // Navigate notes
                     if app.selected_note > 0 {
                         app.selected_note -= 1;
                         app.preview_scroll_offset = 0;
+                        // Reset focused panel when changing notes
+                        app.focused_panel = FocusedPanel::NoteContent;
                     }
                 }
             }
@@ -438,10 +547,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         let note_id = filtered[app.selected_note].id.clone();
                         if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
                         note.pinned = !note.pinned;
-                        // Update modified_at to match web client behavior (triggers sync)
-                        note.modified_at = chrono::Utc::now();
-                        // Increment version for optimistic locking
-                        note.version += 1;
+                        // Note: Don't update modified_at for UI state changes (pinning)
+                        // Only content/tag modifications should trigger timestamp updates
 
                         // Save to database
                         if let (Some(db), Some(key)) = (&app.db, &app.key) {
@@ -610,6 +717,19 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     if let Err(e) = operations::attachments::delete_current_attachment(app) {
                         app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                    }
+                }
+                // Delete attachment when attachment panel is focused
+                else if matches!(app.view_mode, ViewMode::NoteList) && app.focused_panel == FocusedPanel::Attachments {
+                    if let Err(e) = operations::attachments::delete_current_attachment(app) {
+                        app.error = Some(t!("attachment.delete_failed", error = e.to_string()).to_string());
+                    }
+                    // If no more attachments, switch focus back to content
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        if filtered[app.selected_note].attachments.is_empty() {
+                            app.focused_panel = FocusedPanel::NoteContent;
+                        }
                     }
                 }
                 // In multi-select mode: show bulk delete confirmation

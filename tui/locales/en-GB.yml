@@ -311,6 +311,8 @@ help:
   c_copy_desc: "Copy sync credentials (shows text to copy)"
   s_q_close_key: "s / q"
   s_q_close_desc: "Close settings panel"
+  tab_focus_attachment_key: "Tab"
+  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
   A_add_attachment_key: "A"
   A_add_attachment_desc: "Add attachment (enter file path)"
   a_view_attachment_key: "a + number"

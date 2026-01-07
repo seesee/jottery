@@ -65,3 +65,13 @@ pub enum ViewMode {
     /// Version history viewer modal
     VersionHistory,
 }
+
+/// Which panel is focused in the preview pane
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FocusedPanel {
+    /// Note content panel (default)
+    #[default]
+    NoteContent,
+    /// Attachments panel
+    Attachments,
+}

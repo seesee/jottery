@@ -7,7 +7,7 @@ use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 
 use crate::ui::app::App;
-use crate::ui::state::{InputMode, ViewMode};
+use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal};
 use crate::models::SyntaxLanguage;
 
@@ -202,15 +202,32 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
 
         // Add attachments section if there are any attachments
         if !note.attachments.is_empty() {
+            let is_focused = app.focused_panel == FocusedPanel::Attachments;
             lines.push(Line::raw("")); // Blank line before attachments
+
+            // Show separator with focus indicator
+            let separator_style = if is_focused {
+                Style::default().fg(app.color_scheme.accent)
+            } else {
+                Style::default().fg(app.color_scheme.muted)
+            };
             lines.push(Line::styled(
                 "─".repeat(40),
-                Style::default().fg(app.color_scheme.muted)
+                separator_style
             ));
-            lines.push(Line::styled(
-                "Attachments:",
+
+            // Show header with focus indicator
+            let header_text = if is_focused {
+                "▶ Attachments: (Tab to switch, j/k to navigate, Enter to view, d to delete)"
+            } else {
+                "Attachments: (Tab to focus)"
+            };
+            let header_style = if is_focused {
                 Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
-            ));
+            } else {
+                Style::default().fg(app.color_scheme.accent)
+            };
+            lines.push(Line::styled(header_text, header_style));
 
             for (i, attachment) in note.attachments.iter().enumerate() {
                 let size_kb = (attachment.size as f64) / 1024.0;
@@ -220,13 +237,21 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
                     format!("{:.1} MB", size_kb / 1024.0)
                 };
 
-                let prefix = format!("  a{}. ", i + 1);
+                let prefix = if is_focused && i == app.selected_attachment {
+                    format!("▶ a{}. ", i + 1)
+                } else {
+                    format!("  a{}. ", i + 1)
+                };
                 let filename = &attachment.filename;
                 let mime = &attachment.mime_type;
                 let attachment_line = format!("{}{} ({}) [{}]", prefix, filename, size_str, mime);
 
                 let style = if i == app.selected_attachment {
-                    Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
+                    if is_focused {
+                        Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD | Modifier::REVERSED)
+                    } else {
+                        Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
+                    }
                 } else {
                     Style::default().fg(app.color_scheme.foreground)
                 };
@@ -234,11 +259,14 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
                 lines.push(Line::styled(attachment_line, style));
             }
 
-            lines.push(Line::raw(""));
-            lines.push(Line::styled(
-                "Press 'a' + number to view, 'A' to add, 'X' to remove selected",
-                Style::default().fg(app.color_scheme.muted)
-            ));
+            // Only show the shortcut hint if not focused (when focused, header shows the keys)
+            if !is_focused {
+                lines.push(Line::raw(""));
+                lines.push(Line::styled(
+                    "Press 'a' + number to view, 'A' to add, 'X' to remove selected",
+                    Style::default().fg(app.color_scheme.muted)
+                ));
+            }
         }
 
         let preview = Paragraph::new(Text::from(lines))
@@ -255,9 +283,14 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
 
     // Render attachment path input overlay if in AttachmentPath mode
     if matches!(app.input_mode, InputMode::AttachmentPath) {
-        // Calculate centered modal size
-        let modal_width = 60;
-        let modal_height = 3;
+        // Calculate modal size based on whether completions are showing
+        let modal_width = 70;
+        let completions_height = if app.path_completions.is_empty() {
+            0
+        } else {
+            std::cmp::min(app.path_completions.len() + 1, 12) as u16  // Max 12 lines
+        };
+        let modal_height = 4 + completions_height;  // Input + completions
         let x = (size.width.saturating_sub(modal_width)) / 2;
         let y = (size.height.saturating_sub(modal_height)) / 2;
 
@@ -268,12 +301,45 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
 
         // Render modal background
         let modal_block = Block::default()
-            .title("Add Attachment (~/path or /absolute/path)")
+            .title("Add Attachment (Tab: complete, ↑↓: select, Enter: confirm)")
             .borders(Borders::ALL)
             .style(Style::default().bg(app.color_scheme.background).fg(app.color_scheme.accent));
 
-        let modal_text = format!("Enter file path: {}", app.attachment_path_input);
-        let modal_paragraph = Paragraph::new(modal_text)
+        // Build content lines
+        let mut lines = vec![
+            Line::styled(
+                format!("Path: {}█", app.attachment_path_input),
+                Style::default().fg(app.color_scheme.foreground)
+            ),
+        ];
+
+        // Add completions if available
+        if !app.path_completions.is_empty() {
+            lines.push(Line::styled(
+                "─".repeat((modal_width - 2) as usize),
+                Style::default().fg(app.color_scheme.muted)
+            ));
+
+            for (i, completion) in app.path_completions.iter().enumerate().take(10) {
+                let is_selected = i == app.path_completion_index;
+                let prefix = if is_selected { "▶ " } else { "  " };
+                let style = if is_selected {
+                    Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(app.color_scheme.foreground)
+                };
+                lines.push(Line::styled(format!("{}{}", prefix, completion), style));
+            }
+
+            if app.path_completions.len() > 10 {
+                lines.push(Line::styled(
+                    format!("  ... and {} more", app.path_completions.len() - 10),
+                    Style::default().fg(app.color_scheme.muted)
+                ));
+            }
+        }
+
+        let modal_paragraph = Paragraph::new(Text::from(lines))
             .block(modal_block)
             .style(Style::default().fg(app.color_scheme.foreground));
 

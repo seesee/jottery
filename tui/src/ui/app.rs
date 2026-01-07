@@ -139,8 +139,14 @@ pub struct App {
     pub color_scheme: crate::ui::ColorScheme,
     /// Selected attachment index in preview pane
     pub selected_attachment: usize,
+    /// Which panel is focused in preview pane (content or attachments)
+    pub focused_panel: super::state::FocusedPanel,
     /// File path input buffer (when adding attachments)
     pub attachment_path_input: String,
+    /// Path completions for Tab completion
+    pub path_completions: Vec<String>,
+    /// Selected completion index
+    pub path_completion_index: usize,
     /// Whether chafa is available for image preview (lazy-loaded)
     pub(crate) chafa_available: Option<bool>,
     /// Track if 'a' key was pressed (for a1, a2 sequence)
@@ -211,7 +217,10 @@ impl App {
             sync_status_set_at: None,
             color_scheme: crate::ui::ColorScheme::default(),
             selected_attachment: 0,
+            focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
+            path_completions: Vec::new(),
+            path_completion_index: 0,
             chafa_available: None,
             last_key_was_a: false,
             show_force_sync_confirm: false,
