@@ -199,6 +199,8 @@ help:
   question_help_desc: "Diese Hilfe anzeigen"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Anwendung beenden"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Tippen"
   type_search_desc: "Suchanfrage eingeben"
   search_tag_key: "#tag"

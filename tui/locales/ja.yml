@@ -199,6 +199,8 @@ help:
   question_help_desc: "このヘルプを表示"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "アプリケーションを終了"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "入力"
   type_search_desc: "検索クエリを入力"
   search_tag_key: "#タグ"

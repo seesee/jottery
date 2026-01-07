@@ -199,6 +199,8 @@ help:
   question_help_desc: "Показать эту справку"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Выйти из приложения"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Ввести"
   type_search_desc: "Введите запрос поиска"
   search_tag_key: "#тег"

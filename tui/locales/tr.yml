@@ -199,6 +199,8 @@ help:
   question_help_desc: "Bu yardımı göster"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Uygulamadan çık"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Yaz"
   type_search_desc: "Arama sorgusunu girin"
   search_tag_key: "#etiket"

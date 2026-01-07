@@ -199,6 +199,8 @@ help:
   question_help_desc: "Εμφάνιση αυτής της βοήθειας"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Έξοδος από την εφαρμογή"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Πληκτρολόγηση"
   type_search_desc: "Εισαγάγετε ερώτημα αναζήτησης"
   search_tag_key: "#ετικέτα"

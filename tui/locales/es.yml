@@ -199,6 +199,8 @@ help:
   question_help_desc: "Mostrar esta ayuda"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Salir de la aplicación"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Escribir"
   type_search_desc: "Introducir consulta de búsqueda"
   search_tag_key: "#etiqueta"

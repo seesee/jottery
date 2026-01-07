@@ -199,6 +199,8 @@ help:
   question_help_desc: "Deze hulp tonen"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Applicatie afsluiten"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Typen"
   type_search_desc: "Zoekopdracht invoeren"
   search_tag_key: "#label"

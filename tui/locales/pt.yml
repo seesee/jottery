@@ -199,6 +199,8 @@ help:
   question_help_desc: "Mostrar esta ajuda"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Sair da aplicação"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Digite"
   type_search_desc: "Digite a consulta de pesquisa"
   search_tag_key: "#tag"

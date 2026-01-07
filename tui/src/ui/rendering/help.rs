@@ -56,7 +56,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.j_down_key", "help.j_down_desc"),
                 HelpEntry::new("help.k_up_key", "help.k_up_desc"),
                 HelpEntry::new("help.question_help_key", "help.question_help_desc"),
-                HelpEntry::new("help.ctrl_q_quit_key", "help.ctrl_q_quit_desc"),
+                HelpEntry::new("help.q_quit_key", "help.q_quit_desc"),
             ],
         ),
         (

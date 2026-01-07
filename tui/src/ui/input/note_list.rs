@@ -259,6 +259,17 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.state = AppState::Quit;
             }
+            KeyCode::Char('q') => {
+                // Quit app (but not during confirmation dialogs or special modes)
+                if !app.show_bulk_delete_confirm
+                    && !app.show_bulk_combine_confirm
+                    && !app.show_force_sync_confirm
+                    && matches!(app.view_mode, ViewMode::NoteList)
+                    && !app.is_multi_select_mode
+                {
+                    app.state = AppState::Quit;
+                }
+            }
             KeyCode::Char('?') => {
                 // Show help
                 let prev = std::mem::replace(&mut app.state, AppState::Quit);

@@ -199,6 +199,8 @@ help:
   question_help_desc: "이 도움말 표시"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "애플리케이션 종료"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "입력"
   type_search_desc: "검색 쿼리 입력"
   search_tag_key: "#태그"

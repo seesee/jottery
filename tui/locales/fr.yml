@@ -238,6 +238,8 @@ help:
   question_help_desc: "Afficher cette aide"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "Quitter l'application"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "Taper"
   type_search_desc: "Entrez la requête de recherche"
   search_tag_key: "#étiquette"

@@ -199,6 +199,8 @@ help:
   question_help_desc: "显示此帮助"
   ctrl_q_quit_key: "Ctrl+q"
   ctrl_q_quit_desc: "退出应用程序"
+  q_quit_key: "q / Ctrl+q"
+  q_quit_desc: "Quit application"
   type_search_key: "输入"
   type_search_desc: "输入搜索查询"
   search_tag_key: "#标签"
