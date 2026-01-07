@@ -97,7 +97,7 @@ test.describe('Bulk Operations', () => {
     expect(noteItems).toBe(1);
   });
 
-  test('should combine notes with tags merged', async ({ page }) => {
+  test('should combine notes with tags merged by default', async ({ page }) => {
     // Create first note with tags
     await createNote(page, 'Note with tag A');
     const tagInput = page.locator('.tag-input-container input[type="text"]').first();
@@ -127,7 +127,7 @@ test.describe('Bulk Operations', () => {
     const combineButton = page.locator('button').filter({ hasText: /Combine/i }).first();
     await combineButton.click();
 
-    // Confirm
+    // Confirm (merge tags checkbox is checked by default)
     const confirmButton = page.locator('button').filter({ hasText: /Combine/i }).last();
     await confirmButton.click();
 
@@ -136,6 +136,56 @@ test.describe('Bulk Operations', () => {
     // Combined note should have both tags
     await expect(page.locator('.tag-pill').filter({ hasText: '#tag-a' })).toBeVisible();
     await expect(page.locator('.tag-pill').filter({ hasText: '#tag-b' })).toBeVisible();
+  });
+
+  test('should combine notes without merging tags when checkbox unchecked', async ({ page }) => {
+    // Create first note (oldest) with tag-first
+    await createNote(page, 'First note oldest');
+    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    await tagInput.click();
+    await tagInput.fill('tag-first');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
+
+    // Create second note (newest) with tag-second
+    await createNote(page, 'Second note newest');
+    await tagInput.click();
+    await tagInput.fill('tag-second');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
+
+    // Select both notes
+    const noteList = page.getByRole('list');
+    const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /First note oldest/i });
+    await firstNoteItem.hover();
+    await firstNoteItem.locator('[role="checkbox"]').click();
+
+    const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Second note newest/i });
+    await secondNoteItem.hover();
+    await secondNoteItem.locator('[role="checkbox"]').click();
+
+    // Click Combine
+    const combineButton = page.locator('button').filter({ hasText: /Combine/i }).first();
+    await combineButton.click();
+
+    // Wait for modal
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible();
+
+    // Uncheck the merge tags checkbox
+    const mergeTagsCheckbox = modal.locator('input[type="checkbox"]');
+    await mergeTagsCheckbox.uncheck();
+
+    // Confirm
+    const confirmButton = modal.locator('button').filter({ hasText: /Combine/i });
+    await confirmButton.click();
+
+    await page.waitForTimeout(2000);
+
+    // Combined note should only have tag from first (oldest) note
+    await expect(page.locator('.tag-pill').filter({ hasText: '#tag-first' })).toBeVisible();
+    // Second note's tag should NOT be present
+    await expect(page.locator('.tag-pill').filter({ hasText: '#tag-second' })).not.toBeVisible();
   });
 
   test('should not show combine button with only one note selected', async ({ page }) => {
