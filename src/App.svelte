@@ -48,8 +48,11 @@
 
       // Add decrypted note to store (incremental update)
       notes.update(allNotes => {
-        // Add to beginning if sorted by recent, otherwise add and let virtual list handle it
-        return [decryptedNote, ...allNotes];
+        // New notes are unpinned by default, so insert after pinned notes
+        const pinnedCount = allNotes.filter(n => n.pinned).length;
+        const newNotes = [...allNotes];
+        newNotes.splice(pinnedCount, 0, decryptedNote);
+        return newNotes;
       });
       searchService.updateNote(decryptedNote);
       selectNote(decryptedNote.id);

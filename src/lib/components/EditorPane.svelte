@@ -108,9 +108,10 @@
       const syntaxHighlighter = await import('../utils/syntaxHighlighter');
       hljs = syntaxHighlighter.getHljsInstance();
 
-      // Preload enabled syntax languages
+      // Preload enabled syntax languages (filter out 'calc' which is a custom Jottery mode, not an hljs language)
       if ($settings.enabledSyntaxLanguages) {
-        await syntaxHighlighter.preloadLanguages($settings.enabledSyntaxLanguages);
+        const hljsLanguages = $settings.enabledSyntaxLanguages.filter(lang => lang !== 'calc');
+        await syntaxHighlighter.preloadLanguages(hljsLanguages);
       }
 
       highlightJsLoaded = true;
@@ -147,6 +148,18 @@
         const originalCode = renderer.code.bind(renderer);
         const originalImage = renderer.image.bind(renderer);
         const originalLink = renderer.link.bind(renderer);
+
+        // Custom heading renderer to add IDs for anchor links
+        renderer.heading = function(token) {
+          const text = token.text;
+          const depth = token.depth;
+          const id = text.toLowerCase()
+            .replace(/[^\w\s-]/g, '')  // Remove special characters
+            .replace(/\s+/g, '-')       // Replace spaces with hyphens
+            .replace(/-+/g, '-')        // Collapse multiple hyphens
+            .replace(/^-|-$/g, '');     // Trim leading/trailing hyphens
+          return `<h${depth} id="${id}">${text}</h${depth}>`;
+        };
 
         // Custom link renderer to handle attachment: URLs
         renderer.link = function(token) {

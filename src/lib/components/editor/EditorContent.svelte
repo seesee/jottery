@@ -34,6 +34,41 @@
     tags = newTags;
     onTagsChange(newTags);
   }
+
+  // Reference to the preview scroll container
+  let previewContainer: HTMLDivElement;
+
+  // Normalize an anchor ID (same logic as heading ID generation)
+  function normalizeAnchorId(id: string): string {
+    return id.toLowerCase()
+      .replace(/[^\w\s-]/g, '')   // Remove special characters
+      .replace(/\s+/g, '-')        // Replace spaces with hyphens
+      .replace(/-+/g, '-')         // Collapse multiple hyphens
+      .replace(/^-|-$/g, '');      // Trim leading/trailing hyphens
+  }
+
+  // Handle anchor link clicks for internal navigation in preview
+  function handlePreviewClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a');
+    if (link) {
+      const href = link.getAttribute('href');
+      if (href?.startsWith('#')) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Normalize the ID to match our heading ID generation
+        const id = normalizeAnchorId(href.slice(1));
+        const element = document.getElementById(id);
+        if (element && previewContainer) {
+          // Calculate position relative to the scroll container
+          const containerRect = previewContainer.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          const scrollTop = previewContainer.scrollTop + (elementRect.top - containerRect.top) - 20;
+          previewContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+      }
+    }
+  }
 </script>
 
 <!-- Tags Input -->
@@ -65,7 +100,8 @@
 
   <!-- Preview Panel - Only shown when IN preview mode -->
   {#if showPreview && canPreview}
-    <div class="h-full overflow-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+    <div bind:this={previewContainer} class="h-full overflow-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" on:click={handlePreviewClick}>
       <div class="prose dark:prose-invert max-w-none">
         {@html previewHtml}
       </div>
