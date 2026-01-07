@@ -196,3 +196,210 @@ pub fn get_tags_from_selected(app: &App) -> Vec<String> {
     tags.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
     tags
 }
+
+/// Build combined content from notes (used by combine_selected)
+/// Notes are expected to be sorted by creation date (oldest first)
+pub fn build_combined_content(notes: &[&crate::models::Note]) -> String {
+    notes
+        .iter()
+        .map(|n| n.content.as_str())
+        .collect::<Vec<_>>()
+        .join("\n\n---\n\n")
+}
+
+/// Merge all unique tags from multiple notes
+pub fn merge_tags(notes: &[&crate::models::Note]) -> Vec<String> {
+    let mut combined_tags: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for note in notes {
+        for tag in &note.tags {
+            combined_tags.insert(tag.clone());
+        }
+    }
+    combined_tags.into_iter().collect()
+}
+
+/// Combine all selected notes into a single note
+/// - Content is joined with horizontal rule separator
+/// - Notes are ordered by creation date (oldest first)
+/// - Tags and attachments are merged from all notes
+/// - Original notes are soft-deleted
+pub fn combine_selected(app: &mut App) -> Result<usize> {
+    if app.selected_note_ids.len() < 2 {
+        anyhow::bail!("Select at least 2 notes to combine");
+    }
+
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    let repo = NoteRepository::new(db.connection());
+
+    let selected_ids: Vec<String> = app.selected_note_ids.iter().cloned().collect();
+
+    // Get selected notes sorted by creation date (oldest first)
+    let mut selected_notes: Vec<&crate::models::Note> = app
+        .notes
+        .iter()
+        .filter(|n| selected_ids.contains(&n.id))
+        .collect();
+    selected_notes.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+
+    // Combine content with horizontal rule separator
+    let combined_content = build_combined_content(&selected_notes);
+
+    // Merge all unique tags
+    let combined_tags = merge_tags(&selected_notes);
+
+    // Combine all attachments
+    let combined_attachments: Vec<crate::models::Attachment> = selected_notes
+        .iter()
+        .flat_map(|n| n.attachments.clone())
+        .collect();
+
+    // Create new combined note
+    let mut new_note = crate::models::Note::new(combined_content);
+    new_note.tags = combined_tags;
+    new_note.attachments = combined_attachments;
+    new_note.syntax_language = crate::models::SyntaxLanguage::Markdown;
+
+    // Save new note to database
+    repo.create(&new_note, key)?;
+
+    // Soft-delete original notes
+    for note_id in &selected_ids {
+        repo.delete(note_id)?;
+    }
+
+    let count = selected_ids.len();
+
+    // Remove deleted notes from the list
+    app.notes.retain(|n| !selected_ids.contains(&n.id));
+
+    // Insert new note at appropriate position (after pinned notes)
+    let pinned_count = app.notes.iter().filter(|n| n.pinned).count();
+    app.notes.insert(pinned_count, new_note);
+
+    // Clear multi-selection and select the new note
+    app.clear_multi_selection();
+    app.selected_note = pinned_count;
+
+    Ok(count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::Note;
+
+    #[test]
+    fn test_build_combined_content_two_notes() {
+        let note1 = Note::new("First note content".to_string());
+        let note2 = Note::new("Second note content".to_string());
+        let notes: Vec<&Note> = vec![&note1, &note2];
+
+        let result = build_combined_content(&notes);
+
+        assert_eq!(result, "First note content\n\n---\n\nSecond note content");
+    }
+
+    #[test]
+    fn test_build_combined_content_three_notes() {
+        let note1 = Note::new("AAA".to_string());
+        let note2 = Note::new("BBB".to_string());
+        let note3 = Note::new("CCC".to_string());
+        let notes: Vec<&Note> = vec![&note1, &note2, &note3];
+
+        let result = build_combined_content(&notes);
+
+        assert_eq!(result, "AAA\n\n---\n\nBBB\n\n---\n\nCCC");
+    }
+
+    #[test]
+    fn test_build_combined_content_preserves_multiline() {
+        let note1 = Note::new("Line 1\nLine 2".to_string());
+        let note2 = Note::new("Line 3\nLine 4".to_string());
+        let notes: Vec<&Note> = vec![&note1, &note2];
+
+        let result = build_combined_content(&notes);
+
+        assert_eq!(result, "Line 1\nLine 2\n\n---\n\nLine 3\nLine 4");
+    }
+
+    #[test]
+    fn test_build_combined_content_single_note() {
+        let note1 = Note::new("Only note".to_string());
+        let notes: Vec<&Note> = vec![&note1];
+
+        let result = build_combined_content(&notes);
+
+        assert_eq!(result, "Only note");
+    }
+
+    #[test]
+    fn test_build_combined_content_empty() {
+        let notes: Vec<&Note> = vec![];
+
+        let result = build_combined_content(&notes);
+
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_merge_tags_unique() {
+        let mut note1 = Note::new("Note 1".to_string());
+        note1.tags = vec!["tag-a".to_string(), "tag-b".to_string()];
+
+        let mut note2 = Note::new("Note 2".to_string());
+        note2.tags = vec!["tag-c".to_string(), "tag-d".to_string()];
+
+        let notes: Vec<&Note> = vec![&note1, &note2];
+        let result = merge_tags(&notes);
+
+        assert_eq!(result.len(), 4);
+        assert!(result.contains(&"tag-a".to_string()));
+        assert!(result.contains(&"tag-b".to_string()));
+        assert!(result.contains(&"tag-c".to_string()));
+        assert!(result.contains(&"tag-d".to_string()));
+    }
+
+    #[test]
+    fn test_merge_tags_duplicates() {
+        let mut note1 = Note::new("Note 1".to_string());
+        note1.tags = vec!["common".to_string(), "unique-a".to_string()];
+
+        let mut note2 = Note::new("Note 2".to_string());
+        note2.tags = vec!["common".to_string(), "unique-b".to_string()];
+
+        let notes: Vec<&Note> = vec![&note1, &note2];
+        let result = merge_tags(&notes);
+
+        // Should have 3 unique tags, not 4
+        assert_eq!(result.len(), 3);
+        assert!(result.contains(&"common".to_string()));
+        assert!(result.contains(&"unique-a".to_string()));
+        assert!(result.contains(&"unique-b".to_string()));
+    }
+
+    #[test]
+    fn test_merge_tags_empty_notes() {
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+        let notes: Vec<&Note> = vec![&note1, &note2];
+
+        let result = merge_tags(&notes);
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_merge_tags_one_has_tags() {
+        let mut note1 = Note::new("Note 1".to_string());
+        note1.tags = vec!["tag-a".to_string()];
+
+        let note2 = Note::new("Note 2".to_string());
+
+        let notes: Vec<&Note> = vec![&note1, &note2];
+        let result = merge_tags(&notes);
+
+        assert_eq!(result.len(), 1);
+        assert!(result.contains(&"tag-a".to_string()));
+    }
+}

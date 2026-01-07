@@ -274,6 +274,17 @@ status:
   offline: "Офлайн"
   modified: "Изменено"
   saved: "Сохранено"
+bulk:
+  tags_added: "Теги добавлены к %{count} заметкам: %{tags}"
+  deleted: "%{count} заметок удалено"
+  combined: "%{count} заметок объединено"
+  combine_requires_two: "Выберите как минимум 2 заметки для объединения"
+  exported: "%{count} заметок экспортировано в %{path}"
+  operation_failed: "Массовая операция не удалась: %{error}"
+  confirm_delete: "Удалить %{count} заметок? (д/н)"
+  confirm_combine: "Объединить %{count} заметок? (д/н)"
+  enter_tags: "Введите теги (через запятую):"
+  enter_export_path: "Путь экспорта:"
 time:
   just_now: "только что"
   minutes_ago: "%{count} минут назад"

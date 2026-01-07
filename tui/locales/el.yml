@@ -274,6 +274,17 @@ status:
   offline: "Εκτός σύνδεσης"
   modified: "Τροποποιήθηκε"
   saved: "Αποθηκεύτηκε"
+bulk:
+  tags_added: "Προστέθηκαν ετικέτες σε %{count} σημειώσεις: %{tags}"
+  deleted: "Διαγράφηκαν %{count} σημειώσεις"
+  combined: "Συνδυάστηκαν %{count} σημειώσεις"
+  combine_requires_two: "Επιλέξτε τουλάχιστον 2 σημειώσεις για συνδυασμό"
+  exported: "Εξήχθησαν %{count} σημειώσεις στο %{path}"
+  operation_failed: "Η μαζική λειτουργία απέτυχε: %{error}"
+  confirm_delete: "Διαγραφή %{count} σημειώσεων; (y/n)"
+  confirm_combine: "Συνδυασμός %{count} σημειώσεων; (y/n)"
+  enter_tags: "Εισαγάγετε ετικέτες (διαχωρισμένες με κόμμα):"
+  enter_export_path: "Διαδρομή εξαγωγής:"
 time:
   just_now: "μόλις τώρα"
   minutes_ago: "πριν από %{count} λεπτά"

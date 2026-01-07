@@ -274,6 +274,17 @@ status:
   offline: "Offline"
   modified: "Geändert"
   saved: "Gespeichert"
+bulk:
+  tags_added: "Tags zu %{count} Notizen hinzugefügt: %{tags}"
+  deleted: "%{count} Notizen gelöscht"
+  combined: "%{count} Notizen zusammengeführt"
+  combine_requires_two: "Wählen Sie mindestens 2 Notizen zum Zusammenführen aus"
+  exported: "%{count} Notizen nach %{path} exportiert"
+  operation_failed: "Massenoperation fehlgeschlagen: %{error}"
+  confirm_delete: "%{count} Notizen löschen? (j/n)"
+  confirm_combine: "%{count} Notizen zusammenführen? (j/n)"
+  enter_tags: "Tags eingeben (kommagetrennt):"
+  enter_export_path: "Exportpfad:"
 time:
   just_now: "gerade eben"
   minutes_ago: "vor %{count} Minuten"

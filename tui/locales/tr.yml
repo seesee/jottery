@@ -274,6 +274,17 @@ status:
   offline: "Çevrimdışı"
   modified: "Değiştirildi"
   saved: "Kaydedildi"
+bulk:
+  tags_added: "%{count} nota etiket eklendi: %{tags}"
+  deleted: "%{count} not silindi"
+  combined: "%{count} not birleştirildi"
+  combine_requires_two: "Birleştirmek için en az 2 not seçin"
+  exported: "%{count} not %{path} konumuna dışa aktarıldı"
+  operation_failed: "Toplu işlem başarısız: %{error}"
+  confirm_delete: "%{count} notu silmek istiyor musunuz? (e/h)"
+  confirm_combine: "%{count} notu birleştirmek istiyor musunuz? (e/h)"
+  enter_tags: "Etiketleri girin (virgülle ayrılmış):"
+  enter_export_path: "Dışa aktarma yolu:"
 time:
   just_now: "az önce"
   minutes_ago: "%{count} dakika önce"

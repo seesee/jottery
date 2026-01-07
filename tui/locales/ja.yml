@@ -274,6 +274,17 @@ status:
   offline: "オフライン"
   modified: "変更済み"
   saved: "保存済み"
+bulk:
+  tags_added: "%{count} 件のノートにタグを追加しました: %{tags}"
+  deleted: "%{count} 件のノートを削除しました"
+  combined: "%{count} 件のノートを結合しました"
+  combine_requires_two: "結合するには少なくとも2つのノートを選択してください"
+  exported: "%{count} 件のノートを %{path} にエクスポートしました"
+  operation_failed: "一括操作に失敗しました: %{error}"
+  confirm_delete: "%{count} 件のノートを削除しますか？ (y/n)"
+  confirm_combine: "%{count} 件のノートを結合しますか？ (y/n)"
+  enter_tags: "タグを入力 (カンマ区切り):"
+  enter_export_path: "エクスポートパス:"
 time:
   just_now: "たった今"
   minutes_ago: "%{count} 分前"

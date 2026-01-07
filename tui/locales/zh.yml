@@ -274,6 +274,17 @@ status:
   offline: "离线"
   modified: "已修改"
   saved: "已保存"
+bulk:
+  tags_added: "已为 %{count} 条笔记添加标签: %{tags}"
+  deleted: "已删除 %{count} 条笔记"
+  combined: "已合并 %{count} 条笔记"
+  combine_requires_two: "请至少选择 2 条笔记进行合并"
+  exported: "已将 %{count} 条笔记导出至 %{path}"
+  operation_failed: "批量操作失败: %{error}"
+  confirm_delete: "删除 %{count} 条笔记？ (y/n)"
+  confirm_combine: "合并 %{count} 条笔记？ (y/n)"
+  enter_tags: "输入标签 (逗号分隔):"
+  enter_export_path: "导出路径:"
 time:
   just_now: "刚刚"
   minutes_ago: "%{count} 分钟前"

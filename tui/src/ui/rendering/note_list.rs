@@ -606,4 +606,105 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
             frame.render_widget(modal_paragraph, modal_area);
         }
     }
+
+    // Render bulk delete confirmation modal if showing
+    if app.show_bulk_delete_confirm {
+        let count = app.selected_note_ids.len();
+
+        // Create centered modal
+        let modal_width = 50;
+        let modal_height = 7;
+        let modal_x = (size.width.saturating_sub(modal_width)) / 2;
+        let modal_y = (size.height.saturating_sub(modal_height)) / 2;
+
+        let modal_area = Rect {
+            x: modal_x,
+            y: modal_y,
+            width: modal_width,
+            height: modal_height,
+        };
+
+        // Clear the background area
+        frame.render_widget(Clear, modal_area);
+
+        // Render modal
+        let modal_block = Block::default()
+            .title(" Delete Notes ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(app.color_scheme.error))
+            .style(Style::default().bg(app.color_scheme.background));
+
+        let modal_text = vec![
+            Line::from(""),
+            Line::from(format!("Delete {} notes?", count)).style(Style::default().fg(app.color_scheme.foreground)),
+            Line::from("Notes will be moved to recycle bin.").style(Style::default().fg(app.color_scheme.muted)),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("Press "),
+                Span::styled("y", Style::default().fg(app.color_scheme.error).add_modifier(Modifier::BOLD)),
+                Span::raw(" to confirm, "),
+                Span::styled("n", Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw(" or "),
+                Span::styled("Esc", Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw(" to cancel"),
+            ]).style(Style::default().fg(app.color_scheme.foreground)),
+        ];
+
+        let modal_paragraph = Paragraph::new(modal_text)
+            .block(modal_block)
+            .alignment(ratatui::layout::Alignment::Center);
+
+        frame.render_widget(modal_paragraph, modal_area);
+    }
+
+    // Render bulk combine confirmation modal if showing
+    if app.show_bulk_combine_confirm {
+        let count = app.selected_note_ids.len();
+
+        // Create centered modal
+        let modal_width = 55;
+        let modal_height = 8;
+        let modal_x = (size.width.saturating_sub(modal_width)) / 2;
+        let modal_y = (size.height.saturating_sub(modal_height)) / 2;
+
+        let modal_area = Rect {
+            x: modal_x,
+            y: modal_y,
+            width: modal_width,
+            height: modal_height,
+        };
+
+        // Clear the background area
+        frame.render_widget(Clear, modal_area);
+
+        // Render modal
+        let modal_block = Block::default()
+            .title(" Combine Notes ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(app.color_scheme.accent))
+            .style(Style::default().bg(app.color_scheme.background));
+
+        let modal_text = vec![
+            Line::from(""),
+            Line::from(format!("Combine {} notes into one?", count)).style(Style::default().fg(app.color_scheme.foreground)),
+            Line::from("Notes will be merged by creation date.").style(Style::default().fg(app.color_scheme.muted)),
+            Line::from("Original notes will be moved to recycle bin.").style(Style::default().fg(app.color_scheme.muted)),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("Press "),
+                Span::styled("y", Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw(" to confirm, "),
+                Span::styled("n", Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw(" or "),
+                Span::styled("Esc", Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)),
+                Span::raw(" to cancel"),
+            ]).style(Style::default().fg(app.color_scheme.foreground)),
+        ];
+
+        let modal_paragraph = Paragraph::new(modal_text)
+            .block(modal_block)
+            .alignment(ratatui::layout::Alignment::Center);
+
+        frame.render_widget(modal_paragraph, modal_area);
+    }
 }

@@ -274,6 +274,17 @@ status:
   offline: "Offline"
   modified: "Zmodyfikowane"
   saved: "Zapisane"
+bulk:
+  tags_added: "Dodano tagi do %{count} notatek: %{tags}"
+  deleted: "Usunięto %{count} notatek"
+  combined: "Połączono %{count} notatek"
+  combine_requires_two: "Wybierz co najmniej 2 notatki do połączenia"
+  exported: "Wyeksportowano %{count} notatek do %{path}"
+  operation_failed: "Operacja masowa nie powiodła się: %{error}"
+  confirm_delete: "Usunąć %{count} notatek? (t/n)"
+  confirm_combine: "Połączyć %{count} notatek? (t/n)"
+  enter_tags: "Wprowadź tagi (rozdzielone przecinkami):"
+  enter_export_path: "Ścieżka eksportu:"
 time:
   just_now: "przed chwilą"
   minutes_ago: "%{count} minut temu"

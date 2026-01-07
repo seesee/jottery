@@ -313,6 +313,17 @@ status:
   offline: "Hors ligne"
   modified: "Modifié"
   saved: "Enregistré"
+bulk:
+  tags_added: "Étiquettes ajoutées à %{count} notes : %{tags}"
+  deleted: "%{count} notes supprimées"
+  combined: "%{count} notes combinées"
+  combine_requires_two: "Sélectionnez au moins 2 notes à combiner"
+  exported: "%{count} notes exportées vers %{path}"
+  operation_failed: "L'opération en masse a échoué : %{error}"
+  confirm_delete: "Supprimer %{count} notes ? (o/n)"
+  confirm_combine: "Combiner %{count} notes ? (o/n)"
+  enter_tags: "Entrez les étiquettes (séparées par des virgules) :"
+  enter_export_path: "Chemin d'exportation :"
 time:
   just_now: "à l'instant"
   minutes_ago: "il y a %{count} minutes"

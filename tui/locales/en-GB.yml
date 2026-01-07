@@ -351,9 +351,12 @@ status:
 bulk:
   tags_added: "Added tags to %{count} notes: %{tags}"
   deleted: "Deleted %{count} notes"
+  combined: "Combined %{count} notes"
+  combine_requires_two: "Select at least 2 notes to combine"
   exported: "Exported %{count} notes to %{path}"
   operation_failed: "Bulk operation failed: %{error}"
   confirm_delete: "Delete %{count} notes? (y/n)"
+  confirm_combine: "Combine %{count} notes? (y/n)"
   enter_tags: "Enter tags (comma-separated):"
   enter_export_path: "Export path:"
 

@@ -274,6 +274,17 @@ status:
   offline: "오프라인"
   modified: "수정됨"
   saved: "저장됨"
+bulk:
+  tags_added: "%{count}개의 노트에 태그 추가됨: %{tags}"
+  deleted: "%{count}개의 노트 삭제됨"
+  combined: "%{count}개의 노트 결합됨"
+  combine_requires_two: "결합하려면 최소 2개의 노트를 선택하세요"
+  exported: "%{count}개의 노트를 %{path}에 내보냄"
+  operation_failed: "일괄 작업 실패: %{error}"
+  confirm_delete: "%{count}개의 노트를 삭제하시겠습니까? (y/n)"
+  confirm_combine: "%{count}개의 노트를 결합하시겠습니까? (y/n)"
+  enter_tags: "태그 입력 (쉼표로 구분):"
+  enter_export_path: "내보내기 경로:"
 time:
   just_now: "방금"
   minutes_ago: "%{count}분 전"

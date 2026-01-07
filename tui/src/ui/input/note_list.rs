@@ -232,6 +232,17 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
                         }
                     }
+                } else if app.show_bulk_combine_confirm {
+                    // Confirm bulk combine
+                    app.show_bulk_combine_confirm = false;
+                    match operations::bulk::combine_selected(app) {
+                        Ok(combined) => {
+                            app.sync_status = Some(t!("bulk.combined", count = combined).to_string());
+                        }
+                        Err(e) => {
+                            app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
+                        }
+                    }
                 } else if app.show_force_sync_confirm {
                     // Confirm force full sync
                     app.show_force_sync_confirm = false;
@@ -245,10 +256,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Show force full sync confirmation
                 app.show_force_sync_confirm = true;
             }
-            KeyCode::Char('n') if app.show_force_sync_confirm || app.show_bulk_delete_confirm => {
+            KeyCode::Char('n') if app.show_force_sync_confirm || app.show_bulk_delete_confirm || app.show_bulk_combine_confirm => {
                 // Cancel confirmations
                 app.show_force_sync_confirm = false;
                 app.show_bulk_delete_confirm = false;
+                app.show_bulk_combine_confirm = false;
             }
             KeyCode::Char('/') => {
                 // Enter search mode (only in note list view)
@@ -544,9 +556,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Esc => {
                 // Cancel confirmations if showing
-                if app.show_force_sync_confirm || app.show_bulk_delete_confirm {
+                if app.show_force_sync_confirm || app.show_bulk_delete_confirm || app.show_bulk_combine_confirm {
                     app.show_force_sync_confirm = false;
                     app.show_bulk_delete_confirm = false;
+                    app.show_bulk_combine_confirm = false;
                 } else if app.is_multi_select_mode {
                     // Clear multi-selection
                     app.clear_multi_selection();
@@ -619,6 +632,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     }
                     }
+                }
+            }
+            KeyCode::Char('c') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
+                // In multi-select mode: show bulk combine confirmation (requires 2+ notes)
+                if app.selected_note_ids.len() >= 2 {
+                    app.show_bulk_combine_confirm = true;
+                } else {
+                    app.error = Some(t!("bulk.combine_requires_two").to_string());
                 }
             }
             KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {

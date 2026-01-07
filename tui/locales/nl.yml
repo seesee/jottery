@@ -274,6 +274,17 @@ status:
   offline: "Offline"
   modified: "Gewijzigd"
   saved: "Opgeslagen"
+bulk:
+  tags_added: "Labels toegevoegd aan %{count} notities: %{tags}"
+  deleted: "%{count} notities verwijderd"
+  combined: "%{count} notities gecombineerd"
+  combine_requires_two: "Selecteer ten minste 2 notities om te combineren"
+  exported: "%{count} notities geëxporteerd naar %{path}"
+  operation_failed: "Bulkbewerking mislukt: %{error}"
+  confirm_delete: "%{count} notities verwijderen? (j/n)"
+  confirm_combine: "%{count} notities combineren? (j/n)"
+  enter_tags: "Voer labels in (gescheiden door komma's):"
+  enter_export_path: "Exportpad:"
 time:
   just_now: "zojuist"
   minutes_ago: "%{count} minuten geleden"

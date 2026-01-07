@@ -274,6 +274,17 @@ status:
   offline: "Offline"
   modified: "Modificado"
   saved: "Salvo"
+bulk:
+  tags_added: "Tags adicionadas a %{count} notas: %{tags}"
+  deleted: "%{count} notas excluídas"
+  combined: "%{count} notas combinadas"
+  combine_requires_two: "Selecione pelo menos 2 notas para combinar"
+  exported: "%{count} notas exportadas para %{path}"
+  operation_failed: "Operação em massa falhou: %{error}"
+  confirm_delete: "Excluir %{count} notas? (s/n)"
+  confirm_combine: "Combinar %{count} notas? (s/n)"
+  enter_tags: "Digite as tags (separadas por vírgulas):"
+  enter_export_path: "Caminho de exportação:"
 time:
   just_now: "agora mesmo"
   minutes_ago: "%{count} minutos atrás"

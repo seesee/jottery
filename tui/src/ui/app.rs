@@ -161,6 +161,8 @@ pub struct App {
     pub bulk_export_path_input: String,
     /// Show bulk delete confirmation modal
     pub show_bulk_delete_confirm: bool,
+    /// Show bulk combine confirmation modal
+    pub show_bulk_combine_confirm: bool,
 }
 
 
@@ -220,6 +222,7 @@ impl App {
             bulk_tags_input: String::new(),
             bulk_export_path_input: String::new(),
             show_bulk_delete_confirm: false,
+            show_bulk_combine_confirm: false,
         })
     }
 
