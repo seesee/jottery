@@ -551,5 +551,24 @@
     "message": "다시 로드하여 최신 기능 및 개선 사항 받기",
     "reloadButton": "지금 다시 로드",
     "dismissLabel": "무시"
+  },
+  "bulk": {
+    "toggleSelect": "선택 전환",
+    "selected": "개 선택됨",
+    "addTags": "태그 추가",
+    "removeTags": "태그 제거",
+    "delete": "삭제",
+    "export": "내보내기",
+    "combine": "병합",
+    "cancel": "선택 취소",
+    "confirmDelete": "{count}개 노트를 삭제하시겠습니까?",
+    "confirmDeleteMessage": "{count}개 노트가 휴지통으로 이동됩니다.",
+    "confirmCombine": "{count}개 노트를 병합하시겠습니까?",
+    "confirmCombineMessage": "{count}개 노트를 하나의 노트로 병합합니다 (생성일 기준, 오래된 순). 원본 노트는 휴지통으로 이동됩니다.",
+    "combinedSuccess": "{count}개 노트 병합됨",
+    "enterTags": "태그 입력 (쉼표로 구분)",
+    "progress": "{total}개 중 {current}개",
+    "selectAll": "전체 선택",
+    "deselectAll": "전체 선택 해제"
   }
 }

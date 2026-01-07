@@ -551,5 +551,24 @@
     "message": "Neu laden, um die neuesten Funktionen und Verbesserungen zu erhalten",
     "reloadButton": "Jetzt neu laden",
     "dismissLabel": "Verwerfen"
+  },
+  "bulk": {
+    "toggleSelect": "Auswahl umschalten",
+    "selected": "ausgewählt",
+    "addTags": "Schlagwörter hinzufügen",
+    "removeTags": "Schlagwörter entfernen",
+    "delete": "Löschen",
+    "export": "Exportieren",
+    "combine": "Zusammenführen",
+    "cancel": "Auswahl abbrechen",
+    "confirmDelete": "{count} Notizen löschen?",
+    "confirmDeleteMessage": "Dies verschiebt {count} Notizen in den Papierkorb.",
+    "confirmCombine": "{count} Notizen zusammenführen?",
+    "confirmCombineMessage": "Dies führt {count} Notizen zu einer einzelnen Notiz zusammen (sortiert nach Erstellungsdatum, älteste zuerst). Ursprüngliche Notizen werden in den Papierkorb verschoben.",
+    "combinedSuccess": "{count} Notizen zusammengeführt",
+    "enterTags": "Schlagwörter eingeben (kommagetrennt)",
+    "progress": "{current} von {total}",
+    "selectAll": "Alle auswählen",
+    "deselectAll": "Alle abwählen"
   }
 }

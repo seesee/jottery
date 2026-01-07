@@ -551,5 +551,24 @@
     "message": "En son özellikleri ve iyileştirmeleri almak için yenileyin",
     "reloadButton": "Şimdi yenile",
     "dismissLabel": "Kapat"
+  },
+  "bulk": {
+    "toggleSelect": "Seçimi değiştir",
+    "selected": "seçili",
+    "addTags": "Etiket ekle",
+    "removeTags": "Etiketleri kaldır",
+    "delete": "Sil",
+    "export": "Dışa aktar",
+    "combine": "Birleştir",
+    "cancel": "Seçimi iptal et",
+    "confirmDelete": "{count} not silinsin mi?",
+    "confirmDeleteMessage": "Bu, {count} notu geri dönüşüm kutusuna taşıyacaktır.",
+    "confirmCombine": "{count} not birleştirilsin mi?",
+    "confirmCombineMessage": "Bu, {count} notu tek bir notta birleştirecektir (oluşturulma tarihine göre sıralı, en eski önce). Orijinal notlar geri dönüşüm kutusuna taşınacaktır.",
+    "combinedSuccess": "{count} not birleştirildi",
+    "enterTags": "Etiketleri girin (virgülle ayırın)",
+    "progress": "{total} nottan {current}.",
+    "selectAll": "Tümünü seç",
+    "deselectAll": "Tümünün seçimini kaldır"
   }
 }

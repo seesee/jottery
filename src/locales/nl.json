@@ -551,5 +551,24 @@
     "message": "Ververs om de nieuwste functies en verbeteringen te krijgen",
     "reloadButton": "Nu verversen",
     "dismissLabel": "Negeren"
+  },
+  "bulk": {
+    "toggleSelect": "Selectie omschakelen",
+    "selected": "geselecteerd",
+    "addTags": "Tags toevoegen",
+    "removeTags": "Tags verwijderen",
+    "delete": "Verwijderen",
+    "export": "Exporteren",
+    "combine": "Samenvoegen",
+    "cancel": "Selectie annuleren",
+    "confirmDelete": "{count} notities verwijderen?",
+    "confirmDeleteMessage": "Dit verplaatst {count} notities naar de prullenbak.",
+    "confirmCombine": "{count} notities samenvoegen?",
+    "confirmCombineMessage": "Dit voegt {count} notities samen tot één notitie (gesorteerd op aanmaakdatum, oudste eerst). Originele notities worden naar de prullenbak verplaatst.",
+    "combinedSuccess": "{count} notities samengevoegd",
+    "enterTags": "Voer tags in (gescheiden door komma's)",
+    "progress": "{current} van {total}",
+    "selectAll": "Alles selecteren",
+    "deselectAll": "Alles deselecteren"
   }
 }

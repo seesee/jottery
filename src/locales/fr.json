@@ -551,5 +551,24 @@
     "message": "Rechargez pour obtenir les dernières fonctionnalités et améliorations",
     "reloadButton": "Recharger maintenant",
     "dismissLabel": "Ignorer"
+  },
+  "bulk": {
+    "toggleSelect": "Basculer la sélection",
+    "selected": "sélectionné(s)",
+    "addTags": "Ajouter des étiquettes",
+    "removeTags": "Supprimer des étiquettes",
+    "delete": "Supprimer",
+    "export": "Exporter",
+    "combine": "Combiner",
+    "cancel": "Annuler la sélection",
+    "confirmDelete": "Supprimer {count} notes ?",
+    "confirmDeleteMessage": "Cela déplacera {count} notes vers la corbeille.",
+    "confirmCombine": "Combiner {count} notes ?",
+    "confirmCombineMessage": "Cela fusionnera {count} notes en une seule note (triées par date de création, les plus anciennes en premier). Les notes originales seront déplacées vers la corbeille.",
+    "combinedSuccess": "{count} notes combinées",
+    "enterTags": "Entrez les étiquettes (séparées par des virgules)",
+    "progress": "{current} sur {total}",
+    "selectAll": "Tout sélectionner",
+    "deselectAll": "Tout désélectionner"
   }
 }

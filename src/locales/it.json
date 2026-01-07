@@ -551,5 +551,24 @@
     "message": "Ricarica per ottenere le ultime funzionalità e miglioramenti",
     "reloadButton": "Ricarica ora",
     "dismissLabel": "Chiudi"
+  },
+  "bulk": {
+    "toggleSelect": "Attiva/disattiva selezione",
+    "selected": "selezionato/i",
+    "addTags": "Aggiungi tag",
+    "removeTags": "Rimuovi tag",
+    "delete": "Elimina",
+    "export": "Esporta",
+    "combine": "Combina",
+    "cancel": "Annulla selezione",
+    "confirmDelete": "Eliminare {count} note?",
+    "confirmDeleteMessage": "Questo sposterà {count} note nel cestino.",
+    "confirmCombine": "Combinare {count} note?",
+    "confirmCombineMessage": "Questo unirà {count} note in una singola nota (ordinate per data di creazione, le più vecchie prima). Le note originali verranno spostate nel cestino.",
+    "combinedSuccess": "{count} note combinate",
+    "enterTags": "Inserisci tag (separati da virgola)",
+    "progress": "{current} di {total}",
+    "selectAll": "Seleziona tutto",
+    "deselectAll": "Deseleziona tutto"
   }
 }

@@ -551,5 +551,24 @@
     "message": "Odśwież, aby uzyskać najnowsze funkcje i ulepszenia",
     "reloadButton": "Odśwież teraz",
     "dismissLabel": "Odrzuć"
+  },
+  "bulk": {
+    "toggleSelect": "Przełącz zaznaczenie",
+    "selected": "zaznaczono",
+    "addTags": "Dodaj tagi",
+    "removeTags": "Usuń tagi",
+    "delete": "Usuń",
+    "export": "Eksportuj",
+    "combine": "Połącz",
+    "cancel": "Anuluj zaznaczenie",
+    "confirmDelete": "Usunąć {count} notatek?",
+    "confirmDeleteMessage": "Spowoduje to przeniesienie {count} notatek do kosza.",
+    "confirmCombine": "Połączyć {count} notatek?",
+    "confirmCombineMessage": "Spowoduje to połączenie {count} notatek w jedną notatkę (posortowane według daty utworzenia, najstarsze najpierw). Oryginalne notatki zostaną przeniesione do kosza.",
+    "combinedSuccess": "Połączono {count} notatek",
+    "enterTags": "Wprowadź tagi (oddzielone przecinkami)",
+    "progress": "{current} z {total}",
+    "selectAll": "Zaznacz wszystko",
+    "deselectAll": "Odznacz wszystko"
   }
 }

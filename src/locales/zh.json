@@ -551,5 +551,24 @@
     "message": "重新加载以获取最新功能和改进",
     "reloadButton": "立即重新加载",
     "dismissLabel": "忽略"
+  },
+  "bulk": {
+    "toggleSelect": "切换选择",
+    "selected": "已选择",
+    "addTags": "添加标签",
+    "removeTags": "移除标签",
+    "delete": "删除",
+    "export": "导出",
+    "combine": "合并",
+    "cancel": "取消选择",
+    "confirmDelete": "删除 {count} 条笔记？",
+    "confirmDeleteMessage": "这将把 {count} 条笔记移至回收站。",
+    "confirmCombine": "合并 {count} 条笔记？",
+    "confirmCombineMessage": "这将把 {count} 条笔记合并为一条（按创建日期排序，最早的在前）。原始笔记将被移至回收站。",
+    "combinedSuccess": "已合并 {count} 条笔记",
+    "enterTags": "输入标签（用逗号分隔）",
+    "progress": "{current} / {total}",
+    "selectAll": "全选",
+    "deselectAll": "取消全选"
   }
 }
