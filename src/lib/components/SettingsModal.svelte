@@ -26,6 +26,7 @@
   let rememberPassword = $settings.rememberPassword || false;
   let enabledSyntaxLanguages: string[] = $settings.enabledSyntaxLanguages || [];
   let defaultSyntaxLanguage: string = $settings.defaultSyntaxLanguage || 'markdown';
+  let openLinksInNewTab: boolean = $settings.openLinksInNewTab ?? true;
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -657,6 +658,7 @@
         keyboardShortcuts: tempShortcuts,
         enabledSyntaxLanguages,
         defaultSyntaxLanguage,
+        openLinksInNewTab,
       });
 
       // Update store
@@ -673,6 +675,7 @@
         keyboardShortcuts: tempShortcuts,
         enabledSyntaxLanguages,
         defaultSyntaxLanguage,
+        openLinksInNewTab,
       }));
 
       toast.success($_('settings.settingsSaved'));
@@ -1005,6 +1008,7 @@
             bind:language
             bind:timezone
             bind:rememberPassword
+            bind:openLinksInNewTab
             onRememberPasswordToggle={handleRememberPasswordToggle}
           />
         {/if}

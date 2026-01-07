@@ -146,6 +146,8 @@
     "rememberPassword": "Remember Password (Insecure)",
     "rememberPasswordWarning": "Store your password on this device to skip entering it on every visit. WARNING: This stores your password in plain text in localStorage, which is highly insecure.",
     "rememberPasswordNote": "Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.",
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery",
     "rememberPasswordModal": {
       "title": "⚠️ Security Warning",
       "insecureWarning": "Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.",

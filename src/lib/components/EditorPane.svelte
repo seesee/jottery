@@ -189,7 +189,20 @@
             }
           }
 
-          // For non-attachment links, use default renderer
+          // For non-attachment links, check if we should open in new tab
+          const openInNewTab = $settings.openLinksInNewTab ?? true;
+
+          // Check if this is an external link (starts with http:// or https://)
+          const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
+
+          if (isExternal && openInNewTab) {
+            // Escape HTML entities in href to prevent XSS
+            const safeHref = href.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            const title = token.title ? ` title="${token.title.replace(/"/g, '&quot;')}"` : '';
+            return `<a href="${safeHref}"${title} target="_blank" rel="noopener noreferrer">${text}</a>`;
+          }
+
+          // For internal links or when setting is disabled, use default renderer
           return originalLink.call(this, token);
         };
 
