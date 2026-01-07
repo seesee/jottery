@@ -174,6 +174,10 @@ impl UserSettings {
             return Err("Auto-lock timeout must be between 1 and 1440 minutes".to_string());
         }
 
+        if self.auto_sync_interval_minutes < 0 || self.auto_sync_interval_minutes > 1440 {
+            return Err("Auto-sync interval must be between 0 and 1440 minutes".to_string());
+        }
+
         if self.sync_enabled && self.sync_endpoint.is_none() {
             return Err("Sync endpoint is required when sync is enabled".to_string());
         }
@@ -200,6 +204,7 @@ mod tests {
         assert_eq!(settings.sort_order, SortOrder::Recent);
         assert_eq!(settings.auto_lock_timeout, 15);
         assert!(!settings.sync_enabled);
+        assert_eq!(settings.auto_sync_interval_minutes, 1); // Default to 1 minute
     }
 
     #[test]
@@ -223,6 +228,32 @@ mod tests {
 
         // Invalid endpoint protocol
         settings.sync_endpoint = Some("ftp://example.com".to_string());
+        assert!(settings.validate().is_err());
+    }
+
+    #[test]
+    fn test_auto_sync_interval_validation() {
+        let mut settings = UserSettings::default();
+        settings.sync_endpoint = Some("https://example.com".to_string());
+
+        // Valid: 0 (disabled)
+        settings.auto_sync_interval_minutes = 0;
+        assert!(settings.validate().is_ok());
+
+        // Valid: 1 minute (default)
+        settings.auto_sync_interval_minutes = 1;
+        assert!(settings.validate().is_ok());
+
+        // Valid: 1440 minutes (24 hours)
+        settings.auto_sync_interval_minutes = 1440;
+        assert!(settings.validate().is_ok());
+
+        // Invalid: negative
+        settings.auto_sync_interval_minutes = -1;
+        assert!(settings.validate().is_err());
+
+        // Invalid: over 24 hours
+        settings.auto_sync_interval_minutes = 1441;
         assert!(settings.validate().is_err());
     }
 }

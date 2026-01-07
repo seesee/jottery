@@ -282,6 +282,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_sync_metadata_defaults() {
+        let metadata = SyncMetadata::default();
+        assert!(!metadata.sync_enabled);
+        assert!(metadata.sync_endpoint.is_empty());
+        assert!(metadata.api_key.is_none());
+        assert!(metadata.client_id.is_none());
+        assert!(metadata.last_sync_at.is_none());
+        assert_eq!(metadata.auto_sync_interval, Some(1)); // Default to 1 minute
+    }
+
+    #[test]
     fn test_credentials_roundtrip() {
         let creds = SyncCredentials::new(
             "https://example.com/api".to_string(),
