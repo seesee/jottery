@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Bu, {count} notu geri dönüşüm kutusuna taşıyacaktır.",
     "confirmCombine": "{count} not birleştirilsin mi?",
     "confirmCombineMessage": "Bu, {count} notu tek bir notta birleştirecektir (oluşturulma tarihine göre sıralı, en eski önce). Orijinal notlar geri dönüşüm kutusuna taşınacaktır.",
+    "mergeTagsOption": "Tüm notlardan etiketleri birleştir",
+    "mergeTagsDescription": "İşaretlenmediğinde, yalnızca ilk (en eski) notun etiketleri korunacaktır.",
     "combinedSuccess": "{count} not birleştirildi",
     "enterTags": "Etiketleri girin (virgülle ayırın)",
     "progress": "{total} nottan {current}.",

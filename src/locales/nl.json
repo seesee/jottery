@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Dit verplaatst {count} notities naar de prullenbak.",
     "confirmCombine": "{count} notities samenvoegen?",
     "confirmCombineMessage": "Dit voegt {count} notities samen tot één notitie (gesorteerd op aanmaakdatum, oudste eerst). Originele notities worden naar de prullenbak verplaatst.",
+    "mergeTagsOption": "Tags van alle notities samenvoegen",
+    "mergeTagsDescription": "Indien uitgeschakeld, worden alleen tags van de eerste (oudste) notitie behouden.",
     "combinedSuccess": "{count} notities samengevoegd",
     "enterTags": "Voer tags in (gescheiden door komma's)",
     "progress": "{current} van {total}",

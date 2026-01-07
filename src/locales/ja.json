@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "{count}件のノートをごみ箱に移動します。",
     "confirmCombine": "{count}件のノートを結合しますか？",
     "confirmCombineMessage": "{count}件のノートを1つのノートに結合します（作成日順、古いものから）。元のノートはごみ箱に移動されます。",
+    "mergeTagsOption": "すべてのノートからタグを統合",
+    "mergeTagsDescription": "オフにすると、最初（最も古い）のノートのタグのみが保持されます。",
     "combinedSuccess": "{count}件のノートを結合しました",
     "enterTags": "タグを入力（カンマ区切り）",
     "progress": "{total}件中{current}件",

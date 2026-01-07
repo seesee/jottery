@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Esto moverá {count} notas a la papelera de reciclaje.",
     "confirmCombine": "¿Combinar {count} notas?",
     "confirmCombineMessage": "Esto fusionará {count} notas en una sola nota (ordenadas por fecha de creación, más antiguas primero). Las notas originales se moverán a la papelera de reciclaje.",
+    "mergeTagsOption": "Fusionar etiquetas de todas las notas",
+    "mergeTagsDescription": "Cuando está desactivado, solo se conservarán las etiquetas de la primera nota (la más antigua).",
     "combinedSuccess": "{count} notas combinadas",
     "enterTags": "Ingrese etiquetas (separadas por comas)",
     "progress": "{current} de {total}",

@@ -227,19 +227,26 @@ export function downloadExport(jsonData: string, filename: string = 'jottery-exp
   URL.revokeObjectURL(url);
 }
 
+export interface CombineNotesOptions {
+  mergeTags?: boolean; // If true, merge tags from all notes; if false, only keep tags from first note
+}
+
 /**
  * Combine multiple notes into a single note
  * - Content is joined with horizontal rule separator
  * - Notes are ordered by creation date (oldest first)
- * - Tags and attachments are merged from all notes
+ * - Tags: merged from all notes if mergeTags is true, otherwise only from first note
+ * - Attachments are merged from all notes
  * - Original notes are soft-deleted
  */
 export async function combineNotes(
   noteIds: string[],
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  options?: CombineNotesOptions
 ): Promise<DecryptedNote> {
   const allNotes = get(notes);
   const total = noteIds.length;
+  const mergeTags = options?.mergeTags ?? true; // Default to merging tags
 
   // Get selected notes sorted by creation date (oldest first)
   const selectedNotes = allNotes
@@ -249,8 +256,10 @@ export async function combineNotes(
   // Combine content with horizontal rule separator
   const combinedContent = selectedNotes.map((n) => n.content).join('\n\n---\n\n');
 
-  // Merge all unique tags
-  const combinedTags = [...new Set(selectedNotes.flatMap((n) => n.tags))];
+  // Tags: merge all unique tags or only keep from first note
+  const combinedTags = mergeTags
+    ? [...new Set(selectedNotes.flatMap((n) => n.tags))]
+    : [...selectedNotes[0]?.tags ?? []];
 
   // Combine all attachments
   const combinedAttachments = selectedNotes.flatMap((n) => n.attachments);

@@ -581,6 +581,8 @@
     "confirmDeleteMessage": "This will move {count} notes to the recycle bin.",
     "confirmCombine": "Combine {count} notes?",
     "confirmCombineMessage": "This will merge {count} notes into a single note (ordered by creation date, oldest first). Original notes will be moved to the recycle bin.",
+    "mergeTagsOption": "Merge tags from all notes",
+    "mergeTagsDescription": "When unchecked, only tags from the first (oldest) note will be kept.",
     "combinedSuccess": "Combined {count} notes",
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",

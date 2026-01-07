@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Questo sposterà {count} note nel cestino.",
     "confirmCombine": "Combinare {count} note?",
     "confirmCombineMessage": "Questo unirà {count} note in una singola nota (ordinate per data di creazione, le più vecchie prima). Le note originali verranno spostate nel cestino.",
+    "mergeTagsOption": "Unisci tag da tutte le note",
+    "mergeTagsDescription": "Se disattivato, verranno mantenuti solo i tag della prima nota (la più vecchia).",
     "combinedSuccess": "{count} note combinate",
     "enterTags": "Inserisci tag (separati da virgola)",
     "progress": "{current} di {total}",

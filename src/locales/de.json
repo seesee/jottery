@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Dies verschiebt {count} Notizen in den Papierkorb.",
     "confirmCombine": "{count} Notizen zusammenführen?",
     "confirmCombineMessage": "Dies führt {count} Notizen zu einer einzelnen Notiz zusammen (sortiert nach Erstellungsdatum, älteste zuerst). Ursprüngliche Notizen werden in den Papierkorb verschoben.",
+    "mergeTagsOption": "Tags aus allen Notizen zusammenführen",
+    "mergeTagsDescription": "Wenn deaktiviert, werden nur Tags von der ersten (ältesten) Notiz beibehalten.",
     "combinedSuccess": "{count} Notizen zusammengeführt",
     "enterTags": "Schlagwörter eingeben (kommagetrennt)",
     "progress": "{current} von {total}",

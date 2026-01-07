@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Cela déplacera {count} notes vers la corbeille.",
     "confirmCombine": "Combiner {count} notes ?",
     "confirmCombineMessage": "Cela fusionnera {count} notes en une seule note (triées par date de création, les plus anciennes en premier). Les notes originales seront déplacées vers la corbeille.",
+    "mergeTagsOption": "Fusionner les étiquettes de toutes les notes",
+    "mergeTagsDescription": "Lorsque désactivé, seules les étiquettes de la première note (la plus ancienne) seront conservées.",
     "combinedSuccess": "{count} notes combinées",
     "enterTags": "Entrez les étiquettes (séparées par des virgules)",
     "progress": "{current} sur {total}",

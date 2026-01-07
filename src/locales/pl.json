@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "Spowoduje to przeniesienie {count} notatek do kosza.",
     "confirmCombine": "Połączyć {count} notatek?",
     "confirmCombineMessage": "Spowoduje to połączenie {count} notatek w jedną notatkę (posortowane według daty utworzenia, najstarsze najpierw). Oryginalne notatki zostaną przeniesione do kosza.",
+    "mergeTagsOption": "Połącz tagi ze wszystkich notatek",
+    "mergeTagsDescription": "Gdy odznaczone, zachowane zostaną tylko tagi z pierwszej (najstarszej) notatki.",
     "combinedSuccess": "Połączono {count} notatek",
     "enterTags": "Wprowadź tagi (oddzielone przecinkami)",
     "progress": "{current} z {total}",

@@ -572,6 +572,8 @@
     "confirmDeleteMessage": "这将把 {count} 条笔记移至回收站。",
     "confirmCombine": "合并 {count} 条笔记？",
     "confirmCombineMessage": "这将把 {count} 条笔记合并为一条（按创建日期排序，最早的在前）。原始笔记将被移至回收站。",
+    "mergeTagsOption": "合并所有笔记的标签",
+    "mergeTagsDescription": "取消勾选时，仅保留第一条（最早的）笔记的标签。",
     "combinedSuccess": "已合并 {count} 条笔记",
     "enterTags": "输入标签（用逗号分隔）",
     "progress": "{current} / {total}",

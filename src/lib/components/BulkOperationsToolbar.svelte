@@ -12,6 +12,9 @@
   let showCombineConfirm = false;
   let showDeleteConfirm = false;
 
+  // Combine options
+  let combineMergeTags = true;
+
   // Tag input
   let tagsInput = '';
 
@@ -132,13 +135,18 @@
     }
   }
 
+  function openCombineModal() {
+    combineMergeTags = true; // Reset to default
+    showCombineConfirm = true;
+  }
+
   async function handleCombine() {
     const noteIds = Array.from(get(selectedNoteIds));
     isProcessing = true;
     showCombineConfirm = false;
 
     try {
-      await bulkOperationsService.combineNotes(noteIds, handleProgress);
+      await bulkOperationsService.combineNotes(noteIds, handleProgress, { mergeTags: combineMergeTags });
       toast.success($_('bulk.combinedSuccess', { values: { count: noteIds.length } }));
       // clearMultiSelection and selectNote are called inside combineNotes
     } catch (error) {
@@ -246,7 +254,7 @@
             <!-- Combine -->
             {#if $selectedCount >= 2}
               <button
-                on:click={() => showCombineConfirm = true}
+                on:click={openCombineModal}
                 class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 active:bg-purple-800 transition-colors"
               >
                 {$_('bulk.combine')}
@@ -380,16 +388,63 @@
 {/if}
 
 <!-- Combine Confirmation Modal -->
-<ConfirmModal
-  show={showCombineConfirm}
-  title={$_('bulk.confirmCombine', { values: { count: $selectedCount } })}
-  message={$_('bulk.confirmCombineMessage', { values: { count: $selectedCount } })}
-  confirmText={$_('bulk.combine')}
-  cancelText={$_('common.cancel')}
-  confirmClass="bg-purple-600 hover:bg-purple-700"
-  onConfirm={handleCombine}
-  onCancel={() => showCombineConfirm = false}
-/>
+{#if showCombineConfirm}
+  <div
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    on:click={(e) => e.target === e.currentTarget && (showCombineConfirm = false)}
+    on:keydown={(e) => e.key === 'Escape' && (showCombineConfirm = false)}
+    role="dialog"
+    aria-modal="true"
+    tabindex="0"
+  >
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      <!-- Header -->
+      <div class="border-b border-gray-200 dark:border-gray-700 p-4">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+          {$_('bulk.confirmCombine', { values: { count: $selectedCount } })}
+        </h2>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6">
+        <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line mb-4">
+          {$_('bulk.confirmCombineMessage', { values: { count: $selectedCount } })}
+        </p>
+
+        <!-- Merge tags checkbox -->
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            bind:checked={combineMergeTags}
+            class="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
+          />
+          <span class="text-gray-700 dark:text-gray-300">
+            {$_('bulk.mergeTagsOption')}
+          </span>
+        </label>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-8">
+          {$_('bulk.mergeTagsDescription')}
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end gap-3">
+        <button
+          on:click={() => showCombineConfirm = false}
+          class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+        >
+          {$_('common.cancel')}
+        </button>
+        <button
+          on:click={handleCombine}
+          class="px-4 py-2.5 min-h-11 bg-purple-600 active:bg-purple-700 text-white font-medium rounded-md transition-colors"
+        >
+          {$_('bulk.combine')}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- Delete Confirmation Modal -->
 <ConfirmModal
