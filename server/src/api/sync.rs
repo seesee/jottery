@@ -361,36 +361,61 @@ pub async fn pull(
             .collect()
     };
 
-    let mut notes = Vec::new();
+    // Collect all note IDs for batch attachment query
+    let note_ids: Vec<&str> = db_notes.iter().map(|n| n.id.as_str()).collect();
+
+    // Fetch all attachments for all notes in a single query (avoids N+1 problem)
+    let all_attachments = if !note_ids.is_empty() {
+        // Build placeholders for IN clause
+        let placeholders = note_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+        let query = format!(
+            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id IN ({})",
+            placeholders
+        );
+
+        // Execute with dynamic binding
+        let mut query_builder = sqlx::query_as::<_, (Option<String>, Option<String>, String, String, i64, String)>(&query);
+        for note_id in &note_ids {
+            query_builder = query_builder.bind(*note_id);
+        }
+        query_builder.fetch_all(&state.pool).await?
+    } else {
+        Vec::new()
+    };
+
+    // Group attachments by note_id for O(1) lookup
+    let mut attachments_by_note: std::collections::HashMap<String, Vec<crate::models::AttachmentRef>> =
+        std::collections::HashMap::new();
     let mut needed_attachments = Vec::new();
 
+    for (id, note_id, filename, mime_type, size, _created_at) in all_attachments {
+        if let (Some(att_id), Some(nid)) = (id, note_id) {
+            needed_attachments.push(att_id.clone());
+            let attachment = crate::models::AttachmentRef {
+                id: att_id.clone(),
+                filename,
+                mime_type,
+                size,
+                data: att_id,
+            };
+            attachments_by_note
+                .entry(nid)
+                .or_default()
+                .push(attachment);
+        }
+    }
+
+    // Build notes with pre-fetched attachments
+    let mut notes = Vec::new();
     for db_note in db_notes {
         // Deserialize tags
         let tags: Vec<String> = serde_json::from_str(&db_note.tags)
             .unwrap_or_default();
 
-        // Get attachments for this note
-        let db_attachments = sqlx::query!(
-            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id = ?",
-            db_note.id
-        )
-        .fetch_all(&state.pool)
-        .await?;
-
-        let attachments = db_attachments
-            .into_iter()
-            .filter_map(|a| {
-                let att_id = a.id?;
-                needed_attachments.push(att_id.clone());
-                Some(crate::models::AttachmentRef {
-                    id: att_id.clone(),
-                    filename: a.filename,  // NOT NULL, so not Optional
-                    mime_type: a.mime_type,  // NOT NULL, so not Optional
-                    size: a.size,  // NOT NULL in schema, so not Optional
-                    data: att_id, // Reference
-                })
-            })
-            .collect();
+        // Get attachments from pre-fetched map (O(1) lookup)
+        let attachments = attachments_by_note
+            .remove(&db_note.id)
+            .unwrap_or_default();
 
         notes.push(SyncNote {
             id: db_note.id,
