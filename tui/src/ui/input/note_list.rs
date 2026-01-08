@@ -7,6 +7,7 @@ use rust_i18n::t;
 use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
 use crate::ui::app::App;
+use crate::ui::input::text_input::{handle_text_input, TextInputResult};
 use crate::ui::operations;
 use crate::ui::state::{AppState, FocusedPanel, InputMode, ViewMode};
 
@@ -24,8 +25,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
 
     // Handle bulk add tags input mode
     if matches!(app.input_mode, InputMode::BulkAddTags) {
-        match key.code {
-            KeyCode::Enter => {
+        match handle_text_input(&key, &mut app.bulk_tags_input) {
+            TextInputResult::Submit => {
                 // Add tags to selected notes
                 if !app.bulk_tags_input.is_empty() {
                     let tags: Vec<String> = app.bulk_tags_input
@@ -48,25 +49,18 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.bulk_tags_input.clear();
                 app.input_mode = InputMode::Normal;
             }
-            KeyCode::Esc => {
-                app.bulk_tags_input.clear();
+            TextInputResult::Cancel => {
                 app.input_mode = InputMode::Normal;
             }
-            KeyCode::Backspace => {
-                app.bulk_tags_input.pop();
-            }
-            KeyCode::Char(c) => {
-                app.bulk_tags_input.push(c);
-            }
-            _ => {}
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
         }
         return Ok(());
     }
 
     // Handle bulk export path input mode
     if matches!(app.input_mode, InputMode::BulkExportPath) {
-        match key.code {
-            KeyCode::Enter => {
+        match handle_text_input(&key, &mut app.bulk_export_path_input) {
+            TextInputResult::Submit => {
                 // Export selected notes to file
                 if !app.bulk_export_path_input.is_empty() {
                     let path = std::path::PathBuf::from(&app.bulk_export_path_input);
@@ -83,17 +77,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.bulk_export_path_input.clear();
                 app.input_mode = InputMode::Normal;
             }
-            KeyCode::Esc => {
-                app.bulk_export_path_input.clear();
+            TextInputResult::Cancel => {
                 app.input_mode = InputMode::Normal;
             }
-            KeyCode::Backspace => {
-                app.bulk_export_path_input.pop();
-            }
-            KeyCode::Char(c) => {
-                app.bulk_export_path_input.push(c);
-            }
-            _ => {}
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
         }
         return Ok(());
     }
