@@ -75,29 +75,44 @@ class IndexedDBNoteRepository implements NoteRepository {
 
   /**
    * Get all active (non-deleted) notes
+   * Uses 'deleted' index for efficient querying at scale
    */
   async getAllActive(): Promise<Note[]> {
     const db = getDB();
-    const allNotes = await db.getAll(STORES.NOTES);
-    return allNotes.filter(note => !note.deleted);
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+    const index = tx.store.index('deleted');
+    // IndexedDB coerces false to 0, but we query with false for type safety
+    // The index stores boolean values, so query with false directly
+    const notes = await index.getAll(IDBKeyRange.only(false));
+    await tx.done;
+    return notes;
   }
 
   /**
    * Get deleted notes (recycle bin)
+   * Uses 'deleted' index for efficient querying at scale
    */
   async getDeleted(): Promise<Note[]> {
     const db = getDB();
-    const allNotes = await db.getAll(STORES.NOTES);
-    return allNotes.filter(note => note.deleted);
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+    const index = tx.store.index('deleted');
+    const notes = await index.getAll(IDBKeyRange.only(true));
+    await tx.done;
+    return notes;
   }
 
   /**
-   * Get pinned notes
+   * Get pinned notes (active only)
+   * Uses 'pinned' index, then filters for non-deleted
    */
   async getPinned(): Promise<Note[]> {
     const db = getDB();
-    const allNotes = await db.getAll(STORES.NOTES);
-    return allNotes.filter(note => note.pinned && !note.deleted);
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+    const index = tx.store.index('pinned');
+    const pinnedNotes = await index.getAll(IDBKeyRange.only(true));
+    await tx.done;
+    // Filter out deleted notes (pinned count is typically small)
+    return pinnedNotes.filter(note => !note.deleted);
   }
 
   /**
@@ -187,29 +202,48 @@ class IndexedDBNoteRepository implements NoteRepository {
 
   /**
    * Get notes sorted by modified date (most recent first)
+   * Uses 'deleted-modifiedAt' compound index for efficient querying
    */
   async getAllActiveByModified(): Promise<Note[]> {
     const db = getDB();
-    const allNotes = await db.getAll(STORES.NOTES);
-    return allNotes
-      .filter(note => !note.deleted)
-      .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+    const index = tx.store.index('deleted-modifiedAt');
+
+    // Compound index range: [deleted=false, any modifiedAt]
+    // Use bound from [false, ''] to [false, '\uffff'] to get all non-deleted
+    // Results come back sorted by [deleted, modifiedAt] ascending
+    const range = IDBKeyRange.bound([false, ''], [false, '\uffff']);
+    const notes = await index.getAll(range);
+    await tx.done;
+
+    // Reverse to get most recent first (index returns ascending order)
+    return notes.reverse();
   }
 
   /**
    * Count all active notes
+   * Uses 'deleted' index count for efficiency (doesn't load note data)
    */
   async countActive(): Promise<number> {
-    const notes = await this.getAllActive();
-    return notes.length;
+    const db = getDB();
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+    const index = tx.store.index('deleted');
+    const count = await index.count(IDBKeyRange.only(false));
+    await tx.done;
+    return count;
   }
 
   /**
    * Count deleted notes
+   * Uses 'deleted' index count for efficiency (doesn't load note data)
    */
   async countDeleted(): Promise<number> {
-    const notes = await this.getDeleted();
-    return notes.length;
+    const db = getDB();
+    const tx = db.transaction(STORES.NOTES, 'readonly');
+    const index = tx.store.index('deleted');
+    const count = await index.count(IDBKeyRange.only(true));
+    await tx.done;
+    return count;
   }
 }
 
