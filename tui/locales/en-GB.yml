@@ -405,6 +405,8 @@ bulk:
   confirm_combine: "Combine %{count} notes? (y/n)"
   enter_tags: "Enter tags (comma-separated):"
   enter_export_path: "Export path:"
+  add_tags_to: "Add tags to"
+  export_notes_to: "Export"
 
 # Date and time formatting
 time:

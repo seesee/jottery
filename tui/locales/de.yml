@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "%{count} Notizen zusammenführen? (j/n)"
   enter_tags: "Tags eingeben (kommagetrennt):"
   enter_export_path: "Exportpfad:"
+  add_tags_to: "Tags hinzufügen zu"
+  export_notes_to: "Exportieren"
 time:
   just_now: "gerade eben"
   minutes_ago: "vor %{count} Minuten"

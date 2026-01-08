@@ -5,6 +5,7 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
+use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
@@ -806,6 +807,88 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             55,
             8,
         );
+    }
+
+    // Render bulk add tags input modal if showing
+    if matches!(app.input_mode, InputMode::BulkAddTags) {
+        let count = app.selected_note_ids.len();
+        let modal_width = 60;
+        let modal_height = 6;
+        let x = (size.width.saturating_sub(modal_width)) / 2;
+        let y = (size.height.saturating_sub(modal_height)) / 2;
+
+        let modal_area = Rect::new(x, y, modal_width, modal_height);
+
+        // Clear the background area
+        frame.render_widget(Clear, modal_area);
+
+        let modal_block = Block::default()
+            .title(format!(" {} ", t!("bulk.enter_tags")))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(app.color_scheme.accent))
+            .style(Style::default().bg(app.color_scheme.background));
+
+        let lines = vec![
+            Line::styled(
+                format!("{} {} {}", t!("bulk.add_tags_to"), count, if count == 1 { t!("sync.note") } else { t!("sync.notes") }),
+                Style::default().fg(app.color_scheme.foreground)
+            ),
+            Line::styled(
+                format!("{}█", app.bulk_tags_input),
+                Style::default().fg(app.color_scheme.accent)
+            ),
+            Line::styled(
+                "Enter: confirm | Esc: cancel",
+                Style::default().fg(app.color_scheme.muted)
+            ),
+        ];
+
+        let modal_paragraph = Paragraph::new(Text::from(lines))
+            .block(modal_block)
+            .style(Style::default().fg(app.color_scheme.foreground));
+
+        frame.render_widget(modal_paragraph, modal_area);
+    }
+
+    // Render bulk export path input modal if showing
+    if matches!(app.input_mode, InputMode::BulkExportPath) {
+        let count = app.selected_note_ids.len();
+        let modal_width = 70;
+        let modal_height = 6;
+        let x = (size.width.saturating_sub(modal_width)) / 2;
+        let y = (size.height.saturating_sub(modal_height)) / 2;
+
+        let modal_area = Rect::new(x, y, modal_width, modal_height);
+
+        // Clear the background area
+        frame.render_widget(Clear, modal_area);
+
+        let modal_block = Block::default()
+            .title(format!(" {} ", t!("bulk.enter_export_path")))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(app.color_scheme.accent))
+            .style(Style::default().bg(app.color_scheme.background));
+
+        let lines = vec![
+            Line::styled(
+                format!("{} {} {}", t!("bulk.export_notes_to"), count, if count == 1 { t!("sync.note") } else { t!("sync.notes") }),
+                Style::default().fg(app.color_scheme.foreground)
+            ),
+            Line::styled(
+                format!("{}█", app.bulk_export_path_input),
+                Style::default().fg(app.color_scheme.accent)
+            ),
+            Line::styled(
+                "Enter: confirm | Esc: cancel",
+                Style::default().fg(app.color_scheme.muted)
+            ),
+        ];
+
+        let modal_paragraph = Paragraph::new(Text::from(lines))
+            .block(modal_block)
+            .style(Style::default().fg(app.color_scheme.foreground));
+
+        frame.render_widget(modal_paragraph, modal_area);
     }
 
     // Store click detection areas in app (after all borrows of filtered are done)

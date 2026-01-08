@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "Combinar %{count} notas? (s/n)"
   enter_tags: "Digite as tags (separadas por vírgulas):"
   enter_export_path: "Caminho de exportação:"
+  add_tags_to: "Adicionar etiquetas a"
+  export_notes_to: "Exportar"
 time:
   just_now: "agora mesmo"
   minutes_ago: "%{count} minutos atrás"

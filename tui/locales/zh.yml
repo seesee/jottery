@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "合并 %{count} 条笔记？ (y/n)"
   enter_tags: "输入标签 (逗号分隔):"
   enter_export_path: "导出路径:"
+  add_tags_to: "添加标签到"
+  export_notes_to: "导出"
 time:
   just_now: "刚刚"
   minutes_ago: "%{count} 分钟前"

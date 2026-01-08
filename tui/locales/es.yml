@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "¿Combinar %{count} notas? (s/n)"
   enter_tags: "Introduzca etiquetas (separadas por comas):"
   enter_export_path: "Ruta de exportación:"
+  add_tags_to: "Añadir etiquetas a"
+  export_notes_to: "Exportar"
 time:
   just_now: "justo ahora"
   minutes_ago: "hace %{count} minutos"

@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "%{count} 件のノートを結合しますか？ (y/n)"
   enter_tags: "タグを入力 (カンマ区切り):"
   enter_export_path: "エクスポートパス:"
+  add_tags_to: "タグを追加"
+  export_notes_to: "エクスポート"
 time:
   just_now: "たった今"
   minutes_ago: "%{count} 分前"

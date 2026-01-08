@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "Объединить %{count} заметок? (д/н)"
   enter_tags: "Введите теги (через запятую):"
   enter_export_path: "Путь экспорта:"
+  add_tags_to: "Добавить теги к"
+  export_notes_to: "Экспорт"
 time:
   just_now: "только что"
   minutes_ago: "%{count} минут назад"

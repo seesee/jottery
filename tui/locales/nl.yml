@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "%{count} notities combineren? (j/n)"
   enter_tags: "Voer labels in (gescheiden door komma's):"
   enter_export_path: "Exportpad:"
+  add_tags_to: "Labels toevoegen aan"
+  export_notes_to: "Exporteren"
 time:
   just_now: "zojuist"
   minutes_ago: "%{count} minuten geleden"

@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "Συνδυασμός %{count} σημειώσεων; (y/n)"
   enter_tags: "Εισαγάγετε ετικέτες (διαχωρισμένες με κόμμα):"
   enter_export_path: "Διαδρομή εξαγωγής:"
+  add_tags_to: "Προσθήκη ετικετών σε"
+  export_notes_to: "Εξαγωγή"
 time:
   just_now: "μόλις τώρα"
   minutes_ago: "πριν από %{count} λεπτά"

@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "Połączyć %{count} notatek? (t/n)"
   enter_tags: "Wprowadź tagi (rozdzielone przecinkami):"
   enter_export_path: "Ścieżka eksportu:"
+  add_tags_to: "Dodaj tagi do"
+  export_notes_to: "Eksportuj"
 time:
   just_now: "przed chwilą"
   minutes_ago: "%{count} minut temu"

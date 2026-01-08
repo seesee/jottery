@@ -289,6 +289,8 @@ bulk:
   confirm_combine: "%{count} notu birleştirmek istiyor musunuz? (e/h)"
   enter_tags: "Etiketleri girin (virgülle ayrılmış):"
   enter_export_path: "Dışa aktarma yolu:"
+  add_tags_to: "Etiket ekle"
+  export_notes_to: "Dışa aktar"
 time:
   just_now: "az önce"
   minutes_ago: "%{count} dakika önce"
