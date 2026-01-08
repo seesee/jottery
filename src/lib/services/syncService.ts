@@ -23,6 +23,7 @@ import { versionRepository } from './versionRepository';
 import { cryptoService } from './crypto';
 import { storageToSync, syncToStorage } from './tagConversionService';
 import { noteService } from './noteService';
+import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
 import { notes, settings } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
@@ -270,7 +271,7 @@ class SyncService {
         if (!attachmentMap.has(attachment.id)) {
           const blob = await attachmentRepository.getBlob(attachment.data);
           if (blob) {
-            const base64 = this.arrayBufferToBase64(blob);
+            const base64 = arrayBufferToBase64(blob);
             attachmentMap.set(attachment.id, base64);
           }
         }
@@ -494,7 +495,7 @@ class SyncService {
     // Download attachments
     for (const attachment of result.attachments) {
       try {
-        const blob = this.base64ToArrayBuffer(attachment.data);
+        const blob = base64ToArrayBuffer(attachment.data);
         await attachmentRepository.storeBlob(attachment.id, blob);
         console.log(`[SyncService] Downloaded attachment: ${attachment.id}`);
       } catch (error) {
@@ -661,25 +662,6 @@ class SyncService {
 
     console.log(`[SyncService] Push - Sending ${versions.length} versions`);
     return versions;
-  }
-
-  // Helper methods for base64 conversion
-  private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  }
-
-  private base64ToArrayBuffer(base64: string): ArrayBuffer {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes.buffer;
   }
 }
 

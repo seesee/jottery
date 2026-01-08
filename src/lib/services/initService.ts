@@ -10,6 +10,7 @@ import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
+import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 
 const DEFAULT_ITERATIONS = 100000;
 
@@ -224,28 +225,4 @@ export async function changePassword(
   throw new Error(
     'Password change not yet implemented. This requires re-encrypting all data.'
   );
-}
-
-/**
- * Helper: Convert ArrayBuffer to Base64
- */
-function arrayBufferToBase64(buffer: ArrayBuffer | Uint8Array): string {
-  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-/**
- * Helper: Convert Base64 to Uint8Array
- */
-function base64ToUint8Array(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
