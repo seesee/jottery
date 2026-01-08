@@ -292,27 +292,34 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
         let modified_label = format!("Modified: {}", modified_str);
 
         // Calculate padding between left and right timestamps
-        let available_width = timestamp_area.width.saturating_sub(2) as usize; // -2 for borders
+        // -2 for borders, -2 for 1-space padding on each side
+        let inner_width = timestamp_area.width.saturating_sub(4) as usize;
         let total_text_len = created_label.len() + modified_label.len();
-        let padding = if available_width > total_text_len {
-            available_width - total_text_len
+        let padding = if inner_width > total_text_len {
+            inner_width - total_text_len
         } else {
             1
         };
 
+        let border_style = Style::default().fg(app.color_scheme.border);
+        let timestamp_style = Style::default().fg(app.color_scheme.accent_secondary);
+
         let timestamp_line = Line::from(vec![
-            Span::styled("│", Style::default().fg(app.color_scheme.border)),
-            Span::styled(created_label, Style::default().fg(app.color_scheme.muted)),
+            Span::styled("│", border_style),
+            Span::raw(" "),  // Left padding
+            Span::styled(created_label, timestamp_style),
             Span::raw(" ".repeat(padding)),
-            Span::styled(modified_label, Style::default().fg(app.color_scheme.muted)),
-            Span::styled("│", Style::default().fg(app.color_scheme.border)),
+            Span::styled(modified_label, timestamp_style),
+            Span::raw(" "),  // Right padding
+            Span::styled("│", border_style),
         ]);
 
         // Add bottom border line
+        let border_width = timestamp_area.width.saturating_sub(2) as usize;
         let border_line = Line::from(vec![
-            Span::styled("└", Style::default().fg(app.color_scheme.border)),
-            Span::styled("─".repeat(available_width), Style::default().fg(app.color_scheme.border)),
-            Span::styled("┘", Style::default().fg(app.color_scheme.border)),
+            Span::styled("└", border_style),
+            Span::styled("─".repeat(border_width), border_style),
+            Span::styled("┘", border_style),
         ]);
 
         // Create a 2-line footer: timestamp + bottom border
