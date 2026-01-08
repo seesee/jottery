@@ -169,7 +169,8 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
 
     let preview_block = Block::default()
         .title("Preview")
-        .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT);
+        .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+        .border_style(Style::default().fg(app.color_scheme.border));
 
     if !filtered.is_empty() && app.selected_note < filtered.len() {
         let note = filtered[app.selected_note];
@@ -333,7 +334,8 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
     } else {
         let preview_block_empty = Block::default()
             .title("Preview")
-            .borders(Borders::ALL);
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(app.color_scheme.border));
         let preview = Paragraph::new("No notes")
             .block(preview_block_empty)
             .alignment(Alignment::Center);
