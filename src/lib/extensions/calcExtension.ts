@@ -8,6 +8,11 @@ import * as math from 'mathjs';
 
 const RESULT_PREFIX = '  ';
 
+// Limits to prevent performance issues with large/non-calc documents
+const MAX_CALC_LINES = 500;
+const MAX_CONSECUTIVE_ERRORS = 10;
+const MAX_TOTAL_ERRORS = 50;
+
 // Math.js built-in functions and constants
 const BUILTIN_FUNCTIONS = new Set([
 	'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
@@ -245,10 +250,38 @@ class ResultWidget extends WidgetType {
 	}
 }
 
+// Widget: Warning message when limits are hit
+class WarningWidget extends WidgetType {
+	constructor(private message: string) {
+		super();
+	}
+
+	toDOM(): HTMLElement {
+		const div = document.createElement('div');
+		div.className = 'cm-calc-warning';
+		div.textContent = '⚠ ' + this.message;
+		return div;
+	}
+
+	eq(other: WarningWidget): boolean {
+		return other.message === this.message;
+	}
+}
+
 // Decoration Builder: Create inline result widgets and error line markers
 class DecorationBuilder {
-	buildDecorations(results: EvaluationResult[], doc: Text): DecorationSet {
+	buildDecorations(results: EvaluationResult[], doc: Text, warning?: string): DecorationSet {
 		const decorations: any[] = [];
+
+		// Add warning widget at the very start if present
+		if (warning) {
+			const warningWidget = Decoration.widget({
+				widget: new WarningWidget(warning),
+				block: true,
+				side: -1
+			});
+			decorations.push(warningWidget.range(0));
+		}
 
 		for (const result of results) {
 			if (result.result === null) continue;
@@ -305,18 +338,52 @@ const calcPlugin = ViewPlugin.fromClass(
 			// Reset evaluator for fresh scope
 			this.evaluator.reset();
 
+			const doc = view.state.doc;
+			const totalLines = doc.lines;
+
+			// Check if document is too long for calc mode
+			if (totalLines > MAX_CALC_LINES) {
+				const warning = `Document too long for calc mode (${totalLines} lines, max ${MAX_CALC_LINES}). Try a shorter document or switch to a different syntax mode.`;
+				return this.builder.buildDecorations([], doc, warning);
+			}
+
 			// Parse all lines (gets current line numbers)
-			const parsedLines = this.parser.parseDocument(view.state.doc);
+			const parsedLines = this.parser.parseDocument(doc);
 
 			// Evaluate in order (top-to-bottom) to maintain variable scope
+			// Track errors to stop early if too many
 			const results: EvaluationResult[] = [];
+			let consecutiveErrors = 0;
+			let totalErrors = 0;
+			let warning: string | undefined;
+
 			for (const parsedLine of parsedLines) {
 				const result = this.evaluator.evaluateLine(parsedLine);
 				results.push(result);
+
+				if (result.isError) {
+					consecutiveErrors++;
+					totalErrors++;
+
+					// Check consecutive error limit
+					if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+						warning = `Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors. This doesn't look like calc content - try switching to a different syntax mode.`;
+						break;
+					}
+
+					// Check total error limit
+					if (totalErrors >= MAX_TOTAL_ERRORS) {
+						warning = `Stopped after ${MAX_TOTAL_ERRORS} total errors. Consider switching to a different syntax mode for this content.`;
+						break;
+					}
+				} else if (!parsedLine.isComment && result.result !== null) {
+					// Reset consecutive errors on successful evaluation
+					consecutiveErrors = 0;
+				}
 			}
 
 			// Build decorations with current line positions
-			return this.builder.buildDecorations(results, view.state.doc);
+			return this.builder.buildDecorations(results, doc, warning);
 		}
 
 		destroy() {
@@ -328,7 +395,7 @@ const calcPlugin = ViewPlugin.fromClass(
 	}
 );
 
-// Theme: Styling for result widgets and error lines
+// Theme: Styling for result widgets, error lines, and warnings
 const calcTheme = EditorView.baseTheme({
 	'.cm-calc-result': {
 		color: '#6b7280', // gray-500
@@ -344,6 +411,19 @@ const calcTheme = EditorView.baseTheme({
 	},
 	'.dark .cm-calc-error-line .cm-gutterElement': {
 		color: '#f87171 !important' // red-400
+	},
+	'.cm-calc-warning': {
+		backgroundColor: '#fef3c7', // amber-100
+		color: '#92400e', // amber-800
+		padding: '8px 12px',
+		borderBottom: '1px solid #fcd34d', // amber-300
+		fontFamily: 'system-ui, sans-serif',
+		fontSize: '14px'
+	},
+	'.dark .cm-calc-warning': {
+		backgroundColor: '#78350f', // amber-900
+		color: '#fef3c7', // amber-100
+		borderBottom: '1px solid #b45309' // amber-700
 	}
 });
 

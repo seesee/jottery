@@ -4,10 +4,21 @@
 //! similar to the webapp's calcExtension.ts but using evalexpr.
 
 use evalexpr::{eval_with_context_mut, HashMapContext, Value, ContextWithMutableVariables, Context};
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use regex::Regex;
 use std::f64::consts::{E, PI, TAU};
+
+/// Maximum number of lines to evaluate in calc mode
+/// Documents longer than this will show a warning
+const MAX_CALC_LINES: usize = 500;
+
+/// Maximum consecutive errors before stopping evaluation
+/// Prevents runaway processing on non-calc content
+const MAX_CONSECUTIVE_ERRORS: usize = 10;
+
+/// Maximum total errors before stopping evaluation
+const MAX_TOTAL_ERRORS: usize = 50;
 
 /// Result of evaluating a single line
 #[derive(Debug, Clone)]
@@ -321,10 +332,73 @@ impl CalcEvaluator {
         }
     }
 
-    /// Evaluate all lines in a document
-    pub fn evaluate_document(&mut self, text: &str) -> Vec<LineResult> {
+    /// Evaluate all lines in a document, with error limits
+    ///
+    /// Returns (results, stopped_early, reason) where stopped_early indicates
+    /// if evaluation was halted due to error limits
+    pub fn evaluate_document(&mut self, text: &str) -> (Vec<LineResult>, bool, Option<String>) {
         self.reset();
-        text.lines().map(|line| self.evaluate_line(line)).collect()
+
+        let lines: Vec<&str> = text.lines().collect();
+        let total_lines = lines.len();
+
+        // Check if document is too long
+        if total_lines > MAX_CALC_LINES {
+            return (
+                Vec::new(),
+                true,
+                Some(format!(
+                    "Document too long for calc mode ({} lines, max {}). Try a shorter document or switch to a different syntax mode.",
+                    total_lines, MAX_CALC_LINES
+                )),
+            );
+        }
+
+        let mut results = Vec::with_capacity(lines.len());
+        let mut consecutive_errors = 0;
+        let mut total_errors = 0;
+
+        for line in lines {
+            let result = self.evaluate_line(line);
+
+            if result.is_error {
+                consecutive_errors += 1;
+                total_errors += 1;
+
+                // Check consecutive error limit
+                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS {
+                    results.push(result);
+                    return (
+                        results,
+                        true,
+                        Some(format!(
+                            "Stopped after {} consecutive errors. This doesn't look like calc content - try switching to a different syntax mode.",
+                            MAX_CONSECUTIVE_ERRORS
+                        )),
+                    );
+                }
+
+                // Check total error limit
+                if total_errors >= MAX_TOTAL_ERRORS {
+                    results.push(result);
+                    return (
+                        results,
+                        true,
+                        Some(format!(
+                            "Stopped after {} total errors. Consider switching to a different syntax mode for this content.",
+                            MAX_TOTAL_ERRORS
+                        )),
+                    );
+                }
+            } else if !result.is_comment && result.result.is_some() {
+                // Reset consecutive errors on successful evaluation
+                consecutive_errors = 0;
+            }
+
+            results.push(result);
+        }
+
+        (results, false, None)
     }
 }
 
@@ -337,9 +411,24 @@ impl Default for CalcEvaluator {
 /// Render calc mode text with syntax highlighting and inline results
 pub fn render_calc(text: &str) -> Text<'static> {
     let mut evaluator = CalcEvaluator::new();
-    let results = evaluator.evaluate_document(text);
+    let (results, stopped_early, warning) = evaluator.evaluate_document(text);
 
     let mut lines: Vec<Line<'static>> = Vec::new();
+
+    // If there's a warning (limits hit), show it prominently at the top
+    if let Some(warning_msg) = warning {
+        lines.push(Line::from(vec![
+            Span::styled(
+                "⚠ ",
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                warning_msg,
+                Style::default().fg(Color::Yellow),
+            ),
+        ]));
+        lines.push(Line::raw(""));
+    }
 
     for result in results {
         let mut spans: Vec<Span<'static>> = Vec::new();
@@ -370,6 +459,17 @@ pub fn render_calc(text: &str) -> Text<'static> {
         }
 
         lines.push(Line::from(spans));
+    }
+
+    // If we stopped early, add an indicator at the end
+    if stopped_early && !lines.is_empty() {
+        lines.push(Line::raw(""));
+        lines.push(Line::from(vec![
+            Span::styled(
+                "... (evaluation stopped)",
+                Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC),
+            ),
+        ]));
     }
 
     Text::from(lines)
@@ -520,7 +620,8 @@ mod tests {
     #[test]
     fn test_basic_arithmetic() {
         let mut eval = CalcEvaluator::new();
-        let results = eval.evaluate_document("2 + 2");
+        let (results, stopped, _) = eval.evaluate_document("2 + 2");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("4".to_string()));
         assert!(!results[0].is_error);
@@ -530,7 +631,8 @@ mod tests {
     fn test_variable_assignment() {
         let mut eval = CalcEvaluator::new();
         // Assignments should now show the assigned value
-        let results = eval.evaluate_document("x = 10\nx * 2");
+        let (results, stopped, _) = eval.evaluate_document("x = 10\nx * 2");
+        assert!(!stopped);
         assert_eq!(results.len(), 2);
         // Assignment should show the assigned value
         assert!(!results[0].is_error);
@@ -542,7 +644,8 @@ mod tests {
     #[test]
     fn test_comments() {
         let mut eval = CalcEvaluator::new();
-        let results = eval.evaluate_document("# This is a comment\n2 + 2");
+        let (results, stopped, _) = eval.evaluate_document("# This is a comment\n2 + 2");
+        assert!(!stopped);
         assert_eq!(results.len(), 2);
         assert!(results[0].is_comment);
         assert_eq!(results[0].result, None);
@@ -552,7 +655,8 @@ mod tests {
     #[test]
     fn test_constants() {
         let mut eval = CalcEvaluator::new();
-        let results = eval.evaluate_document("pi");
+        let (results, stopped, _) = eval.evaluate_document("pi");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert!(results[0].result.is_some());
         let result = results[0].result.as_ref().unwrap();
@@ -563,7 +667,8 @@ mod tests {
     fn test_functions() {
         let mut eval = CalcEvaluator::new();
         // sqrt should work without math:: prefix (preprocessor adds it)
-        let results = eval.evaluate_document("sqrt(16)");
+        let (results, stopped, _) = eval.evaluate_document("sqrt(16)");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("4".to_string()));
     }
@@ -571,7 +676,8 @@ mod tests {
     #[test]
     fn test_floor() {
         let mut eval = CalcEvaluator::new();
-        let results = eval.evaluate_document("floor(3.7)");
+        let (results, stopped, _) = eval.evaluate_document("floor(3.7)");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("3".to_string()));
     }
@@ -580,7 +686,8 @@ mod tests {
     fn test_abs() {
         let mut eval = CalcEvaluator::new();
         // abs should work without math:: prefix
-        let results = eval.evaluate_document("abs(-7)");
+        let (results, stopped, _) = eval.evaluate_document("abs(-7)");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("7".to_string()));
     }
@@ -589,7 +696,8 @@ mod tests {
     fn test_trig_functions() {
         let mut eval = CalcEvaluator::new();
         // sin(pi/2) should be approximately 1
-        let results = eval.evaluate_document("sin(pi/2)");
+        let (results, stopped, _) = eval.evaluate_document("sin(pi/2)");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert!(!results[0].is_error);
         let result = results[0].result.as_ref().unwrap();
@@ -600,7 +708,8 @@ mod tests {
     #[test]
     fn test_factorial() {
         let mut eval = CalcEvaluator::new();
-        let results = eval.evaluate_document("5!");
+        let (results, stopped, _) = eval.evaluate_document("5!");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("120".to_string()));
     }
@@ -609,7 +718,8 @@ mod tests {
     fn test_power_operator() {
         let mut eval = CalcEvaluator::new();
         // Test ** syntax (Python-style)
-        let results = eval.evaluate_document("2**10");
+        let (results, stopped, _) = eval.evaluate_document("2**10");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("1024".to_string()));
     }
@@ -618,7 +728,8 @@ mod tests {
     fn test_power_associativity() {
         let mut eval = CalcEvaluator::new();
         // 2^3^2 should be 2^(3^2) = 2^9 = 512 (right-to-left associativity)
-        let results = eval.evaluate_document("2^3^2");
+        let (results, stopped, _) = eval.evaluate_document("2^3^2");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("512".to_string()));
     }
@@ -627,7 +738,8 @@ mod tests {
     fn test_float_division() {
         let mut eval = CalcEvaluator::new();
         // 4/5 should be 0.8, not 0 (integer division)
-        let results = eval.evaluate_document("4/5");
+        let (results, stopped, _) = eval.evaluate_document("4/5");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("0.8".to_string()));
     }
@@ -636,7 +748,8 @@ mod tests {
     fn test_complex_expression() {
         let mut eval = CalcEvaluator::new();
         // 1 + 2 * 3 - 4 / 5 = 1 + 6 - 0.8 = 6.2
-        let results = eval.evaluate_document("1 + 2 * 3 - 4 / 5");
+        let (results, stopped, _) = eval.evaluate_document("1 + 2 * 3 - 4 / 5");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].result, Some("6.2".to_string()));
     }
@@ -644,9 +757,36 @@ mod tests {
     #[test]
     fn test_error_handling() {
         let mut eval = CalcEvaluator::new();
-        let results = eval.evaluate_document("undefined_var");
+        let (results, stopped, _) = eval.evaluate_document("undefined_var");
+        assert!(!stopped);
         assert_eq!(results.len(), 1);
         assert!(results[0].is_error);
         assert!(results[0].result.as_ref().unwrap().starts_with("Error:"));
+    }
+
+    #[test]
+    fn test_consecutive_errors_stop() {
+        let mut eval = CalcEvaluator::new();
+        // Create content that will produce many consecutive errors
+        let error_lines = "undefined\n".repeat(MAX_CONSECUTIVE_ERRORS + 5);
+        let (results, stopped, warning) = eval.evaluate_document(&error_lines);
+        assert!(stopped);
+        assert!(warning.is_some());
+        assert!(warning.unwrap().contains("consecutive errors"));
+        // Should have stopped at MAX_CONSECUTIVE_ERRORS
+        assert_eq!(results.len(), MAX_CONSECUTIVE_ERRORS);
+    }
+
+    #[test]
+    fn test_document_too_long() {
+        let mut eval = CalcEvaluator::new();
+        // Create a document that exceeds the line limit
+        let long_doc = "1 + 1\n".repeat(MAX_CALC_LINES + 10);
+        let (results, stopped, warning) = eval.evaluate_document(&long_doc);
+        assert!(stopped);
+        assert!(warning.is_some());
+        assert!(warning.unwrap().contains("too long"));
+        // No lines should be evaluated
+        assert_eq!(results.len(), 0);
     }
 }
