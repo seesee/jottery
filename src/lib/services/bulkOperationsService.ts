@@ -38,19 +38,21 @@ export async function addTagsToNotes(
       const newTags = [...new Set([...note.tags, ...tagsToAdd])];
 
       if (newTags.length !== note.tags.length) {
-        // Update note with new tags
+        // Update note with new tags (properly encrypts via noteService)
+        await noteService.updateNote(noteId, { tags: newTags });
+
+        // Update store with decrypted version
         const updated: DecryptedNote = {
           ...note,
           tags: newTags,
           modifiedAt: new Date().toISOString(),
         };
-
-        await noteRepository.update(updated);
-
-        // Update store
         notes.update((n) =>
           n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
         );
+
+        // Update search index
+        searchService.updateNote(updated);
       }
     }
 
@@ -91,19 +93,21 @@ export async function removeTagsFromNotes(
       );
 
       if (newTags.length !== note.tags.length) {
-        // Update note with new tags
+        // Update note with new tags (properly encrypts via noteService)
+        await noteService.updateNote(noteId, { tags: newTags });
+
+        // Update store with decrypted version
         const updated: DecryptedNote = {
           ...note,
           tags: newTags,
           modifiedAt: new Date().toISOString(),
         };
-
-        await noteRepository.update(updated);
-
-        // Update store
         notes.update((n) =>
           n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
         );
+
+        // Update search index
+        searchService.updateNote(updated);
       }
     }
 
