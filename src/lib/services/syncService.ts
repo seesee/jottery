@@ -20,7 +20,8 @@ import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { versionRepository } from './versionRepository';
-import { cryptoService, encryptJSON, decryptJSON } from './crypto';
+import { cryptoService } from './crypto';
+import { storageToSync, syncToStorage } from './tagConversionService';
 import { noteService } from './noteService';
 import { searchService } from './searchService';
 import { notes, settings } from '../stores/appStore';
@@ -285,58 +286,15 @@ class SyncService {
     // Build push request - convert tags from storage format to sync format
     const pushRequest: SyncPushRequest = {
       notes: await Promise.all(modifiedNotes.map(async note => {
-        let individuallyEncryptedTags: string[];
-
-        // Handle tags conversion - support both old and new storage formats
-        if (!note.tags || note.tags.length === 0) {
-          // No tags
-          individuallyEncryptedTags = [];
-        } else if (note.tags.length === 1) {
-          // Single-blob format: tags[0] is a JSON string containing encrypted array
-          try {
-            const encryptedTagsBlob = JSON.parse(note.tags[0]);
-            const decryptedTagsArray = await decryptJSON<string[]>(
-              encryptedTagsBlob,
-              masterKey.key
-            );
-
-            // Filter out invalid tags (empty strings, non-strings, empty arrays, etc.)
-            const validTags = decryptedTagsArray.filter(tag => {
-              if (typeof tag !== 'string') {
-                console.warn('[SyncService] Skipping non-string tag:', tag);
-                return false;
-              }
-              if (tag.trim().length === 0) {
-                console.warn('[SyncService] Skipping empty tag');
-                return false;
-              }
-              return true;
-            });
-
-            // Encrypt each valid tag individually with JSON encoding (as required by sync protocol)
-            individuallyEncryptedTags = await Promise.all(
-              validTags.map(async tag => {
-                const tagJson = JSON.stringify(tag);  // JSON-encode the tag
-                const encrypted = await cryptoService.encryptText(tagJson, masterKey.key);
-                return JSON.stringify(encrypted);  // Stringify the EncryptionResult
-              })
-            );
-          } catch (error) {
-            console.error('[SyncService] Failed to parse tags, assuming empty:', error);
-            individuallyEncryptedTags = [];
-          }
-        } else {
-          // Array format: already individually encrypted (shouldn't happen, but handle it)
-          console.warn('[SyncService] Note has multiple tag entries, using as-is');
-          individuallyEncryptedTags = note.tags;
-        }
+        // Convert tags from storage format to sync format
+        const syncTags = await storageToSync(note.tags, masterKey.key);
 
         return {
           id: note.id,
           createdAt: note.createdAt,
           modifiedAt: note.modifiedAt,
           content: note.content,
-          tags: individuallyEncryptedTags,
+          tags: syncTags,
           attachments: note.attachments.map(a => ({
             id: a.id,
             filename: a.filename,
@@ -497,88 +455,14 @@ class SyncService {
 
     // Apply remote changes with Last-Write-Wins conflict resolution
     for (const remoteNote of result.notes) {
-      // Convert tags from sync format (array of individually encrypted tags) to storage format (single encrypted blob)
-      console.log(`[SyncService] Pull - Processing note ${remoteNote.id}`);
-      console.log(`[SyncService] Pull - remoteNote.tags:`, {
-        isArray: Array.isArray(remoteNote.tags),
-        length: remoteNote.tags?.length,
-        type: typeof remoteNote.tags,
-        sample: remoteNote.tags?.[0]?.substring(0, 100)
-      });
-
-      let tagsForStorage: string[];
-
-      if (remoteNote.tags && remoteNote.tags.length > 0) {
-        // Decrypt each individually encrypted tag
-        const decryptedTags: string[] = [];
-        for (let i = 0; i < remoteNote.tags.length; i++) {
-          const encryptedTagJson = remoteNote.tags[i];
-          try {
-            console.log(`[SyncService] Pull - Tag[${i}] encrypted:`, encryptedTagJson?.substring(0, 100));
-            const encryptedTag = JSON.parse(encryptedTagJson);
-            const tagJson = await cryptoService.decryptText(encryptedTag, masterKey.key);
-            console.log(`[SyncService] Pull - Tag[${i}] decrypted:`, tagJson);
-            const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
-            console.log(`[SyncService] Pull - Tag[${i}] parsed:`, tag, 'type:', typeof tag, 'isArray:', Array.isArray(tag));
-
-            // Handle legacy format: if tag is an array, extract individual tags
-            if (Array.isArray(tag)) {
-              console.warn('[SyncService] Pull - Found legacy array tag format, extracting individual tags:', tag);
-              for (const individualTag of tag) {
-                if (typeof individualTag === 'string' && individualTag.trim().length > 0) {
-                  decryptedTags.push(individualTag);
-                } else {
-                  console.warn('[SyncService] Pull - Skipping invalid tag in array:', individualTag);
-                }
-              }
-              continue;
-            }
-
-            // Validate tag before adding
-            if (typeof tag !== 'string') {
-              console.warn('[SyncService] Pull - Skipping non-string tag:', tag);
-              continue;
-            }
-            if (tag.trim().length === 0) {
-              console.warn('[SyncService] Pull - Skipping empty tag');
-              continue;
-            }
-
-            decryptedTags.push(tag);
-          } catch (error) {
-            console.error('[SyncService] Pull - Failed to decrypt tag:', error);
-          }
-        }
-
-        console.log(`[SyncService] Pull - Collected ${decryptedTags.length} decrypted tags:`, decryptedTags);
-
-        // Re-encrypt as a single blob for storage
-        const encryptedTagsBlob = await encryptJSON(decryptedTags, masterKey.key);
-        tagsForStorage = [JSON.stringify(encryptedTagsBlob)];
-
-        console.log(`[SyncService] Pull - tagsForStorage:`, {
-          isArray: Array.isArray(tagsForStorage),
-          length: tagsForStorage.length,
-          sample: tagsForStorage[0]?.substring(0, 100)
-        });
-      } else {
-        tagsForStorage = [];
-        console.log(`[SyncService] Pull - No tags on note`);
-      }
+      // Convert tags from sync format to storage format
+      const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey.key);
 
       const noteForStorage = {
         ...remoteNote,
         tags: tagsForStorage,
         syncedAt: result.syncedAt,
       };
-
-      // Debug logging for tag storage
-      console.log(`[SyncService] Pull - Storing note ${remoteNote.id} with tags:`, {
-        tagsIsArray: Array.isArray(tagsForStorage),
-        tagsLength: tagsForStorage?.length,
-        tagsType: typeof tagsForStorage,
-        firstTagSample: tagsForStorage?.[0]?.substring(0, 100)
-      });
 
       const localNote = await noteRepository.getById(remoteNote.id);
 
