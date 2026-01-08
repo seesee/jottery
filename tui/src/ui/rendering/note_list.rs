@@ -301,25 +301,24 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
             1
         };
 
-        let border_style = Style::default().fg(app.color_scheme.foreground);
         let timestamp_style = Style::default().fg(app.color_scheme.accent_secondary);
 
         let timestamp_line = Line::from(vec![
-            Span::styled("│", border_style),
+            Span::raw("│"),
             Span::raw(" "),  // Left padding
             Span::styled(created_label, timestamp_style),
             Span::raw(" ".repeat(padding)),
             Span::styled(modified_label, timestamp_style),
             Span::raw(" "),  // Right padding
-            Span::styled("│", border_style),
+            Span::raw("│"),
         ]);
 
         // Add bottom border line
         let border_width = timestamp_area.width.saturating_sub(2) as usize;
         let border_line = Line::from(vec![
-            Span::styled("└", border_style),
-            Span::styled("─".repeat(border_width), border_style),
-            Span::styled("┘", border_style),
+            Span::raw("└"),
+            Span::raw("─".repeat(border_width)),
+            Span::raw("┘"),
         ]);
 
         // Create a 2-line footer: timestamp + bottom border
