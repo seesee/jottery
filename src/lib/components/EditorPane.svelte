@@ -8,7 +8,7 @@
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
-  import PdfViewer from './PdfViewer.svelte';
+  import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import { marked } from 'marked';
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
@@ -60,9 +60,6 @@
 
   // Attachment preview state
   let previewAttachment: Attachment | null = null;
-  let previewContent: string | null = null;
-  let previewType: 'image' | 'text' | 'pdf' | 'audio' | 'video' | 'unsupported' | null = null;
-  let isLoadingPreview = false;
 
   // Lazy load highlight.js when preview is shown
   $: if (showPreview && !highlightJsLoaded && !loadingHighlightJs) {
@@ -739,76 +736,14 @@
     }
   }
 
-  // Check if attachment can be previewed
-  function canPreviewAttachment(mimeType: string): boolean {
-    if (mimeType.startsWith('image/')) return true;
-    if (mimeType.startsWith('text/')) return true;
-    if (mimeType.includes('json')) return true;
-    if (mimeType.includes('javascript')) return true;
-    if (mimeType.includes('xml')) return true;
-    if (mimeType.includes('pdf')) return true;
-    if (mimeType.startsWith('audio/')) return true;
-    if (mimeType.startsWith('video/')) return true;
-    return false;
-  }
-
-  // Get preview type for attachment
-  function getAttachmentPreviewType(mimeType: string): typeof previewType {
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('audio/')) return 'audio';
-    if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType.includes('pdf')) return 'pdf';
-    if (mimeType.startsWith('text/') ||
-        mimeType.includes('json') ||
-        mimeType.includes('javascript') ||
-        mimeType.includes('xml')) return 'text';
-    return 'unsupported';
-  }
-
   // Show attachment preview
-  async function handlePreviewAttachment(attachment: Attachment) {
-    if (!canPreviewAttachment(attachment.mimeType)) {
-      // If can't preview, just download
-      await handleDownloadAttachment(attachment);
-      return;
-    }
-
-    isLoadingPreview = true;
+  function handlePreviewAttachment(attachment: Attachment) {
     previewAttachment = attachment;
-    previewType = getAttachmentPreviewType(attachment.mimeType);
-    previewContent = null;
-
-    try {
-      // Get the decrypted data (returns Blob)
-      const blob = await attachmentService.getAttachmentData(attachment);
-
-      if (previewType === 'image' || previewType === 'audio' || previewType === 'video' || previewType === 'pdf') {
-        // Create blob URL for media files
-        previewContent = URL.createObjectURL(blob);
-      } else if (previewType === 'text') {
-        // Convert blob to text for text files
-        const arrayBuffer = await blob.arrayBuffer();
-        const text = new TextDecoder().decode(arrayBuffer);
-        previewContent = text;
-      }
-    } catch (error) {
-      console.error('Failed to load preview:', error);
-      previewType = 'unsupported';
-    } finally {
-      isLoadingPreview = false;
-    }
   }
 
   // Close attachment preview
   function closeAttachmentPreview() {
-    // Revoke blob URLs to free memory
-    if (previewContent && (previewType === 'image' || previewType === 'audio' || previewType === 'video' || previewType === 'pdf')) {
-      URL.revokeObjectURL(previewContent);
-    }
-
     previewAttachment = null;
-    previewContent = null;
-    previewType = null;
   }
 
   // Download attachment
@@ -818,13 +753,6 @@
     } catch (error) {
       console.error('Failed to download attachment:', error);
       toast.error(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  // Download from preview
-  async function handleDownloadFromPreview() {
-    if (previewAttachment) {
-      await handleDownloadAttachment(previewAttachment);
     }
   }
 
@@ -1378,102 +1306,12 @@
 />
 
 <!-- Attachment Preview Modal -->
-{#if previewAttachment}
-  <div
-    class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-    on:click={closeAttachmentPreview}
-    on:keydown={(e) => e.key === 'Enter' && closeAttachmentPreview()}
-    role="button"
-    tabindex="-1"
-    aria-label="Close preview"
-  >
-    <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
-      role="dialog"
-      aria-modal="true"
-      tabindex="0"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex-1 min-w-0">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-            {$_('editor.attachmentPreview')}
-          </h2>
-        </div>
-        <div class="flex gap-2 ml-4">
-          <button
-            on:click={handleDownloadFromPreview}
-            class="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-          >
-            {$_('editor.download')}
-          </button>
-          <button
-            on:click={closeAttachmentPreview}
-            class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-            aria-label="Close"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="flex-1 overflow-auto {previewType === 'image' ? '' : 'p-4'}">
-        {#if isLoadingPreview}
-          <div class="flex items-center justify-center h-full">
-            <div class="text-gray-500 dark:text-gray-400">{$_('editor.status.loadingPreview')}</div>
-          </div>
-        {:else if previewType === 'image' && previewContent}
-          <div class="w-full h-full flex items-center justify-center p-4">
-            <img
-              src={previewContent}
-              alt="Attachment preview"
-              class="max-w-full max-h-full object-contain"
-              style="max-height: calc(90vh - 120px);"
-            />
-          </div>
-        {:else if previewType === 'text' && previewContent}
-          <pre class="text-sm bg-gray-50 dark:bg-gray-900 p-4 rounded overflow-auto max-h-full"><code class="text-gray-900 dark:text-gray-100">{previewContent}</code></pre>
-        {:else if previewType === 'pdf' && previewContent}
-          <PdfViewer
-            pdfUrl={previewContent}
-          />
-        {:else if previewType === 'audio' && previewContent}
-          <div class="flex items-center justify-center h-full">
-            <audio controls class="w-full max-w-xl">
-              <source src={previewContent} type={previewAttachment.mimeType} />
-              Your browser does not support audio playback.
-            </audio>
-          </div>
-        {:else if previewType === 'video' && previewContent}
-          <div class="flex items-center justify-center h-full">
-            <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
-              <source src={previewContent} type={previewAttachment.mimeType} />
-              <track kind="captions" />
-              {$_('editor.errors.videoNotSupported')}
-            </video>
-          </div>
-        {:else}
-          <div class="flex items-center justify-center h-full">
-            <div class="text-center text-gray-500 dark:text-gray-400">
-              <p class="mb-4">{$_('editor.errors.previewNotAvailable')}</p>
-              <button
-                on:click={handleDownloadFromPreview}
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                {$_('editor.errors.downloadToView')}
-              </button>
-            </div>
-          </div>
-        {/if}
-      </div>
-    </div>
-  </div>
-{/if}
+<AttachmentPreviewModal
+  show={previewAttachment !== null}
+  attachment={previewAttachment}
+  onClose={closeAttachmentPreview}
+  onDownload={handleDownloadAttachment}
+/>
 
 <!-- Attachments Modal (Mobile) -->
 <MobileAttachmentsModal
