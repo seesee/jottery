@@ -250,17 +250,17 @@ class ResultWidget extends WidgetType {
 	}
 }
 
-// Widget: Warning message when limits are hit
+// Widget: Warning message when limits are hit (inline at start of line)
 class WarningWidget extends WidgetType {
 	constructor(private message: string) {
 		super();
 	}
 
 	toDOM(): HTMLElement {
-		const div = document.createElement('div');
-		div.className = 'cm-calc-warning';
-		div.textContent = '⚠ ' + this.message;
-		return div;
+		const span = document.createElement('span');
+		span.className = 'cm-calc-warning';
+		span.textContent = '⚠ ' + this.message + ' ';
+		return span;
 	}
 
 	eq(other: WarningWidget): boolean {
@@ -273,12 +273,11 @@ class DecorationBuilder {
 	buildDecorations(results: EvaluationResult[], doc: Text, warning?: string): DecorationSet {
 		const decorations: any[] = [];
 
-		// Add warning widget at the very start if present
-		if (warning) {
+		// Add warning widget at the start of line 1 if present
+		if (warning && doc.lines >= 1) {
 			const warningWidget = Decoration.widget({
 				widget: new WarningWidget(warning),
-				block: true,
-				side: -1
+				side: -1 // Position before content
 			});
 			decorations.push(warningWidget.range(0));
 		}
@@ -413,17 +412,18 @@ const calcTheme = EditorView.baseTheme({
 		color: '#f87171 !important' // red-400
 	},
 	'.cm-calc-warning': {
+		display: 'inline-block',
 		backgroundColor: '#fef3c7', // amber-100
 		color: '#92400e', // amber-800
-		padding: '8px 12px',
-		borderBottom: '1px solid #fcd34d', // amber-300
+		padding: '4px 8px',
+		borderRadius: '4px',
 		fontFamily: 'system-ui, sans-serif',
-		fontSize: '14px'
+		fontSize: '13px',
+		marginBottom: '4px'
 	},
 	'.dark .cm-calc-warning': {
 		backgroundColor: '#78350f', // amber-900
-		color: '#fef3c7', // amber-100
-		borderBottom: '1px solid #b45309' // amber-700
+		color: '#fef3c7' // amber-100
 	}
 });
 
