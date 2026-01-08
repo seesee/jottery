@@ -138,7 +138,7 @@ pub mod middleware {
 
     /// Extract session token from headers
     /// Checks both Cookie header and Authorization header (Bearer token)
-    fn extract_session_token(headers: &HeaderMap) -> Option<String> {
+    pub fn extract_session_token(headers: &HeaderMap) -> Option<String> {
         // Try Authorization header first (Bearer token)
         if let Some(auth_header) = headers.get("Authorization") {
             if let Ok(auth_str) = auth_header.to_str() {

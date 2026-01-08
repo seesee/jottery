@@ -9,7 +9,7 @@ use axum::{
 };
 use std::sync::Arc;
 
-use crate::{db::SessionRepository, AppState};
+use crate::{api::middleware::extract_session_token, db::SessionRepository, AppState};
 
 /// Admin session middleware
 /// Validates session token and ensures user is admin
@@ -73,34 +73,6 @@ pub async fn admin_auth_middleware(
     });
 
     Ok(next.run(request).await)
-}
-
-/// Extract session token from headers
-/// Checks both Cookie header and Authorization header (Bearer token)
-fn extract_session_token(headers: &HeaderMap) -> Option<String> {
-    // Try Authorization header first (Bearer token)
-    if let Some(auth_header) = headers.get("Authorization") {
-        if let Ok(auth_str) = auth_header.to_str() {
-            if auth_str.starts_with("Bearer ") {
-                return Some(auth_str[7..].to_string());
-            }
-        }
-    }
-
-    // Try Cookie header (session_token=xxx)
-    if let Some(cookie_header) = headers.get("Cookie") {
-        if let Ok(cookie_str) = cookie_header.to_str() {
-            // Parse cookies (simple implementation)
-            for cookie in cookie_str.split(';') {
-                let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
-                if parts.len() == 2 && parts[0] == "session_token" {
-                    return Some(parts[1].to_string());
-                }
-            }
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]
