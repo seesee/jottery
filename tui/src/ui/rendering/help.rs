@@ -122,6 +122,28 @@ pub fn render_help(app: &App, frame: &mut Frame) {
             ],
         ),
         (
+            "help.multi_select",
+            vec![
+                HelpEntry::new("help.space_select_key", "help.space_select_desc"),
+                HelpEntry::new("help.shift_v_range_key", "help.shift_v_range_desc"),
+                HelpEntry::new("help.ctrl_a_all_key", "help.ctrl_a_all_desc"),
+                HelpEntry::new("help.multi_t_tags_key", "help.multi_t_tags_desc"),
+                HelpEntry::new("help.multi_d_delete_key", "help.multi_d_delete_desc"),
+                HelpEntry::new("help.multi_c_combine_key", "help.multi_c_combine_desc"),
+                HelpEntry::new("help.multi_e_export_key", "help.multi_e_export_desc"),
+                HelpEntry::new("help.esc_clear_key", "help.esc_clear_desc"),
+            ],
+        ),
+        (
+            "help.mouse",
+            vec![
+                HelpEntry::new("help.click_note_key", "help.click_note_desc"),
+                HelpEntry::new("help.click_tag_key", "help.click_tag_desc"),
+                HelpEntry::new("help.click_tags_key", "help.click_tags_desc"),
+                HelpEntry::new("help.scroll_key", "help.scroll_desc"),
+            ],
+        ),
+        (
             "help.global",
             vec![
                 HelpEntry::new("help.question_global_key", "help.question_global_desc"),

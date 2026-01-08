@@ -13,7 +13,7 @@ use crate::ui::rendering::modal::render_confirmation_modal;
 use crate::models::SyntaxLanguage;
 
 /// Render note list (split pane view)
-pub fn render_note_list(app: &App, frame: &mut Frame) {
+pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let size = frame.area();
 
     // Main layout: content + help at bottom
@@ -121,6 +121,15 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
 
     frame.render_stateful_widget(list, list_chunk, &mut list_state);
 
+    // Store note list inner area for mouse click detection (will assign to app at end)
+    // Inner area is list_chunk minus the border (1 pixel on each side)
+    let note_list_inner_area = Rect {
+        x: list_chunk.x + 1,
+        y: list_chunk.y + 1,
+        width: list_chunk.width.saturating_sub(2),
+        height: list_chunk.height.saturating_sub(2),
+    };
+
     // Help text (full width at bottom)
     let status_text = if let Some(ref status) = app.sync_status {
         status.clone()
@@ -138,7 +147,11 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
                 "↑/↓: navigate | Enter: restore version | Esc: close".to_string()
             }
             ViewMode::NoteList => {
-                "?: help | /: search | p: pin | t: tags | []: type | r: bin | v: ver | n: new | i: edit".to_string()
+                if app.is_multi_select_mode {
+                    format!("Space: toggle | Esc: clear | t: add tags | d: delete | c: combine | e: export ({} selected)", app.selected_note_ids.len())
+                } else {
+                    "?: help | /: search | Space: select | p: pin | t: tags | []: type | r: bin | v: ver | n: new".to_string()
+                }
             }
         }
     };
@@ -172,6 +185,10 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
         .title("Preview")
         .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT);
 
+    // Variables for mouse click detection (assigned inside if block, stored at end)
+    let mut tags_line_area_local: Option<Rect> = None;
+    let mut tag_positions_local: Vec<(String, u16, u16)> = Vec::new();
+
     if !filtered.is_empty() && app.selected_note < filtered.len() {
         let note = filtered[app.selected_note];
 
@@ -179,7 +196,23 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
         let mut metadata_parts = Vec::new();
 
         // Show tags (or n/a if none)
+        // Also calculate tag positions for click detection
+        let tags_prefix = "Tags: ";
+        let preview_inner_x = preview_area.x + 1; // Account for border
+        let preview_inner_y = preview_area.y + 1; // Account for title bar
+        let scroll_offset = app.preview_scroll_offset;
+
         let tags_str = if !note.tags.is_empty() {
+            let mut x_offset = preview_inner_x + tags_prefix.len() as u16;
+            for tag in &note.tags {
+                let tag_str = format!("#{}", tag);
+                let tag_len = tag_str.len() as u16;
+                // Store position only if visible (scroll offset is 0 for tags line)
+                if scroll_offset == 0 {
+                    tag_positions_local.push((tag.clone(), x_offset, x_offset + tag_len));
+                }
+                x_offset += tag_len + 1; // +1 for space separator
+            }
             note.tags.iter()
                 .map(|t| format!("#{}", t))
                 .collect::<Vec<_>>()
@@ -187,7 +220,20 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
         } else {
             "n/a".to_string()
         };
-        metadata_parts.push(format!("Tags: {}", tags_str));
+
+        // Store tags line area for click detection (only visible when scroll offset is 0)
+        tags_line_area_local = if scroll_offset == 0 {
+            Some(Rect {
+                x: preview_inner_x,
+                y: preview_inner_y,
+                width: preview_area.width.saturating_sub(2),
+                height: 1,
+            })
+        } else {
+            None
+        };
+
+        metadata_parts.push(format!("{}{}", tags_prefix, tags_str));
 
         // Show syntax language
         metadata_parts.push(format!("Type: {}", note.syntax_language));
@@ -744,4 +790,9 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
             8,
         );
     }
+
+    // Store click detection areas in app (after all borrows of filtered are done)
+    app.note_list_area = Some(note_list_inner_area);
+    app.tags_line_area = tags_line_area_local;
+    app.tag_positions = tag_positions_local;
 }

@@ -914,7 +914,9 @@ fn main() -> Result<()> {
                 app.check_auto_sync();
             }
             ui::Event::Mouse(mouse) => {
-                use crossterm::event::MouseEventKind;
+                use crossterm::event::{MouseEventKind, MouseButton};
+                use ui::state::{AppState, ViewMode, InputMode, FocusedPanel};
+
                 match mouse.kind {
                     MouseEventKind::ScrollUp => {
                         // Scroll preview up 3 lines
@@ -923,6 +925,79 @@ fn main() -> Result<()> {
                     MouseEventKind::ScrollDown => {
                         // Scroll preview down 3 lines
                         app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(3);
+                    }
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        // Only handle clicks in NoteList state
+                        if !matches!(app.state, AppState::NoteList) {
+                            continue;
+                        }
+                        if !matches!(app.view_mode, ViewMode::NoteList) {
+                            continue;
+                        }
+                        if app.search_active {
+                            // Clicking outside search exits search mode
+                            app.search_active = false;
+                        }
+
+                        let x = mouse.column;
+                        let y = mouse.row;
+
+                        // Check if click is in note list area
+                        if let Some(area) = app.note_list_area {
+                            if x >= area.x && x < area.x + area.width
+                                && y >= area.y && y < area.y + area.height
+                            {
+                                // Calculate which note was clicked
+                                let clicked_index = (y - area.y) as usize;
+                                let filtered_count = app.filtered_notes().len();
+                                if clicked_index < filtered_count {
+                                    app.selected_note = clicked_index;
+                                    app.selected_note_id = app.filtered_notes().get(clicked_index).map(|n| n.id.clone());
+                                    app.preview_scroll_offset = 0;
+                                    app.focused_panel = FocusedPanel::NoteContent;
+                                }
+                                continue;
+                            }
+                        }
+
+                        // Check if click is on tags line (for entering tag mode)
+                        if let Some(area) = app.tags_line_area {
+                            if y == area.y && x >= area.x && x < area.x + area.width {
+                                // Check if click is on a specific tag (for search)
+                                let mut found_tag = None;
+                                for (tag_name, tag_start, tag_end) in &app.tag_positions {
+                                    if x >= *tag_start && x < *tag_end {
+                                        found_tag = Some(tag_name.clone());
+                                        break;
+                                    }
+                                }
+
+                                if let Some(tag) = found_tag {
+                                    // Click on a tag: search for it
+                                    app.search_input = format!("#{}", tag);
+                                    app.search_active = true;
+                                    app.selected_note = 0;
+                                } else {
+                                    // Click on "Tags:" label or empty area: enter tag mode
+                                    let filtered = app.filtered_notes();
+                                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                                        let note = &filtered[app.selected_note];
+                                        let note_id = note.id.clone();
+                                        let content = note.content.clone();
+                                        let syntax_lang = note.syntax_language;
+                                        let tags = note.tags.clone();
+
+                                        app.note_input = content;
+                                        app.note_syntax = syntax_lang;
+                                        app.current_tags = tags;
+                                        app.editing_note_id = Some(note_id);
+                                        app.state = AppState::NoteView;
+                                        app.input_mode = InputMode::Tag;
+                                        app.tag_input.clear();
+                                    }
+                                }
+                            }
+                        }
                     }
                     _ => {}
                 }
