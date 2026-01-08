@@ -7,6 +7,7 @@ use clap::{Parser, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Cell, Color, ContentArrangement, Table};
 use jottery_server::config::Config;
 use jottery_server::db::{init_pool, UserRepository};
+use jottery_server::utils::password::hash_password_with_params;
 use sqlx::SqlitePool;
 
 /// Device record for admin CLI (simplified from Client)
@@ -89,6 +90,14 @@ enum UserCommands {
         /// Skip confirmation prompt
         #[arg(long, short = 'y')]
         yes: bool,
+    },
+    /// Reset a user's password
+    ResetPassword {
+        /// User ID or email
+        user: String,
+        /// New password (will prompt if not provided)
+        #[arg(long)]
+        password: Option<String>,
     },
 }
 
@@ -333,6 +342,60 @@ async fn handle_users(pool: &SqlitePool, action: UserCommands) -> Result<(), Box
             UserRepository::delete(pool, &user_record.id).await?;
 
             println!("✓ Deleted user: {}", user_record.email);
+        }
+
+        UserCommands::ResetPassword { user, password } => {
+            let user_record = find_user(pool, &user).await?;
+
+            // Get password (from argument or prompt)
+            let new_password = if let Some(pwd) = password {
+                pwd
+            } else {
+                use std::io::{self, Write};
+
+                print!("Enter new password for {}: ", user_record.email);
+                io::stdout().flush()?;
+
+                // Read password (note: not hidden, consider using rpassword crate for production)
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)?;
+                let pwd = input.trim().to_string();
+
+                if pwd.is_empty() {
+                    eprintln!("Error: Password cannot be empty.");
+                    std::process::exit(1);
+                }
+
+                pwd
+            };
+
+            // Validate password length
+            if new_password.len() < 12 {
+                eprintln!("Error: Password must be at least 12 characters.");
+                std::process::exit(1);
+            }
+
+            // Load config for Argon2 parameters
+            let config = Config::from_env()?;
+
+            // Hash the new password
+            let password_hash = hash_password_with_params(
+                &new_password,
+                config.argon2_m_cost,
+                config.argon2_t_cost,
+                config.argon2_p_cost,
+            ).map_err(|e| format!("Failed to hash password: {}", e))?;
+
+            // Update in database
+            sqlx::query!(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                password_hash,
+                user_record.id
+            )
+            .execute(pool)
+            .await?;
+
+            println!("✓ Password reset for user: {}", user_record.email);
         }
     }
 
