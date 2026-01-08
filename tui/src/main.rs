@@ -913,8 +913,19 @@ fn main() -> Result<()> {
                 // Check if auto-sync should run
                 app.check_auto_sync();
             }
-            ui::Event::Mouse(_) => {
-                // Ignore for now
+            ui::Event::Mouse(mouse) => {
+                use crossterm::event::MouseEventKind;
+                match mouse.kind {
+                    MouseEventKind::ScrollUp => {
+                        // Scroll preview up 3 lines
+                        app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(3);
+                    }
+                    MouseEventKind::ScrollDown => {
+                        // Scroll preview down 3 lines
+                        app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(3);
+                    }
+                    _ => {}
+                }
             }
         }
     }

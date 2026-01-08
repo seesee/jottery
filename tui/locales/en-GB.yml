@@ -327,6 +327,22 @@ help:
   note_images_desc: "Images use chafa if available, otherwise system default app"
   question_global_key: "?"
   question_global_desc: "Show this help screen"
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: "Cycle syntax type (forward/backward)"
+  pageup_pagedown_key: "PgUp / PgDn"
+  pageup_pagedown_desc: "Scroll preview (full page)"
+  ctrl_scroll_key: "Ctrl+d/u/f/b"
+  ctrl_scroll_desc: "Vim-style scroll (half/full page)"
+  mouse_scroll_key: "Mouse scroll"
+  mouse_scroll_desc: "Scroll preview"
+  p_pin_key: "p"
+  p_pin_desc: "Toggle pin on selected note"
+  r_recycle_key: "r"
+  r_recycle_desc: "Toggle recycle bin view"
+  v_versions_key: "v"
+  v_versions_desc: "View version history"
+  tab_search_key: "Tab"
+  tab_search_desc: "Exit search, focus attachments"
 
 # CLI commands
 cli:

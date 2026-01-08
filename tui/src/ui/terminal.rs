@@ -5,6 +5,7 @@
 
 use anyhow::Result;
 use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -27,7 +28,7 @@ impl Tui {
     /// Enter the terminal UI
     pub fn enter(&mut self) -> Result<()> {
         enable_raw_mode()?;
-        execute!(io::stdout(), EnterAlternateScreen)?;
+        execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture)?;
         // Don't hide cursor - let ratatui manage it via set_cursor()
         self.terminal.clear()?;
         Ok(())
@@ -36,7 +37,7 @@ impl Tui {
     /// Exit the terminal UI
     pub fn exit(&mut self) -> Result<()> {
         disable_raw_mode()?;
-        execute!(io::stdout(), LeaveAlternateScreen)?;
+        execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
         self.terminal.show_cursor()?;
         Ok(())
     }

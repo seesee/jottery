@@ -248,6 +248,18 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.selected_note_id = filtered.get(app.selected_note).map(|n| n.id.clone());
                 }
             }
+            KeyCode::Tab => {
+                // Exit search mode and toggle to attachments panel if there are attachments
+                app.search_active = false;
+                let filtered = app.filtered_notes();
+                if !filtered.is_empty() && app.selected_note < filtered.len() {
+                    let note = &filtered[app.selected_note];
+                    if !note.attachments.is_empty() {
+                        app.focused_panel = FocusedPanel::Attachments;
+                        app.selected_attachment = 0;
+                    }
+                }
+            }
             _ => {}
         }
     } else {
@@ -257,14 +269,35 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.state = AppState::Quit;
             }
             KeyCode::Char('q') => {
-                // Quit app (but not during confirmation dialogs or special modes)
-                if !app.show_bulk_delete_confirm
-                    && !app.show_bulk_combine_confirm
-                    && !app.show_force_sync_confirm
-                    && matches!(app.view_mode, ViewMode::NoteList)
-                    && !app.is_multi_select_mode
-                {
-                    app.state = AppState::Quit;
+                // 'q' closes modals/dialogs first, then returns to NoteList, then quits
+                // Never quits from input modes (search_active is already handled above)
+                if app.show_bulk_delete_confirm {
+                    app.show_bulk_delete_confirm = false;
+                } else if app.show_bulk_combine_confirm {
+                    app.show_bulk_combine_confirm = false;
+                } else if app.show_force_sync_confirm {
+                    app.show_force_sync_confirm = false;
+                } else if app.is_multi_select_mode {
+                    // Exit multi-select mode
+                    app.clear_multi_selection();
+                } else {
+                    match app.view_mode {
+                        ViewMode::NoteList => {
+                            app.state = AppState::Quit;
+                        }
+                        ViewMode::RecycleBin => {
+                            app.view_mode = ViewMode::NoteList;
+                            app.selected_note = 0;
+                            app.preview_scroll_offset = 0;
+                            // Reload normal notes
+                            if let Err(e) = operations::notes::load_notes(app) {
+                                app.error = Some(format!("Failed to reload notes: {}", e));
+                            }
+                        }
+                        ViewMode::AttachmentViewer | ViewMode::VersionHistory => {
+                            app.view_mode = ViewMode::NoteList;
+                        }
+                    }
                 }
             }
             KeyCode::Char('?') => {
@@ -630,7 +663,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
-            KeyCode::Char('l') => {
+            KeyCode::Char(']') => {
                 // Cycle syntax language forward for selected note (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
@@ -650,7 +683,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
-            KeyCode::Char('L') => {
+            KeyCode::Char('[') => {
                 // Cycle syntax language backward for selected note (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
@@ -748,6 +781,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 // Ctrl-b: scroll preview up full page (20 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
+            }
+            KeyCode::PageDown => {
+                // Page Down: scroll preview down full page (20 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(20);
+            }
+            KeyCode::PageUp => {
+                // Page Up: scroll preview up full page (20 lines)
                 app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
             }
             KeyCode::Char('d') | KeyCode::Delete => {

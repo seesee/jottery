@@ -138,7 +138,7 @@ pub fn render_note_list(app: &App, frame: &mut Frame) {
                 "↑/↓: navigate | Enter: restore version | Esc: close".to_string()
             }
             ViewMode::NoteList => {
-                "/: search | p: pin | t: tags | l: type | r: recycle bin | v: versions | n: new | i: edit".to_string()
+                "?: help | /: search | p: pin | t: tags | []: type | r: bin | v: ver | n: new | i: edit".to_string()
             }
         }
     };
