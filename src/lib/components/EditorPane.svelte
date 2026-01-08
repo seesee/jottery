@@ -652,7 +652,16 @@
 
   function handleLanguageChange(event: Event) {
     const target = event.target as HTMLSelectElement;
-    language = target.value as typeof language;
+    const newLanguage = target.value as typeof language;
+
+    // If we're in preview mode and switching to a language that doesn't support preview,
+    // exit preview mode first
+    const newLanguageSupportsPreview = newLanguage === 'markdown' || newLanguage === 'html';
+    if (showPreview && !newLanguageSupportsPreview) {
+      showPreview = false;
+    }
+
+    language = newLanguage;
     handleInput();
   }
 
