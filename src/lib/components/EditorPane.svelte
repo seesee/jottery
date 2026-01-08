@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
-  import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager, cryptoService } from '../services';
@@ -9,7 +8,7 @@
   import type { Attachment } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
-  import { marked } from 'marked';
+  import { getPreviewHtml } from '../utils/markdownPreview';
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
@@ -67,7 +66,12 @@
   }
 
   // Compute preview HTML
-  $: previewHtml = showPreview ? getPreviewHtml(content, language) : '';
+  $: previewHtml = showPreview ? getPreviewHtml(content, language, {
+    attachments,
+    openLinksInNewTab: $settings.openLinksInNewTab ?? true,
+    hljs,
+    loadingText: $_('editor.status.loading'),
+  }) : '';
 
   // Check if preview is available for current language
   $: canPreview = language === 'markdown' || language === 'html';
@@ -130,196 +134,6 @@
       .filter((lang): lang is { id: string; name: string } => lang !== null)
       .sort((a, b) => a.name.localeCompare(b.name))
   ];
-
-  function getPreviewHtml(text: string, lang: string): string {
-    if (lang === 'markdown') {
-      try {
-        // Configure marked for better rendering with syntax highlighting
-        marked.setOptions({
-          breaks: true, // Convert \n to <br>
-          gfm: true, // GitHub Flavored Markdown
-        });
-
-        // Set up custom renderer for code blocks and images
-        const renderer = new marked.Renderer();
-        const originalCode = renderer.code.bind(renderer);
-        const originalImage = renderer.image.bind(renderer);
-        const originalLink = renderer.link.bind(renderer);
-
-        // Custom heading renderer to add IDs for anchor links
-        renderer.heading = function(token) {
-          const text = token.text;
-          const depth = token.depth;
-          const id = text.toLowerCase()
-            .replace(/[^\w\s-]/g, '')  // Remove special characters
-            .replace(/\s+/g, '-')       // Replace spaces with hyphens
-            .replace(/-+/g, '-')        // Collapse multiple hyphens
-            .replace(/^-|-$/g, '');     // Trim leading/trailing hyphens
-          return `<h${depth} id="${id}">${text}</h${depth}>`;
-        };
-
-        // Custom link renderer to handle attachment: URLs
-        renderer.link = function(token) {
-          const href = token.href;
-          
-          const text = token.text || '';
-
-          // Check if this is an attachment URL
-          if (href && href.startsWith('attachment:')) {
-            const attachmentRef = href.substring('attachment:'.length);
-
-            // Find the attachment
-            let attachment = attachments.find(a => {
-              if (a.id === attachmentRef) return true;
-              const idWithoutHyphens = a.id.replace(/-/g, '');
-              if (attachmentRef.startsWith(idWithoutHyphens)) return true;
-              if (a.data === attachmentRef) return true;
-              const dataWithoutHyphens = a.data.replace(/-/g, '');
-              if (attachmentRef.startsWith(dataWithoutHyphens)) return true;
-              return false;
-            });
-
-            if (attachment) {
-              // Create a clickable div with attachment ID
-              const icon = attachment.mimeType.includes('pdf') ? '📄' :
-                          attachment.mimeType.startsWith('image/') ? '🖼️' :
-                          attachment.mimeType.startsWith('video/') ? '🎥' :
-                          attachment.mimeType.startsWith('audio/') ? '🎵' : '📎';
-              return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}">
-                <span class="text-2xl mr-2">${icon}</span>
-                <span class="font-medium text-gray-900 dark:text-gray-100">${text || attachmentRef}</span>
-                <span class="ml-2 text-gray-600 dark:text-gray-400 text-sm">(${(attachment.size / 1024).toFixed(1)} KB)</span>
-              </div>`;
-            } else {
-              // Attachment not found by ID - create placeholder with filename for async resolution
-              return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-filename="${attachmentRef}" data-loaded="false">
-                <span class="text-2xl mr-2">📎</span>
-                <span class="font-medium text-gray-900 dark:text-gray-100">${text || attachmentRef}</span>
-              </div>`;
-            }
-          }
-
-          // For non-attachment links, check if we should open in new tab
-          const openInNewTab = $settings.openLinksInNewTab ?? true;
-
-          // Check if this is an external link (starts with http:// or https://)
-          const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
-
-          if (isExternal && openInNewTab) {
-            // Escape HTML entities in href to prevent XSS
-            const safeHref = href.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-            const title = token.title ? ` title="${token.title.replace(/"/g, '&quot;')}"` : '';
-            return `<a href="${safeHref}"${title} target="_blank" rel="noopener noreferrer">${text}</a>`;
-          }
-
-          // For internal links or when setting is disabled, use default renderer
-          return originalLink.call(this, token);
-        };
-
-        // Custom image renderer to handle attachment: URLs
-        renderer.image = function(token) {
-          const href = token.href;
-          const title = token.title || '';
-          const text = token.text || '';
-
-          // Check if this is an attachment URL
-          if (href && href.startsWith('attachment:')) {
-            const attachmentRef = href.substring('attachment:'.length);
-
-            // Find the attachment by filename (preferred) or UUID
-            // Note: We can't decrypt filenames synchronously in the renderer,
-            // so we need to handle this in afterUpdate. For now, try to match by UUID.
-            let attachment = attachments.find(a => {
-              // Direct ID match (UUID)
-              if (a.id === attachmentRef) return true;
-
-              // Match UUID without hyphens
-              const idWithoutHyphens = a.id.replace(/-/g, '');
-              if (attachmentRef.startsWith(idWithoutHyphens)) return true;
-
-              // Match by data field
-              if (a.data === attachmentRef) return true;
-
-              // Match data without hyphens
-              const dataWithoutHyphens = a.data.replace(/-/g, '');
-              if (attachmentRef.startsWith(dataWithoutHyphens)) return true;
-
-              return false;
-            });
-
-            // If not found by UUID, mark for filename lookup in afterUpdate
-            // Store the reference in the data attribute for async resolution
-            if (!attachment) {
-              // Return placeholder that will be resolved by filename in afterUpdate
-              return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3E${get(_)('editor.status.loading')}%3C/text%3E%3C/svg%3E" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
-            }
-
-            if (attachment) {
-              // Check if it's an image
-              if (attachment.mimeType.startsWith('image/')) {
-                // Return a placeholder with data URL to avoid CSP errors
-                // Store the actual attachment.data value (blob storage key) in data attribute
-                return `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='%23999'%3E${get(_)('editor.status.loading')}%3C/text%3E%3C/svg%3E" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
-              } else {
-                // For non-image attachments, create a download link
-                const icon = attachment.mimeType.includes('pdf') ? '📄' :
-                            attachment.mimeType.startsWith('video/') ? '🎥' :
-                            attachment.mimeType.startsWith('audio/') ? '🎵' : '📎';
-                return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}">
-                  <span class="text-2xl mr-2">${icon}</span>
-                  <span class="font-medium text-gray-900 dark:text-gray-100">${text || attachmentRef}</span>
-                  <span class="ml-2 text-gray-600 dark:text-gray-400 text-sm">(${(attachment.size / 1024).toFixed(1)} KB)</span>
-                </div>`;
-              }
-            }
-          }
-
-          // For non-attachment images, use default renderer
-          return originalImage.call(this, token);
-        };
-
-        renderer.code = function(token) {
-          // In marked v17+, renderer receives a token object instead of separate parameters
-          const code = token.text;
-          const language = token.lang;
-
-          // Only use syntax highlighting if hljs is loaded
-          if (hljs) {
-            // Highlight the code if language is specified
-            if (language && hljs.getLanguage(language)) {
-              try {
-                const highlighted = hljs.highlight(code, { language }).value;
-                return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
-              } catch (err) {
-                console.error('Syntax highlighting error:', err);
-              }
-            }
-
-            // Auto-detect if no language specified
-            if (code) {
-              try {
-                const highlighted = hljs.highlightAuto(code).value;
-                return `<pre><code class="hljs">${highlighted}</code></pre>`;
-              } catch (err) {
-                console.error('Auto-highlight error:', err);
-              }
-            }
-          }
-
-          // Fallback to plain code block if hljs not loaded or highlighting failed
-          return originalCode.call(this, token);
-        };
-
-        return marked.parse(text, { renderer }) as string;
-      } catch (error) {
-        console.error('Markdown parsing error:', error);
-        return `<p>Error rendering markdown: ${error}</p>`;
-      }
-    } else if (lang === 'html') {
-      return text;
-    }
-    return '';
-  }
 
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
@@ -1134,7 +948,7 @@
         div.innerHTML = `
           <span class="text-2xl mr-2">⚠️</span>
           <div class="flex-1">
-            <span class="font-medium text-red-700 dark:text-red-400">${get(_)('editor.errors.loadingAttachment')}</span>
+            <span class="font-medium text-red-700 dark:text-red-400">${$_('editor.errors.loadingAttachment')}</span>
             <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
           </div>
         `;
