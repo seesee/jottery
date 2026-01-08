@@ -90,8 +90,18 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 content.to_string()
             };
 
-            // Add indicators for pinned and attachments
+            // Add indicators for pinned, attachments, and multi-select
             let mut indicators = String::new();
+
+            // Show checkbox for multi-select mode
+            if app.is_multi_select_mode {
+                if app.selected_note_ids.contains(&note.id) {
+                    indicators.push_str("[✓] ");
+                } else {
+                    indicators.push_str("[ ] ");
+                }
+            }
+
             if note.pinned {
                 indicators.push_str("📌 ");
             }
@@ -103,7 +113,14 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 preview = format!("{}{}", indicators, preview);
             }
 
-            ListItem::new(preview)
+            // Style selected notes differently in multi-select mode
+            let is_selected = app.selected_note_ids.contains(&note.id);
+            if is_selected {
+                ListItem::new(preview)
+                    .style(Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD))
+            } else {
+                ListItem::new(preview)
+            }
         })
         .collect();
 

@@ -951,10 +951,16 @@ fn main() -> Result<()> {
                                 let clicked_index = (y - area.y) as usize;
                                 let filtered_count = app.filtered_notes().len();
                                 if clicked_index < filtered_count {
-                                    app.selected_note = clicked_index;
-                                    app.selected_note_id = app.filtered_notes().get(clicked_index).map(|n| n.id.clone());
-                                    app.preview_scroll_offset = 0;
-                                    app.focused_panel = FocusedPanel::NoteContent;
+                                    if app.is_multi_select_mode {
+                                        // In multi-select mode, toggle selection
+                                        app.toggle_note_selection(clicked_index);
+                                    } else {
+                                        // Normal mode: select the note
+                                        app.selected_note = clicked_index;
+                                        app.selected_note_id = app.filtered_notes().get(clicked_index).map(|n| n.id.clone());
+                                        app.preview_scroll_offset = 0;
+                                        app.focused_panel = FocusedPanel::NoteContent;
+                                    }
                                 }
                                 continue;
                             }
