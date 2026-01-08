@@ -32,30 +32,70 @@
 
   let creatingNote = false;
 
+  /**
+   * Check if a note is "blank" (empty content and no tags)
+   */
+  function isBlankNote(note: DecryptedNote): boolean {
+    return note.content.trim() === '' && note.tags.length === 0;
+  }
+
   async function handleNewNote() {
     if (creatingNote) return; // Prevent multiple clicks
 
     creatingNote = true;
     try {
-      // Create empty note immediately
-      const newNote = await noteService.createNote('', []);
+      // Check for existing blank note first
+      const existingBlank = $notes.find(n => !n.deleted && isBlankNote(n));
 
-      // Decrypt the note before adding to store
-      const decryptedNote = await noteService.getNote(newNote.id);
-      if (!decryptedNote) {
-        throw new Error('Failed to retrieve newly created note');
+      if (existingBlank) {
+        // Reuse existing blank note: update timestamps and reorder
+        const now = new Date().toISOString();
+        const updatedNote: DecryptedNote = {
+          ...existingBlank,
+          createdAt: now,
+          modifiedAt: now,
+        };
+
+        // Update in database (this will update timestamps)
+        await noteService.updateNote(existingBlank.id, {
+          content: '',
+          tags: [],
+        });
+
+        // Update in store and reorder
+        notes.update(allNotes => {
+          // Remove the blank note from its current position
+          const filtered = allNotes.filter(n => n.id !== existingBlank.id);
+          // Insert at the top (after pinned notes)
+          const pinnedCount = filtered.filter(n => n.pinned).length;
+          const reordered = [...filtered];
+          reordered.splice(pinnedCount, 0, updatedNote);
+          return reordered;
+        });
+
+        searchService.updateNote(updatedNote);
+        selectNote(existingBlank.id);
+      } else {
+        // Create new note
+        const newNote = await noteService.createNote('', []);
+
+        // Decrypt the note before adding to store
+        const decryptedNote = await noteService.getNote(newNote.id);
+        if (!decryptedNote) {
+          throw new Error('Failed to retrieve newly created note');
+        }
+
+        // Add decrypted note to store (incremental update)
+        notes.update(allNotes => {
+          // New notes are unpinned by default, so insert after pinned notes
+          const pinnedCount = allNotes.filter(n => n.pinned).length;
+          const newNotes = [...allNotes];
+          newNotes.splice(pinnedCount, 0, decryptedNote);
+          return newNotes;
+        });
+        searchService.updateNote(decryptedNote);
+        selectNote(decryptedNote.id);
       }
-
-      // Add decrypted note to store (incremental update)
-      notes.update(allNotes => {
-        // New notes are unpinned by default, so insert after pinned notes
-        const pinnedCount = allNotes.filter(n => n.pinned).length;
-        const newNotes = [...allNotes];
-        newNotes.splice(pinnedCount, 0, decryptedNote);
-        return newNotes;
-      });
-      searchService.updateNote(decryptedNote);
-      selectNote(decryptedNote.id);
 
       // Switch to editor view on mobile
       mobileView = 'editor';

@@ -351,12 +351,39 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Char('n') => {
                 // New note - open editor immediately (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
-                    app.note_input.clear();
-                    app.note_syntax = SyntaxLanguage::default();
-                    app.current_tags.clear();
-                    app.editing_note_id = None;
+                    // Check for existing blank note first
+                    let existing_blank = app.notes.iter()
+                        .find(|n| !n.deleted && n.is_blank())
+                        .map(|n| n.id.clone());
 
-                    // Open external editor immediately
+                    if let Some(blank_id) = existing_blank {
+                        // Reuse existing blank note
+                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == blank_id) {
+                            note.touch(); // Update timestamps
+                            // Update in database
+                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                                }
+                            }
+                        }
+                        // Set up for editing this note
+                        app.editing_note_id = Some(blank_id.clone());
+                        if let Some(note) = app.notes.iter().find(|n| n.id == blank_id) {
+                            app.note_input = note.content.clone();
+                            app.note_syntax = note.syntax_language;
+                            app.current_tags = note.tags.clone();
+                        }
+                    } else {
+                        // Create new note - clear inputs
+                        app.note_input.clear();
+                        app.note_syntax = SyntaxLanguage::default();
+                        app.current_tags.clear();
+                        app.editing_note_id = None;
+                    }
+
+                    // Open external editor
                     if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
                         app.note_input = new_content;
                         // Save the note

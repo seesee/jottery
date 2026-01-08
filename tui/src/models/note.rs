@@ -178,6 +178,11 @@ impl Note {
         self.pinned = !self.pinned;
         self.touch();
     }
+
+    /// Check if note is blank (empty content, no tags, no attachments)
+    pub fn is_blank(&self) -> bool {
+        self.content.trim().is_empty() && self.tags.is_empty() && self.attachments.is_empty()
+    }
 }
 
 impl Attachment {
