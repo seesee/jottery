@@ -41,6 +41,15 @@ pub struct RegisterDeviceResponse {
     pub device_name: String,
 }
 
+/// User status check response
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserStatusResponse {
+    pub exists: bool,
+    pub is_approved: bool,
+    pub is_active: bool,
+}
+
 /// API client for authentication endpoints
 pub struct AuthClient {
     base_url: String,
@@ -142,6 +151,32 @@ impl AuthClient {
             .context("Failed to reach server")?;
 
         Ok(response.status().is_success())
+    }
+
+    /// Check user approval status (no auth required)
+    pub fn check_status(&self, email: &str) -> Result<UserStatusResponse> {
+        let url = format!(
+            "{}/api/v1/user/status?email={}",
+            self.base_url,
+            urlencoding::encode(email)
+        );
+
+        let response = self.client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .context("Failed to check status")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Status check failed: {} - {}", status, error_body);
+        }
+
+        let result: UserStatusResponse = response.json()
+            .context("Failed to parse status response")?;
+
+        Ok(result)
     }
 }
 

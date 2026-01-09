@@ -579,3 +579,27 @@ pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
 
     Ok(())
 }
+
+/// Check registration status for an email
+pub fn check_registration_status(app: &mut App, email: &str) -> Result<String> {
+    // Need sync endpoint to check status
+    let endpoint = app.settings.sync_endpoint.as_ref()
+        .ok_or_else(|| anyhow::anyhow!(t!("sync.endpoint_not_configured").to_string()))?;
+
+    app.debug_log(&format!("Checking registration status for: {}", email));
+
+    let client = crate::api::AuthClient::new(endpoint.clone());
+    let status = client.check_status(email)?;
+
+    let message = if !status.exists {
+        t!("sync.status.not_found").to_string()
+    } else if status.is_approved && status.is_active {
+        t!("sync.status.approved").to_string()
+    } else if !status.is_approved {
+        t!("sync.status.pending").to_string()
+    } else {
+        t!("sync.status.inactive").to_string()
+    };
+
+    Ok(message)
+}

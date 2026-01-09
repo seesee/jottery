@@ -107,6 +107,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         Line::from(format!("  • {}", t!("settings.instructions_paste"))),
         Line::from(format!("  • {}", t!("settings.instructions_copy"))),
         Line::from(format!("  • {}", t!("settings.instructions_disconnect"))),
+        Line::from(format!("  • {}", t!("settings.instructions_status"))),
     ];
 
     // Add status and error messages if present

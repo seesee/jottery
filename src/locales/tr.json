@@ -309,7 +309,18 @@
       "syncDisabledDescription": "Senkronizasyon isteğe bağlıdır ve maksimum gizlilik için varsayılan olarak devre dışıdır.",
       "syncDisabledDetails": "Devre dışı bırakıldığında, Jottery senkronizasyon sunucularına ağ istekleri yapmaz. Tüm notlarınız bu cihazda tamamen yerel kalır.",
       "toEnableSync": "Senkronizasyonu etkinleştirmek için: Yukarıdaki anahtarı değiştirin ve senkronizasyon sunucunuzu yapılandırın.",
-      "privacyNote": "Gizlilik: Etkinleştirildiğinde bile, tüm notlar uçtan uca şifrelenir. Senkronizasyon sunucusu içeriğinizi okuyamaz."
+      "privacyNote": "Gizlilik: Etkinleştirildiğinde bile, tüm notlar uçtan uca şifrelenir. Senkronizasyon sunucusu içeriğinizi okuyamaz.",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",

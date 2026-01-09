@@ -172,7 +172,17 @@
       "errors": {
         "invalidCredentials": "Μη έγκυρο email ή κωδικός πρόσβασης",
         "accountInactive": "Ο λογαριασμός σας είναι ανενεργός. Επικοινωνήστε με τον διαχειριστή.",
-        "unexpected": "Παρουσιάστηκε μη αναμενόμενο σφάλμα"
+        "unexpected": "Παρουσιάστηκε μη αναμενόμενο σφάλμα",
+        "statusCheckFailed": "Failed to check status. Please try again."
+      },
+      "checkStatus": "Check approval status",
+      "statusCheck": {
+        "title": "Check Approval Status",
+        "checkButton": "Check Status",
+        "notFound": "No account found with this email address.",
+        "approved": "Your account is approved and active. You can sign in above.",
+        "pending": "Your account is pending approval. Please wait for an administrator to approve your registration.",
+        "inactive": "Your account has been deactivated. Please contact an administrator."
       }
     },
     "account": {

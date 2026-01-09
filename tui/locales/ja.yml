@@ -85,6 +85,9 @@ settings:
   sync_enabled: "同期が有効"
   sync_endpoint: "同期エンドポイント"
   device_name: "デバイス名"
+  instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
+  instructions_status: "Press 'R' (Shift+r) to check registration approval status"
+  user_portal: "User Portal"
 sync:
   push: "サーバーにプッシュ"
   pull: "サーバーからプル"
@@ -100,6 +103,17 @@ sync:
   response_parse_failed: "同期レスポンスの解析に失敗"
   encrypted_import: "暗号化された認証情報がインポートされました。設定を完了するにはパスワードを入力して復号化してください。"
   legacy_format_warning: "警告: 暗号化なしのレガシー形式を使用しています。APIキーが平文で表示されます。"
+  disconnected: "Disconnected from sync server. Local notes preserved."
+  disconnect_failed: "Failed to disconnect from sync server"
+  status:
+    check_title: "Check Registration Status"
+    result_title: "Registration Status"
+    enter_email: "Enter your email address to check approval status:"
+    check_failed: "Failed to check registration status"
+    not_found: "No account found with this email address."
+    approved: "Your account is approved and active. You can sync your notes."
+    pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
+    inactive: "Your account has been deactivated. Please contact an administrator."
 color_scheme:
   default_dark: "デフォルトダーク"
   default_light: "デフォルトライト"

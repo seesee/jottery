@@ -138,3 +138,129 @@ pub fn render_input_credentials(app: &App, frame: &mut Frame) {
 
     frame.render_widget(help, chunks[2]);
 }
+
+/// Render email input for registration status check
+pub fn render_input_email_for_status(app: &App, frame: &mut Frame) {
+    let size = frame.area();
+
+    // Create centered modal (60% width, 30% height)
+    let modal_width = (size.width as f32 * 0.6) as u16;
+    let modal_height = (size.height as f32 * 0.3) as u16;
+    let modal_x = (size.width - modal_width) / 2;
+    let modal_y = (size.height - modal_height) / 2;
+
+    let modal_area = ratatui::layout::Rect {
+        x: modal_x,
+        y: modal_y,
+        width: modal_width,
+        height: modal_height,
+    };
+
+    // Create background
+    frame.render_widget(
+        Block::default().style(Style::default().bg(app.color_scheme.background)),
+        modal_area,
+    );
+
+    // Create border block
+    let block = Block::default()
+        .title(format!(" {} ", t!("sync.status.check_title")))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.color_scheme.title));
+
+    // Split into content area and help area
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(2),
+            Constraint::Min(1),
+            Constraint::Length(3),
+        ])
+        .split(block.inner(modal_area));
+
+    // Render border
+    frame.render_widget(block, modal_area);
+
+    // Render instruction text
+    let instruction = Paragraph::new(Line::from(Span::styled(
+        t!("sync.status.enter_email"),
+        Style::default().fg(app.color_scheme.accent),
+    )));
+    frame.render_widget(instruction, chunks[0]);
+
+    // Render input field
+    let input = Paragraph::new(Line::from(vec![
+        Span::raw(&app.credential_input),
+        Span::styled("█", Style::default().fg(app.color_scheme.title)), // Cursor
+    ]))
+    .style(Style::default().fg(app.color_scheme.foreground));
+
+    frame.render_widget(input, chunks[1]);
+
+    // Render help text
+    let help = Paragraph::new(t!("help.press_enter_paste"))
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(app.color_scheme.muted));
+
+    frame.render_widget(help, chunks[2]);
+}
+
+/// Render registration status result
+pub fn render_registration_status(app: &App, frame: &mut Frame, status_message: &str) {
+    let size = frame.area();
+
+    // Create centered modal (50% width, 30% height)
+    let modal_width = (size.width as f32 * 0.5) as u16;
+    let modal_height = (size.height as f32 * 0.3) as u16;
+    let modal_x = (size.width - modal_width) / 2;
+    let modal_y = (size.height - modal_height) / 2;
+
+    let modal_area = ratatui::layout::Rect {
+        x: modal_x,
+        y: modal_y,
+        width: modal_width,
+        height: modal_height,
+    };
+
+    // Create background
+    frame.render_widget(
+        Block::default().style(Style::default().bg(app.color_scheme.background)),
+        modal_area,
+    );
+
+    // Create border block
+    let block = Block::default()
+        .title(format!(" {} ", t!("sync.status.result_title")))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(app.color_scheme.title));
+
+    // Split into content area and help area
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(0), Constraint::Length(3)])
+        .split(block.inner(modal_area));
+
+    // Render border
+    frame.render_widget(block, modal_area);
+
+    // Render status message
+    let text = Paragraph::new(vec![
+        Line::from(""),
+        Line::from(Span::styled(
+            status_message,
+            Style::default().fg(app.color_scheme.accent),
+        )),
+    ])
+    .alignment(Alignment::Center)
+    .wrap(Wrap { trim: false })
+    .style(Style::default().fg(app.color_scheme.foreground));
+
+    frame.render_widget(text, chunks[0]);
+
+    // Render help text
+    let help = Paragraph::new(t!("help.press_esc_or_enter"))
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(app.color_scheme.muted));
+
+    frame.render_widget(help, chunks[1]);
+}

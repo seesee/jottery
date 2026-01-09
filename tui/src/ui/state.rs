@@ -30,6 +30,15 @@ pub enum AppState {
     InputSyncCredentials {
         previous: Box<AppState>,
     },
+    /// Input email for registration status check
+    InputEmailForStatus {
+        previous: Box<AppState>,
+    },
+    /// Show registration status result
+    ShowRegistrationStatus {
+        status_message: String,
+        previous: Box<AppState>,
+    },
     /// Quit
     Quit,
 }

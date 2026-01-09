@@ -309,7 +309,18 @@
       "syncDisabledDescription": "Синхронизация опциональна и отключена по умолчанию для максимальной конфиденциальности.",
       "syncDisabledDetails": "Когда отключена, Jottery не будет делать сетевых запросов к серверам синхронизации. Все ваши заметки остаются полностью локальными на этом устройстве.",
       "toEnableSync": "Чтобы включить синхронизацию: переключите выключатель выше и настройте сервер синхронизации.",
-      "privacyNote": "Конфиденциальность: Даже когда включена, все заметки шифруются сквозным шифрованием. Сервер синхронизации не может прочитать ваш контент."
+      "privacyNote": "Конфиденциальность: Даже когда включена, все заметки шифруются сквозным шифрованием. Сервер синхронизации не может прочитать ваш контент.",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "Импорт/Экспорт",

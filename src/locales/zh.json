@@ -309,7 +309,18 @@
       "syncDisabledDescription": "同步是可选的,默认禁用以最大程度保护隐私。",
       "syncDisabledDetails": "禁用时,Jottery 不会向同步服务器发出任何网络请求。您的所有笔记都完全保留在此设备上。",
       "toEnableSync": "要启用同步:切换上方的开关并配置您的同步服务器。",
-      "privacyNote": "隐私:即使启用,所有笔记也是端到端加密的。同步服务器无法读取您的内容。"
+      "privacyNote": "隐私:即使启用,所有笔记也是端到端加密的。同步服务器无法读取您的内容。",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "导入/导出",

@@ -85,6 +85,9 @@ settings:
   sync_enabled: "Synchronisation aktiviert"
   sync_endpoint: "Synchronisations-Endpunkt"
   device_name: "Gerätename"
+  instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
+  instructions_status: "Press 'R' (Shift+r) to check registration approval status"
+  user_portal: "User Portal"
 sync:
   push: "An Server senden"
   pull: "Vom Server abrufen"
@@ -100,6 +103,17 @@ sync:
   response_parse_failed: "Fehler beim Parsen der Synchronisationsantwort"
   encrypted_import: "Verschlüsselte Anmeldedaten importiert. Bitte geben Sie Ihr Passwort ein, um die Einrichtung zu entschlüsseln und abzuschließen."
   legacy_format_warning: "Warnung: Verwendung des Legacy-Formats ohne Verschlüsselung. API-Schlüssel wird im Klartext angezeigt."
+  disconnected: "Disconnected from sync server. Local notes preserved."
+  disconnect_failed: "Failed to disconnect from sync server"
+  status:
+    check_title: "Check Registration Status"
+    result_title: "Registration Status"
+    enter_email: "Enter your email address to check approval status:"
+    check_failed: "Failed to check registration status"
+    not_found: "No account found with this email address."
+    approved: "Your account is approved and active. You can sync your notes."
+    pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
+    inactive: "Your account has been deactivated. Please contact an administrator."
 color_scheme:
   default_dark: "Standard Dunkel"
   default_light: "Standard Hell"

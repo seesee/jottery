@@ -312,7 +312,18 @@
       "syncDisabledDescription": "Sync is opt-in and disabled by default for maximum privacy.",
       "syncDisabledDetails": "When disabled, Jottery will not make any network requests to sync servers. All your notes remain completely local to this device.",
       "toEnableSync": "To enable sync: Toggle the switch above and configure your sync server.",
-      "privacyNote": "Privacy: Even when enabled, all notes are end-to-end encrypted. The sync server cannot read your content."
+      "privacyNote": "Privacy: Even when enabled, all notes are end-to-end encrypted. The sync server cannot read your content.",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "Import/Export",

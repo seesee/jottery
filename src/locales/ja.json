@@ -309,7 +309,18 @@
       "syncDisabledDescription": "同期はオプトインで、最大限のプライバシーのためにデフォルトで無効になっています。",
       "syncDisabledDetails": "無効の場合、Jotteryは同期サーバーへのネットワークリクエストを一切行いません。すべてのノートは完全にこのデバイスにローカル保存されます。",
       "toEnableSync": "同期を有効にするには: 上記のスイッチを切り替えて、同期サーバーを設定してください。",
-      "privacyNote": "プライバシー: 有効にしても、すべてのノートはエンドツーエンドで暗号化されています。同期サーバーは内容を読み取ることができません。"
+      "privacyNote": "プライバシー: 有効にしても、すべてのノートはエンドツーエンドで暗号化されています。同期サーバーは内容を読み取ることができません。",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "インポート/エクスポート",

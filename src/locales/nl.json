@@ -309,7 +309,18 @@
       "syncDisabledDescription": "Synchronisatie is opt-in en standaard uitgeschakeld voor maximale privacy.",
       "syncDisabledDetails": "Wanneer uitgeschakeld, zal Jottery geen netwerkverzoeken doen aan synchronisatieservers. Al uw notities blijven volledig lokaal op dit apparaat.",
       "toEnableSync": "Om synchronisatie in te schakelen: Schakel de schakelaar hierboven in en configureer uw synchronisatieserver.",
-      "privacyNote": "Privacy: Zelfs wanneer ingeschakeld, zijn alle notities end-to-end versleuteld. De synchronisatieserver kan uw inhoud niet lezen."
+      "privacyNote": "Privacy: Zelfs wanneer ingeschakeld, zijn alle notities end-to-end versleuteld. De synchronisatieserver kan uw inhoud niet lezen.",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "Importeren/Exporteren",

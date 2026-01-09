@@ -120,6 +120,19 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     }
                 }
+                KeyCode::Char('R') => {
+                    // Check registration status (need to enter email)
+                    if app.settings.sync_endpoint.is_some() {
+                        app.credential_input.clear();
+                        let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                        app.state = AppState::InputEmailForStatus {
+                            previous: Box::new(prev),
+                        };
+                        app.input_mode = InputMode::Insert;
+                    } else {
+                        app.error = Some(t!("sync.endpoint_not_configured").to_string());
+                    }
+                }
                 _ => {}
             }
         }

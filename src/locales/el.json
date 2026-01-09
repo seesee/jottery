@@ -309,7 +309,18 @@
       "syncDisabledDescription": "Ο συγχρονισμός είναι προαιρετικός και απενεργοποιημένος από προεπιλογή για μέγιστη ιδιωτικότητα.",
       "syncDisabledDetails": "Όταν είναι απενεργοποιημένο, το Jottery δεν θα πραγματοποιεί αιτήματα δικτύου προς διακομιστές συγχρονισμού. Όλες οι σημειώσεις σας παραμένουν πλήρως τοπικές σε αυτήν τη συσκευή.",
       "toEnableSync": "Για να ενεργοποιήσετε τον συγχρονισμό: Ενεργοποιήστε τον διακόπτη παραπάνω και ρυθμίστε τον διακομιστή συγχρονισμού σας.",
-      "privacyNote": "Ιδιωτικότητα: Ακόμα και όταν είναι ενεργοποιημένος, όλες οι σημειώσεις είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής συγχρονισμού δεν μπορεί να διαβάσει το περιεχόμενό σας."
+      "privacyNote": "Ιδιωτικότητα: Ακόμα και όταν είναι ενεργοποιημένος, όλες οι σημειώσεις είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής συγχρονισμού δεν μπορεί να διαβάσει το περιεχόμενό σας.",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "Εισαγωγή/Εξαγωγή",

@@ -85,6 +85,9 @@ settings:
   sync_enabled: "동기화 활성화됨"
   sync_endpoint: "동기화 엔드포인트"
   device_name: "기기 이름"
+  instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
+  instructions_status: "Press 'R' (Shift+r) to check registration approval status"
+  user_portal: "User Portal"
 sync:
   push: "서버로 푸시"
   pull: "서버에서 가져오기"
@@ -100,6 +103,17 @@ sync:
   response_parse_failed: "동기화 응답 구문 분석 실패"
   encrypted_import: "암호화된 자격 증명을 가져왔습니다. 복호화하고 설정을 완료하려면 비밀번호를 입력하세요."
   legacy_format_warning: "경고: 암호화되지 않은 레거시 형식을 사용 중입니다. API 키가 일반 텍스트로 표시됩니다."
+  disconnected: "Disconnected from sync server. Local notes preserved."
+  disconnect_failed: "Failed to disconnect from sync server"
+  status:
+    check_title: "Check Registration Status"
+    result_title: "Registration Status"
+    enter_email: "Enter your email address to check approval status:"
+    check_failed: "Failed to check registration status"
+    not_found: "No account found with this email address."
+    approved: "Your account is approved and active. You can sync your notes."
+    pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
+    inactive: "Your account has been deactivated. Please contact an administrator."
 color_scheme:
   default_dark: "기본 다크"
   default_light: "기본 라이트"

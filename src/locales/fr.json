@@ -309,7 +309,18 @@
       "syncDisabledDescription": "La synchronisation est opt-in et désactivée par défaut pour une confidentialité maximale.",
       "syncDisabledDetails": "Lorsqu'elle est désactivée, Jottery ne fera aucune requête réseau vers les serveurs de synchronisation. Toutes vos notes restent complètement locales sur cet appareil.",
       "toEnableSync": "Pour activer la synchronisation : Activez l'interrupteur ci-dessus et configurez votre serveur de synchronisation.",
-      "privacyNote": "Confidentialité : Même lorsqu'elle est activée, toutes les notes sont chiffrées de bout en bout. Le serveur de synchronisation ne peut pas lire votre contenu."
+      "privacyNote": "Confidentialité : Même lorsqu'elle est activée, toutes les notes sont chiffrées de bout en bout. Le serveur de synchronisation ne peut pas lire votre contenu.",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      }
     },
     "advancedTab": {
       "importExport": "Importer/Exporter",
