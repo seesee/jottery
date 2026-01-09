@@ -358,7 +358,7 @@ pub fn copy_sync_credentials(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Generate sync credentials text (base64 encoded)
+/// Generate sync credentials text (encrypted format: jottery:v1:<salt>.<encrypted_payload>)
 pub fn generate_sync_credentials_text(app: &App) -> Result<String> {
     // Get sync metadata
     if let Some(db) = &app.db {
@@ -372,13 +372,13 @@ pub fn generate_sync_credentials_text(app: &App) -> Result<String> {
         let client_id = metadata.client_id
             .ok_or_else(|| anyhow::anyhow!("No client ID found. Enable sync first."))?;
 
+        // Need encryption key to decrypt API key and encrypt credentials
+        let key = app.key.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
         // Decrypt API key
-        let api_key = if let Some(key) = &app.key {
-            let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
-            app.crypto.decrypt_text(&encrypted, key)?
-        } else {
-            anyhow::bail!("Database not unlocked");
-        };
+        let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
+        let api_key = app.crypto.decrypt_text(&encrypted, key)?;
 
         // Get encryption metadata for salt
         let encryption_repo = EncryptionRepository::new(db.connection());
@@ -389,37 +389,94 @@ pub fn generate_sync_credentials_text(app: &App) -> Result<String> {
         use base64::Engine;
         let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
 
-        // Create credentials payload with salt
-        let mut creds = SyncCredentials::new(
+        // Create credentials payload WITHOUT salt (salt goes in prefix)
+        let creds = SyncCredentials::new(
             metadata.sync_endpoint,
             api_key,
             client_id,
         );
-        creds.salt = Some(salt_b64);
 
-        // Encode to base64
-        creds.to_base64()
+        // Encrypt the credentials JSON
+        let creds_json = serde_json::to_string(&creds)?;
+        let encrypted_creds = app.crypto.encrypt_text(&creds_json, key)?;
+        let encrypted_json = serde_json::to_string(&encrypted_creds)?;
+        let encrypted_b64 = base64::engine::general_purpose::STANDARD.encode(encrypted_json.as_bytes());
+
+        // Format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
+        Ok(format!("jottery:v1:{}.{}", salt_b64, encrypted_b64))
     } else {
         anyhow::bail!("Database not available")
     }
 }
 
 /// Process credentials input from text
+/// Supports both encrypted format (jottery:v1:...) and legacy unencrypted format
 pub fn process_credentials_input(app: &mut App, input: &str) -> Result<()> {
-    // Decode credentials
-    let creds = SyncCredentials::from_base64(input.trim())
-        .context("Invalid sync credentials format")?;
+    use base64::Engine;
 
-    app.debug_log(&format!("Process credentials - endpoint: {}", creds.endpoint));
-    app.debug_log(&format!("Process credentials - client_id: {}", creds.client_id));
-    app.debug_log(&format!("Process credentials - has salt: {}", creds.salt.is_some()));
+    let input = input.trim();
 
     // Get database
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
+    // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
+    if input.starts_with("jottery:v1:") {
+        let payload = &input["jottery:v1:".len()..];
+        let dot_index = payload.find('.')
+            .ok_or_else(|| anyhow::anyhow!("Invalid encrypted credentials format"))?;
+
+        let salt_b64 = &payload[..dot_index];
+        let encrypted_payload = &payload[dot_index + 1..];
+
+        app.debug_log("Process credentials - Encrypted format detected");
+        app.debug_log(&format!("Process credentials - Salt (base64): {}", salt_b64));
+
+        // Decode and validate salt
+        let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
+            .context("Invalid base64 salt in encrypted credentials")?;
+
+        if salt.len() < 32 {
+            anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes)", salt.len());
+        }
+
+        // Update encryption metadata with the extracted salt
+        let encryption_repo = EncryptionRepository::new(db.connection());
+        encryption_repo.save(&salt, 100_000)?;
+        app.debug_log("Process credentials - Salt saved successfully");
+
+        // Store encrypted payload with marker for deferred decryption
+        let sync_repo = SyncRepository::new(db.connection());
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+        metadata.api_key = Some(format!("ENCRYPTED:{}", encrypted_payload));
+        metadata.sync_enabled = false; // Will be enabled after successful decryption
+        sync_repo.update_metadata(&metadata)?;
+
+        app.debug_log("Process credentials - Encrypted payload stored for deferred decryption");
+
+        // Lock and force re-unlock to derive correct key from new salt
+        app.key = None;
+        app.notes.clear();
+        app.selected_note = 0;
+        app.password_input.clear();
+        app.password_confirm.clear();
+        app.password_confirm_focused = false;
+        app.input_mode = InputMode::Normal;
+        app.state = AppState::Locked;
+
+        app.error = Some(t!("sync.encrypted_import").to_string());
+        return Ok(());
+    }
+
+    // Legacy unencrypted format: base64(JSON)
+    let creds = SyncCredentials::from_base64(input)
+        .context("Invalid sync credentials format")?;
+
+    app.debug_log(&format!("Process credentials - Legacy format - endpoint: {}", creds.endpoint));
+    app.debug_log(&format!("Process credentials - client_id: {}", creds.client_id));
+    app.debug_log(&format!("Process credentials - has salt: {}", creds.salt.is_some()));
+
     // If web app salt is provided, update it first
     if let Some(salt_b64) = &creds.salt {
-        use base64::Engine;
         let encryption_repo = EncryptionRepository::new(db.connection());
 
         // Decode the base64 salt from web app

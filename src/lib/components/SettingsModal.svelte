@@ -447,17 +447,20 @@
       const encryptedApiKey = JSON.parse(metadata.apiKey);
       const apiKey = await cryptoService.decryptText(encryptedApiKey, masterKey.key);
 
-      // Create credentials object
+      // Create credentials object (salt is NOT included - it goes in the prefix)
       const credentials = {
         endpoint: metadata.syncEndpoint,
         clientId: metadata.clientId,
         apiKey: apiKey,
-        salt: encryptionMeta.salt,
       };
 
-      // Encode as base64
+      // Encrypt the credentials JSON with the master key
+      // Format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
+      // Salt is outside encrypted portion since it's needed to derive the decryption key
       const json = JSON.stringify(credentials);
-      const base64 = btoa(json);
+      const encrypted = await cryptoService.encryptText(json, masterKey.key);
+      const encryptedJson = JSON.stringify(encrypted);
+      const base64 = `jottery:v1:${encryptionMeta.salt}.${btoa(encryptedJson)}`;
 
       // Try to copy to clipboard (best effort - may fail over SSH or in some browsers)
       try {
@@ -488,33 +491,76 @@
     syncError = '';
 
     try {
-      const json = atob(importCredentialsText.trim());
-      const credentials = JSON.parse(json);
+      const input = importCredentialsText.trim();
+      let credentials: { endpoint: string; clientId: string; apiKey: string };
+      let salt: string;
 
-      // Validate structure
-      if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey || !credentials.salt) {
-        console.error('[Import] Invalid credentials structure');
-        throw new Error('Invalid credentials format - missing required fields');
+      // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
+      if (input.startsWith('jottery:v1:')) {
+        const payload = input.substring('jottery:v1:'.length);
+        const dotIndex = payload.indexOf('.');
+        if (dotIndex === -1) {
+          throw new Error('Invalid encrypted credentials format');
+        }
+
+        salt = payload.substring(0, dotIndex);
+        const encryptedPayload = payload.substring(dotIndex + 1);
+
+        // Store the encrypted payload for deferred decryption after unlock
+        // The initService will decrypt this when the app is unlocked with the correct password
+        await encryptionRepository.setMetadata({
+          salt: salt,
+          iterations: 100000,
+          createdAt: new Date().toISOString(),
+          algorithm: 'AES-256-GCM',
+        });
+
+        await syncRepository.updateMetadata({
+          syncEnabled: false,
+          // Store encrypted payload with marker - will be decrypted on unlock
+          apiKey: `ENCRYPTED:${encryptedPayload}`,
+        });
+
+        await settingsRepository.update({
+          syncEnabled: false,
+        });
+      } else {
+        // Legacy unencrypted format: base64(JSON)
+        const json = atob(input);
+        credentials = JSON.parse(json);
+
+        // Validate structure - legacy format includes salt
+        if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey) {
+          console.error('[Import] Invalid credentials structure');
+          throw new Error('Invalid credentials format - missing required fields');
+        }
+
+        // Legacy format has salt in the credentials object
+        const legacyCredentials = credentials as { endpoint: string; clientId: string; apiKey: string; salt?: string };
+        if (!legacyCredentials.salt) {
+          throw new Error('Invalid credentials format - missing salt (legacy format)');
+        }
+        salt = legacyCredentials.salt;
+
+        await encryptionRepository.setMetadata({
+          salt: salt,
+          iterations: 100000,
+          createdAt: new Date().toISOString(),
+          algorithm: 'AES-256-GCM',
+        });
+
+        await syncRepository.updateMetadata({
+          clientId: credentials.clientId,
+          syncEndpoint: credentials.endpoint,
+          syncEnabled: false,
+          apiKey: `IMPORT:${credentials.apiKey}`,
+        });
+
+        await settingsRepository.update({
+          syncEndpoint: credentials.endpoint,
+          syncEnabled: false,
+        });
       }
-
-      await encryptionRepository.setMetadata({
-        salt: credentials.salt,
-        iterations: 100000,
-        createdAt: new Date().toISOString(),
-        algorithm: 'AES-256-GCM',
-      });
-
-      await syncRepository.updateMetadata({
-        clientId: credentials.clientId,
-        syncEndpoint: credentials.endpoint,
-        syncEnabled: false,
-        apiKey: `IMPORT:${credentials.apiKey}`,
-      });
-
-      await settingsRepository.update({
-        syncEndpoint: credentials.endpoint,
-        syncEnabled: false,
-      });
 
 
       // Close the modal first

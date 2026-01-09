@@ -153,7 +153,7 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
       syncEnabled: metadata.syncEnabled,
     });
 
-    // Check for IMPORT: marker (plaintext API key from import)
+    // Check for IMPORT: marker (plaintext API key from legacy unencrypted import)
     if (metadata.apiKey.startsWith('IMPORT:')) {
       console.log('[ImportHandler] ✓ IMPORT marker detected! Processing imported credentials...');
 
@@ -179,8 +179,60 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
       console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
 
       console.log('[ImportHandler] ✓✓✓ Import credentials processed successfully! Sync is now enabled.');
+    }
+    // Check for ENCRYPTED: marker (encrypted credentials from v1 format import)
+    else if (metadata.apiKey.startsWith('ENCRYPTED:')) {
+      console.log('[ImportHandler] ✓ ENCRYPTED marker detected! Decrypting imported credentials...');
+
+      // Extract encrypted payload (base64 encoded JSON of EncryptedData)
+      const encryptedPayload = metadata.apiKey.substring(10); // Remove "ENCRYPTED:" prefix
+
+      try {
+        // Decode and parse the encrypted data
+        const encryptedJson = atob(encryptedPayload);
+        const encryptedData = JSON.parse(encryptedJson);
+
+        // Decrypt the credentials JSON
+        const credentialsJson = await cryptoService.decryptText(encryptedData, masterKey);
+        const credentials = JSON.parse(credentialsJson);
+        console.log('[ImportHandler] ✓ Credentials decrypted successfully');
+
+        // Validate decrypted credentials
+        if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey) {
+          throw new Error('Invalid decrypted credentials - missing required fields');
+        }
+
+        // Re-encrypt the API key for storage
+        const encryptedApiKey = await cryptoService.encryptText(credentials.apiKey, masterKey);
+        console.log('[ImportHandler] ✓ API key re-encrypted');
+
+        // Update sync metadata with decrypted values
+        await syncRepository.updateMetadata({
+          clientId: credentials.clientId,
+          syncEndpoint: credentials.endpoint,
+          apiKey: JSON.stringify(encryptedApiKey),
+          syncEnabled: true,
+        });
+        console.log('[ImportHandler] ✓ Sync metadata updated with decrypted credentials');
+
+        await settingsRepository.update({
+          syncEndpoint: credentials.endpoint,
+          syncEnabled: true,
+        });
+        console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
+
+        console.log('[ImportHandler] ✓✓✓ Encrypted credentials processed successfully! Sync is now enabled.');
+      } catch (decryptError) {
+        console.error('[ImportHandler] Failed to decrypt credentials - wrong password?', decryptError);
+        // Clear the invalid encrypted data so user can try again
+        await syncRepository.updateMetadata({
+          apiKey: '',
+          syncEnabled: false,
+        });
+        throw new Error('Failed to decrypt sync credentials. Please ensure you are using the same password as the source device.');
+      }
     } else {
-      console.log('[ImportHandler] No IMPORT marker - credentials already encrypted');
+      console.log('[ImportHandler] No IMPORT/ENCRYPTED marker - credentials already encrypted');
     }
   } catch (error) {
     console.error('[ImportHandler] ERROR handling imported credentials:', error);

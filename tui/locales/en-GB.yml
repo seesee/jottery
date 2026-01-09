@@ -158,6 +158,7 @@ sync:
   paste_success: "Sync credentials configured successfully!"
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: "Salt synchronised! Please re-enter your password to unlock with the new encryption salt."
+  encrypted_import: "Encrypted credentials imported. Please enter your password to decrypt and complete setup."
 
 # Conflict resolution
 conflict:
