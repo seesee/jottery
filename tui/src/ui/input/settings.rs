@@ -65,12 +65,36 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.input_mode = InputMode::Insert;
                 }
                 KeyCode::Char('c') => {
-                    // Show sync credentials as text (and try clipboard copy)
-                    match operations::settings::generate_sync_credentials_text(app) {
+                    // Show sync credentials as text (encrypted format)
+                    match operations::settings::generate_sync_credentials_text(app, false) {
                         Ok(creds_text) => {
                             // Try clipboard copy (best effort - may fail over SSH)
                             let _ = arboard::Clipboard::new()
                                 .and_then(|mut clip| clip.set_text(&creds_text));
+
+                            // Always show text modal for manual copy
+                            let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                            app.state = AppState::ShowSyncCredentials {
+                                credentials: creds_text,
+                                previous: Box::new(prev),
+                            };
+                        }
+                        Err(e) => {
+                            app.error = Some(format!("Failed to generate credentials: {}", e));
+                        }
+                    }
+                }
+                KeyCode::Char('C') => {
+                    // Show sync credentials as text (legacy unencrypted format for older versions)
+                    match operations::settings::generate_sync_credentials_text(app, true) {
+                        Ok(creds_text) => {
+                            // Try clipboard copy (best effort - may fail over SSH)
+                            let _ = arboard::Clipboard::new()
+                                .and_then(|mut clip| clip.set_text(&creds_text));
+
+                            // Show warning about legacy format
+                            app.sync_status = Some(t!("sync.legacy_format_warning").to_string());
+                            app.sync_status_set_at = Some(std::time::Instant::now());
 
                             // Always show text modal for manual copy
                             let prev = std::mem::replace(&mut app.state, AppState::Quit);

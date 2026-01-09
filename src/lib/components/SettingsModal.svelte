@@ -425,7 +425,7 @@
     syncError = '';
   }
 
-  async function handleCopySyncCredentials() {
+  async function handleCopySyncCredentials(useLegacyFormat: boolean = false) {
     try {
       // Get all required data
       const masterKey = keyManager.getMasterKey();
@@ -447,20 +447,30 @@
       const encryptedApiKey = JSON.parse(metadata.apiKey);
       const apiKey = await cryptoService.decryptText(encryptedApiKey, masterKey.key);
 
-      // Create credentials object (salt is NOT included - it goes in the prefix)
-      const credentials = {
-        endpoint: metadata.syncEndpoint,
-        clientId: metadata.clientId,
-        apiKey: apiKey,
-      };
+      let base64: string;
 
-      // Encrypt the credentials JSON with the master key
-      // Format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-      // Salt is outside encrypted portion since it's needed to derive the decryption key
-      const json = JSON.stringify(credentials);
-      const encrypted = await cryptoService.encryptText(json, masterKey.key);
-      const encryptedJson = JSON.stringify(encrypted);
-      const base64 = `jottery:v1:${encryptionMeta.salt}.${btoa(encryptedJson)}`;
+      if (useLegacyFormat) {
+        // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
+        const credentials = {
+          endpoint: metadata.syncEndpoint,
+          clientId: metadata.clientId,
+          apiKey: apiKey,
+          salt: encryptionMeta.salt,
+        };
+        base64 = btoa(JSON.stringify(credentials));
+        console.warn('[SettingsModal] Using legacy unencrypted credentials format');
+      } else {
+        // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
+        const credentials = {
+          endpoint: metadata.syncEndpoint,
+          clientId: metadata.clientId,
+          apiKey: apiKey,
+        };
+        const json = JSON.stringify(credentials);
+        const encrypted = await cryptoService.encryptText(json, masterKey.key);
+        const encryptedJson = JSON.stringify(encrypted);
+        base64 = `jottery:v1:${encryptionMeta.salt}.${btoa(encryptedJson)}`;
+      }
 
       // Try to copy to clipboard (best effort - may fail over SSH or in some browsers)
       try {

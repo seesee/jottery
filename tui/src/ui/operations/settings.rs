@@ -358,8 +358,10 @@ pub fn copy_sync_credentials(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Generate sync credentials text (encrypted format: jottery:v1:<salt>.<encrypted_payload>)
-pub fn generate_sync_credentials_text(app: &App) -> Result<String> {
+/// Generate sync credentials text
+/// - use_legacy_format=false: encrypted format jottery:v1:<salt>.<encrypted_payload>
+/// - use_legacy_format=true: legacy unencrypted base64 JSON (for older Jottery versions)
+pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Result<String> {
     // Get sync metadata
     if let Some(db) = &app.db {
         let sync_repo = SyncRepository::new(db.connection());
@@ -385,25 +387,38 @@ pub fn generate_sync_credentials_text(app: &App) -> Result<String> {
         let encryption_meta = encryption_repo.get()?
             .ok_or_else(|| anyhow::anyhow!("Encryption metadata not found"))?;
 
-        // Convert salt to base64 string
         use base64::Engine;
-        let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
 
-        // Create credentials payload WITHOUT salt (salt goes in prefix)
-        let creds = SyncCredentials::new(
-            metadata.sync_endpoint,
-            api_key,
-            client_id,
-        );
+        if use_legacy_format {
+            // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
+            let mut creds = SyncCredentials::new(
+                metadata.sync_endpoint,
+                api_key,
+                client_id,
+            );
+            creds.salt = Some(salt_b64);
+            creds.to_base64()
+        } else {
+            // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
 
-        // Encrypt the credentials JSON
-        let creds_json = serde_json::to_string(&creds)?;
-        let encrypted_creds = app.crypto.encrypt_text(&creds_json, key)?;
-        let encrypted_json = serde_json::to_string(&encrypted_creds)?;
-        let encrypted_b64 = base64::engine::general_purpose::STANDARD.encode(encrypted_json.as_bytes());
+            // Create credentials payload WITHOUT salt (salt goes in prefix)
+            let creds = SyncCredentials::new(
+                metadata.sync_endpoint,
+                api_key,
+                client_id,
+            );
 
-        // Format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-        Ok(format!("jottery:v1:{}.{}", salt_b64, encrypted_b64))
+            // Encrypt the credentials JSON
+            let creds_json = serde_json::to_string(&creds)?;
+            let encrypted_creds = app.crypto.encrypt_text(&creds_json, key)?;
+            let encrypted_json = serde_json::to_string(&encrypted_creds)?;
+            let encrypted_b64 = base64::engine::general_purpose::STANDARD.encode(encrypted_json.as_bytes());
+
+            // Format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
+            Ok(format!("jottery:v1:{}.{}", salt_b64, encrypted_b64))
+        }
     } else {
         anyhow::bail!("Database not available")
     }
