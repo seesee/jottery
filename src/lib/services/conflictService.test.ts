@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import { conflictService, storeConflict, getConflicts, getConflictInfo, resolveKeepMine, resolveKeepServer, resolveKeepBoth } from './conflictService';
+import { storeConflict, getConflicts, getConflictInfo, resolveKeepMine, resolveKeepServer, resolveKeepBoth } from './conflictService';
 import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
 import { keyManager } from './keyManager';
@@ -18,7 +18,7 @@ describe('conflictService', () => {
     const { masterKey: key } = await initTestDB();
     masterKey = key;
     // Mock keyManager to return our test key
-    vi.spyOn(keyManager, 'getMasterKey').mockReturnValue({ key: masterKey, salt: new Uint8Array(16) });
+    vi.spyOn(keyManager, 'getMasterKey').mockReturnValue({ key: masterKey, derivedAt: Date.now() });
   });
 
   afterEach(async () => {
@@ -48,7 +48,7 @@ describe('conflictService', () => {
   describe('storeConflict', () => {
     it('should store conflict data for a note', async () => {
       const note = createTestNote({ content: 'Local content' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await storeConflict(note.id, {
         serverContent: 'encrypted-server-content',
@@ -71,7 +71,7 @@ describe('conflictService', () => {
 
     it('should set error message when storing conflict', async () => {
       const note = createTestNote();
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await storeConflict(note.id, {
         serverContent: 'content',
@@ -119,7 +119,7 @@ describe('conflictService', () => {
 
     it('should not include notes without conflictData', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       // Set conflict status but no conflictData
       await syncRepository.updateNoteSyncMetadata('note-1', {
@@ -141,7 +141,7 @@ describe('conflictService', () => {
 
     it('should return null if no conflict data exists', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       const info = await getConflictInfo('note-1');
       expect(info).toBeNull();
@@ -149,7 +149,7 @@ describe('conflictService', () => {
 
     it('should return conflict info with decrypted content', async () => {
       const note = createTestNote({ id: 'note-1', content: 'Local content' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       const conflictData = await createTestConflictData('note-1');
       await syncRepository.updateNoteSyncMetadata('note-1', {
@@ -175,7 +175,7 @@ describe('conflictService', () => {
   describe('resolveKeepMine', () => {
     it('should clear conflict and mark note for sync', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await syncRepository.updateNoteSyncMetadata('note-1', {
         noteId: 'note-1',
@@ -193,7 +193,7 @@ describe('conflictService', () => {
     it('should update note modifiedAt timestamp', async () => {
       const oldDate = '2020-01-01T00:00:00.000Z';
       const note = createTestNote({ id: 'note-1', modifiedAt: oldDate });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await syncRepository.updateNoteSyncMetadata('note-1', {
         noteId: 'note-1',
@@ -215,7 +215,7 @@ describe('conflictService', () => {
   describe('resolveKeepServer', () => {
     it('should update note with server content', async () => {
       const note = createTestNote({ id: 'note-1', content: 'Local content', pinned: false });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       const conflictData = await createTestConflictData('note-1');
       await syncRepository.updateNoteSyncMetadata('note-1', {
@@ -233,7 +233,7 @@ describe('conflictService', () => {
 
     it('should clear conflict and mark as synced', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await syncRepository.updateNoteSyncMetadata('note-1', {
         noteId: 'note-1',
@@ -250,7 +250,7 @@ describe('conflictService', () => {
 
     it('should throw if no conflict data exists', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await expect(resolveKeepServer('note-1')).rejects.toThrow('No conflict data');
     });
@@ -265,7 +265,7 @@ describe('conflictService', () => {
   describe('resolveKeepBoth', () => {
     it('should create new note from server version', async () => {
       const note = createTestNote({ id: 'note-1', content: 'Local content' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       const conflictData = await createTestConflictData('note-1');
       await syncRepository.updateNoteSyncMetadata('note-1', {
@@ -290,7 +290,7 @@ describe('conflictService', () => {
 
     it('should add conflict-copy tag to new note', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       const conflictData = await createTestConflictData('note-1');
       await syncRepository.updateNoteSyncMetadata('note-1', {
@@ -312,7 +312,7 @@ describe('conflictService', () => {
 
     it('should clear conflict on original note', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await syncRepository.updateNoteSyncMetadata('note-1', {
         noteId: 'note-1',
@@ -329,7 +329,7 @@ describe('conflictService', () => {
 
     it('should throw if no conflict data exists', async () => {
       const note = createTestNote({ id: 'note-1' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       await expect(resolveKeepBoth('note-1')).rejects.toThrow('No conflict data');
     });
@@ -339,7 +339,7 @@ describe('conflictService', () => {
     it('should handle full conflict detection and resolution workflow', async () => {
       // Create note
       const note = createTestNote({ id: 'note-1', content: 'Original content' });
-      await noteRepository.create(note, masterKey);
+      await noteRepository.create(note);
 
       // Simulate conflict detected during sync
       await storeConflict('note-1', {
