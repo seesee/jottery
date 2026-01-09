@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import AccountManagementPanel from './AccountManagementPanel.svelte';
   import type { SyncStatus } from '../../types';
 
@@ -86,7 +87,7 @@
                     on:click={() => showLegacyOption = !showLegacyOption}
                     class="mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline"
                   >
-                    {showLegacyOption ? '▼' : '▶'} Advanced options
+                    {showLegacyOption ? '▼' : '▶'} {$_('settings.syncCredentials.advancedOptions')}
                   </button>
 
                   {#if showLegacyOption}
@@ -98,10 +99,9 @@
                           class="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
                         />
                         <span class="text-amber-800 dark:text-amber-200">
-                          <strong>Use legacy (unencrypted) format</strong><br/>
+                          <strong>{$_('settings.syncCredentials.legacyFormat.label')}</strong><br/>
                           <span class="text-amber-600 dark:text-amber-400">
-                            ⚠️ Only use if sharing with older Jottery versions that cannot be updated.
-                            Legacy format exposes your API key in plain text.
+                            {$_('settings.syncCredentials.legacyFormat.warning')}
                           </span>
                         </span>
                       </label>
