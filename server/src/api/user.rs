@@ -500,6 +500,51 @@ pub async fn delete_account(
     }
 }
 
+/// Check user approval status (no auth required)
+/// GET /api/v1/user/status?email=...
+#[derive(Debug, Deserialize)]
+pub struct StatusQuery {
+    pub email: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserStatusResponse {
+    pub exists: bool,
+    pub is_approved: bool,
+    pub is_active: bool,
+}
+
+pub async fn check_status(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<StatusQuery>,
+) -> AppResult<Json<UserStatusResponse>> {
+    // Look up user by email
+    let user = sqlx::query!(
+        "SELECT approved, is_active FROM users WHERE email = ?",
+        query.email
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Database error: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    match user {
+        Some(u) => Ok(Json(UserStatusResponse {
+            exists: true,
+            is_approved: u.approved != 0,
+            is_active: u.is_active != 0,
+        })),
+        None => Ok(Json(UserStatusResponse {
+            exists: false,
+            is_approved: false,
+            is_active: false,
+        })),
+    }
+}
+
 /// Logout - invalidate current session
 /// POST /api/v1/user/logout
 pub async fn logout(

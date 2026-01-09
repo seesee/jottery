@@ -201,6 +201,16 @@
                           <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
                             {$_('settings.syncSetup.registration.pendingText')}
                           </p>
+                          <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
+                            <a
+                              href="{syncEndpoint}/user"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="underline hover:text-yellow-900 dark:hover:text-yellow-100"
+                            >
+                              {$_('settings.syncSetup.registration.checkStatusLink')}
+                            </a>
+                          </p>
                         </div>
                       </div>
                     </div>

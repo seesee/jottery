@@ -247,6 +247,7 @@
         "registering": "Registering...",
         "pendingTitle": "Pending admin approval",
         "pendingText": "Contact your administrator to approve your account. Once approved, click below to complete setup.",
+        "checkStatusLink": "Check your approval status on the User Portal →",
         "approvedButton": "I've been approved - Complete setup",
         "completingSetup": "Completing setup...",
         "deviceRegistering": "⏳ Registering device and syncing...",

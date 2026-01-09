@@ -172,7 +172,17 @@
       "errors": {
         "invalidCredentials": "Invalid email or password",
         "accountInactive": "Your account is inactive. Please contact the administrator.",
-        "unexpected": "An unexpected error occurred"
+        "unexpected": "An unexpected error occurred",
+        "statusCheckFailed": "Failed to check status. Please try again."
+      },
+      "checkStatus": "Check approval status",
+      "statusCheck": {
+        "title": "Check Approval Status",
+        "checkButton": "Check Status",
+        "notFound": "No account found with this email address.",
+        "approved": "Your account is approved and active. You can sign in above.",
+        "pending": "Your account is pending approval. Please wait for an administrator to approve your registration.",
+        "inactive": "Your account has been deactivated. Please contact an administrator."
       }
     },
     "account": {
@@ -196,17 +206,17 @@
       "updatePassword": "Update Password",
       "passwordChanged": "Password changed successfully",
       "dangerZone": "Danger Zone",
-      "deactivateAccount": "Deactivate Account",
-      "deactivateDescription": "Deactivate your account. You can re-register with admin approval.",
-      "deactivate": "Deactivate",
-      "deactivateConfirmTitle": "Deactivate Account",
-      "deactivateConfirmMessage": "Are you sure you want to deactivate your account? Your data will be preserved, but you will need admin approval to access it again.",
-      "accountDeactivated": "Your account has been deactivated",
+      "deleteNotes": "Delete Notes",
+      "deleteNotesDescription": "Delete all your notes from the server. Your account remains active and you can sync again.",
+      "deleteNotesButton": "Delete Notes",
+      "deleteNotesConfirmTitle": "Delete All Notes",
+      "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
+      "notesDeleted": "All notes have been deleted from the server",
       "deleteAccount": "Delete Account",
-      "deleteDescription": "Permanently delete your account and all data. This cannot be undone.",
+      "deleteDescription": "Permanently delete your account and all data. You can re-register with admin approval.",
       "delete": "Delete",
       "deleteConfirmTitle": "Delete Account Permanently",
-      "deleteConfirmMessage": "This will permanently delete your account and all your data. This action cannot be undone.",
+      "deleteConfirmMessage": "This will permanently delete your account and all your data. You will need to re-register and get admin approval to use sync again.",
       "deleteConfirmLabel": "Type DELETE to confirm:",
       "deleteForever": "Delete Forever",
       "accountDeleted": "Your account has been deleted",
@@ -215,7 +225,7 @@
         "passwordTooShort": "Password must be at least 12 characters",
         "wrongPassword": "Current password is incorrect",
         "unexpected": "An unexpected error occurred",
-        "deactivateFailed": "Failed to deactivate account",
+        "deleteNotesFailed": "Failed to delete notes",
         "deleteFailed": "Failed to delete account"
       }
     }

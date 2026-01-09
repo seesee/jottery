@@ -12,11 +12,11 @@
   let passwordError = $state<string | null>(null);
   let passwordLoading = $state(false);
 
-  // Account deletion state
-  let showDeactivateModal = $state(false);
+  // Account actions state
+  let showDeleteNotesModal = $state(false);
   let showDeleteModal = $state(false);
   let deleteConfirmText = $state('');
-  let deleteLoading = $state(false);
+  let actionLoading = $state(false);
 
   async function handlePasswordChange(e: Event) {
     e.preventDefault();
@@ -57,18 +57,17 @@
     }
   }
 
-  async function handleDeactivate() {
-    deleteLoading = true;
+  async function handleDeleteNotes() {
+    actionLoading = true;
     try {
-      await userApi.deactivateAccount();
-      userAuth.clearAuth();
-      toast.success($_('userPortal.settings.accountDeactivated'));
+      await userApi.deleteAllNotes();
+      toast.success($_('userPortal.settings.notesDeleted'));
     } catch (err) {
-      toast.error($_('userPortal.settings.errors.deactivateFailed'));
-      console.error('Failed to deactivate account:', err);
+      toast.error($_('userPortal.settings.errors.deleteNotesFailed'));
+      console.error('Failed to delete notes:', err);
     } finally {
-      deleteLoading = false;
-      showDeactivateModal = false;
+      actionLoading = false;
+      showDeleteNotesModal = false;
     }
   }
 
@@ -77,7 +76,7 @@
       return;
     }
 
-    deleteLoading = true;
+    actionLoading = true;
     try {
       await userApi.deleteAccount();
       userAuth.clearAuth();
@@ -86,7 +85,7 @@
       toast.error($_('userPortal.settings.errors.deleteFailed'));
       console.error('Failed to delete account:', err);
     } finally {
-      deleteLoading = false;
+      actionLoading = false;
       showDeleteModal = false;
       deleteConfirmText = '';
     }
@@ -167,17 +166,17 @@
     <h3 class="text-lg font-semibold text-red-600 mb-4">{$_('userPortal.settings.dangerZone')}</h3>
 
     <div class="space-y-4">
-      <!-- Deactivate Account -->
+      <!-- Delete Notes -->
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div>
-          <h4 class="font-medium text-gray-900">{$_('userPortal.settings.deactivateAccount')}</h4>
-          <p class="text-sm text-gray-600">{$_('userPortal.settings.deactivateDescription')}</p>
+          <h4 class="font-medium text-gray-900">{$_('userPortal.settings.deleteNotes')}</h4>
+          <p class="text-sm text-gray-600">{$_('userPortal.settings.deleteNotesDescription')}</p>
         </div>
         <button
-          onclick={() => showDeactivateModal = true}
+          onclick={() => showDeleteNotesModal = true}
           class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors"
         >
-          {$_('userPortal.settings.deactivate')}
+          {$_('userPortal.settings.deleteNotesButton')}
         </button>
       </div>
 
@@ -198,15 +197,15 @@
   </div>
 </div>
 
-<!-- Deactivate Confirmation Modal -->
-{#if showDeactivateModal}
+<!-- Delete Notes Confirmation Modal -->
+{#if showDeleteNotesModal}
   <ConfirmModal
-    title={$_('userPortal.settings.deactivateConfirmTitle')}
-    message={$_('userPortal.settings.deactivateConfirmMessage')}
-    confirmText={$_('userPortal.settings.deactivate')}
+    title={$_('userPortal.settings.deleteNotesConfirmTitle')}
+    message={$_('userPortal.settings.deleteNotesConfirmMessage')}
+    confirmText={$_('userPortal.settings.deleteNotesButton')}
     cancelText={$_('common.cancel')}
-    onConfirm={handleDeactivate}
-    onCancel={() => showDeactivateModal = false}
+    onConfirm={handleDeleteNotes}
+    onCancel={() => showDeleteNotesModal = false}
     danger={true}
   />
 {/if}
@@ -226,7 +225,7 @@
           id="deleteConfirm"
           type="text"
           bind:value={deleteConfirmText}
-          disabled={deleteLoading}
+          disabled={actionLoading}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100"
           placeholder="DELETE"
         />
@@ -235,17 +234,17 @@
       <div class="flex justify-end space-x-3">
         <button
           onclick={() => { showDeleteModal = false; deleteConfirmText = ''; }}
-          disabled={deleteLoading}
+          disabled={actionLoading}
           class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
         >
           {$_('common.cancel')}
         </button>
         <button
           onclick={handleDelete}
-          disabled={deleteLoading || deleteConfirmText !== 'DELETE'}
+          disabled={actionLoading || deleteConfirmText !== 'DELETE'}
           class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
-          {deleteLoading ? $_('common.deleting') : $_('userPortal.settings.deleteForever')}
+          {actionLoading ? $_('common.deleting') : $_('userPortal.settings.deleteForever')}
         </button>
       </div>
     </div>
