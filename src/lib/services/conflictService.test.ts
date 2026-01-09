@@ -96,8 +96,8 @@ describe('conflictService', () => {
     it('should return note IDs with conflict status', async () => {
       const note1 = createTestNote({ id: 'note-1' });
       const note2 = createTestNote({ id: 'note-2' });
-      await noteRepository.create(note1, masterKey);
-      await noteRepository.create(note2, masterKey);
+      await noteRepository.create(note1);
+      await noteRepository.create(note2);
 
       // Set note1 as conflict
       await syncRepository.updateNoteSyncMetadata('note-1', {
@@ -371,9 +371,9 @@ describe('conflictService', () => {
       const note1 = createTestNote({ id: 'note-1' });
       const note2 = createTestNote({ id: 'note-2' });
       const note3 = createTestNote({ id: 'note-3' });
-      await noteRepository.create(note1, masterKey);
-      await noteRepository.create(note2, masterKey);
-      await noteRepository.create(note3, masterKey);
+      await noteRepository.create(note1);
+      await noteRepository.create(note2);
+      await noteRepository.create(note3);
 
       // Set conflicts on all
       for (const noteId of ['note-1', 'note-2', 'note-3']) {

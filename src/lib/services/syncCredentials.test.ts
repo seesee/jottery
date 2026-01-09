@@ -87,7 +87,7 @@ function isEncryptedFormat(blob: string): boolean {
 
 describe('Sync Credentials Encryption', () => {
   let masterKey: CryptoKey;
-  let salt: ArrayBuffer;
+  let salt: Uint8Array;
   let saltBase64: string;
 
   beforeEach(async () => {
