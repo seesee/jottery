@@ -3,11 +3,13 @@
   import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
+  import ConflictResolutionModal from './ConflictResolutionModal.svelte';
   import { beforeUpdate, afterUpdate, onMount } from 'svelte';
   import { noteRepository } from '../services/noteRepository';
   import { noteService } from '../services/noteService';
   import { keyManager } from '../services/keyManager';
   import { syncService } from '../services/syncService';
+  import { syncRepository } from '../services/syncRepository';
   import { isMobileTouchDevice } from '../utils/device';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
 
@@ -26,7 +28,37 @@
     // Only sync if enabled
     if ($settings.syncEnabled) {
       await syncService.syncNow();
+      // Refresh conflict list after sync
+      await loadConflictNotes();
     }
+  }
+
+  // Conflict resolution state
+  let conflictNoteIds: Set<string> = new Set();
+  let showConflictModal = false;
+  let conflictNoteId: string | undefined = undefined;
+
+  // Load notes with conflicts
+  async function loadConflictNotes() {
+    const allNotes = await noteRepository.getAllActive();
+    const conflicts = new Set<string>();
+    for (const note of allNotes) {
+      const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
+      if (syncMeta?.lastSyncStatus === 'conflict' && syncMeta.conflictData) {
+        conflicts.add(note.id);
+      }
+    }
+    conflictNoteIds = conflicts;
+  }
+
+  function handleConflictClick(note: DecryptedNote) {
+    conflictNoteId = note.id;
+    showConflictModal = true;
+  }
+
+  function handleConflictResolved() {
+    // Refresh conflict list and notes
+    loadConflictNotes();
   }
 
   // Virtual scrolling state
@@ -174,6 +206,8 @@
   onMount(() => {
     isMobile = isMobileTouchDevice();
     updateVisibleRange();
+    // Load conflict notes on mount
+    loadConflictNotes();
   });
 
   // Save scroll position before DOM updates
@@ -311,7 +345,7 @@
           <!-- Render only visible items -->
           {#each visibleNotes as note, i (note.id)}
             <div bind:this={itemElements[i]}>
-              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} />
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} />
             </div>
           {/each}
         </div>
@@ -361,10 +395,18 @@
         <!-- Render only visible items -->
         {#each visibleNotes as note, i (note.id)}
           <div bind:this={itemElements[i]}>
-            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} />
+            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} />
           </div>
         {/each}
       </div>
     {/if}
   </div>
 {/if}
+
+<!-- Conflict Resolution Modal -->
+<ConflictResolutionModal
+  show={showConflictModal}
+  noteId={conflictNoteId}
+  onClose={() => { showConflictModal = false; conflictNoteId = undefined; }}
+  onResolved={handleConflictResolved}
+/>
