@@ -10,7 +10,7 @@ use crate::{
     api::middleware::ClientInfo,
     error::{AppError, AppResult},
     models::{
-        SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
+        AttachmentRef, SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
         SyncPullResponse, SyncPushRequest, SyncPushResponse, SyncRejected, SyncStatusResponse,
     },
     AppState,
@@ -203,13 +203,56 @@ pub async fn push(
 
             tracing::debug!("Accepted note: {}", note.id);
         } else {
+            // Fetch full server note data for conflict resolution
+            let server_note = sqlx::query!(
+                r#"SELECT content, tags, pinned, server_version, syntax_language, word_wrap, modified_at
+                   FROM notes WHERE id = ? AND user_id = ?"#,
+                note.id,
+                client_info.user_id
+            )
+            .fetch_one(&state.pool)
+            .await?;
+
+            // Fetch server attachments for this note (note ownership already verified)
+            let server_attachments_rows = sqlx::query!(
+                r#"SELECT id, filename, mime_type, size FROM attachments_meta WHERE note_id = ?"#,
+                note.id
+            )
+            .fetch_all(&state.pool)
+            .await?;
+
+            let server_attachments: Vec<AttachmentRef> = server_attachments_rows
+                .into_iter()
+                .filter_map(|row| {
+                    let id = row.id?;
+                    Some(AttachmentRef {
+                        id: id.clone(),
+                        filename: row.filename,
+                        mime_type: row.mime_type,
+                        size: row.size,
+                        data: id, // Reference ID same as attachment ID
+                    })
+                })
+                .collect();
+
+            // Parse server tags from JSON
+            let server_tags: Vec<String> = serde_json::from_str(&server_note.tags)
+                .unwrap_or_default();
+
             rejected.push(SyncRejected {
                 id: note.id.clone(),
                 reason: "Server version is newer".to_string(),
-                server_modified_at: existing.unwrap().modified_at,
+                server_modified_at: server_note.modified_at,
+                server_content: server_note.content,
+                server_tags,
+                server_version: server_note.server_version,
+                server_attachments,
+                server_pinned: server_note.pinned == 1,
+                server_syntax_language: server_note.syntax_language,
+                server_word_wrap: server_note.word_wrap.map(|w| w == 1),
             });
 
-            tracing::debug!("Rejected note: {} (conflict)", note.id);
+            tracing::debug!("Rejected note: {} (conflict) - included server data for resolution", note.id);
         }
     }
 

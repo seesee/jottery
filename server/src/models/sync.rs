@@ -68,6 +68,21 @@ pub struct SyncRejected {
     pub reason: String,
     #[serde(rename = "serverModifiedAt")]
     pub server_modified_at: String,
+    // Server note data for conflict resolution
+    #[serde(rename = "serverContent")]
+    pub server_content: String,
+    #[serde(rename = "serverTags")]
+    pub server_tags: Vec<String>,
+    #[serde(rename = "serverVersion")]
+    pub server_version: i64,
+    #[serde(rename = "serverAttachments")]
+    pub server_attachments: Vec<AttachmentRef>,
+    #[serde(rename = "serverPinned")]
+    pub server_pinned: bool,
+    #[serde(rename = "serverSyntaxLanguage")]
+    pub server_syntax_language: Option<String>,
+    #[serde(rename = "serverWordWrap")]
+    pub server_word_wrap: Option<bool>,
 }
 
 // Sync pull request
