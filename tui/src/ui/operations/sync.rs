@@ -456,14 +456,33 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
 
                 app.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
             } else {
-                app.debug_log(&format!("Pull - Attachment data NOT found in map for {}", attachment_ref.id));
+                app.debug_log(&format!("Pull - Attachment data NOT found in map for {} - will try to preserve from local", attachment_ref.id));
+                // Server didn't send data because we said we had it - mark for local preservation
             }
         }
 
-        app.debug_log(&format!("Pull - Total attachments added to note: {}", note_attachments.len()));
+        app.debug_log(&format!("Pull - Total attachments from server: {}", note_attachments.len()));
 
         // Check if we have this note in the database (not just in-memory list)
         let existing_note = note_repo.get(&remote_note.id, key)?;
+
+        // If we have fewer attachments than the remote says we should have,
+        // preserve any local attachments that weren't sent by the server
+        if let Some(ref local_note) = existing_note {
+            for attachment_ref in &remote_note.attachments {
+                // If this attachment wasn't in the server data (we already had it)
+                if !note_attachments.iter().any(|a| a.id == attachment_ref.id) {
+                    // Try to find it in local attachments
+                    if let Some(local_att) = local_note.attachments.iter().find(|a| a.id == attachment_ref.id) {
+                        app.debug_log(&format!("Pull - Preserving local attachment: {} ({})", local_att.id, local_att.filename));
+                        note_attachments.push(local_att.clone());
+                    } else {
+                        app.debug_log(&format!("Pull - WARNING: Attachment {} not found locally either!", attachment_ref.id));
+                    }
+                }
+            }
+            app.debug_log(&format!("Pull - Total attachments after preserving local: {}", note_attachments.len()));
+        }
 
         if let Some(mut local_note) = existing_note {
             // Note exists in database - check if we should update it
