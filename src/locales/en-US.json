@@ -559,6 +559,8 @@
   "updateBanner": {
     "title": "New version available",
     "message": "Reload to get the latest features and improvements",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up...",
     "reloadButton": "Reload now",
     "dismissLabel": "Dismiss"
   },

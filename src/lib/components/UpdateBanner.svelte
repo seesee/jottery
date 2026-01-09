@@ -1,9 +1,27 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { updateAvailable, newVersionInfo, appUpdateService } from '../services';
+  import { exportAllNotes, downloadExport } from '../services/exportService';
+
+  let isBackingUp = false;
 
   function handleReload() {
     appUpdateService.reloadApp();
+  }
+
+  async function handleBackupAndReload() {
+    isBackingUp = true;
+    try {
+      const exportData = await exportAllNotes();
+      await downloadExport(exportData, `jottery-backup-${new Date().toISOString().split('T')[0]}.json`);
+      // Give the download a moment to start before reloading
+      setTimeout(() => {
+        appUpdateService.reloadApp();
+      }, 500);
+    } catch (error) {
+      console.error('Failed to backup notes:', error);
+      isBackingUp = false;
+    }
   }
 
   function handleDismiss() {
@@ -33,14 +51,27 @@
       
       <div class="flex items-center gap-2 flex-shrink-0">
         <button
+          on:click={handleBackupAndReload}
+          disabled={isBackingUp}
+          class="px-4 py-2 min-h-10 bg-blue-500 dark:bg-blue-600 text-white font-medium text-sm rounded-md hover:bg-blue-400 dark:hover:bg-blue-500 active:bg-blue-300 dark:active:bg-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {#if isBackingUp}
+            {$_('updateBanner.backingUp')}
+          {:else}
+            {$_('updateBanner.backupButton')}
+          {/if}
+        </button>
+        <button
           on:click={handleReload}
-          class="px-4 py-2 min-h-10 bg-white text-blue-600 dark:bg-blue-800 dark:text-white font-medium text-sm rounded-md hover:bg-blue-50 dark:hover:bg-blue-900 active:bg-blue-100 dark:active:bg-blue-950 transition-colors"
+          disabled={isBackingUp}
+          class="px-4 py-2 min-h-10 bg-white text-blue-600 dark:bg-blue-800 dark:text-white font-medium text-sm rounded-md hover:bg-blue-50 dark:hover:bg-blue-900 active:bg-blue-100 dark:active:bg-blue-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {$_('updateBanner.reloadButton')}
         </button>
         <button
           on:click={handleDismiss}
-          class="p-2 min-h-10 min-w-10 hover:bg-blue-700 dark:hover:bg-blue-800 active:bg-blue-800 dark:active:bg-blue-900 rounded-md transition-colors"
+          disabled={isBackingUp}
+          class="p-2 min-h-10 min-w-10 hover:bg-blue-700 dark:hover:bg-blue-800 active:bg-blue-800 dark:active:bg-blue-900 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label={$_('updateBanner.dismissLabel')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
