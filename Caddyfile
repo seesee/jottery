@@ -8,10 +8,14 @@
     # Proxy admin dashboard to backend server
     reverse_proxy /admin* localhost:3030
 
-    # SPA fallback: rewrite non-static, non-API, non-admin requests to index.html
+    # Proxy user portal to backend server
+    reverse_proxy /user* localhost:3030
+
+    # SPA fallback: rewrite non-static, non-API, non-admin, non-user requests to index.html
     @notStatic {
         not path /api*
         not path /admin*
+        not path /user*
         not file
     }
     rewrite @notStatic /index.html
