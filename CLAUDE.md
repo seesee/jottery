@@ -496,9 +496,25 @@ git commit -m "i18n: translate VersionHistoryModal component"
 
 ### Branch Management
 
-- **main**: Production-ready code, always deployable
-- **feature/***: Feature branches, commit frequently
-- **Before merging**: Ensure all work is committed
-- **After merging**: Clean up feature branch if needed
+**IMPORTANT: Always use feature branches for development. Never commit directly to main.**
+
+- **main**: Production-ready code, always deployable. Only receives merged PRs.
+- **feature/***: Feature branches for all development work
+- **fix/***: Bug fix branches
+- **refactor/***: Refactoring branches
+
+**Workflow:**
+1. Create feature branch: `git checkout -b feature/my-feature`
+2. Commit frequently to your branch
+3. Push branch and open PR to main
+4. CI runs automatically on PRs
+5. Merge after review/CI passes
+6. Delete feature branch after merge
+
+**CI Triggers:**
+- PRs to main → CI runs (validates before merge)
+- Direct pushes to main → No CI (should not happen)
+- Tags (`v*`) → CI runs (release validation)
+- Manual trigger available via GitHub Actions UI
 
 **Remember: Commits are cheap. Lost work is expensive. When in doubt, commit.**
