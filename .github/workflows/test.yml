@@ -1,10 +1,11 @@
 name: Test Suite
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    tags: ['v*']  # Run on release tags
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   unit-tests:
