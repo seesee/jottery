@@ -22,6 +22,7 @@ export { versionRepository } from './versionRepository';
 export { syncService } from './syncService';
 export { noteService } from './noteService';
 export { attachmentService } from './attachmentService';
+export { conflictService } from './conflictService';
 export { isInitialized, initialize, unlock, lock, isLocked, changePassword } from './initService';
 export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFile } from './exportService';
 export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';

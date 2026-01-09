@@ -24,6 +24,7 @@ export interface NoteSyncMetadata {
   serverVersion: number;          // Version on server
   lastSyncStatus: 'synced' | 'pending' | 'conflict' | 'error';
   errorMessage?: string;
+  conflictData?: ConflictData;    // Server version data when in conflict
 }
 
 // Current sync status for UI display
