@@ -12,7 +12,9 @@
     "password": "パスワード",
     "actions": "アクション",
     "status": "ステータス",
-    "created": "作成日"
+    "created": "作成日",
+    "saving": "保存中...",
+    "deleting": "削除中..."
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -148,6 +150,74 @@
         "failed": "パスワードの変更に失敗しました"
       },
       "success": "パスワードが正常に変更されました"
+    }
+  },
+  "userPortal": {
+    "title": "マイアカウント",
+    "tabs": {
+      "account": "アカウント",
+      "settings": "設定"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "アカウントを管理するにはログインしてください",
+      "email": "メール",
+      "password": "パスワード",
+      "signIn": "ログイン",
+      "signingIn": "ログイン中...",
+      "placeholder": {
+        "email": "you@example.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "メールまたはパスワードが無効です",
+        "accountInactive": "アカウントが無効です。管理者にお問い合わせください。",
+        "unexpected": "予期しないエラーが発生しました"
+      }
+    },
+    "account": {
+      "title": "アカウント情報",
+      "loadError": "アカウント情報の読み込みに失敗しました",
+      "email": "メール",
+      "memberSince": "登録日",
+      "noteCount": "ノート",
+      "attachmentCount": "添付ファイル",
+      "storageUsed": "使用容量",
+      "lastSync": "最終同期",
+      "never": "なし"
+    },
+    "settings": {
+      "title": "設定",
+      "changePassword": "パスワードを変更",
+      "currentPassword": "現在のパスワード",
+      "newPassword": "新しいパスワード",
+      "confirmPassword": "パスワードの確認",
+      "passwordHint": "パスワードは12文字以上である必要があります",
+      "updatePassword": "パスワードを更新",
+      "passwordChanged": "パスワードが正常に変更されました",
+      "dangerZone": "危険な操作",
+      "deactivateAccount": "アカウントを無効化",
+      "deactivateDescription": "アカウントを無効化します。管理者の承認を得て再登録できます。",
+      "deactivate": "無効化",
+      "deactivateConfirmTitle": "アカウントを無効化",
+      "deactivateConfirmMessage": "アカウントを無効化してもよろしいですか？データは保持されますが、再度アクセスするには管理者の承認が必要です。",
+      "accountDeactivated": "アカウントが無効化されました",
+      "deleteAccount": "アカウントを削除",
+      "deleteDescription": "アカウントとすべてのデータを完全に削除します。この操作は元に戻せません。",
+      "delete": "削除",
+      "deleteConfirmTitle": "アカウントを完全に削除",
+      "deleteConfirmMessage": "アカウントとすべてのデータが完全に削除されます。この操作は元に戻せません。",
+      "deleteConfirmLabel": "確認のためDELETEと入力してください：",
+      "deleteForever": "完全に削除",
+      "accountDeleted": "アカウントが削除されました",
+      "errors": {
+        "passwordMismatch": "パスワードが一致しません",
+        "passwordTooShort": "パスワードは12文字以上である必要があります",
+        "wrongPassword": "現在のパスワードが正しくありません",
+        "unexpected": "予期しないエラーが発生しました",
+        "deactivateFailed": "アカウントの無効化に失敗しました",
+        "deleteFailed": "アカウントの削除に失敗しました"
+      }
     }
   }
 }

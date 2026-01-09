@@ -12,7 +12,9 @@
     "password": "Mot de passe",
     "actions": "Actions",
     "status": "Statut",
-    "created": "Créé"
+    "created": "Créé",
+    "saving": "Enregistrement...",
+    "deleting": "Suppression..."
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -148,6 +150,74 @@
         "failed": "Échec du changement de mot de passe"
       },
       "success": "Mot de passe modifié avec succès"
+    }
+  },
+  "userPortal": {
+    "title": "Mon compte",
+    "tabs": {
+      "account": "Compte",
+      "settings": "Paramètres"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Connectez-vous pour gérer votre compte",
+      "email": "E-mail",
+      "password": "Mot de passe",
+      "signIn": "Se connecter",
+      "signingIn": "Connexion...",
+      "placeholder": {
+        "email": "vous@exemple.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "E-mail ou mot de passe incorrect",
+        "accountInactive": "Votre compte est inactif. Veuillez contacter l'administrateur.",
+        "unexpected": "Une erreur inattendue s'est produite"
+      }
+    },
+    "account": {
+      "title": "Informations du compte",
+      "loadError": "Échec du chargement des informations du compte",
+      "email": "E-mail",
+      "memberSince": "Membre depuis",
+      "noteCount": "Notes",
+      "attachmentCount": "Pièces jointes",
+      "storageUsed": "Stockage utilisé",
+      "lastSync": "Dernière synchronisation",
+      "never": "Jamais"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "changePassword": "Changer le mot de passe",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "passwordHint": "Le mot de passe doit comporter au moins 12 caractères",
+      "updatePassword": "Mettre à jour le mot de passe",
+      "passwordChanged": "Mot de passe modifié avec succès",
+      "dangerZone": "Zone de danger",
+      "deactivateAccount": "Désactiver le compte",
+      "deactivateDescription": "Désactivez votre compte. Vous pouvez vous réinscrire avec l'approbation de l'administrateur.",
+      "deactivate": "Désactiver",
+      "deactivateConfirmTitle": "Désactiver le compte",
+      "deactivateConfirmMessage": "Êtes-vous sûr de vouloir désactiver votre compte ? Vos données seront conservées, mais vous aurez besoin de l'approbation de l'administrateur pour y accéder à nouveau.",
+      "accountDeactivated": "Votre compte a été désactivé",
+      "deleteAccount": "Supprimer le compte",
+      "deleteDescription": "Supprimez définitivement votre compte et toutes vos données. Cette action est irréversible.",
+      "delete": "Supprimer",
+      "deleteConfirmTitle": "Supprimer le compte définitivement",
+      "deleteConfirmMessage": "Cela supprimera définitivement votre compte et toutes vos données. Cette action est irréversible.",
+      "deleteConfirmLabel": "Tapez DELETE pour confirmer :",
+      "deleteForever": "Supprimer définitivement",
+      "accountDeleted": "Votre compte a été supprimé",
+      "errors": {
+        "passwordMismatch": "Les mots de passe ne correspondent pas",
+        "passwordTooShort": "Le mot de passe doit comporter au moins 12 caractères",
+        "wrongPassword": "Le mot de passe actuel est incorrect",
+        "unexpected": "Une erreur inattendue s'est produite",
+        "deactivateFailed": "Échec de la désactivation du compte",
+        "deleteFailed": "Échec de la suppression du compte"
+      }
     }
   }
 }

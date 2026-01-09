@@ -12,7 +12,9 @@
     "password": "Password",
     "actions": "Azioni",
     "status": "Stato",
-    "created": "Creato"
+    "created": "Creato",
+    "saving": "Salvataggio...",
+    "deleting": "Eliminazione..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -148,6 +150,74 @@
         "failed": "Impossibile cambiare la password"
       },
       "success": "Password cambiata con successo"
+    }
+  },
+  "userPortal": {
+    "title": "Il mio account",
+    "tabs": {
+      "account": "Account",
+      "settings": "Impostazioni"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Accedi per gestire il tuo account",
+      "email": "Email",
+      "password": "Password",
+      "signIn": "Accedi",
+      "signingIn": "Accesso...",
+      "placeholder": {
+        "email": "tu@esempio.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Email o password non validi",
+        "accountInactive": "Il tuo account è inattivo. Contatta l'amministratore.",
+        "unexpected": "Si è verificato un errore imprevisto"
+      }
+    },
+    "account": {
+      "title": "Informazioni account",
+      "loadError": "Impossibile caricare le informazioni dell'account",
+      "email": "Email",
+      "memberSince": "Membro dal",
+      "noteCount": "Note",
+      "attachmentCount": "Allegati",
+      "storageUsed": "Spazio utilizzato",
+      "lastSync": "Ultima sincronizzazione",
+      "never": "Mai"
+    },
+    "settings": {
+      "title": "Impostazioni",
+      "changePassword": "Cambia password",
+      "currentPassword": "Password attuale",
+      "newPassword": "Nuova password",
+      "confirmPassword": "Conferma password",
+      "passwordHint": "La password deve essere di almeno 12 caratteri",
+      "updatePassword": "Aggiorna password",
+      "passwordChanged": "Password cambiata con successo",
+      "dangerZone": "Zona pericolosa",
+      "deactivateAccount": "Disattiva account",
+      "deactivateDescription": "Disattiva il tuo account. Puoi registrarti nuovamente con l'approvazione dell'amministratore.",
+      "deactivate": "Disattiva",
+      "deactivateConfirmTitle": "Disattiva account",
+      "deactivateConfirmMessage": "Sei sicuro di voler disattivare il tuo account? I tuoi dati saranno conservati, ma avrai bisogno dell'approvazione dell'amministratore per accedervi nuovamente.",
+      "accountDeactivated": "Il tuo account è stato disattivato",
+      "deleteAccount": "Elimina account",
+      "deleteDescription": "Elimina definitivamente il tuo account e tutti i dati. Questa azione non può essere annullata.",
+      "delete": "Elimina",
+      "deleteConfirmTitle": "Elimina account definitivamente",
+      "deleteConfirmMessage": "Questo eliminerà definitivamente il tuo account e tutti i tuoi dati. Questa azione non può essere annullata.",
+      "deleteConfirmLabel": "Digita DELETE per confermare:",
+      "deleteForever": "Elimina per sempre",
+      "accountDeleted": "Il tuo account è stato eliminato",
+      "errors": {
+        "passwordMismatch": "Le password non corrispondono",
+        "passwordTooShort": "La password deve essere di almeno 12 caratteri",
+        "wrongPassword": "La password attuale non è corretta",
+        "unexpected": "Si è verificato un errore imprevisto",
+        "deactivateFailed": "Impossibile disattivare l'account",
+        "deleteFailed": "Impossibile eliminare l'account"
+      }
     }
   }
 }

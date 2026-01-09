@@ -12,7 +12,9 @@
     "password": "Parola",
     "actions": "Eylemler",
     "status": "Durum",
-    "created": "Oluşturulma"
+    "created": "Oluşturulma",
+    "saving": "Kaydediliyor...",
+    "deleting": "Siliniyor..."
   },
   "nav": {
     "dashboard": "Panel",
@@ -148,6 +150,74 @@
         "failed": "Parola değiştirilemedi"
       },
       "success": "Parola başarıyla değiştirildi"
+    }
+  },
+  "userPortal": {
+    "title": "Hesabım",
+    "tabs": {
+      "account": "Hesap",
+      "settings": "Ayarlar"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Hesabınızı yönetmek için giriş yapın",
+      "email": "E-posta",
+      "password": "Parola",
+      "signIn": "Giriş yap",
+      "signingIn": "Giriş yapılıyor...",
+      "placeholder": {
+        "email": "siz@ornek.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Geçersiz e-posta veya parola",
+        "accountInactive": "Hesabınız etkin değil. Lütfen yönetici ile iletişime geçin.",
+        "unexpected": "Beklenmeyen bir hata oluştu"
+      }
+    },
+    "account": {
+      "title": "Hesap bilgileri",
+      "loadError": "Hesap bilgileri yüklenemedi",
+      "email": "E-posta",
+      "memberSince": "Üyelik tarihi",
+      "noteCount": "Notlar",
+      "attachmentCount": "Ekler",
+      "storageUsed": "Kullanılan depolama",
+      "lastSync": "Son senkronizasyon",
+      "never": "Hiç"
+    },
+    "settings": {
+      "title": "Ayarlar",
+      "changePassword": "Parolayı değiştir",
+      "currentPassword": "Mevcut parola",
+      "newPassword": "Yeni parola",
+      "confirmPassword": "Parolayı onayla",
+      "passwordHint": "Parola en az 12 karakter uzunluğunda olmalıdır",
+      "updatePassword": "Parolayı güncelle",
+      "passwordChanged": "Parola başarıyla değiştirildi",
+      "dangerZone": "Tehlikeli bölge",
+      "deactivateAccount": "Hesabı devre dışı bırak",
+      "deactivateDescription": "Hesabınızı devre dışı bırakın. Yönetici onayı ile yeniden kayıt olabilirsiniz.",
+      "deactivate": "Devre dışı bırak",
+      "deactivateConfirmTitle": "Hesabı devre dışı bırak",
+      "deactivateConfirmMessage": "Hesabınızı devre dışı bırakmak istediğinizden emin misiniz? Verileriniz korunacak, ancak tekrar erişmek için yönetici onayına ihtiyacınız olacak.",
+      "accountDeactivated": "Hesabınız devre dışı bırakıldı",
+      "deleteAccount": "Hesabı sil",
+      "deleteDescription": "Hesabınızı ve tüm verileri kalıcı olarak silin. Bu işlem geri alınamaz.",
+      "delete": "Sil",
+      "deleteConfirmTitle": "Hesabı kalıcı olarak sil",
+      "deleteConfirmMessage": "Bu, hesabınızı ve tüm verilerinizi kalıcı olarak silecektir. Bu işlem geri alınamaz.",
+      "deleteConfirmLabel": "Onaylamak için DELETE yazın:",
+      "deleteForever": "Sonsuza kadar sil",
+      "accountDeleted": "Hesabınız silindi",
+      "errors": {
+        "passwordMismatch": "Parolalar eşleşmiyor",
+        "passwordTooShort": "Parola en az 12 karakter uzunluğunda olmalıdır",
+        "wrongPassword": "Mevcut parola yanlış",
+        "unexpected": "Beklenmeyen bir hata oluştu",
+        "deactivateFailed": "Hesap devre dışı bırakılamadı",
+        "deleteFailed": "Hesap silinemedi"
+      }
     }
   }
 }

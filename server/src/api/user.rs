@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     Json,
 };
@@ -7,9 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
-    db::SessionRepository,
+    db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{CreateSessionParams, Session},
+    utils::password::{hash_password_with_params, verify_password},
     AppState,
 };
 
@@ -289,5 +290,230 @@ pub async fn delete_all_notes(
         user_id
     );
 
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Change password request
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
+/// Change user's own password
+/// POST /api/v1/user/change-password
+pub async fn change_password(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+    Json(req): Json<ChangePasswordRequest>,
+) -> AppResult<StatusCode> {
+    let user_id = &session.user_id;
+
+    // Get current user
+    let user = UserRepository::get_by_id(&state.pool, user_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get user: {}", e);
+            AppError::Unauthorized
+        })?;
+
+    // Verify current password
+    let password_valid = verify_password(&req.current_password, &user.password_hash)
+        .map_err(|e| {
+            tracing::error!("Password verification failed: {}", e);
+            AppError::InternalServerError
+        })?;
+
+    if !password_valid {
+        tracing::warn!("Password change failed: invalid current password for user {}", user_id);
+        return Err(AppError::Unauthorized);
+    }
+
+    // Validate new password strength
+    if req.new_password.len() < 12 {
+        return Err(AppError::BadRequest(
+            "New password must be at least 12 characters".to_string(),
+        ));
+    }
+
+    // Hash new password with configured Argon2 parameters
+    let new_password_hash = hash_password_with_params(
+        &req.new_password,
+        state.config.argon2_m_cost,
+        state.config.argon2_t_cost,
+        state.config.argon2_p_cost,
+    )
+    .map_err(|e| {
+        tracing::error!("Password hashing failed: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    // Update password
+    sqlx::query!(
+        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        new_password_hash,
+        user_id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("Password changed successfully for user: {}", user_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Delete account query parameters
+#[derive(Debug, Deserialize)]
+pub struct DeleteAccountQuery {
+    pub mode: String, // "deactivate" or "delete"
+}
+
+/// Delete or deactivate user's own account
+/// DELETE /api/v1/user/account?mode=deactivate|delete
+pub async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+    Query(query): Query<DeleteAccountQuery>,
+) -> AppResult<StatusCode> {
+    let user_id = &session.user_id;
+
+    match query.mode.as_str() {
+        "deactivate" => {
+            // Soft delete: set is_active = 0, allowing re-registration with admin approval
+            sqlx::query!(
+                r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
+                user_id
+            )
+            .execute(&state.pool)
+            .await?;
+
+            // Invalidate all sessions for this user
+            sqlx::query!(
+                r#"DELETE FROM sessions WHERE user_id = ?"#,
+                user_id
+            )
+            .execute(&state.pool)
+            .await?;
+
+            tracing::info!("User deactivated their account: {}", user_id);
+            Ok(StatusCode::NO_CONTENT)
+        }
+        "delete" => {
+            // Hard delete: remove all user data
+            // Due to CASCADE constraints, this will delete:
+            // - sessions
+            // - clients (devices)
+            // - notes (which cascades to note_versions, attachments_meta, attachments_data)
+
+            let mut tx = state.pool.begin().await.map_err(|e| {
+                tracing::error!("Failed to start transaction: {}", e);
+                AppError::InternalServerError
+            })?;
+
+            // Delete note versions first (may not have CASCADE set up)
+            sqlx::query!(
+                "DELETE FROM note_versions WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
+                user_id
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to delete note versions: {}", e);
+                AppError::InternalServerError
+            })?;
+
+            // Delete attachment data
+            sqlx::query!(
+                "DELETE FROM attachments_data WHERE id IN
+                 (SELECT id FROM attachments_meta WHERE note_id IN
+                  (SELECT id FROM notes WHERE user_id = ?))",
+                user_id
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to delete attachment data: {}", e);
+                AppError::InternalServerError
+            })?;
+
+            // Delete attachment metadata
+            sqlx::query!(
+                "DELETE FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
+                user_id
+            )
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to delete attachment metadata: {}", e);
+                AppError::InternalServerError
+            })?;
+
+            // Delete notes
+            sqlx::query!("DELETE FROM notes WHERE user_id = ?", user_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to delete notes: {}", e);
+                    AppError::InternalServerError
+                })?;
+
+            // Delete sessions
+            sqlx::query!("DELETE FROM sessions WHERE user_id = ?", user_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to delete sessions: {}", e);
+                    AppError::InternalServerError
+                })?;
+
+            // Delete clients (devices)
+            sqlx::query!("DELETE FROM clients WHERE user_id = ?", user_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to delete clients: {}", e);
+                    AppError::InternalServerError
+                })?;
+
+            // Finally delete the user
+            sqlx::query!("DELETE FROM users WHERE id = ?", user_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to delete user: {}", e);
+                    AppError::InternalServerError
+                })?;
+
+            tx.commit().await.map_err(|e| {
+                tracing::error!("Failed to commit transaction: {}", e);
+                AppError::InternalServerError
+            })?;
+
+            tracing::warn!("User permanently deleted their account: {}", user_id);
+            Ok(StatusCode::NO_CONTENT)
+        }
+        _ => {
+            Err(AppError::BadRequest(
+                "Invalid mode. Use 'deactivate' or 'delete'".to_string(),
+            ))
+        }
+    }
+}
+
+/// Logout - invalidate current session
+/// POST /api/v1/user/logout
+pub async fn logout(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<StatusCode> {
+    // Delete the current session
+    sqlx::query!(
+        r#"DELETE FROM sessions WHERE id = ?"#,
+        session.id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("User logged out: session_id={}", session.id);
     Ok(StatusCode::NO_CONTENT)
 }

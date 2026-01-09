@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 mod api;
 mod config;
@@ -106,8 +106,10 @@ async fn main() {
 
     // Build protected user routes with session auth middleware (for account management)
     let user_routes = Router::new()
-        .route("/api/v1/user/account", get(api::user::get_account_info))
+        .route("/api/v1/user/account", get(api::user::get_account_info).delete(api::user::delete_account))
         .route("/api/v1/user/notes", delete(api::user::delete_all_notes))
+        .route("/api/v1/user/change-password", post(api::user::change_password))
+        .route("/api/v1/user/logout", post(api::user::logout))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             api::middleware::user_auth_middleware,
@@ -138,8 +140,10 @@ async fn main() {
         .parent()
         .expect("Failed to get parent directory")
         .join("admin/dist");
+    let admin_index = admin_dir.join("index.html");
 
     tracing::info!("Serving admin dashboard from: {}", admin_dir.display());
+    tracing::info!("Serving user portal from: {}", admin_dir.display());
 
     // Build main router
     let app = Router::new()
@@ -154,8 +158,10 @@ async fn main() {
         .merge(sync_routes)
         .merge(user_routes)
         .merge(admin_routes)
-        // Serve admin dashboard (must be after API routes to avoid conflicts)
-        .nest_service("/admin", ServeDir::new(admin_dir))
+        // Serve admin dashboard and user portal (same SPA, different paths)
+        // Must be after API routes to avoid conflicts
+        .nest_service("/admin", ServeDir::new(&admin_dir).fallback(ServeFile::new(&admin_index)))
+        .nest_service("/user", ServeDir::new(&admin_dir).fallback(ServeFile::new(&admin_index)))
         // Add state
         .with_state(app_state)
         // Add middleware
