@@ -12,7 +12,9 @@
     "password": "비밀번호",
     "actions": "작업",
     "status": "상태",
-    "created": "생성일"
+    "created": "생성일",
+    "saving": "저장 중...",
+    "deleting": "삭제 중..."
   },
   "nav": {
     "dashboard": "대시보드",
@@ -148,6 +150,74 @@
         "failed": "비밀번호 변경 실패"
       },
       "success": "비밀번호가 성공적으로 변경되었습니다"
+    }
+  },
+  "userPortal": {
+    "title": "내 계정",
+    "tabs": {
+      "account": "계정",
+      "settings": "설정"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "계정을 관리하려면 로그인하세요",
+      "email": "이메일",
+      "password": "비밀번호",
+      "signIn": "로그인",
+      "signingIn": "로그인 중...",
+      "placeholder": {
+        "email": "you@example.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다",
+        "accountInactive": "계정이 비활성화되었습니다. 관리자에게 문의하세요.",
+        "unexpected": "예기치 않은 오류가 발생했습니다"
+      }
+    },
+    "account": {
+      "title": "계정 정보",
+      "loadError": "계정 정보를 불러오지 못했습니다",
+      "email": "이메일",
+      "memberSince": "가입일",
+      "noteCount": "노트",
+      "attachmentCount": "첨부 파일",
+      "storageUsed": "사용 중인 저장 공간",
+      "lastSync": "마지막 동기화",
+      "never": "없음"
+    },
+    "settings": {
+      "title": "설정",
+      "changePassword": "비밀번호 변경",
+      "currentPassword": "현재 비밀번호",
+      "newPassword": "새 비밀번호",
+      "confirmPassword": "비밀번호 확인",
+      "passwordHint": "비밀번호는 최소 12자 이상이어야 합니다",
+      "updatePassword": "비밀번호 업데이트",
+      "passwordChanged": "비밀번호가 성공적으로 변경되었습니다",
+      "dangerZone": "위험 구역",
+      "deactivateAccount": "계정 비활성화",
+      "deactivateDescription": "계정을 비활성화합니다. 관리자 승인을 받아 다시 등록할 수 있습니다.",
+      "deactivate": "비활성화",
+      "deactivateConfirmTitle": "계정 비활성화",
+      "deactivateConfirmMessage": "계정을 비활성화하시겠습니까? 데이터는 보존되지만 다시 액세스하려면 관리자 승인이 필요합니다.",
+      "accountDeactivated": "계정이 비활성화되었습니다",
+      "deleteAccount": "계정 삭제",
+      "deleteDescription": "계정과 모든 데이터를 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+      "delete": "삭제",
+      "deleteConfirmTitle": "계정 영구 삭제",
+      "deleteConfirmMessage": "계정과 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "deleteConfirmLabel": "확인하려면 DELETE를 입력하세요:",
+      "deleteForever": "영구 삭제",
+      "accountDeleted": "계정이 삭제되었습니다",
+      "errors": {
+        "passwordMismatch": "비밀번호가 일치하지 않습니다",
+        "passwordTooShort": "비밀번호는 최소 12자 이상이어야 합니다",
+        "wrongPassword": "현재 비밀번호가 올바르지 않습니다",
+        "unexpected": "예기치 않은 오류가 발생했습니다",
+        "deactivateFailed": "계정 비활성화에 실패했습니다",
+        "deleteFailed": "계정 삭제에 실패했습니다"
+      }
     }
   }
 }

@@ -12,7 +12,9 @@
     "password": "Contraseña",
     "actions": "Acciones",
     "status": "Estado",
-    "created": "Creado"
+    "created": "Creado",
+    "saving": "Guardando...",
+    "deleting": "Eliminando..."
   },
   "nav": {
     "dashboard": "Panel",
@@ -148,6 +150,74 @@
         "failed": "Error al cambiar la contraseña"
       },
       "success": "Contraseña cambiada exitosamente"
+    }
+  },
+  "userPortal": {
+    "title": "Mi cuenta",
+    "tabs": {
+      "account": "Cuenta",
+      "settings": "Configuración"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Inicia sesión para gestionar tu cuenta",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "signIn": "Iniciar sesión",
+      "signingIn": "Iniciando sesión...",
+      "placeholder": {
+        "email": "tu@ejemplo.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Correo electrónico o contraseña incorrectos",
+        "accountInactive": "Tu cuenta está inactiva. Por favor, contacta al administrador.",
+        "unexpected": "Ocurrió un error inesperado"
+      }
+    },
+    "account": {
+      "title": "Información de la cuenta",
+      "loadError": "Error al cargar la información de la cuenta",
+      "email": "Correo electrónico",
+      "memberSince": "Miembro desde",
+      "noteCount": "Notas",
+      "attachmentCount": "Archivos adjuntos",
+      "storageUsed": "Almacenamiento usado",
+      "lastSync": "Última sincronización",
+      "never": "Nunca"
+    },
+    "settings": {
+      "title": "Configuración",
+      "changePassword": "Cambiar contraseña",
+      "currentPassword": "Contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "passwordHint": "La contraseña debe tener al menos 12 caracteres",
+      "updatePassword": "Actualizar contraseña",
+      "passwordChanged": "Contraseña cambiada exitosamente",
+      "dangerZone": "Zona de peligro",
+      "deactivateAccount": "Desactivar cuenta",
+      "deactivateDescription": "Desactiva tu cuenta. Puedes volver a registrarte con aprobación del administrador.",
+      "deactivate": "Desactivar",
+      "deactivateConfirmTitle": "Desactivar cuenta",
+      "deactivateConfirmMessage": "¿Estás seguro de que quieres desactivar tu cuenta? Tus datos se conservarán, pero necesitarás aprobación del administrador para acceder de nuevo.",
+      "accountDeactivated": "Tu cuenta ha sido desactivada",
+      "deleteAccount": "Eliminar cuenta",
+      "deleteDescription": "Elimina permanentemente tu cuenta y todos los datos. Esta acción no se puede deshacer.",
+      "delete": "Eliminar",
+      "deleteConfirmTitle": "Eliminar cuenta permanentemente",
+      "deleteConfirmMessage": "Esto eliminará permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.",
+      "deleteConfirmLabel": "Escribe DELETE para confirmar:",
+      "deleteForever": "Eliminar para siempre",
+      "accountDeleted": "Tu cuenta ha sido eliminada",
+      "errors": {
+        "passwordMismatch": "Las contraseñas no coinciden",
+        "passwordTooShort": "La contraseña debe tener al menos 12 caracteres",
+        "wrongPassword": "La contraseña actual es incorrecta",
+        "unexpected": "Ocurrió un error inesperado",
+        "deactivateFailed": "Error al desactivar la cuenta",
+        "deleteFailed": "Error al eliminar la cuenta"
+      }
     }
   }
 }

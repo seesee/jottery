@@ -12,7 +12,9 @@
     "password": "Wachtwoord",
     "actions": "Acties",
     "status": "Status",
-    "created": "Aangemaakt"
+    "created": "Aangemaakt",
+    "saving": "Opslaan...",
+    "deleting": "Verwijderen..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -148,6 +150,74 @@
         "failed": "Wachtwoord wijzigen mislukt"
       },
       "success": "Wachtwoord succesvol gewijzigd"
+    }
+  },
+  "userPortal": {
+    "title": "Mijn account",
+    "tabs": {
+      "account": "Account",
+      "settings": "Instellingen"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Log in om uw account te beheren",
+      "email": "E-mail",
+      "password": "Wachtwoord",
+      "signIn": "Inloggen",
+      "signingIn": "Inloggen...",
+      "placeholder": {
+        "email": "u@voorbeeld.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Ongeldig e-mailadres of wachtwoord",
+        "accountInactive": "Uw account is inactief. Neem contact op met de beheerder.",
+        "unexpected": "Er is een onverwachte fout opgetreden"
+      }
+    },
+    "account": {
+      "title": "Accountinformatie",
+      "loadError": "Laden van accountinformatie mislukt",
+      "email": "E-mail",
+      "memberSince": "Lid sinds",
+      "noteCount": "Notities",
+      "attachmentCount": "Bijlagen",
+      "storageUsed": "Opslag gebruikt",
+      "lastSync": "Laatste synchronisatie",
+      "never": "Nooit"
+    },
+    "settings": {
+      "title": "Instellingen",
+      "changePassword": "Wachtwoord wijzigen",
+      "currentPassword": "Huidig wachtwoord",
+      "newPassword": "Nieuw wachtwoord",
+      "confirmPassword": "Bevestig wachtwoord",
+      "passwordHint": "Wachtwoord moet minimaal 12 tekens lang zijn",
+      "updatePassword": "Wachtwoord bijwerken",
+      "passwordChanged": "Wachtwoord succesvol gewijzigd",
+      "dangerZone": "Gevarenzone",
+      "deactivateAccount": "Account deactiveren",
+      "deactivateDescription": "Deactiveer uw account. U kunt zich opnieuw registreren met goedkeuring van de beheerder.",
+      "deactivate": "Deactiveren",
+      "deactivateConfirmTitle": "Account deactiveren",
+      "deactivateConfirmMessage": "Weet u zeker dat u uw account wilt deactiveren? Uw gegevens blijven behouden, maar u heeft goedkeuring van de beheerder nodig om weer toegang te krijgen.",
+      "accountDeactivated": "Uw account is gedeactiveerd",
+      "deleteAccount": "Account verwijderen",
+      "deleteDescription": "Verwijder uw account en alle gegevens permanent. Dit kan niet ongedaan worden gemaakt.",
+      "delete": "Verwijderen",
+      "deleteConfirmTitle": "Account permanent verwijderen",
+      "deleteConfirmMessage": "Dit zal uw account en alle gegevens permanent verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteConfirmLabel": "Typ DELETE om te bevestigen:",
+      "deleteForever": "Voor altijd verwijderen",
+      "accountDeleted": "Uw account is verwijderd",
+      "errors": {
+        "passwordMismatch": "Wachtwoorden komen niet overeen",
+        "passwordTooShort": "Wachtwoord moet minimaal 12 tekens lang zijn",
+        "wrongPassword": "Huidig wachtwoord is onjuist",
+        "unexpected": "Er is een onverwachte fout opgetreden",
+        "deactivateFailed": "Account deactiveren mislukt",
+        "deleteFailed": "Account verwijderen mislukt"
+      }
     }
   }
 }

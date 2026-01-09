@@ -12,7 +12,9 @@
     "password": "密码",
     "actions": "操作",
     "status": "状态",
-    "created": "创建时间"
+    "created": "创建时间",
+    "saving": "保存中...",
+    "deleting": "删除中..."
   },
   "nav": {
     "dashboard": "仪表板",
@@ -148,6 +150,74 @@
         "failed": "更改密码失败"
       },
       "success": "密码更改成功"
+    }
+  },
+  "userPortal": {
+    "title": "我的账户",
+    "tabs": {
+      "account": "账户",
+      "settings": "设置"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "登录以管理您的账户",
+      "email": "电子邮件",
+      "password": "密码",
+      "signIn": "登录",
+      "signingIn": "登录中...",
+      "placeholder": {
+        "email": "you@example.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "电子邮件或密码无效",
+        "accountInactive": "您的账户已停用。请联系管理员。",
+        "unexpected": "发生意外错误"
+      }
+    },
+    "account": {
+      "title": "账户信息",
+      "loadError": "加载账户信息失败",
+      "email": "电子邮件",
+      "memberSince": "注册日期",
+      "noteCount": "笔记",
+      "attachmentCount": "附件",
+      "storageUsed": "已用存储空间",
+      "lastSync": "最后同步",
+      "never": "从未"
+    },
+    "settings": {
+      "title": "设置",
+      "changePassword": "更改密码",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认密码",
+      "passwordHint": "密码必须至少包含12个字符",
+      "updatePassword": "更新密码",
+      "passwordChanged": "密码更改成功",
+      "dangerZone": "危险区域",
+      "deactivateAccount": "停用账户",
+      "deactivateDescription": "停用您的账户。您可以在获得管理员批准后重新注册。",
+      "deactivate": "停用",
+      "deactivateConfirmTitle": "停用账户",
+      "deactivateConfirmMessage": "您确定要停用账户吗？您的数据将被保留，但需要管理员批准才能再次访问。",
+      "accountDeactivated": "您的账户已停用",
+      "deleteAccount": "删除账户",
+      "deleteDescription": "永久删除您的账户和所有数据。此操作无法撤销。",
+      "delete": "删除",
+      "deleteConfirmTitle": "永久删除账户",
+      "deleteConfirmMessage": "这将永久删除您的账户和所有数据。此操作无法撤销。",
+      "deleteConfirmLabel": "输入 DELETE 以确认：",
+      "deleteForever": "永久删除",
+      "accountDeleted": "您的账户已被删除",
+      "errors": {
+        "passwordMismatch": "密码不匹配",
+        "passwordTooShort": "密码必须至少包含12个字符",
+        "wrongPassword": "当前密码不正确",
+        "unexpected": "发生意外错误",
+        "deactivateFailed": "停用账户失败",
+        "deleteFailed": "删除账户失败"
+      }
     }
   }
 }

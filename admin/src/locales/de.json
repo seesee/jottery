@@ -12,7 +12,9 @@
     "password": "Passwort",
     "actions": "Aktionen",
     "status": "Status",
-    "created": "Erstellt"
+    "created": "Erstellt",
+    "saving": "Speichern...",
+    "deleting": "Löschen..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -148,6 +150,74 @@
         "failed": "Fehler beim Ändern des Passworts"
       },
       "success": "Passwort erfolgreich geändert"
+    }
+  },
+  "userPortal": {
+    "title": "Mein Konto",
+    "tabs": {
+      "account": "Konto",
+      "settings": "Einstellungen"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Melden Sie sich an, um Ihr Konto zu verwalten",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "signIn": "Anmelden",
+      "signingIn": "Anmeldung...",
+      "placeholder": {
+        "email": "sie@beispiel.de",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Ungültige E-Mail oder Passwort",
+        "accountInactive": "Ihr Konto ist inaktiv. Bitte kontaktieren Sie den Administrator.",
+        "unexpected": "Ein unerwarteter Fehler ist aufgetreten"
+      }
+    },
+    "account": {
+      "title": "Kontoinformationen",
+      "loadError": "Fehler beim Laden der Kontoinformationen",
+      "email": "E-Mail",
+      "memberSince": "Mitglied seit",
+      "noteCount": "Notizen",
+      "attachmentCount": "Anhänge",
+      "storageUsed": "Speicher genutzt",
+      "lastSync": "Letzte Synchronisation",
+      "never": "Nie"
+    },
+    "settings": {
+      "title": "Einstellungen",
+      "changePassword": "Passwort ändern",
+      "currentPassword": "Aktuelles Passwort",
+      "newPassword": "Neues Passwort",
+      "confirmPassword": "Passwort bestätigen",
+      "passwordHint": "Passwort muss mindestens 12 Zeichen lang sein",
+      "updatePassword": "Passwort aktualisieren",
+      "passwordChanged": "Passwort erfolgreich geändert",
+      "dangerZone": "Gefahrenzone",
+      "deactivateAccount": "Konto deaktivieren",
+      "deactivateDescription": "Deaktivieren Sie Ihr Konto. Sie können sich mit Genehmigung des Administrators erneut registrieren.",
+      "deactivate": "Deaktivieren",
+      "deactivateConfirmTitle": "Konto deaktivieren",
+      "deactivateConfirmMessage": "Sind Sie sicher, dass Sie Ihr Konto deaktivieren möchten? Ihre Daten bleiben erhalten, aber Sie benötigen die Genehmigung des Administrators, um erneut darauf zuzugreifen.",
+      "accountDeactivated": "Ihr Konto wurde deaktiviert",
+      "deleteAccount": "Konto löschen",
+      "deleteDescription": "Konto und alle Daten dauerhaft löschen. Dies kann nicht rückgängig gemacht werden.",
+      "delete": "Löschen",
+      "deleteConfirmTitle": "Konto dauerhaft löschen",
+      "deleteConfirmMessage": "Dies wird Ihr Konto und alle Ihre Daten dauerhaft löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "deleteConfirmLabel": "Geben Sie DELETE zur Bestätigung ein:",
+      "deleteForever": "Für immer löschen",
+      "accountDeleted": "Ihr Konto wurde gelöscht",
+      "errors": {
+        "passwordMismatch": "Passwörter stimmen nicht überein",
+        "passwordTooShort": "Passwort muss mindestens 12 Zeichen lang sein",
+        "wrongPassword": "Aktuelles Passwort ist falsch",
+        "unexpected": "Ein unerwarteter Fehler ist aufgetreten",
+        "deactivateFailed": "Fehler beim Deaktivieren des Kontos",
+        "deleteFailed": "Fehler beim Löschen des Kontos"
+      }
     }
   }
 }

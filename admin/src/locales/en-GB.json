@@ -12,7 +12,9 @@
     "password": "Password",
     "actions": "Actions",
     "status": "Status",
-    "created": "Created"
+    "created": "Created",
+    "saving": "Saving...",
+    "deleting": "Deleting..."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -148,6 +150,74 @@
         "failed": "Failed to change password"
       },
       "success": "Password changed successfully"
+    }
+  },
+  "userPortal": {
+    "title": "My Account",
+    "tabs": {
+      "account": "Account",
+      "settings": "Settings"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Sign in to manage your account",
+      "email": "Email",
+      "password": "Password",
+      "signIn": "Sign in",
+      "signingIn": "Signing in...",
+      "placeholder": {
+        "email": "you@example.com",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Invalid email or password",
+        "accountInactive": "Your account is inactive. Please contact the administrator.",
+        "unexpected": "An unexpected error occurred"
+      }
+    },
+    "account": {
+      "title": "Account Information",
+      "loadError": "Failed to load account information",
+      "email": "Email",
+      "memberSince": "Member Since",
+      "noteCount": "Notes",
+      "attachmentCount": "Attachments",
+      "storageUsed": "Storage Used",
+      "lastSync": "Last Sync",
+      "never": "Never"
+    },
+    "settings": {
+      "title": "Settings",
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm Password",
+      "passwordHint": "Password must be at least 12 characters",
+      "updatePassword": "Update Password",
+      "passwordChanged": "Password changed successfully",
+      "dangerZone": "Danger Zone",
+      "deactivateAccount": "Deactivate Account",
+      "deactivateDescription": "Deactivate your account. You can re-register with admin approval.",
+      "deactivate": "Deactivate",
+      "deactivateConfirmTitle": "Deactivate Account",
+      "deactivateConfirmMessage": "Are you sure you want to deactivate your account? Your data will be preserved, but you will need admin approval to access it again.",
+      "accountDeactivated": "Your account has been deactivated",
+      "deleteAccount": "Delete Account",
+      "deleteDescription": "Permanently delete your account and all data. This cannot be undone.",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete Account Permanently",
+      "deleteConfirmMessage": "This will permanently delete your account and all your data. This action cannot be undone.",
+      "deleteConfirmLabel": "Type DELETE to confirm:",
+      "deleteForever": "Delete Forever",
+      "accountDeleted": "Your account has been deleted",
+      "errors": {
+        "passwordMismatch": "Passwords do not match",
+        "passwordTooShort": "Password must be at least 12 characters",
+        "wrongPassword": "Current password is incorrect",
+        "unexpected": "An unexpected error occurred",
+        "deactivateFailed": "Failed to deactivate account",
+        "deleteFailed": "Failed to delete account"
+      }
     }
   }
 }

@@ -12,7 +12,9 @@
     "password": "Hasło",
     "actions": "Akcje",
     "status": "Status",
-    "created": "Utworzono"
+    "created": "Utworzono",
+    "saving": "Zapisywanie...",
+    "deleting": "Usuwanie..."
   },
   "nav": {
     "dashboard": "Panel",
@@ -148,6 +150,74 @@
         "failed": "Nie udało się zmienić hasła"
       },
       "success": "Hasło zostało pomyślnie zmienione"
+    }
+  },
+  "userPortal": {
+    "title": "Moje konto",
+    "tabs": {
+      "account": "Konto",
+      "settings": "Ustawienia"
+    },
+    "login": {
+      "title": "Jottery",
+      "subtitle": "Zaloguj się, aby zarządzać kontem",
+      "email": "E-mail",
+      "password": "Hasło",
+      "signIn": "Zaloguj",
+      "signingIn": "Logowanie...",
+      "placeholder": {
+        "email": "ty@przyklad.pl",
+        "password": "••••••••"
+      },
+      "errors": {
+        "invalidCredentials": "Nieprawidłowy e-mail lub hasło",
+        "accountInactive": "Twoje konto jest nieaktywne. Skontaktuj się z administratorem.",
+        "unexpected": "Wystąpił nieoczekiwany błąd"
+      }
+    },
+    "account": {
+      "title": "Informacje o koncie",
+      "loadError": "Nie udało się załadować informacji o koncie",
+      "email": "E-mail",
+      "memberSince": "Członek od",
+      "noteCount": "Notatki",
+      "attachmentCount": "Załączniki",
+      "storageUsed": "Użyta pamięć",
+      "lastSync": "Ostatnia synchronizacja",
+      "never": "Nigdy"
+    },
+    "settings": {
+      "title": "Ustawienia",
+      "changePassword": "Zmień hasło",
+      "currentPassword": "Obecne hasło",
+      "newPassword": "Nowe hasło",
+      "confirmPassword": "Potwierdź hasło",
+      "passwordHint": "Hasło musi mieć co najmniej 12 znaków",
+      "updatePassword": "Zaktualizuj hasło",
+      "passwordChanged": "Hasło zostało pomyślnie zmienione",
+      "dangerZone": "Strefa niebezpieczna",
+      "deactivateAccount": "Dezaktywuj konto",
+      "deactivateDescription": "Dezaktywuj swoje konto. Możesz ponownie się zarejestrować z zatwierdzeniem administratora.",
+      "deactivate": "Dezaktywuj",
+      "deactivateConfirmTitle": "Dezaktywuj konto",
+      "deactivateConfirmMessage": "Czy na pewno chcesz dezaktywować swoje konto? Twoje dane zostaną zachowane, ale będziesz potrzebować zatwierdzenia administratora, aby ponownie uzyskać dostęp.",
+      "accountDeactivated": "Twoje konto zostało dezaktywowane",
+      "deleteAccount": "Usuń konto",
+      "deleteDescription": "Trwale usuń swoje konto i wszystkie dane. Ta akcja jest nieodwracalna.",
+      "delete": "Usuń",
+      "deleteConfirmTitle": "Trwale usuń konto",
+      "deleteConfirmMessage": "To trwale usunie Twoje konto i wszystkie dane. Ta akcja jest nieodwracalna.",
+      "deleteConfirmLabel": "Wpisz DELETE, aby potwierdzić:",
+      "deleteForever": "Usuń na zawsze",
+      "accountDeleted": "Twoje konto zostało usunięte",
+      "errors": {
+        "passwordMismatch": "Hasła nie są zgodne",
+        "passwordTooShort": "Hasło musi mieć co najmniej 12 znaków",
+        "wrongPassword": "Obecne hasło jest nieprawidłowe",
+        "unexpected": "Wystąpił nieoczekiwany błąd",
+        "deactivateFailed": "Nie udało się dezaktywować konta",
+        "deleteFailed": "Nie udało się usunąć konta"
+      }
     }
   }
 }

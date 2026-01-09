@@ -6,12 +6,14 @@ import { readFileSync } from 'fs';
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const version = packageJson.version;
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     '__APP_VERSION__': JSON.stringify(version),
   },
   plugins: [svelte()],
-  base: '/admin/',
+  // Only use /admin/ base in production build - in dev mode serve from root
+  // This allows E2E tests to access both /admin and /user paths
+  base: command === 'build' ? '/admin/' : '/',
   server: {
     port: 5174,
     proxy: {
@@ -25,4 +27,9 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
-});
+  test: {
+    globals: true,
+    environment: 'happy-dom',
+    include: ['src/**/*.test.ts'],
+  },
+}));

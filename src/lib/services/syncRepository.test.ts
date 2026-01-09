@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { syncRepository } from './syncRepository';
-import type { SyncMetadata, NoteSyncMetadata } from '../types';
+import type { SyncMetadata, NoteSyncMetadata, ConflictData } from '../types';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
 
 describe('syncRepository', () => {
@@ -602,7 +602,7 @@ describe('syncRepository', () => {
   });
 
   describe('Conflict Data', () => {
-    const createTestConflictData = (noteId: string) => ({
+    const createTestConflictData = (noteId: string): ConflictData => ({
       noteId,
       serverContent: 'encrypted-server-content',
       serverTags: ['tag1', 'tag2'],
