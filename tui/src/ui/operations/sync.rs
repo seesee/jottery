@@ -292,6 +292,30 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             }
         }
 
+        // Store conflict data for rejected notes
+        for rejected in &push_response.rejected {
+            app.debug_log(&format!("Sync conflict for note {}: {}", rejected.id, rejected.reason));
+
+            // Create ConflictData from the SyncRejected response
+            let conflict_data = crate::models::sync::ConflictData {
+                note_id: rejected.id.clone(),
+                server_content: rejected.server_content.clone(),
+                server_tags: rejected.server_tags.clone(),
+                server_modified_at: rejected.server_modified_at,
+                server_version: rejected.server_version,
+                server_attachments: rejected.server_attachments.clone(),
+                server_pinned: rejected.server_pinned,
+                server_syntax_language: rejected.server_syntax_language.clone(),
+                server_word_wrap: rejected.server_word_wrap,
+                detected_at: Utc::now(),
+            };
+
+            // Store conflict in sync metadata
+            if let Err(e) = sync_repo.set_conflict(&rejected.id, &conflict_data) {
+                app.debug_log(&format!("Failed to store conflict for note {}: {}", rejected.id, e));
+            }
+        }
+
         // Update last push timestamp
         metadata.last_push_at = Some(Utc::now());
     }
@@ -659,5 +683,187 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
     super::notes::load_notes(app)?;
 
     Ok(sync_count)
+}
+
+/// Open conflict resolution for a note
+/// Decrypts and loads both local and server versions for display
+pub fn open_conflict_resolution(app: &mut App, note_id: &str) -> Result<()> {
+    use crate::ui::state::ViewMode;
+
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let note_repo = NoteRepository::new(db.connection());
+    let sync_repo = SyncRepository::new(db.connection());
+
+    // Get the local note
+    let local_note = note_repo.get(note_id, key)?
+        .ok_or_else(|| anyhow::anyhow!("Note not found"))?;
+
+    // Get conflict data from sync metadata
+    let note_sync = sync_repo.get_note_sync(note_id)?
+        .ok_or_else(|| anyhow::anyhow!("No sync metadata for note"))?;
+
+    let conflict_data = note_sync.conflict_data
+        .ok_or_else(|| anyhow::anyhow!("No conflict data available"))?;
+
+    // Decrypt server content
+    let encrypted_content: crate::crypto::EncryptedData = serde_json::from_str(&conflict_data.server_content)?;
+    let server_content = app.crypto.decrypt_text(&encrypted_content, key)?;
+
+    // Decrypt server tags
+    let server_tags: Vec<String> = conflict_data.server_tags.iter()
+        .filter_map(|tag_json| {
+            let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
+            let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
+            serde_json::from_str::<String>(&tag_json_str).ok()
+        })
+        .collect();
+
+    // Store data in app for display
+    app.conflict_note_id = Some(note_id.to_string());
+    app.conflict_data = Some(conflict_data);
+    app.conflict_local_content = local_note.content;
+    app.conflict_server_content = server_content;
+    app.conflict_local_tags = local_note.tags;
+    app.conflict_server_tags = server_tags;
+    app.conflict_local_scroll = 0;
+    app.conflict_server_scroll = 0;
+    app.conflict_focus_server = false;
+    app.view_mode = ViewMode::ConflictResolution;
+
+    Ok(())
+}
+
+/// Resolve conflict by keeping local version
+/// Clears conflict status and marks note for sync
+pub fn resolve_keep_local(app: &mut App) -> Result<()> {
+    let note_id = app.conflict_note_id.clone()
+        .ok_or_else(|| anyhow::anyhow!("No conflict being resolved"))?;
+
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let note_repo = NoteRepository::new(db.connection());
+    let sync_repo = SyncRepository::new(db.connection());
+
+    // Clear conflict status - the local version will be pushed on next sync
+    sync_repo.clear_conflict(&note_id)?;
+
+    // Update the note's modified_at to ensure it gets pushed
+    if let Some(mut note) = note_repo.get(&note_id, key)? {
+        note.modified_at = chrono::Utc::now();
+        note.version += 1;
+        note_repo.update(&note, key)?;
+    }
+
+    // Clear conflict state in app
+    clear_conflict_state(app);
+
+    Ok(())
+}
+
+/// Resolve conflict by keeping server version
+/// Replaces local content with server version and clears conflict
+pub fn resolve_keep_server(app: &mut App) -> Result<()> {
+    let note_id = app.conflict_note_id.clone()
+        .ok_or_else(|| anyhow::anyhow!("No conflict being resolved"))?;
+
+    let conflict_data = app.conflict_data.clone()
+        .ok_or_else(|| anyhow::anyhow!("No conflict data available"))?;
+
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let note_repo = NoteRepository::new(db.connection());
+    let sync_repo = SyncRepository::new(db.connection());
+    let version_repo = NoteVersionRepository::new(db.connection());
+
+    // Get the local note to save a version before overwriting
+    if let Some(local_note) = note_repo.get(&note_id, key)? {
+        // Create version snapshot of local before overwriting
+        let _ = version_repo.create_version(&local_note, chrono::Utc::now(), VersionReason::Sync, key);
+
+        // Create updated note with server content (already decrypted in conflict_server_content)
+        let mut updated_note = local_note.clone();
+        updated_note.content = app.conflict_server_content.clone();
+        updated_note.tags = app.conflict_server_tags.clone();
+        updated_note.modified_at = conflict_data.server_modified_at;
+        updated_note.version = conflict_data.server_version;
+        updated_note.pinned = conflict_data.server_pinned;
+        if let Some(ref lang) = conflict_data.server_syntax_language {
+            updated_note.syntax_language = lang.parse().unwrap_or_default();
+        }
+        if let Some(wrap) = conflict_data.server_word_wrap {
+            updated_note.word_wrap = wrap;
+        }
+
+        note_repo.update(&updated_note, key)?;
+    }
+
+    // Clear conflict status
+    sync_repo.clear_conflict(&note_id)?;
+
+    // Clear conflict state in app and reload notes
+    clear_conflict_state(app);
+    super::notes::load_notes(app)?;
+
+    Ok(())
+}
+
+/// Resolve conflict by keeping both versions
+/// Creates a new note from the server version
+pub fn resolve_keep_both(app: &mut App) -> Result<String> {
+    let note_id = app.conflict_note_id.clone()
+        .ok_or_else(|| anyhow::anyhow!("No conflict being resolved"))?;
+
+    let conflict_data = app.conflict_data.clone()
+        .ok_or_else(|| anyhow::anyhow!("No conflict data available"))?;
+
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let note_repo = NoteRepository::new(db.connection());
+    let sync_repo = SyncRepository::new(db.connection());
+
+    // Create a new note from the server version
+    let mut new_note = Note::new(app.conflict_server_content.clone());
+    new_note.tags = app.conflict_server_tags.clone();
+    new_note.modified_at = conflict_data.server_modified_at;
+    new_note.pinned = conflict_data.server_pinned;
+    if let Some(ref lang) = conflict_data.server_syntax_language {
+        new_note.syntax_language = lang.parse().unwrap_or_default();
+    }
+    if let Some(wrap) = conflict_data.server_word_wrap {
+        new_note.word_wrap = wrap;
+    }
+
+    let new_note_id = new_note.id.clone();
+    note_repo.create(&new_note, key)?;
+
+    // Clear conflict status on the original note
+    sync_repo.clear_conflict(&note_id)?;
+
+    // Clear conflict state in app and reload notes
+    clear_conflict_state(app);
+    super::notes::load_notes(app)?;
+
+    Ok(new_note_id)
+}
+
+/// Clear conflict resolution state in app
+fn clear_conflict_state(app: &mut App) {
+    use crate::ui::state::ViewMode;
+
+    app.conflict_note_id = None;
+    app.conflict_data = None;
+    app.conflict_local_content.clear();
+    app.conflict_server_content.clear();
+    app.conflict_local_tags.clear();
+    app.conflict_server_tags.clear();
+    app.conflict_local_scroll = 0;
+    app.conflict_server_scroll = 0;
+    app.conflict_focus_server = false;
+    app.view_mode = ViewMode::NoteList;
 }
 

@@ -64,6 +64,8 @@ pub enum ViewMode {
     AttachmentViewer,
     /// Version history viewer modal
     VersionHistory,
+    /// Conflict resolution modal
+    ConflictResolution,
 }
 
 /// Which panel is focused in the preview pane

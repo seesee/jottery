@@ -38,7 +38,7 @@ use std::{
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Attachment, Note, UserSettings, sync::SyncCredentials},
+    models::{Attachment, Note, UserSettings, sync::{SyncCredentials, ConflictData}},
     repository::{attachment::AttachmentRepository, EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
 };
 
@@ -163,6 +163,24 @@ pub struct App {
     pub(crate) versions_note_id: Option<String>,
     /// Scroll offset for version preview content
     pub version_preview_scroll_offset: usize,
+    /// Note ID for which conflict is being resolved
+    pub(crate) conflict_note_id: Option<String>,
+    /// Conflict data from server (encrypted)
+    pub(crate) conflict_data: Option<ConflictData>,
+    /// Decrypted local content for conflict view
+    pub conflict_local_content: String,
+    /// Decrypted server content for conflict view
+    pub conflict_server_content: String,
+    /// Decrypted local tags for conflict view
+    pub conflict_local_tags: Vec<String>,
+    /// Decrypted server tags for conflict view
+    pub conflict_server_tags: Vec<String>,
+    /// Scroll offset for conflict left pane (local version)
+    pub conflict_local_scroll: usize,
+    /// Scroll offset for conflict right pane (server version)
+    pub conflict_server_scroll: usize,
+    /// Which pane is focused in conflict view (false = local, true = server)
+    pub conflict_focus_server: bool,
     /// Bulk tags input buffer (for adding tags to selected notes)
     pub bulk_tags_input: String,
     /// Bulk export path input buffer
@@ -237,6 +255,15 @@ impl App {
             selected_version: 0,
             versions_note_id: None,
             version_preview_scroll_offset: 0,
+            conflict_note_id: None,
+            conflict_data: None,
+            conflict_local_content: String::new(),
+            conflict_server_content: String::new(),
+            conflict_local_tags: Vec::new(),
+            conflict_server_tags: Vec::new(),
+            conflict_local_scroll: 0,
+            conflict_server_scroll: 0,
+            conflict_focus_server: false,
             bulk_tags_input: String::new(),
             bulk_export_path_input: String::new(),
             show_bulk_delete_confirm: false,

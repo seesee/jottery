@@ -23,6 +23,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         app.sync_status = None;
     }
 
+    // Handle conflict resolution view mode
+    if matches!(app.view_mode, ViewMode::ConflictResolution) {
+        return super::conflict::handle_conflict_key(app, key);
+    }
+
     // Handle bulk add tags input mode
     if matches!(app.input_mode, InputMode::BulkAddTags) {
         match handle_text_input(&key, &mut app.bulk_tags_input) {
@@ -319,7 +324,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.error = Some(format!("Failed to reload notes: {}", e));
                             }
                         }
-                        ViewMode::AttachmentViewer | ViewMode::VersionHistory => {
+                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
                             app.view_mode = ViewMode::NoteList;
                         }
                     }
@@ -746,11 +751,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer => {
-                        // 'r' does nothing in attachment viewer
-                    }
-                    ViewMode::VersionHistory => {
-                        // 'r' does nothing in version history
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
+                        // 'r' does nothing in these views
                     }
                 }
             }
@@ -969,6 +971,24 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     let timestamp = chrono::Local::now().format("%Y-%m-%d").to_string();
                     app.bulk_export_path_input = format!("jottery-export-{}.json", timestamp);
                     app.input_mode = InputMode::BulkExportPath;
+                }
+            }
+            KeyCode::Char('x') => {
+                // Open conflict resolution for selected note (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note_id = filtered[app.selected_note].id.clone();
+                        // Check if this note has a conflict and open resolution
+                        if let Err(e) = operations::sync::open_conflict_resolution(app, &note_id) {
+                            // If there's no conflict, this just shows a message
+                            if e.to_string().contains("No conflict") {
+                                app.error = Some(t!("conflict.no_conflict").to_string());
+                            } else {
+                                app.error = Some(format!("{}: {}", t!("conflict.resolve_failed"), e));
+                            }
+                        }
+                    }
                 }
             }
             _ => {

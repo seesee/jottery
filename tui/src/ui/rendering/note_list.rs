@@ -43,6 +43,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::RecycleBin => "Recycle Bin".to_string(),
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
         ViewMode::VersionHistory => "Version History".to_string(),
+        ViewMode::ConflictResolution => "Conflict Resolution".to_string(),
         ViewMode::NoteList => {
             if app.search_active && !app.search_input.is_empty() {
                 format!("Jottery v{} - Notes ({}/{})", env!("CARGO_PKG_VERSION"), filtered.len(), app.notes.len())
@@ -162,6 +163,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             }
             ViewMode::VersionHistory => {
                 "↑/↓: navigate | Enter: restore version | Esc: close".to_string()
+            }
+            ViewMode::ConflictResolution => {
+                "1: Keep Mine | 2: Keep Server | 3: Keep Both | Tab: switch | j/k: scroll | Esc: cancel".to_string()
             }
             ViewMode::NoteList => {
                 if app.is_multi_select_mode {
@@ -888,6 +892,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             .style(Style::default().fg(app.color_scheme.foreground));
 
         frame.render_widget(modal_paragraph, modal_area);
+    }
+
+    // Render conflict resolution modal if showing
+    if matches!(app.view_mode, ViewMode::ConflictResolution) {
+        super::conflict::render_conflict_modal(app, frame, size);
     }
 
     // Store click detection areas in app (after all borrows of filtered are done)

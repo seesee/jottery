@@ -3,7 +3,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::models::sync::{NoteSyncMetadata, SyncMetadata, SyncStatus};
+use crate::models::sync::{ConflictData, NoteSyncMetadata, SyncMetadata, SyncStatus};
 
 /// Repository for sync metadata operations
 pub struct SyncRepository<'a> {
@@ -112,10 +112,14 @@ impl<'a> SyncRepository<'a> {
     pub fn get_note_metadata(&self, note_id: &str) -> Result<Option<NoteSyncMetadata>> {
         let result = self.conn
             .query_row(
-                "SELECT note_id, synced_at, sync_hash, server_version, last_sync_status, error_message
+                "SELECT note_id, synced_at, sync_hash, server_version, last_sync_status, error_message, conflict_data
                  FROM note_sync_metadata WHERE note_id = ?1",
                 params![note_id],
                 |row| {
+                    let conflict_json: Option<String> = row.get(6)?;
+                    let conflict_data = conflict_json
+                        .and_then(|json| serde_json::from_str(&json).ok());
+
                     Ok(NoteSyncMetadata {
                         note_id: row.get(0)?,
                         synced_at: row.get::<_, String>(1)?.parse().unwrap(),
@@ -123,6 +127,7 @@ impl<'a> SyncRepository<'a> {
                         server_version: row.get(3)?,
                         last_sync_status: parse_sync_status(&row.get::<_, String>(4)?),
                         error_message: row.get(5)?,
+                        conflict_data,
                     })
                 },
             )
@@ -178,6 +183,85 @@ impl<'a> SyncRepository<'a> {
         self.conn.execute("DELETE FROM sync_metadata WHERE id = 1", [])?;
         self.conn.execute("DELETE FROM note_sync_metadata", [])?;
         Ok(())
+    }
+
+    /// Get per-note sync metadata with conflict data
+    pub fn get_note_sync(&self, note_id: &str) -> Result<Option<NoteSyncMetadata>> {
+        let result = self.conn
+            .query_row(
+                "SELECT note_id, synced_at, sync_hash, server_version, last_sync_status, error_message, conflict_data
+                 FROM note_sync_metadata WHERE note_id = ?1",
+                params![note_id],
+                |row| {
+                    let conflict_json: Option<String> = row.get(6)?;
+                    let conflict_data = conflict_json
+                        .and_then(|json| serde_json::from_str(&json).ok());
+
+                    Ok(NoteSyncMetadata {
+                        note_id: row.get(0)?,
+                        synced_at: row.get::<_, String>(1)?.parse().unwrap(),
+                        sync_hash: row.get(2)?,
+                        server_version: row.get(3)?,
+                        last_sync_status: parse_sync_status(&row.get::<_, String>(4)?),
+                        error_message: row.get(5)?,
+                        conflict_data,
+                    })
+                },
+            )
+            .optional()?;
+
+        Ok(result)
+    }
+
+    /// Store conflict data for a note
+    pub fn set_conflict(&self, note_id: &str, conflict_data: &ConflictData) -> Result<()> {
+        let conflict_json = serde_json::to_string(conflict_data)?;
+
+        // First check if record exists
+        let exists: bool = self.conn.query_row(
+            "SELECT 1 FROM note_sync_metadata WHERE note_id = ?1",
+            params![note_id],
+            |_| Ok(true),
+        ).unwrap_or(false);
+
+        if exists {
+            // Update existing record
+            self.conn.execute(
+                "UPDATE note_sync_metadata SET last_sync_status = 'conflict', conflict_data = ?1 WHERE note_id = ?2",
+                params![conflict_json, note_id],
+            )?;
+        } else {
+            // Insert new record
+            self.conn.execute(
+                "INSERT INTO note_sync_metadata (note_id, synced_at, sync_hash, server_version, last_sync_status, conflict_data)
+                 VALUES (?1, ?2, '', 0, 'conflict', ?3)",
+                params![note_id, Utc::now().to_rfc3339(), conflict_json],
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Clear conflict status for a note
+    pub fn clear_conflict(&self, note_id: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE note_sync_metadata SET last_sync_status = 'pending', conflict_data = NULL WHERE note_id = ?1",
+            params![note_id],
+        )?;
+        Ok(())
+    }
+
+    /// Get all notes with conflict status
+    pub fn get_conflict_note_ids(&self) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT note_id FROM note_sync_metadata WHERE last_sync_status = 'conflict'"
+        )?;
+
+        let note_ids = stmt
+            .query_map([], |row| row.get(0))?
+            .collect::<Result<Vec<String>, _>>()?;
+
+        Ok(note_ids)
     }
 }
 

@@ -43,6 +43,7 @@ pub struct NoteSyncMetadata {
     pub server_version: i32,
     pub last_sync_status: SyncStatus,
     pub error_message: Option<String>,
+    pub conflict_data: Option<ConflictData>, // Server version data when in conflict
 }
 
 /// Sync status for a note
