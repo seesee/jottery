@@ -954,3 +954,529 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use tempfile::tempdir;
+    use crate::models::Note;
+    use crate::ui::state::FocusedPanel;
+
+    /// Create a test app with minimal setup
+    fn create_test_app() -> App {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let db_path = temp_dir.path().join("test.db");
+        let mut app = App::new(db_path, None).expect("Failed to create app");
+        app.state = AppState::NoteList;
+        // Leak the temp_dir so it stays alive for the test
+        std::mem::forget(temp_dir);
+        app
+    }
+
+    /// Create a key event with no modifiers
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    /// Create a key event with Ctrl modifier
+    fn ctrl_key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::CONTROL)
+    }
+
+    // ==================== Syntax Cycling Tests ====================
+
+    #[test]
+    fn test_bracket_right_cycles_syntax_forward() {
+        let mut app = create_test_app();
+        // Add a test note
+        let mut note = Note::new("Test content".to_string());
+        note.syntax_language = crate::models::SyntaxLanguage::Plain;
+        app.notes.push(note);
+        app.view_mode = ViewMode::NoteList;
+
+        let initial_syntax = app.notes[0].syntax_language;
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char(']')));
+
+        // Syntax should have changed to next value
+        assert_ne!(app.notes[0].syntax_language, initial_syntax);
+    }
+
+    #[test]
+    fn test_bracket_left_cycles_syntax_backward() {
+        let mut app = create_test_app();
+        // Add a test note with a non-default syntax
+        let mut note = Note::new("Test content".to_string());
+        note.syntax_language = crate::models::SyntaxLanguage::Python;
+        app.notes.push(note);
+        app.view_mode = ViewMode::NoteList;
+
+        let initial_syntax = app.notes[0].syntax_language;
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('[')));
+
+        // Syntax should have changed to previous value
+        assert_ne!(app.notes[0].syntax_language, initial_syntax);
+    }
+
+    #[test]
+    fn test_syntax_cycling_only_works_in_note_list_view() {
+        let mut app = create_test_app();
+        let mut note = Note::new("Test content".to_string());
+        note.syntax_language = crate::models::SyntaxLanguage::Plain;
+        app.notes.push(note);
+
+        // Set to RecycleBin view
+        app.view_mode = ViewMode::RecycleBin;
+        let initial_syntax = app.notes[0].syntax_language;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char(']')));
+
+        // Syntax should NOT have changed
+        assert_eq!(app.notes[0].syntax_language, initial_syntax);
+    }
+
+    // ==================== Search Mode Tab Tests ====================
+
+    #[test]
+    fn test_tab_exits_search_mode() {
+        let mut app = create_test_app();
+        app.search_active = true;
+        app.search_input = "test".to_string();
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Tab));
+
+        assert!(!app.search_active);
+    }
+
+    #[test]
+    fn test_tab_in_search_focuses_attachments_when_available() {
+        let mut app = create_test_app();
+        // Add a note with attachments
+        let mut note = Note::new("Test content".to_string());
+        note.attachments.push(crate::models::Attachment {
+            id: "test-attachment".to_string(),
+            filename: "test.txt".to_string(),
+            mime_type: "text/plain".to_string(),
+            size: 100,
+            data: String::new(),
+            thumbnail_data: None,
+        });
+        app.notes.push(note);
+        app.search_active = true;
+        app.focused_panel = FocusedPanel::NoteContent;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Tab));
+
+        assert!(!app.search_active);
+        assert_eq!(app.focused_panel, FocusedPanel::Attachments);
+        assert_eq!(app.selected_attachment, 0);
+    }
+
+    #[test]
+    fn test_tab_in_search_stays_content_when_no_attachments() {
+        let mut app = create_test_app();
+        // Add a note without attachments
+        app.notes.push(Note::new("Test content".to_string()));
+        app.search_active = true;
+        app.focused_panel = FocusedPanel::NoteContent;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Tab));
+
+        assert!(!app.search_active);
+        assert_eq!(app.focused_panel, FocusedPanel::NoteContent);
+    }
+
+    #[test]
+    fn test_typing_q_in_search_adds_to_query() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.search_active = true;
+        app.search_input = "test".to_string();
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        // Should add 'q' to search, NOT quit
+        assert!(app.search_active);
+        assert_eq!(app.search_input, "testq");
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    // ==================== PageUp/PageDown Tests ====================
+
+    #[test]
+    fn test_page_down_scrolls_preview() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.preview_scroll_offset = 0;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::PageDown));
+
+        assert_eq!(app.preview_scroll_offset, 20);
+    }
+
+    #[test]
+    fn test_page_up_scrolls_preview() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.preview_scroll_offset = 40;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::PageUp));
+
+        assert_eq!(app.preview_scroll_offset, 20);
+    }
+
+    #[test]
+    fn test_page_up_does_not_go_negative() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.preview_scroll_offset = 5;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::PageUp));
+
+        assert_eq!(app.preview_scroll_offset, 0);
+    }
+
+    #[test]
+    fn test_ctrl_d_scrolls_half_page() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.preview_scroll_offset = 0;
+
+        let _ = handle_note_list_key(&mut app, ctrl_key(KeyCode::Char('d')));
+
+        assert_eq!(app.preview_scroll_offset, 10);
+    }
+
+    #[test]
+    fn test_ctrl_u_scrolls_half_page() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.preview_scroll_offset = 20;
+
+        let _ = handle_note_list_key(&mut app, ctrl_key(KeyCode::Char('u')));
+
+        assert_eq!(app.preview_scroll_offset, 10);
+    }
+
+    // ==================== 'q' Key Layered Close Tests ====================
+
+    #[test]
+    fn test_q_closes_bulk_delete_confirm_first() {
+        let mut app = create_test_app();
+        app.show_bulk_delete_confirm = true;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(!app.show_bulk_delete_confirm);
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_q_closes_bulk_combine_confirm_first() {
+        let mut app = create_test_app();
+        app.show_bulk_combine_confirm = true;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(!app.show_bulk_combine_confirm);
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_q_closes_force_sync_confirm_first() {
+        let mut app = create_test_app();
+        app.show_force_sync_confirm = true;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(!app.show_force_sync_confirm);
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_q_exits_multi_select_mode_first() {
+        let mut app = create_test_app();
+        app.is_multi_select_mode = true;
+        app.selected_note_ids.insert("test-id".to_string());
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(!app.is_multi_select_mode);
+        assert!(app.selected_note_ids.is_empty());
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_q_returns_from_recycle_bin_to_note_list() {
+        let mut app = create_test_app();
+        app.view_mode = ViewMode::RecycleBin;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(matches!(app.view_mode, ViewMode::NoteList));
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_q_returns_from_version_history_to_note_list() {
+        let mut app = create_test_app();
+        app.view_mode = ViewMode::VersionHistory;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(matches!(app.view_mode, ViewMode::NoteList));
+        assert!(!matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_q_quits_from_note_list_view() {
+        let mut app = create_test_app();
+        app.view_mode = ViewMode::NoteList;
+        app.is_multi_select_mode = false;
+        app.show_bulk_delete_confirm = false;
+        app.show_bulk_combine_confirm = false;
+        app.show_force_sync_confirm = false;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('q')));
+
+        assert!(matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn test_ctrl_q_always_quits() {
+        let mut app = create_test_app();
+        app.view_mode = ViewMode::RecycleBin;
+        app.is_multi_select_mode = true;
+        app.show_bulk_delete_confirm = true;
+
+        let _ = handle_note_list_key(&mut app, ctrl_key(KeyCode::Char('q')));
+
+        assert!(matches!(app.state, AppState::Quit));
+    }
+
+    // ==================== Multi-Select Mode Tests ====================
+
+    #[test]
+    fn test_space_enters_multi_select_mode() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.view_mode = ViewMode::NoteList;
+        app.is_multi_select_mode = false;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char(' ')));
+
+        assert!(app.is_multi_select_mode);
+    }
+
+    #[test]
+    fn test_space_toggles_note_selection() {
+        let mut app = create_test_app();
+        let note = Note::new("Test content".to_string());
+        let note_id = note.id.clone();
+        app.notes.push(note);
+        app.view_mode = ViewMode::NoteList;
+        app.is_multi_select_mode = true;
+        app.selected_note = 0;
+
+        // First space selects
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char(' ')));
+        assert!(app.selected_note_ids.contains(&note_id));
+
+        // Second space deselects
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char(' ')));
+        assert!(!app.selected_note_ids.contains(&note_id));
+    }
+
+    #[test]
+    fn test_ctrl_a_selects_all_notes() {
+        let mut app = create_test_app();
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+        let note3 = Note::new("Note 3".to_string());
+        let id1 = note1.id.clone();
+        let id2 = note2.id.clone();
+        let id3 = note3.id.clone();
+        app.notes.push(note1);
+        app.notes.push(note2);
+        app.notes.push(note3);
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, ctrl_key(KeyCode::Char('a')));
+
+        assert!(app.is_multi_select_mode);
+        assert!(app.selected_note_ids.contains(&id1));
+        assert!(app.selected_note_ids.contains(&id2));
+        assert!(app.selected_note_ids.contains(&id3));
+        assert_eq!(app.selected_note_ids.len(), 3);
+    }
+
+    #[test]
+    fn test_esc_clears_multi_selection() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.view_mode = ViewMode::NoteList;
+        app.is_multi_select_mode = true;
+        app.selected_note_ids.insert("test-id".to_string());
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Esc));
+
+        assert!(!app.is_multi_select_mode);
+        assert!(app.selected_note_ids.is_empty());
+    }
+
+    // ==================== BulkAddTags Modal Tests ====================
+
+    #[test]
+    fn test_t_in_multi_select_opens_bulk_tags_modal() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.view_mode = ViewMode::NoteList;
+        app.is_multi_select_mode = true;
+        app.selected_note_ids.insert("test-id".to_string());
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('t')));
+
+        assert!(matches!(app.input_mode, InputMode::BulkAddTags));
+        assert!(app.bulk_tags_input.is_empty());
+    }
+
+    #[test]
+    fn test_esc_cancels_bulk_tags_input() {
+        let mut app = create_test_app();
+        app.input_mode = InputMode::BulkAddTags;
+        app.bulk_tags_input = "tag1, tag2".to_string();
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Esc));
+
+        assert!(matches!(app.input_mode, InputMode::Normal));
+    }
+
+    // ==================== BulkExportPath Modal Tests ====================
+
+    #[test]
+    fn test_e_in_multi_select_opens_export_path_modal() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.view_mode = ViewMode::NoteList;
+        app.is_multi_select_mode = true;
+        app.selected_note_ids.insert("test-id".to_string());
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('e')));
+
+        assert!(matches!(app.input_mode, InputMode::BulkExportPath));
+        // Should have a default filename with timestamp
+        assert!(app.bulk_export_path_input.starts_with("jottery-export-"));
+        assert!(app.bulk_export_path_input.ends_with(".json"));
+    }
+
+    #[test]
+    fn test_esc_cancels_bulk_export_input() {
+        let mut app = create_test_app();
+        app.input_mode = InputMode::BulkExportPath;
+        app.bulk_export_path_input = "export.json".to_string();
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Esc));
+
+        assert!(matches!(app.input_mode, InputMode::Normal));
+    }
+
+    // ==================== Navigation Tests ====================
+
+    #[test]
+    fn test_j_moves_down() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Note 1".to_string()));
+        app.notes.push(Note::new("Note 2".to_string()));
+        app.notes.push(Note::new("Note 3".to_string()));
+        app.selected_note = 0;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('j')));
+
+        assert_eq!(app.selected_note, 1);
+    }
+
+    #[test]
+    fn test_k_moves_up() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Note 1".to_string()));
+        app.notes.push(Note::new("Note 2".to_string()));
+        app.notes.push(Note::new("Note 3".to_string()));
+        app.selected_note = 2;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('k')));
+
+        assert_eq!(app.selected_note, 1);
+    }
+
+    #[test]
+    fn test_down_arrow_moves_down() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Note 1".to_string()));
+        app.notes.push(Note::new("Note 2".to_string()));
+        app.selected_note = 0;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Down));
+
+        assert_eq!(app.selected_note, 1);
+    }
+
+    #[test]
+    fn test_up_arrow_moves_up() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Note 1".to_string()));
+        app.notes.push(Note::new("Note 2".to_string()));
+        app.selected_note = 1;
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Up));
+
+        assert_eq!(app.selected_note, 0);
+    }
+
+    // ==================== Search Mode Entry Tests ====================
+
+    #[test]
+    fn test_slash_enters_search_mode() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.view_mode = ViewMode::NoteList;
+        app.search_active = false;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('/')));
+
+        assert!(app.search_active);
+    }
+
+    #[test]
+    fn test_esc_exits_search_mode() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.search_active = true;
+        app.search_input = "test query".to_string();
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Esc));
+
+        assert!(!app.search_active);
+        assert!(app.search_input.is_empty());
+    }
+
+    // ==================== Help Screen Tests ====================
+
+    #[test]
+    fn test_question_mark_shows_help() {
+        let mut app = create_test_app();
+        app.notes.push(Note::new("Test content".to_string()));
+        app.view_mode = ViewMode::NoteList;
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('?')));
+
+        assert!(matches!(app.state, AppState::Help { .. }));
+    }
+}
