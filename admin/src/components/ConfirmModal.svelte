@@ -6,6 +6,7 @@
     cancelText?: string;
     onConfirm: () => void;
     onCancel: () => void;
+    danger?: boolean;
   }
 
   let {
@@ -15,13 +16,14 @@
     cancelText = 'Cancel',
     onConfirm,
     onCancel,
+    danger = false,
   }: Props = $props();
 </script>
 
 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
   <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
     <div class="p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      <h3 class="text-lg font-semibold mb-2" class:text-gray-900={!danger} class:text-red-600={danger}>{title}</h3>
       <p class="text-gray-600">{message}</p>
     </div>
 
@@ -34,7 +36,11 @@
       </button>
       <button
         onclick={onConfirm}
-        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        class="px-4 py-2 text-white rounded-md transition-colors"
+        class:bg-blue-600={!danger}
+        class:hover:bg-blue-700={!danger}
+        class:bg-red-600={danger}
+        class:hover:bg-red-700={danger}
       >
         {confirmText}
       </button>

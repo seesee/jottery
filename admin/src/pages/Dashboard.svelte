@@ -4,9 +4,6 @@
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
 
-  // Access the version from the global __APP_VERSION__ variable
-  declare const __APP_VERSION__: string;
-
   let stats = $state<StatsResponse | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
