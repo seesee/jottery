@@ -549,6 +549,8 @@
   "updateBanner": {
     "title": "NEW VERSION AVAILABLE",
     "message": "RELOAD TO GET THE LATEST FEATURES AND IMPROVEMENTS",
+    "backupButton": "BACK UP FIRST",
+    "backingUp": "BACKING UP...",
     "reloadButton": "RELOAD NOW",
     "dismissLabel": "DISMISS"
   },
