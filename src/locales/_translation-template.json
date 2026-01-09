@@ -554,6 +554,21 @@
     "reloadButton": "RELOAD NOW",
     "dismissLabel": "DISMISS"
   },
+  "conflict": {
+    "title": "SYNC CONFLICT DETECTED",
+    "description": "THIS NOTE WAS MODIFIED BOTH LOCALLY AND ON THE SERVER. CHOOSE HOW TO RESOLVE THE CONFLICT.",
+    "yourVersion": "YOUR VERSION",
+    "serverVersion": "SERVER VERSION",
+    "chooseAction": "CHOOSE HOW TO RESOLVE THIS CONFLICT:",
+    "keepMine": "KEEP MINE",
+    "keepServer": "KEEP SERVER",
+    "keepBoth": "KEEP BOTH",
+    "merge": "MERGE",
+    "resolved": "CONFLICT RESOLVED",
+    "resolvedBoth": "CONFLICT RESOLVED - DUPLICATE NOTE CREATED",
+    "noConflict": "NO CONFLICT DATA FOUND",
+    "indicator": "SYNC CONFLICT"
+  },
   "pullToRefresh": {
     "pull": "PULL DOWN TO SYNC",
     "release": "RELEASE TO SYNC",
