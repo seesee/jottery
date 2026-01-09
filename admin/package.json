@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo 'Admin dashboard: No tests configured yet' && exit 0",
+    "test": "vitest run",
     "check": "echo 'Admin dashboard: No type checking configured yet' && exit 0"
   },
   "dependencies": {
@@ -15,9 +15,12 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.4",
+    "@testing-library/svelte": "^5.3.1",
     "autoprefixer": "^10.4.20",
+    "happy-dom": "^20.1.0",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vitest": "^4.0.16"
   }
 }
