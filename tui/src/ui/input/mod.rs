@@ -1,5 +1,6 @@
 //! Input handling modules for the TUI application
 
+pub mod conflict;
 pub mod credentials;
 pub mod help;
 pub mod locked;

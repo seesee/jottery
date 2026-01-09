@@ -65,4 +65,5 @@ export type {
   SyncStatusResponse,
   AuthRegisterRequest,
   AuthRegisterResponse,
+  ConflictData,
 } from './sync';

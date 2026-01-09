@@ -24,6 +24,7 @@ export interface NoteSyncMetadata {
   serverVersion: number;          // Version on server
   lastSyncStatus: 'synced' | 'pending' | 'conflict' | 'error';
   errorMessage?: string;
+  conflictData?: ConflictData;    // Server version data when in conflict
 }
 
 // Current sync status for UI display
@@ -90,11 +91,33 @@ export interface SyncAccepted {
   syncedAt?: string; // Optional for backward compatibility
 }
 
-// Rejected note info (conflict)
+// Rejected note info (conflict) - includes full server note data for resolution
 export interface SyncRejected {
   id: string;
   reason: string;
   serverModifiedAt: string;
+  // Server note data for conflict resolution
+  serverContent: string;           // Encrypted content
+  serverTags: string[];            // Encrypted tags
+  serverVersion: number;
+  serverAttachments: AttachmentRef[];
+  serverPinned: boolean;
+  serverSyntaxLanguage?: string;
+  serverWordWrap?: boolean;
+}
+
+// Stored conflict data for resolution UI
+export interface ConflictData {
+  noteId: string;
+  serverContent: string;           // Encrypted content
+  serverTags: string[];            // Encrypted tags
+  serverModifiedAt: string;
+  serverVersion: number;
+  serverAttachments: AttachmentRef[];
+  serverPinned: boolean;
+  serverSyntaxLanguage?: string;
+  serverWordWrap?: boolean;
+  detectedAt: string;              // When conflict was detected (ISO 8601)
 }
 
 // Pull request payload

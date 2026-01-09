@@ -510,3 +510,279 @@ async fn test_user_isolation_in_sync() {
 
     pool.close().await;
 }
+
+#[tokio::test]
+async fn test_sync_push_conflict_returns_full_server_data() {
+    let (app, pool) = create_test_app().await;
+
+    let api_key = create_test_user_and_device(&pool).await;
+
+    // First push a note
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let old_time = "2024-01-01T10:00:00Z";
+
+    let push_request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Original content",
+                        "createdAt": old_time,
+                        "modifiedAt": old_time,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "tags": ["tag1"],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let push_response = ServiceExt::<Request<Body>>::ready(&mut app.clone())
+        .await
+        .unwrap()
+        .call(push_request)
+        .await
+        .unwrap();
+
+    assert_eq!(push_response.status(), StatusCode::OK);
+
+    // Simulate another client updating the note by modifying the database directly
+    let server_time = "2024-01-02T15:00:00Z";
+    sqlx::query!(
+        r#"UPDATE notes SET content = ?, modified_at = ?, pinned = ?, tags = ?, server_version = ?, syntax_language = ?, word_wrap = ?
+           WHERE id = ?"#,
+        "Server updated content",
+        server_time,
+        true,
+        "[\"server-tag1\", \"server-tag2\"]",
+        2i64,
+        "markdown",
+        true,
+        note_id
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to update note on server");
+
+    // Now try to push outdated client version - should be rejected
+    let client_time = "2024-01-01T12:00:00Z"; // Earlier than server's modified_at
+    let conflict_request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Client outdated content",
+                        "createdAt": old_time,
+                        "modifiedAt": client_time,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "tags": ["client-tag"],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": false,
+                        "syntaxLanguage": "plain"
+                    }
+                ],
+                "attachments": [],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let conflict_response = app.oneshot(conflict_request).await.unwrap();
+
+    assert_eq!(conflict_response.status(), StatusCode::OK);
+
+    let body = parse_json_response(conflict_response.into_body()).await;
+
+    // Verify rejection occurred
+    assert_eq!(body["accepted"].as_array().unwrap().len(), 0);
+    assert_eq!(body["rejected"].as_array().unwrap().len(), 1);
+
+    // Verify rejected entry includes full server data for conflict resolution
+    let rejected = &body["rejected"][0];
+    assert_eq!(rejected["id"], note_id);
+    assert!(rejected["reason"].as_str().unwrap().contains("newer"));
+
+    // Verify server note data is included
+    assert_eq!(rejected["serverContent"], "Server updated content");
+    assert_eq!(rejected["serverModifiedAt"], server_time);
+    assert_eq!(rejected["serverVersion"], 2);
+    assert_eq!(rejected["serverPinned"], true);
+    assert_eq!(rejected["serverSyntaxLanguage"], "markdown");
+    assert_eq!(rejected["serverWordWrap"], true);
+
+    // Verify server tags are included
+    let server_tags = rejected["serverTags"].as_array().unwrap();
+    assert_eq!(server_tags.len(), 2);
+    assert!(server_tags.iter().any(|t| t == "server-tag1"));
+    assert!(server_tags.iter().any(|t| t == "server-tag2"));
+
+    // Verify server attachments array is present (empty in this case)
+    assert!(rejected["serverAttachments"].is_array());
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_sync_push_conflict_with_attachments() {
+    let (app, pool) = create_test_app().await;
+
+    let api_key = create_test_user_and_device(&pool).await;
+
+    // First push a note
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let attachment_id = uuid::Uuid::new_v4().to_string();
+    let old_time = "2024-01-01T10:00:00Z";
+
+    let push_request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Original content",
+                        "createdAt": old_time,
+                        "modifiedAt": old_time,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "tags": [],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let _push_response = ServiceExt::<Request<Body>>::ready(&mut app.clone())
+        .await
+        .unwrap()
+        .call(push_request)
+        .await
+        .unwrap();
+
+    // Get user_id from the note we just pushed
+    let note_row = sqlx::query!(
+        r#"SELECT user_id FROM notes WHERE id = ?"#,
+        note_id
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("Note should exist");
+    let user_id = note_row.user_id;
+
+    // Simulate another client updating the note with an attachment
+    let server_time = "2024-01-02T15:00:00Z";
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // Update note content and modified_at
+    sqlx::query!(
+        r#"UPDATE notes SET content = ?, modified_at = ?, version = ?
+           WHERE id = ? AND user_id = ?"#,
+        "Server content with attachment",
+        server_time,
+        2i64,
+        note_id,
+        user_id
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to update note on server");
+
+    // Insert attachment into attachments_meta table (separate from notes table)
+    sqlx::query!(
+        r#"INSERT INTO attachments_meta (id, note_id, note_user_id, filename, mime_type, size, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)"#,
+        attachment_id,
+        note_id,
+        user_id,
+        "server-file.pdf",
+        "application/pdf",
+        1024i64,
+        now
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to insert attachment metadata");
+
+    // Try to push outdated client version
+    let client_time = "2024-01-01T12:00:00Z";
+    let conflict_request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Client content",
+                        "createdAt": old_time,
+                        "modifiedAt": client_time,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "tags": [],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let conflict_response = app.oneshot(conflict_request).await.unwrap();
+
+    assert_eq!(conflict_response.status(), StatusCode::OK);
+
+    let body = parse_json_response(conflict_response.into_body()).await;
+
+    // Verify rejection with attachment data
+    let rejected = &body["rejected"][0];
+    let server_attachments = rejected["serverAttachments"].as_array().unwrap();
+    assert_eq!(server_attachments.len(), 1);
+    assert_eq!(server_attachments[0]["id"], attachment_id);
+    assert_eq!(server_attachments[0]["filename"], "server-file.pdf");
+    assert_eq!(server_attachments[0]["mimeType"], "application/pdf");
+    assert_eq!(server_attachments[0]["size"], 1024);
+
+    pool.close().await;
+}

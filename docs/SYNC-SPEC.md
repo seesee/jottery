@@ -375,7 +375,22 @@ Content-Type: application/json
     {
       "id": "another-note-uuid",
       "reason": "Server version is newer",
-      "serverModifiedAt": "2025-03-12T10:35:00Z"
+      "serverModifiedAt": "2025-03-12T10:35:00Z",
+      "serverContent": "{encrypted content}",
+      "serverTags": ["{encrypted tag 1}", "{encrypted tag 2}"],
+      "serverVersion": 3,
+      "serverAttachments": [
+        {
+          "id": "attachment-uuid",
+          "filename": "{encrypted filename}",
+          "mimeType": "image/png",
+          "size": 12345,
+          "data": "attachment-uuid"
+        }
+      ],
+      "serverPinned": false,
+      "serverSyntaxLanguage": "markdown",
+      "serverWordWrap": true
     }
   ],
   "errors": []
@@ -402,12 +417,25 @@ Jottery uses **Last-Write-Wins** (LWW) conflict resolution:
 
 ### Handling Rejected Pushes
 
-When a push is rejected:
+When a push is rejected, the server includes the complete server note data in the rejection response. This enables clients to show a diff/comparison view for manual conflict resolution without requiring a separate pull.
 
-1. Pull the server version of the conflicting note
-2. Optionally create a local version snapshot for recovery
-3. Merge changes (automatic or manual, per client implementation)
-4. Push the merged result with updated `modifiedAt`
+**Resolution options:**
+
+| Option | Description |
+|--------|-------------|
+| Keep Mine | Discard server version, push local with updated `modifiedAt` |
+| Keep Server | Replace local with server version, clear conflict |
+| Merge | Open editor with both versions, save merged result |
+| Keep Both | Create duplicate note from server version with new ID |
+
+**Client implementation:**
+
+1. Store server version data from rejection response
+2. Mark note with `lastSyncStatus: 'conflict'`
+3. Show conflict indicator in UI
+4. Present diff/comparison modal with resolution options
+5. Apply chosen resolution and clear conflict status
+6. Push resolved version on next sync
 
 ## Version History
 

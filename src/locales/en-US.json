@@ -564,6 +564,21 @@
     "reloadButton": "Reload now",
     "dismissLabel": "Dismiss"
   },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
   "pullToRefresh": {
     "pull": "Pull down to sync",
     "release": "Release to sync",

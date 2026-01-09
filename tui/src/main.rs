@@ -412,6 +412,7 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
                 server_version: accepted.server_version,
                 last_sync_status: SyncStatus::Synced,
                 error_message: None,
+                conflict_data: None,
             };
             sync_repo.update_note_metadata(&note_metadata)?;
         }

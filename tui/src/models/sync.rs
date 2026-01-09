@@ -43,6 +43,7 @@ pub struct NoteSyncMetadata {
     pub server_version: i32,
     pub last_sync_status: SyncStatus,
     pub error_message: Option<String>,
+    pub conflict_data: Option<ConflictData>, // Server version data when in conflict
 }
 
 /// Sync status for a note
@@ -142,13 +143,37 @@ pub struct SyncAccepted {
     pub synced_at: DateTime<Utc>,
 }
 
-/// Rejected note info (conflict)
+/// Rejected note info (conflict) - includes full server note data for resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncRejected {
     pub id: String,
     pub reason: String,
     pub server_modified_at: DateTime<Utc>,
+    // Server note data for conflict resolution
+    pub server_content: String,           // Encrypted content
+    pub server_tags: Vec<String>,         // Encrypted tags
+    pub server_version: i32,
+    pub server_attachments: Vec<AttachmentRef>,
+    pub server_pinned: bool,
+    pub server_syntax_language: Option<String>,
+    pub server_word_wrap: Option<bool>,
+}
+
+/// Stored conflict data for resolution UI
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictData {
+    pub note_id: String,
+    pub server_content: String,           // Encrypted content
+    pub server_tags: Vec<String>,         // Encrypted tags
+    pub server_modified_at: DateTime<Utc>,
+    pub server_version: i32,
+    pub server_attachments: Vec<AttachmentRef>,
+    pub server_pinned: bool,
+    pub server_syntax_language: Option<String>,
+    pub server_word_wrap: Option<bool>,
+    pub detected_at: DateTime<Utc>,       // When conflict was detected
 }
 
 /// Pull request payload

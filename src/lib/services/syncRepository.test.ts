@@ -601,6 +601,142 @@ describe('syncRepository', () => {
     });
   });
 
+  describe('Conflict Data', () => {
+    const createTestConflictData = (noteId: string) => ({
+      noteId,
+      serverContent: 'encrypted-server-content',
+      serverTags: ['tag1', 'tag2'],
+      serverModifiedAt: new Date().toISOString(),
+      serverVersion: 2,
+      serverAttachments: [],
+      serverPinned: true,
+      serverSyntaxLanguage: 'markdown',
+      serverWordWrap: false,
+      detectedAt: new Date().toISOString(),
+    });
+
+    describe('storing conflict data', () => {
+      it('should store conflict data with note sync metadata', async () => {
+        const conflictData = createTestConflictData('note-1');
+
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'conflict',
+          conflictData,
+        });
+
+        const metadata = await syncRepository.getNoteSyncMetadata('note-1');
+        expect(metadata?.conflictData).toBeDefined();
+        expect(metadata?.conflictData?.serverContent).toBe('encrypted-server-content');
+        expect(metadata?.conflictData?.serverVersion).toBe(2);
+        expect(metadata?.conflictData?.serverPinned).toBe(true);
+      });
+
+      it('should preserve all conflict data fields', async () => {
+        const conflictData = createTestConflictData('note-1');
+
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'conflict',
+          conflictData,
+        });
+
+        const metadata = await syncRepository.getNoteSyncMetadata('note-1');
+        expect(metadata?.conflictData?.noteId).toBe(conflictData.noteId);
+        expect(metadata?.conflictData?.serverContent).toBe(conflictData.serverContent);
+        expect(metadata?.conflictData?.serverTags).toEqual(conflictData.serverTags);
+        expect(metadata?.conflictData?.serverModifiedAt).toBe(conflictData.serverModifiedAt);
+        expect(metadata?.conflictData?.serverVersion).toBe(conflictData.serverVersion);
+        expect(metadata?.conflictData?.serverAttachments).toEqual(conflictData.serverAttachments);
+        expect(metadata?.conflictData?.serverPinned).toBe(conflictData.serverPinned);
+        expect(metadata?.conflictData?.serverSyntaxLanguage).toBe(conflictData.serverSyntaxLanguage);
+        expect(metadata?.conflictData?.serverWordWrap).toBe(conflictData.serverWordWrap);
+        expect(metadata?.conflictData?.detectedAt).toBe(conflictData.detectedAt);
+      });
+
+      it('should handle conflict data with attachments', async () => {
+        const conflictData = createTestConflictData('note-1');
+        conflictData.serverAttachments = [
+          { id: 'att-1', filename: 'file.txt', mimeType: 'text/plain', size: 100, data: 'ref-1' },
+        ];
+
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'conflict',
+          conflictData,
+        });
+
+        const metadata = await syncRepository.getNoteSyncMetadata('note-1');
+        expect(metadata?.conflictData?.serverAttachments).toHaveLength(1);
+        expect(metadata?.conflictData?.serverAttachments?.[0].id).toBe('att-1');
+      });
+    });
+
+    describe('clearing conflict data', () => {
+      it('should clear conflict data when set to undefined', async () => {
+        const conflictData = createTestConflictData('note-1');
+
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'conflict',
+          conflictData,
+        });
+
+        // Verify conflict exists
+        let metadata = await syncRepository.getNoteSyncMetadata('note-1');
+        expect(metadata?.conflictData).toBeDefined();
+
+        // Clear conflict
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'synced',
+          conflictData: undefined,
+        });
+
+        metadata = await syncRepository.getNoteSyncMetadata('note-1');
+        expect(metadata?.conflictData).toBeUndefined();
+      });
+
+      it('should clear conflict data when status changes to synced', async () => {
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'conflict',
+          conflictData: createTestConflictData('note-1'),
+        });
+
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'synced',
+          conflictData: undefined,
+        });
+
+        const metadata = await syncRepository.getNoteSyncMetadata('note-1');
+        expect(metadata?.lastSyncStatus).toBe('synced');
+        expect(metadata?.conflictData).toBeUndefined();
+      });
+    });
+
+    describe('getConflictNotes', () => {
+      it('should return notes with conflict status and data', async () => {
+        // Create note with conflict
+        await syncRepository.updateNoteSyncMetadata('note-1', {
+          noteId: 'note-1',
+          lastSyncStatus: 'conflict',
+          conflictData: createTestConflictData('note-1'),
+        });
+
+        // Create note without conflict
+        await syncRepository.updateNoteSyncMetadata('note-2', {
+          noteId: 'note-2',
+          lastSyncStatus: 'synced',
+        });
+
+        const count = await syncRepository.getConflictCount();
+        expect(count).toBe(1);
+      });
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle very long endpoint URLs', async () => {
       const longUrl = 'https://' + 'a'.repeat(1000) + '.example.com';
