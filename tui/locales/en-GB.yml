@@ -158,6 +158,8 @@ sync:
   paste_success: "Sync credentials configured successfully!"
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: "Salt synchronised! Please re-enter your password to unlock with the new encryption salt."
+  encrypted_import: "Encrypted credentials imported. Please enter your password to decrypt and complete setup."
+  legacy_format_warning: "Warning: Using legacy unencrypted format. API key is exposed in plain text."
 
 # Conflict resolution
 conflict:
@@ -322,7 +324,9 @@ help:
   p_paste_key: "p"
   p_paste_desc: "Paste sync credentials (shows text input)"
   c_copy_key: "c"
-  c_copy_desc: "Copy sync credentials (shows text to copy)"
+  c_copy_desc: "Copy sync credentials (encrypted format)"
+  shift_c_copy_key: "C"
+  shift_c_copy_desc: "Copy sync credentials (legacy unencrypted format)"
   s_q_close_key: "s / q"
   s_q_close_desc: "Close settings panel"
   tab_focus_attachment_key: "Tab"

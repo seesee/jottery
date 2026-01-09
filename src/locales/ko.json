@@ -168,7 +168,12 @@
       "instructions": "아래 텍스트를 복사하여 다른 Jottery 클라이언트에 \"기존 자격 증명 사용\"으로 붙여넣으세요:",
       "samePasswordWarning": "⚠️ <strong>중요:</strong> 모든 기기에서 동일한 비밀번호를 사용해야 노트를 해독할 수 있습니다!",
       "clipboardNote": "클립보드 복사가 실패할 수 있습니다 (특히 SSH를 통하거나 일부 브라우저에서). 위의 텍스트를 수동으로 선택하여 복사할 수 있습니다.",
-      "closeButton": "닫기"
+      "closeButton": "닫기",
+      "advancedOptions": "고급 옵션",
+      "legacyFormat": {
+        "label": "레거시 형식 사용 (암호화되지 않음)",
+        "warning": "⚠️ 업데이트할 수 없는 이전 Jottery 버전과 공유할 때만 사용하세요. 레거시 형식은 API 키가 일반 텍스트로 노출됩니다."
+      }
     },
     "saveSettings": "설정 저장",
     "saving": "저장 중...",

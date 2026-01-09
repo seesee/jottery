@@ -70,6 +70,55 @@ pub fn unlock(app: &mut App) -> Result<()> {
 
                     app.debug_log("Unlock - API key encrypted and saved");
                 }
+                // Check if credentials are encrypted (prefixed with "ENCRYPTED:")
+                else if let Some(encrypted_payload) = api_key_str.strip_prefix("ENCRYPTED:") {
+                    app.debug_log("Unlock - Detected encrypted credentials, decrypting");
+
+                    use base64::Engine;
+
+                    // Decode and parse the encrypted data
+                    let encrypted_json = base64::engine::general_purpose::STANDARD
+                        .decode(encrypted_payload)
+                        .map_err(|e| anyhow::anyhow!("Invalid base64 in encrypted credentials: {}", e))?;
+                    let encrypted_json_str = String::from_utf8(encrypted_json)
+                        .map_err(|e| anyhow::anyhow!("Invalid UTF-8 in encrypted credentials: {}", e))?;
+                    let encrypted_data: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_json_str)
+                        .map_err(|e| anyhow::anyhow!("Invalid JSON in encrypted credentials: {}", e))?;
+
+                    // Decrypt the credentials JSON
+                    let creds_json = app.crypto.decrypt_text(&encrypted_data, &key)
+                        .map_err(|_| anyhow::anyhow!("Failed to decrypt credentials. Please ensure you are using the same password as the source device."))?;
+
+                    // Parse the decrypted credentials
+                    let creds: serde_json::Value = serde_json::from_str(&creds_json)
+                        .map_err(|e| anyhow::anyhow!("Invalid decrypted credentials JSON: {}", e))?;
+
+                    let endpoint = creds["endpoint"].as_str()
+                        .ok_or_else(|| anyhow::anyhow!("Missing endpoint in decrypted credentials"))?;
+                    let client_id = creds["clientId"].as_str()
+                        .ok_or_else(|| anyhow::anyhow!("Missing clientId in decrypted credentials"))?;
+                    let api_key = creds["apiKey"].as_str()
+                        .ok_or_else(|| anyhow::anyhow!("Missing apiKey in decrypted credentials"))?;
+
+                    app.debug_log("Unlock - Credentials decrypted successfully");
+
+                    // Re-encrypt the API key for storage
+                    let encrypted = app.crypto.encrypt_text(api_key, &key)?;
+                    let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+                    // Update metadata with decrypted values
+                    metadata.client_id = Some(client_id.to_string());
+                    metadata.sync_endpoint = endpoint.to_string();
+                    metadata.api_key = Some(encrypted_api_key);
+                    metadata.sync_enabled = true;
+                    sync_repo.update_metadata(&metadata)?;
+
+                    // Update app settings
+                    app.settings.sync_endpoint = Some(endpoint.to_string());
+                    app.settings.sync_enabled = true;
+
+                    app.debug_log("Unlock - Encrypted credentials processed, sync enabled");
+                }
             }
         }
     }

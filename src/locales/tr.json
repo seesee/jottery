@@ -168,7 +168,12 @@
       "instructions": "Aşağıdaki metni kopyalayın ve \"Mevcut Kimlik Bilgilerini Kullan\" seçeneğini kullanarak başka bir Jottery istemcisine yapıştırın:",
       "samePasswordWarning": "⚠️ <strong>Önemli:</strong> Notların şifresini çözmek için tüm cihazlar AYNI şifreyi kullanmalıdır!",
       "clipboardNote": "Panoya kopyalama başarısız olmuş olabilir (özellikle SSH üzerinden veya bazı tarayıcılarda). Yukarıdaki metni manuel olarak seçip kopyalayabilirsiniz.",
-      "closeButton": "Kapat"
+      "closeButton": "Kapat",
+      "advancedOptions": "Gelişmiş seçenekler",
+      "legacyFormat": {
+        "label": "Eski format kullan (şifresiz)",
+        "warning": "⚠️ Yalnızca güncellenemeyen eski Jottery sürümleriyle paylaşıyorsanız kullanın. Eski format API anahtarınızı düz metin olarak gösterir."
+      }
     },
     "saveSettings": "Ayarları Kaydet",
     "saving": "Kaydediliyor...",

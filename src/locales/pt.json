@@ -168,7 +168,12 @@
       "instructions": "Copie o texto abaixo e cole em outro cliente Jottery usando \"Usar credenciais existentes\":",
       "samePasswordWarning": "⚠️ <strong>Importante:</strong> Todos os dispositivos devem usar a MESMA senha para descriptografar as notas!",
       "clipboardNote": "A cópia para a área de transferência pode ter falhado (especialmente via SSH ou em alguns navegadores). Você pode selecionar e copiar manualmente o texto acima.",
-      "closeButton": "Fechar"
+      "closeButton": "Fechar",
+      "advancedOptions": "Opções avançadas",
+      "legacyFormat": {
+        "label": "Usar formato legado (não criptografado)",
+        "warning": "⚠️ Use apenas se estiver compartilhando com versões antigas do Jottery que não podem ser atualizadas. O formato legado expõe sua chave API em texto simples."
+      }
     },
     "saveSettings": "Salvar configurações",
     "saving": "Salvando...",

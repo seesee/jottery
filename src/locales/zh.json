@@ -168,7 +168,12 @@
       "instructions": "复制下面的文本并将其粘贴到另一个 Jottery 客户端,使用\"使用现有凭据\":",
       "samePasswordWarning": "⚠️ <strong>重要:</strong> 所有设备必须使用相同的密码才能解密笔记!",
       "clipboardNote": "剪贴板复制可能失败(尤其是通过 SSH 或在某些浏览器中)。您可以手动选择并复制上面的文本。",
-      "closeButton": "关闭"
+      "closeButton": "关闭",
+      "advancedOptions": "高级选项",
+      "legacyFormat": {
+        "label": "使用旧版格式(未加密)",
+        "warning": "⚠️ 仅在与无法更新的旧版 Jottery 共享时使用。旧版格式会以明文形式公开您的 API 密钥。"
+      }
     },
     "saveSettings": "保存设置",
     "saving": "保存中...",
