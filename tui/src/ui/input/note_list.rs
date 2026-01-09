@@ -219,6 +219,23 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
+            // Preview scrolling controls (must come before generic Char(c) pattern)
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Ctrl-d: scroll preview down half page (10 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(10);
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Ctrl-u: scroll preview up half page (10 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(10);
+            }
+            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Ctrl-f: scroll preview down full page (20 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(20);
+            }
+            KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Ctrl-b: scroll preview up full page (20 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
+            }
             KeyCode::Char(c) => {
                 app.search_input.push(c);
                 app.selected_note = 0; // Reset selection when search changes
@@ -259,6 +276,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.selected_attachment = 0;
                     }
                 }
+            }
+            KeyCode::PageDown => {
+                // Page Down: scroll preview down full page (20 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(20);
+            }
+            KeyCode::PageUp => {
+                // Page Up: scroll preview up full page (20 lines)
+                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
             }
             _ => {}
         }
