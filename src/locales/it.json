@@ -168,7 +168,12 @@
       "instructions": "Copia il testo sottostante e incollalo in un altro client Jottery utilizzando \"Usa credenziali esistenti\":",
       "samePasswordWarning": "⚠️ <strong>Importante:</strong> Tutti i dispositivi devono usare la STESSA password per decifrare le note!",
       "clipboardNote": "La copia negli appunti potrebbe essere fallita (specialmente tramite SSH o in alcuni browser). Puoi selezionare e copiare manualmente il testo sopra.",
-      "closeButton": "Chiudi"
+      "closeButton": "Chiudi",
+      "advancedOptions": "Opzioni avanzate",
+      "legacyFormat": {
+        "label": "Usa formato legacy (non crittografato)",
+        "warning": "⚠️ Da usare solo se si condivide con versioni precedenti di Jottery che non possono essere aggiornate. Il formato legacy espone la chiave API in testo normale."
+      }
     },
     "saveSettings": "Salva impostazioni",
     "saving": "Salvataggio...",

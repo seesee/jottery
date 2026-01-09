@@ -168,7 +168,12 @@
       "instructions": "Skopiuj poniższy tekst i wklej do innego klienta Jottery, używając \"Użyj istniejących danych uwierzytelniających\":",
       "samePasswordWarning": "⚠️ <strong>Ważne:</strong> Wszystkie urządzenia muszą używać tego samego hasła, aby odszyfrować notatki!",
       "clipboardNote": "Kopiowanie do schowka mogło się nie powieść (szczególnie przez SSH lub w niektórych przeglądarkach). Możesz ręcznie zaznaczyć i skopiować powyższy tekst.",
-      "closeButton": "Zamknij"
+      "closeButton": "Zamknij",
+      "advancedOptions": "Opcje zaawansowane",
+      "legacyFormat": {
+        "label": "Użyj starszego formatu (nieszyfrowany)",
+        "warning": "⚠️ Używaj tylko podczas udostępniania starszym wersjom Jottery, które nie mogą zostać zaktualizowane. Starszy format ujawnia klucz API w postaci zwykłego tekstu."
+      }
     },
     "saveSettings": "Zapisz ustawienia",
     "saving": "Zapisywanie...",

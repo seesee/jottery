@@ -171,7 +171,12 @@
       "instructions": "Copy the text below and paste it into another Jottery client using \"Use Existing Credentials\":",
       "samePasswordWarning": "⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!",
       "clipboardNote": "The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.",
-      "closeButton": "Close"
+      "closeButton": "Close",
+      "advancedOptions": "Advanced options",
+      "legacyFormat": {
+        "label": "Use legacy (unencrypted) format",
+        "warning": "⚠️ Only use if sharing with older Jottery versions that cannot be updated. Legacy format exposes your API key in plain text."
+      }
     },
     "saveSettings": "Save Settings",
     "saving": "Saving...",

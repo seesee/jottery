@@ -168,7 +168,12 @@
       "instructions": "Kopieer de onderstaande tekst en plak deze in een andere Jottery-client met \"Bestaande inloggegevens gebruiken\":",
       "samePasswordWarning": "⚠️ <strong>Belangrijk:</strong> Alle apparaten moeten hetzelfde wachtwoord gebruiken om notities te ontsleutelen!",
       "clipboardNote": "Het kopiëren naar het klembord kan zijn mislukt (vooral via SSH of in sommige browsers). U kunt de bovenstaande tekst handmatig selecteren en kopiëren.",
-      "closeButton": "Sluiten"
+      "closeButton": "Sluiten",
+      "advancedOptions": "Geavanceerde opties",
+      "legacyFormat": {
+        "label": "Legacy-formaat gebruiken (onversleuteld)",
+        "warning": "⚠️ Gebruik alleen als u deelt met oudere Jottery-versies die niet kunnen worden bijgewerkt. Het legacy-formaat toont uw API-sleutel in platte tekst."
+      }
     },
     "saveSettings": "Instellingen opslaan",
     "saving": "Opslaan...",

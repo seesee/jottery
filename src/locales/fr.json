@@ -168,7 +168,12 @@
       "instructions": "Copiez le texte ci-dessous et collez-le dans un autre client Jottery en utilisant \"Utiliser les identifiants existants\" :",
       "samePasswordWarning": "⚠️ <strong>Important :</strong> Tous les appareils doivent utiliser le MÊME mot de passe pour déchiffrer les notes !",
       "clipboardNote": "La copie dans le presse-papiers a peut-être échoué (surtout via SSH ou dans certains navigateurs). Vous pouvez sélectionner et copier manuellement le texte ci-dessus.",
-      "closeButton": "Fermer"
+      "closeButton": "Fermer",
+      "advancedOptions": "Options avancées",
+      "legacyFormat": {
+        "label": "Utiliser le format hérité (non chiffré)",
+        "warning": "⚠️ À utiliser uniquement pour partager avec des versions anciennes de Jottery qui ne peuvent pas être mises à jour. Le format hérité expose votre clé API en texte clair."
+      }
     },
     "saveSettings": "Enregistrer les paramètres",
     "saving": "Enregistrement...",

@@ -168,7 +168,12 @@
       "instructions": "Kopieren Sie den folgenden Text und fügen Sie ihn in einen anderen Jottery-Client ein, indem Sie \"Vorhandene Anmeldedaten verwenden\" wählen:",
       "samePasswordWarning": "⚠️ <strong>Wichtig:</strong> Alle Geräte müssen dasselbe Passwort verwenden, um die Notizen zu entschlüsseln!",
       "clipboardNote": "Das Kopieren in die Zwischenablage ist möglicherweise fehlgeschlagen (insbesondere über SSH oder in einigen Browsern). Sie können den obigen Text manuell auswählen und kopieren.",
-      "closeButton": "Schließen"
+      "closeButton": "Schließen",
+      "advancedOptions": "Erweiterte Optionen",
+      "legacyFormat": {
+        "label": "Legacy-Format (unverschlüsselt) verwenden",
+        "warning": "⚠️ Nur verwenden, wenn Sie mit älteren Jottery-Versionen teilen, die nicht aktualisiert werden können. Das Legacy-Format zeigt Ihren API-Schlüssel im Klartext an."
+      }
     },
     "saveSettings": "Einstellungen speichern",
     "saving": "Wird gespeichert...",

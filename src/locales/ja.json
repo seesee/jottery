@@ -168,7 +168,12 @@
       "instructions": "以下のテキストをコピーして、別のJotteryクライアントで「既存の認証情報を使用」に貼り付けてください:",
       "samePasswordWarning": "⚠️ <strong>重要:</strong> すべてのデバイスでノートを復号化するために、同じパスワードを使用する必要があります!",
       "clipboardNote": "クリップボードへのコピーが失敗した可能性があります(特にSSH経由や一部のブラウザで)。上記のテキストを手動で選択してコピーできます。",
-      "closeButton": "閉じる"
+      "closeButton": "閉じる",
+      "advancedOptions": "詳細オプション",
+      "legacyFormat": {
+        "label": "レガシー形式を使用(暗号化なし)",
+        "warning": "⚠️ アップデートできない古いJotteryバージョンと共有する場合のみ使用してください。レガシー形式はAPIキーが平文で公開されます。"
+      }
     },
     "saveSettings": "設定を保存",
     "saving": "保存中...",
