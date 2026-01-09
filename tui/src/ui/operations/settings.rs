@@ -551,3 +551,31 @@ pub fn process_credentials_input(app: &mut App, input: &str) -> Result<()> {
 
     Ok(())
 }
+
+/// Disconnect from sync server
+/// Clears all sync credentials and metadata, but preserves local notes
+pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
+    app.debug_log("Disconnect - Starting disconnect from sync server");
+
+    // Get database
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    // Clear sync metadata (credentials, client ID, etc.)
+    let sync_repo = SyncRepository::new(db.connection());
+    sync_repo.clear_all()?;
+
+    app.debug_log("Disconnect - Sync metadata cleared");
+
+    // Update settings to disable sync
+    app.settings.sync_enabled = false;
+    app.settings.sync_endpoint = None;
+    save_settings(app)?;
+
+    app.debug_log("Disconnect - Settings updated");
+
+    // Show success message
+    app.sync_status = Some(t!("sync.disconnected").to_string());
+    app.sync_status_set_at = Some(Instant::now());
+
+    Ok(())
+}

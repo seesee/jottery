@@ -112,6 +112,14 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     // Trigger manual sync
                     operations::sync::trigger_sync(app);
                 }
+                KeyCode::Char('d') => {
+                    // Disconnect from sync server (only if sync is configured)
+                    if app.settings.sync_enabled || app.settings.sync_endpoint.is_some() {
+                        if let Err(e) = operations::settings::disconnect_from_sync(app) {
+                            app.error = Some(format!("{}: {}", t!("sync.disconnect_failed"), e));
+                        }
+                    }
+                }
                 _ => {}
             }
         }

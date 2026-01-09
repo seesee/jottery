@@ -125,9 +125,11 @@ settings:
   instructions_force_sync: "Press 'Y' (Shift+y) to force full sync (pull from server)"
   instructions_paste: "Press 'p' to paste sync credentials from another device"
   instructions_copy: "Press 'c' to copy sync credentials to share with another device"
+  instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
   press_enter_cycle: "press Enter to cycle"
   press_enter_toggle: "press Enter to toggle"
   disabled: "disabled"
+  user_portal: "User Portal"
 
 # Sync operations
 sync:
@@ -160,6 +162,8 @@ sync:
   salt_sync: "Salt synchronised! Please re-enter your password to unlock with the new encryption salt."
   encrypted_import: "Encrypted credentials imported. Please enter your password to decrypt and complete setup."
   legacy_format_warning: "Warning: Using legacy unencrypted format. API key is exposed in plain text."
+  disconnected: "Disconnected from sync server. Local notes preserved."
+  disconnect_failed: "Failed to disconnect from sync server"
 
 # Conflict resolution
 conflict:

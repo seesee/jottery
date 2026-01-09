@@ -106,10 +106,20 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         ]),
         Line::from(format!("  • {}", t!("settings.instructions_paste"))),
         Line::from(format!("  • {}", t!("settings.instructions_copy"))),
+        Line::from(format!("  • {}", t!("settings.instructions_disconnect"))),
     ];
 
     // Add status and error messages if present
     let mut all_lines = settings_text;
+
+    // Show user portal link if sync endpoint is configured
+    if let Some(endpoint) = &app.settings.sync_endpoint {
+        all_lines.push(Line::from(""));
+        all_lines.push(Line::from(vec![
+            Span::styled(format!("{}: ", t!("settings.user_portal")), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
+            Span::styled(format!("{}/user", endpoint), Style::default().fg(app.color_scheme.accent)),
+        ]));
+    }
     if let Some(status) = &app.sync_status {
         all_lines.push(Line::from(""));
         all_lines.push(Line::from(vec![

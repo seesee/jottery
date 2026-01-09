@@ -639,6 +639,28 @@ class SyncService {
   }
 
   /**
+   * Disconnect from sync server
+   * Clears all sync credentials and metadata, but preserves local notes
+   */
+  async disconnect(): Promise<void> {
+    console.log('[SyncService] Disconnecting from sync server...');
+
+    // Disable auto-sync first
+    this.disableAutoSync();
+
+    // Clear all sync metadata (credentials, client ID, etc.)
+    await syncRepository.clearAll();
+
+    // Update settings to disable sync
+    await settingsRepository.update({
+      syncEnabled: false,
+      syncEndpoint: undefined,
+    });
+
+    console.log('[SyncService] Disconnected from sync server');
+  }
+
+  /**
    * Collect all versions for notes being pushed
    */
   private async collectVersionsForPush(notes: Note[]): Promise<SyncNoteVersion[]> {

@@ -31,10 +31,16 @@
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
   export let onShowDeleteServerNotesConfirm: () => void;
+  export let onShowDisconnectConfirm: () => void;
+  export let syncEndpoint: string = '';
 
   // Local state for legacy format toggle
   let showLegacyOption = false;
   let useLegacyFormat = false;
+  let showDangerZone = false;
+
+  // Derive user portal URL from sync endpoint
+  $: userPortalUrl = syncEndpoint ? `${syncEndpoint}/user` : '';
 </script>
 
 <!-- Sync Enabled - Show Status & Copy Credentials -->
@@ -133,4 +139,61 @@
               </div>
             {/if}
 
-<!-- Disconnect Sync Server -->
+<!-- User Portal Link -->
+{#if userPortalUrl}
+  <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+    <div class="flex items-center justify-between">
+      <div>
+        <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+          {$_('settings.syncTab.userPortal.title')}
+        </h4>
+        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+          {$_('settings.syncTab.userPortal.description')}
+        </p>
+      </div>
+      <a
+        href={userPortalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+      >
+        {$_('settings.syncTab.userPortal.openButton')} →
+      </a>
+    </div>
+  </div>
+{/if}
+
+<!-- Danger Zone -->
+<div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+  <button
+    type="button"
+    on:click={() => showDangerZone = !showDangerZone}
+    class="w-full flex items-center justify-between p-3 text-left"
+  >
+    <span class="text-sm font-medium text-gray-900 dark:text-white">
+      {$_('settings.syncTab.dangerZone.title')}
+    </span>
+    <span class="text-gray-500 dark:text-gray-400">
+      {showDangerZone ? '▼' : '▶'}
+    </span>
+  </button>
+
+  {#if showDangerZone}
+    <div class="border-t border-gray-200 dark:border-gray-700 p-3 space-y-3">
+      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+        <h4 class="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+          {$_('settings.syncTab.dangerZone.disconnectTitle')}
+        </h4>
+        <p class="text-xs text-red-800 dark:text-red-200 mb-3">
+          {$_('settings.syncTab.dangerZone.disconnectDescription')}
+        </p>
+        <button
+          on:click={onShowDisconnectConfirm}
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors"
+        >
+          {$_('settings.syncTab.dangerZone.disconnectButton')}
+        </button>
+      </div>
+    </div>
+  {/if}
+</div>
