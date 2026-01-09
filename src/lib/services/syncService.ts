@@ -23,6 +23,7 @@ import { versionRepository } from './versionRepository';
 import { cryptoService } from './crypto';
 import { storageToSync, syncToStorage } from './tagConversionService';
 import { noteService } from './noteService';
+import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
 import { notes, settings } from '../stores/appStore';
@@ -370,13 +371,18 @@ class SyncService {
       // and on note navigation, not during sync
     }
 
-    // Handle rejected notes (conflicts)
+    // Handle rejected notes (conflicts) - store server data for resolution
     for (const rejected of result.rejected) {
       console.warn(`[SyncService] Note ${rejected.id} rejected: ${rejected.reason}`);
-      await syncRepository.updateNoteSyncMetadata(rejected.id, {
-        noteId: rejected.id,
-        lastSyncStatus: 'conflict',
-        errorMessage: rejected.reason,
+      await storeConflict(rejected.id, {
+        serverContent: rejected.serverContent,
+        serverTags: rejected.serverTags,
+        serverModifiedAt: rejected.serverModifiedAt,
+        serverVersion: rejected.serverVersion,
+        serverAttachments: rejected.serverAttachments,
+        serverPinned: rejected.serverPinned,
+        serverSyntaxLanguage: rejected.serverSyntaxLanguage,
+        serverWordWrap: rejected.serverWordWrap,
       });
     }
 
