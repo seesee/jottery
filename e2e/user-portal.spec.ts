@@ -124,9 +124,9 @@ async function setupApiMocks(page: Page, options: {
   });
 }
 
-// Use admin dev server port for user portal tests
+// Use default Vite dev server port for user portal tests
 // Can be overridden with ADMIN_BASE_URL env var
-test.use({ baseURL: process.env.ADMIN_BASE_URL || 'http://localhost:5174' });
+test.use({ baseURL: process.env.ADMIN_BASE_URL || 'http://localhost:5173' });
 
 test.describe('User Portal', () => {
   test.beforeEach(async ({ page }) => {
