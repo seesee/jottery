@@ -1,4 +1,4 @@
-import { defineConfig, Plugin } from 'vite';
+import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { readFileSync } from 'fs';
 
@@ -6,28 +6,14 @@ import { readFileSync } from 'fs';
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const version = packageJson.version;
 
-// Plugin to serve the SPA at /user path in dev mode (for E2E tests)
-function serveUserPortal(): Plugin {
-  return {
-    name: 'serve-user-portal',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        // Rewrite /user requests to /admin/ so the SPA is served
-        if (req.url?.startsWith('/user')) {
-          req.url = req.url.replace('/user', '/admin');
-        }
-        next();
-      });
-    },
-  };
-}
-
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     '__APP_VERSION__': JSON.stringify(version),
   },
-  plugins: [svelte(), serveUserPortal()],
-  base: '/admin/',
+  plugins: [svelte()],
+  // Only use /admin/ base in production build - in dev mode serve from root
+  // This allows E2E tests to access both /admin and /user paths
+  base: command === 'build' ? '/admin/' : '/',
   server: {
     port: 5174,
     proxy: {
@@ -46,4 +32,4 @@ export default defineConfig({
     environment: 'happy-dom',
     include: ['src/**/*.test.ts'],
   },
-});
+}));
