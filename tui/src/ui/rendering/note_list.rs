@@ -65,10 +65,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
     // Render search bar if active
     let list_chunk = if app.search_active {
-        let search_text = format!("Search: {}", app.search_input);
-        let search_bar = Paragraph::new(search_text)
+        let search_bar = Paragraph::new(app.search_input.as_str())
             .style(Style::default().fg(app.color_scheme.accent))
-            .block(Block::default().title("Search").borders(Borders::ALL));
+            .block(Block::default().title("Search:").borders(Borders::ALL));
         frame.render_widget(search_bar, left_chunks[0]);
         left_chunks[1]
     } else {
