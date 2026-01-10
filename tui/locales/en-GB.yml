@@ -125,9 +125,12 @@ settings:
   instructions_force_sync: "Press 'Y' (Shift+y) to force full sync (pull from server)"
   instructions_paste: "Press 'p' to paste sync credentials from another device"
   instructions_copy: "Press 'c' to copy sync credentials to share with another device"
+  instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
+  instructions_status: "Press 'R' (Shift+r) to check registration approval status"
   press_enter_cycle: "press Enter to cycle"
   press_enter_toggle: "press Enter to toggle"
   disabled: "disabled"
+  user_portal: "User Portal"
 
 # Sync operations
 sync:
@@ -160,6 +163,17 @@ sync:
   salt_sync: "Salt synchronised! Please re-enter your password to unlock with the new encryption salt."
   encrypted_import: "Encrypted credentials imported. Please enter your password to decrypt and complete setup."
   legacy_format_warning: "Warning: Using legacy unencrypted format. API key is exposed in plain text."
+  disconnected: "Disconnected from sync server. Local notes preserved."
+  disconnect_failed: "Failed to disconnect from sync server"
+  status:
+    check_title: "Check Registration Status"
+    result_title: "Registration Status"
+    enter_email: "Enter your email address to check approval status:"
+    check_failed: "Failed to check registration status"
+    not_found: "No account found with this email address."
+    approved: "Your account is approved and active. You can sync your notes."
+    pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
+    inactive: "Your account has been deactivated. Please contact an administrator."
 
 # Conflict resolution
 conflict:

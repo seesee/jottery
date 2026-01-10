@@ -27,6 +27,12 @@ interface UserAccountInfo {
   lastSyncAt: string | null;
 }
 
+interface UserStatusResponse {
+  exists: boolean;
+  isApproved: boolean;
+  isActive: boolean;
+}
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -141,8 +147,25 @@ class UserApiClient {
     this.sessionToken = null;
     localStorage.removeItem('user_session_token');
   }
+
+  // Check user approval status (no auth required)
+  async checkStatus(email: string): Promise<UserStatusResponse> {
+    const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new ApiError(response.status, errorData.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
 }
 
 export const userApi = new UserApiClient();
 export { ApiError };
-export type { LoginResponse, UserAccountInfo };
+export type { LoginResponse, UserAccountInfo, UserStatusResponse };

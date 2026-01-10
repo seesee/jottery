@@ -309,7 +309,50 @@
       "syncDisabledDescription": "Senkronizasyon isteğe bağlıdır ve maksimum gizlilik için varsayılan olarak devre dışıdır.",
       "syncDisabledDetails": "Devre dışı bırakıldığında, Jottery senkronizasyon sunucularına ağ istekleri yapmaz. Tüm notlarınız bu cihazda tamamen yerel kalır.",
       "toEnableSync": "Senkronizasyonu etkinleştirmek için: Yukarıdaki anahtarı değiştirin ve senkronizasyon sunucunuzu yapılandırın.",
-      "privacyNote": "Gizlilik: Etkinleştirildiğinde bile, tüm notlar uçtan uca şifrelenir. Senkronizasyon sunucusu içeriğinizi okuyamaz."
+      "privacyNote": "Gizlilik: Etkinleştirildiğinde bile, tüm notlar uçtan uca şifrelenir. Senkronizasyon sunucusu içeriğinizi okuyamaz.",
+      "syncEnabled": "Senkronizasyon Etkin",
+      "syncing": "Senkronize ediliyor...",
+      "lastSync": "Son senkronizasyon:",
+      "syncNow": "Şimdi Senkronize Et",
+      "notesPendingSingle": "{count} not senkronizasyon bekliyor",
+      "notesPendingPlural": "{count} not senkronizasyon bekliyor",
+      "showCredentials": "Diğer Cihazlar İçin Kimlik Bilgilerini Göster",
+      "credentialsHelp": "Kimlik bilgilerini metin olarak görüntülemek için tıklayın. İçe aktarmak için diğer cihazlarda \"Mevcut Kimlik Bilgilerini Kullan\" seçeneğini kullanın.",
+      "samePasswordWarning": "Notların şifresini çözmek için tüm cihazlar AYNI şifreyi kullanmalıdır!",
+      "userPortal": {
+        "title": "Kullanıcı Portalı",
+        "description": "Hesabınızı yönetin, şifrenizi değiştirin veya verilerinizi silin",
+        "openButton": "Kullanıcı Portalını Aç"
+      },
+      "dangerZone": {
+        "title": "Tehlikeli Bölge",
+        "disconnectTitle": "Senkronizasyon Sunucusundan Bağlantıyı Kes",
+        "disconnectDescription": "Bu, bu cihazın senkronizasyon sunucusuyla bağlantısını kesecek ve tüm senkronizasyon kimlik bilgilerini temizleyecektir. Notlarınız SİLİNMEYECEK ve bu cihazda kalacaktır.",
+        "disconnectButton": "Bağlantıyı Kes"
+      },
+      "accountManagement": {
+        "title": "Hesabınızı Yönetin",
+        "loginPrompt": "Hesap bilgilerinizi görüntülemek ve senkronize edilmiş notlarınızı yönetmek için giriş yapın.",
+        "emailLabel": "E-posta Adresi",
+        "passwordLabel": "Şifre",
+        "loggingIn": "Giriş yapılıyor...",
+        "loginButton": "Hesabı Görüntülemek İçin Giriş Yap",
+        "loggedInAs": "Oturum açan:",
+        "adminAccount": "Yönetici Hesabı",
+        "logOut": "Çıkış Yap",
+        "loadingInfo": "Hesap bilgileri yükleniyor...",
+        "syncedNotes": "Senkronize Edilmiş Notlar",
+        "attachments": "Ekler",
+        "storageUsed": "Kullanılan Depolama",
+        "storageQuota": "Depolama Kotası",
+        "storageUsage": "Depolama Kullanımı",
+        "privacyTitle": "Gizlilik ve Güvenlik",
+        "privacyDescription": "Tüm notlarınız uçtan uca şifrelenmiştir. Sunucu içeriğinizi okuyamaz.",
+        "selfHostLink": "Kendi sunucunuzda barındırmak ister misiniz? GitHub'a bakın →",
+        "dangerZone": "Tehlikeli Bölge",
+        "deleteNotesDescription": "Senkronizasyon sunucusundan tüm notlarınızı silin. Bu işlem geri alınamaz. Yerel notlarınız SİLİNMEYECEKTİR.",
+        "deleteNotesButton": "Sunucudan Tüm Notları Sil"
+      }
     },
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",

@@ -309,7 +309,50 @@
       "syncDisabledDescription": "Synchronisatie is opt-in en standaard uitgeschakeld voor maximale privacy.",
       "syncDisabledDetails": "Wanneer uitgeschakeld, zal Jottery geen netwerkverzoeken doen aan synchronisatieservers. Al uw notities blijven volledig lokaal op dit apparaat.",
       "toEnableSync": "Om synchronisatie in te schakelen: Schakel de schakelaar hierboven in en configureer uw synchronisatieserver.",
-      "privacyNote": "Privacy: Zelfs wanneer ingeschakeld, zijn alle notities end-to-end versleuteld. De synchronisatieserver kan uw inhoud niet lezen."
+      "privacyNote": "Privacy: Zelfs wanneer ingeschakeld, zijn alle notities end-to-end versleuteld. De synchronisatieserver kan uw inhoud niet lezen.",
+      "syncEnabled": "Synchronisatie ingeschakeld",
+      "syncing": "Synchroniseren...",
+      "lastSync": "Laatste synchronisatie:",
+      "syncNow": "Nu synchroniseren",
+      "notesPendingSingle": "{count} notitie wacht op synchronisatie",
+      "notesPendingPlural": "{count} notities wachten op synchronisatie",
+      "showCredentials": "Toon inloggegevens voor andere apparaten",
+      "credentialsHelp": "Klik om inloggegevens als tekst te tonen. Gebruik \"Bestaande inloggegevens gebruiken\" op andere apparaten om te importeren.",
+      "samePasswordWarning": "Alle apparaten moeten HETZELFDE wachtwoord gebruiken om notities te ontsleutelen!",
+      "userPortal": {
+        "title": "Gebruikersportaal",
+        "description": "Beheer uw account, wijzig uw wachtwoord of verwijder uw gegevens",
+        "openButton": "Open gebruikersportaal"
+      },
+      "dangerZone": {
+        "title": "Gevarenzone",
+        "disconnectTitle": "Verbinding met synchronisatieserver verbreken",
+        "disconnectDescription": "Dit verbreekt de verbinding van dit apparaat met de synchronisatieserver en wist alle synchronisatie-inloggegevens. Uw notities worden NIET verwijderd en blijven op dit apparaat.",
+        "disconnectButton": "Verbinding verbreken"
+      },
+      "accountManagement": {
+        "title": "Uw account beheren",
+        "loginPrompt": "Log in om uw accountinformatie te bekijken en uw gesynchroniseerde notities te beheren.",
+        "emailLabel": "E-mailadres",
+        "passwordLabel": "Wachtwoord",
+        "loggingIn": "Inloggen...",
+        "loginButton": "Inloggen om account te bekijken",
+        "loggedInAs": "Ingelogd als:",
+        "adminAccount": "Beheerdersaccount",
+        "logOut": "Uitloggen",
+        "loadingInfo": "Accountinformatie laden...",
+        "syncedNotes": "Gesynchroniseerde notities",
+        "attachments": "Bijlagen",
+        "storageUsed": "Gebruikte opslag",
+        "storageQuota": "Opslagquotum",
+        "storageUsage": "Opslaggebruik",
+        "privacyTitle": "Privacy en beveiliging",
+        "privacyDescription": "Al uw notities zijn end-to-end versleuteld. De server kan uw inhoud niet lezen.",
+        "selfHostLink": "Wilt u zelf hosten? Zie GitHub →",
+        "dangerZone": "Gevarenzone",
+        "deleteNotesDescription": "Verwijder al uw notities van de synchronisatieserver. Deze actie kan niet ongedaan worden gemaakt. Uw lokale notities worden NIET verwijderd.",
+        "deleteNotesButton": "Alle notities van server verwijderen"
+      }
     },
     "advancedTab": {
       "importExport": "Importeren/Exporteren",

@@ -551,3 +551,55 @@ pub fn process_credentials_input(app: &mut App, input: &str) -> Result<()> {
 
     Ok(())
 }
+
+/// Disconnect from sync server
+/// Clears all sync credentials and metadata, but preserves local notes
+pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
+    app.debug_log("Disconnect - Starting disconnect from sync server");
+
+    // Get database
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    // Clear sync metadata (credentials, client ID, etc.)
+    let sync_repo = SyncRepository::new(db.connection());
+    sync_repo.clear_all()?;
+
+    app.debug_log("Disconnect - Sync metadata cleared");
+
+    // Update settings to disable sync
+    app.settings.sync_enabled = false;
+    app.settings.sync_endpoint = None;
+    save_settings(app)?;
+
+    app.debug_log("Disconnect - Settings updated");
+
+    // Show success message
+    app.sync_status = Some(t!("sync.disconnected").to_string());
+    app.sync_status_set_at = Some(Instant::now());
+
+    Ok(())
+}
+
+/// Check registration status for an email
+pub fn check_registration_status(app: &mut App, email: &str) -> Result<String> {
+    // Need sync endpoint to check status
+    let endpoint = app.settings.sync_endpoint.as_ref()
+        .ok_or_else(|| anyhow::anyhow!(t!("sync.endpoint_not_configured").to_string()))?;
+
+    app.debug_log(&format!("Checking registration status for: {}", email));
+
+    let client = crate::api::AuthClient::new(endpoint.clone());
+    let status = client.check_status(email)?;
+
+    let message = if !status.exists {
+        t!("sync.status.not_found").to_string()
+    } else if status.is_approved && status.is_active {
+        t!("sync.status.approved").to_string()
+    } else if !status.is_approved {
+        t!("sync.status.pending").to_string()
+    } else {
+        t!("sync.status.inactive").to_string()
+    };
+
+    Ok(message)
+}

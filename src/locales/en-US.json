@@ -312,7 +312,50 @@
       "syncDisabledDescription": "Sync is opt-in and disabled by default for maximum privacy.",
       "syncDisabledDetails": "When disabled, Jottery will not make any network requests to sync servers. All your notes remain completely local to this device.",
       "toEnableSync": "To enable sync: Toggle the switch above and configure your sync server.",
-      "privacyNote": "Privacy: Even when enabled, all notes are end-to-end encrypted. The sync server cannot read your content."
+      "privacyNote": "Privacy: Even when enabled, all notes are end-to-end encrypted. The sync server cannot read your content.",
+      "syncEnabled": "Sync Enabled",
+      "syncing": "Syncing...",
+      "lastSync": "Last sync:",
+      "syncNow": "Sync Now",
+      "notesPendingSingle": "{count} note pending sync",
+      "notesPendingPlural": "{count} notes pending sync",
+      "showCredentials": "Show Credentials for Other Devices",
+      "credentialsHelp": "Click to display credentials as text. Use \"Use Existing Credentials\" on other devices to import.",
+      "samePasswordWarning": "All devices must use the SAME password to decrypt notes!",
+      "userPortal": {
+        "title": "User Portal",
+        "description": "Manage your account, change password, or delete your data",
+        "openButton": "Open User Portal"
+      },
+      "dangerZone": {
+        "title": "Danger Zone",
+        "disconnectTitle": "Disconnect from Sync Server",
+        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
+        "disconnectButton": "Disconnect"
+      },
+      "accountManagement": {
+        "title": "Manage Your Account",
+        "loginPrompt": "Log in to view your account information and manage your synced notes.",
+        "emailLabel": "Email Address",
+        "passwordLabel": "Password",
+        "loggingIn": "Logging in...",
+        "loginButton": "Log In to View Account",
+        "loggedInAs": "Logged in as:",
+        "adminAccount": "Admin Account",
+        "logOut": "Log Out",
+        "loadingInfo": "Loading account information...",
+        "syncedNotes": "Synced Notes",
+        "attachments": "Attachments",
+        "storageUsed": "Storage Used",
+        "storageQuota": "Storage Quota",
+        "storageUsage": "Storage Usage",
+        "privacyTitle": "Privacy & Security",
+        "privacyDescription": "All your notes are end-to-end encrypted. The server cannot read your content.",
+        "selfHostLink": "Want to self-host? See GitHub →",
+        "dangerZone": "Danger Zone",
+        "deleteNotesDescription": "Delete all your notes from the sync server. This action cannot be undone. Your local notes will NOT be deleted.",
+        "deleteNotesButton": "Delete All Notes from Server"
+      }
     },
     "advancedTab": {
       "importExport": "Import/Export",

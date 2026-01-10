@@ -55,6 +55,9 @@ hex = "0.4"
 anyhow = "1.0"
 thiserror = "2.0"
 
+# URL encoding
+urlencoding = "2.1"
+
 # Regex for search parsing
 regex = "1.10"
 

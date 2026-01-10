@@ -154,6 +154,7 @@ async fn main() {
         .route("/api/v1/auth/register-device", post(api::auth::register_device))
         .route("/api/v1/auth/login", post(api::auth::login))
         .route("/api/v1/user/login", post(api::user::login))
+        .route("/api/v1/user/status", get(api::user::check_status))
         // Merge protected routes
         .merge(sync_routes)
         .merge(user_routes)

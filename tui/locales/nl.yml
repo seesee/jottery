@@ -85,6 +85,9 @@ settings:
   sync_enabled: "Synchronisatie ingeschakeld"
   sync_endpoint: "Synchronisatie-eindpunt"
   device_name: "Apparaatnaam"
+  instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
+  instructions_status: "Press 'R' (Shift+r) to check registration approval status"
+  user_portal: "User Portal"
 sync:
   push: "Naar server pushen"
   pull: "Van server pullen"
@@ -100,6 +103,17 @@ sync:
   response_parse_failed: "Parseren synchronisatierespons mislukt"
   encrypted_import: "Versleutelde inloggegevens geïmporteerd. Voer uw wachtwoord in om te ontsleutelen en de configuratie te voltooien."
   legacy_format_warning: "Waarschuwing: Legacy-formaat zonder versleuteling gebruikt. API-sleutel is zichtbaar in platte tekst."
+  disconnected: "Disconnected from sync server. Local notes preserved."
+  disconnect_failed: "Failed to disconnect from sync server"
+  status:
+    check_title: "Check Registration Status"
+    result_title: "Registration Status"
+    enter_email: "Enter your email address to check approval status:"
+    check_failed: "Failed to check registration status"
+    not_found: "No account found with this email address."
+    approved: "Your account is approved and active. You can sync your notes."
+    pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
+    inactive: "Your account has been deactivated. Please contact an administrator."
 color_scheme:
   default_dark: "Standaard donker"
   default_light: "Standaard licht"

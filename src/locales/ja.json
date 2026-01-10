@@ -309,7 +309,50 @@
       "syncDisabledDescription": "同期はオプトインで、最大限のプライバシーのためにデフォルトで無効になっています。",
       "syncDisabledDetails": "無効の場合、Jotteryは同期サーバーへのネットワークリクエストを一切行いません。すべてのノートは完全にこのデバイスにローカル保存されます。",
       "toEnableSync": "同期を有効にするには: 上記のスイッチを切り替えて、同期サーバーを設定してください。",
-      "privacyNote": "プライバシー: 有効にしても、すべてのノートはエンドツーエンドで暗号化されています。同期サーバーは内容を読み取ることができません。"
+      "privacyNote": "プライバシー: 有効にしても、すべてのノートはエンドツーエンドで暗号化されています。同期サーバーは内容を読み取ることができません。",
+      "syncEnabled": "同期が有効",
+      "syncing": "同期中...",
+      "lastSync": "最終同期:",
+      "syncNow": "今すぐ同期",
+      "notesPendingSingle": "{count}件のノートが同期待ち",
+      "notesPendingPlural": "{count}件のノートが同期待ち",
+      "showCredentials": "他のデバイス用の認証情報を表示",
+      "credentialsHelp": "クリックして認証情報をテキストで表示。他のデバイスで「既存の認証情報を使用」を選択してインポートしてください。",
+      "samePasswordWarning": "すべてのデバイスでノートを復号化するには同じパスワードを使用する必要があります！",
+      "userPortal": {
+        "title": "ユーザーポータル",
+        "description": "アカウントの管理、パスワードの変更、またはデータの削除",
+        "openButton": "ユーザーポータルを開く"
+      },
+      "dangerZone": {
+        "title": "危険ゾーン",
+        "disconnectTitle": "同期サーバーから切断",
+        "disconnectDescription": "このデバイスを同期サーバーから切断し、すべての同期認証情報を削除します。ノートは削除されず、このデバイスに残ります。",
+        "disconnectButton": "切断"
+      },
+      "accountManagement": {
+        "title": "アカウント管理",
+        "loginPrompt": "ログインしてアカウント情報を表示し、同期されたノートを管理します。",
+        "emailLabel": "メールアドレス",
+        "passwordLabel": "パスワード",
+        "loggingIn": "ログイン中...",
+        "loginButton": "ログインしてアカウントを表示",
+        "loggedInAs": "ログイン中:",
+        "adminAccount": "管理者アカウント",
+        "logOut": "ログアウト",
+        "loadingInfo": "アカウント情報を読み込み中...",
+        "syncedNotes": "同期されたノート",
+        "attachments": "添付ファイル",
+        "storageUsed": "使用済みストレージ",
+        "storageQuota": "ストレージ容量",
+        "storageUsage": "ストレージ使用状況",
+        "privacyTitle": "プライバシーとセキュリティ",
+        "privacyDescription": "すべてのノートはエンドツーエンドで暗号化されています。サーバーは内容を読み取ることができません。",
+        "selfHostLink": "セルフホストしたいですか？GitHubを参照 →",
+        "dangerZone": "危険ゾーン",
+        "deleteNotesDescription": "同期サーバーからすべてのノートを削除します。この操作は取り消せません。ローカルのノートは削除されません。",
+        "deleteNotesButton": "サーバーからすべてのノートを削除"
+      }
     },
     "advancedTab": {
       "importExport": "インポート/エクスポート",

@@ -55,6 +55,7 @@
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
   export let onShowDeleteServerNotesConfirm: () => void;
+  export let onShowDisconnectConfirm: () => void;
 </script>
 
 <div class="space-y-4">
@@ -145,11 +146,13 @@
         bind:userSession
         bind:accountInfo
         bind:loadingAccountInfo
+        {syncEndpoint}
         {onSyncNow}
         {onCopySyncCredentials}
         {onAccountLogin}
         {onAccountLogout}
         {onShowDeleteServerNotesConfirm}
+        {onShowDisconnectConfirm}
       />
     {/if}
   {/if}

@@ -285,7 +285,7 @@ test.describe('User Portal', () => {
     });
   });
 
-  test.describe('Account Deactivation', () => {
+  test.describe('Delete Notes', () => {
     test.beforeEach(async ({ page }) => {
       await setupApiMocks(page);
       await page.goto('/user');
@@ -294,7 +294,7 @@ test.describe('User Portal', () => {
       });
     });
 
-    test('should show deactivation confirmation modal', async ({ page }) => {
+    test('should show delete notes confirmation modal', async ({ page }) => {
       await page.goto('/user');
 
       // Navigate to settings tab if present
@@ -303,14 +303,14 @@ test.describe('User Portal', () => {
         await settingsTab.click();
       }
 
-      // Click deactivate button in the danger zone
-      await page.locator('button').filter({ hasText: /^Deactivate$/i }).first().click();
+      // Click delete notes button in the danger zone
+      await page.locator('button').filter({ hasText: /Delete Notes/i }).first().click();
 
       // Should see confirmation modal
-      await expect(page.locator('.fixed, [role="dialog"]').locator('text=/deactivate|Are you sure/i').first()).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.fixed, [role="dialog"]').locator('text=/delete.*notes|Are you sure/i').first()).toBeVisible({ timeout: 5000 });
 
       // Should have confirm and cancel buttons
-      await expect(page.locator('.fixed button, [role="dialog"] button').filter({ hasText: /Deactivate|Confirm/i })).toBeVisible();
+      await expect(page.locator('.fixed button, [role="dialog"] button').filter({ hasText: /Delete|Confirm/i })).toBeVisible();
       await expect(page.locator('.fixed button, [role="dialog"] button').filter({ hasText: /Cancel/i })).toBeVisible();
     });
   });

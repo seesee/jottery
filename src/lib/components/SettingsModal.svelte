@@ -73,6 +73,7 @@
   } | null = null;
   let loadingAccountInfo = false;
   let showDeleteServerNotesConfirm = false;
+  let showDisconnectConfirm = false;
 
   // Keyboard shortcut recording
   let recordingShortcut: keyof KeyboardShortcuts | null = null;
@@ -414,6 +415,25 @@
     } catch (error) {
       console.error('Failed to delete notes:', error);
       syncError = error instanceof Error ? error.message : 'Failed to delete notes';
+    }
+  }
+
+  async function handleDisconnect() {
+    try {
+      await syncService.disconnect();
+      // Reset UI state
+      syncStatus = null;
+      syncEndpoint = '';
+      userSession = null;
+      accountInfo = null;
+      registrationMode = 'select';
+      registrationStep = 'email';
+      showDisconnectConfirm = false;
+      // Refresh sync status
+      syncStatus = await syncService.getSyncStatus();
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+      syncError = error instanceof Error ? error.message : 'Failed to disconnect';
     }
   }
 
@@ -1120,6 +1140,7 @@
             onAccountLogin={handleAccountLogin}
             onAccountLogout={handleAccountLogout}
             onShowDeleteServerNotesConfirm={() => showDeleteServerNotesConfirm = true}
+            onShowDisconnectConfirm={() => showDisconnectConfirm = true}
           />
         {/if}
 
@@ -1198,6 +1219,18 @@
     requireTextMatch={$_('confirm.deleteKeyword')}
     onConfirm={handleDeleteAllNotes}
     onCancel={() => showDeleteServerNotesConfirm = false}
+  />
+
+  <!-- Disconnect Sync Server Confirmation Modal -->
+  <ConfirmModal
+    show={showDisconnectConfirm}
+    title={$_('confirm.disconnectSync.title')}
+    message={$_('confirm.disconnectSync.message')}
+    confirmText={$_('confirm.disconnectSync.confirmButton')}
+    cancelText={$_('confirm.disconnectSync.cancelButton')}
+    confirmClass="bg-red-600 hover:bg-red-700"
+    onConfirm={handleDisconnect}
+    onCancel={() => showDisconnectConfirm = false}
   />
 
   <!-- Remember Password Warning Modal -->
