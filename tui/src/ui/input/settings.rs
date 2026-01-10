@@ -113,17 +113,37 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     operations::sync::trigger_sync(app);
                 }
                 KeyCode::Char('d') => {
-                    // Disconnect from sync server (only if sync is configured)
+                    // Disconnect from sync server or clear pending registration
                     if app.settings.sync_enabled || app.settings.sync_endpoint.is_some() {
+                        // Fully configured - disconnect
                         if let Err(e) = operations::settings::disconnect_from_sync(app) {
                             app.error = Some(format!("{}: {}", t!("sync.disconnect_failed"), e));
+                        }
+                    } else if operations::settings::has_pending_registration(app) {
+                        // Pending registration - clear it
+                        if let Err(e) = operations::settings::clear_pending_registration(app) {
+                            app.error = Some(format!("{}: {}", t!("sync.disconnect_failed"), e));
+                        } else {
+                            app.sync_status = Some(t!("register.cleared").to_string());
+                            app.sync_status_set_at = Some(std::time::Instant::now());
                         }
                     }
                 }
                 KeyCode::Char('R') => {
                     // Check registration status (need to enter email)
+                    // Works if sync endpoint is configured OR there's a pending registration
                     if app.settings.sync_endpoint.is_some() {
                         app.credential_input.clear();
+                        let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                        app.state = AppState::InputEmailForStatus {
+                            previous: Box::new(prev),
+                        };
+                        app.input_mode = InputMode::Insert;
+                    } else if let Ok(Some((endpoint, _))) = operations::settings::get_pending_registration(app) {
+                        // Use endpoint from pending registration
+                        app.credential_input.clear();
+                        // Temporarily set endpoint for status check
+                        app.settings.sync_endpoint = Some(endpoint);
                         let prev = std::mem::replace(&mut app.state, AppState::Quit);
                         app.state = AppState::InputEmailForStatus {
                             previous: Box::new(prev),
@@ -134,8 +154,8 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
                 KeyCode::Char('r') => {
-                    // Start registration flow (only if sync is not configured)
-                    if app.settings.sync_endpoint.is_none() {
+                    // Start or resume registration flow (only if sync is not fully configured)
+                    if !operations::settings::is_sync_fully_configured(app) {
                         // Check if there's a pending registration to resume
                         match operations::settings::get_pending_registration(app) {
                             Ok(Some((endpoint, email))) => {

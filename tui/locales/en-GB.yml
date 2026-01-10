@@ -197,6 +197,8 @@ register:
   still_pending: "Your registration is still pending approval"
   success: "Successfully registered! Sync is now enabled."
   device_failed: "Device registration failed"
+  cleared: "Registration cleared. You can start fresh."
+  pending_status: "Pending approval"
 
 # Conflict resolution
 conflict:

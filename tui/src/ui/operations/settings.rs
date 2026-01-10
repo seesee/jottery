@@ -709,17 +709,42 @@ pub fn get_pending_registration(app: &mut App) -> Result<Option<(String, String)
     Ok(None)
 }
 
-/// Clear pending registration state
-#[allow(dead_code)]
+/// Clear pending registration state (and all sync metadata)
 pub fn clear_pending_registration(app: &mut App) -> Result<()> {
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
     let sync_repo = SyncRepository::new(db.connection());
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
     metadata.pending_registration_email = None;
+    metadata.sync_endpoint = String::new();
+    metadata.api_key = None;
+    metadata.client_id = None;
+    metadata.user_email = None;
+    metadata.sync_enabled = false;
     sync_repo.update_metadata(&metadata)?;
 
-    app.debug_log("Cleared pending registration");
+    // Also clear app settings
+    app.settings.sync_endpoint = None;
+    app.settings.sync_enabled = false;
+    save_settings(app)?;
+
+    app.debug_log("Cleared pending registration and sync settings");
 
     Ok(())
+}
+
+/// Check if there's a pending registration
+pub fn has_pending_registration(app: &mut App) -> bool {
+    get_pending_registration(app).ok().flatten().is_some()
+}
+
+/// Check if sync is fully configured (has API key)
+pub fn is_sync_fully_configured(app: &mut App) -> bool {
+    if let Some(db) = &app.db {
+        let sync_repo = SyncRepository::new(db.connection());
+        if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+            return metadata.api_key.is_some();
+        }
+    }
+    false
 }
