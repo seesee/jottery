@@ -1,6 +1,7 @@
 <script lang="ts">
   import { userApi, type UserAccountInfo } from '../../lib/userApi';
   import { _ } from 'svelte-i18n';
+  import DevicesSection from '../../components/user/DevicesSection.svelte';
 
   let accountInfo = $state<UserAccountInfo | null>(null);
   let loading = $state(true);
@@ -132,6 +133,11 @@
         </div>
         <p class="text-lg text-gray-900">{formatDateTime(accountInfo.lastSyncAt)}</p>
       </div>
+    </div>
+
+    <!-- Devices Section -->
+    <div class="mt-8 bg-white rounded-lg shadow p-6">
+      <DevicesSection />
     </div>
   {/if}
 </div>

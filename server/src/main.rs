@@ -110,6 +110,8 @@ async fn main() {
         .route("/api/v1/user/notes", delete(api::user::delete_all_notes))
         .route("/api/v1/user/change-password", post(api::user::change_password))
         .route("/api/v1/user/logout", post(api::user::logout))
+        .route("/api/v1/user/devices", get(api::user::list_devices))
+        .route("/api/v1/user/devices/:id", delete(api::user::revoke_device))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             api::middleware::user_auth_middleware,
@@ -125,7 +127,7 @@ async fn main() {
         .route("/api/v1/admin/users/:id/toggle-admin", post(api::admin::users::toggle_admin))
         .route("/api/v1/admin/users/:id", delete(api::admin::users::delete_user))
         .route("/api/v1/admin/users/:id/devices", get(api::admin::users::list_user_devices))
-        .route("/api/v1/admin/devices/:id", delete(api::admin::users::revoke_device))
+        .route("/api/v1/admin/devices/:id", delete(api::admin::users::revoke_device).patch(api::admin::users::rename_device))
         .route("/api/v1/admin/stats", get(api::admin::stats::get_stats))
         .route("/api/v1/admin/audit", get(api::admin::stats::get_audit_log))
         .route("/api/v1/admin/notes/metadata", get(api::admin::stats::get_notes_metadata))

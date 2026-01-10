@@ -7,6 +7,8 @@
     "refreshing": "Refreshing...",
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "close": "Close",
+    "save": "Save",
     "loading": "Loading...",
     "email": "Email",
     "password": "Password",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Pending Approvals:"
     }
   },
+  "devices": {
+    "title": "Devices",
+    "name": "Device name",
+    "type": "Type",
+    "createdAt": "Registered",
+    "lastSeen": "Last seen",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "revoke": "Revoke",
+    "rename": "Rename",
+    "revokeConfirmTitle": "Revoke Device",
+    "revokeConfirm": "Are you sure you want to revoke device \"{name}\"? This device will no longer be able to sync.",
+    "revokeWarning": "This device will no longer be able to sync.",
+    "noDevices": "No devices registered",
+    "total": "total",
+    "nameRequired": "Device name is required",
+    "toast": {
+      "revoked": "Device \"{name}\" has been revoked",
+      "revokeFailed": "Failed to revoke device: {error}",
+      "revokeFailedGeneric": "Failed to revoke device",
+      "renamed": "Device renamed successfully",
+      "renameFailed": "Failed to rename device: {error}",
+      "renameFailedGeneric": "Failed to rename device"
+    }
+  },
   "users": {
     "title": "Users",
     "loadingUsers": "Loading users...",
     "noUsersFound": "No users found",
     "failedToLoad": "Failed to load users",
+    "detail": {
+      "title": "User Details",
+      "userInfo": "User Information",
+      "approvedAt": "Approved",
+      "lastLogin": "Last Login",
+      "lastSync": "Last Sync",
+      "statistics": "Statistics",
+      "attachments": "Attachments",
+      "storage": "Storage Used",
+      "quota": "Storage Quota",
+      "viewDevices": "Click to view devices"
+    },
     "filters": {
       "all": "All",
       "pending": "Pending",
@@ -195,6 +235,18 @@
       "storageUsed": "Storage Used",
       "lastSync": "Last Sync",
       "never": "Never"
+    },
+    "devices": {
+      "title": "Your Devices",
+      "loadError": "Failed to load devices",
+      "noDevices": "No devices registered",
+      "never": "Never",
+      "revokeTitle": "Revoke Device",
+      "revokeConfirm": "Are you sure you want to revoke \"{name}\"? This device will no longer be able to sync.",
+      "revokeNote": "Revoking a device will prevent it from syncing. You can re-register the device later if needed.",
+      "revoked": "Device \"{name}\" has been revoked",
+      "revokeFailed": "Failed to revoke device: {error}",
+      "revokeFailedGeneric": "Failed to revoke device"
     },
     "settings": {
       "title": "Settings",

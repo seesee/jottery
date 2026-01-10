@@ -7,6 +7,8 @@
     "refreshing": "Yenileniyor...",
     "cancel": "İptal",
     "confirm": "Onayla",
+    "close": "Kapat",
+    "save": "Kaydet",
     "loading": "Yükleniyor...",
     "email": "E-posta",
     "password": "Parola",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Bekleyen onaylar:"
     }
   },
+  "devices": {
+    "title": "Cihazlar",
+    "name": "Cihaz adı",
+    "type": "Tür",
+    "createdAt": "Kayıt tarihi",
+    "lastSeen": "Son görülme",
+    "status": "Durum",
+    "active": "Aktif",
+    "inactive": "Pasif",
+    "revoke": "İptal et",
+    "rename": "Yeniden adlandır",
+    "revokeConfirmTitle": "Cihazı iptal et",
+    "revokeConfirm": "\"{name}\" cihazını iptal etmek istediğinizden emin misiniz? Bu cihaz artık senkronize olamayacak.",
+    "revokeWarning": "Bu cihaz artık senkronize olamayacak.",
+    "noDevices": "Kayıtlı cihaz yok",
+    "total": "toplam",
+    "nameRequired": "Cihaz adı gerekli",
+    "toast": {
+      "revoked": "\"{name}\" cihazı iptal edildi",
+      "revokeFailed": "Cihaz iptal edilemedi: {error}",
+      "revokeFailedGeneric": "Cihaz iptal edilemedi",
+      "renamed": "Cihaz başarıyla yeniden adlandırıldı",
+      "renameFailed": "Cihaz yeniden adlandırılamadı: {error}",
+      "renameFailedGeneric": "Cihaz yeniden adlandırılamadı"
+    }
+  },
   "users": {
     "title": "Kullanıcılar",
     "loadingUsers": "Kullanıcılar yükleniyor...",
     "noUsersFound": "Kullanıcı bulunamadı",
     "failedToLoad": "Kullanıcılar yüklenemedi",
+    "detail": {
+      "title": "Kullanıcı Detayları",
+      "userInfo": "Kullanıcı Bilgileri",
+      "approvedAt": "Onaylandı",
+      "lastLogin": "Son Giriş",
+      "lastSync": "Son Senkronizasyon",
+      "statistics": "İstatistikler",
+      "attachments": "Ekler",
+      "storage": "Kullanılan Depolama",
+      "quota": "Depolama Kotası",
+      "viewDevices": "Cihazları görmek için tıklayın"
+    },
     "filters": {
       "all": "Tümü",
       "pending": "Beklemede",
@@ -195,6 +235,18 @@
       "storageUsed": "Kullanılan depolama",
       "lastSync": "Son senkronizasyon",
       "never": "Hiç"
+    },
+    "devices": {
+      "title": "Cihazlarınız",
+      "loadError": "Cihazlar yüklenemedi",
+      "noDevices": "Kayıtlı cihaz yok",
+      "never": "Hiç",
+      "revokeTitle": "Cihazı iptal et",
+      "revokeConfirm": "\"{name}\" cihazını iptal etmek istediğinizden emin misiniz? Bu cihaz artık senkronize olamayacak.",
+      "revokeNote": "Bir cihazı iptal etmek senkronizasyonu engelleyecektir. Gerekirse cihazı daha sonra tekrar kaydedebilirsiniz.",
+      "revoked": "\"{name}\" cihazı iptal edildi",
+      "revokeFailed": "Cihaz iptal edilemedi: {error}",
+      "revokeFailedGeneric": "Cihaz iptal edilemedi"
     },
     "settings": {
       "title": "Ayarlar",

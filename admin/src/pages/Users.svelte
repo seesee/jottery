@@ -4,12 +4,16 @@
   import { onMount } from 'svelte';
   import { toast } from '../lib/toast.svelte';
   import ConfirmModal from '../components/ConfirmModal.svelte';
+  import UserDetailModal from '../components/UserDetailModal.svelte';
   import { _ } from 'svelte-i18n';
 
   let users = $state<UserListItem[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
   let filter = $state<'all' | 'pending' | 'approved' | 'inactive'>('all');
+
+  // User detail modal state
+  let selectedUserId = $state<string | null>(null);
 
   // Confirmation modal state
   type ConfirmAction = { type: 'approve' | 'deactivate' | 'activate' | 'delete' | 'toggleAdmin'; userId: string; email: string; isAdmin?: boolean } | null;
@@ -215,8 +219,14 @@
                   {badge.text}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {user.deviceCount}
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <button
+                  onclick={() => selectedUserId = user.id}
+                  class="text-blue-600 hover:text-blue-800 hover:underline"
+                  title={$_('users.detail.viewDevices')}
+                >
+                  {user.deviceCount}
+                </button>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {user.noteCount}
@@ -308,5 +318,12 @@
     cancelText={$_('common.cancel')}
     onConfirm={executeAction}
     onCancel={() => confirmAction = null}
+  />
+{/if}
+
+{#if selectedUserId}
+  <UserDetailModal
+    userId={selectedUserId}
+    onClose={() => { selectedUserId = null; loadUsers(); }}
   />
 {/if}

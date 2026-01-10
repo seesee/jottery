@@ -7,6 +7,8 @@
     "refreshing": "새로 고침 중...",
     "cancel": "취소",
     "confirm": "확인",
+    "close": "닫기",
+    "save": "저장",
     "loading": "로딩 중...",
     "email": "이메일",
     "password": "비밀번호",
@@ -65,11 +67,49 @@
       "pendingApprovals": "승인 대기:"
     }
   },
+  "devices": {
+    "title": "기기",
+    "name": "기기 이름",
+    "type": "유형",
+    "createdAt": "등록일",
+    "lastSeen": "마지막 접속",
+    "status": "상태",
+    "active": "활성",
+    "inactive": "비활성",
+    "revoke": "해지",
+    "rename": "이름 변경",
+    "revokeConfirmTitle": "기기 해지",
+    "revokeConfirm": "기기 \"{name}\"을(를) 해지하시겠습니까? 이 기기는 더 이상 동기화할 수 없습니다.",
+    "revokeWarning": "이 기기는 더 이상 동기화할 수 없습니다.",
+    "noDevices": "등록된 기기가 없습니다",
+    "total": "총",
+    "nameRequired": "기기 이름은 필수입니다",
+    "toast": {
+      "revoked": "기기 \"{name}\"이(가) 해지되었습니다",
+      "revokeFailed": "기기 해지 실패: {error}",
+      "revokeFailedGeneric": "기기 해지에 실패했습니다",
+      "renamed": "기기 이름이 변경되었습니다",
+      "renameFailed": "기기 이름 변경 실패: {error}",
+      "renameFailedGeneric": "기기 이름 변경에 실패했습니다"
+    }
+  },
   "users": {
     "title": "사용자",
     "loadingUsers": "사용자 로딩 중...",
     "noUsersFound": "사용자를 찾을 수 없습니다",
     "failedToLoad": "사용자 로드 실패",
+    "detail": {
+      "title": "사용자 상세",
+      "userInfo": "사용자 정보",
+      "approvedAt": "승인일",
+      "lastLogin": "마지막 로그인",
+      "lastSync": "마지막 동기화",
+      "statistics": "통계",
+      "attachments": "첨부 파일",
+      "storage": "사용 중인 저장 공간",
+      "quota": "저장 공간 할당량",
+      "viewDevices": "기기를 보려면 클릭"
+    },
     "filters": {
       "all": "전체",
       "pending": "대기 중",
@@ -195,6 +235,18 @@
       "storageUsed": "사용 중인 저장 공간",
       "lastSync": "마지막 동기화",
       "never": "없음"
+    },
+    "devices": {
+      "title": "내 기기",
+      "loadError": "기기를 불러오지 못했습니다",
+      "noDevices": "등록된 기기가 없습니다",
+      "never": "없음",
+      "revokeTitle": "기기 해지",
+      "revokeConfirm": "\"{name}\"을(를) 해지하시겠습니까? 이 기기는 더 이상 동기화할 수 없습니다.",
+      "revokeNote": "기기를 해지하면 동기화가 중지됩니다. 필요한 경우 나중에 기기를 다시 등록할 수 있습니다.",
+      "revoked": "기기 \"{name}\"이(가) 해지되었습니다",
+      "revokeFailed": "기기 해지 실패: {error}",
+      "revokeFailedGeneric": "기기 해지에 실패했습니다"
     },
     "settings": {
       "title": "설정",

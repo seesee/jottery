@@ -7,6 +7,8 @@
     "refreshing": "Actualisation...",
     "cancel": "Annuler",
     "confirm": "Confirmer",
+    "close": "Fermer",
+    "save": "Enregistrer",
     "loading": "Chargement...",
     "email": "E-mail",
     "password": "Mot de passe",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Approbations en attente :"
     }
   },
+  "devices": {
+    "title": "Appareils",
+    "name": "Nom de l'appareil",
+    "type": "Type",
+    "createdAt": "Enregistré",
+    "lastSeen": "Dernière connexion",
+    "status": "Statut",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "revoke": "Révoquer",
+    "rename": "Renommer",
+    "revokeConfirmTitle": "Révoquer l'appareil",
+    "revokeConfirm": "Êtes-vous sûr de vouloir révoquer l'appareil \"{name}\" ? Cet appareil ne pourra plus se synchroniser.",
+    "revokeWarning": "Cet appareil ne pourra plus se synchroniser.",
+    "noDevices": "Aucun appareil enregistré",
+    "total": "total",
+    "nameRequired": "Le nom de l'appareil est requis",
+    "toast": {
+      "revoked": "L'appareil \"{name}\" a été révoqué",
+      "revokeFailed": "Échec de la révocation de l'appareil : {error}",
+      "revokeFailedGeneric": "Échec de la révocation de l'appareil",
+      "renamed": "Appareil renommé avec succès",
+      "renameFailed": "Échec du renommage de l'appareil : {error}",
+      "renameFailedGeneric": "Échec du renommage de l'appareil"
+    }
+  },
   "users": {
     "title": "Utilisateurs",
     "loadingUsers": "Chargement des utilisateurs...",
     "noUsersFound": "Aucun utilisateur trouvé",
     "failedToLoad": "Échec du chargement des utilisateurs",
+    "detail": {
+      "title": "Détails de l'utilisateur",
+      "userInfo": "Informations utilisateur",
+      "approvedAt": "Approuvé",
+      "lastLogin": "Dernière connexion",
+      "lastSync": "Dernière synchronisation",
+      "statistics": "Statistiques",
+      "attachments": "Pièces jointes",
+      "storage": "Stockage utilisé",
+      "quota": "Quota de stockage",
+      "viewDevices": "Cliquez pour voir les appareils"
+    },
     "filters": {
       "all": "Tous",
       "pending": "En attente",
@@ -195,6 +235,18 @@
       "storageUsed": "Stockage utilisé",
       "lastSync": "Dernière synchronisation",
       "never": "Jamais"
+    },
+    "devices": {
+      "title": "Vos appareils",
+      "loadError": "Échec du chargement des appareils",
+      "noDevices": "Aucun appareil enregistré",
+      "never": "Jamais",
+      "revokeTitle": "Révoquer l'appareil",
+      "revokeConfirm": "Êtes-vous sûr de vouloir révoquer \"{name}\" ? Cet appareil ne pourra plus se synchroniser.",
+      "revokeNote": "La révocation d'un appareil l'empêchera de se synchroniser. Vous pourrez réenregistrer l'appareil ultérieurement si nécessaire.",
+      "revoked": "L'appareil \"{name}\" a été révoqué",
+      "revokeFailed": "Échec de la révocation de l'appareil : {error}",
+      "revokeFailedGeneric": "Échec de la révocation de l'appareil"
     },
     "settings": {
       "title": "Paramètres",

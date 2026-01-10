@@ -7,6 +7,8 @@
     "refreshing": "刷新中...",
     "cancel": "取消",
     "confirm": "确认",
+    "close": "关闭",
+    "save": "保存",
     "loading": "加载中...",
     "email": "电子邮件",
     "password": "密码",
@@ -65,11 +67,49 @@
       "pendingApprovals": "待批准："
     }
   },
+  "devices": {
+    "title": "设备",
+    "name": "设备名称",
+    "type": "类型",
+    "createdAt": "注册时间",
+    "lastSeen": "最后在线",
+    "status": "状态",
+    "active": "活跃",
+    "inactive": "未激活",
+    "revoke": "撤销",
+    "rename": "重命名",
+    "revokeConfirmTitle": "撤销设备",
+    "revokeConfirm": "您确定要撤销设备「{name}」吗？此设备将无法再进行同步。",
+    "revokeWarning": "此设备将无法再进行同步。",
+    "noDevices": "没有已注册的设备",
+    "total": "总计",
+    "nameRequired": "设备名称为必填项",
+    "toast": {
+      "revoked": "设备「{name}」已被撤销",
+      "revokeFailed": "撤销设备失败：{error}",
+      "revokeFailedGeneric": "撤销设备失败",
+      "renamed": "设备重命名成功",
+      "renameFailed": "重命名设备失败：{error}",
+      "renameFailedGeneric": "重命名设备失败"
+    }
+  },
   "users": {
     "title": "用户",
     "loadingUsers": "正在加载用户...",
     "noUsersFound": "未找到用户",
     "failedToLoad": "加载用户失败",
+    "detail": {
+      "title": "用户详情",
+      "userInfo": "用户信息",
+      "approvedAt": "批准时间",
+      "lastLogin": "最后登录",
+      "lastSync": "最后同步",
+      "statistics": "统计",
+      "attachments": "附件",
+      "storage": "已用存储空间",
+      "quota": "存储配额",
+      "viewDevices": "点击查看设备"
+    },
     "filters": {
       "all": "全部",
       "pending": "待处理",
@@ -195,6 +235,18 @@
       "storageUsed": "已用存储空间",
       "lastSync": "最后同步",
       "never": "从未"
+    },
+    "devices": {
+      "title": "您的设备",
+      "loadError": "加载设备失败",
+      "noDevices": "没有已注册的设备",
+      "never": "从未",
+      "revokeTitle": "撤销设备",
+      "revokeConfirm": "您确定要撤销「{name}」吗？此设备将无法再进行同步。",
+      "revokeNote": "撤销设备将阻止其同步。如有需要，您可以稍后重新注册该设备。",
+      "revoked": "设备「{name}」已被撤销",
+      "revokeFailed": "撤销设备失败：{error}",
+      "revokeFailedGeneric": "撤销设备失败"
     },
     "settings": {
       "title": "设置",
