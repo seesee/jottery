@@ -199,7 +199,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory("test_password").unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 6);
+        assert_eq!(db.schema_version().unwrap(), 8);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -227,13 +227,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 6);
+            assert_eq!(db.schema_version().unwrap(), 8);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 6);
+            assert_eq!(db.schema_version().unwrap(), 8);
         }
     }
 }
