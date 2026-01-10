@@ -49,11 +49,10 @@ test.describe('Recycle Bin', () => {
 	}
 
 	async function deleteNoteViaBulk(page: import('@playwright/test').Page, noteContent: string) {
-		// Use bulk selection to delete (more reliable than menu)
+		// Use bulk selection to delete - Ctrl/Cmd+click to enter multi-select mode
 		const noteList = page.getByRole('list');
 		const noteItem = noteList.locator('.note-list-item').filter({ hasText: new RegExp(noteContent, 'i') });
-		await noteItem.hover();
-		await noteItem.locator('[role="checkbox"]').click();
+		await noteItem.click({ modifiers: ['ControlOrMeta'] });
 
 		// Click bulk delete
 		const bulkDeleteButton = page.locator('button').filter({ hasText: /^Delete$/i }).first();
