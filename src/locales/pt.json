@@ -14,7 +14,8 @@
     "unlock": "Desbloquear",
     "settings": "Configurações",
     "search": "Pesquisar",
-    "error": "Erro"
+    "error": "Erro",
+    "back": "Back"
   },
   "docs": {
     "title": "Documentação",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Pesquisar notas...",
-    "clear": "Limpar pesquisa"
+    "clear": "Limpar pesquisa",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Nenhuma nota selecionada",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Seu navegador não suporta reprodução de vídeo.",
       "previewNotAvailable": "Visualização não disponível para este tipo de arquivo.",
       "downloadToView": "Baixe para visualizar"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Excluir nota",
@@ -247,7 +251,8 @@
         "successTitle": "Sincronização ativada com sucesso!",
         "successText": "Seu dispositivo agora está registrado e <strong>todas as suas notas existentes foram sincronizadas com o servidor</strong>. Quaisquer alterações futuras serão sincronizadas automaticamente.",
         "successNextSteps": "📋 Para adicionar outro dispositivo: Clique em \"Exportar credenciais de sincronização\" abaixo e importe-as no seu outro dispositivo.",
-        "done": "Concluído"
+        "done": "Concluído",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Vincular conta (opcional)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Linguagens de sistema",
       "dataLanguages": "Linguagens de dados",
       "otherLanguages": "Outras linguagens",
-      "enabledCount": "{enabled}/{total} ativadas"
+      "enabledCount": "{enabled}/{total} ativadas",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Personalize atalhos de teclado. Clique em um atalho para alterá-lo e pressione a combinação de teclas desejada.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery é um aplicativo de bloco de notas auto-hospedado focado em privacidade para capturar, organizar e pesquisar notas com conteúdo rico, realce de sintaxe e criptografia.",
       "viewOnGithub": "Ver no GitHub",
       "license": "Licenciado sob a Licença MIT."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Bem-vindo ao Jottery",
@@ -605,7 +615,9 @@
     "title": "Nova versão disponível",
     "message": "Recarregue para obter os recursos e melhorias mais recentes",
     "reloadButton": "Recarregar agora",
-    "dismissLabel": "Dispensar"
+    "dismissLabel": "Dispensar",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Alternar seleção",
@@ -627,5 +639,26 @@
     "progress": "{current} de {total}",
     "selectAll": "Selecionar tudo",
     "deselectAll": "Desmarcar tudo"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

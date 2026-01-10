@@ -278,8 +278,15 @@
         "wrongPassword": "Le mot de passe actuel est incorrect",
         "unexpected": "Une erreur inattendue s'est produite",
         "deactivateFailed": "Échec de la désactivation du compte",
-        "deleteFailed": "Échec de la suppression du compte"
-      }
+        "deleteFailed": "Échec de la suppression du compte",
+        "deleteNotesFailed": "Failed to delete notes"
+      },
+      "deleteNotes": "Delete Notes",
+      "deleteNotesDescription": "Delete all your notes from the server. Your account remains active and you can sync again.",
+      "deleteNotesButton": "Delete Notes",
+      "deleteNotesConfirmTitle": "Delete All Notes",
+      "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
+      "notesDeleted": "All notes have been deleted from the server"
     }
   }
 }

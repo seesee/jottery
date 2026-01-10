@@ -14,7 +14,8 @@
     "unlock": "Kilidi Aç",
     "settings": "Ayarlar",
     "search": "Ara",
-    "error": "Hata"
+    "error": "Hata",
+    "back": "Back"
   },
   "docs": {
     "title": "Belgeler",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Notlarda ara...",
-    "clear": "Aramayı temizle"
+    "clear": "Aramayı temizle",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Not seçilmedi",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor.",
       "previewNotAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
       "downloadToView": "Görüntülemek için indirin"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Notu sil",
@@ -247,7 +251,8 @@
         "successTitle": "Senkronizasyon başarıyla etkinleştirildi!",
         "successText": "Cihazınız şimdi kayıtlı ve <strong>mevcut tüm notlarınız sunucuya senkronize edildi</strong>. Gelecekteki değişiklikler otomatik olarak senkronize edilecek.",
         "successNextSteps": "📋 Başka bir cihaz eklemek için: Aşağıdaki \"Senkronizasyon kimlik bilgilerini dışa aktar\" seçeneğine tıklayın ve diğer cihazınıza aktarın.",
-        "done": "Bitti"
+        "done": "Bitti",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Hesabı bağla (isteğe bağlı)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Sistem dilleri",
       "dataLanguages": "Veri dilleri",
       "otherLanguages": "Diğer diller",
-      "enabledCount": "{enabled}/{total} etkin"
+      "enabledCount": "{enabled}/{total} etkin",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Klavye kısayollarını özelleştirin. Değiştirmek için bir kısayola tıklayın, ardından istediğiniz tuş kombinasyonuna basın.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery, zengin içerik, sözdizimi vurgulama ve şifreleme ile notları yakalamak, düzenlemek ve aramak için gizlilik odaklı, kendi barındırılan bir not defteri uygulamasıdır.",
       "viewOnGithub": "GitHub'da Görüntüle",
       "license": "MIT Lisansı altında lisanslanmıştır."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Jottery'ye Hoş Geldiniz",
@@ -605,7 +615,9 @@
     "title": "Yeni sürüm mevcut",
     "message": "En son özellikleri ve iyileştirmeleri almak için yenileyin",
     "reloadButton": "Şimdi yenile",
-    "dismissLabel": "Kapat"
+    "dismissLabel": "Kapat",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Seçimi değiştir",
@@ -627,5 +639,26 @@
     "progress": "{total} nottan {current}.",
     "selectAll": "Tümünü seç",
     "deselectAll": "Tümünün seçimini kaldır"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

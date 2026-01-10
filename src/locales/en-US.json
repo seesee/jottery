@@ -48,7 +48,8 @@
   },
   "search": {
     "placeholder": "Search notes...",
-    "clear": "Clear search"
+    "clear": "Clear search",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "No note selected",
@@ -250,7 +251,8 @@
         "successTitle": "Sync enabled successfully!",
         "successText": "Your device is now registered and <strong>all your existing notes have been synced to the server</strong>. Any future changes will sync automatically.",
         "successNextSteps": "📋 To add another device: Click \"Export sync credentials\" below and import them on your other device.",
-        "done": "Done"
+        "done": "Done",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Link account (optional)",
@@ -285,7 +287,10 @@
       "systemsLanguages": "Systems languages",
       "dataLanguages": "Data languages",
       "otherLanguages": "Other languages",
-      "enabledCount": "{enabled}/{total} enabled"
+      "enabledCount": "{enabled}/{total} enabled",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Customize keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
@@ -385,7 +390,9 @@
       "aboutDescription": "Jottery is a privacy-focused, self-hosted scratch pad application for capturing, organizing, and searching notes with rich content, syntax highlighting, and encryption.",
       "viewOnGithub": "View on GitHub",
       "license": "Licensed under the MIT License."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Welcome to Jottery",

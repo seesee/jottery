@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "Ориентированный на конфиденциальность зашифрованный TUI для заметок"
+  name: Jottery
+  description: Ориентированный на конфиденциальность зашифрованный TUI для заметок
 common:
-  loading: "Загрузка..."
-  saving: "Сохранение..."
-  cancel: "Отмена"
-  confirm: "Подтвердить"
-  yes: "Да"
-  no: "Нет"
-  ok: "ОК"
-  close: "Закрыть"
-  quit: "Выход"
-  back: "Назад"
-  email: "Эл. почта"
+  loading: Загрузка...
+  saving: Сохранение...
+  cancel: Отмена
+  confirm: Подтвердить
+  "yes": Да
+  "no": Нет
+  ok: ОК
+  close: Закрыть
+  quit: Выход
+  back: Назад
+  email: Эл. почта
 password:
   prompt: "Пароль: "
-  enter: "Введите пароль"
-  confirm: "Подтвердите пароль"
-  empty_error: "Пароль не может быть пустым"
-  mismatch_error: "Пароли не совпадают"
+  enter: Введите пароль
+  confirm: Подтвердите пароль
+  empty_error: Пароль не может быть пустым
+  mismatch_error: Пароли не совпадают
   unlock_failed: "Не удалось разблокировать: %{error}"
-  change_success: "Пароль успешно изменён"
+  change_success: Пароль успешно изменён
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "Заметки"
-  new_note: "Новая заметка"
-  settings: "Настройки"
-  help: "Справка"
-  quit: "Выход"
-  search: "Поиск"
+  notes: Заметки
+  new_note: Новая заметка
+  settings: Настройки
+  help: Справка
+  quit: Выход
+  search: Поиск
 note:
-  new: "Новая заметка"
-  save: "Сохранить"
-  saved: "Заметка сохранена"
+  new: Новая заметка
+  save: Сохранить
+  saved: Заметка сохранена
   save_failed: "Не удалось сохранить заметку: %{error}"
-  delete: "Удалить заметку"
-  deleted: "Заметка удалена"
+  delete: Удалить заметку
+  deleted: Заметка удалена
   delete_failed: "Не удалось удалить заметку: %{error}"
   reload_failed: "Не удалось перезагрузить заметки: %{error}"
-  pin: "Закрепить заметку"
-  unpin: "Открепить заметку"
-  pinned: "Закреплено"
+  pin: Закрепить заметку
+  unpin: Открепить заметку
+  pinned: Закреплено
   pin_failed: "Не удалось обновить статус закрепления: %{error}"
-  no_notes: "Заметки не найдены"
+  no_notes: Заметки не найдены
   total: "%{count} заметок"
 editor:
-  title: "Заголовок"
-  content: "Содержимое"
-  tags: "Теги"
-  created: "Создано"
-  modified: "Изменено"
-  launch_external: "Запустить внешний редактор"
+  title: Заголовок
+  content: Содержимое
+  tags: Теги
+  created: Создано
+  modified: Изменено
+  launch_external: Запустить внешний редактор
   external_failed: "Не удалось запустить редактор: %{error}"
-  external_exit_error: "Редактор завершился с кодом ошибки"
-  temp_file_error: "Не удалось создать временный файл"
-  temp_write_error: "Не удалось записать во временный файл"
-  temp_read_error: "Не удалось прочитать временный файл"
-  default_editor: "vi"
+  external_exit_error: Редактор завершился с кодом ошибки
+  temp_file_error: Не удалось создать временный файл
+  temp_write_error: Не удалось записать во временный файл
+  temp_read_error: Не удалось прочитать временный файл
+  default_editor: vi
 attachment:
-  add: "Добавить вложение"
+  add: Добавить вложение
   add_failed: "Не удалось добавить вложение: %{error}"
-  view: "Просмотреть вложение"
+  view: Просмотреть вложение
   view_failed: "Не удалось просмотреть вложение: %{error}"
-  delete: "Удалить вложение"
-  no_attachments: "Нет вложений"
+  delete: Удалить вложение
+  no_attachments: Нет вложений
   total: "%{count} вложений"
 version:
-  history: "История версий"
-  restore: "Восстановить версию"
-  restored: "Версия %{number} восстановлена"
+  history: История версий
+  restore: Восстановить версию
+  restored: Версия %{number} восстановлена
   restore_failed: "Не удалось восстановить версию: %{error}"
-  no_versions: "Нет истории версий"
-  current: "Текущая версия"
+  no_versions: Нет истории версий
+  current: Текущая версия
 search:
-  prompt: "Поиск заметок..."
-  no_results: "Результаты не найдены"
+  prompt: Поиск заметок...
+  no_results: Результаты не найдены
   results: "%{count} результатов"
 settings:
-  title: "Настройки"
-  language: "Язык"
-  theme: "Тема"
-  color_scheme: "Цветовая схема"
-  auto_lock: "Таймаут автоблокировки"
-  minutes: "минут"
-  sync: "Синхронизация"
-  sync_enabled: "Синхронизация включена"
-  sync_endpoint: "Конечная точка синхронизации"
-  device_name: "Имя устройства"
-  instructions_disconnect: "Нажмите 'd' для отключения от сервера синхронизации (локальные заметки сохраняются)"
-  instructions_status: "Нажмите 'R' (Shift+r) для проверки статуса одобрения регистрации"
-  instructions_register: "Нажмите 'r' для регистрации на сервере синхронизации"
-  user_portal: "Портал пользователя"
+  title: Настройки
+  language: Язык
+  theme: Тема
+  color_scheme: Цветовая схема
+  auto_lock: Таймаут автоблокировки
+  minutes: минут
+  sync: Синхронизация
+  sync_enabled: Синхронизация включена
+  sync_endpoint: Конечная точка синхронизации
+  device_name: Имя устройства
+  instructions_disconnect: Нажмите 'd' для отключения от сервера синхронизации (локальные заметки сохраняются)
+  instructions_status: Нажмите 'R' (Shift+r) для проверки статуса одобрения регистрации
+  instructions_register: Нажмите 'r' для регистрации на сервере синхронизации
+  user_portal: Портал пользователя
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "Отправить на сервер"
-  pull: "Получить с сервера"
-  pushing: "Отправка изменений..."
-  pulling: "Получение изменений..."
-  success: "Синхронизация выполнена"
+  push: Отправить на сервер
+  pull: Получить с сервера
+  pushing: Отправка изменений...
+  pulling: Получение изменений...
+  success: Синхронизация выполнена
   failed: "Синхронизация не удалась: %{error}"
-  no_api_key: "Ключ API не настроен"
-  account_deactivated: "Ваша учётная запись деактивирована или ожидает одобрения администратора. Свяжитесь с администратором."
-  invalid_key: "Недействительный ключ API или ошибка аутентификации. Попробуйте перерегистрировать устройство."
-  conflict: "Обнаружен конфликт синхронизации. Некоторые заметки имеют конфликтующие изменения на сервере."
-  request_failed: "Не удалось отправить запрос синхронизации"
-  response_parse_failed: "Не удалось разобрать ответ синхронизации"
-  encrypted_import: "Зашифрованные учётные данные импортированы. Введите пароль для расшифровки и завершения настройки."
+  no_api_key: Ключ API не настроен
+  account_deactivated: Ваша учётная запись деактивирована или ожидает одобрения администратора. Свяжитесь с администратором.
+  invalid_key: Недействительный ключ API или ошибка аутентификации. Попробуйте перерегистрировать устройство.
+  conflict: Обнаружен конфликт синхронизации. Некоторые заметки имеют конфликтующие изменения на сервере.
+  request_failed: Не удалось отправить запрос синхронизации
+  response_parse_failed: Не удалось разобрать ответ синхронизации
+  encrypted_import: Зашифрованные учётные данные импортированы. Введите пароль для расшифровки и завершения настройки.
   legacy_format_warning: "Внимание: Используется устаревший формат без шифрования. API-ключ отображается в открытом виде."
-  disconnected: "Отключено от сервера синхронизации. Локальные заметки сохранены."
-  disconnect_failed: "Не удалось отключиться от сервера синхронизации"
+  disconnected: Отключено от сервера синхронизации. Локальные заметки сохранены.
+  disconnect_failed: Не удалось отключиться от сервера синхронизации
   status:
-    check_title: "Проверить Статус Регистрации"
-    result_title: "Статус Регистрации"
+    check_title: Проверить Статус Регистрации
+    result_title: Статус Регистрации
     enter_email: "Введите адрес электронной почты для проверки статуса одобрения:"
-    check_failed: "Не удалось проверить статус регистрации"
-    not_found: "Аккаунт с таким адресом электронной почты не найден."
-    approved: "Ваш аккаунт одобрен и активен. Вы можете синхронизировать заметки."
-    pending: "Ваш аккаунт ожидает одобрения. Подождите, пока администратор одобрит вашу регистрацию."
-    inactive: "Ваш аккаунт был деактивирован. Свяжитесь с администратором."
+    check_failed: Не удалось проверить статус регистрации
+    not_found: Аккаунт с таким адресом электронной почты не найден.
+    approved: Ваш аккаунт одобрен и активен. Вы можете синхронизировать заметки.
+    pending: Ваш аккаунт ожидает одобрения. Подождите, пока администратор одобрит вашу регистрацию.
+    inactive: Ваш аккаунт был деактивирован. Свяжитесь с администратором.
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "Регистрация на Сервере Синхронизации"
+  title: Регистрация на Сервере Синхронизации
   enter_endpoint: "Введите URL сервера синхронизации (напр. https://sync.example.com):"
   enter_email: "Введите ваш адрес электронной почты:"
   enter_password: "Создайте пароль (мин. 12 символов):"
   reenter_password: "Повторите пароль синхронизации:"
-  pending_title: "Регистрация на Рассмотрении"
-  pending_message: "Ваша регистрация отправлена и ожидает одобрения администратора."
-  pending_instructions: "Нажмите 'r' или Enter для проверки статуса одобрения. Нажмите Esc для закрытия."
+  pending_title: Регистрация на Рассмотрении
+  pending_message: Ваша регистрация отправлена и ожидает одобрения администратора.
+  pending_instructions: Нажмите 'r' или Enter для проверки статуса одобрения. Нажмите Esc для закрытия.
   pending_help: "r/Enter: Проверить статус | Esc: Закрыть"
-  device_title: "Регистрация Устройства"
+  device_title: Регистрация Устройства
   enter_device_name: "Введите имя для этого устройства (или нажмите Enter для значения по умолчанию):"
-  endpoint_required: "Требуется URL сервера синхронизации"
-  email_invalid: "Введите действительный адрес электронной почты"
-  password_too_short: "Пароль должен содержать минимум 12 символов"
-  failed: "Регистрация не удалась"
-  approved: "Ваша регистрация одобрена!"
-  still_pending: "Ваша регистрация всё ещё ожидает одобрения"
-  success: "Успешно зарегистрировано! Синхронизация теперь включена."
-  device_failed: "Регистрация устройства не удалась"
-  cleared: "Регистрация очищена. Вы можете начать заново."
-  pending_status: "Ожидание одобрения"
+  endpoint_required: Требуется URL сервера синхронизации
+  email_invalid: Введите действительный адрес электронной почты
+  password_too_short: Пароль должен содержать минимум 12 символов
+  failed: Регистрация не удалась
+  approved: Ваша регистрация одобрена!
+  still_pending: Ваша регистрация всё ещё ожидает одобрения
+  success: Успешно зарегистрировано! Синхронизация теперь включена.
+  device_failed: Регистрация устройства не удалась
+  cleared: Регистрация очищена. Вы можете начать заново.
+  pending_status: Ожидание одобрения
 color_scheme:
-  default_dark: "Тёмная по умолчанию"
-  default_light: "Светлая по умолчанию"
-  monokai: "Monokai"
-  solarized_dark: "Solarized тёмная"
-  solarized_light: "Solarized светлая"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox тёмная"
-  gruvbox_light: "Gruvbox светлая"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: Тёмная по умолчанию
+  default_light: Светлая по умолчанию
+  monokai: Monokai
+  solarized_dark: Solarized тёмная
+  solarized_light: Solarized светлая
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox тёмная
+  gruvbox_light: Gruvbox светлая
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "Нет"
-  change_language: "Изменить язык синтаксиса"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: Нет
+  change_language: Изменить язык синтаксиса
   change_failed: "Не удалось обновить язык синтаксиса: %{error}"
 error:
-  generic: "Произошла ошибка"
-  unexpected: "Произошла непредвиденная ошибка"
+  generic: Произошла ошибка
+  unexpected: Произошла непредвиденная ошибка
   database: "Ошибка базы данных: %{error}"
   encryption: "Ошибка шифрования: %{error}"
   network: "Сетевая ошибка: %{error}"
-  file_not_found: "Файл не найден"
-  permission_denied: "Доступ запрещён"
-  invalid_input: "Недопустимый ввод"
+  file_not_found: Файл не найден
+  permission_denied: Доступ запрещён
+  invalid_input: Недопустимый ввод
   operation_failed: "Операция не выполнена: %{error}"
 help:
-  title: "Горячие клавиши"
-  subtitle: "Нажмите ? или q для закрытия"
-  general: "Общие"
-  notes: "Заметки"
-  editor: "Редактор"
-  navigation: "Навигация"
-  quit_app: "Выйти из приложения"
-  new_note: "Создать новую заметку"
-  save_note: "Сохранить текущую заметку"
-  delete_note: "Удалить текущую заметку"
-  search_notes: "Найти заметки"
-  toggle_pin: "Переключить статус закрепления"
-  next_note: "Следующая заметка"
-  prev_note: "Предыдущая заметка"
-  scroll_up: "Прокрутить вверх"
-  scroll_down: "Прокрутить вниз"
-  page_up: "Предыдущая страница"
-  page_down: "Следующая страница"
-  unlock_screen: "ЭКРАН РАЗБЛОКИРОВКИ"
-  note_list: "СПИСОК ЗАМЕТОК"
-  search_mode: "РЕЖИМ ПОИСКА"
-  note_preview_view: "ПРОСМОТР ЗАМЕТКИ - РЕЖИМ ПРОСМОТРА"
-  note_preview_tag: "ПРОСМОТР ЗАМЕТКИ - РЕЖИМ ТЕГОВ"
-  settings: "НАСТРОЙКИ"
-  attachments: "ВЛОЖЕНИЯ"
-  global: "ГЛОБАЛЬНЫЕ"
-  press_esc_or_enter: "Нажмите Esc или Enter для закрытия"
-  press_enter_paste: "Нажмите Enter для вставки | Esc для отмены"
+  title: Горячие клавиши
+  subtitle: Нажмите ? или q для закрытия
+  general: Общие
+  notes: Заметки
+  editor: Редактор
+  navigation: Навигация
+  quit_app: Выйти из приложения
+  new_note: Создать новую заметку
+  save_note: Сохранить текущую заметку
+  delete_note: Удалить текущую заметку
+  search_notes: Найти заметки
+  toggle_pin: Переключить статус закрепления
+  next_note: Следующая заметка
+  prev_note: Предыдущая заметка
+  scroll_up: Прокрутить вверх
+  scroll_down: Прокрутить вниз
+  page_up: Предыдущая страница
+  page_down: Следующая страница
+  unlock_screen: ЭКРАН РАЗБЛОКИРОВКИ
+  note_list: СПИСОК ЗАМЕТОК
+  search_mode: РЕЖИМ ПОИСКА
+  note_preview_view: ПРОСМОТР ЗАМЕТКИ - РЕЖИМ ПРОСМОТРА
+  note_preview_tag: ПРОСМОТР ЗАМЕТКИ - РЕЖИМ ТЕГОВ
+  settings: НАСТРОЙКИ
+  attachments: ВЛОЖЕНИЯ
+  global: ГЛОБАЛЬНЫЕ
+  press_esc_or_enter: Нажмите Esc или Enter для закрытия
+  press_enter_paste: Нажмите Enter для вставки | Esc для отмены
   tab_switch: "Tab: переключить поля | Enter: создать"
   enter_unlock: "Enter: разблокировать | Ctrl+Q: выйти"
-  type_password_key: "Ввести"
-  type_password_desc: "Введите пароль"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "Разблокировать базу данных"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "Переключить пароль/подтверждение (новая БД)"
-  backspace_key: "Backspace"
-  backspace_desc: "Удалить символ"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "Выйти из приложения"
-  slash_search_key: "/"
-  slash_search_desc: "Войти в режим поиска"
+  type_password_key: Ввести
+  type_password_desc: Введите пароль
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: Разблокировать базу данных
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: Переключить пароль/подтверждение (новая БД)
+  backspace_key: Backspace
+  backspace_desc: Удалить символ
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: Выйти из приложения
+  slash_search_key: /
+  slash_search_desc: Войти в режим поиска
   y_sync_key: "y"
-  y_sync_desc: "Синхронизировать заметки (если настроено)"
-  s_settings_key: "s"
-  s_settings_desc: "Показать настройки"
+  y_sync_desc: Синхронизировать заметки (если настроено)
+  s_settings_key: s
+  s_settings_desc: Показать настройки
   n_new_key: "n"
-  n_new_desc: "Создать новую заметку"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "Открыть заметку в $EDITOR"
-  d_delete_key: "d"
-  d_delete_desc: "Удалить выбранную заметку"
-  j_down_key: "j / ↓"
-  j_down_desc: "Переместить вниз"
-  k_up_key: "k / ↑"
-  k_up_desc: "Переместить вверх"
+  n_new_desc: Создать новую заметку
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: Открыть заметку в $EDITOR
+  d_delete_key: d
+  d_delete_desc: Удалить выбранную заметку
+  j_down_key: j / ↓
+  j_down_desc: Переместить вниз
+  k_up_key: k / ↑
+  k_up_desc: Переместить вверх
   question_help_key: "?"
-  question_help_desc: "Показать эту справку"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "Выйти из приложения"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "Ввести"
-  type_search_desc: "Введите запрос поиска"
+  question_help_desc: Показать эту справку
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: Выйти из приложения
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: Ввести
+  type_search_desc: Введите запрос поиска
   search_tag_key: "#тег"
-  search_tag_desc: "Поиск по тегу"
+  search_tag_desc: Поиск по тегу
   search_exclude_key: "-слово"
-  search_exclude_desc: "Исключить слово (отрицание)"
-  search_and_key: "слово1 слово2"
-  search_and_desc: "Найти все слова (И)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "Открыть заметку в $EDITOR"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "Выйти из режима поиска"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "Навигация по результатам"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "Редактировать во внешнем $EDITOR"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "Войти в режим тегов"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "Сохранить и вернуться к списку"
-  type_tag_key: "Ввести"
-  type_tag_desc: "Введите имя тега"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "Добавить тег"
-  backspace_remove_key: "Backspace (пусто)"
-  backspace_remove_desc: "Удалить последний тег"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "Удалить символ из ввода"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "Выйти в обычный режим"
-  jk_navigate_key: "j/k или ↑/↓"
-  jk_navigate_desc: "Навигация между полями"
-  enter_edit_key: "Enter / i / Пробел"
-  enter_edit_desc: "Редактировать выбранное поле"
-  enter_save_key: "Enter"
-  enter_save_desc: "Сохранить текстовые/числовые поля, переключить другие поля"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "Отменить редактирование (текстовые/числовые поля)"
-  p_paste_key: "p"
-  p_paste_desc: "Вставить учётные данные синхронизации (показывает ввод текста)"
-  c_copy_key: "c"
-  c_copy_desc: "Копировать учётные данные синхронизации (зашифрованный формат)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "Копировать учётные данные синхронизации (устаревший незашифрованный формат)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "Закрыть панель настроек"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "Добавить вложение (введите путь к файлу)"
-  a_view_attachment_key: "a + номер"
-  a_view_attachment_desc: "Просмотреть вложение (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "Навигация по вложениям"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "Удалить выбранное вложение"
+  search_exclude_desc: Исключить слово (отрицание)
+  search_and_key: слово1 слово2
+  search_and_desc: Найти все слова (И)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: Открыть заметку в $EDITOR
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: Выйти из режима поиска
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: Навигация по результатам
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: Редактировать во внешнем $EDITOR
+  t_tag_mode_key: t
+  t_tag_mode_desc: Войти в режим тегов
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: Сохранить и вернуться к списку
+  type_tag_key: Ввести
+  type_tag_desc: Введите имя тега
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: Добавить тег
+  backspace_remove_key: Backspace (пусто)
+  backspace_remove_desc: Удалить последний тег
+  backspace_delete_key: Backspace
+  backspace_delete_desc: Удалить символ из ввода
+  esc_normal_key: Esc
+  esc_normal_desc: Выйти в обычный режим
+  jk_navigate_key: j/k или ↑/↓
+  jk_navigate_desc: Навигация между полями
+  enter_edit_key: Enter / i / Пробел
+  enter_edit_desc: Редактировать выбранное поле
+  enter_save_key: Enter
+  enter_save_desc: Сохранить текстовые/числовые поля, переключить другие поля
+  esc_cancel_key: Esc
+  esc_cancel_desc: Отменить редактирование (текстовые/числовые поля)
+  p_paste_key: p
+  p_paste_desc: Вставить учётные данные синхронизации (показывает ввод текста)
+  c_copy_key: c
+  c_copy_desc: Копировать учётные данные синхронизации (зашифрованный формат)
+  shift_c_copy_key: C
+  shift_c_copy_desc: Копировать учётные данные синхронизации (устаревший незашифрованный формат)
+  s_q_close_key: s / q
+  s_q_close_desc: Закрыть панель настроек
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: Добавить вложение (введите путь к файлу)
+  a_view_attachment_key: a + номер
+  a_view_attachment_desc: Просмотреть вложение (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: Навигация по вложениям
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: Удалить выбранное вложение
   note_images_key: "Примечание:"
-  note_images_desc: "Изображения используют chafa, если доступно, иначе системное приложение по умолчанию"
+  note_images_desc: Изображения используют chafa, если доступно, иначе системное приложение по умолчанию
   question_global_key: "?"
-  question_global_desc: "Показать этот экран справки"
+  question_global_desc: Показать этот экран справки
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "Список заметок"
-  show: "Показать заметку"
-  new: "Создать новую заметку"
-  edit: "Редактировать заметку"
-  delete: "Удалить заметку"
-  search: "Найти заметки"
-  export: "Экспортировать заметки"
-  import: "Импортировать заметки"
-  sync: "Синхронизировать с сервером"
-  register: "Зарегистрировать устройство"
+  list: Список заметок
+  show: Показать заметку
+  new: Создать новую заметку
+  edit: Редактировать заметку
+  delete: Удалить заметку
+  search: Найти заметки
+  export: Экспортировать заметки
+  import: Импортировать заметки
+  sync: Синхронизировать с сервером
+  register: Зарегистрировать устройство
 status:
-  locked: "Заблокировано"
-  unlocked: "Разблокировано"
-  syncing: "Синхронизация..."
-  synced: "Синхронизировано"
-  offline: "Офлайн"
-  modified: "Изменено"
-  saved: "Сохранено"
+  locked: Заблокировано
+  unlocked: Разблокировано
+  syncing: Синхронизация...
+  synced: Синхронизировано
+  offline: Офлайн
+  modified: Изменено
+  saved: Сохранено
 bulk:
   tags_added: "Теги добавлены к %{count} заметкам: %{tags}"
   deleted: "%{count} заметок удалено"
   combined: "%{count} заметок объединено"
-  combine_requires_two: "Выберите как минимум 2 заметки для объединения"
+  combine_requires_two: Выберите как минимум 2 заметки для объединения
   exported: "%{count} заметок экспортировано в %{path}"
   operation_failed: "Массовая операция не удалась: %{error}"
-  confirm_delete: "Удалить %{count} заметок? (д/н)"
-  confirm_combine: "Объединить %{count} заметок? (д/н)"
+  confirm_delete: Удалить %{count} заметок? (д/н)
+  confirm_combine: Объединить %{count} заметок? (д/н)
   enter_tags: "Введите теги (через запятую):"
   enter_export_path: "Путь экспорта:"
-  add_tags_to: "Добавить теги к"
-  export_notes_to: "Экспорт"
+  add_tags_to: Добавить теги к
+  export_notes_to: Экспорт
 time:
-  just_now: "только что"
+  just_now: только что
   minutes_ago: "%{count} минут назад"
   hours_ago: "%{count} часов назад"
   days_ago: "%{count} дней назад"
   date_format: "%d.%m.%Y"
   time_format: "%H:%M:%S"
   datetime_format: "%d.%m.%Y %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

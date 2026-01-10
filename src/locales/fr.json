@@ -14,7 +14,8 @@
     "unlock": "Déverrouiller",
     "settings": "Paramètres",
     "search": "Rechercher",
-    "error": "Erreur"
+    "error": "Erreur",
+    "back": "Back"
   },
   "docs": {
     "title": "Documentation",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Rechercher des notes...",
-    "clear": "Effacer la recherche"
+    "clear": "Effacer la recherche",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Aucune note sélectionnée",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Votre navigateur ne prend pas en charge la lecture vidéo.",
       "previewNotAvailable": "Aperçu non disponible pour ce type de fichier.",
       "downloadToView": "Téléchargez pour visualiser"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Supprimer la note",
@@ -247,7 +251,8 @@
         "successTitle": "Synchronisation activée avec succès !",
         "successText": "Votre appareil est maintenant enregistré et <strong>toutes vos notes existantes ont été synchronisées avec le serveur</strong>. Tous les changements futurs seront synchronisés automatiquement.",
         "successNextSteps": "📋 Pour ajouter un autre appareil : Cliquez sur \"Exporter les identifiants de synchronisation\" ci-dessous et importez-les sur votre autre appareil.",
-        "done": "Terminé"
+        "done": "Terminé",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Lier un compte (facultatif)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Langages système",
       "dataLanguages": "Langages de données",
       "otherLanguages": "Autres langages",
-      "enabledCount": "{enabled}/{total} activés"
+      "enabledCount": "{enabled}/{total} activés",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Personnalisez les raccourcis clavier. Cliquez sur un raccourci pour le modifier, puis appuyez sur la combinaison de touches souhaitée.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery est une application de bloc-notes auto-hébergée axée sur la confidentialité pour capturer, organiser et rechercher des notes avec du contenu riche, de la coloration syntaxique et du chiffrement.",
       "viewOnGithub": "Voir sur GitHub",
       "license": "Sous licence MIT."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Bienvenue dans Jottery",
@@ -605,7 +615,9 @@
     "title": "Nouvelle version disponible",
     "message": "Rechargez pour obtenir les dernières fonctionnalités et améliorations",
     "reloadButton": "Recharger maintenant",
-    "dismissLabel": "Ignorer"
+    "dismissLabel": "Ignorer",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Basculer la sélection",
@@ -627,5 +639,26 @@
     "progress": "{current} sur {total}",
     "selectAll": "Tout sélectionner",
     "deselectAll": "Tout désélectionner"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

@@ -14,7 +14,8 @@
     "unlock": "ロック解除",
     "settings": "設定",
     "search": "検索",
-    "error": "エラー"
+    "error": "エラー",
+    "back": "Back"
   },
   "docs": {
     "title": "ドキュメント",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "ノートを検索...",
-    "clear": "検索をクリア"
+    "clear": "検索をクリア",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "ノートが選択されていません",
@@ -102,7 +104,9 @@
       "videoNotSupported": "お使いのブラウザは動画の再生に対応していません。",
       "previewNotAvailable": "このファイルタイプのプレビューは利用できません。",
       "downloadToView": "表示するにはダウンロードしてください"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "ノートを削除",
@@ -247,7 +251,8 @@
         "successTitle": "同期が正常に有効化されました!",
         "successText": "デバイスが登録され、<strong>既存のすべてのノートがサーバーに同期されました</strong>。今後の変更は自動的に同期されます。",
         "successNextSteps": "📋 別のデバイスを追加するには: 以下の「同期認証情報をエクスポート」をクリックして、他のデバイスにインポートしてください。",
-        "done": "完了"
+        "done": "完了",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "アカウントをリンク(オプション)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "システム言語",
       "dataLanguages": "データ言語",
       "otherLanguages": "その他の言語",
-      "enabledCount": "{total}件中{enabled}件が有効"
+      "enabledCount": "{total}件中{enabled}件が有効",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "キーボードショートカットをカスタマイズします。ショートカットをクリックして変更し、希望するキーの組み合わせを押してください。",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jotteryは、リッチコンテンツ、シンタックスハイライト、暗号化を備えた、ノートをキャプチャ、整理、検索するためのプライバシー重視のセルフホスト型スクラッチパッドアプリケーションです。",
       "viewOnGithub": "GitHubで表示",
       "license": "MITライセンスの下でライセンスされています。"
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Jotteryへようこそ",
@@ -605,7 +615,9 @@
     "title": "新しいバージョンが利用可能です",
     "message": "リロードして最新の機能と改善を入手してください",
     "reloadButton": "今すぐリロード",
-    "dismissLabel": "閉じる"
+    "dismissLabel": "閉じる",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "選択を切り替え",
@@ -627,5 +639,26 @@
     "progress": "{total}件中{current}件",
     "selectAll": "すべて選択",
     "deselectAll": "すべて選択解除"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

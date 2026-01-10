@@ -14,7 +14,8 @@
     "unlock": "解锁",
     "settings": "设置",
     "search": "搜索",
-    "error": "错误"
+    "error": "错误",
+    "back": "Back"
   },
   "docs": {
     "title": "文档",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "搜索笔记...",
-    "clear": "清除搜索"
+    "clear": "清除搜索",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "未选择笔记",
@@ -102,7 +104,9 @@
       "videoNotSupported": "您的浏览器不支持视频播放。",
       "previewNotAvailable": "此文件类型无法预览。",
       "downloadToView": "下载以查看"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "删除笔记",
@@ -247,7 +251,8 @@
         "successTitle": "同步已成功启用!",
         "successText": "您的设备现已注册,<strong>所有现有笔记已同步到服务器</strong>。未来的更改将自动同步。",
         "successNextSteps": "📋 添加另一台设备:点击下方的\"导出同步凭据\"并将其导入到您的其他设备。",
-        "done": "完成"
+        "done": "完成",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "关联账户 (可选)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "系统语言",
       "dataLanguages": "数据语言",
       "otherLanguages": "其他语言",
-      "enabledCount": "已启用 {enabled}/{total}"
+      "enabledCount": "已启用 {enabled}/{total}",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "自定义快捷键。点击快捷键进行修改,然后按下您想要的组合键。",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery 是一个注重隐私、自托管的便签应用程序,用于捕获、组织和搜索具有丰富内容、语法高亮和加密的笔记。",
       "viewOnGithub": "在 GitHub 上查看",
       "license": "使用 MIT 许可证授权。"
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "欢迎使用 Jottery",
@@ -605,7 +615,9 @@
     "title": "有新版本可用",
     "message": "重新加载以获取最新功能和改进",
     "reloadButton": "立即重新加载",
-    "dismissLabel": "忽略"
+    "dismissLabel": "忽略",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "切换选择",
@@ -627,5 +639,26 @@
     "progress": "{current} / {total}",
     "selectAll": "全选",
     "deselectAll": "取消全选"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

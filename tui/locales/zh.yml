@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "注重隐私的加密笔记TUI"
+  name: Jottery
+  description: 注重隐私的加密笔记TUI
 common:
-  loading: "加载中..."
-  saving: "保存中..."
-  cancel: "取消"
-  confirm: "确认"
-  yes: "是"
-  no: "否"
-  ok: "确定"
-  close: "关闭"
-  quit: "退出"
-  back: "返回"
-  email: "电子邮件"
+  loading: 加载中...
+  saving: 保存中...
+  cancel: 取消
+  confirm: 确认
+  "yes": 是
+  "no": 否
+  ok: 确定
+  close: 关闭
+  quit: 退出
+  back: 返回
+  email: 电子邮件
 password:
   prompt: "密码: "
-  enter: "输入密码"
-  confirm: "确认密码"
-  empty_error: "密码不能为空"
-  mismatch_error: "密码不匹配"
+  enter: 输入密码
+  confirm: 确认密码
+  empty_error: 密码不能为空
+  mismatch_error: 密码不匹配
   unlock_failed: "解锁失败: %{error}"
-  change_success: "密码修改成功"
+  change_success: 密码修改成功
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "笔记"
-  new_note: "新建笔记"
-  settings: "设置"
-  help: "帮助"
-  quit: "退出"
-  search: "搜索"
+  notes: 笔记
+  new_note: 新建笔记
+  settings: 设置
+  help: 帮助
+  quit: 退出
+  search: 搜索
 note:
-  new: "新建笔记"
-  save: "保存"
-  saved: "笔记已保存"
+  new: 新建笔记
+  save: 保存
+  saved: 笔记已保存
   save_failed: "保存笔记失败: %{error}"
-  delete: "删除笔记"
-  deleted: "笔记已删除"
+  delete: 删除笔记
+  deleted: 笔记已删除
   delete_failed: "删除笔记失败: %{error}"
   reload_failed: "重新加载笔记失败: %{error}"
-  pin: "固定笔记"
-  unpin: "取消固定笔记"
-  pinned: "已固定"
+  pin: 固定笔记
+  unpin: 取消固定笔记
+  pinned: 已固定
   pin_failed: "更新固定状态失败: %{error}"
-  no_notes: "未找到笔记"
+  no_notes: 未找到笔记
   total: "%{count} 条笔记"
 editor:
-  title: "标题"
-  content: "内容"
-  tags: "标签"
-  created: "创建时间"
-  modified: "修改时间"
-  launch_external: "启动外部编辑器"
+  title: 标题
+  content: 内容
+  tags: 标签
+  created: 创建时间
+  modified: 修改时间
+  launch_external: 启动外部编辑器
   external_failed: "启动编辑器失败: %{error}"
-  external_exit_error: "编辑器退出时出错"
-  temp_file_error: "创建临时文件失败"
-  temp_write_error: "写入临时文件失败"
-  temp_read_error: "读取临时文件失败"
-  default_editor: "vi"
+  external_exit_error: 编辑器退出时出错
+  temp_file_error: 创建临时文件失败
+  temp_write_error: 写入临时文件失败
+  temp_read_error: 读取临时文件失败
+  default_editor: vi
 attachment:
-  add: "添加附件"
+  add: 添加附件
   add_failed: "添加附件失败: %{error}"
-  view: "查看附件"
+  view: 查看附件
   view_failed: "查看附件失败: %{error}"
-  delete: "删除附件"
-  no_attachments: "无附件"
+  delete: 删除附件
+  no_attachments: 无附件
   total: "%{count} 个附件"
 version:
-  history: "版本历史"
-  restore: "恢复版本"
-  restored: "已恢复版本 %{number}"
+  history: 版本历史
+  restore: 恢复版本
+  restored: 已恢复版本 %{number}
   restore_failed: "恢复版本失败: %{error}"
-  no_versions: "无版本历史"
-  current: "当前版本"
+  no_versions: 无版本历史
+  current: 当前版本
 search:
-  prompt: "搜索笔记..."
-  no_results: "未找到结果"
+  prompt: 搜索笔记...
+  no_results: 未找到结果
   results: "%{count} 个结果"
 settings:
-  title: "设置"
-  language: "语言"
-  theme: "主题"
-  color_scheme: "配色方案"
-  auto_lock: "自动锁定超时"
-  minutes: "分钟"
-  sync: "同步"
-  sync_enabled: "同步已启用"
-  sync_endpoint: "同步端点"
-  device_name: "设备名称"
-  instructions_disconnect: "按 'd' 断开与同步服务器的连接 (保留本地笔记)"
-  instructions_status: "按 'R' (Shift+r) 检查注册审批状态"
-  instructions_register: "按 'r' 注册到同步服务器"
-  user_portal: "用户门户"
+  title: 设置
+  language: 语言
+  theme: 主题
+  color_scheme: 配色方案
+  auto_lock: 自动锁定超时
+  minutes: 分钟
+  sync: 同步
+  sync_enabled: 同步已启用
+  sync_endpoint: 同步端点
+  device_name: 设备名称
+  instructions_disconnect: 按 'd' 断开与同步服务器的连接 (保留本地笔记)
+  instructions_status: 按 'R' (Shift+r) 检查注册审批状态
+  instructions_register: 按 'r' 注册到同步服务器
+  user_portal: 用户门户
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "推送到服务器"
-  pull: "从服务器拉取"
-  pushing: "正在推送更改..."
-  pulling: "正在拉取更改..."
-  success: "同步成功"
+  push: 推送到服务器
+  pull: 从服务器拉取
+  pushing: 正在推送更改...
+  pulling: 正在拉取更改...
+  success: 同步成功
   failed: "同步失败: %{error}"
-  no_api_key: "未配置API密钥"
-  account_deactivated: "您的账户已被停用或正在等待管理员批准。请联系管理员。"
-  invalid_key: "无效的API密钥或身份验证失败。请尝试重新注册您的设备。"
-  conflict: "检测到同步冲突。某些笔记在服务器上有冲突的更改。"
-  request_failed: "发送同步请求失败"
-  response_parse_failed: "解析同步响应失败"
-  encrypted_import: "已导入加密凭据。请输入密码以解密并完成设置。"
-  legacy_format_warning: "警告：使用未加密的旧版格式。API密钥以明文显示。"
-  disconnected: "已断开与同步服务器的连接。本地笔记已保留。"
-  disconnect_failed: "断开与同步服务器的连接失败"
+  no_api_key: 未配置API密钥
+  account_deactivated: 您的账户已被停用或正在等待管理员批准。请联系管理员。
+  invalid_key: 无效的API密钥或身份验证失败。请尝试重新注册您的设备。
+  conflict: 检测到同步冲突。某些笔记在服务器上有冲突的更改。
+  request_failed: 发送同步请求失败
+  response_parse_failed: 解析同步响应失败
+  encrypted_import: 已导入加密凭据。请输入密码以解密并完成设置。
+  legacy_format_warning: 警告：使用未加密的旧版格式。API密钥以明文显示。
+  disconnected: 已断开与同步服务器的连接。本地笔记已保留。
+  disconnect_failed: 断开与同步服务器的连接失败
   status:
-    check_title: "检查注册状态"
-    result_title: "注册状态"
+    check_title: 检查注册状态
+    result_title: 注册状态
     enter_email: "输入您的电子邮件地址以检查审批状态:"
-    check_failed: "检查注册状态失败"
-    not_found: "未找到使用此电子邮件地址的账户。"
-    approved: "您的账户已获批准并处于活动状态。您可以同步笔记。"
-    pending: "您的账户正在等待审批。请等待管理员批准您的注册。"
-    inactive: "您的账户已被停用。请联系管理员。"
+    check_failed: 检查注册状态失败
+    not_found: 未找到使用此电子邮件地址的账户。
+    approved: 您的账户已获批准并处于活动状态。您可以同步笔记。
+    pending: 您的账户正在等待审批。请等待管理员批准您的注册。
+    inactive: 您的账户已被停用。请联系管理员。
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "注册到同步服务器"
+  title: 注册到同步服务器
   enter_endpoint: "输入同步服务器 URL (例如 https://sync.example.com):"
   enter_email: "输入您的电子邮件地址:"
   enter_password: "创建密码 (最少12个字符):"
   reenter_password: "重新输入您的同步密码:"
-  pending_title: "注册待处理"
-  pending_message: "您的注册已提交，正在等待管理员审批。"
-  pending_instructions: "按 'r' 或 Enter 检查审批状态。按 Esc 关闭。"
+  pending_title: 注册待处理
+  pending_message: 您的注册已提交，正在等待管理员审批。
+  pending_instructions: 按 'r' 或 Enter 检查审批状态。按 Esc 关闭。
   pending_help: "r/Enter: 检查状态 | Esc: 关闭"
-  device_title: "设备注册"
+  device_title: 设备注册
   enter_device_name: "为此设备输入名称 (或按 Enter 使用默认值):"
-  endpoint_required: "需要同步服务器 URL"
-  email_invalid: "请输入有效的电子邮件地址"
-  password_too_short: "密码必须至少12个字符"
-  failed: "注册失败"
-  approved: "您的注册已获批准！"
-  still_pending: "您的注册仍在等待审批"
-  success: "注册成功！同步已启用。"
-  device_failed: "设备注册失败"
-  cleared: "注册已清除。您可以重新开始。"
-  pending_status: "等待审批"
+  endpoint_required: 需要同步服务器 URL
+  email_invalid: 请输入有效的电子邮件地址
+  password_too_short: 密码必须至少12个字符
+  failed: 注册失败
+  approved: 您的注册已获批准！
+  still_pending: 您的注册仍在等待审批
+  success: 注册成功！同步已启用。
+  device_failed: 设备注册失败
+  cleared: 注册已清除。您可以重新开始。
+  pending_status: 等待审批
 color_scheme:
-  default_dark: "默认深色"
-  default_light: "默认浅色"
-  monokai: "Monokai"
-  solarized_dark: "Solarized 深色"
-  solarized_light: "Solarized 浅色"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox 深色"
-  gruvbox_light: "Gruvbox 浅色"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: 默认深色
+  default_light: 默认浅色
+  monokai: Monokai
+  solarized_dark: Solarized 深色
+  solarized_light: Solarized 浅色
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox 深色
+  gruvbox_light: Gruvbox 浅色
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "无"
-  change_language: "更改语法语言"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: 无
+  change_language: 更改语法语言
   change_failed: "更新语法语言失败: %{error}"
 error:
-  generic: "发生错误"
-  unexpected: "发生意外错误"
+  generic: 发生错误
+  unexpected: 发生意外错误
   database: "数据库错误: %{error}"
   encryption: "加密错误: %{error}"
   network: "网络错误: %{error}"
-  file_not_found: "文件未找到"
-  permission_denied: "权限被拒绝"
-  invalid_input: "无效输入"
+  file_not_found: 文件未找到
+  permission_denied: 权限被拒绝
+  invalid_input: 无效输入
   operation_failed: "操作失败: %{error}"
 help:
-  title: "键盘快捷键"
-  subtitle: "按 ? 或 q 关闭"
-  general: "常规"
-  notes: "笔记"
-  editor: "编辑器"
-  navigation: "导航"
-  quit_app: "退出应用程序"
-  new_note: "创建新笔记"
-  save_note: "保存当前笔记"
-  delete_note: "删除当前笔记"
-  search_notes: "搜索笔记"
-  toggle_pin: "切换固定状态"
-  next_note: "下一条笔记"
-  prev_note: "上一条笔记"
-  scroll_up: "向上滚动"
-  scroll_down: "向下滚动"
-  page_up: "上一页"
-  page_down: "下一页"
-  unlock_screen: "解锁屏幕"
-  note_list: "笔记列表"
-  search_mode: "搜索模式"
-  note_preview_view: "笔记预览 - 查看模式"
-  note_preview_tag: "笔记预览 - 标签模式"
-  settings: "设置"
-  attachments: "附件"
-  global: "全局"
-  press_esc_or_enter: "按 Esc 或 Enter 关闭"
-  press_enter_paste: "按 Enter 粘贴 | Esc 取消"
+  title: 键盘快捷键
+  subtitle: 按 ? 或 q 关闭
+  general: 常规
+  notes: 笔记
+  editor: 编辑器
+  navigation: 导航
+  quit_app: 退出应用程序
+  new_note: 创建新笔记
+  save_note: 保存当前笔记
+  delete_note: 删除当前笔记
+  search_notes: 搜索笔记
+  toggle_pin: 切换固定状态
+  next_note: 下一条笔记
+  prev_note: 上一条笔记
+  scroll_up: 向上滚动
+  scroll_down: 向下滚动
+  page_up: 上一页
+  page_down: 下一页
+  unlock_screen: 解锁屏幕
+  note_list: 笔记列表
+  search_mode: 搜索模式
+  note_preview_view: 笔记预览 - 查看模式
+  note_preview_tag: 笔记预览 - 标签模式
+  settings: 设置
+  attachments: 附件
+  global: 全局
+  press_esc_or_enter: 按 Esc 或 Enter 关闭
+  press_enter_paste: 按 Enter 粘贴 | Esc 取消
   tab_switch: "Tab: 切换字段 | Enter: 创建"
   enter_unlock: "Enter: 解锁 | Ctrl+Q: 退出"
-  type_password_key: "输入"
-  type_password_desc: "输入密码"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "解锁数据库"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "切换密码/确认 (新数据库)"
-  backspace_key: "Backspace"
-  backspace_desc: "删除字符"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "退出应用程序"
-  slash_search_key: "/"
-  slash_search_desc: "进入搜索模式"
+  type_password_key: 输入
+  type_password_desc: 输入密码
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: 解锁数据库
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: 切换密码/确认 (新数据库)
+  backspace_key: Backspace
+  backspace_desc: 删除字符
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: 退出应用程序
+  slash_search_key: /
+  slash_search_desc: 进入搜索模式
   y_sync_key: "y"
-  y_sync_desc: "同步笔记 (如已配置)"
-  s_settings_key: "s"
-  s_settings_desc: "显示设置"
+  y_sync_desc: 同步笔记 (如已配置)
+  s_settings_key: s
+  s_settings_desc: 显示设置
   n_new_key: "n"
-  n_new_desc: "创建新笔记"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "在 $EDITOR 中打开笔记"
-  d_delete_key: "d"
-  d_delete_desc: "删除选定的笔记"
-  j_down_key: "j / ↓"
-  j_down_desc: "向下移动"
-  k_up_key: "k / ↑"
-  k_up_desc: "向上移动"
+  n_new_desc: 创建新笔记
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: 在 $EDITOR 中打开笔记
+  d_delete_key: d
+  d_delete_desc: 删除选定的笔记
+  j_down_key: j / ↓
+  j_down_desc: 向下移动
+  k_up_key: k / ↑
+  k_up_desc: 向上移动
   question_help_key: "?"
-  question_help_desc: "显示此帮助"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "退出应用程序"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "输入"
-  type_search_desc: "输入搜索查询"
+  question_help_desc: 显示此帮助
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: 退出应用程序
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: 输入
+  type_search_desc: 输入搜索查询
   search_tag_key: "#标签"
-  search_tag_desc: "按标签搜索"
+  search_tag_desc: 按标签搜索
   search_exclude_key: "-词"
-  search_exclude_desc: "排除词 (否定)"
-  search_and_key: "词1 词2"
-  search_and_desc: "匹配所有词 (与)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "在 $EDITOR 中打开笔记"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "退出搜索模式"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "浏览结果"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "使用外部 $EDITOR 编辑"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "进入标签模式"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "保存并返回列表"
-  type_tag_key: "输入"
-  type_tag_desc: "输入标签名称"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "添加标签"
-  backspace_remove_key: "Backspace (空)"
-  backspace_remove_desc: "删除最后一个标签"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "从输入中删除字符"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "退出到正常模式"
-  jk_navigate_key: "j/k 或 ↑/↓"
-  jk_navigate_desc: "在字段间导航"
-  enter_edit_key: "Enter / i / Space"
-  enter_edit_desc: "编辑选定的字段"
-  enter_save_key: "Enter"
-  enter_save_desc: "保存文本/数字字段，切换其他字段"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "取消编辑 (文本/数字字段)"
-  p_paste_key: "p"
-  p_paste_desc: "粘贴同步凭据 (显示文本输入)"
-  c_copy_key: "c"
-  c_copy_desc: "复制同步凭据 (加密格式)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "复制同步凭据 (旧版未加密格式)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "关闭设置面板"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "添加附件 (输入文件路径)"
-  a_view_attachment_key: "a + 数字"
-  a_view_attachment_desc: "查看附件 (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "浏览附件"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "删除选定的附件"
+  search_exclude_desc: 排除词 (否定)
+  search_and_key: 词1 词2
+  search_and_desc: 匹配所有词 (与)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: 在 $EDITOR 中打开笔记
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: 退出搜索模式
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: 浏览结果
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: 使用外部 $EDITOR 编辑
+  t_tag_mode_key: t
+  t_tag_mode_desc: 进入标签模式
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: 保存并返回列表
+  type_tag_key: 输入
+  type_tag_desc: 输入标签名称
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: 添加标签
+  backspace_remove_key: Backspace (空)
+  backspace_remove_desc: 删除最后一个标签
+  backspace_delete_key: Backspace
+  backspace_delete_desc: 从输入中删除字符
+  esc_normal_key: Esc
+  esc_normal_desc: 退出到正常模式
+  jk_navigate_key: j/k 或 ↑/↓
+  jk_navigate_desc: 在字段间导航
+  enter_edit_key: Enter / i / Space
+  enter_edit_desc: 编辑选定的字段
+  enter_save_key: Enter
+  enter_save_desc: 保存文本/数字字段，切换其他字段
+  esc_cancel_key: Esc
+  esc_cancel_desc: 取消编辑 (文本/数字字段)
+  p_paste_key: p
+  p_paste_desc: 粘贴同步凭据 (显示文本输入)
+  c_copy_key: c
+  c_copy_desc: 复制同步凭据 (加密格式)
+  shift_c_copy_key: C
+  shift_c_copy_desc: 复制同步凭据 (旧版未加密格式)
+  s_q_close_key: s / q
+  s_q_close_desc: 关闭设置面板
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: 添加附件 (输入文件路径)
+  a_view_attachment_key: a + 数字
+  a_view_attachment_desc: 查看附件 (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: 浏览附件
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: 删除选定的附件
   note_images_key: "注意:"
-  note_images_desc: "图像如果可用则使用 chafa，否则使用系统默认应用"
+  note_images_desc: 图像如果可用则使用 chafa，否则使用系统默认应用
   question_global_key: "?"
-  question_global_desc: "显示此帮助屏幕"
+  question_global_desc: 显示此帮助屏幕
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "列出笔记"
-  show: "显示笔记"
-  new: "创建新笔记"
-  edit: "编辑笔记"
-  delete: "删除笔记"
-  search: "搜索笔记"
-  export: "导出笔记"
-  import: "导入笔记"
-  sync: "与服务器同步"
-  register: "注册设备"
+  list: 列出笔记
+  show: 显示笔记
+  new: 创建新笔记
+  edit: 编辑笔记
+  delete: 删除笔记
+  search: 搜索笔记
+  export: 导出笔记
+  import: 导入笔记
+  sync: 与服务器同步
+  register: 注册设备
 status:
-  locked: "已锁定"
-  unlocked: "已解锁"
-  syncing: "同步中..."
-  synced: "已同步"
-  offline: "离线"
-  modified: "已修改"
-  saved: "已保存"
+  locked: 已锁定
+  unlocked: 已解锁
+  syncing: 同步中...
+  synced: 已同步
+  offline: 离线
+  modified: 已修改
+  saved: 已保存
 bulk:
   tags_added: "已为 %{count} 条笔记添加标签: %{tags}"
-  deleted: "已删除 %{count} 条笔记"
-  combined: "已合并 %{count} 条笔记"
-  combine_requires_two: "请至少选择 2 条笔记进行合并"
-  exported: "已将 %{count} 条笔记导出至 %{path}"
+  deleted: 已删除 %{count} 条笔记
+  combined: 已合并 %{count} 条笔记
+  combine_requires_two: 请至少选择 2 条笔记进行合并
+  exported: 已将 %{count} 条笔记导出至 %{path}
   operation_failed: "批量操作失败: %{error}"
-  confirm_delete: "删除 %{count} 条笔记？ (y/n)"
-  confirm_combine: "合并 %{count} 条笔记？ (y/n)"
+  confirm_delete: 删除 %{count} 条笔记？ (y/n)
+  confirm_combine: 合并 %{count} 条笔记？ (y/n)
   enter_tags: "输入标签 (逗号分隔):"
   enter_export_path: "导出路径:"
-  add_tags_to: "添加标签到"
-  export_notes_to: "导出"
+  add_tags_to: 添加标签到
+  export_notes_to: 导出
 time:
-  just_now: "刚刚"
+  just_now: 刚刚
   minutes_ago: "%{count} 分钟前"
   hours_ago: "%{count} 小时前"
   days_ago: "%{count} 天前"
   date_format: "%Y年%m月%d日"
   time_format: "%H:%M:%S"
   datetime_format: "%Y年%m月%d日 %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

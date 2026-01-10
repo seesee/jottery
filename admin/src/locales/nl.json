@@ -278,8 +278,15 @@
         "wrongPassword": "Huidig wachtwoord is onjuist",
         "unexpected": "Er is een onverwachte fout opgetreden",
         "deactivateFailed": "Account deactiveren mislukt",
-        "deleteFailed": "Account verwijderen mislukt"
-      }
+        "deleteFailed": "Account verwijderen mislukt",
+        "deleteNotesFailed": "Failed to delete notes"
+      },
+      "deleteNotes": "Delete Notes",
+      "deleteNotesDescription": "Delete all your notes from the server. Your account remains active and you can sync again.",
+      "deleteNotesButton": "Delete Notes",
+      "deleteNotesConfirmTitle": "Delete All Notes",
+      "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
+      "notesDeleted": "All notes have been deleted from the server"
     }
   }
 }

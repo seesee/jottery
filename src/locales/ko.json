@@ -14,7 +14,8 @@
     "unlock": "잠금 해제",
     "settings": "설정",
     "search": "검색",
-    "error": "오류"
+    "error": "오류",
+    "back": "Back"
   },
   "docs": {
     "title": "문서",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "노트 검색...",
-    "clear": "검색 지우기"
+    "clear": "검색 지우기",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "선택된 노트 없음",
@@ -102,7 +104,9 @@
       "videoNotSupported": "브라우저가 비디오 재생을 지원하지 않습니다.",
       "previewNotAvailable": "이 파일 형식은 미리보기가 불가능합니다.",
       "downloadToView": "다운로드하여 보기"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "노트 삭제",
@@ -247,7 +251,8 @@
         "successTitle": "동기화가 성공적으로 활성화되었습니다!",
         "successText": "기기가 등록되었으며 <strong>모든 기존 노트가 서버에 동기화되었습니다</strong>. 향후 변경 사항은 자동으로 동기화됩니다.",
         "successNextSteps": "📋 다른 기기를 추가하려면: 아래의 \"동기화 자격 증명 내보내기\"를 클릭하여 다른 기기에 가져오세요.",
-        "done": "완료"
+        "done": "완료",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "계정 연결 (선택 사항)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "시스템 언어",
       "dataLanguages": "데이터 언어",
       "otherLanguages": "기타 언어",
-      "enabledCount": "{enabled}/{total} 활성화됨"
+      "enabledCount": "{enabled}/{total} 활성화됨",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "단축키를 사용자 정의하세요. 단축키를 클릭하여 변경한 다음 원하는 키 조합을 누르세요.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery는 풍부한 콘텐츠, 구문 강조 및 암호화를 사용하여 노트를 캡처, 구성 및 검색하기 위한 개인정보 중심의 자체 호스팅 메모장 애플리케이션입니다.",
       "viewOnGithub": "GitHub에서 보기",
       "license": "MIT 라이선스로 제공됩니다."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Jottery에 오신 것을 환영합니다",
@@ -605,7 +615,9 @@
     "title": "새 버전 사용 가능",
     "message": "다시 로드하여 최신 기능 및 개선 사항 받기",
     "reloadButton": "지금 다시 로드",
-    "dismissLabel": "무시"
+    "dismissLabel": "무시",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "선택 전환",
@@ -627,5 +639,26 @@
     "progress": "{total}개 중 {current}개",
     "selectAll": "전체 선택",
     "deselectAll": "전체 선택 해제"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

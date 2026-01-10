@@ -278,8 +278,15 @@
         "wrongPassword": "現在のパスワードが正しくありません",
         "unexpected": "予期しないエラーが発生しました",
         "deactivateFailed": "アカウントの無効化に失敗しました",
-        "deleteFailed": "アカウントの削除に失敗しました"
-      }
+        "deleteFailed": "アカウントの削除に失敗しました",
+        "deleteNotesFailed": "Failed to delete notes"
+      },
+      "deleteNotes": "Delete Notes",
+      "deleteNotesDescription": "Delete all your notes from the server. Your account remains active and you can sync again.",
+      "deleteNotesButton": "Delete Notes",
+      "deleteNotesConfirmTitle": "Delete All Notes",
+      "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
+      "notesDeleted": "All notes have been deleted from the server"
     }
   }
 }

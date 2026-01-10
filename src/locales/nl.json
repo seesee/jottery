@@ -14,7 +14,8 @@
     "unlock": "Ontgrendelen",
     "settings": "Instellingen",
     "search": "Zoeken",
-    "error": "Fout"
+    "error": "Fout",
+    "back": "Back"
   },
   "docs": {
     "title": "Documentatie",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Notities zoeken...",
-    "clear": "Zoekopdracht wissen"
+    "clear": "Zoekopdracht wissen",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Geen notitie geselecteerd",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Uw browser ondersteunt geen video-afspelen.",
       "previewNotAvailable": "Voorvertoning niet beschikbaar voor dit bestandstype.",
       "downloadToView": "Download om te bekijken"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",
@@ -247,7 +251,8 @@
         "successTitle": "Synchronisatie succesvol ingeschakeld!",
         "successText": "Uw apparaat is nu geregistreerd en <strong>al uw bestaande notities zijn gesynchroniseerd met de server</strong>. Toekomstige wijzigingen worden automatisch gesynchroniseerd.",
         "successNextSteps": "📋 Om een ander apparaat toe te voegen: Klik hieronder op \"Synchronisatie-inloggegevens exporteren\" en importeer ze op uw andere apparaat.",
-        "done": "Klaar"
+        "done": "Klaar",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Account koppelen (optioneel)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Systeemtalen",
       "dataLanguages": "Datatalen",
       "otherLanguages": "Andere talen",
-      "enabledCount": "{enabled}/{total} ingeschakeld"
+      "enabledCount": "{enabled}/{total} ingeschakeld",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Pas sneltoetsen aan. Klik op een sneltoets om deze te wijzigen en druk vervolgens op de gewenste toetscombinatie.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery is een privacy-gerichte, zelf-gehoste kladblokapplicatie voor het vastleggen, organiseren en doorzoeken van notities met rijke inhoud, syntaxisaccentuering en versleuteling.",
       "viewOnGithub": "Bekijken op GitHub",
       "license": "Gelicentieerd onder de MIT-licentie."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Welkom bij Jottery",
@@ -605,7 +615,9 @@
     "title": "Nieuwe versie beschikbaar",
     "message": "Ververs om de nieuwste functies en verbeteringen te krijgen",
     "reloadButton": "Nu verversen",
-    "dismissLabel": "Negeren"
+    "dismissLabel": "Negeren",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Selectie omschakelen",
@@ -627,5 +639,26 @@
     "progress": "{current} van {total}",
     "selectAll": "Alles selecteren",
     "deselectAll": "Alles deselecteren"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }
