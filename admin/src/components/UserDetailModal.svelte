@@ -20,6 +20,11 @@
   let confirmAction = $state<{ type: 'revoke'; device: Device } | null>(null);
   let editingDevice = $state<{ id: string; name: string } | null>(null);
 
+  // Svelte action to focus element on mount (avoids a11y autofocus warning)
+  function focusOnMount(node: HTMLElement) {
+    node.focus();
+  }
+
   async function loadUser() {
     try {
       loading = true;
@@ -255,7 +260,7 @@
                               if (e.key === 'Escape') editingDevice = null;
                             }}
                             class="px-2 py-1 border border-gray-300 rounded text-sm w-full"
-                            autofocus
+                            use:focusOnMount
                           />
                         {:else}
                           <span class="text-sm font-medium text-gray-900">{device.name}</span>
