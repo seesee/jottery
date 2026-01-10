@@ -177,7 +177,7 @@
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-hidden p-6">
+      <div class="flex-1 overflow-hidden p-6 flex flex-col min-h-0">
         {#if loading}
           <div class="flex items-center justify-center h-full">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -208,9 +208,9 @@
           </div>
 
           <!-- Side-by-side comparison -->
-          <div class="grid grid-cols-2 gap-4 h-[calc(100%-8rem)]">
+          <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
             <!-- Local version -->
-            <div class="flex flex-col border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div class="flex flex-col border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden min-h-0">
               <div class="bg-blue-50 dark:bg-blue-900/20 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="font-medium text-blue-700 dark:text-blue-400">{$_('conflict.yourVersion')}</h3>
                 {#if localTags.length > 0}
@@ -227,7 +227,7 @@
             </div>
 
             <!-- Server version -->
-            <div class="flex flex-col border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div class="flex flex-col border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden min-h-0">
               <div class="bg-purple-50 dark:bg-purple-900/20 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="font-medium text-purple-700 dark:text-purple-400">{$_('conflict.serverVersion')}</h3>
                 {#if conflictInfo.serverTags.length > 0}
