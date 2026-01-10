@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "개인정보 보호 중심의 암호화된 노트 TUI"
+  name: Jottery
+  description: 개인정보 보호 중심의 암호화된 노트 TUI
 common:
-  loading: "로딩 중..."
-  saving: "저장 중..."
-  cancel: "취소"
-  confirm: "확인"
-  yes: "예"
-  no: "아니오"
-  ok: "확인"
-  close: "닫기"
-  quit: "종료"
-  back: "뒤로"
-  email: "이메일"
+  loading: 로딩 중...
+  saving: 저장 중...
+  cancel: 취소
+  confirm: 확인
+  "yes": 예
+  "no": 아니오
+  ok: 확인
+  close: 닫기
+  quit: 종료
+  back: 뒤로
+  email: 이메일
 password:
   prompt: "비밀번호: "
-  enter: "비밀번호 입력"
-  confirm: "비밀번호 확인"
-  empty_error: "비밀번호는 비어있을 수 없습니다"
-  mismatch_error: "비밀번호가 일치하지 않습니다"
+  enter: 비밀번호 입력
+  confirm: 비밀번호 확인
+  empty_error: 비밀번호는 비어있을 수 없습니다
+  mismatch_error: 비밀번호가 일치하지 않습니다
   unlock_failed: "잠금 해제 실패: %{error}"
-  change_success: "비밀번호가 성공적으로 변경되었습니다"
+  change_success: 비밀번호가 성공적으로 변경되었습니다
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "노트"
-  new_note: "새 노트"
-  settings: "설정"
-  help: "도움말"
-  quit: "종료"
-  search: "검색"
+  notes: 노트
+  new_note: 새 노트
+  settings: 설정
+  help: 도움말
+  quit: 종료
+  search: 검색
 note:
-  new: "새 노트"
-  save: "저장"
-  saved: "노트 저장됨"
+  new: 새 노트
+  save: 저장
+  saved: 노트 저장됨
   save_failed: "노트 저장 실패: %{error}"
-  delete: "노트 삭제"
-  deleted: "노트 삭제됨"
+  delete: 노트 삭제
+  deleted: 노트 삭제됨
   delete_failed: "노트 삭제 실패: %{error}"
   reload_failed: "노트 다시 로드 실패: %{error}"
-  pin: "노트 고정"
-  unpin: "노트 고정 해제"
-  pinned: "고정됨"
+  pin: 노트 고정
+  unpin: 노트 고정 해제
+  pinned: 고정됨
   pin_failed: "고정 상태 업데이트 실패: %{error}"
-  no_notes: "노트를 찾을 수 없습니다"
+  no_notes: 노트를 찾을 수 없습니다
   total: "%{count}개의 노트"
 editor:
-  title: "제목"
-  content: "내용"
-  tags: "태그"
-  created: "생성됨"
-  modified: "수정됨"
-  launch_external: "외부 편집기 실행"
+  title: 제목
+  content: 내용
+  tags: 태그
+  created: 생성됨
+  modified: 수정됨
+  launch_external: 외부 편집기 실행
   external_failed: "편집기 실행 실패: %{error}"
-  external_exit_error: "편집기가 오류 코드와 함께 종료되었습니다"
-  temp_file_error: "임시 파일 생성 실패"
-  temp_write_error: "임시 파일 쓰기 실패"
-  temp_read_error: "임시 파일 읽기 실패"
-  default_editor: "vi"
+  external_exit_error: 편집기가 오류 코드와 함께 종료되었습니다
+  temp_file_error: 임시 파일 생성 실패
+  temp_write_error: 임시 파일 쓰기 실패
+  temp_read_error: 임시 파일 읽기 실패
+  default_editor: vi
 attachment:
-  add: "첨부 파일 추가"
+  add: 첨부 파일 추가
   add_failed: "첨부 파일 추가 실패: %{error}"
-  view: "첨부 파일 보기"
+  view: 첨부 파일 보기
   view_failed: "첨부 파일 보기 실패: %{error}"
-  delete: "첨부 파일 삭제"
-  no_attachments: "첨부 파일 없음"
+  delete: 첨부 파일 삭제
+  no_attachments: 첨부 파일 없음
   total: "%{count}개의 첨부 파일"
 version:
-  history: "버전 히스토리"
-  restore: "버전 복원"
-  restored: "버전 %{number} 복원됨"
+  history: 버전 히스토리
+  restore: 버전 복원
+  restored: 버전 %{number} 복원됨
   restore_failed: "버전 복원 실패: %{error}"
-  no_versions: "버전 히스토리 없음"
-  current: "현재 버전"
+  no_versions: 버전 히스토리 없음
+  current: 현재 버전
 search:
-  prompt: "노트 검색..."
-  no_results: "결과를 찾을 수 없습니다"
+  prompt: 노트 검색...
+  no_results: 결과를 찾을 수 없습니다
   results: "%{count}개의 결과"
 settings:
-  title: "설정"
-  language: "언어"
-  theme: "테마"
-  color_scheme: "색상 구성"
-  auto_lock: "자동 잠금 시간 초과"
-  minutes: "분"
-  sync: "동기화"
-  sync_enabled: "동기화 활성화됨"
-  sync_endpoint: "동기화 엔드포인트"
-  device_name: "기기 이름"
+  title: 설정
+  language: 언어
+  theme: 테마
+  color_scheme: 색상 구성
+  auto_lock: 자동 잠금 시간 초과
+  minutes: 분
+  sync: 동기화
+  sync_enabled: 동기화 활성화됨
+  sync_endpoint: 동기화 엔드포인트
+  device_name: 기기 이름
   instructions_disconnect: "'d'를 눌러 동기화 서버에서 연결 해제 (로컬 노트 유지)"
   instructions_status: "'R' (Shift+r)을 눌러 등록 승인 상태 확인"
   instructions_register: "'r'을 눌러 동기화 서버에 등록"
-  user_portal: "사용자 포털"
+  user_portal: 사용자 포털
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "서버로 푸시"
-  pull: "서버에서 가져오기"
-  pushing: "변경 사항 푸시 중..."
-  pulling: "변경 사항 가져오는 중..."
-  success: "동기화 성공"
+  push: 서버로 푸시
+  pull: 서버에서 가져오기
+  pushing: 변경 사항 푸시 중...
+  pulling: 변경 사항 가져오는 중...
+  success: 동기화 성공
   failed: "동기화 실패: %{error}"
-  no_api_key: "API 키가 구성되지 않았습니다"
-  account_deactivated: "계정이 비활성화되었거나 관리자 승인 대기 중입니다. 관리자에게 문의하세요."
-  invalid_key: "잘못된 API 키이거나 인증에 실패했습니다. 기기를 다시 등록해 보세요."
-  conflict: "동기화 충돌이 감지되었습니다. 일부 노트에 서버에서 충돌하는 변경 사항이 있습니다."
-  request_failed: "동기화 요청 전송 실패"
-  response_parse_failed: "동기화 응답 구문 분석 실패"
-  encrypted_import: "암호화된 자격 증명을 가져왔습니다. 복호화하고 설정을 완료하려면 비밀번호를 입력하세요."
+  no_api_key: API 키가 구성되지 않았습니다
+  account_deactivated: 계정이 비활성화되었거나 관리자 승인 대기 중입니다. 관리자에게 문의하세요.
+  invalid_key: 잘못된 API 키이거나 인증에 실패했습니다. 기기를 다시 등록해 보세요.
+  conflict: 동기화 충돌이 감지되었습니다. 일부 노트에 서버에서 충돌하는 변경 사항이 있습니다.
+  request_failed: 동기화 요청 전송 실패
+  response_parse_failed: 동기화 응답 구문 분석 실패
+  encrypted_import: 암호화된 자격 증명을 가져왔습니다. 복호화하고 설정을 완료하려면 비밀번호를 입력하세요.
   legacy_format_warning: "경고: 암호화되지 않은 레거시 형식을 사용 중입니다. API 키가 일반 텍스트로 표시됩니다."
-  disconnected: "동기화 서버에서 연결 해제됨. 로컬 노트가 보존됩니다."
-  disconnect_failed: "동기화 서버에서 연결 해제 실패"
+  disconnected: 동기화 서버에서 연결 해제됨. 로컬 노트가 보존됩니다.
+  disconnect_failed: 동기화 서버에서 연결 해제 실패
   status:
-    check_title: "등록 상태 확인"
-    result_title: "등록 상태"
+    check_title: 등록 상태 확인
+    result_title: 등록 상태
     enter_email: "승인 상태를 확인하려면 이메일 주소를 입력하세요:"
-    check_failed: "등록 상태 확인 실패"
-    not_found: "이 이메일 주소로 등록된 계정을 찾을 수 없습니다."
-    approved: "계정이 승인되어 활성화되었습니다. 노트를 동기화할 수 있습니다."
-    pending: "계정이 승인 대기 중입니다. 관리자가 등록을 승인할 때까지 기다려 주세요."
-    inactive: "계정이 비활성화되었습니다. 관리자에게 문의하세요."
+    check_failed: 등록 상태 확인 실패
+    not_found: 이 이메일 주소로 등록된 계정을 찾을 수 없습니다.
+    approved: 계정이 승인되어 활성화되었습니다. 노트를 동기화할 수 있습니다.
+    pending: 계정이 승인 대기 중입니다. 관리자가 등록을 승인할 때까지 기다려 주세요.
+    inactive: 계정이 비활성화되었습니다. 관리자에게 문의하세요.
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "동기화 서버에 등록"
+  title: 동기화 서버에 등록
   enter_endpoint: "동기화 서버 URL을 입력하세요 (예: https://sync.example.com):"
   enter_email: "이메일 주소를 입력하세요:"
   enter_password: "비밀번호를 만드세요 (최소 12자):"
   reenter_password: "동기화 비밀번호를 다시 입력하세요:"
-  pending_title: "등록 대기 중"
-  pending_message: "등록이 제출되었으며 관리자 승인을 기다리고 있습니다."
+  pending_title: 등록 대기 중
+  pending_message: 등록이 제출되었으며 관리자 승인을 기다리고 있습니다.
   pending_instructions: "'r' 또는 Enter를 눌러 승인 상태를 확인하세요. Esc를 눌러 닫습니다."
   pending_help: "r/Enter: 상태 확인 | Esc: 닫기"
-  device_title: "기기 등록"
+  device_title: 기기 등록
   enter_device_name: "이 기기의 이름을 입력하세요 (또는 Enter를 눌러 기본값 사용):"
-  endpoint_required: "동기화 서버 URL이 필요합니다"
-  email_invalid: "유효한 이메일 주소를 입력하세요"
-  password_too_short: "비밀번호는 최소 12자 이상이어야 합니다"
-  failed: "등록 실패"
-  approved: "등록이 승인되었습니다!"
-  still_pending: "등록이 아직 승인 대기 중입니다"
-  success: "등록 성공! 동기화가 활성화되었습니다."
-  device_failed: "기기 등록 실패"
-  cleared: "등록이 지워졌습니다. 새로 시작할 수 있습니다."
-  pending_status: "승인 대기 중"
+  endpoint_required: 동기화 서버 URL이 필요합니다
+  email_invalid: 유효한 이메일 주소를 입력하세요
+  password_too_short: 비밀번호는 최소 12자 이상이어야 합니다
+  failed: 등록 실패
+  approved: 등록이 승인되었습니다!
+  still_pending: 등록이 아직 승인 대기 중입니다
+  success: 등록 성공! 동기화가 활성화되었습니다.
+  device_failed: 기기 등록 실패
+  cleared: 등록이 지워졌습니다. 새로 시작할 수 있습니다.
+  pending_status: 승인 대기 중
 color_scheme:
-  default_dark: "기본 다크"
-  default_light: "기본 라이트"
-  monokai: "Monokai"
-  solarized_dark: "Solarized 다크"
-  solarized_light: "Solarized 라이트"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox 다크"
-  gruvbox_light: "Gruvbox 라이트"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: 기본 다크
+  default_light: 기본 라이트
+  monokai: Monokai
+  solarized_dark: Solarized 다크
+  solarized_light: Solarized 라이트
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox 다크
+  gruvbox_light: Gruvbox 라이트
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "없음"
-  change_language: "구문 언어 변경"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: 없음
+  change_language: 구문 언어 변경
   change_failed: "구문 언어 업데이트 실패: %{error}"
 error:
-  generic: "오류가 발생했습니다"
-  unexpected: "예기치 않은 오류가 발생했습니다"
+  generic: 오류가 발생했습니다
+  unexpected: 예기치 않은 오류가 발생했습니다
   database: "데이터베이스 오류: %{error}"
   encryption: "암호화 오류: %{error}"
   network: "네트워크 오류: %{error}"
-  file_not_found: "파일을 찾을 수 없습니다"
-  permission_denied: "권한이 거부되었습니다"
-  invalid_input: "잘못된 입력"
+  file_not_found: 파일을 찾을 수 없습니다
+  permission_denied: 권한이 거부되었습니다
+  invalid_input: 잘못된 입력
   operation_failed: "작업 실패: %{error}"
 help:
-  title: "키보드 단축키"
+  title: 키보드 단축키
   subtitle: "?또는 q를 눌러 닫기"
-  general: "일반"
-  notes: "노트"
-  editor: "편집기"
-  navigation: "탐색"
-  quit_app: "애플리케이션 종료"
-  new_note: "새 노트 만들기"
-  save_note: "현재 노트 저장"
-  delete_note: "현재 노트 삭제"
-  search_notes: "노트 검색"
-  toggle_pin: "고정 상태 전환"
-  next_note: "다음 노트"
-  prev_note: "이전 노트"
-  scroll_up: "위로 스크롤"
-  scroll_down: "아래로 스크롤"
-  page_up: "이전 페이지"
-  page_down: "다음 페이지"
-  unlock_screen: "잠금 해제 화면"
-  note_list: "노트 목록"
-  search_mode: "검색 모드"
-  note_preview_view: "노트 미리보기 - 보기 모드"
-  note_preview_tag: "노트 미리보기 - 태그 모드"
-  settings: "설정"
-  attachments: "첨부 파일"
-  global: "전역"
-  press_esc_or_enter: "Esc 또는 Enter를 눌러 닫기"
-  press_enter_paste: "Enter를 눌러 붙여넣기 | Esc로 취소"
+  general: 일반
+  notes: 노트
+  editor: 편집기
+  navigation: 탐색
+  quit_app: 애플리케이션 종료
+  new_note: 새 노트 만들기
+  save_note: 현재 노트 저장
+  delete_note: 현재 노트 삭제
+  search_notes: 노트 검색
+  toggle_pin: 고정 상태 전환
+  next_note: 다음 노트
+  prev_note: 이전 노트
+  scroll_up: 위로 스크롤
+  scroll_down: 아래로 스크롤
+  page_up: 이전 페이지
+  page_down: 다음 페이지
+  unlock_screen: 잠금 해제 화면
+  note_list: 노트 목록
+  search_mode: 검색 모드
+  note_preview_view: 노트 미리보기 - 보기 모드
+  note_preview_tag: 노트 미리보기 - 태그 모드
+  settings: 설정
+  attachments: 첨부 파일
+  global: 전역
+  press_esc_or_enter: Esc 또는 Enter를 눌러 닫기
+  press_enter_paste: Enter를 눌러 붙여넣기 | Esc로 취소
   tab_switch: "Tab: 필드 전환 | Enter: 생성"
   enter_unlock: "Enter: 잠금 해제 | Ctrl+Q: 종료"
-  type_password_key: "입력"
-  type_password_desc: "비밀번호 입력"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "데이터베이스 잠금 해제"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "비밀번호/확인 전환 (새 DB)"
-  backspace_key: "Backspace"
-  backspace_desc: "문자 삭제"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "애플리케이션 종료"
-  slash_search_key: "/"
-  slash_search_desc: "검색 모드 진입"
+  type_password_key: 입력
+  type_password_desc: 비밀번호 입력
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: 데이터베이스 잠금 해제
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: 비밀번호/확인 전환 (새 DB)
+  backspace_key: Backspace
+  backspace_desc: 문자 삭제
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: 애플리케이션 종료
+  slash_search_key: /
+  slash_search_desc: 검색 모드 진입
   y_sync_key: "y"
-  y_sync_desc: "노트 동기화 (구성된 경우)"
-  s_settings_key: "s"
-  s_settings_desc: "설정 표시"
+  y_sync_desc: 노트 동기화 (구성된 경우)
+  s_settings_key: s
+  s_settings_desc: 설정 표시
   n_new_key: "n"
-  n_new_desc: "새 노트 만들기"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "$EDITOR에서 노트 열기"
-  d_delete_key: "d"
-  d_delete_desc: "선택한 노트 삭제"
-  j_down_key: "j / ↓"
-  j_down_desc: "아래로 이동"
-  k_up_key: "k / ↑"
-  k_up_desc: "위로 이동"
+  n_new_desc: 새 노트 만들기
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: $EDITOR에서 노트 열기
+  d_delete_key: d
+  d_delete_desc: 선택한 노트 삭제
+  j_down_key: j / ↓
+  j_down_desc: 아래로 이동
+  k_up_key: k / ↑
+  k_up_desc: 위로 이동
   question_help_key: "?"
-  question_help_desc: "이 도움말 표시"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "애플리케이션 종료"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "입력"
-  type_search_desc: "검색 쿼리 입력"
+  question_help_desc: 이 도움말 표시
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: 애플리케이션 종료
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: 입력
+  type_search_desc: 검색 쿼리 입력
   search_tag_key: "#태그"
-  search_tag_desc: "태그로 검색"
+  search_tag_desc: 태그로 검색
   search_exclude_key: "-단어"
-  search_exclude_desc: "단어 제외 (부정)"
-  search_and_key: "단어1 단어2"
-  search_and_desc: "모든 단어 일치 (AND)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "$EDITOR에서 노트 열기"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "검색 모드 종료"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "결과 탐색"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "외부 $EDITOR로 편집"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "태그 모드 진입"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "저장하고 목록으로 돌아가기"
-  type_tag_key: "입력"
-  type_tag_desc: "태그 이름 입력"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "태그 추가"
-  backspace_remove_key: "Backspace (비어있음)"
-  backspace_remove_desc: "마지막 태그 제거"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "입력에서 문자 삭제"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "일반 모드로 종료"
-  jk_navigate_key: "j/k 또는 ↑/↓"
-  jk_navigate_desc: "필드 간 탐색"
-  enter_edit_key: "Enter / i / Space"
-  enter_edit_desc: "선택한 필드 편집"
-  enter_save_key: "Enter"
-  enter_save_desc: "텍스트/숫자 필드 저장, 다른 필드 전환"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "편집 취소 (텍스트/숫자 필드)"
-  p_paste_key: "p"
-  p_paste_desc: "동기화 자격 증명 붙여넣기 (텍스트 입력 표시)"
-  c_copy_key: "c"
-  c_copy_desc: "동기화 자격 증명 복사 (암호화된 형식)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "동기화 자격 증명 복사 (레거시 암호화되지 않은 형식)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "설정 패널 닫기"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "첨부 파일 추가 (파일 경로 입력)"
-  a_view_attachment_key: "a + 번호"
-  a_view_attachment_desc: "첨부 파일 보기 (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "첨부 파일 탐색"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "선택한 첨부 파일 제거"
+  search_exclude_desc: 단어 제외 (부정)
+  search_and_key: 단어1 단어2
+  search_and_desc: 모든 단어 일치 (AND)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: $EDITOR에서 노트 열기
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: 검색 모드 종료
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: 결과 탐색
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: 외부 $EDITOR로 편집
+  t_tag_mode_key: t
+  t_tag_mode_desc: 태그 모드 진입
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: 저장하고 목록으로 돌아가기
+  type_tag_key: 입력
+  type_tag_desc: 태그 이름 입력
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: 태그 추가
+  backspace_remove_key: Backspace (비어있음)
+  backspace_remove_desc: 마지막 태그 제거
+  backspace_delete_key: Backspace
+  backspace_delete_desc: 입력에서 문자 삭제
+  esc_normal_key: Esc
+  esc_normal_desc: 일반 모드로 종료
+  jk_navigate_key: j/k 또는 ↑/↓
+  jk_navigate_desc: 필드 간 탐색
+  enter_edit_key: Enter / i / Space
+  enter_edit_desc: 선택한 필드 편집
+  enter_save_key: Enter
+  enter_save_desc: 텍스트/숫자 필드 저장, 다른 필드 전환
+  esc_cancel_key: Esc
+  esc_cancel_desc: 편집 취소 (텍스트/숫자 필드)
+  p_paste_key: p
+  p_paste_desc: 동기화 자격 증명 붙여넣기 (텍스트 입력 표시)
+  c_copy_key: c
+  c_copy_desc: 동기화 자격 증명 복사 (암호화된 형식)
+  shift_c_copy_key: C
+  shift_c_copy_desc: 동기화 자격 증명 복사 (레거시 암호화되지 않은 형식)
+  s_q_close_key: s / q
+  s_q_close_desc: 설정 패널 닫기
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: 첨부 파일 추가 (파일 경로 입력)
+  a_view_attachment_key: a + 번호
+  a_view_attachment_desc: 첨부 파일 보기 (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: 첨부 파일 탐색
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: 선택한 첨부 파일 제거
   note_images_key: "참고:"
-  note_images_desc: "이미지는 사용 가능한 경우 chafa 사용, 그렇지 않으면 시스템 기본 앱"
+  note_images_desc: 이미지는 사용 가능한 경우 chafa 사용, 그렇지 않으면 시스템 기본 앱
   question_global_key: "?"
-  question_global_desc: "이 도움말 화면 표시"
+  question_global_desc: 이 도움말 화면 표시
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "노트 목록"
-  show: "노트 표시"
-  new: "새 노트 만들기"
-  edit: "노트 편집"
-  delete: "노트 삭제"
-  search: "노트 검색"
-  export: "노트 내보내기"
-  import: "노트 가져오기"
-  sync: "서버와 동기화"
-  register: "기기 등록"
+  list: 노트 목록
+  show: 노트 표시
+  new: 새 노트 만들기
+  edit: 노트 편집
+  delete: 노트 삭제
+  search: 노트 검색
+  export: 노트 내보내기
+  import: 노트 가져오기
+  sync: 서버와 동기화
+  register: 기기 등록
 status:
-  locked: "잠김"
-  unlocked: "잠금 해제됨"
-  syncing: "동기화 중..."
-  synced: "동기화됨"
-  offline: "오프라인"
-  modified: "수정됨"
-  saved: "저장됨"
+  locked: 잠김
+  unlocked: 잠금 해제됨
+  syncing: 동기화 중...
+  synced: 동기화됨
+  offline: 오프라인
+  modified: 수정됨
+  saved: 저장됨
 bulk:
   tags_added: "%{count}개의 노트에 태그 추가됨: %{tags}"
   deleted: "%{count}개의 노트 삭제됨"
   combined: "%{count}개의 노트 결합됨"
-  combine_requires_two: "결합하려면 최소 2개의 노트를 선택하세요"
+  combine_requires_two: 결합하려면 최소 2개의 노트를 선택하세요
   exported: "%{count}개의 노트를 %{path}에 내보냄"
   operation_failed: "일괄 작업 실패: %{error}"
   confirm_delete: "%{count}개의 노트를 삭제하시겠습니까? (y/n)"
   confirm_combine: "%{count}개의 노트를 결합하시겠습니까? (y/n)"
   enter_tags: "태그 입력 (쉼표로 구분):"
   enter_export_path: "내보내기 경로:"
-  add_tags_to: "태그 추가"
-  export_notes_to: "내보내기"
+  add_tags_to: 태그 추가
+  export_notes_to: 내보내기
 time:
-  just_now: "방금"
+  just_now: 방금
   minutes_ago: "%{count}분 전"
   hours_ago: "%{count}시간 전"
   days_ago: "%{count}일 전"
   date_format: "%Y년 %m월 %d일"
   time_format: "%H:%M:%S"
   datetime_format: "%Y년 %m월 %d일 %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "Een privacygerichte, versleutelde notitie-TUI"
+  name: Jottery
+  description: Een privacygerichte, versleutelde notitie-TUI
 common:
-  loading: "Laden..."
-  saving: "Opslaan..."
-  cancel: "Annuleren"
-  confirm: "Bevestigen"
-  yes: "Ja"
-  no: "Nee"
-  ok: "OK"
-  close: "Sluiten"
-  quit: "Afsluiten"
-  back: "Terug"
-  email: "E-mail"
+  loading: Laden...
+  saving: Opslaan...
+  cancel: Annuleren
+  confirm: Bevestigen
+  "yes": Ja
+  "no": Nee
+  ok: OK
+  close: Sluiten
+  quit: Afsluiten
+  back: Terug
+  email: E-mail
 password:
   prompt: "Wachtwoord: "
-  enter: "Voer wachtwoord in"
-  confirm: "Bevestig wachtwoord"
-  empty_error: "Wachtwoord mag niet leeg zijn"
-  mismatch_error: "Wachtwoorden komen niet overeen"
+  enter: Voer wachtwoord in
+  confirm: Bevestig wachtwoord
+  empty_error: Wachtwoord mag niet leeg zijn
+  mismatch_error: Wachtwoorden komen niet overeen
   unlock_failed: "Ontgrendelen mislukt: %{error}"
-  change_success: "Wachtwoord succesvol gewijzigd"
+  change_success: Wachtwoord succesvol gewijzigd
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "Notities"
-  new_note: "Nieuwe notitie"
-  settings: "Instellingen"
-  help: "Help"
-  quit: "Afsluiten"
-  search: "Zoeken"
+  notes: Notities
+  new_note: Nieuwe notitie
+  settings: Instellingen
+  help: Help
+  quit: Afsluiten
+  search: Zoeken
 note:
-  new: "Nieuwe notitie"
-  save: "Opslaan"
-  saved: "Notitie opgeslagen"
+  new: Nieuwe notitie
+  save: Opslaan
+  saved: Notitie opgeslagen
   save_failed: "Opslaan notitie mislukt: %{error}"
-  delete: "Notitie verwijderen"
-  deleted: "Notitie verwijderd"
+  delete: Notitie verwijderen
+  deleted: Notitie verwijderd
   delete_failed: "Verwijderen notitie mislukt: %{error}"
   reload_failed: "Notities opnieuw laden mislukt: %{error}"
-  pin: "Notitie vastmaken"
-  unpin: "Notitie losmaken"
-  pinned: "Vastgemaakt"
+  pin: Notitie vastmaken
+  unpin: Notitie losmaken
+  pinned: Vastgemaakt
   pin_failed: "Bijwerken vastzet-status mislukt: %{error}"
-  no_notes: "Geen notities gevonden"
+  no_notes: Geen notities gevonden
   total: "%{count} notities"
 editor:
-  title: "Titel"
-  content: "Inhoud"
-  tags: "Labels"
-  created: "Aangemaakt"
-  modified: "Gewijzigd"
-  launch_external: "Externe editor starten"
+  title: Titel
+  content: Inhoud
+  tags: Labels
+  created: Aangemaakt
+  modified: Gewijzigd
+  launch_external: Externe editor starten
   external_failed: "Starten editor mislukt: %{error}"
-  external_exit_error: "Editor afgesloten met foutcode"
-  temp_file_error: "Tijdelijk bestand aanmaken mislukt"
-  temp_write_error: "Schrijven naar tijdelijk bestand mislukt"
-  temp_read_error: "Lezen tijdelijk bestand mislukt"
-  default_editor: "vi"
+  external_exit_error: Editor afgesloten met foutcode
+  temp_file_error: Tijdelijk bestand aanmaken mislukt
+  temp_write_error: Schrijven naar tijdelijk bestand mislukt
+  temp_read_error: Lezen tijdelijk bestand mislukt
+  default_editor: vi
 attachment:
-  add: "Bijlage toevoegen"
+  add: Bijlage toevoegen
   add_failed: "Toevoegen bijlage mislukt: %{error}"
-  view: "Bijlage bekijken"
+  view: Bijlage bekijken
   view_failed: "Bekijken bijlage mislukt: %{error}"
-  delete: "Bijlage verwijderen"
-  no_attachments: "Geen bijlagen"
+  delete: Bijlage verwijderen
+  no_attachments: Geen bijlagen
   total: "%{count} bijlagen"
 version:
-  history: "Versiegeschiedenis"
-  restore: "Versie herstellen"
-  restored: "Versie %{number} hersteld"
+  history: Versiegeschiedenis
+  restore: Versie herstellen
+  restored: Versie %{number} hersteld
   restore_failed: "Herstellen versie mislukt: %{error}"
-  no_versions: "Geen versiegeschiedenis"
-  current: "Huidige versie"
+  no_versions: Geen versiegeschiedenis
+  current: Huidige versie
 search:
-  prompt: "Notities zoeken..."
-  no_results: "Geen resultaten gevonden"
+  prompt: Notities zoeken...
+  no_results: Geen resultaten gevonden
   results: "%{count} resultaten"
 settings:
-  title: "Instellingen"
-  language: "Taal"
-  theme: "Thema"
-  color_scheme: "Kleurenschema"
-  auto_lock: "Automatische vergrendelingstimeout"
-  minutes: "minuten"
-  sync: "Synchronisatie"
-  sync_enabled: "Synchronisatie ingeschakeld"
-  sync_endpoint: "Synchronisatie-eindpunt"
-  device_name: "Apparaatnaam"
-  instructions_disconnect: "Druk op 'd' om de verbinding met de synchronisatieserver te verbreken (behoudt lokale notities)"
-  instructions_status: "Druk op 'R' (Shift+r) om de registratiegoedkeuringsstatus te controleren"
-  instructions_register: "Druk op 'r' om te registreren bij een synchronisatieserver"
-  user_portal: "Gebruikersportaal"
+  title: Instellingen
+  language: Taal
+  theme: Thema
+  color_scheme: Kleurenschema
+  auto_lock: Automatische vergrendelingstimeout
+  minutes: minuten
+  sync: Synchronisatie
+  sync_enabled: Synchronisatie ingeschakeld
+  sync_endpoint: Synchronisatie-eindpunt
+  device_name: Apparaatnaam
+  instructions_disconnect: Druk op 'd' om de verbinding met de synchronisatieserver te verbreken (behoudt lokale notities)
+  instructions_status: Druk op 'R' (Shift+r) om de registratiegoedkeuringsstatus te controleren
+  instructions_register: Druk op 'r' om te registreren bij een synchronisatieserver
+  user_portal: Gebruikersportaal
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "Naar server pushen"
-  pull: "Van server pullen"
-  pushing: "Wijzigingen pushen..."
-  pulling: "Wijzigingen pullen..."
-  success: "Synchronisatie gelukt"
+  push: Naar server pushen
+  pull: Van server pullen
+  pushing: Wijzigingen pushen...
+  pulling: Wijzigingen pullen...
+  success: Synchronisatie gelukt
   failed: "Synchronisatie mislukt: %{error}"
-  no_api_key: "Geen API-sleutel geconfigureerd"
-  account_deactivated: "Uw account is gedeactiveerd of wacht op goedkeuring van de beheerder. Neem contact op met de beheerder."
-  invalid_key: "Ongeldige API-sleutel of authenticatie mislukt. Probeer uw apparaat opnieuw te registreren."
-  conflict: "Synchronisatieconflict gedetecteerd. Sommige notities hebben conflicterende wijzigingen op de server."
-  request_failed: "Verzenden synchronisatieverzoek mislukt"
-  response_parse_failed: "Parseren synchronisatierespons mislukt"
-  encrypted_import: "Versleutelde inloggegevens geïmporteerd. Voer uw wachtwoord in om te ontsleutelen en de configuratie te voltooien."
+  no_api_key: Geen API-sleutel geconfigureerd
+  account_deactivated: Uw account is gedeactiveerd of wacht op goedkeuring van de beheerder. Neem contact op met de beheerder.
+  invalid_key: Ongeldige API-sleutel of authenticatie mislukt. Probeer uw apparaat opnieuw te registreren.
+  conflict: Synchronisatieconflict gedetecteerd. Sommige notities hebben conflicterende wijzigingen op de server.
+  request_failed: Verzenden synchronisatieverzoek mislukt
+  response_parse_failed: Parseren synchronisatierespons mislukt
+  encrypted_import: Versleutelde inloggegevens geïmporteerd. Voer uw wachtwoord in om te ontsleutelen en de configuratie te voltooien.
   legacy_format_warning: "Waarschuwing: Legacy-formaat zonder versleuteling gebruikt. API-sleutel is zichtbaar in platte tekst."
-  disconnected: "Verbinding met synchronisatieserver verbroken. Lokale notities behouden."
-  disconnect_failed: "Verbinding verbreken met synchronisatieserver mislukt"
+  disconnected: Verbinding met synchronisatieserver verbroken. Lokale notities behouden.
+  disconnect_failed: Verbinding verbreken met synchronisatieserver mislukt
   status:
-    check_title: "Registratiestatus Controleren"
-    result_title: "Registratiestatus"
+    check_title: Registratiestatus Controleren
+    result_title: Registratiestatus
     enter_email: "Voer uw e-mailadres in om de goedkeuringsstatus te controleren:"
-    check_failed: "Controleren van registratiestatus mislukt"
-    not_found: "Geen account gevonden met dit e-mailadres."
-    approved: "Uw account is goedgekeurd en actief. U kunt uw notities synchroniseren."
-    pending: "Uw account wacht op goedkeuring. Wacht tot een beheerder uw registratie goedkeurt."
-    inactive: "Uw account is gedeactiveerd. Neem contact op met een beheerder."
+    check_failed: Controleren van registratiestatus mislukt
+    not_found: Geen account gevonden met dit e-mailadres.
+    approved: Uw account is goedgekeurd en actief. U kunt uw notities synchroniseren.
+    pending: Uw account wacht op goedkeuring. Wacht tot een beheerder uw registratie goedkeurt.
+    inactive: Uw account is gedeactiveerd. Neem contact op met een beheerder.
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "Registreren bij Synchronisatieserver"
+  title: Registreren bij Synchronisatieserver
   enter_endpoint: "Voer de URL van de synchronisatieserver in (bijv. https://sync.example.com):"
   enter_email: "Voer uw e-mailadres in:"
   enter_password: "Maak een wachtwoord aan (min. 12 tekens):"
   reenter_password: "Voer uw synchronisatiewachtwoord opnieuw in:"
-  pending_title: "Registratie in Afwachting"
-  pending_message: "Uw registratie is ingediend en wacht op goedkeuring van de beheerder."
-  pending_instructions: "Druk op 'r' of Enter om de goedkeuringsstatus te controleren. Druk op Esc om te sluiten."
+  pending_title: Registratie in Afwachting
+  pending_message: Uw registratie is ingediend en wacht op goedkeuring van de beheerder.
+  pending_instructions: Druk op 'r' of Enter om de goedkeuringsstatus te controleren. Druk op Esc om te sluiten.
   pending_help: "r/Enter: Status controleren | Esc: Sluiten"
-  device_title: "Apparaatregistratie"
+  device_title: Apparaatregistratie
   enter_device_name: "Voer een naam in voor dit apparaat (of druk op Enter voor standaard):"
-  endpoint_required: "URL van synchronisatieserver is vereist"
-  email_invalid: "Voer een geldig e-mailadres in"
-  password_too_short: "Wachtwoord moet minimaal 12 tekens bevatten"
-  failed: "Registratie mislukt"
-  approved: "Uw registratie is goedgekeurd!"
-  still_pending: "Uw registratie wacht nog op goedkeuring"
-  success: "Succesvol geregistreerd! Synchronisatie is nu ingeschakeld."
-  device_failed: "Apparaatregistratie mislukt"
-  cleared: "Registratie gewist. U kunt opnieuw beginnen."
-  pending_status: "In afwachting van goedkeuring"
+  endpoint_required: URL van synchronisatieserver is vereist
+  email_invalid: Voer een geldig e-mailadres in
+  password_too_short: Wachtwoord moet minimaal 12 tekens bevatten
+  failed: Registratie mislukt
+  approved: Uw registratie is goedgekeurd!
+  still_pending: Uw registratie wacht nog op goedkeuring
+  success: Succesvol geregistreerd! Synchronisatie is nu ingeschakeld.
+  device_failed: Apparaatregistratie mislukt
+  cleared: Registratie gewist. U kunt opnieuw beginnen.
+  pending_status: In afwachting van goedkeuring
 color_scheme:
-  default_dark: "Standaard donker"
-  default_light: "Standaard licht"
-  monokai: "Monokai"
-  solarized_dark: "Solarized donker"
-  solarized_light: "Solarized licht"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox donker"
-  gruvbox_light: "Gruvbox licht"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: Standaard donker
+  default_light: Standaard licht
+  monokai: Monokai
+  solarized_dark: Solarized donker
+  solarized_light: Solarized licht
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox donker
+  gruvbox_light: Gruvbox licht
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "Geen"
-  change_language: "Syntaxistaal wijzigen"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: Geen
+  change_language: Syntaxistaal wijzigen
   change_failed: "Bijwerken syntaxistaal mislukt: %{error}"
 error:
-  generic: "Er is een fout opgetreden"
-  unexpected: "Er is een onverwachte fout opgetreden"
+  generic: Er is een fout opgetreden
+  unexpected: Er is een onverwachte fout opgetreden
   database: "Databasefout: %{error}"
   encryption: "Versleutelingsfout: %{error}"
   network: "Netwerkfout: %{error}"
-  file_not_found: "Bestand niet gevonden"
-  permission_denied: "Toestemming geweigerd"
-  invalid_input: "Ongeldige invoer"
+  file_not_found: Bestand niet gevonden
+  permission_denied: Toestemming geweigerd
+  invalid_input: Ongeldige invoer
   operation_failed: "Bewerking mislukt: %{error}"
 help:
-  title: "Sneltoetsen"
-  subtitle: "Druk op ? of q om te sluiten"
-  general: "Algemeen"
-  notes: "Notities"
-  editor: "Editor"
-  navigation: "Navigatie"
-  quit_app: "Applicatie afsluiten"
-  new_note: "Nieuwe notitie aanmaken"
-  save_note: "Huidige notitie opslaan"
-  delete_note: "Huidige notitie verwijderen"
-  search_notes: "Notities zoeken"
-  toggle_pin: "Vastzet-status wisselen"
-  next_note: "Volgende notitie"
-  prev_note: "Vorige notitie"
-  scroll_up: "Omhoog scrollen"
-  scroll_down: "Omlaag scrollen"
-  page_up: "Pagina omhoog"
-  page_down: "Pagina omlaag"
-  unlock_screen: "ONTGRENDELSCHERM"
-  note_list: "NOTITIELIJST"
-  search_mode: "ZOEKMODUS"
-  note_preview_view: "NOTITIEVOORBEELD - WEERGAVEMODUS"
-  note_preview_tag: "NOTITIEVOORBEELD - LABELMODUS"
-  settings: "INSTELLINGEN"
-  attachments: "BIJLAGEN"
-  global: "GLOBAAL"
-  press_esc_or_enter: "Druk op Esc of Enter om te sluiten"
-  press_enter_paste: "Druk op Enter om te plakken | Esc om te annuleren"
+  title: Sneltoetsen
+  subtitle: Druk op ? of q om te sluiten
+  general: Algemeen
+  notes: Notities
+  editor: Editor
+  navigation: Navigatie
+  quit_app: Applicatie afsluiten
+  new_note: Nieuwe notitie aanmaken
+  save_note: Huidige notitie opslaan
+  delete_note: Huidige notitie verwijderen
+  search_notes: Notities zoeken
+  toggle_pin: Vastzet-status wisselen
+  next_note: Volgende notitie
+  prev_note: Vorige notitie
+  scroll_up: Omhoog scrollen
+  scroll_down: Omlaag scrollen
+  page_up: Pagina omhoog
+  page_down: Pagina omlaag
+  unlock_screen: ONTGRENDELSCHERM
+  note_list: NOTITIELIJST
+  search_mode: ZOEKMODUS
+  note_preview_view: NOTITIEVOORBEELD - WEERGAVEMODUS
+  note_preview_tag: NOTITIEVOORBEELD - LABELMODUS
+  settings: INSTELLINGEN
+  attachments: BIJLAGEN
+  global: GLOBAAL
+  press_esc_or_enter: Druk op Esc of Enter om te sluiten
+  press_enter_paste: Druk op Enter om te plakken | Esc om te annuleren
   tab_switch: "Tab: velden wisselen | Enter: aanmaken"
   enter_unlock: "Enter: ontgrendelen | Ctrl+Q: afsluiten"
-  type_password_key: "Typen"
-  type_password_desc: "Wachtwoord invoeren"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "Database ontgrendelen"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "Wachtwoord/bevestiging wisselen (nieuwe DB)"
-  backspace_key: "Backspace"
-  backspace_desc: "Teken verwijderen"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "Applicatie afsluiten"
-  slash_search_key: "/"
-  slash_search_desc: "Zoekmodus activeren"
+  type_password_key: Typen
+  type_password_desc: Wachtwoord invoeren
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: Database ontgrendelen
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: Wachtwoord/bevestiging wisselen (nieuwe DB)
+  backspace_key: Backspace
+  backspace_desc: Teken verwijderen
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: Applicatie afsluiten
+  slash_search_key: /
+  slash_search_desc: Zoekmodus activeren
   y_sync_key: "y"
-  y_sync_desc: "Notities synchroniseren (indien geconfigureerd)"
-  s_settings_key: "s"
-  s_settings_desc: "Instellingen tonen"
+  y_sync_desc: Notities synchroniseren (indien geconfigureerd)
+  s_settings_key: s
+  s_settings_desc: Instellingen tonen
   n_new_key: "n"
-  n_new_desc: "Nieuwe notitie aanmaken"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "Notitie openen in $EDITOR"
-  d_delete_key: "d"
-  d_delete_desc: "Geselecteerde notitie verwijderen"
-  j_down_key: "j / ↓"
-  j_down_desc: "Naar beneden"
-  k_up_key: "k / ↑"
-  k_up_desc: "Naar boven"
+  n_new_desc: Nieuwe notitie aanmaken
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: Notitie openen in $EDITOR
+  d_delete_key: d
+  d_delete_desc: Geselecteerde notitie verwijderen
+  j_down_key: j / ↓
+  j_down_desc: Naar beneden
+  k_up_key: k / ↑
+  k_up_desc: Naar boven
   question_help_key: "?"
-  question_help_desc: "Deze hulp tonen"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "Applicatie afsluiten"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "Typen"
-  type_search_desc: "Zoekopdracht invoeren"
+  question_help_desc: Deze hulp tonen
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: Applicatie afsluiten
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: Typen
+  type_search_desc: Zoekopdracht invoeren
   search_tag_key: "#label"
-  search_tag_desc: "Zoeken op label"
+  search_tag_desc: Zoeken op label
   search_exclude_key: "-woord"
-  search_exclude_desc: "Woord uitsluiten (negatie)"
-  search_and_key: "woord1 woord2"
-  search_and_desc: "Alle woorden vinden (EN)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "Notitie openen in $EDITOR"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "Zoekmodus verlaten"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "Resultaten navigeren"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "Bewerken met externe $EDITOR"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "Labelmodus activeren"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "Opslaan en terug naar lijst"
-  type_tag_key: "Typen"
-  type_tag_desc: "Labelnaam invoeren"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "Label toevoegen"
-  backspace_remove_key: "Backspace (leeg)"
-  backspace_remove_desc: "Laatste label verwijderen"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "Teken uit invoer verwijderen"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "Naar normale modus"
-  jk_navigate_key: "j/k of ↑/↓"
-  jk_navigate_desc: "Tussen velden navigeren"
-  enter_edit_key: "Enter / i / Spatie"
-  enter_edit_desc: "Geselecteerd veld bewerken"
-  enter_save_key: "Enter"
-  enter_save_desc: "Tekst-/nummervelden opslaan, andere velden wisselen"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "Bewerking annuleren (tekst-/nummervelden)"
-  p_paste_key: "p"
-  p_paste_desc: "Synchronisatie-inloggegevens plakken (toont tekstinvoer)"
-  c_copy_key: "c"
-  c_copy_desc: "Synchronisatie-inloggegevens kopiëren (versleuteld formaat)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "Synchronisatie-inloggegevens kopiëren (legacy onversleuteld formaat)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "Instellingenpaneel sluiten"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "Bijlage toevoegen (bestandspad invoeren)"
-  a_view_attachment_key: "a + nummer"
-  a_view_attachment_desc: "Bijlage bekijken (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "Bijlagen navigeren"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "Geselecteerde bijlage verwijderen"
+  search_exclude_desc: Woord uitsluiten (negatie)
+  search_and_key: woord1 woord2
+  search_and_desc: Alle woorden vinden (EN)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: Notitie openen in $EDITOR
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: Zoekmodus verlaten
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: Resultaten navigeren
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: Bewerken met externe $EDITOR
+  t_tag_mode_key: t
+  t_tag_mode_desc: Labelmodus activeren
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: Opslaan en terug naar lijst
+  type_tag_key: Typen
+  type_tag_desc: Labelnaam invoeren
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: Label toevoegen
+  backspace_remove_key: Backspace (leeg)
+  backspace_remove_desc: Laatste label verwijderen
+  backspace_delete_key: Backspace
+  backspace_delete_desc: Teken uit invoer verwijderen
+  esc_normal_key: Esc
+  esc_normal_desc: Naar normale modus
+  jk_navigate_key: j/k of ↑/↓
+  jk_navigate_desc: Tussen velden navigeren
+  enter_edit_key: Enter / i / Spatie
+  enter_edit_desc: Geselecteerd veld bewerken
+  enter_save_key: Enter
+  enter_save_desc: Tekst-/nummervelden opslaan, andere velden wisselen
+  esc_cancel_key: Esc
+  esc_cancel_desc: Bewerking annuleren (tekst-/nummervelden)
+  p_paste_key: p
+  p_paste_desc: Synchronisatie-inloggegevens plakken (toont tekstinvoer)
+  c_copy_key: c
+  c_copy_desc: Synchronisatie-inloggegevens kopiëren (versleuteld formaat)
+  shift_c_copy_key: C
+  shift_c_copy_desc: Synchronisatie-inloggegevens kopiëren (legacy onversleuteld formaat)
+  s_q_close_key: s / q
+  s_q_close_desc: Instellingenpaneel sluiten
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: Bijlage toevoegen (bestandspad invoeren)
+  a_view_attachment_key: a + nummer
+  a_view_attachment_desc: Bijlage bekijken (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: Bijlagen navigeren
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: Geselecteerde bijlage verwijderen
   note_images_key: "Opmerking:"
-  note_images_desc: "Afbeeldingen gebruiken chafa indien beschikbaar, anders standaard systeem-app"
+  note_images_desc: Afbeeldingen gebruiken chafa indien beschikbaar, anders standaard systeem-app
   question_global_key: "?"
-  question_global_desc: "Dit hulpscherm tonen"
+  question_global_desc: Dit hulpscherm tonen
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "Notities weergeven"
-  show: "Notitie tonen"
-  new: "Nieuwe notitie aanmaken"
-  edit: "Notitie bewerken"
-  delete: "Notitie verwijderen"
-  search: "Notities zoeken"
-  export: "Notities exporteren"
-  import: "Notities importeren"
-  sync: "Synchroniseren met server"
-  register: "Apparaat registreren"
+  list: Notities weergeven
+  show: Notitie tonen
+  new: Nieuwe notitie aanmaken
+  edit: Notitie bewerken
+  delete: Notitie verwijderen
+  search: Notities zoeken
+  export: Notities exporteren
+  import: Notities importeren
+  sync: Synchroniseren met server
+  register: Apparaat registreren
 status:
-  locked: "Vergrendeld"
-  unlocked: "Ontgrendeld"
-  syncing: "Synchroniseren..."
-  synced: "Gesynchroniseerd"
-  offline: "Offline"
-  modified: "Gewijzigd"
-  saved: "Opgeslagen"
+  locked: Vergrendeld
+  unlocked: Ontgrendeld
+  syncing: Synchroniseren...
+  synced: Gesynchroniseerd
+  offline: Offline
+  modified: Gewijzigd
+  saved: Opgeslagen
 bulk:
   tags_added: "Labels toegevoegd aan %{count} notities: %{tags}"
   deleted: "%{count} notities verwijderd"
   combined: "%{count} notities gecombineerd"
-  combine_requires_two: "Selecteer ten minste 2 notities om te combineren"
+  combine_requires_two: Selecteer ten minste 2 notities om te combineren
   exported: "%{count} notities geëxporteerd naar %{path}"
   operation_failed: "Bulkbewerking mislukt: %{error}"
   confirm_delete: "%{count} notities verwijderen? (j/n)"
   confirm_combine: "%{count} notities combineren? (j/n)"
   enter_tags: "Voer labels in (gescheiden door komma's):"
   enter_export_path: "Exportpad:"
-  add_tags_to: "Labels toevoegen aan"
-  export_notes_to: "Exporteren"
+  add_tags_to: Labels toevoegen aan
+  export_notes_to: Exporteren
 time:
-  just_now: "zojuist"
+  just_now: zojuist
   minutes_ago: "%{count} minuten geleden"
   hours_ago: "%{count} uur geleden"
   days_ago: "%{count} dagen geleden"
   date_format: "%d-%m-%Y"
   time_format: "%H:%M:%S"
   datetime_format: "%d-%m-%Y %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

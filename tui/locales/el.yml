@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "Ένα TUI σημειώσεων με κρυπτογράφηση και έμφαση στην ιδιωτικότητα"
+  name: Jottery
+  description: Ένα TUI σημειώσεων με κρυπτογράφηση και έμφαση στην ιδιωτικότητα
 common:
-  loading: "Φόρτωση..."
-  saving: "Αποθήκευση..."
-  cancel: "Ακύρωση"
-  confirm: "Επιβεβαίωση"
-  yes: "Ναι"
-  no: "Όχι"
-  ok: "ΟΚ"
-  close: "Κλείσιμο"
-  quit: "Έξοδος"
-  back: "Πίσω"
-  email: "Email"
+  loading: Φόρτωση...
+  saving: Αποθήκευση...
+  cancel: Ακύρωση
+  confirm: Επιβεβαίωση
+  "yes": Ναι
+  "no": Όχι
+  ok: ΟΚ
+  close: Κλείσιμο
+  quit: Έξοδος
+  back: Πίσω
+  email: Email
 password:
   prompt: "Κωδικός: "
-  enter: "Εισαγάγετε κωδικό"
-  confirm: "Επιβεβαιώστε κωδικό"
-  empty_error: "Ο κωδικός δεν μπορεί να είναι κενός"
-  mismatch_error: "Οι κωδικοί δεν ταιριάζουν"
+  enter: Εισαγάγετε κωδικό
+  confirm: Επιβεβαιώστε κωδικό
+  empty_error: Ο κωδικός δεν μπορεί να είναι κενός
+  mismatch_error: Οι κωδικοί δεν ταιριάζουν
   unlock_failed: "Αποτυχία ξεκλειδώματος: %{error}"
-  change_success: "Ο κωδικός άλλαξε επιτυχώς"
+  change_success: Ο κωδικός άλλαξε επιτυχώς
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "Σημειώσεις"
-  new_note: "Νέα σημείωση"
-  settings: "Ρυθμίσεις"
-  help: "Βοήθεια"
-  quit: "Έξοδος"
-  search: "Αναζήτηση"
+  notes: Σημειώσεις
+  new_note: Νέα σημείωση
+  settings: Ρυθμίσεις
+  help: Βοήθεια
+  quit: Έξοδος
+  search: Αναζήτηση
 note:
-  new: "Νέα σημείωση"
-  save: "Αποθήκευση"
-  saved: "Η σημείωση αποθηκεύτηκε"
+  new: Νέα σημείωση
+  save: Αποθήκευση
+  saved: Η σημείωση αποθηκεύτηκε
   save_failed: "Αποτυχία αποθήκευσης σημείωσης: %{error}"
-  delete: "Διαγραφή σημείωσης"
-  deleted: "Η σημείωση διαγράφηκε"
+  delete: Διαγραφή σημείωσης
+  deleted: Η σημείωση διαγράφηκε
   delete_failed: "Αποτυχία διαγραφής σημείωσης: %{error}"
   reload_failed: "Αποτυχία επαναφόρτωσης σημειώσεων: %{error}"
-  pin: "Καρφίτσωμα σημείωσης"
-  unpin: "Αποκαρφίτσωμα σημείωσης"
-  pinned: "Καρφιτσωμένο"
+  pin: Καρφίτσωμα σημείωσης
+  unpin: Αποκαρφίτσωμα σημείωσης
+  pinned: Καρφιτσωμένο
   pin_failed: "Αποτυχία ενημέρωσης κατάστασης καρφιτσώματος: %{error}"
-  no_notes: "Δεν βρέθηκαν σημειώσεις"
+  no_notes: Δεν βρέθηκαν σημειώσεις
   total: "%{count} σημειώσεις"
 editor:
-  title: "Τίτλος"
-  content: "Περιεχόμενο"
-  tags: "Ετικέτες"
-  created: "Δημιουργήθηκε"
-  modified: "Τροποποιήθηκε"
-  launch_external: "Εκκίνηση εξωτερικού επεξεργαστή"
+  title: Τίτλος
+  content: Περιεχόμενο
+  tags: Ετικέτες
+  created: Δημιουργήθηκε
+  modified: Τροποποιήθηκε
+  launch_external: Εκκίνηση εξωτερικού επεξεργαστή
   external_failed: "Αποτυχία εκκίνησης επεξεργαστή: %{error}"
-  external_exit_error: "Ο επεξεργαστής έκλεισε με κωδικό σφάλματος"
-  temp_file_error: "Αποτυχία δημιουργίας προσωρινού αρχείου"
-  temp_write_error: "Αποτυχία εγγραφής σε προσωρινό αρχείο"
-  temp_read_error: "Αποτυχία ανάγνωσης προσωρινού αρχείου"
-  default_editor: "vi"
+  external_exit_error: Ο επεξεργαστής έκλεισε με κωδικό σφάλματος
+  temp_file_error: Αποτυχία δημιουργίας προσωρινού αρχείου
+  temp_write_error: Αποτυχία εγγραφής σε προσωρινό αρχείο
+  temp_read_error: Αποτυχία ανάγνωσης προσωρινού αρχείου
+  default_editor: vi
 attachment:
-  add: "Προσθήκη συνημμένου"
+  add: Προσθήκη συνημμένου
   add_failed: "Αποτυχία προσθήκης συνημμένου: %{error}"
-  view: "Προβολή συνημμένου"
+  view: Προβολή συνημμένου
   view_failed: "Αποτυχία προβολής συνημμένου: %{error}"
-  delete: "Διαγραφή συνημμένου"
-  no_attachments: "Χωρίς συνημμένα"
+  delete: Διαγραφή συνημμένου
+  no_attachments: Χωρίς συνημμένα
   total: "%{count} συνημμένα"
 version:
-  history: "Ιστορικό εκδόσεων"
-  restore: "Επαναφορά έκδοσης"
-  restored: "Η έκδοση %{number} επαναφέρθηκε"
+  history: Ιστορικό εκδόσεων
+  restore: Επαναφορά έκδοσης
+  restored: Η έκδοση %{number} επαναφέρθηκε
   restore_failed: "Αποτυχία επαναφοράς έκδοσης: %{error}"
-  no_versions: "Χωρίς ιστορικό εκδόσεων"
-  current: "Τρέχουσα έκδοση"
+  no_versions: Χωρίς ιστορικό εκδόσεων
+  current: Τρέχουσα έκδοση
 search:
-  prompt: "Αναζήτηση σημειώσεων..."
-  no_results: "Δεν βρέθηκαν αποτελέσματα"
+  prompt: Αναζήτηση σημειώσεων...
+  no_results: Δεν βρέθηκαν αποτελέσματα
   results: "%{count} αποτελέσματα"
 settings:
-  title: "Ρυθμίσεις"
-  language: "Γλώσσα"
-  theme: "Θέμα"
-  color_scheme: "Χρωματικός συνδυασμός"
-  auto_lock: "Χρονικό όριο αυτόματου κλειδώματος"
-  minutes: "λεπτά"
-  sync: "Συγχρονισμός"
-  sync_enabled: "Ο συγχρονισμός ενεργοποιήθηκε"
-  sync_endpoint: "Τελικό σημείο συγχρονισμού"
-  device_name: "Όνομα συσκευής"
-  instructions_disconnect: "Πατήστε 'd' για αποσύνδεση από τον διακομιστή συγχρονισμού (διατηρεί τις τοπικές σημειώσεις)"
-  instructions_status: "Πατήστε 'R' (Shift+r) για έλεγχο της κατάστασης έγκρισης εγγραφής"
-  instructions_register: "Πατήστε 'r' για εγγραφή σε διακομιστή συγχρονισμού"
-  user_portal: "Πύλη Χρήστη"
+  title: Ρυθμίσεις
+  language: Γλώσσα
+  theme: Θέμα
+  color_scheme: Χρωματικός συνδυασμός
+  auto_lock: Χρονικό όριο αυτόματου κλειδώματος
+  minutes: λεπτά
+  sync: Συγχρονισμός
+  sync_enabled: Ο συγχρονισμός ενεργοποιήθηκε
+  sync_endpoint: Τελικό σημείο συγχρονισμού
+  device_name: Όνομα συσκευής
+  instructions_disconnect: Πατήστε 'd' για αποσύνδεση από τον διακομιστή συγχρονισμού (διατηρεί τις τοπικές σημειώσεις)
+  instructions_status: Πατήστε 'R' (Shift+r) για έλεγχο της κατάστασης έγκρισης εγγραφής
+  instructions_register: Πατήστε 'r' για εγγραφή σε διακομιστή συγχρονισμού
+  user_portal: Πύλη Χρήστη
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "Αποστολή στον διακομιστή"
-  pull: "Λήψη από τον διακομιστή"
-  pushing: "Αποστολή αλλαγών..."
-  pulling: "Λήψη αλλαγών..."
-  success: "Ο συγχρονισμός ολοκληρώθηκε"
+  push: Αποστολή στον διακομιστή
+  pull: Λήψη από τον διακομιστή
+  pushing: Αποστολή αλλαγών...
+  pulling: Λήψη αλλαγών...
+  success: Ο συγχρονισμός ολοκληρώθηκε
   failed: "Αποτυχία συγχρονισμού: %{error}"
-  no_api_key: "Δεν έχει ρυθμιστεί κλειδί API"
-  account_deactivated: "Ο λογαριασμός σας έχει απενεργοποιηθεί ή εκκρεμεί έγκριση διαχειριστή. Επικοινωνήστε με τον διαχειριστή."
-  invalid_key: "Μη έγκυρο κλειδί API ή αποτυχία ελέγχου ταυτότητας. Δοκιμάστε να εγγράψετε ξανά τη συσκευή σας."
-  conflict: "Ανιχνεύθηκε σύγκρουση συγχρονισμού. Ορισμένες σημειώσεις έχουν αντικρουόμενες αλλαγές στον διακομιστή."
-  request_failed: "Αποτυχία αποστολής αιτήματος συγχρονισμού"
-  response_parse_failed: "Αποτυχία ανάλυσης απόκρισης συγχρονισμού"
-  encrypted_import: "Τα κρυπτογραφημένα διαπιστευτήρια εισήχθησαν. Εισαγάγετε τον κωδικό πρόσβασής σας για αποκρυπτογράφηση και ολοκλήρωση της ρύθμισης."
+  no_api_key: Δεν έχει ρυθμιστεί κλειδί API
+  account_deactivated: Ο λογαριασμός σας έχει απενεργοποιηθεί ή εκκρεμεί έγκριση διαχειριστή. Επικοινωνήστε με τον διαχειριστή.
+  invalid_key: Μη έγκυρο κλειδί API ή αποτυχία ελέγχου ταυτότητας. Δοκιμάστε να εγγράψετε ξανά τη συσκευή σας.
+  conflict: Ανιχνεύθηκε σύγκρουση συγχρονισμού. Ορισμένες σημειώσεις έχουν αντικρουόμενες αλλαγές στον διακομιστή.
+  request_failed: Αποτυχία αποστολής αιτήματος συγχρονισμού
+  response_parse_failed: Αποτυχία ανάλυσης απόκρισης συγχρονισμού
+  encrypted_import: Τα κρυπτογραφημένα διαπιστευτήρια εισήχθησαν. Εισαγάγετε τον κωδικό πρόσβασής σας για αποκρυπτογράφηση και ολοκλήρωση της ρύθμισης.
   legacy_format_warning: "Προειδοποίηση: Χρήση παλαιού μορφότυπου χωρίς κρυπτογράφηση. Το κλειδί API είναι ορατό σε απλό κείμενο."
-  disconnected: "Αποσυνδέθηκε από τον διακομιστή συγχρονισμού. Οι τοπικές σημειώσεις διατηρήθηκαν."
-  disconnect_failed: "Αποτυχία αποσύνδεσης από τον διακομιστή συγχρονισμού"
+  disconnected: Αποσυνδέθηκε από τον διακομιστή συγχρονισμού. Οι τοπικές σημειώσεις διατηρήθηκαν.
+  disconnect_failed: Αποτυχία αποσύνδεσης από τον διακομιστή συγχρονισμού
   status:
-    check_title: "Έλεγχος Κατάστασης Εγγραφής"
-    result_title: "Κατάσταση Εγγραφής"
+    check_title: Έλεγχος Κατάστασης Εγγραφής
+    result_title: Κατάσταση Εγγραφής
     enter_email: "Εισαγάγετε τη διεύθυνση email σας για έλεγχο της κατάστασης έγκρισης:"
-    check_failed: "Αποτυχία ελέγχου κατάστασης εγγραφής"
-    not_found: "Δεν βρέθηκε λογαριασμός με αυτή τη διεύθυνση email."
-    approved: "Ο λογαριασμός σας είναι εγκεκριμένος και ενεργός. Μπορείτε να συγχρονίσετε τις σημειώσεις σας."
-    pending: "Ο λογαριασμός σας εκκρεμεί για έγκριση. Παρακαλώ περιμένετε έναν διαχειριστή να εγκρίνει την εγγραφή σας."
-    inactive: "Ο λογαριασμός σας έχει απενεργοποιηθεί. Επικοινωνήστε με έναν διαχειριστή."
+    check_failed: Αποτυχία ελέγχου κατάστασης εγγραφής
+    not_found: Δεν βρέθηκε λογαριασμός με αυτή τη διεύθυνση email.
+    approved: Ο λογαριασμός σας είναι εγκεκριμένος και ενεργός. Μπορείτε να συγχρονίσετε τις σημειώσεις σας.
+    pending: Ο λογαριασμός σας εκκρεμεί για έγκριση. Παρακαλώ περιμένετε έναν διαχειριστή να εγκρίνει την εγγραφή σας.
+    inactive: Ο λογαριασμός σας έχει απενεργοποιηθεί. Επικοινωνήστε με έναν διαχειριστή.
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "Εγγραφή σε Διακομιστή Συγχρονισμού"
+  title: Εγγραφή σε Διακομιστή Συγχρονισμού
   enter_endpoint: "Εισαγάγετε τη διεύθυνση URL του διακομιστή συγχρονισμού (π.χ. https://sync.example.com):"
   enter_email: "Εισαγάγετε τη διεύθυνση email σας:"
   enter_password: "Δημιουργήστε έναν κωδικό πρόσβασης (τουλάχιστον 12 χαρακτήρες):"
   reenter_password: "Εισαγάγετε ξανά τον κωδικό συγχρονισμού σας:"
-  pending_title: "Εγγραφή σε Εκκρεμότητα"
-  pending_message: "Η εγγραφή σας υποβλήθηκε και αναμένει έγκριση διαχειριστή."
-  pending_instructions: "Πατήστε 'r' ή Enter για έλεγχο κατάστασης έγκρισης. Πατήστε Esc για κλείσιμο."
+  pending_title: Εγγραφή σε Εκκρεμότητα
+  pending_message: Η εγγραφή σας υποβλήθηκε και αναμένει έγκριση διαχειριστή.
+  pending_instructions: Πατήστε 'r' ή Enter για έλεγχο κατάστασης έγκρισης. Πατήστε Esc για κλείσιμο.
   pending_help: "r/Enter: Έλεγχος κατάστασης | Esc: Κλείσιμο"
-  device_title: "Εγγραφή Συσκευής"
+  device_title: Εγγραφή Συσκευής
   enter_device_name: "Εισαγάγετε ένα όνομα για αυτή τη συσκευή (ή πατήστε Enter για προεπιλογή):"
-  endpoint_required: "Απαιτείται διεύθυνση URL διακομιστή συγχρονισμού"
-  email_invalid: "Παρακαλώ εισαγάγετε μια έγκυρη διεύθυνση email"
-  password_too_short: "Ο κωδικός πρόσβασης πρέπει να έχει τουλάχιστον 12 χαρακτήρες"
-  failed: "Η εγγραφή απέτυχε"
-  approved: "Η εγγραφή σας εγκρίθηκε!"
-  still_pending: "Η εγγραφή σας εξακολουθεί να εκκρεμεί για έγκριση"
-  success: "Επιτυχής εγγραφή! Ο συγχρονισμός είναι πλέον ενεργοποιημένος."
-  device_failed: "Η εγγραφή συσκευής απέτυχε"
-  cleared: "Η εγγραφή διαγράφηκε. Μπορείτε να ξεκινήσετε από την αρχή."
-  pending_status: "Αναμονή έγκρισης"
+  endpoint_required: Απαιτείται διεύθυνση URL διακομιστή συγχρονισμού
+  email_invalid: Παρακαλώ εισαγάγετε μια έγκυρη διεύθυνση email
+  password_too_short: Ο κωδικός πρόσβασης πρέπει να έχει τουλάχιστον 12 χαρακτήρες
+  failed: Η εγγραφή απέτυχε
+  approved: Η εγγραφή σας εγκρίθηκε!
+  still_pending: Η εγγραφή σας εξακολουθεί να εκκρεμεί για έγκριση
+  success: Επιτυχής εγγραφή! Ο συγχρονισμός είναι πλέον ενεργοποιημένος.
+  device_failed: Η εγγραφή συσκευής απέτυχε
+  cleared: Η εγγραφή διαγράφηκε. Μπορείτε να ξεκινήσετε από την αρχή.
+  pending_status: Αναμονή έγκρισης
 color_scheme:
-  default_dark: "Προεπιλεγμένο σκούρο"
-  default_light: "Προεπιλεγμένο φωτεινό"
-  monokai: "Monokai"
-  solarized_dark: "Solarized σκούρο"
-  solarized_light: "Solarized φωτεινό"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox σκούρο"
-  gruvbox_light: "Gruvbox φωτεινό"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: Προεπιλεγμένο σκούρο
+  default_light: Προεπιλεγμένο φωτεινό
+  monokai: Monokai
+  solarized_dark: Solarized σκούρο
+  solarized_light: Solarized φωτεινό
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox σκούρο
+  gruvbox_light: Gruvbox φωτεινό
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "Καμία"
-  change_language: "Αλλαγή γλώσσας σύνταξης"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: Καμία
+  change_language: Αλλαγή γλώσσας σύνταξης
   change_failed: "Αποτυχία ενημέρωσης γλώσσας σύνταξης: %{error}"
 error:
-  generic: "Προέκυψε σφάλμα"
-  unexpected: "Προέκυψε απροσδόκητο σφάλμα"
+  generic: Προέκυψε σφάλμα
+  unexpected: Προέκυψε απροσδόκητο σφάλμα
   database: "Σφάλμα βάσης δεδομένων: %{error}"
   encryption: "Σφάλμα κρυπτογράφησης: %{error}"
   network: "Σφάλμα δικτύου: %{error}"
-  file_not_found: "Το αρχείο δεν βρέθηκε"
-  permission_denied: "Άρνηση άδειας"
-  invalid_input: "Μη έγκυρη εισαγωγή"
+  file_not_found: Το αρχείο δεν βρέθηκε
+  permission_denied: Άρνηση άδειας
+  invalid_input: Μη έγκυρη εισαγωγή
   operation_failed: "Η λειτουργία απέτυχε: %{error}"
 help:
-  title: "Συντομεύσεις πληκτρολογίου"
-  subtitle: "Πατήστε ? ή q για κλείσιμο"
-  general: "Γενικά"
-  notes: "Σημειώσεις"
-  editor: "Επεξεργαστής"
-  navigation: "Πλοήγηση"
-  quit_app: "Έξοδος από την εφαρμογή"
-  new_note: "Δημιουργία νέας σημείωσης"
-  save_note: "Αποθήκευση τρέχουσας σημείωσης"
-  delete_note: "Διαγραφή τρέχουσας σημείωσης"
-  search_notes: "Αναζήτηση σημειώσεων"
-  toggle_pin: "Εναλλαγή κατάστασης καρφιτσώματος"
-  next_note: "Επόμενη σημείωση"
-  prev_note: "Προηγούμενη σημείωση"
-  scroll_up: "Κύλιση πάνω"
-  scroll_down: "Κύλιση κάτω"
-  page_up: "Σελίδα πάνω"
-  page_down: "Σελίδα κάτω"
-  unlock_screen: "ΟΘΟΝΗ ΞΕΚΛΕΙΔΩΜΑΤΟΣ"
-  note_list: "ΛΙΣΤΑ ΣΗΜΕΙΩΣΕΩΝ"
-  search_mode: "ΛΕΙΤΟΥΡΓΙΑ ΑΝΑΖΗΤΗΣΗΣ"
-  note_preview_view: "ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΣΗΜΕΙΩΣΗΣ - ΛΕΙΤΟΥΡΓΙΑ ΠΡΟΒΟΛΗΣ"
-  note_preview_tag: "ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΣΗΜΕΙΩΣΗΣ - ΛΕΙΤΟΥΡΓΙΑ ΕΤΙΚΕΤΩΝ"
-  settings: "ΡΥΘΜΙΣΕΙΣ"
-  attachments: "ΣΥΝΗΜΜΕΝΑ"
-  global: "ΚΑΘΟΛΙΚΑ"
-  press_esc_or_enter: "Πατήστε Esc ή Enter για κλείσιμο"
-  press_enter_paste: "Πατήστε Enter για επικόλληση | Esc για ακύρωση"
+  title: Συντομεύσεις πληκτρολογίου
+  subtitle: Πατήστε ? ή q για κλείσιμο
+  general: Γενικά
+  notes: Σημειώσεις
+  editor: Επεξεργαστής
+  navigation: Πλοήγηση
+  quit_app: Έξοδος από την εφαρμογή
+  new_note: Δημιουργία νέας σημείωσης
+  save_note: Αποθήκευση τρέχουσας σημείωσης
+  delete_note: Διαγραφή τρέχουσας σημείωσης
+  search_notes: Αναζήτηση σημειώσεων
+  toggle_pin: Εναλλαγή κατάστασης καρφιτσώματος
+  next_note: Επόμενη σημείωση
+  prev_note: Προηγούμενη σημείωση
+  scroll_up: Κύλιση πάνω
+  scroll_down: Κύλιση κάτω
+  page_up: Σελίδα πάνω
+  page_down: Σελίδα κάτω
+  unlock_screen: ΟΘΟΝΗ ΞΕΚΛΕΙΔΩΜΑΤΟΣ
+  note_list: ΛΙΣΤΑ ΣΗΜΕΙΩΣΕΩΝ
+  search_mode: ΛΕΙΤΟΥΡΓΙΑ ΑΝΑΖΗΤΗΣΗΣ
+  note_preview_view: ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΣΗΜΕΙΩΣΗΣ - ΛΕΙΤΟΥΡΓΙΑ ΠΡΟΒΟΛΗΣ
+  note_preview_tag: ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΣΗΜΕΙΩΣΗΣ - ΛΕΙΤΟΥΡΓΙΑ ΕΤΙΚΕΤΩΝ
+  settings: ΡΥΘΜΙΣΕΙΣ
+  attachments: ΣΥΝΗΜΜΕΝΑ
+  global: ΚΑΘΟΛΙΚΑ
+  press_esc_or_enter: Πατήστε Esc ή Enter για κλείσιμο
+  press_enter_paste: Πατήστε Enter για επικόλληση | Esc για ακύρωση
   tab_switch: "Tab: εναλλαγή πεδίων | Enter: δημιουργία"
   enter_unlock: "Enter: ξεκλείδωμα | Ctrl+Q: έξοδος"
-  type_password_key: "Πληκτρολόγηση"
-  type_password_desc: "Εισαγάγετε κωδικό"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "Ξεκλείδωμα βάσης δεδομένων"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "Εναλλαγή κωδικού/επιβεβαίωσης (νέα ΒΔ)"
-  backspace_key: "Backspace"
-  backspace_desc: "Διαγραφή χαρακτήρα"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "Έξοδος από την εφαρμογή"
-  slash_search_key: "/"
-  slash_search_desc: "Είσοδος σε λειτουργία αναζήτησης"
+  type_password_key: Πληκτρολόγηση
+  type_password_desc: Εισαγάγετε κωδικό
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: Ξεκλείδωμα βάσης δεδομένων
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: Εναλλαγή κωδικού/επιβεβαίωσης (νέα ΒΔ)
+  backspace_key: Backspace
+  backspace_desc: Διαγραφή χαρακτήρα
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: Έξοδος από την εφαρμογή
+  slash_search_key: /
+  slash_search_desc: Είσοδος σε λειτουργία αναζήτησης
   y_sync_key: "y"
-  y_sync_desc: "Συγχρονισμός σημειώσεων (εάν έχει ρυθμιστεί)"
-  s_settings_key: "s"
-  s_settings_desc: "Εμφάνιση ρυθμίσεων"
+  y_sync_desc: Συγχρονισμός σημειώσεων (εάν έχει ρυθμιστεί)
+  s_settings_key: s
+  s_settings_desc: Εμφάνιση ρυθμίσεων
   n_new_key: "n"
-  n_new_desc: "Δημιουργία νέας σημείωσης"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "Άνοιγμα σημείωσης στο $EDITOR"
-  d_delete_key: "d"
-  d_delete_desc: "Διαγραφή επιλεγμένης σημείωσης"
-  j_down_key: "j / ↓"
-  j_down_desc: "Μετακίνηση κάτω"
-  k_up_key: "k / ↑"
-  k_up_desc: "Μετακίνηση πάνω"
+  n_new_desc: Δημιουργία νέας σημείωσης
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: Άνοιγμα σημείωσης στο $EDITOR
+  d_delete_key: d
+  d_delete_desc: Διαγραφή επιλεγμένης σημείωσης
+  j_down_key: j / ↓
+  j_down_desc: Μετακίνηση κάτω
+  k_up_key: k / ↑
+  k_up_desc: Μετακίνηση πάνω
   question_help_key: "?"
-  question_help_desc: "Εμφάνιση αυτής της βοήθειας"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "Έξοδος από την εφαρμογή"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "Πληκτρολόγηση"
-  type_search_desc: "Εισαγάγετε ερώτημα αναζήτησης"
+  question_help_desc: Εμφάνιση αυτής της βοήθειας
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: Έξοδος από την εφαρμογή
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: Πληκτρολόγηση
+  type_search_desc: Εισαγάγετε ερώτημα αναζήτησης
   search_tag_key: "#ετικέτα"
-  search_tag_desc: "Αναζήτηση κατά ετικέτα"
+  search_tag_desc: Αναζήτηση κατά ετικέτα
   search_exclude_key: "-λέξη"
-  search_exclude_desc: "Εξαίρεση λέξης (άρνηση)"
-  search_and_key: "λέξη1 λέξη2"
-  search_and_desc: "Αντιστοίχιση όλων των λέξεων (ΚΑΙ)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "Άνοιγμα σημείωσης στο $EDITOR"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "Έξοδος από τη λειτουργία αναζήτησης"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "Πλοήγηση αποτελεσμάτων"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "Επεξεργασία με εξωτερικό $EDITOR"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "Είσοδος σε λειτουργία ετικετών"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "Αποθήκευση και επιστροφή στη λίστα"
-  type_tag_key: "Πληκτρολόγηση"
-  type_tag_desc: "Εισαγάγετε όνομα ετικέτας"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "Προσθήκη ετικέτας"
-  backspace_remove_key: "Backspace (κενό)"
-  backspace_remove_desc: "Αφαίρεση τελευταίας ετικέτας"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "Διαγραφή χαρακτήρα από την εισαγωγή"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "Έξοδος σε κανονική λειτουργία"
-  jk_navigate_key: "j/k ή ↑/↓"
-  jk_navigate_desc: "Πλοήγηση μεταξύ πεδίων"
-  enter_edit_key: "Enter / i / Διάστημα"
-  enter_edit_desc: "Επεξεργασία επιλεγμένου πεδίου"
-  enter_save_key: "Enter"
-  enter_save_desc: "Αποθήκευση πεδίων κειμένου/αριθμού, εναλλαγή άλλων πεδίων"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "Ακύρωση επεξεργασίας (πεδία κειμένου/αριθμού)"
-  p_paste_key: "p"
-  p_paste_desc: "Επικόλληση διαπιστευτηρίων συγχρονισμού (εμφανίζει εισαγωγή κειμένου)"
-  c_copy_key: "c"
-  c_copy_desc: "Αντιγραφή διαπιστευτηρίων συγχρονισμού (κρυπτογραφημένη μορφή)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "Αντιγραφή διαπιστευτηρίων συγχρονισμού (παλαιά μη κρυπτογραφημένη μορφή)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "Κλείσιμο πίνακα ρυθμίσεων"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "Προσθήκη συνημμένου (εισαγάγετε διαδρομή αρχείου)"
-  a_view_attachment_key: "a + αριθμός"
-  a_view_attachment_desc: "Προβολή συνημμένου (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "Πλοήγηση συνημμένων"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "Αφαίρεση επιλεγμένου συνημμένου"
+  search_exclude_desc: Εξαίρεση λέξης (άρνηση)
+  search_and_key: λέξη1 λέξη2
+  search_and_desc: Αντιστοίχιση όλων των λέξεων (ΚΑΙ)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: Άνοιγμα σημείωσης στο $EDITOR
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: Έξοδος από τη λειτουργία αναζήτησης
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: Πλοήγηση αποτελεσμάτων
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: Επεξεργασία με εξωτερικό $EDITOR
+  t_tag_mode_key: t
+  t_tag_mode_desc: Είσοδος σε λειτουργία ετικετών
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: Αποθήκευση και επιστροφή στη λίστα
+  type_tag_key: Πληκτρολόγηση
+  type_tag_desc: Εισαγάγετε όνομα ετικέτας
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: Προσθήκη ετικέτας
+  backspace_remove_key: Backspace (κενό)
+  backspace_remove_desc: Αφαίρεση τελευταίας ετικέτας
+  backspace_delete_key: Backspace
+  backspace_delete_desc: Διαγραφή χαρακτήρα από την εισαγωγή
+  esc_normal_key: Esc
+  esc_normal_desc: Έξοδος σε κανονική λειτουργία
+  jk_navigate_key: j/k ή ↑/↓
+  jk_navigate_desc: Πλοήγηση μεταξύ πεδίων
+  enter_edit_key: Enter / i / Διάστημα
+  enter_edit_desc: Επεξεργασία επιλεγμένου πεδίου
+  enter_save_key: Enter
+  enter_save_desc: Αποθήκευση πεδίων κειμένου/αριθμού, εναλλαγή άλλων πεδίων
+  esc_cancel_key: Esc
+  esc_cancel_desc: Ακύρωση επεξεργασίας (πεδία κειμένου/αριθμού)
+  p_paste_key: p
+  p_paste_desc: Επικόλληση διαπιστευτηρίων συγχρονισμού (εμφανίζει εισαγωγή κειμένου)
+  c_copy_key: c
+  c_copy_desc: Αντιγραφή διαπιστευτηρίων συγχρονισμού (κρυπτογραφημένη μορφή)
+  shift_c_copy_key: C
+  shift_c_copy_desc: Αντιγραφή διαπιστευτηρίων συγχρονισμού (παλαιά μη κρυπτογραφημένη μορφή)
+  s_q_close_key: s / q
+  s_q_close_desc: Κλείσιμο πίνακα ρυθμίσεων
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: Προσθήκη συνημμένου (εισαγάγετε διαδρομή αρχείου)
+  a_view_attachment_key: a + αριθμός
+  a_view_attachment_desc: Προβολή συνημμένου (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: Πλοήγηση συνημμένων
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: Αφαίρεση επιλεγμένου συνημμένου
   note_images_key: "Σημείωση:"
-  note_images_desc: "Οι εικόνες χρησιμοποιούν chafa εάν είναι διαθέσιμο, αλλιώς την προεπιλεγμένη εφαρμογή συστήματος"
+  note_images_desc: Οι εικόνες χρησιμοποιούν chafa εάν είναι διαθέσιμο, αλλιώς την προεπιλεγμένη εφαρμογή συστήματος
   question_global_key: "?"
-  question_global_desc: "Εμφάνιση αυτής της οθόνης βοήθειας"
+  question_global_desc: Εμφάνιση αυτής της οθόνης βοήθειας
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "Λίστα σημειώσεων"
-  show: "Εμφάνιση σημείωσης"
-  new: "Δημιουργία νέας σημείωσης"
-  edit: "Επεξεργασία σημείωσης"
-  delete: "Διαγραφή σημείωσης"
-  search: "Αναζήτηση σημειώσεων"
-  export: "Εξαγωγή σημειώσεων"
-  import: "Εισαγωγή σημειώσεων"
-  sync: "Συγχρονισμός με διακομιστή"
-  register: "Εγγραφή συσκευής"
+  list: Λίστα σημειώσεων
+  show: Εμφάνιση σημείωσης
+  new: Δημιουργία νέας σημείωσης
+  edit: Επεξεργασία σημείωσης
+  delete: Διαγραφή σημείωσης
+  search: Αναζήτηση σημειώσεων
+  export: Εξαγωγή σημειώσεων
+  import: Εισαγωγή σημειώσεων
+  sync: Συγχρονισμός με διακομιστή
+  register: Εγγραφή συσκευής
 status:
-  locked: "Κλειδωμένο"
-  unlocked: "Ξεκλείδωτο"
-  syncing: "Συγχρονισμός..."
-  synced: "Συγχρονισμένο"
-  offline: "Εκτός σύνδεσης"
-  modified: "Τροποποιήθηκε"
-  saved: "Αποθηκεύτηκε"
+  locked: Κλειδωμένο
+  unlocked: Ξεκλείδωτο
+  syncing: Συγχρονισμός...
+  synced: Συγχρονισμένο
+  offline: Εκτός σύνδεσης
+  modified: Τροποποιήθηκε
+  saved: Αποθηκεύτηκε
 bulk:
   tags_added: "Προστέθηκαν ετικέτες σε %{count} σημειώσεις: %{tags}"
-  deleted: "Διαγράφηκαν %{count} σημειώσεις"
-  combined: "Συνδυάστηκαν %{count} σημειώσεις"
-  combine_requires_two: "Επιλέξτε τουλάχιστον 2 σημειώσεις για συνδυασμό"
-  exported: "Εξήχθησαν %{count} σημειώσεις στο %{path}"
+  deleted: Διαγράφηκαν %{count} σημειώσεις
+  combined: Συνδυάστηκαν %{count} σημειώσεις
+  combine_requires_two: Επιλέξτε τουλάχιστον 2 σημειώσεις για συνδυασμό
+  exported: Εξήχθησαν %{count} σημειώσεις στο %{path}
   operation_failed: "Η μαζική λειτουργία απέτυχε: %{error}"
-  confirm_delete: "Διαγραφή %{count} σημειώσεων; (y/n)"
-  confirm_combine: "Συνδυασμός %{count} σημειώσεων; (y/n)"
+  confirm_delete: Διαγραφή %{count} σημειώσεων; (y/n)
+  confirm_combine: Συνδυασμός %{count} σημειώσεων; (y/n)
   enter_tags: "Εισαγάγετε ετικέτες (διαχωρισμένες με κόμμα):"
   enter_export_path: "Διαδρομή εξαγωγής:"
-  add_tags_to: "Προσθήκη ετικετών σε"
-  export_notes_to: "Εξαγωγή"
+  add_tags_to: Προσθήκη ετικετών σε
+  export_notes_to: Εξαγωγή
 time:
-  just_now: "μόλις τώρα"
-  minutes_ago: "πριν από %{count} λεπτά"
-  hours_ago: "πριν από %{count} ώρες"
-  days_ago: "πριν από %{count} ημέρες"
+  just_now: μόλις τώρα
+  minutes_ago: πριν από %{count} λεπτά
+  hours_ago: πριν από %{count} ώρες
+  days_ago: πριν από %{count} ημέρες
   date_format: "%d/%m/%Y"
   time_format: "%H:%M:%S"
   datetime_format: "%d/%m/%Y %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

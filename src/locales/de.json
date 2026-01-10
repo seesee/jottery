@@ -14,7 +14,8 @@
     "unlock": "Entsperren",
     "settings": "Einstellungen",
     "search": "Suchen",
-    "error": "Fehler"
+    "error": "Fehler",
+    "back": "Back"
   },
   "docs": {
     "title": "Dokumentation",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Notizen durchsuchen...",
-    "clear": "Suche löschen"
+    "clear": "Suche löschen",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Keine Notiz ausgewählt",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Ihr Browser unterstützt keine Videowiedergabe.",
       "previewNotAvailable": "Vorschau für diesen Dateityp nicht verfügbar.",
       "downloadToView": "Zum Anzeigen herunterladen"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Notiz löschen",
@@ -247,7 +251,8 @@
         "successTitle": "Synchronisation erfolgreich aktiviert!",
         "successText": "Ihr Gerät ist jetzt registriert und <strong>alle Ihre vorhandenen Notizen wurden mit dem Server synchronisiert</strong>. Alle zukünftigen Änderungen werden automatisch synchronisiert.",
         "successNextSteps": "📋 Um ein weiteres Gerät hinzuzufügen: Klicken Sie unten auf \"Synchronisierungs-Anmeldedaten exportieren\" und importieren Sie sie auf Ihrem anderen Gerät.",
-        "done": "Fertig"
+        "done": "Fertig",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Konto verknüpfen (optional)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "System-Sprachen",
       "dataLanguages": "Datensprachen",
       "otherLanguages": "Andere Sprachen",
-      "enabledCount": "{enabled}/{total} aktiviert"
+      "enabledCount": "{enabled}/{total} aktiviert",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Tastenkombinationen anpassen. Klicken Sie auf eine Tastenkombination, um sie zu ändern, und drücken Sie dann die gewünschte Tastenkombination.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery ist eine datenschutzorientierte, selbst gehostete Notizblock-Anwendung zum Erfassen, Organisieren und Durchsuchen von Notizen mit reichhaltigem Inhalt, Syntaxhervorhebung und Verschlüsselung.",
       "viewOnGithub": "Auf GitHub ansehen",
       "license": "Lizenziert unter der MIT-Lizenz."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Willkommen bei Jottery",
@@ -605,7 +615,9 @@
     "title": "Neue Version verfügbar",
     "message": "Neu laden, um die neuesten Funktionen und Verbesserungen zu erhalten",
     "reloadButton": "Jetzt neu laden",
-    "dismissLabel": "Verwerfen"
+    "dismissLabel": "Verwerfen",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Auswahl umschalten",
@@ -627,5 +639,26 @@
     "progress": "{current} von {total}",
     "selectAll": "Alle auswählen",
     "deselectAll": "Alle abwählen"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

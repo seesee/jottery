@@ -96,6 +96,7 @@ evalexpr = "13.1"
 rust-i18n = "3"
 
 [dev-dependencies]
+serde_yaml = "0.9"
 
 [profile.release]
 opt-level = 3

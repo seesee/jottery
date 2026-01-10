@@ -14,7 +14,8 @@
     "unlock": "Odblokuj",
     "settings": "Ustawienia",
     "search": "Szukaj",
-    "error": "Błąd"
+    "error": "Błąd",
+    "back": "Back"
   },
   "docs": {
     "title": "Dokumentacja",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Szukaj notatek...",
-    "clear": "Wyczyść wyszukiwanie"
+    "clear": "Wyczyść wyszukiwanie",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Nie wybrano notatki",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania wideo.",
       "previewNotAvailable": "Podgląd niedostępny dla tego typu pliku.",
       "downloadToView": "Pobierz, aby wyświetlić"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Usuń notatkę",
@@ -247,7 +251,8 @@
         "successTitle": "Synchronizacja włączona pomyślnie!",
         "successText": "Twoje urządzenie jest teraz zarejestrowane i <strong>wszystkie istniejące notatki zostały zsynchronizowane z serwerem</strong>. Przyszłe zmiany będą synchronizowane automatycznie.",
         "successNextSteps": "📋 Aby dodać inne urządzenie: Kliknij poniżej \"Eksportuj dane uwierzytelniające synchronizacji\" i zaimportuj je na drugim urządzeniu.",
-        "done": "Gotowe"
+        "done": "Gotowe",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Połącz konto (opcjonalne)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Języki systemowe",
       "dataLanguages": "Języki danych",
       "otherLanguages": "Inne języki",
-      "enabledCount": "Włączono {enabled}/{total}"
+      "enabledCount": "Włączono {enabled}/{total}",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Dostosuj skróty klawiszowe. Kliknij skrót, aby go zmienić, a następnie naciśnij żądaną kombinację klawiszy.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery to aplikacja do notatek zorientowana na prywatność, samodzielnie hostowana, do przechwytywania, organizowania i przeszukiwania notatek z bogatą treścią, podświetlaniem składni i szyfrowaniem.",
       "viewOnGithub": "Zobacz na GitHub",
       "license": "Licencjonowane na licencji MIT."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Witaj w Jottery",
@@ -605,7 +615,9 @@
     "title": "Dostępna nowa wersja",
     "message": "Odśwież, aby uzyskać najnowsze funkcje i ulepszenia",
     "reloadButton": "Odśwież teraz",
-    "dismissLabel": "Odrzuć"
+    "dismissLabel": "Odrzuć",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Przełącz zaznaczenie",
@@ -627,5 +639,26 @@
     "progress": "{current} z {total}",
     "selectAll": "Zaznacz wszystko",
     "deselectAll": "Odznacz wszystko"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

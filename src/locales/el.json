@@ -14,7 +14,8 @@
     "unlock": "Ξεκλείδωμα",
     "settings": "Ρυθμίσεις",
     "search": "Αναζήτηση",
-    "error": "Σφάλμα"
+    "error": "Σφάλμα",
+    "back": "Back"
   },
   "docs": {
     "title": "Τεκμηρίωση",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Αναζήτηση σημειώσεων...",
-    "clear": "Εκκαθάριση αναζήτησης"
+    "clear": "Εκκαθάριση αναζήτησης",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Δεν επιλέχθηκε σημείωση",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Το πρόγραμμα περιήγησής σας δεν υποστηρίζει αναπαραγωγή βίντεο.",
       "previewNotAvailable": "Η προεπισκόπηση δεν είναι διαθέσιμη για αυτόν τον τύπο αρχείου.",
       "downloadToView": "Κάντε λήψη για προβολή"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",
@@ -247,7 +251,8 @@
         "successTitle": "Ο συγχρονισμός ενεργοποιήθηκε με επιτυχία!",
         "successText": "Η συσκευή σας είναι τώρα εγγεγραμμένη και <strong>όλες οι υπάρχουσες σημειώσεις σας έχουν συγχρονιστεί στον διακομιστή</strong>. Οποιεσδήποτε μελλοντικές αλλαγές θα συγχρονίζονται αυτόματα.",
         "successNextSteps": "📋 Για να προσθέσετε άλλη συσκευή: Κάντε κλικ στο \"Εξαγωγή διαπιστευτηρίων συγχρονισμού\" παρακάτω και εισαγάγετε τα στην άλλη συσκευή σας.",
-        "done": "Ολοκλήρωση"
+        "done": "Ολοκλήρωση",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Σύνδεση λογαριασμού (προαιρετικό)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Γλώσσες συστημάτων",
       "dataLanguages": "Γλώσσες δεδομένων",
       "otherLanguages": "Άλλες γλώσσες",
-      "enabledCount": "{enabled}/{total} ενεργοποιημένες"
+      "enabledCount": "{enabled}/{total} ενεργοποιημένες",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Προσαρμόστε τις συντομεύσεις πληκτρολογίου. Κάντε κλικ σε μια συντόμευση για να την αλλάξετε, στη συνέχεια πατήστε τον επιθυμητό συνδυασμό πλήκτρων.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Το Jottery είναι μια εφαρμογή σημειώσεων με έμφαση στην ιδιωτικότητα και αυτο-φιλοξένηση για καταγραφή, οργάνωση και αναζήτηση σημειώσεων με εμπλουτισμένο περιεχόμενο, επισήμανση σύνταξης και κρυπτογράφηση.",
       "viewOnGithub": "Προβολή στο GitHub",
       "license": "Με άδεια MIT License."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Καλώς ήρθατε στο Jottery",
@@ -605,7 +615,9 @@
     "title": "Νέα έκδοση διαθέσιμη",
     "message": "Επαναφορτώστε για να λάβετε τις τελευταίες λειτουργίες και βελτιώσεις",
     "reloadButton": "Επαναφόρτωση τώρα",
-    "dismissLabel": "Απόρριψη"
+    "dismissLabel": "Απόρριψη",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Εναλλαγή επιλογής",
@@ -627,5 +639,26 @@
     "progress": "{current} από {total}",
     "selectAll": "Επιλογή όλων",
     "deselectAll": "Αποεπιλογή όλων"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }

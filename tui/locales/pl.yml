@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "Zorientowany na prywatność, zaszyfrowany TUI do notatek"
+  name: Jottery
+  description: Zorientowany na prywatność, zaszyfrowany TUI do notatek
 common:
-  loading: "Ładowanie..."
-  saving: "Zapisywanie..."
-  cancel: "Anuluj"
-  confirm: "Potwierdź"
-  yes: "Tak"
-  no: "Nie"
-  ok: "OK"
-  close: "Zamknij"
-  quit: "Wyjdź"
-  back: "Wstecz"
-  email: "E-mail"
+  loading: Ładowanie...
+  saving: Zapisywanie...
+  cancel: Anuluj
+  confirm: Potwierdź
+  "yes": Tak
+  "no": Nie
+  ok: OK
+  close: Zamknij
+  quit: Wyjdź
+  back: Wstecz
+  email: E-mail
 password:
   prompt: "Hasło: "
-  enter: "Wprowadź hasło"
-  confirm: "Potwierdź hasło"
-  empty_error: "Hasło nie może być puste"
-  mismatch_error: "Hasła nie pasują"
+  enter: Wprowadź hasło
+  confirm: Potwierdź hasło
+  empty_error: Hasło nie może być puste
+  mismatch_error: Hasła nie pasują
   unlock_failed: "Odblokowanie nie powiodło się: %{error}"
-  change_success: "Hasło zmienione pomyślnie"
+  change_success: Hasło zmienione pomyślnie
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "Notatki"
-  new_note: "Nowa notatka"
-  settings: "Ustawienia"
-  help: "Pomoc"
-  quit: "Wyjdź"
-  search: "Szukaj"
+  notes: Notatki
+  new_note: Nowa notatka
+  settings: Ustawienia
+  help: Pomoc
+  quit: Wyjdź
+  search: Szukaj
 note:
-  new: "Nowa notatka"
-  save: "Zapisz"
-  saved: "Notatka zapisana"
+  new: Nowa notatka
+  save: Zapisz
+  saved: Notatka zapisana
   save_failed: "Zapisywanie notatki nie powiodło się: %{error}"
-  delete: "Usuń notatkę"
-  deleted: "Notatka usunięta"
+  delete: Usuń notatkę
+  deleted: Notatka usunięta
   delete_failed: "Usuwanie notatki nie powiodło się: %{error}"
   reload_failed: "Ponowne ładowanie notatek nie powiodło się: %{error}"
-  pin: "Przypnij notatkę"
-  unpin: "Odepnij notatkę"
-  pinned: "Przypięta"
+  pin: Przypnij notatkę
+  unpin: Odepnij notatkę
+  pinned: Przypięta
   pin_failed: "Aktualizacja statusu przypięcia nie powiodła się: %{error}"
-  no_notes: "Nie znaleziono notatek"
+  no_notes: Nie znaleziono notatek
   total: "%{count} notatek"
 editor:
-  title: "Tytuł"
-  content: "Treść"
-  tags: "Tagi"
-  created: "Utworzono"
-  modified: "Zmodyfikowano"
-  launch_external: "Uruchom zewnętrzny edytor"
+  title: Tytuł
+  content: Treść
+  tags: Tagi
+  created: Utworzono
+  modified: Zmodyfikowano
+  launch_external: Uruchom zewnętrzny edytor
   external_failed: "Uruchomienie edytora nie powiodło się: %{error}"
-  external_exit_error: "Edytor zakończył się kodem błędu"
-  temp_file_error: "Utworzenie pliku tymczasowego nie powiodło się"
-  temp_write_error: "Zapis do pliku tymczasowego nie powiódł się"
-  temp_read_error: "Odczyt pliku tymczasowego nie powiódł się"
-  default_editor: "vi"
+  external_exit_error: Edytor zakończył się kodem błędu
+  temp_file_error: Utworzenie pliku tymczasowego nie powiodło się
+  temp_write_error: Zapis do pliku tymczasowego nie powiódł się
+  temp_read_error: Odczyt pliku tymczasowego nie powiódł się
+  default_editor: vi
 attachment:
-  add: "Dodaj załącznik"
+  add: Dodaj załącznik
   add_failed: "Dodawanie załącznika nie powiodło się: %{error}"
-  view: "Wyświetl załącznik"
+  view: Wyświetl załącznik
   view_failed: "Wyświetlanie załącznika nie powiodło się: %{error}"
-  delete: "Usuń załącznik"
-  no_attachments: "Brak załączników"
+  delete: Usuń załącznik
+  no_attachments: Brak załączników
   total: "%{count} załączników"
 version:
-  history: "Historia wersji"
-  restore: "Przywróć wersję"
-  restored: "Wersja %{number} przywrócona"
+  history: Historia wersji
+  restore: Przywróć wersję
+  restored: Wersja %{number} przywrócona
   restore_failed: "Przywracanie wersji nie powiodło się: %{error}"
-  no_versions: "Brak historii wersji"
-  current: "Aktualna wersja"
+  no_versions: Brak historii wersji
+  current: Aktualna wersja
 search:
-  prompt: "Szukaj notatek..."
-  no_results: "Nie znaleziono wyników"
+  prompt: Szukaj notatek...
+  no_results: Nie znaleziono wyników
   results: "%{count} wyników"
 settings:
-  title: "Ustawienia"
-  language: "Język"
-  theme: "Motyw"
-  color_scheme: "Schemat kolorów"
-  auto_lock: "Limit czasu autoblokady"
-  minutes: "minut"
-  sync: "Synchronizacja"
-  sync_enabled: "Synchronizacja włączona"
-  sync_endpoint: "Punkt końcowy synchronizacji"
-  device_name: "Nazwa urządzenia"
-  instructions_disconnect: "Naciśnij 'd', aby odłączyć się od serwera synchronizacji (zachowuje lokalne notatki)"
-  instructions_status: "Naciśnij 'R' (Shift+r), aby sprawdzić status zatwierdzenia rejestracji"
-  instructions_register: "Naciśnij 'r', aby zarejestrować się na serwerze synchronizacji"
-  user_portal: "Portal Użytkownika"
+  title: Ustawienia
+  language: Język
+  theme: Motyw
+  color_scheme: Schemat kolorów
+  auto_lock: Limit czasu autoblokady
+  minutes: minut
+  sync: Synchronizacja
+  sync_enabled: Synchronizacja włączona
+  sync_endpoint: Punkt końcowy synchronizacji
+  device_name: Nazwa urządzenia
+  instructions_disconnect: Naciśnij 'd', aby odłączyć się od serwera synchronizacji (zachowuje lokalne notatki)
+  instructions_status: Naciśnij 'R' (Shift+r), aby sprawdzić status zatwierdzenia rejestracji
+  instructions_register: Naciśnij 'r', aby zarejestrować się na serwerze synchronizacji
+  user_portal: Portal Użytkownika
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "Wyślij na serwer"
-  pull: "Pobierz z serwera"
-  pushing: "Wysyłanie zmian..."
-  pulling: "Pobieranie zmian..."
-  success: "Synchronizacja powiodła się"
+  push: Wyślij na serwer
+  pull: Pobierz z serwera
+  pushing: Wysyłanie zmian...
+  pulling: Pobieranie zmian...
+  success: Synchronizacja powiodła się
   failed: "Synchronizacja nie powiodła się: %{error}"
-  no_api_key: "Nie skonfigurowano klucza API"
-  account_deactivated: "Twoje konto zostało dezaktywowane lub oczekuje na zatwierdzenie administratora. Skontaktuj się z administratorem."
-  invalid_key: "Nieprawidłowy klucz API lub uwierzytelnianie nie powiodło się. Spróbuj ponownie zarejestrować urządzenie."
-  conflict: "Wykryto konflikt synchronizacji. Niektóre notatki mają konfliktujące zmiany na serwerze."
-  request_failed: "Wysłanie żądania synchronizacji nie powiodło się"
-  response_parse_failed: "Analiza odpowiedzi synchronizacji nie powiodła się"
-  encrypted_import: "Zaszyfrowane dane uwierzytelniające zaimportowane. Wprowadź hasło, aby odszyfrować i zakończyć konfigurację."
+  no_api_key: Nie skonfigurowano klucza API
+  account_deactivated: Twoje konto zostało dezaktywowane lub oczekuje na zatwierdzenie administratora. Skontaktuj się z administratorem.
+  invalid_key: Nieprawidłowy klucz API lub uwierzytelnianie nie powiodło się. Spróbuj ponownie zarejestrować urządzenie.
+  conflict: Wykryto konflikt synchronizacji. Niektóre notatki mają konfliktujące zmiany na serwerze.
+  request_failed: Wysłanie żądania synchronizacji nie powiodło się
+  response_parse_failed: Analiza odpowiedzi synchronizacji nie powiodła się
+  encrypted_import: Zaszyfrowane dane uwierzytelniające zaimportowane. Wprowadź hasło, aby odszyfrować i zakończyć konfigurację.
   legacy_format_warning: "Ostrzeżenie: Używanie starszego formatu bez szyfrowania. Klucz API jest widoczny w postaci zwykłego tekstu."
-  disconnected: "Rozłączono z serwerem synchronizacji. Lokalne notatki zachowane."
-  disconnect_failed: "Nie udało się rozłączyć z serwerem synchronizacji"
+  disconnected: Rozłączono z serwerem synchronizacji. Lokalne notatki zachowane.
+  disconnect_failed: Nie udało się rozłączyć z serwerem synchronizacji
   status:
-    check_title: "Sprawdź Status Rejestracji"
-    result_title: "Status Rejestracji"
+    check_title: Sprawdź Status Rejestracji
+    result_title: Status Rejestracji
     enter_email: "Wprowadź adres e-mail, aby sprawdzić status zatwierdzenia:"
-    check_failed: "Nie udało się sprawdzić statusu rejestracji"
-    not_found: "Nie znaleziono konta z tym adresem e-mail."
-    approved: "Twoje konto jest zatwierdzone i aktywne. Możesz synchronizować notatki."
-    pending: "Twoje konto oczekuje na zatwierdzenie. Poczekaj, aż administrator zatwierdzi rejestrację."
-    inactive: "Twoje konto zostało dezaktywowane. Skontaktuj się z administratorem."
+    check_failed: Nie udało się sprawdzić statusu rejestracji
+    not_found: Nie znaleziono konta z tym adresem e-mail.
+    approved: Twoje konto jest zatwierdzone i aktywne. Możesz synchronizować notatki.
+    pending: Twoje konto oczekuje na zatwierdzenie. Poczekaj, aż administrator zatwierdzi rejestrację.
+    inactive: Twoje konto zostało dezaktywowane. Skontaktuj się z administratorem.
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "Zarejestruj się na Serwerze Synchronizacji"
+  title: Zarejestruj się na Serwerze Synchronizacji
   enter_endpoint: "Wprowadź URL serwera synchronizacji (np. https://sync.example.com):"
   enter_email: "Wprowadź swój adres e-mail:"
   enter_password: "Utwórz hasło (min. 12 znaków):"
   reenter_password: "Wprowadź ponownie hasło synchronizacji:"
-  pending_title: "Rejestracja Oczekująca"
-  pending_message: "Twoja rejestracja została przesłana i oczekuje na zatwierdzenie administratora."
-  pending_instructions: "Naciśnij 'r' lub Enter, aby sprawdzić status zatwierdzenia. Naciśnij Esc, aby zamknąć."
+  pending_title: Rejestracja Oczekująca
+  pending_message: Twoja rejestracja została przesłana i oczekuje na zatwierdzenie administratora.
+  pending_instructions: Naciśnij 'r' lub Enter, aby sprawdzić status zatwierdzenia. Naciśnij Esc, aby zamknąć.
   pending_help: "r/Enter: Sprawdź status | Esc: Zamknij"
-  device_title: "Rejestracja Urządzenia"
+  device_title: Rejestracja Urządzenia
   enter_device_name: "Wprowadź nazwę tego urządzenia (lub naciśnij Enter dla domyślnej):"
-  endpoint_required: "Wymagany jest URL serwera synchronizacji"
-  email_invalid: "Wprowadź prawidłowy adres e-mail"
-  password_too_short: "Hasło musi mieć co najmniej 12 znaków"
-  failed: "Rejestracja nie powiodła się"
-  approved: "Twoja rejestracja została zatwierdzona!"
-  still_pending: "Twoja rejestracja wciąż oczekuje na zatwierdzenie"
-  success: "Zarejestrowano pomyślnie! Synchronizacja jest teraz włączona."
-  device_failed: "Rejestracja urządzenia nie powiodła się"
-  cleared: "Rejestracja wyczyszczona. Możesz zacząć od nowa."
-  pending_status: "Oczekuje na zatwierdzenie"
+  endpoint_required: Wymagany jest URL serwera synchronizacji
+  email_invalid: Wprowadź prawidłowy adres e-mail
+  password_too_short: Hasło musi mieć co najmniej 12 znaków
+  failed: Rejestracja nie powiodła się
+  approved: Twoja rejestracja została zatwierdzona!
+  still_pending: Twoja rejestracja wciąż oczekuje na zatwierdzenie
+  success: Zarejestrowano pomyślnie! Synchronizacja jest teraz włączona.
+  device_failed: Rejestracja urządzenia nie powiodła się
+  cleared: Rejestracja wyczyszczona. Możesz zacząć od nowa.
+  pending_status: Oczekuje na zatwierdzenie
 color_scheme:
-  default_dark: "Domyślny ciemny"
-  default_light: "Domyślny jasny"
-  monokai: "Monokai"
-  solarized_dark: "Solarized ciemny"
-  solarized_light: "Solarized jasny"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox ciemny"
-  gruvbox_light: "Gruvbox jasny"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: Domyślny ciemny
+  default_light: Domyślny jasny
+  monokai: Monokai
+  solarized_dark: Solarized ciemny
+  solarized_light: Solarized jasny
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox ciemny
+  gruvbox_light: Gruvbox jasny
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "Brak"
-  change_language: "Zmień język składni"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: Brak
+  change_language: Zmień język składni
   change_failed: "Aktualizacja języka składni nie powiodła się: %{error}"
 error:
-  generic: "Wystąpił błąd"
-  unexpected: "Wystąpił nieoczekiwany błąd"
+  generic: Wystąpił błąd
+  unexpected: Wystąpił nieoczekiwany błąd
   database: "Błąd bazy danych: %{error}"
   encryption: "Błąd szyfrowania: %{error}"
   network: "Błąd sieci: %{error}"
-  file_not_found: "Nie znaleziono pliku"
-  permission_denied: "Odmowa dostępu"
-  invalid_input: "Nieprawidłowe dane wejściowe"
+  file_not_found: Nie znaleziono pliku
+  permission_denied: Odmowa dostępu
+  invalid_input: Nieprawidłowe dane wejściowe
   operation_failed: "Operacja nie powiodła się: %{error}"
 help:
-  title: "Skróty klawiszowe"
-  subtitle: "Naciśnij ? lub q, aby zamknąć"
-  general: "Ogólne"
-  notes: "Notatki"
-  editor: "Edytor"
-  navigation: "Nawigacja"
-  quit_app: "Zamknij aplikację"
-  new_note: "Utwórz nową notatkę"
-  save_note: "Zapisz bieżącą notatkę"
-  delete_note: "Usuń bieżącą notatkę"
-  search_notes: "Szukaj notatek"
-  toggle_pin: "Przełącz status przypięcia"
-  next_note: "Następna notatka"
-  prev_note: "Poprzednia notatka"
-  scroll_up: "Przewiń w górę"
-  scroll_down: "Przewiń w dół"
-  page_up: "Strona w górę"
-  page_down: "Strona w dół"
-  unlock_screen: "EKRAN ODBLOKOWYWANIA"
-  note_list: "LISTA NOTATEK"
-  search_mode: "TRYB WYSZUKIWANIA"
-  note_preview_view: "PODGLĄD NOTATKI - TRYB WIDOKU"
-  note_preview_tag: "PODGLĄD NOTATKI - TRYB TAGÓW"
-  settings: "USTAWIENIA"
-  attachments: "ZAŁĄCZNIKI"
-  global: "GLOBALNE"
-  press_esc_or_enter: "Naciśnij Esc lub Enter, aby zamknąć"
-  press_enter_paste: "Naciśnij Enter, aby wkleić | Esc, aby anulować"
+  title: Skróty klawiszowe
+  subtitle: Naciśnij ? lub q, aby zamknąć
+  general: Ogólne
+  notes: Notatki
+  editor: Edytor
+  navigation: Nawigacja
+  quit_app: Zamknij aplikację
+  new_note: Utwórz nową notatkę
+  save_note: Zapisz bieżącą notatkę
+  delete_note: Usuń bieżącą notatkę
+  search_notes: Szukaj notatek
+  toggle_pin: Przełącz status przypięcia
+  next_note: Następna notatka
+  prev_note: Poprzednia notatka
+  scroll_up: Przewiń w górę
+  scroll_down: Przewiń w dół
+  page_up: Strona w górę
+  page_down: Strona w dół
+  unlock_screen: EKRAN ODBLOKOWYWANIA
+  note_list: LISTA NOTATEK
+  search_mode: TRYB WYSZUKIWANIA
+  note_preview_view: PODGLĄD NOTATKI - TRYB WIDOKU
+  note_preview_tag: PODGLĄD NOTATKI - TRYB TAGÓW
+  settings: USTAWIENIA
+  attachments: ZAŁĄCZNIKI
+  global: GLOBALNE
+  press_esc_or_enter: Naciśnij Esc lub Enter, aby zamknąć
+  press_enter_paste: Naciśnij Enter, aby wkleić | Esc, aby anulować
   tab_switch: "Tab: przełącz pola | Enter: utwórz"
   enter_unlock: "Enter: odblokuj | Ctrl+Q: wyjdź"
-  type_password_key: "Wpisz"
-  type_password_desc: "Wprowadź hasło"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "Odblokuj bazę danych"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "Przełącz hasło/potwierdzenie (nowa baza)"
-  backspace_key: "Backspace"
-  backspace_desc: "Usuń znak"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "Zamknij aplikację"
-  slash_search_key: "/"
-  slash_search_desc: "Wejdź w tryb wyszukiwania"
+  type_password_key: Wpisz
+  type_password_desc: Wprowadź hasło
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: Odblokuj bazę danych
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: Przełącz hasło/potwierdzenie (nowa baza)
+  backspace_key: Backspace
+  backspace_desc: Usuń znak
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: Zamknij aplikację
+  slash_search_key: /
+  slash_search_desc: Wejdź w tryb wyszukiwania
   y_sync_key: "y"
-  y_sync_desc: "Synchronizuj notatki (jeśli skonfigurowane)"
-  s_settings_key: "s"
-  s_settings_desc: "Pokaż ustawienia"
+  y_sync_desc: Synchronizuj notatki (jeśli skonfigurowane)
+  s_settings_key: s
+  s_settings_desc: Pokaż ustawienia
   n_new_key: "n"
-  n_new_desc: "Utwórz nową notatkę"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "Otwórz notatkę w $EDITOR"
-  d_delete_key: "d"
-  d_delete_desc: "Usuń wybraną notatkę"
-  j_down_key: "j / ↓"
-  j_down_desc: "Przesuń w dół"
-  k_up_key: "k / ↑"
-  k_up_desc: "Przesuń w górę"
+  n_new_desc: Utwórz nową notatkę
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: Otwórz notatkę w $EDITOR
+  d_delete_key: d
+  d_delete_desc: Usuń wybraną notatkę
+  j_down_key: j / ↓
+  j_down_desc: Przesuń w dół
+  k_up_key: k / ↑
+  k_up_desc: Przesuń w górę
   question_help_key: "?"
-  question_help_desc: "Pokaż tę pomoc"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "Zamknij aplikację"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "Wpisz"
-  type_search_desc: "Wprowadź zapytanie wyszukiwania"
+  question_help_desc: Pokaż tę pomoc
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: Zamknij aplikację
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: Wpisz
+  type_search_desc: Wprowadź zapytanie wyszukiwania
   search_tag_key: "#tag"
-  search_tag_desc: "Szukaj według tagu"
+  search_tag_desc: Szukaj według tagu
   search_exclude_key: "-słowo"
-  search_exclude_desc: "Wyklucz słowo (negacja)"
-  search_and_key: "słowo1 słowo2"
-  search_and_desc: "Dopasuj wszystkie słowa (I)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "Otwórz notatkę w $EDITOR"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "Wyjdź z trybu wyszukiwania"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "Nawiguj wyniki"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "Edytuj w zewnętrznym $EDITOR"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "Wejdź w tryb tagów"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "Zapisz i wróć do listy"
-  type_tag_key: "Wpisz"
-  type_tag_desc: "Wprowadź nazwę tagu"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "Dodaj tag"
-  backspace_remove_key: "Backspace (pusty)"
-  backspace_remove_desc: "Usuń ostatni tag"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "Usuń znak z wprowadzania"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "Wyjdź do trybu normalnego"
-  jk_navigate_key: "j/k lub ↑/↓"
-  jk_navigate_desc: "Nawiguj między polami"
-  enter_edit_key: "Enter / i / Spacja"
-  enter_edit_desc: "Edytuj wybrane pole"
-  enter_save_key: "Enter"
-  enter_save_desc: "Zapisz pola tekstowe/liczbowe, przełącz inne pola"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "Anuluj edycję (pola tekstowe/liczbowe)"
-  p_paste_key: "p"
-  p_paste_desc: "Wklej dane uwierzytelniające synchronizacji (pokazuje wprowadzanie tekstu)"
-  c_copy_key: "c"
-  c_copy_desc: "Kopiuj dane uwierzytelniające synchronizacji (format zaszyfrowany)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "Kopiuj dane uwierzytelniające synchronizacji (starszy format niezaszyfrowany)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "Zamknij panel ustawień"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "Dodaj załącznik (wprowadź ścieżkę pliku)"
-  a_view_attachment_key: "a + numer"
-  a_view_attachment_desc: "Wyświetl załącznik (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "Nawiguj załączniki"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "Usuń wybrany załącznik"
+  search_exclude_desc: Wyklucz słowo (negacja)
+  search_and_key: słowo1 słowo2
+  search_and_desc: Dopasuj wszystkie słowa (I)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: Otwórz notatkę w $EDITOR
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: Wyjdź z trybu wyszukiwania
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: Nawiguj wyniki
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: Edytuj w zewnętrznym $EDITOR
+  t_tag_mode_key: t
+  t_tag_mode_desc: Wejdź w tryb tagów
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: Zapisz i wróć do listy
+  type_tag_key: Wpisz
+  type_tag_desc: Wprowadź nazwę tagu
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: Dodaj tag
+  backspace_remove_key: Backspace (pusty)
+  backspace_remove_desc: Usuń ostatni tag
+  backspace_delete_key: Backspace
+  backspace_delete_desc: Usuń znak z wprowadzania
+  esc_normal_key: Esc
+  esc_normal_desc: Wyjdź do trybu normalnego
+  jk_navigate_key: j/k lub ↑/↓
+  jk_navigate_desc: Nawiguj między polami
+  enter_edit_key: Enter / i / Spacja
+  enter_edit_desc: Edytuj wybrane pole
+  enter_save_key: Enter
+  enter_save_desc: Zapisz pola tekstowe/liczbowe, przełącz inne pola
+  esc_cancel_key: Esc
+  esc_cancel_desc: Anuluj edycję (pola tekstowe/liczbowe)
+  p_paste_key: p
+  p_paste_desc: Wklej dane uwierzytelniające synchronizacji (pokazuje wprowadzanie tekstu)
+  c_copy_key: c
+  c_copy_desc: Kopiuj dane uwierzytelniające synchronizacji (format zaszyfrowany)
+  shift_c_copy_key: C
+  shift_c_copy_desc: Kopiuj dane uwierzytelniające synchronizacji (starszy format niezaszyfrowany)
+  s_q_close_key: s / q
+  s_q_close_desc: Zamknij panel ustawień
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: Dodaj załącznik (wprowadź ścieżkę pliku)
+  a_view_attachment_key: a + numer
+  a_view_attachment_desc: Wyświetl załącznik (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: Nawiguj załączniki
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: Usuń wybrany załącznik
   note_images_key: "Uwaga:"
-  note_images_desc: "Obrazy używają chafa, jeśli dostępne, w przeciwnym razie domyślnej aplikacji systemowej"
+  note_images_desc: Obrazy używają chafa, jeśli dostępne, w przeciwnym razie domyślnej aplikacji systemowej
   question_global_key: "?"
-  question_global_desc: "Pokaż ten ekran pomocy"
+  question_global_desc: Pokaż ten ekran pomocy
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "Wyświetl notatki"
-  show: "Pokaż notatkę"
-  new: "Utwórz nową notatkę"
-  edit: "Edytuj notatkę"
-  delete: "Usuń notatkę"
-  search: "Szukaj notatek"
-  export: "Eksportuj notatki"
-  import: "Importuj notatki"
-  sync: "Synchronizuj z serwerem"
-  register: "Zarejestruj urządzenie"
+  list: Wyświetl notatki
+  show: Pokaż notatkę
+  new: Utwórz nową notatkę
+  edit: Edytuj notatkę
+  delete: Usuń notatkę
+  search: Szukaj notatek
+  export: Eksportuj notatki
+  import: Importuj notatki
+  sync: Synchronizuj z serwerem
+  register: Zarejestruj urządzenie
 status:
-  locked: "Zablokowane"
-  unlocked: "Odblokowane"
-  syncing: "Synchronizowanie..."
-  synced: "Zsynchronizowane"
-  offline: "Offline"
-  modified: "Zmodyfikowane"
-  saved: "Zapisane"
+  locked: Zablokowane
+  unlocked: Odblokowane
+  syncing: Synchronizowanie...
+  synced: Zsynchronizowane
+  offline: Offline
+  modified: Zmodyfikowane
+  saved: Zapisane
 bulk:
   tags_added: "Dodano tagi do %{count} notatek: %{tags}"
-  deleted: "Usunięto %{count} notatek"
-  combined: "Połączono %{count} notatek"
-  combine_requires_two: "Wybierz co najmniej 2 notatki do połączenia"
-  exported: "Wyeksportowano %{count} notatek do %{path}"
+  deleted: Usunięto %{count} notatek
+  combined: Połączono %{count} notatek
+  combine_requires_two: Wybierz co najmniej 2 notatki do połączenia
+  exported: Wyeksportowano %{count} notatek do %{path}
   operation_failed: "Operacja masowa nie powiodła się: %{error}"
-  confirm_delete: "Usunąć %{count} notatek? (t/n)"
-  confirm_combine: "Połączyć %{count} notatek? (t/n)"
+  confirm_delete: Usunąć %{count} notatek? (t/n)
+  confirm_combine: Połączyć %{count} notatek? (t/n)
   enter_tags: "Wprowadź tagi (rozdzielone przecinkami):"
   enter_export_path: "Ścieżka eksportu:"
-  add_tags_to: "Dodaj tagi do"
-  export_notes_to: "Eksportuj"
+  add_tags_to: Dodaj tagi do
+  export_notes_to: Eksportuj
 time:
-  just_now: "przed chwilą"
+  just_now: przed chwilą
   minutes_ago: "%{count} minut temu"
   hours_ago: "%{count} godzin temu"
   days_ago: "%{count} dni temu"
   date_format: "%d.%m.%Y"
   time_format: "%H:%M:%S"
   datetime_format: "%d.%m.%Y %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

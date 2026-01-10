@@ -1,343 +1,434 @@
 app:
-  name: "Jottery"
-  description: "プライバシー重視の暗号化メモアプリTUI"
+  name: Jottery
+  description: プライバシー重視の暗号化メモアプリTUI
 common:
-  loading: "読み込み中..."
-  saving: "保存中..."
-  cancel: "キャンセル"
-  confirm: "確認"
-  yes: "はい"
-  no: "いいえ"
-  ok: "OK"
-  close: "閉じる"
-  quit: "終了"
-  back: "戻る"
-  email: "メールアドレス"
+  loading: 読み込み中...
+  saving: 保存中...
+  cancel: キャンセル
+  confirm: 確認
+  "yes": はい
+  "no": いいえ
+  ok: OK
+  close: 閉じる
+  quit: 終了
+  back: 戻る
+  email: メールアドレス
 password:
   prompt: "パスワード: "
-  enter: "パスワードを入力"
-  confirm: "パスワードを確認"
-  empty_error: "パスワードを空にすることはできません"
-  mismatch_error: "パスワードが一致しません"
+  enter: パスワードを入力
+  confirm: パスワードを確認
+  empty_error: パスワードを空にすることはできません
+  mismatch_error: パスワードが一致しません
   unlock_failed: "ロック解除に失敗: %{error}"
-  change_success: "パスワードを正常に変更しました"
+  change_success: パスワードを正常に変更しました
+  remember: Remember password
+  remember_toggle: Remember password (Ctrl+R to toggle)
+  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_disabled: Password storage disabled. You will be prompted on next start.
+  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  incorrect: Incorrect password. Try again.
+  verification_failed: "Password verification failed: %{error}"
+  enter_to_enable: "Enter your password to enable auto-unlock:"
+  create_title: Create Password
+  unlock_title: Unlock
 menu:
-  notes: "ノート"
-  new_note: "新しいノート"
-  settings: "設定"
-  help: "ヘルプ"
-  quit: "終了"
-  search: "検索"
+  notes: ノート
+  new_note: 新しいノート
+  settings: 設定
+  help: ヘルプ
+  quit: 終了
+  search: 検索
 note:
-  new: "新しいノート"
-  save: "保存"
-  saved: "ノートを保存しました"
+  new: 新しいノート
+  save: 保存
+  saved: ノートを保存しました
   save_failed: "ノートの保存に失敗: %{error}"
-  delete: "ノートを削除"
-  deleted: "ノートを削除しました"
+  delete: ノートを削除
+  deleted: ノートを削除しました
   delete_failed: "ノートの削除に失敗: %{error}"
   reload_failed: "ノートの再読み込みに失敗: %{error}"
-  pin: "ノートを固定"
-  unpin: "ノートの固定を解除"
-  pinned: "固定済み"
+  pin: ノートを固定
+  unpin: ノートの固定を解除
+  pinned: 固定済み
   pin_failed: "固定状態の更新に失敗: %{error}"
-  no_notes: "ノートが見つかりません"
+  no_notes: ノートが見つかりません
   total: "%{count} 件のノート"
 editor:
-  title: "タイトル"
-  content: "内容"
-  tags: "タグ"
-  created: "作成日時"
-  modified: "更新日時"
-  launch_external: "外部エディタを起動"
+  title: タイトル
+  content: 内容
+  tags: タグ
+  created: 作成日時
+  modified: 更新日時
+  launch_external: 外部エディタを起動
   external_failed: "エディタの起動に失敗: %{error}"
-  external_exit_error: "エディタがエラーコードで終了しました"
-  temp_file_error: "一時ファイルの作成に失敗"
-  temp_write_error: "一時ファイルへの書き込みに失敗"
-  temp_read_error: "一時ファイルの読み込みに失敗"
-  default_editor: "vi"
+  external_exit_error: エディタがエラーコードで終了しました
+  temp_file_error: 一時ファイルの作成に失敗
+  temp_write_error: 一時ファイルへの書き込みに失敗
+  temp_read_error: 一時ファイルの読み込みに失敗
+  default_editor: vi
 attachment:
-  add: "添付ファイルを追加"
+  add: 添付ファイルを追加
   add_failed: "添付ファイルの追加に失敗: %{error}"
-  view: "添付ファイルを表示"
+  view: 添付ファイルを表示
   view_failed: "添付ファイルの表示に失敗: %{error}"
-  delete: "添付ファイルを削除"
-  no_attachments: "添付ファイルなし"
+  delete: 添付ファイルを削除
+  no_attachments: 添付ファイルなし
   total: "%{count} 件の添付ファイル"
 version:
-  history: "バージョン履歴"
-  restore: "バージョンを復元"
-  restored: "バージョン %{number} を復元しました"
+  history: バージョン履歴
+  restore: バージョンを復元
+  restored: バージョン %{number} を復元しました
   restore_failed: "バージョンの復元に失敗: %{error}"
-  no_versions: "バージョン履歴なし"
-  current: "現在のバージョン"
+  no_versions: バージョン履歴なし
+  current: 現在のバージョン
 search:
-  prompt: "ノートを検索..."
-  no_results: "結果が見つかりません"
+  prompt: ノートを検索...
+  no_results: 結果が見つかりません
   results: "%{count} 件の結果"
 settings:
-  title: "設定"
-  language: "言語"
-  theme: "テーマ"
-  color_scheme: "カラースキーム"
-  auto_lock: "自動ロックタイムアウト"
-  minutes: "分"
-  sync: "同期"
-  sync_enabled: "同期が有効"
-  sync_endpoint: "同期エンドポイント"
-  device_name: "デバイス名"
+  title: 設定
+  language: 言語
+  theme: テーマ
+  color_scheme: カラースキーム
+  auto_lock: 自動ロックタイムアウト
+  minutes: 分
+  sync: 同期
+  sync_enabled: 同期が有効
+  sync_endpoint: 同期エンドポイント
+  device_name: デバイス名
   instructions_disconnect: "'d' を押して同期サーバーから切断 (ローカルノートは保持されます)"
   instructions_status: "'R' (Shift+r) を押して登録承認状態を確認"
   instructions_register: "'r' を押して同期サーバーに登録"
-  user_portal: "ユーザーポータル"
+  user_portal: ユーザーポータル
+  auto_sync_interval: Auto-sync interval
+  instructions: Instructions
+  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
+  instructions_edit: Press Enter, i, or Space to edit a field
+  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
+  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
+  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
+  instructions_sync: Press 'y' to trigger sync
+  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
+  instructions_paste: Press 'p' to paste sync credentials from another device
+  instructions_copy: Press 'c' to copy sync credentials to share with another device
+  press_enter_cycle: press Enter to cycle
+  press_enter_toggle: press Enter to toggle
+  disabled: disabled
 sync:
-  push: "サーバーにプッシュ"
-  pull: "サーバーからプル"
-  pushing: "変更をプッシュ中..."
-  pulling: "変更をプル中..."
-  success: "同期に成功しました"
+  push: サーバーにプッシュ
+  pull: サーバーからプル
+  pushing: 変更をプッシュ中...
+  pulling: 変更をプル中...
+  success: 同期に成功しました
   failed: "同期に失敗: %{error}"
-  no_api_key: "APIキーが設定されていません"
-  account_deactivated: "アカウントが無効化されているか、管理者の承認待ちです。管理者にお問い合わせください。"
-  invalid_key: "無効なAPIキーまたは認証に失敗しました。デバイスを再登録してください。"
-  conflict: "同期の競合が検出されました。一部のノートにサーバー上で競合する変更があります。"
-  request_failed: "同期リクエストの送信に失敗"
-  response_parse_failed: "同期レスポンスの解析に失敗"
-  encrypted_import: "暗号化された認証情報がインポートされました。設定を完了するにはパスワードを入力して復号化してください。"
+  no_api_key: APIキーが設定されていません
+  account_deactivated: アカウントが無効化されているか、管理者の承認待ちです。管理者にお問い合わせください。
+  invalid_key: 無効なAPIキーまたは認証に失敗しました。デバイスを再登録してください。
+  conflict: 同期の競合が検出されました。一部のノートにサーバー上で競合する変更があります。
+  request_failed: 同期リクエストの送信に失敗
+  response_parse_failed: 同期レスポンスの解析に失敗
+  encrypted_import: 暗号化された認証情報がインポートされました。設定を完了するにはパスワードを入力して復号化してください。
   legacy_format_warning: "警告: 暗号化なしのレガシー形式を使用しています。APIキーが平文で表示されます。"
-  disconnected: "同期サーバーから切断されました。ローカルノートは保持されています。"
-  disconnect_failed: "同期サーバーからの切断に失敗しました"
+  disconnected: 同期サーバーから切断されました。ローカルノートは保持されています。
+  disconnect_failed: 同期サーバーからの切断に失敗しました
   status:
-    check_title: "登録状態の確認"
-    result_title: "登録状態"
+    check_title: 登録状態の確認
+    result_title: 登録状態
     enter_email: "承認状態を確認するためにメールアドレスを入力してください:"
-    check_failed: "登録状態の確認に失敗しました"
-    not_found: "このメールアドレスのアカウントは見つかりません。"
-    approved: "アカウントは承認され、有効です。ノートを同期できます。"
-    pending: "アカウントは承認待ちです。管理者が登録を承認するまでお待ちください。"
-    inactive: "アカウントは無効化されています。管理者にお問い合わせください。"
+    check_failed: 登録状態の確認に失敗しました
+    not_found: このメールアドレスのアカウントは見つかりません。
+    approved: アカウントは承認され、有効です。ノートを同期できます。
+    pending: アカウントは承認待ちです。管理者が登録を承認するまでお待ちください。
+    inactive: アカウントは無効化されています。管理者にお問い合わせください。
+  not_enabled: Sync not enabled. Press 's' to configure in settings.
+  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
+  complete: Sync complete! %{count} %{unit} synced
+  force_syncing: Force syncing all notes...
+  force_complete: Force sync complete! %{count} %{unit} synced from server
+  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
+  note: note
+  notes: notes
+  credentials_title: Sync Credentials (Copy This Text)
+  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
+  paste_title: Paste Sync Credentials
+  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
+  paste_success: Sync credentials configured successfully!
+  paste_failed: "Failed to paste credentials: %{error}"
+  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
 register:
-  title: "同期サーバーに登録"
+  title: 同期サーバーに登録
   enter_endpoint: "同期サーバーのURLを入力してください (例: https://sync.example.com):"
   enter_email: "メールアドレスを入力してください:"
   enter_password: "パスワードを作成してください (12文字以上):"
   reenter_password: "同期パスワードを再入力してください:"
-  pending_title: "登録保留中"
-  pending_message: "登録が送信され、管理者の承認を待っています。"
+  pending_title: 登録保留中
+  pending_message: 登録が送信され、管理者の承認を待っています。
   pending_instructions: "'r' または Enter を押して承認状態を確認。Esc で閉じる。"
   pending_help: "r/Enter: 状態確認 | Esc: 閉じる"
-  device_title: "デバイス登録"
+  device_title: デバイス登録
   enter_device_name: "このデバイスの名前を入力してください (またはEnterでデフォルト):"
-  endpoint_required: "同期サーバーのURLが必要です"
-  email_invalid: "有効なメールアドレスを入力してください"
-  password_too_short: "パスワードは12文字以上必要です"
-  failed: "登録に失敗しました"
-  approved: "登録が承認されました！"
-  still_pending: "登録はまだ承認待ちです"
-  success: "登録に成功しました！同期が有効になりました。"
-  device_failed: "デバイス登録に失敗しました"
-  cleared: "登録がクリアされました。最初からやり直せます。"
-  pending_status: "承認待ち"
+  endpoint_required: 同期サーバーのURLが必要です
+  email_invalid: 有効なメールアドレスを入力してください
+  password_too_short: パスワードは12文字以上必要です
+  failed: 登録に失敗しました
+  approved: 登録が承認されました！
+  still_pending: 登録はまだ承認待ちです
+  success: 登録に成功しました！同期が有効になりました。
+  device_failed: デバイス登録に失敗しました
+  cleared: 登録がクリアされました。最初からやり直せます。
+  pending_status: 承認待ち
 color_scheme:
-  default_dark: "デフォルトダーク"
-  default_light: "デフォルトライト"
-  monokai: "Monokai"
-  solarized_dark: "Solarized ダーク"
-  solarized_light: "Solarized ライト"
-  nord: "Nord"
-  dracula: "Dracula"
-  gruvbox_dark: "Gruvbox ダーク"
-  gruvbox_light: "Gruvbox ライト"
-  tokyo_night: "Tokyo Night"
-  catppuccin: "Catppuccin"
+  default_dark: デフォルトダーク
+  default_light: デフォルトライト
+  monokai: Monokai
+  solarized_dark: Solarized ダーク
+  solarized_light: Solarized ライト
+  nord: Nord
+  dracula: Dracula
+  gruvbox_dark: Gruvbox ダーク
+  gruvbox_light: Gruvbox ライト
+  tokyo_night: Tokyo Night
+  catppuccin: Catppuccin
 syntax:
-  javascript: "JavaScript"
-  python: "Python"
-  markdown: "Markdown"
-  json: "JSON"
-  html: "HTML"
-  css: "CSS"
-  sql: "SQL"
-  bash: "Bash"
-  perl: "Perl"
-  rust: "Rust"
-  go: "Go"
-  java: "Java"
-  c: "C"
-  cpp: "C++"
-  none: "なし"
-  change_language: "構文言語を変更"
+  javascript: JavaScript
+  python: Python
+  markdown: Markdown
+  json: JSON
+  html: HTML
+  css: CSS
+  sql: SQL
+  bash: Bash
+  perl: Perl
+  rust: Rust
+  go: Go
+  java: Java
+  c: C
+  cpp: C++
+  none: なし
+  change_language: 構文言語を変更
   change_failed: "構文言語の更新に失敗: %{error}"
 error:
-  generic: "エラーが発生しました"
-  unexpected: "予期しないエラーが発生しました"
+  generic: エラーが発生しました
+  unexpected: 予期しないエラーが発生しました
   database: "データベースエラー: %{error}"
   encryption: "暗号化エラー: %{error}"
   network: "ネットワークエラー: %{error}"
-  file_not_found: "ファイルが見つかりません"
-  permission_denied: "アクセスが拒否されました"
-  invalid_input: "無効な入力"
+  file_not_found: ファイルが見つかりません
+  permission_denied: アクセスが拒否されました
+  invalid_input: 無効な入力
   operation_failed: "操作に失敗: %{error}"
 help:
-  title: "キーボードショートカット"
+  title: キーボードショートカット
   subtitle: "?またはqを押して閉じる"
-  general: "一般"
-  notes: "ノート"
-  editor: "エディタ"
-  navigation: "ナビゲーション"
-  quit_app: "アプリケーションを終了"
-  new_note: "新しいノートを作成"
-  save_note: "現在のノートを保存"
-  delete_note: "現在のノートを削除"
-  search_notes: "ノートを検索"
-  toggle_pin: "固定状態を切り替え"
-  next_note: "次のノート"
-  prev_note: "前のノート"
-  scroll_up: "上にスクロール"
-  scroll_down: "下にスクロール"
-  page_up: "前のページ"
-  page_down: "次のページ"
-  unlock_screen: "ロック解除画面"
-  note_list: "ノート一覧"
-  search_mode: "検索モード"
-  note_preview_view: "ノートプレビュー - 表示モード"
-  note_preview_tag: "ノートプレビュー - タグモード"
-  settings: "設定"
-  attachments: "添付ファイル"
-  global: "グローバル"
-  press_esc_or_enter: "EscまたはEnterで閉じる"
-  press_enter_paste: "Enterで貼り付け | Escでキャンセル"
+  general: 一般
+  notes: ノート
+  editor: エディタ
+  navigation: ナビゲーション
+  quit_app: アプリケーションを終了
+  new_note: 新しいノートを作成
+  save_note: 現在のノートを保存
+  delete_note: 現在のノートを削除
+  search_notes: ノートを検索
+  toggle_pin: 固定状態を切り替え
+  next_note: 次のノート
+  prev_note: 前のノート
+  scroll_up: 上にスクロール
+  scroll_down: 下にスクロール
+  page_up: 前のページ
+  page_down: 次のページ
+  unlock_screen: ロック解除画面
+  note_list: ノート一覧
+  search_mode: 検索モード
+  note_preview_view: ノートプレビュー - 表示モード
+  note_preview_tag: ノートプレビュー - タグモード
+  settings: 設定
+  attachments: 添付ファイル
+  global: グローバル
+  press_esc_or_enter: EscまたはEnterで閉じる
+  press_enter_paste: Enterで貼り付け | Escでキャンセル
   tab_switch: "Tab: フィールド切替 | Enter: 作成"
   enter_unlock: "Enter: ロック解除 | Ctrl+Q: 終了"
-  type_password_key: "入力"
-  type_password_desc: "パスワードを入力"
-  enter_to_unlock_key: "Enter"
-  enter_to_unlock_desc: "データベースをロック解除"
-  tab_to_switch_key: "Tab"
-  tab_to_switch_desc: "パスワード/確認を切替 (新規DB)"
-  backspace_key: "Backspace"
-  backspace_desc: "文字を削除"
-  ctrl_q_esc_key: "Ctrl+q / Esc"
-  ctrl_q_esc_desc: "アプリケーションを終了"
-  slash_search_key: "/"
-  slash_search_desc: "検索モードに入る"
+  type_password_key: 入力
+  type_password_desc: パスワードを入力
+  enter_to_unlock_key: Enter
+  enter_to_unlock_desc: データベースをロック解除
+  tab_to_switch_key: Tab
+  tab_to_switch_desc: パスワード/確認を切替 (新規DB)
+  backspace_key: Backspace
+  backspace_desc: 文字を削除
+  ctrl_q_esc_key: Ctrl+q / Esc
+  ctrl_q_esc_desc: アプリケーションを終了
+  slash_search_key: /
+  slash_search_desc: 検索モードに入る
   y_sync_key: "y"
-  y_sync_desc: "ノートを同期 (設定されている場合)"
-  s_settings_key: "s"
-  s_settings_desc: "設定を表示"
+  y_sync_desc: ノートを同期 (設定されている場合)
+  s_settings_key: s
+  s_settings_desc: 設定を表示
   n_new_key: "n"
-  n_new_desc: "新しいノートを作成"
-  i_enter_open_key: "i / Enter"
-  i_enter_open_desc: "$EDITORでノートを開く"
-  d_delete_key: "d"
-  d_delete_desc: "選択したノートを削除"
-  j_down_key: "j / ↓"
-  j_down_desc: "下に移動"
-  k_up_key: "k / ↑"
-  k_up_desc: "上に移動"
+  n_new_desc: 新しいノートを作成
+  i_enter_open_key: i / Enter
+  i_enter_open_desc: $EDITORでノートを開く
+  d_delete_key: d
+  d_delete_desc: 選択したノートを削除
+  j_down_key: j / ↓
+  j_down_desc: 下に移動
+  k_up_key: k / ↑
+  k_up_desc: 上に移動
   question_help_key: "?"
-  question_help_desc: "このヘルプを表示"
-  ctrl_q_quit_key: "Ctrl+q"
-  ctrl_q_quit_desc: "アプリケーションを終了"
-  q_quit_key: "q / Ctrl+q"
-  q_quit_desc: "Quit application"
-  type_search_key: "入力"
-  type_search_desc: "検索クエリを入力"
+  question_help_desc: このヘルプを表示
+  ctrl_q_quit_key: Ctrl+q
+  ctrl_q_quit_desc: アプリケーションを終了
+  q_quit_key: q / Ctrl+q
+  q_quit_desc: Quit application
+  type_search_key: 入力
+  type_search_desc: 検索クエリを入力
   search_tag_key: "#タグ"
-  search_tag_desc: "タグで検索"
+  search_tag_desc: タグで検索
   search_exclude_key: "-単語"
-  search_exclude_desc: "単語を除外 (否定)"
-  search_and_key: "単語1 単語2"
-  search_and_desc: "すべての単語に一致 (AND)"
-  enter_open_editor_key: "Enter"
-  enter_open_editor_desc: "$EDITORでノートを開く"
-  esc_exit_search_key: "Esc"
-  esc_exit_search_desc: "検索モードを終了"
-  arrows_navigate_key: "↑ / ↓"
-  arrows_navigate_desc: "結果を移動"
-  enter_e_edit_key: "Enter / e"
-  enter_e_edit_desc: "外部$EDITORで編集"
-  t_tag_mode_key: "t"
-  t_tag_mode_desc: "タグモードに入る"
-  q_esc_save_key: "q / Esc"
-  q_esc_save_desc: "保存してリストに戻る"
-  type_tag_key: "入力"
-  type_tag_desc: "タグ名を入力"
-  enter_add_tag_key: "Enter"
-  enter_add_tag_desc: "タグを追加"
-  backspace_remove_key: "Backspace (空)"
-  backspace_remove_desc: "最後のタグを削除"
-  backspace_delete_key: "Backspace"
-  backspace_delete_desc: "入力から文字を削除"
-  esc_normal_key: "Esc"
-  esc_normal_desc: "通常モードに戻る"
-  jk_navigate_key: "j/k または ↑/↓"
-  jk_navigate_desc: "フィールド間を移動"
-  enter_edit_key: "Enter / i / Space"
-  enter_edit_desc: "選択したフィールドを編集"
-  enter_save_key: "Enter"
-  enter_save_desc: "テキスト/数値フィールドを保存、その他のフィールドを切替"
-  esc_cancel_key: "Esc"
-  esc_cancel_desc: "編集をキャンセル (テキスト/数値フィールド)"
-  p_paste_key: "p"
-  p_paste_desc: "同期認証情報を貼り付け (テキスト入力を表示)"
-  c_copy_key: "c"
-  c_copy_desc: "同期認証情報をコピー (暗号化形式)"
-  shift_c_copy_key: "C"
-  shift_c_copy_desc: "同期認証情報をコピー (レガシー非暗号化形式)"
-  s_q_close_key: "s / q"
-  s_q_close_desc: "設定パネルを閉じる"
-  tab_focus_attachment_key: "Tab"
-  tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "添付ファイルを追加 (ファイルパスを入力)"
-  a_view_attachment_key: "a + 番号"
-  a_view_attachment_desc: "添付ファイルを表示 (a1, a2, ...)"
-  shift_jk_attachment_key: "Shift+j / Shift+k"
-  shift_jk_attachment_desc: "添付ファイルを移動"
-  X_remove_attachment_key: "X"
-  X_remove_attachment_desc: "選択した添付ファイルを削除"
+  search_exclude_desc: 単語を除外 (否定)
+  search_and_key: 単語1 単語2
+  search_and_desc: すべての単語に一致 (AND)
+  enter_open_editor_key: Enter
+  enter_open_editor_desc: $EDITORでノートを開く
+  esc_exit_search_key: Esc
+  esc_exit_search_desc: 検索モードを終了
+  arrows_navigate_key: ↑ / ↓
+  arrows_navigate_desc: 結果を移動
+  enter_e_edit_key: Enter / e
+  enter_e_edit_desc: 外部$EDITORで編集
+  t_tag_mode_key: t
+  t_tag_mode_desc: タグモードに入る
+  q_esc_save_key: q / Esc
+  q_esc_save_desc: 保存してリストに戻る
+  type_tag_key: 入力
+  type_tag_desc: タグ名を入力
+  enter_add_tag_key: Enter
+  enter_add_tag_desc: タグを追加
+  backspace_remove_key: Backspace (空)
+  backspace_remove_desc: 最後のタグを削除
+  backspace_delete_key: Backspace
+  backspace_delete_desc: 入力から文字を削除
+  esc_normal_key: Esc
+  esc_normal_desc: 通常モードに戻る
+  jk_navigate_key: j/k または ↑/↓
+  jk_navigate_desc: フィールド間を移動
+  enter_edit_key: Enter / i / Space
+  enter_edit_desc: 選択したフィールドを編集
+  enter_save_key: Enter
+  enter_save_desc: テキスト/数値フィールドを保存、その他のフィールドを切替
+  esc_cancel_key: Esc
+  esc_cancel_desc: 編集をキャンセル (テキスト/数値フィールド)
+  p_paste_key: p
+  p_paste_desc: 同期認証情報を貼り付け (テキスト入力を表示)
+  c_copy_key: c
+  c_copy_desc: 同期認証情報をコピー (暗号化形式)
+  shift_c_copy_key: C
+  shift_c_copy_desc: 同期認証情報をコピー (レガシー非暗号化形式)
+  s_q_close_key: s / q
+  s_q_close_desc: 設定パネルを閉じる
+  tab_focus_attachment_key: Tab
+  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  A_add_attachment_key: A
+  A_add_attachment_desc: 添付ファイルを追加 (ファイルパスを入力)
+  a_view_attachment_key: a + 番号
+  a_view_attachment_desc: 添付ファイルを表示 (a1, a2, ...)
+  shift_jk_attachment_key: Shift+j / Shift+k
+  shift_jk_attachment_desc: 添付ファイルを移動
+  X_remove_attachment_key: X
+  X_remove_attachment_desc: 選択した添付ファイルを削除
   note_images_key: "注:"
-  note_images_desc: "画像は利用可能な場合chafaを使用、それ以外はシステムデフォルトアプリ"
+  note_images_desc: 画像は利用可能な場合chafaを使用、それ以外はシステムデフォルトアプリ
   question_global_key: "?"
-  question_global_desc: "このヘルプ画面を表示"
+  question_global_desc: このヘルプ画面を表示
+  bracket_cycle_key: "] / ["
+  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  pageup_pagedown_key: PgUp / PgDn
+  pageup_pagedown_desc: Scroll preview (full page)
+  ctrl_scroll_key: Ctrl+d/u/f/b
+  ctrl_scroll_desc: Vim-style scroll (half/full page)
+  mouse_scroll_key: Mouse scroll
+  mouse_scroll_desc: Scroll preview
+  p_pin_key: p
+  p_pin_desc: Toggle pin on selected note
+  r_recycle_key: r
+  r_recycle_desc: Toggle recycle bin view
+  v_versions_key: v
+  v_versions_desc: View version history
+  tab_search_key: Tab
+  tab_search_desc: Exit search, focus attachments
+  multi_select: MULTI-SELECT MODE
+  space_select_key: Space
+  space_select_desc: Toggle selection on current note
+  shift_v_range_key: Shift+V
+  shift_v_range_desc: Range select from last selected
+  ctrl_a_all_key: Ctrl+A
+  ctrl_a_all_desc: Select all filtered notes
+  multi_t_tags_key: t
+  multi_t_tags_desc: Add tags to selected notes
+  multi_d_delete_key: d
+  multi_d_delete_desc: Delete selected notes
+  multi_c_combine_key: c
+  multi_c_combine_desc: Combine selected notes into one
+  multi_e_export_key: e
+  multi_e_export_desc: Export selected notes to JSON
+  esc_clear_key: Esc
+  esc_clear_desc: Clear selection / exit multi-select
+  mouse: MOUSE
+  click_note_key: Click note
+  click_note_desc: Select note in list
+  click_tag_key: Click tag
+  click_tag_desc: Search for that tag
+  click_tags_key: Click 'Tags:'
+  click_tags_desc: Enter tag editing mode
+  scroll_key: Scroll wheel
+  scroll_desc: Scroll preview up/down
 cli:
-  list: "ノートを一覧表示"
-  show: "ノートを表示"
-  new: "新しいノートを作成"
-  edit: "ノートを編集"
-  delete: "ノートを削除"
-  search: "ノートを検索"
-  export: "ノートをエクスポート"
-  import: "ノートをインポート"
-  sync: "サーバーと同期"
-  register: "デバイスを登録"
+  list: ノートを一覧表示
+  show: ノートを表示
+  new: 新しいノートを作成
+  edit: ノートを編集
+  delete: ノートを削除
+  search: ノートを検索
+  export: ノートをエクスポート
+  import: ノートをインポート
+  sync: サーバーと同期
+  register: デバイスを登録
 status:
-  locked: "ロック中"
-  unlocked: "ロック解除"
-  syncing: "同期中..."
-  synced: "同期済み"
-  offline: "オフライン"
-  modified: "変更済み"
-  saved: "保存済み"
+  locked: ロック中
+  unlocked: ロック解除
+  syncing: 同期中...
+  synced: 同期済み
+  offline: オフライン
+  modified: 変更済み
+  saved: 保存済み
 bulk:
   tags_added: "%{count} 件のノートにタグを追加しました: %{tags}"
   deleted: "%{count} 件のノートを削除しました"
   combined: "%{count} 件のノートを結合しました"
-  combine_requires_two: "結合するには少なくとも2つのノートを選択してください"
+  combine_requires_two: 結合するには少なくとも2つのノートを選択してください
   exported: "%{count} 件のノートを %{path} にエクスポートしました"
   operation_failed: "一括操作に失敗しました: %{error}"
   confirm_delete: "%{count} 件のノートを削除しますか？ (y/n)"
   confirm_combine: "%{count} 件のノートを結合しますか？ (y/n)"
   enter_tags: "タグを入力 (カンマ区切り):"
   enter_export_path: "エクスポートパス:"
-  add_tags_to: "タグを追加"
-  export_notes_to: "エクスポート"
+  add_tags_to: タグを追加
+  export_notes_to: エクスポート
 time:
-  just_now: "たった今"
+  just_now: たった今
   minutes_ago: "%{count} 分前"
   hours_ago: "%{count} 時間前"
   days_ago: "%{count} 日前"
   date_format: "%Y年%m月%d日"
   time_format: "%H:%M:%S"
   datetime_format: "%Y年%m月%d日 %H:%M:%S"
+conflict:
+  title: Sync Conflict
+  your_version: Your Version
+  server_version: Server Version
+  resolved_mine: Conflict resolved - kept your version
+  resolved_server: Conflict resolved - kept server version
+  resolved_both: Conflict resolved - kept both versions
+  resolve_failed: Failed to resolve conflict
+  indicator: Sync conflict detected
+  no_conflict: This note has no sync conflict

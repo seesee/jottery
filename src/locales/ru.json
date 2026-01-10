@@ -14,7 +14,8 @@
     "unlock": "Разблокировать",
     "settings": "Настройки",
     "search": "Поиск",
-    "error": "Ошибка"
+    "error": "Ошибка",
+    "back": "Back"
   },
   "docs": {
     "title": "Документация",
@@ -47,7 +48,8 @@
   },
   "search": {
     "placeholder": "Поиск заметок...",
-    "clear": "Очистить поиск"
+    "clear": "Очистить поиск",
+    "resultCount": "Search results: matches / total"
   },
   "editor": {
     "noNoteSelected": "Заметка не выбрана",
@@ -102,7 +104,9 @@
       "videoNotSupported": "Ваш браузер не поддерживает воспроизведение видео.",
       "previewNotAvailable": "Предпросмотр недоступен для этого типа файла.",
       "downloadToView": "Скачайте для просмотра"
-    }
+    },
+    "attachments": "Attachments",
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Удалить заметку",
@@ -247,7 +251,8 @@
         "successTitle": "Синхронизация успешно включена!",
         "successText": "Ваше устройство зарегистрировано и <strong>все существующие заметки синхронизированы с сервером</strong>. Любые будущие изменения будут синхронизироваться автоматически.",
         "successNextSteps": "📋 Чтобы добавить другое устройство: Нажмите \"Экспортировать учётные данные синхронизации\" ниже и импортируйте их на другом устройстве.",
-        "done": "Готово"
+        "done": "Готово",
+        "checkStatusLink": "Check your approval status on the User Portal →"
       },
       "linkAccount": {
         "title": "Связать учётную запись (необязательно)",
@@ -282,7 +287,10 @@
       "systemsLanguages": "Системные языки",
       "dataLanguages": "Языки данных",
       "otherLanguages": "Другие языки",
-      "enabledCount": "Включено {enabled}/{total}"
+      "enabledCount": "Включено {enabled}/{total}",
+      "defaultNoteType": "Default note type",
+      "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
+      "default": "default"
     },
     "keyboardTab": {
       "description": "Настройте горячие клавиши. Нажмите на клавишу, чтобы изменить её, затем нажмите желаемую комбинацию клавиш.",
@@ -382,7 +390,9 @@
       "aboutDescription": "Jottery - это самостоятельно размещаемое приложение для заметок с фокусом на конфиденциальность для захвата, организации и поиска заметок с богатым контентом, подсветкой синтаксиса и шифрованием.",
       "viewOnGithub": "Просмотреть на GitHub",
       "license": "Лицензировано под лицензией MIT."
-    }
+    },
+    "openLinksInNewTab": "Open External Links in New Tab",
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
   },
   "unlock": {
     "welcome": "Добро пожаловать в Jottery",
@@ -605,7 +615,9 @@
     "title": "Доступна новая версия",
     "message": "Перезагрузите, чтобы получить последние функции и улучшения",
     "reloadButton": "Перезагрузить сейчас",
-    "dismissLabel": "Закрыть"
+    "dismissLabel": "Закрыть",
+    "backupButton": "Back up first",
+    "backingUp": "Backing up..."
   },
   "bulk": {
     "toggleSelect": "Переключить выделение",
@@ -627,5 +639,26 @@
     "progress": "{current} из {total}",
     "selectAll": "Выбрать все",
     "deselectAll": "Снять выделение"
+  },
+  "conflict": {
+    "title": "Sync Conflict Detected",
+    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
+    "yourVersion": "Your version",
+    "serverVersion": "Server version",
+    "chooseAction": "Choose how to resolve this conflict:",
+    "keepMine": "Keep mine",
+    "keepServer": "Keep server",
+    "keepBoth": "Keep both",
+    "merge": "Merge",
+    "resolved": "Conflict resolved",
+    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "noConflict": "No conflict data found",
+    "indicator": "Sync conflict"
+  },
+  "pullToRefresh": {
+    "pull": "Pull down to sync",
+    "release": "Release to sync",
+    "syncing": "Syncing...",
+    "region": "Pull to refresh"
   }
 }
