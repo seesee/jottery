@@ -52,14 +52,14 @@
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
-    if (ctrlOrCmd) {
-      // Ctrl/Cmd+click: toggle selection
+    if (ctrlOrCmd && !note.pinned) {
+      // Ctrl/Cmd+click: toggle selection (not on pinned notes)
       toggleNoteSelection(note.id, index);
-    } else if (event.shiftKey && $lastSelectedIndex !== null) {
-      // Shift+click: range selection
+    } else if (event.shiftKey && $lastSelectedIndex !== null && !note.pinned) {
+      // Shift+click: range selection (not on pinned notes)
       selectRange($lastSelectedIndex, index, filteredNotes);
-    } else if ($isMultiSelectMode) {
-      // In multi-select mode, normal click toggles selection
+    } else if ($isMultiSelectMode && !note.pinned) {
+      // In multi-select mode, normal click toggles selection (not on pinned notes)
       toggleNoteSelection(note.id, index);
     } else {
       // Normal click: single selection
@@ -73,7 +73,9 @@
 
   function handleCheckboxClick(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
-    toggleNoteSelection(note.id, index);
+    if (!note.pinned) {
+      toggleNoteSelection(note.id, index);
+    }
   }
 
   function handleTagClick(event: MouseEvent | KeyboardEvent, tag: string) {
@@ -104,8 +106,8 @@
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
-      <!-- Multi-select checkbox: only show when in multi-select mode or this note is the currently viewed note -->
-      {#if $isMultiSelectMode || isSelected}
+      <!-- Multi-select checkbox: only show on non-pinned notes when in multi-select mode or this note is the currently viewed note -->
+      {#if !note.pinned && ($isMultiSelectMode || isSelected)}
         <span
           on:click|stopPropagation={handleCheckboxClick}
           on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
