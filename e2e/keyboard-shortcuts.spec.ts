@@ -79,9 +79,9 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(settingsModal.first()).toBeVisible();
   });
 
-  test('should create new note with Ctrl/Cmd+N', async ({ page }) => {
-    // Press Ctrl+N to create new note
-    await page.keyboard.press('Control+n');
+  test('should create new note with Alt+N', async ({ page }) => {
+    // Press Alt+N to create new note (web app uses Alt to avoid browser conflicts)
+    await page.keyboard.press('Alt+n');
     await page.waitForTimeout(1000);
 
     // Editor should be visible
@@ -89,9 +89,9 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
   });
 
-  test('should lock app with Ctrl/Cmd+L', async ({ page }) => {
-    // Press Ctrl+L
-    await page.keyboard.press('Control+l');
+  test('should lock app with Alt+L', async ({ page }) => {
+    // Press Alt+L to lock (web app uses Alt to avoid browser conflicts)
+    await page.keyboard.press('Alt+l');
     await page.waitForTimeout(1000);
 
     // Should show lock screen or password prompt
@@ -99,9 +99,9 @@ test.describe('Keyboard Shortcuts', () => {
     await expect(lockScreen.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show keyboard shortcuts help with Ctrl+/', async ({ page }) => {
-    // Press Ctrl+/
-    await page.keyboard.press('Control+/');
+  test('should show keyboard shortcuts help with Alt+/', async ({ page }) => {
+    // Press Alt+/ to show shortcuts (web app uses Alt to avoid browser conflicts)
+    await page.keyboard.press('Alt+/');
     await page.waitForTimeout(500);
 
     // Should show keyboard shortcuts help modal

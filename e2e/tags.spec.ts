@@ -136,8 +136,8 @@ test.describe('Tags', () => {
       await tagInput.press('Enter');
       await page.waitForTimeout(300);
 
-      // Create another note
-      await page.keyboard.press('Control+n');
+      // Create another note (Alt+N for web app to avoid browser conflicts)
+      await page.keyboard.press('Alt+n');
       await page.waitForTimeout(500);
 
       const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
@@ -297,17 +297,18 @@ test.describe('Tags', () => {
 
     if (await tagInput.isVisible()) {
       // Add tag twice
-      await tagInput.fill('unique');
+      await tagInput.fill('uniquetag');
       await tagInput.press('Enter');
       await page.waitForTimeout(500);
 
-      await tagInput.fill('unique');
+      await tagInput.fill('uniquetag');
       await tagInput.press('Enter');
       await page.waitForTimeout(500);
 
-      // Should only have one instance of the tag - count tags with exact text
-      const tagBadges = page.locator('[class*="tag"]').filter({ hasText: 'unique' });
-      const count = await tagBadges.count();
+      // Should only have one instance of the tag
+      // Use more specific selector for tag pills (the span with tag-pill class)
+      const tagPills = page.locator('.tag-pill, [class*="tag-pill"]').filter({ hasText: '#uniquetag' });
+      const count = await tagPills.count();
 
       expect(count).toBe(1);
     }
@@ -346,9 +347,9 @@ test.describe('Tags', () => {
   });
 
   test('should support bulk tag operations', async ({ page }) => {
-    // Create multiple notes
+    // Create multiple notes (Alt+N for web app to avoid browser conflicts)
     for (let i = 0; i < 3; i++) {
-      await page.keyboard.press('Control+n');
+      await page.keyboard.press('Alt+n');
       await page.waitForTimeout(500);
 
       const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
@@ -414,8 +415,8 @@ test.describe('Tags', () => {
       await tagInput.press('Enter');
       await page.waitForTimeout(500);
 
-      // Create another note with same tag
-      await page.keyboard.press('Control+n');
+      // Create another note with same tag (Alt+N for web app to avoid browser conflicts)
+      await page.keyboard.press('Alt+n');
       await page.waitForTimeout(500);
 
       const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
