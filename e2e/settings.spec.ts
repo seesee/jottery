@@ -240,15 +240,16 @@ test.describe('Settings', () => {
   test('should close settings with escape key', async ({ page }) => {
     await openSettings(page);
 
-    const settingsPanel = page.locator('[class*="settings"], [class*="modal"], [role="dialog"]').first();
+    // Look for settings modal with role="dialog"
+    const settingsModal = page.locator('[role="dialog"]').first();
 
-    if (await settingsPanel.isVisible()) {
-      // Press escape
+    if (await settingsModal.isVisible()) {
+      // Press escape to close
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1000);
 
-      // Settings should be closed
-      await expect(settingsPanel).not.toBeVisible();
+      // Settings should be closed - use longer timeout for animation
+      await expect(settingsModal).not.toBeVisible({ timeout: 3000 });
     }
   });
 });
