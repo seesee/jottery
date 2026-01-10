@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
   import { conflictService, cryptoService, keyManager, decryptJSON } from '../services';
@@ -17,6 +18,22 @@
   export let onResolved: () => void;
 
   let loading = false;
+
+  // Lock body scroll when modal is open
+  $: if (typeof document !== 'undefined') {
+    if (show) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Clean up on destroy
+  onDestroy(() => {
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
+  });
   let resolving = false;
   let conflictInfo: ConflictInfo | null = null;
   let localContent: string = '';
@@ -128,12 +145,13 @@
 {#if show}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-hidden"
     on:click={onClose}
+    on:wheel|preventDefault|stopPropagation
   >
     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-4"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-4 overflow-hidden"
       on:click|stopPropagation
       on:wheel|stopPropagation
     >
