@@ -310,16 +310,48 @@
       "syncDisabledDetails": "Когда отключена, Jottery не будет делать сетевых запросов к серверам синхронизации. Все ваши заметки остаются полностью локальными на этом устройстве.",
       "toEnableSync": "Чтобы включить синхронизацию: переключите выключатель выше и настройте сервер синхронизации.",
       "privacyNote": "Конфиденциальность: Даже когда включена, все заметки шифруются сквозным шифрованием. Сервер синхронизации не может прочитать ваш контент.",
+      "syncEnabled": "Синхронизация включена",
+      "syncing": "Синхронизация...",
+      "lastSync": "Последняя синхронизация:",
+      "syncNow": "Синхронизировать сейчас",
+      "notesPendingSingle": "{count} заметка ожидает синхронизации",
+      "notesPendingPlural": "{count} заметок ожидают синхронизации",
+      "showCredentials": "Показать учётные данные для других устройств",
+      "credentialsHelp": "Нажмите, чтобы отобразить учётные данные как текст. Используйте \"Использовать существующие учётные данные\" на других устройствах для импорта.",
+      "samePasswordWarning": "Все устройства должны использовать ОДИН И ТОТ ЖЕ пароль для расшифровки заметок!",
       "userPortal": {
-        "title": "User Portal",
-        "description": "Manage your account, change password, or delete your data",
-        "openButton": "Open User Portal"
+        "title": "Пользовательский портал",
+        "description": "Управляйте своей учётной записью, измените пароль или удалите данные",
+        "openButton": "Открыть портал пользователя"
       },
       "dangerZone": {
-        "title": "Danger Zone",
-        "disconnectTitle": "Disconnect from Sync Server",
-        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
-        "disconnectButton": "Disconnect"
+        "title": "Опасная зона",
+        "disconnectTitle": "Отключиться от сервера синхронизации",
+        "disconnectDescription": "Это отключит это устройство от сервера синхронизации и удалит все учётные данные синхронизации. Ваши заметки НЕ будут удалены и останутся на этом устройстве.",
+        "disconnectButton": "Отключить"
+      },
+      "accountManagement": {
+        "title": "Управление учётной записью",
+        "loginPrompt": "Войдите, чтобы просмотреть информацию об учётной записи и управлять синхронизированными заметками.",
+        "emailLabel": "Адрес электронной почты",
+        "passwordLabel": "Пароль",
+        "loggingIn": "Вход...",
+        "loginButton": "Войти для просмотра учётной записи",
+        "loggedInAs": "Вы вошли как:",
+        "adminAccount": "Учётная запись администратора",
+        "logOut": "Выйти",
+        "loadingInfo": "Загрузка информации об учётной записи...",
+        "syncedNotes": "Синхронизированные заметки",
+        "attachments": "Вложения",
+        "storageUsed": "Использовано хранилища",
+        "storageQuota": "Квота хранилища",
+        "storageUsage": "Использование хранилища",
+        "privacyTitle": "Конфиденциальность и безопасность",
+        "privacyDescription": "Все ваши заметки зашифрованы сквозным шифрованием. Сервер не может прочитать ваш контент.",
+        "selfHostLink": "Хотите разместить самостоятельно? Смотрите GitHub →",
+        "dangerZone": "Опасная зона",
+        "deleteNotesDescription": "Удалить все заметки с сервера синхронизации. Это действие нельзя отменить. Ваши локальные заметки НЕ будут удалены.",
+        "deleteNotesButton": "Удалить все заметки с сервера"
       }
     },
     "advancedTab": {

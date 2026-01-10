@@ -310,16 +310,48 @@
       "syncDisabledDetails": "禁用时,Jottery 不会向同步服务器发出任何网络请求。您的所有笔记都完全保留在此设备上。",
       "toEnableSync": "要启用同步:切换上方的开关并配置您的同步服务器。",
       "privacyNote": "隐私:即使启用,所有笔记也是端到端加密的。同步服务器无法读取您的内容。",
+      "syncEnabled": "同步已启用",
+      "syncing": "同步中...",
+      "lastSync": "上次同步:",
+      "syncNow": "立即同步",
+      "notesPendingSingle": "{count} 条笔记等待同步",
+      "notesPendingPlural": "{count} 条笔记等待同步",
+      "showCredentials": "显示其他设备的凭据",
+      "credentialsHelp": "点击以文本形式显示凭据。在其他设备上使用\"使用现有凭据\"进行导入。",
+      "samePasswordWarning": "所有设备必须使用相同的密码来解密笔记！",
       "userPortal": {
-        "title": "User Portal",
-        "description": "Manage your account, change password, or delete your data",
-        "openButton": "Open User Portal"
+        "title": "用户门户",
+        "description": "管理您的账户、更改密码或删除数据",
+        "openButton": "打开用户门户"
       },
       "dangerZone": {
-        "title": "Danger Zone",
-        "disconnectTitle": "Disconnect from Sync Server",
-        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
-        "disconnectButton": "Disconnect"
+        "title": "危险区域",
+        "disconnectTitle": "断开同步服务器连接",
+        "disconnectDescription": "这将断开此设备与同步服务器的连接并清除所有同步凭据。您的笔记不会被删除，将保留在此设备上。",
+        "disconnectButton": "断开连接"
+      },
+      "accountManagement": {
+        "title": "管理您的账户",
+        "loginPrompt": "登录以查看账户信息并管理您的同步笔记。",
+        "emailLabel": "电子邮件地址",
+        "passwordLabel": "密码",
+        "loggingIn": "登录中...",
+        "loginButton": "登录查看账户",
+        "loggedInAs": "已登录:",
+        "adminAccount": "管理员账户",
+        "logOut": "退出登录",
+        "loadingInfo": "正在加载账户信息...",
+        "syncedNotes": "已同步的笔记",
+        "attachments": "附件",
+        "storageUsed": "已用存储空间",
+        "storageQuota": "存储配额",
+        "storageUsage": "存储使用情况",
+        "privacyTitle": "隐私与安全",
+        "privacyDescription": "您的所有笔记都是端到端加密的。服务器无法读取您的内容。",
+        "selfHostLink": "想要自托管？查看 GitHub →",
+        "dangerZone": "危险区域",
+        "deleteNotesDescription": "从同步服务器删除所有笔记。此操作无法撤消。您的本地笔记不会被删除。",
+        "deleteNotesButton": "从服务器删除所有笔记"
       }
     },
     "advancedTab": {

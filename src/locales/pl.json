@@ -310,16 +310,48 @@
       "syncDisabledDetails": "Gdy jest wyłączona, Jottery nie będzie wykonywał żadnych żądań sieciowych do serwerów synchronizacji. Wszystkie notatki pozostają całkowicie lokalne na tym urządzeniu.",
       "toEnableSync": "Aby włączyć synchronizację: Przełącz powyższy przełącznik i skonfiguruj serwer synchronizacji.",
       "privacyNote": "Prywatność: Nawet gdy jest włączona, wszystkie notatki są szyfrowane end-to-end. Serwer synchronizacji nie może odczytać treści.",
+      "syncEnabled": "Synchronizacja włączona",
+      "syncing": "Synchronizowanie...",
+      "lastSync": "Ostatnia synchronizacja:",
+      "syncNow": "Synchronizuj teraz",
+      "notesPendingSingle": "{count} notatka oczekuje na synchronizację",
+      "notesPendingPlural": "{count} notatek oczekuje na synchronizację",
+      "showCredentials": "Pokaż dane logowania dla innych urządzeń",
+      "credentialsHelp": "Kliknij, aby wyświetlić dane logowania jako tekst. Użyj \"Użyj istniejących danych logowania\" na innych urządzeniach, aby zaimportować.",
+      "samePasswordWarning": "Wszystkie urządzenia muszą używać TEGO SAMEGO hasła do odszyfrowania notatek!",
       "userPortal": {
-        "title": "User Portal",
-        "description": "Manage your account, change password, or delete your data",
-        "openButton": "Open User Portal"
+        "title": "Portal użytkownika",
+        "description": "Zarządzaj kontem, zmień hasło lub usuń dane",
+        "openButton": "Otwórz portal użytkownika"
       },
       "dangerZone": {
-        "title": "Danger Zone",
-        "disconnectTitle": "Disconnect from Sync Server",
-        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
-        "disconnectButton": "Disconnect"
+        "title": "Strefa niebezpieczna",
+        "disconnectTitle": "Odłącz od serwera synchronizacji",
+        "disconnectDescription": "To odłączy to urządzenie od serwera synchronizacji i wyczyści wszystkie dane logowania synchronizacji. Twoje notatki NIE zostaną usunięte i pozostaną na tym urządzeniu.",
+        "disconnectButton": "Odłącz"
+      },
+      "accountManagement": {
+        "title": "Zarządzaj kontem",
+        "loginPrompt": "Zaloguj się, aby wyświetlić informacje o koncie i zarządzać zsynchronizowanymi notatkami.",
+        "emailLabel": "Adres e-mail",
+        "passwordLabel": "Hasło",
+        "loggingIn": "Logowanie...",
+        "loginButton": "Zaloguj się, aby wyświetlić konto",
+        "loggedInAs": "Zalogowany jako:",
+        "adminAccount": "Konto administratora",
+        "logOut": "Wyloguj",
+        "loadingInfo": "Ładowanie informacji o koncie...",
+        "syncedNotes": "Zsynchronizowane notatki",
+        "attachments": "Załączniki",
+        "storageUsed": "Wykorzystana przestrzeń",
+        "storageQuota": "Limit przestrzeni",
+        "storageUsage": "Wykorzystanie przestrzeni",
+        "privacyTitle": "Prywatność i bezpieczeństwo",
+        "privacyDescription": "Wszystkie notatki są szyfrowane end-to-end. Serwer nie może odczytać treści.",
+        "selfHostLink": "Chcesz hostować samodzielnie? Zobacz GitHub →",
+        "dangerZone": "Strefa niebezpieczna",
+        "deleteNotesDescription": "Usuń wszystkie notatki z serwera synchronizacji. Tej czynności nie można cofnąć. Twoje lokalne notatki NIE zostaną usunięte.",
+        "deleteNotesButton": "Usuń wszystkie notatki z serwera"
       }
     },
     "advancedTab": {

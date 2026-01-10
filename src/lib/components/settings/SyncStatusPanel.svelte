@@ -47,13 +47,13 @@
               <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-3">
                 <div class="flex items-center justify-between">
                   <span class="text-sm font-medium text-green-800 dark:text-green-200">
-                    ✓ Sync Enabled
+                    ✓ {$_('settings.syncTab.syncEnabled')}
                   </span>
                   {#if syncStatus?.isSyncing}
-                    <span class="text-xs text-green-600 dark:text-green-400">Syncing...</span>
+                    <span class="text-xs text-green-600 dark:text-green-400">{$_('settings.syncTab.syncing')}</span>
                   {:else if syncStatus?.lastSyncAt}
                     <span class="text-xs text-green-600 dark:text-green-400">
-                      Last sync: {new Date(syncStatus.lastSyncAt).toLocaleString()}
+                      {$_('settings.syncTab.lastSync')} {new Date(syncStatus.lastSyncAt).toLocaleString()}
                     </span>
                   {/if}
                 </div>
@@ -63,12 +63,12 @@
                   disabled={syncing || syncStatus?.isSyncing}
                   class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
                 >
-                  {syncing || syncStatus?.isSyncing ? 'Syncing...' : '🔄 Sync Now'}
+                  {syncing || syncStatus?.isSyncing ? $_('settings.syncTab.syncing') : '🔄 ' + $_('settings.syncTab.syncNow')}
                 </button>
 
                 {#if syncStatus?.pendingNotes && syncStatus.pendingNotes > 0}
                   <p class="text-xs text-gray-600 dark:text-gray-400">
-                    {syncStatus.pendingNotes} note{syncStatus.pendingNotes !== 1 ? 's' : ''} pending sync
+                    {syncStatus.pendingNotes === 1 ? $_('settings.syncTab.notesPendingSingle', { values: { count: syncStatus.pendingNotes }}) : $_('settings.syncTab.notesPendingPlural', { values: { count: syncStatus.pendingNotes }})}
                   </p>
                 {/if}
 
@@ -77,14 +77,14 @@
                     on:click={() => onCopySyncCredentials(useLegacyFormat)}
                     class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors"
                   >
-                    📋 Show Credentials for Other Devices
+                    📋 {$_('settings.syncTab.showCredentials')}
                   </button>
 
                   <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    Click to display credentials as text. Use "Use Existing Credentials" on other devices to import.
+                    {$_('settings.syncTab.credentialsHelp')}
                   </p>
                   <p class="mt-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
-                    ⚠️ All devices must use the SAME password to decrypt notes!
+                    ⚠️ {$_('settings.syncTab.samePasswordWarning')}
                   </p>
 
                   <!-- Advanced: Legacy format option -->

@@ -310,16 +310,48 @@
       "syncDisabledDetails": "Lorsqu'elle est désactivée, Jottery ne fera aucune requête réseau vers les serveurs de synchronisation. Toutes vos notes restent complètement locales sur cet appareil.",
       "toEnableSync": "Pour activer la synchronisation : Activez l'interrupteur ci-dessus et configurez votre serveur de synchronisation.",
       "privacyNote": "Confidentialité : Même lorsqu'elle est activée, toutes les notes sont chiffrées de bout en bout. Le serveur de synchronisation ne peut pas lire votre contenu.",
+      "syncEnabled": "Synchronisation activée",
+      "syncing": "Synchronisation...",
+      "lastSync": "Dernière synchronisation :",
+      "syncNow": "Synchroniser maintenant",
+      "notesPendingSingle": "{count} note en attente de synchronisation",
+      "notesPendingPlural": "{count} notes en attente de synchronisation",
+      "showCredentials": "Afficher les identifiants pour d'autres appareils",
+      "credentialsHelp": "Cliquez pour afficher les identifiants en texte. Utilisez \"Utiliser les identifiants existants\" sur d'autres appareils pour importer.",
+      "samePasswordWarning": "Tous les appareils doivent utiliser le MÊME mot de passe pour déchiffrer les notes !",
       "userPortal": {
-        "title": "User Portal",
-        "description": "Manage your account, change password, or delete your data",
-        "openButton": "Open User Portal"
+        "title": "Portail utilisateur",
+        "description": "Gérez votre compte, changez votre mot de passe ou supprimez vos données",
+        "openButton": "Ouvrir le portail utilisateur"
       },
       "dangerZone": {
-        "title": "Danger Zone",
-        "disconnectTitle": "Disconnect from Sync Server",
-        "disconnectDescription": "This will disconnect this device from the sync server and clear all sync credentials. Your notes will NOT be deleted and will remain on this device.",
-        "disconnectButton": "Disconnect"
+        "title": "Zone dangereuse",
+        "disconnectTitle": "Se déconnecter du serveur de synchronisation",
+        "disconnectDescription": "Cela déconnectera cet appareil du serveur de synchronisation et effacera tous les identifiants de synchronisation. Vos notes NE seront PAS supprimées et resteront sur cet appareil.",
+        "disconnectButton": "Déconnecter"
+      },
+      "accountManagement": {
+        "title": "Gérer votre compte",
+        "loginPrompt": "Connectez-vous pour voir les informations de votre compte et gérer vos notes synchronisées.",
+        "emailLabel": "Adresse e-mail",
+        "passwordLabel": "Mot de passe",
+        "loggingIn": "Connexion...",
+        "loginButton": "Se connecter pour voir le compte",
+        "loggedInAs": "Connecté en tant que :",
+        "adminAccount": "Compte administrateur",
+        "logOut": "Se déconnecter",
+        "loadingInfo": "Chargement des informations du compte...",
+        "syncedNotes": "Notes synchronisées",
+        "attachments": "Pièces jointes",
+        "storageUsed": "Stockage utilisé",
+        "storageQuota": "Quota de stockage",
+        "storageUsage": "Utilisation du stockage",
+        "privacyTitle": "Confidentialité et sécurité",
+        "privacyDescription": "Toutes vos notes sont chiffrées de bout en bout. Le serveur ne peut pas lire votre contenu.",
+        "selfHostLink": "Vous voulez auto-héberger ? Voir GitHub →",
+        "dangerZone": "Zone dangereuse",
+        "deleteNotesDescription": "Supprimez toutes vos notes du serveur de synchronisation. Cette action ne peut pas être annulée. Vos notes locales NE seront PAS supprimées.",
+        "deleteNotesButton": "Supprimer toutes les notes du serveur"
       }
     },
     "advancedTab": {

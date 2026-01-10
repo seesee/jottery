@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
+
   export let showAccountManagement: boolean;
   export let accountEmail: string;
   export let accountPassword: string;
@@ -25,7 +27,7 @@
     on:click={() => showAccountManagement = !showAccountManagement}
     class="w-full flex items-center justify-between text-sm font-medium text-gray-900 dark:text-white"
   >
-    <span>👤 Manage Your Account</span>
+    <span>👤 {$_('settings.syncTab.accountManagement.title')}</span>
     <span class="transform transition-transform {showAccountManagement ? 'rotate-180' : ''}">
       ▼
     </span>
@@ -35,12 +37,12 @@
     {#if !userSession}
                   <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
                     <p class="text-sm text-blue-900 dark:text-blue-100 mb-3">
-                      Log in to view your account information and manage your synced notes.
+                      {$_('settings.syncTab.accountManagement.loginPrompt')}
                     </p>
 
                     <div>
                       <label for="account-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Email Address
+                        {$_('settings.syncTab.accountManagement.emailLabel')}
                       </label>
                       <input
                         id="account-email"
@@ -53,7 +55,7 @@
 
                     <div>
                       <label for="account-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Password
+                        {$_('settings.syncTab.accountManagement.passwordLabel')}
                       </label>
                       <input
                         id="account-password"
@@ -69,7 +71,7 @@
                       disabled={!accountEmail || !accountPassword || loggingIn}
                       class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
                     >
-                      {loggingIn ? 'Logging in...' : 'Log In to View Account'}
+                      {loggingIn ? $_('settings.syncTab.accountManagement.loggingIn') : $_('settings.syncTab.accountManagement.loginButton')}
                     </button>
                   </div>
     {:else}
@@ -77,11 +79,11 @@
                     <div class="flex items-center justify-between">
                       <div>
                         <div class="text-sm font-medium text-green-900 dark:text-green-100">
-                          Logged in as: {userSession.email}
+                          {$_('settings.syncTab.accountManagement.loggedInAs')} {userSession.email}
                         </div>
                         {#if userSession.isAdmin}
                           <div class="text-xs text-green-700 dark:text-green-300 mt-1">
-                            ⭐ Admin Account
+                            ⭐ {$_('settings.syncTab.accountManagement.adminAccount')}
                           </div>
                         {/if}
                       </div>
@@ -89,14 +91,14 @@
                         on:click={onAccountLogout}
                         class="text-xs text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100"
                       >
-                        Log Out
+                        {$_('settings.syncTab.accountManagement.logOut')}
                       </button>
                     </div>
 
                     {#if loadingAccountInfo}
                       <div class="text-center py-4">
                         <div class="text-sm text-gray-600 dark:text-gray-400">
-                          Loading account information...
+                          {$_('settings.syncTab.accountManagement.loadingInfo')}
                         </div>
                       </div>
                     {:else if accountInfo}
@@ -104,7 +106,7 @@
                       <div class="grid grid-cols-2 gap-3">
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-200 dark:border-green-700">
                           <div class="text-xs text-gray-600 dark:text-gray-400">
-                            Synced Notes
+                            {$_('settings.syncTab.accountManagement.syncedNotes')}
                           </div>
                           <div class="text-lg font-semibold text-gray-900 dark:text-white">
                             {accountInfo.noteCount.toLocaleString()}
@@ -113,7 +115,7 @@
 
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-200 dark:border-green-700">
                           <div class="text-xs text-gray-600 dark:text-gray-400">
-                            Attachments
+                            {$_('settings.syncTab.accountManagement.attachments')}
                           </div>
                           <div class="text-lg font-semibold text-gray-900 dark:text-white">
                             {accountInfo.attachmentCount.toLocaleString()}
@@ -122,7 +124,7 @@
 
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-200 dark:border-green-700">
                           <div class="text-xs text-gray-600 dark:text-gray-400">
-                            Storage Used
+                            {$_('settings.syncTab.accountManagement.storageUsed')}
                           </div>
                           <div class="text-lg font-semibold text-gray-900 dark:text-white">
                             {(accountInfo.storageUsedBytes / 1024 / 1024).toFixed(2)} MB
@@ -131,7 +133,7 @@
 
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-200 dark:border-green-700">
                           <div class="text-xs text-gray-600 dark:text-gray-400">
-                            Storage Quota
+                            {$_('settings.syncTab.accountManagement.storageQuota')}
                           </div>
                           <div class="text-lg font-semibold text-gray-900 dark:text-white">
                             {accountInfo.storageQuotaMb.toLocaleString()} MB
@@ -142,7 +144,7 @@
                       <!-- Storage Progress Bar -->
                       <div>
                         <div class="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                          <span>Storage Usage</span>
+                          <span>{$_('settings.syncTab.accountManagement.storageUsage')}</span>
                           <span>{((accountInfo.storageUsedBytes / 1024 / 1024 / accountInfo.storageQuotaMb) * 100).toFixed(1)}%</span>
                         </div>
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -156,8 +158,8 @@
                       <!-- Privacy Notice -->
                       <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded p-3">
                         <div class="text-xs text-blue-900 dark:text-blue-100 space-y-1">
-                          <div class="font-medium">🔒 Privacy & Security</div>
-                          <div>All your notes are end-to-end encrypted. The server cannot read your content.</div>
+                          <div class="font-medium">🔒 {$_('settings.syncTab.accountManagement.privacyTitle')}</div>
+                          <div>{$_('settings.syncTab.accountManagement.privacyDescription')}</div>
                           <div class="mt-2">
                             <a
                               href="https://github.com/seesee/jottery"
@@ -165,7 +167,7 @@
                               rel="noopener noreferrer"
                               class="text-blue-700 dark:text-blue-300 hover:underline font-medium"
                             >
-                              💡 Want to self-host? See GitHub →
+                              💡 {$_('settings.syncTab.accountManagement.selfHostLink')}
                             </a>
                           </div>
                         </div>
@@ -174,16 +176,16 @@
                       <!-- Delete All Notes -->
                       <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
                         <div class="text-sm font-medium text-red-900 dark:text-red-100 mb-2">
-                          ⚠️ Danger Zone
+                          ⚠️ {$_('settings.syncTab.accountManagement.dangerZone')}
                         </div>
                         <p class="text-xs text-red-800 dark:text-red-200 mb-3">
-                          Delete all your notes from the sync server. This action cannot be undone. Your local notes will NOT be deleted.
+                          {$_('settings.syncTab.accountManagement.deleteNotesDescription')}
                         </p>
                         <button
                           on:click={onShowDeleteServerNotesConfirm}
                           class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
                         >
-                          Delete All Notes from Server
+                          {$_('settings.syncTab.accountManagement.deleteNotesButton')}
                         </button>
                       </div>
                     {/if}
