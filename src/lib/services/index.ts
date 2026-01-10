@@ -21,6 +21,7 @@ export { versionRepository } from './versionRepository';
 // Business logic services
 export { syncService } from './syncService';
 export { noteService } from './noteService';
+export { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 export { attachmentService } from './attachmentService';
 export { conflictService } from './conflictService';
 export { isInitialized, initialize, unlock, lock, isLocked, changePassword } from './initService';
