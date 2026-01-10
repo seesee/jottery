@@ -11,10 +11,30 @@ import type { Note, ConflictData, Attachment } from '../types';
 import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
 import { noteService } from './noteService';
-import { cryptoService, decryptStringArray, encryptStringArray } from './crypto';
+import { cryptoService, encryptStringArray } from './crypto';
 import { keyManager } from './keyManager';
 
 export type ConflictResolution = 'keep-mine' | 'keep-server' | 'keep-both' | 'merge';
+
+/**
+ * Decrypt server tags from sync format (each tag individually encrypted)
+ */
+async function decryptSyncFormatTags(encryptedTags: string[], key: CryptoKey): Promise<string[]> {
+  const tags: string[] = [];
+  for (const encryptedTagJson of encryptedTags) {
+    try {
+      const encryptedTag = JSON.parse(encryptedTagJson);
+      const tagJson = await cryptoService.decryptText(encryptedTag, key);
+      const tag = JSON.parse(tagJson); // Tags are JSON-encoded in sync format
+      if (typeof tag === 'string' && tag.trim().length > 0) {
+        tags.push(tag);
+      }
+    } catch (error) {
+      console.warn('[ConflictService] Failed to decrypt server tag:', error);
+    }
+  }
+  return tags;
+}
 
 export interface ConflictInfo {
   noteId: string;
@@ -76,16 +96,8 @@ export async function getConflictInfo(noteId: string): Promise<ConflictInfo | nu
     serverContent = conflict.serverContent;
   }
 
-  // Decrypt server tags
-  let serverTags: string[] = [];
-  if (conflict.serverTags.length > 0 && conflict.serverTags[0]) {
-    try {
-      const encryptedTags = JSON.parse(conflict.serverTags[0]);
-      serverTags = await decryptStringArray(encryptedTags, masterKey.key);
-    } catch {
-      serverTags = conflict.serverTags;
-    }
-  }
+  // Decrypt server tags (sync format: each tag individually encrypted)
+  const serverTags = await decryptSyncFormatTags(conflict.serverTags, masterKey.key);
 
   return {
     noteId,
@@ -198,16 +210,8 @@ export async function resolveKeepBoth(noteId: string): Promise<string> {
     serverContent = conflict.serverContent;
   }
 
-  // Decrypt server tags
-  let serverTags: string[] = [];
-  if (conflict.serverTags.length > 0 && conflict.serverTags[0]) {
-    try {
-      const encryptedTags = JSON.parse(conflict.serverTags[0]);
-      serverTags = await decryptStringArray(encryptedTags, masterKey.key);
-    } catch {
-      serverTags = conflict.serverTags;
-    }
-  }
+  // Decrypt server tags (sync format: each tag individually encrypted)
+  const serverTags = await decryptSyncFormatTags(conflict.serverTags, masterKey.key);
 
   // Add a tag to indicate this is a conflict copy
   serverTags.push('conflict-copy');

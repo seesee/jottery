@@ -135,6 +135,7 @@
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-4"
       on:click|stopPropagation
+      on:wheel|stopPropagation
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
