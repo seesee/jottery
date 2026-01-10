@@ -183,6 +183,7 @@ register:
   enter_endpoint: "Enter sync server URL (e.g. https://sync.example.com):"
   enter_email: "Enter your email address:"
   enter_password: "Create a password (min. 12 characters):"
+  reenter_password: "Re-enter your sync password:"
   pending_title: "Registration Pending"
   pending_message: "Your registration has been submitted and is awaiting admin approval."
   pending_instructions: "Press 'r' or Enter to check approval status. Press Esc to close."

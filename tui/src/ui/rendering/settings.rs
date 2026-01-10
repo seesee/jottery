@@ -135,11 +135,10 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
     ]));
 
     if sync_configured {
-        // Fully configured - show all sync options
+        // Fully configured - show all sync options (no need to check registration status)
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_paste"))));
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_copy"))));
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_disconnect"))));
-        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_status"))));
     } else if has_pending {
         // Pending registration - show resume and clear options
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));

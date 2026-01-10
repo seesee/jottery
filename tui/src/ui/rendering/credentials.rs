@@ -291,11 +291,23 @@ pub fn render_register_input_email(app: &App, frame: &mut Frame) {
 
 /// Render registration password input
 pub fn render_register_input_password(app: &App, frame: &mut Frame) {
+    // Check if this is a re-entry after approval (pending registration exists)
+    let is_reentry = app.db.as_ref().and_then(|db| {
+        let sync_repo = crate::repository::sync::SyncRepository::new(db.connection());
+        sync_repo.get_metadata().ok().flatten()
+    }).map(|m| m.pending_registration_email.is_some()).unwrap_or(false);
+
+    let prompt = if is_reentry {
+        t!("register.reenter_password")
+    } else {
+        t!("register.enter_password")
+    };
+
     render_registration_input_modal(
         app,
         frame,
         &t!("register.title"),
-        &t!("register.enter_password"),
+        &prompt,
         &app.credential_input,
         true,
     );
