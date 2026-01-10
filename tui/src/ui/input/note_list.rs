@@ -33,7 +33,7 @@ fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
     let mut all_tags: HashSet<String> = HashSet::new();
     for note in &app.notes {
         for tag in &note.tags {
-            if tag.to_lowercase().contains(&partial_lower) {
+            if tag.to_lowercase().starts_with(&partial_lower) {
                 all_tags.insert(tag.clone());
             }
         }

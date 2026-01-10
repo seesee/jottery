@@ -32,7 +32,7 @@ fn get_tag_completions(app: &App) -> Vec<String> {
         .into_iter()
         .filter(|tag| {
             let tag_lower = tag.to_lowercase();
-            tag_lower.contains(&query) && !app.current_tags.contains(tag)
+            tag_lower.starts_with(&query) && !app.current_tags.contains(tag)
         })
         .collect()
 }
