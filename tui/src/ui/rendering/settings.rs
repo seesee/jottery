@@ -61,7 +61,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         ])
     };
 
-    let settings_text = vec![
+    let mut settings_text = vec![
         Line::from(vec![
             Span::styled(t!("settings.title"), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
         ]),
@@ -98,17 +98,33 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         Line::from(format!("  • {}", t!("settings.instructions_text"))),
         Line::from(format!("  • {}", t!("settings.instructions_toggle"))),
         Line::from(format!("  • {}", t!("settings.instructions_remember"))),
-        Line::from(format!("  • {}", t!("settings.instructions_sync"))),
-        Line::from(format!("  • {}", t!("settings.instructions_force_sync"))),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(format!("{}: ", t!("settings.sync")), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(format!("  • {}", t!("settings.instructions_paste"))),
-        Line::from(format!("  • {}", t!("settings.instructions_copy"))),
-        Line::from(format!("  • {}", t!("settings.instructions_disconnect"))),
-        Line::from(format!("  • {}", t!("settings.instructions_status"))),
     ];
+
+    // Add sync-related instructions based on whether sync is configured
+    let sync_configured = app.settings.sync_endpoint.is_some();
+
+    if sync_configured {
+        // Show sync operations when sync is configured
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_sync"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_force_sync"))));
+    }
+
+    settings_text.push(Line::from(""));
+    settings_text.push(Line::from(vec![
+        Span::styled(format!("{}: ", t!("settings.sync")), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
+    ]));
+
+    if sync_configured {
+        // Show all sync options when configured
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_paste"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_copy"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_disconnect"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_status"))));
+    } else {
+        // Show setup options when not configured
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_paste"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));
+    }
 
     // Add status and error messages if present
     let mut all_lines = settings_text;

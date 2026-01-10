@@ -603,3 +603,74 @@ pub fn check_registration_status(app: &mut App, email: &str) -> Result<String> {
 
     Ok(message)
 }
+
+/// Check registration status with a specific endpoint
+pub fn check_registration_status_with_endpoint(_app: &mut App, endpoint: &str, email: &str) -> Result<bool> {
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+    let status = client.check_status(email)?;
+    Ok(status.exists && status.is_approved && status.is_active)
+}
+
+/// Register a new user account
+/// Returns true if the user needs approval, false if already approved
+pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str) -> Result<bool> {
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+
+    // Try to register the user
+    match client.register_user(email, password) {
+        Ok(response) => {
+            // Check if user needs approval
+            Ok(response.status == "pending_approval")
+        }
+        Err(e) => {
+            let error_msg = e.to_string();
+            // If user already exists, check their status
+            if error_msg.contains("already exists") || error_msg.contains("409") {
+                let status = client.check_status(email)?;
+                if status.is_approved && status.is_active {
+                    // User exists and is approved, can proceed to device registration
+                    Ok(false)
+                } else if !status.is_approved {
+                    // User exists but still pending
+                    Ok(true)
+                } else {
+                    anyhow::bail!("Account is inactive. Please contact administrator.")
+                }
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
+/// Register a device with the sync server
+pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &str, device_name: &str) -> Result<()> {
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+
+    // Register the device
+    let response = client.register_device(email, password, device_name, "tui")?;
+
+    // Get database
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
+
+    // Encrypt and save the API key
+    let encrypted = app.crypto.encrypt_text(&response.api_key, key)?;
+    let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+    // Save sync metadata
+    let sync_repo = SyncRepository::new(db.connection());
+    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    metadata.api_key = Some(encrypted_api_key);
+    metadata.client_id = Some(response.client_id);
+    metadata.sync_endpoint = endpoint.to_string();
+    metadata.sync_enabled = true;
+    sync_repo.update_metadata(&metadata)?;
+
+    // Update app settings
+    app.settings.sync_endpoint = Some(endpoint.to_string());
+    app.settings.sync_enabled = true;
+    save_settings(app)?;
+
+    Ok(())
+}

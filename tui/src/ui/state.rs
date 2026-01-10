@@ -39,6 +39,34 @@ pub enum AppState {
         status_message: String,
         previous: Box<AppState>,
     },
+    /// Registration flow - input sync server endpoint
+    RegisterInputEndpoint {
+        previous: Box<AppState>,
+    },
+    /// Registration flow - input email
+    RegisterInputEmail {
+        endpoint: String,
+        previous: Box<AppState>,
+    },
+    /// Registration flow - input password
+    RegisterInputPassword {
+        endpoint: String,
+        email: String,
+        previous: Box<AppState>,
+    },
+    /// Registration flow - pending approval
+    RegisterPendingApproval {
+        endpoint: String,
+        email: String,
+        previous: Box<AppState>,
+    },
+    /// Registration flow - input device name (after approval)
+    RegisterInputDeviceName {
+        endpoint: String,
+        email: String,
+        password: String,
+        previous: Box<AppState>,
+    },
     /// Quit
     Quit,
 }

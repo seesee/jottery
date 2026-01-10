@@ -133,6 +133,17 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.error = Some(t!("sync.endpoint_not_configured").to_string());
                     }
                 }
+                KeyCode::Char('r') => {
+                    // Start registration flow (only if sync is not configured)
+                    if app.settings.sync_endpoint.is_none() {
+                        app.credential_input.clear();
+                        let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                        app.state = AppState::RegisterInputEndpoint {
+                            previous: Box::new(prev),
+                        };
+                        app.input_mode = InputMode::Insert;
+                    }
+                }
                 _ => {}
             }
         }
