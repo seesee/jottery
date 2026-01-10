@@ -787,6 +787,7 @@ fn main() -> Result<()> {
                 sync_enabled: true,
                 sync_endpoint: server.clone(),
                 auto_sync_interval: Some(1),
+                pending_registration_email: None,
             };
 
             sync_repo.update_metadata(&sync_metadata)?;

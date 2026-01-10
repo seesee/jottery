@@ -15,6 +15,7 @@ common:
   close: "Close"
   quit: "Quit"
   back: "Back"
+  email: "Email"
 
 # Password and authentication
 password:
@@ -127,6 +128,7 @@ settings:
   instructions_copy: "Press 'c' to copy sync credentials to share with another device"
   instructions_disconnect: "Press 'd' to disconnect from sync server (keeps local notes)"
   instructions_status: "Press 'R' (Shift+r) to check registration approval status"
+  instructions_register: "Press 'r' to register with a sync server"
   press_enter_cycle: "press Enter to cycle"
   press_enter_toggle: "press Enter to toggle"
   disabled: "disabled"
@@ -174,6 +176,30 @@ sync:
     approved: "Your account is approved and active. You can sync your notes."
     pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
     inactive: "Your account has been deactivated. Please contact an administrator."
+
+# Registration flow
+register:
+  title: "Register with Sync Server"
+  enter_endpoint: "Enter sync server URL (e.g. https://sync.example.com):"
+  enter_email: "Enter your email address:"
+  enter_password: "Create a password (min. 12 characters):"
+  reenter_password: "Re-enter your sync password:"
+  pending_title: "Registration Pending"
+  pending_message: "Your registration has been submitted and is awaiting admin approval."
+  pending_instructions: "Press 'r' or Enter to check approval status. Press Esc to close."
+  pending_help: "r/Enter: Check status | Esc: Close"
+  device_title: "Device Registration"
+  enter_device_name: "Enter a name for this device (or press Enter for default):"
+  endpoint_required: "Sync server URL is required"
+  email_invalid: "Please enter a valid email address"
+  password_too_short: "Password must be at least 12 characters"
+  failed: "Registration failed"
+  approved: "Your registration has been approved!"
+  still_pending: "Your registration is still pending approval"
+  success: "Successfully registered! Sync is now enabled."
+  device_failed: "Device registration failed"
+  cleared: "Registration cleared. You can start fresh."
+  pending_status: "Pending approval"
 
 # Conflict resolution
 conflict:

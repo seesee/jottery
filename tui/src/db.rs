@@ -83,6 +83,8 @@ impl Database {
             (4, include_str!("../migrations/004_update_syntax_default.sql")),
             (5, include_str!("../migrations/005_add_note_versions.sql")),
             (6, include_str!("../migrations/006_add_user_email.sql")),
+            (7, include_str!("../migrations/007_add_conflict_data.sql")),
+            (8, include_str!("../migrations/008_add_pending_registration.sql")),
         ];
 
         // Run pending migrations
@@ -197,7 +199,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory("test_password").unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 6);
+        assert_eq!(db.schema_version().unwrap(), 8);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -225,13 +227,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 6);
+            assert_eq!(db.schema_version().unwrap(), 8);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 6);
+            assert_eq!(db.schema_version().unwrap(), 8);
         }
     }
 }

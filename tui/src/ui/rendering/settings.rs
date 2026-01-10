@@ -61,7 +61,26 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         ])
     };
 
-    let settings_text = vec![
+    // Check for pending registration directly from database
+    let pending_registration: Option<(String, String)> = app.db.as_ref().and_then(|db| {
+        let sync_repo = crate::repository::sync::SyncRepository::new(db.connection());
+        sync_repo.get_metadata().ok().flatten()
+    }).and_then(|m| {
+        if !m.sync_endpoint.is_empty() && m.pending_registration_email.is_some() && m.api_key.is_none() {
+            Some((m.sync_endpoint, m.pending_registration_email.unwrap()))
+        } else {
+            None
+        }
+    });
+
+    // Determine sync endpoint display value
+    let sync_endpoint_display = if let Some((ref endpoint, ref email)) = pending_registration {
+        format!("{} ({}: {})", endpoint, t!("register.pending_status"), email)
+    } else {
+        app.settings.sync_endpoint.clone().unwrap_or_else(|| t!("sync.no_api_key").to_string())
+    };
+
+    let mut settings_text = vec![
         Line::from(vec![
             Span::styled(t!("settings.title"), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
         ]),
@@ -76,7 +95,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         ]),
         Line::from(""),
         field_line(4, format!("{}:          ", t!("settings.sync_enabled")), format!("{} ({})", if app.settings.sync_enabled { t!("common.yes") } else { t!("common.no") }, t!("settings.press_enter_toggle"))),
-        field_line(5, format!("{}:         ", t!("settings.sync_endpoint")), app.settings.sync_endpoint.clone().unwrap_or_else(|| t!("sync.no_api_key").to_string())),
+        field_line(5, format!("{}:         ", t!("settings.sync_endpoint")), sync_endpoint_display),
         field_line(6, format!("{}:    ", t!("settings.auto_sync_interval")), format!("{} {} (0 = {})", app.settings.auto_sync_interval_minutes, t!("settings.minutes"), t!("settings.disabled"))),
         Line::from(""),
         Line::from(vec![
@@ -98,17 +117,38 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         Line::from(format!("  • {}", t!("settings.instructions_text"))),
         Line::from(format!("  • {}", t!("settings.instructions_toggle"))),
         Line::from(format!("  • {}", t!("settings.instructions_remember"))),
-        Line::from(format!("  • {}", t!("settings.instructions_sync"))),
-        Line::from(format!("  • {}", t!("settings.instructions_force_sync"))),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled(format!("{}: ", t!("settings.sync")), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
-        ]),
-        Line::from(format!("  • {}", t!("settings.instructions_paste"))),
-        Line::from(format!("  • {}", t!("settings.instructions_copy"))),
-        Line::from(format!("  • {}", t!("settings.instructions_disconnect"))),
-        Line::from(format!("  • {}", t!("settings.instructions_status"))),
     ];
+
+    // Add sync-related instructions based on sync state
+    let sync_configured = app.settings.sync_endpoint.is_some();
+    let has_pending = pending_registration.is_some();
+
+    if sync_configured {
+        // Fully configured - show sync operations
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_sync"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_force_sync"))));
+    }
+
+    settings_text.push(Line::from(""));
+    settings_text.push(Line::from(vec![
+        Span::styled(format!("{}: ", t!("settings.sync")), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
+    ]));
+
+    if sync_configured {
+        // Fully configured - show all sync options (no need to check registration status)
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_paste"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_copy"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_disconnect"))));
+    } else if has_pending {
+        // Pending registration - show resume and clear options
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_disconnect"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_status"))));
+    } else {
+        // Not configured - show setup options
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_paste"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));
+    }
 
     // Add status and error messages if present
     let mut all_lines = settings_text;

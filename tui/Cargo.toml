@@ -74,6 +74,9 @@ rpassword = "7.3"
 # Config management
 dirs = "5.0"
 
+# Hostname detection
+hostname = "0.4"
+
 # Temporary files for external editor
 tempfile = "3.13"
 

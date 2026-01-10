@@ -303,6 +303,11 @@ impl App {
             AppState::InputSyncCredentials { .. } => input::credentials::handle_input_credentials_key(self, key)?,
             AppState::InputEmailForStatus { .. } => input::credentials::handle_input_email_for_status_key(self, key)?,
             AppState::ShowRegistrationStatus { .. } => input::credentials::handle_show_registration_status_key(self, key)?,
+            AppState::RegisterInputEndpoint { .. } => input::credentials::handle_register_input_endpoint_key(self, key)?,
+            AppState::RegisterInputEmail { .. } => input::credentials::handle_register_input_email_key(self, key)?,
+            AppState::RegisterInputPassword { .. } => input::credentials::handle_register_input_password_key(self, key)?,
+            AppState::RegisterPendingApproval { .. } => input::credentials::handle_register_pending_approval_key(self, key)?,
+            AppState::RegisterInputDeviceName { .. } => input::credentials::handle_register_input_device_name_key(self, key)?,
             AppState::Quit => {}
             AppState::Settings { .. } => unreachable!(), // Handled above
             AppState::Help { .. } => unreachable!(), // Handled above
@@ -1678,6 +1683,22 @@ impl App {
             AppState::InputEmailForStatus { .. } => rendering::credentials::render_input_email_for_status(self, frame),
             AppState::ShowRegistrationStatus { status_message, .. } => {
                 rendering::credentials::render_registration_status(self, frame, status_message)
+            }
+            AppState::RegisterInputEndpoint { .. } => {
+                rendering::credentials::render_register_input_endpoint(self, frame)
+            }
+            AppState::RegisterInputEmail { .. } => {
+                rendering::credentials::render_register_input_email(self, frame)
+            }
+            AppState::RegisterInputPassword { .. } => {
+                rendering::credentials::render_register_input_password(self, frame)
+            }
+            AppState::RegisterPendingApproval { email, .. } => {
+                let email = email.clone();
+                rendering::credentials::render_register_pending_approval(self, frame, &email)
+            }
+            AppState::RegisterInputDeviceName { .. } => {
+                rendering::credentials::render_register_input_device_name(self, frame)
             }
             AppState::Quit => {}
         }

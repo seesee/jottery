@@ -21,7 +21,8 @@ impl<'a> SyncRepository<'a> {
         let result = self.conn
             .query_row(
                 "SELECT last_sync_at, last_push_at, last_pull_at, api_key, client_id,
-                        sync_enabled, sync_endpoint, auto_sync_interval, user_email
+                        sync_enabled, sync_endpoint, auto_sync_interval, user_email,
+                        pending_registration_email
                  FROM sync_metadata WHERE id = 1",
                 [],
                 |row| {
@@ -50,6 +51,7 @@ impl<'a> SyncRepository<'a> {
                         sync_endpoint: row.get(6)?,
                         auto_sync_interval: row.get(7)?,
                         user_email: row.get(8)?,
+                        pending_registration_email: row.get(9)?,
                     })
                 },
             )
@@ -63,8 +65,9 @@ impl<'a> SyncRepository<'a> {
         self.conn.execute(
             "INSERT OR REPLACE INTO sync_metadata (
                 id, last_sync_at, last_push_at, last_pull_at, api_key, client_id,
-                sync_enabled, sync_endpoint, auto_sync_interval, user_email
-            ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                sync_enabled, sync_endpoint, auto_sync_interval, user_email,
+                pending_registration_email
+            ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 metadata.last_sync_at.map(|dt| dt.to_rfc3339()),
                 metadata.last_push_at.map(|dt| dt.to_rfc3339()),
@@ -75,6 +78,7 @@ impl<'a> SyncRepository<'a> {
                 &metadata.sync_endpoint,
                 metadata.auto_sync_interval,
                 &metadata.user_email,
+                &metadata.pending_registration_email,
             ],
         )?;
 

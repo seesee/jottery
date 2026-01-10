@@ -113,9 +113,11 @@ pub fn unlock(app: &mut App) -> Result<()> {
                     metadata.sync_enabled = true;
                     sync_repo.update_metadata(&metadata)?;
 
-                    // Update app settings
+                    // Update app settings and save to database
                     app.settings.sync_endpoint = Some(endpoint.to_string());
                     app.settings.sync_enabled = true;
+                    let settings_repo = SettingsRepository::new(db.connection());
+                    settings_repo.update(&app.settings)?;
 
                     app.debug_log("Unlock - Encrypted credentials processed, sync enabled");
                 }

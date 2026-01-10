@@ -603,3 +603,148 @@ pub fn check_registration_status(app: &mut App, email: &str) -> Result<String> {
 
     Ok(message)
 }
+
+/// Check registration status with a specific endpoint
+pub fn check_registration_status_with_endpoint(_app: &mut App, endpoint: &str, email: &str) -> Result<bool> {
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+    let status = client.check_status(email)?;
+    Ok(status.exists && status.is_approved && status.is_active)
+}
+
+/// Register a new user account
+/// Returns true if the user needs approval, false if already approved
+pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str) -> Result<bool> {
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+
+    // Try to register the user
+    match client.register_user(email, password) {
+        Ok(response) => {
+            // Check if user needs approval
+            Ok(response.status == "pending_approval")
+        }
+        Err(e) => {
+            let error_msg = e.to_string();
+            // If user already exists, check their status
+            if error_msg.contains("already exists") || error_msg.contains("409") {
+                let status = client.check_status(email)?;
+                if status.is_approved && status.is_active {
+                    // User exists and is approved, can proceed to device registration
+                    Ok(false)
+                } else if !status.is_approved {
+                    // User exists but still pending
+                    Ok(true)
+                } else {
+                    anyhow::bail!("Account is inactive. Please contact administrator.")
+                }
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
+/// Register a device with the sync server
+pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &str, device_name: &str) -> Result<()> {
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+
+    // Register the device
+    let response = client.register_device(email, password, device_name, "tui")?;
+
+    // Get database
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
+
+    // Encrypt and save the API key
+    let encrypted = app.crypto.encrypt_text(&response.api_key, key)?;
+    let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+    // Save sync metadata - also clear pending registration since we're now fully registered
+    let sync_repo = SyncRepository::new(db.connection());
+    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    metadata.api_key = Some(encrypted_api_key);
+    metadata.client_id = Some(response.client_id);
+    metadata.sync_endpoint = endpoint.to_string();
+    metadata.sync_enabled = true;
+    metadata.pending_registration_email = None; // Clear pending registration
+    sync_repo.update_metadata(&metadata)?;
+
+    // Update app settings
+    app.settings.sync_endpoint = Some(endpoint.to_string());
+    app.settings.sync_enabled = true;
+    save_settings(app)?;
+
+    Ok(())
+}
+
+/// Save pending registration state to database
+pub fn save_pending_registration(app: &mut App, endpoint: &str, email: &str) -> Result<()> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    let sync_repo = SyncRepository::new(db.connection());
+    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    metadata.sync_endpoint = endpoint.to_string();
+    metadata.pending_registration_email = Some(email.to_string());
+    sync_repo.update_metadata(&metadata)?;
+
+    app.debug_log(&format!("Saved pending registration: endpoint={}, email={}", endpoint, email));
+
+    Ok(())
+}
+
+/// Get pending registration if one exists
+pub fn get_pending_registration(app: &mut App) -> Result<Option<(String, String)>> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    let sync_repo = SyncRepository::new(db.connection());
+    if let Some(metadata) = sync_repo.get_metadata()? {
+        // Check if there's a pending registration (endpoint set, pending email set, but no API key)
+        if !metadata.sync_endpoint.is_empty() && metadata.pending_registration_email.is_some() && metadata.api_key.is_none() {
+            let endpoint = metadata.sync_endpoint;
+            let email = metadata.pending_registration_email.unwrap();
+            app.debug_log(&format!("Found pending registration: endpoint={}, email={}", endpoint, email));
+            return Ok(Some((endpoint, email)));
+        }
+    }
+
+    Ok(None)
+}
+
+/// Clear pending registration state (and all sync metadata)
+pub fn clear_pending_registration(app: &mut App) -> Result<()> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    let sync_repo = SyncRepository::new(db.connection());
+    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    metadata.pending_registration_email = None;
+    metadata.sync_endpoint = String::new();
+    metadata.api_key = None;
+    metadata.client_id = None;
+    metadata.user_email = None;
+    metadata.sync_enabled = false;
+    sync_repo.update_metadata(&metadata)?;
+
+    // Also clear app settings
+    app.settings.sync_endpoint = None;
+    app.settings.sync_enabled = false;
+    save_settings(app)?;
+
+    app.debug_log("Cleared pending registration and sync settings");
+
+    Ok(())
+}
+
+/// Check if there's a pending registration
+pub fn has_pending_registration(app: &mut App) -> bool {
+    get_pending_registration(app).ok().flatten().is_some()
+}
+
+/// Check if sync is fully configured (has API key)
+pub fn is_sync_fully_configured(app: &mut App) -> bool {
+    if let Some(db) = &app.db {
+        let sync_repo = SyncRepository::new(db.connection());
+        if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+            return metadata.api_key.is_some();
+        }
+    }
+    false
+}

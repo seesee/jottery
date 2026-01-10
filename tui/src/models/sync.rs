@@ -16,6 +16,7 @@ pub struct SyncMetadata {
     pub sync_enabled: bool,
     pub sync_endpoint: String,
     pub auto_sync_interval: Option<i32>, // Minutes (0 = disabled, default: 1)
+    pub pending_registration_email: Option<String>, // Email of pending registration awaiting approval
 }
 
 impl Default for SyncMetadata {
@@ -30,6 +31,7 @@ impl Default for SyncMetadata {
             sync_enabled: false,
             sync_endpoint: String::new(),
             auto_sync_interval: Some(1),
+            pending_registration_email: None,
         }
     }
 }
