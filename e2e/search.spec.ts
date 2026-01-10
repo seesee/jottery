@@ -27,8 +27,9 @@ test.describe('Search Functionality', () => {
     await passwordInputs.nth(1).fill('test-password-123');
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
-    // Wait for app to load
-    await page.waitForTimeout(2000);
+    // Wait for app to fully load - look for note list or empty state
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
   });
 
   async function createNote(page: any, content: string, tags: string[] = []) {

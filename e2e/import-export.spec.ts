@@ -6,6 +6,10 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test.describe('Import/Export', () => {
   test.beforeEach(async ({ page }) => {
@@ -29,8 +33,9 @@ test.describe('Import/Export', () => {
     await passwordInputs.nth(1).fill('test-password-123');
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
-    // Wait for app to load
-    await page.waitForTimeout(2000);
+    // Wait for app to fully load - look for note list or empty state
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
   });
 
   async function createNote(page: any, content: string, tags: string[] = []) {
@@ -76,14 +81,18 @@ test.describe('Import/Export', () => {
   async function openAdvancedTab(page: any) {
     await openSettings(page);
 
-    // Navigate to Advanced tab - look for tab button with "Advanced" text
-    const advancedTab = page.locator('button, [role="tab"]').filter({
+    // Wait for settings modal to be visible
+    const settingsModal = page.locator('[role="dialog"]').first();
+    await expect(settingsModal).toBeVisible({ timeout: 3000 });
+
+    // Navigate to Advanced tab - look for tab button with "Advanced" text within the modal
+    const advancedTab = settingsModal.locator('button, [role="tab"]').filter({
       hasText: /advanced/i
     }).first();
 
     if (await advancedTab.isVisible()) {
       await advancedTab.click();
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
     }
   }
 
@@ -91,7 +100,9 @@ test.describe('Import/Export', () => {
     // Look for export button in settings Advanced tab
     await openAdvancedTab(page);
 
-    const exportButton = page.locator('button, a').filter({
+    // Look within the settings modal dialog
+    const settingsModal = page.locator('[role="dialog"]').first();
+    const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     });
 
@@ -102,7 +113,9 @@ test.describe('Import/Export', () => {
   test('should have import button', async ({ page }) => {
     await openAdvancedTab(page);
 
-    const importButton = page.locator('button, a').filter({
+    // Look within the settings modal dialog
+    const settingsModal = page.locator('[role="dialog"]').first();
+    const importButton = settingsModal.locator('button').filter({
       hasText: /import/i
     });
 
@@ -121,8 +134,9 @@ test.describe('Import/Export', () => {
     // Set up download listener
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
-    // Click export button
-    const exportButton = page.locator('button, a').filter({
+    // Click export button within settings modal
+    const settingsModal = page.locator('[role="dialog"]').first();
+    const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
 
@@ -248,7 +262,9 @@ test.describe('Import/Export', () => {
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
-    const exportButton = page.locator('button, a').filter({
+    // Look within the settings modal
+    const settingsModal = page.locator('[role="dialog"]').first();
+    const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
 
@@ -289,7 +305,9 @@ test.describe('Import/Export', () => {
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
-    const exportButton = page.locator('button, a').filter({
+    // Look within the settings modal
+    const settingsModal = page.locator('[role="dialog"]').first();
+    const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
 
@@ -371,7 +389,9 @@ test.describe('Import/Export', () => {
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
-    const exportButton = page.locator('button, a').filter({
+    // Look within the settings modal
+    let settingsModal = page.locator('[role="dialog"]').first();
+    const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
 

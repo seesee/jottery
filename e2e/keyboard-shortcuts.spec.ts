@@ -27,21 +27,24 @@ test.describe('Keyboard Shortcuts', () => {
     await passwordInputs.nth(1).fill('test-password-123');
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
-    // Wait for app to load
-    await page.waitForTimeout(2000);
+    // Wait for app to fully load - look for note list or empty state
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
   });
 
   // Helper function to create a note via button click (more reliable than keyboard)
   async function createNoteViaButton(page: any, content: string) {
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newNoteButton.click();
-    await page.waitForTimeout(500);
 
+    // Wait for editor to appear
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially(content);
-    await page.waitForTimeout(2000);
+
+    // Wait for auto-save
+    await page.waitForTimeout(3000);
   }
 
   test('should create new note with Ctrl/Cmd+N', async ({ page }) => {

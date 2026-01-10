@@ -6,6 +6,10 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test.describe('Attachments', () => {
   test.beforeEach(async ({ page }) => {
@@ -29,8 +33,9 @@ test.describe('Attachments', () => {
     await passwordInputs.nth(1).fill('test-password-123');
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
-    // Wait for app to load
-    await page.waitForTimeout(2000);
+    // Wait for app to fully load - look for note list or empty state
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
 
     // Create a note to work with
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
