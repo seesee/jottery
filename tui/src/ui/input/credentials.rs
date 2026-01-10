@@ -301,19 +301,22 @@ pub fn handle_register_pending_approval_key(app: &mut App, key: KeyEvent) -> Res
                 match operations::settings::check_registration_status_with_endpoint(app, &endpoint, &email) {
                     Ok(approved) => {
                         if approved {
-                            // Approved! Move to device name input
+                            // Approved! Move to password input for device registration
                             // Need to get password again since we don't store it
                             app.credential_input.clear();
                             app.sync_status = Some(t!("register.approved").to_string());
+                            app.sync_status_set_at = Some(std::time::Instant::now());
 
                             if let AppState::RegisterPendingApproval { endpoint, email, previous } =
                                 std::mem::replace(&mut app.state, AppState::Quit)
                             {
                                 // Go back to password input to complete device registration
                                 app.state = AppState::RegisterInputPassword { endpoint, email, previous };
+                                app.input_mode = InputMode::Insert;
                             }
                         } else {
                             app.sync_status = Some(t!("register.still_pending").to_string());
+                            app.sync_status_set_at = Some(std::time::Instant::now());
                         }
                     }
                     Err(e) => {
