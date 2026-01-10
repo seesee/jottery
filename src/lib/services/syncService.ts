@@ -396,6 +396,14 @@ class SyncService {
         serverSyntaxLanguage: rejected.serverSyntaxLanguage,
         serverWordWrap: rejected.serverWordWrap,
       });
+
+      // Clear needsSync flag to prevent infinite retry loop
+      // User must resolve conflict before note can sync again
+      const note = await noteRepository.getById(rejected.id);
+      if (note) {
+        note.needsSync = false;
+        await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
+      }
     }
 
     await syncRepository.updateMetadata({

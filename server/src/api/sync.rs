@@ -108,7 +108,9 @@ pub async fn push(
             None => true, // New note
             Some(existing_note) => {
                 // Last-Write-Wins: compare modifiedAt
-                note.modified_at > existing_note.modified_at
+                // Use >= to avoid false conflicts when timestamps are identical
+                // (can happen if note is synced, then client re-syncs without changes)
+                note.modified_at >= existing_note.modified_at
             }
         };
 

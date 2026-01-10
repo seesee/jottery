@@ -104,11 +104,18 @@ RUN mkdir -p /etc/caddy
 
 COPY <<'EOF' /etc/caddy/Caddyfile
 :8088 {
-    # API proxy to jottery-server (must be before admin to avoid conflicts)
+    # API proxy to jottery-server (must be before admin/user to avoid conflicts)
     reverse_proxy /api/* localhost:3030
 
     # Admin dashboard
     handle_path /admin* {
+        root * /app/admin/dist
+        try_files {path} /index.html
+        file_server
+    }
+
+    # User portal (same SPA as admin, different path)
+    handle_path /user* {
         root * /app/admin/dist
         try_files {path} /index.html
         file_server
@@ -121,6 +128,7 @@ COPY <<'EOF' /etc/caddy/Caddyfile
     @notStatic {
         not path /api*
         not path /admin*
+        not path /user*
         not file
     }
     rewrite @notStatic /index.html
