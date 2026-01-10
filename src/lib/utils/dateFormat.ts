@@ -17,17 +17,26 @@ function _formatDate(
 ): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-  const defaultOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: timezone === 'local' ? undefined : timezone,
-    ...options,
-  };
+  // If dateStyle or timeStyle is provided, don't use individual date/time components
+  // as they cannot be combined (Intl.DateTimeFormat limitation)
+  const useStyleOptions = options?.dateStyle || options?.timeStyle;
 
-  return new Intl.DateTimeFormat(currentLocale, defaultOptions).format(dateObj);
+  const formatOptions: Intl.DateTimeFormatOptions = useStyleOptions
+    ? {
+        timeZone: timezone === 'local' ? undefined : timezone,
+        ...options,
+      }
+    : {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: timezone === 'local' ? undefined : timezone,
+        ...options,
+      };
+
+  return new Intl.DateTimeFormat(currentLocale, formatOptions).format(dateObj);
 }
 
 /**
