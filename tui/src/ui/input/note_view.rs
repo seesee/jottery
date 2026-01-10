@@ -24,6 +24,10 @@ fn collect_all_tags(app: &App) -> Vec<String> {
 /// Get tag completions matching the current input
 fn get_tag_completions(app: &App) -> Vec<String> {
     let query = app.tag_input.to_lowercase();
+    // Require at least one character to start completing
+    if query.is_empty() {
+        return Vec::new();
+    }
     collect_all_tags(app)
         .into_iter()
         .filter(|tag| {

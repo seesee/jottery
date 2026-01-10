@@ -25,6 +25,10 @@ fn get_search_tag_partial(input: &str) -> Option<(String, usize)> {
 
 /// Get search tag completions matching the current partial
 fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
+    // Require at least one character to start completing
+    if partial.is_empty() {
+        return Vec::new();
+    }
     let partial_lower = partial.to_lowercase();
     let mut all_tags: HashSet<String> = HashSet::new();
     for note in &app.notes {
