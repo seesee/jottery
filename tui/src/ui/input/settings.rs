@@ -136,12 +136,28 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('r') => {
                     // Start registration flow (only if sync is not configured)
                     if app.settings.sync_endpoint.is_none() {
-                        app.credential_input.clear();
-                        let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                        app.state = AppState::RegisterInputEndpoint {
-                            previous: Box::new(prev),
-                        };
-                        app.input_mode = InputMode::Insert;
+                        // Check if there's a pending registration to resume
+                        match operations::settings::get_pending_registration(app) {
+                            Ok(Some((endpoint, email))) => {
+                                // Resume pending registration - go to pending approval screen
+                                let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                                app.state = AppState::RegisterPendingApproval {
+                                    endpoint,
+                                    email,
+                                    previous: Box::new(prev),
+                                };
+                                app.input_mode = InputMode::Normal;
+                            }
+                            _ => {
+                                // No pending registration - start fresh
+                                app.credential_input.clear();
+                                let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                                app.state = AppState::RegisterInputEndpoint {
+                                    previous: Box::new(prev),
+                                };
+                                app.input_mode = InputMode::Insert;
+                            }
+                        }
                     }
                 }
                 _ => {}

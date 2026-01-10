@@ -251,7 +251,10 @@ pub fn handle_register_input_password_key(app: &mut App, key: KeyEvent) -> Resul
                 match operations::settings::register_user(app, &endpoint, &email, &password) {
                     Ok(needs_approval) => {
                         if needs_approval {
-                            // User registered but needs approval
+                            // User registered but needs approval - save pending state to database
+                            if let Err(e) = operations::settings::save_pending_registration(app, &endpoint, &email) {
+                                app.debug_log(&format!("Failed to save pending registration: {}", e));
+                            }
                             app.state = AppState::RegisterPendingApproval { endpoint, email, previous };
                             app.input_mode = InputMode::Normal;
                         } else {
