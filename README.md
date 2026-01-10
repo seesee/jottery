@@ -1,10 +1,10 @@
 # Jottery
 
-Jottery is a simple, searchable, and privacy-focused scratchpad/notes application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app or in a terminal, the sync server is optional. All data are stored locally unless explicitly configured to sync to an endpoint of your choosing.
+Jottery is a simple, searchable, scratchpad/notes application. It is designed to be self-hosted and accessible from both a web browser and a terminal. The core idea is to provide a secure place for your notes, with all data being end-to-end encrypted. It runs as a web app or in a terminal, the sync server is optional. All data are stored locally unless explicitly configured to sync to an endpoint of your choosing (which stores notes, tags, and attachments in their encrypted forms and never sees the unencrypted data).
 
 ## Why Jottery?
 
-Most note-taking apps are either too heavy (designed for long-form documents) or too limited (plain text files). Jottery is a lightweight scratchpad that handles code snippets, searchable tags, and basic formatting. It provides both web and terminal clients that sync seamlessly, so you can access your notes from a browser or SSH session.
+Most note-taking apps are either too heavy (designed for long-form documents) or too limited (plain text files). Jottery is a lightweight scratchpad that handles code snippets, searchable tags, and basic formatting. It provides both web and terminal clients that sync seamlessly, so you can access your notes from a browser or SSH session. A script to convert Evernote .enex files into something Jottery can import is included for user convenience.
 
 ## Features
 
