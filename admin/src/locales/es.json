@@ -7,6 +7,8 @@
     "refreshing": "Actualizando...",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
+    "close": "Cerrar",
+    "save": "Guardar",
     "loading": "Cargando...",
     "email": "Correo electrónico",
     "password": "Contraseña",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Aprobaciones pendientes:"
     }
   },
+  "devices": {
+    "title": "Dispositivos",
+    "name": "Nombre del dispositivo",
+    "type": "Tipo",
+    "createdAt": "Registrado",
+    "lastSeen": "Última vez visto",
+    "status": "Estado",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "revoke": "Revocar",
+    "rename": "Renombrar",
+    "revokeConfirmTitle": "Revocar dispositivo",
+    "revokeConfirm": "¿Estás seguro de que quieres revocar el dispositivo \"{name}\"? Este dispositivo ya no podrá sincronizarse.",
+    "revokeWarning": "Este dispositivo ya no podrá sincronizarse.",
+    "noDevices": "No hay dispositivos registrados",
+    "total": "total",
+    "nameRequired": "El nombre del dispositivo es obligatorio",
+    "toast": {
+      "revoked": "El dispositivo \"{name}\" ha sido revocado",
+      "revokeFailed": "Error al revocar el dispositivo: {error}",
+      "revokeFailedGeneric": "Error al revocar el dispositivo",
+      "renamed": "Dispositivo renombrado exitosamente",
+      "renameFailed": "Error al renombrar el dispositivo: {error}",
+      "renameFailedGeneric": "Error al renombrar el dispositivo"
+    }
+  },
   "users": {
     "title": "Usuarios",
     "loadingUsers": "Cargando usuarios...",
     "noUsersFound": "No se encontraron usuarios",
     "failedToLoad": "Error al cargar usuarios",
+    "detail": {
+      "title": "Detalles del usuario",
+      "userInfo": "Información del usuario",
+      "approvedAt": "Aprobado",
+      "lastLogin": "Último acceso",
+      "lastSync": "Última sincronización",
+      "statistics": "Estadísticas",
+      "attachments": "Archivos adjuntos",
+      "storage": "Almacenamiento usado",
+      "quota": "Cuota de almacenamiento",
+      "viewDevices": "Haz clic para ver dispositivos"
+    },
     "filters": {
       "all": "Todos",
       "pending": "Pendientes",
@@ -195,6 +235,18 @@
       "storageUsed": "Almacenamiento usado",
       "lastSync": "Última sincronización",
       "never": "Nunca"
+    },
+    "devices": {
+      "title": "Tus dispositivos",
+      "loadError": "Error al cargar los dispositivos",
+      "noDevices": "No hay dispositivos registrados",
+      "never": "Nunca",
+      "revokeTitle": "Revocar dispositivo",
+      "revokeConfirm": "¿Estás seguro de que quieres revocar \"{name}\"? Este dispositivo ya no podrá sincronizarse.",
+      "revokeNote": "Revocar un dispositivo evitará que se sincronice. Puedes volver a registrar el dispositivo más tarde si es necesario.",
+      "revoked": "El dispositivo \"{name}\" ha sido revocado",
+      "revokeFailed": "Error al revocar el dispositivo: {error}",
+      "revokeFailedGeneric": "Error al revocar el dispositivo"
     },
     "settings": {
       "title": "Configuración",

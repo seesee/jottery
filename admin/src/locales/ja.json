@@ -7,6 +7,8 @@
     "refreshing": "更新中...",
     "cancel": "キャンセル",
     "confirm": "確認",
+    "close": "閉じる",
+    "save": "保存",
     "loading": "読み込み中...",
     "email": "メール",
     "password": "パスワード",
@@ -65,11 +67,49 @@
       "pendingApprovals": "保留中の承認:"
     }
   },
+  "devices": {
+    "title": "デバイス",
+    "name": "デバイス名",
+    "type": "タイプ",
+    "createdAt": "登録日",
+    "lastSeen": "最終アクセス",
+    "status": "ステータス",
+    "active": "アクティブ",
+    "inactive": "非アクティブ",
+    "revoke": "取り消し",
+    "rename": "名前変更",
+    "revokeConfirmTitle": "デバイスの取り消し",
+    "revokeConfirm": "デバイス「{name}」を取り消してもよろしいですか？このデバイスは同期できなくなります。",
+    "revokeWarning": "このデバイスは同期できなくなります。",
+    "noDevices": "登録されているデバイスはありません",
+    "total": "合計",
+    "nameRequired": "デバイス名は必須です",
+    "toast": {
+      "revoked": "デバイス「{name}」が取り消されました",
+      "revokeFailed": "デバイスの取り消しに失敗しました: {error}",
+      "revokeFailedGeneric": "デバイスの取り消しに失敗しました",
+      "renamed": "デバイスの名前が変更されました",
+      "renameFailed": "デバイスの名前変更に失敗しました: {error}",
+      "renameFailedGeneric": "デバイスの名前変更に失敗しました"
+    }
+  },
   "users": {
     "title": "ユーザー",
     "loadingUsers": "ユーザーを読み込み中...",
     "noUsersFound": "ユーザーが見つかりません",
     "failedToLoad": "ユーザーの読み込みに失敗しました",
+    "detail": {
+      "title": "ユーザー詳細",
+      "userInfo": "ユーザー情報",
+      "approvedAt": "承認日",
+      "lastLogin": "最終ログイン",
+      "lastSync": "最終同期",
+      "statistics": "統計",
+      "attachments": "添付ファイル",
+      "storage": "使用容量",
+      "quota": "ストレージクォータ",
+      "viewDevices": "クリックしてデバイスを表示"
+    },
     "filters": {
       "all": "すべて",
       "pending": "保留中",
@@ -195,6 +235,18 @@
       "storageUsed": "使用容量",
       "lastSync": "最終同期",
       "never": "なし"
+    },
+    "devices": {
+      "title": "あなたのデバイス",
+      "loadError": "デバイスの読み込みに失敗しました",
+      "noDevices": "登録されているデバイスはありません",
+      "never": "なし",
+      "revokeTitle": "デバイスの取り消し",
+      "revokeConfirm": "「{name}」を取り消してもよろしいですか？このデバイスは同期できなくなります。",
+      "revokeNote": "デバイスを取り消すと同期ができなくなります。必要に応じて後でデバイスを再登録できます。",
+      "revoked": "デバイス「{name}」が取り消されました",
+      "revokeFailed": "デバイスの取り消しに失敗しました: {error}",
+      "revokeFailedGeneric": "デバイスの取り消しに失敗しました"
     },
     "settings": {
       "title": "設定",

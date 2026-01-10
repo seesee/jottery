@@ -366,23 +366,107 @@ pub async fn delete_user(
 /// List user's devices
 /// GET /api/v1/admin/users/:id/devices
 pub async fn list_user_devices(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
-    // TODO: Implement device listing
+    let devices = sqlx::query!(
+        r#"
+        SELECT id, device_name, device_type, created_at, last_seen_at, is_active
+        FROM clients
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        "#,
+        user_id
+    )
+    .fetch_all(&state.pool)
+    .await?;
+
+    let device_list: Vec<serde_json::Value> = devices
+        .into_iter()
+        .map(|d| {
+            serde_json::json!({
+                "id": d.id,
+                "name": d.device_name,
+                "type": d.device_type,
+                "createdAt": d.created_at,
+                "lastSeenAt": d.last_seen_at,
+                "isActive": d.is_active.unwrap_or(0) == 1
+            })
+        })
+        .collect();
+
     Ok((
         StatusCode::OK,
         Json(serde_json::json!({
-            "devices": []
+            "devices": device_list
         })),
     ))
 }
 
-/// Revoke device API key
+/// Revoke device API key (deactivate)
 /// DELETE /api/v1/admin/devices/:id
 pub async fn revoke_device(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Path(device_id): Path<String>,
 ) -> AppResult<StatusCode> {
-    // TODO: Implement device revocation
+    // Check device exists
+    let device = sqlx::query!(
+        "SELECT id FROM clients WHERE id = ?",
+        device_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| crate::error::AppError::NotFound("Device not found".to_string()))?;
+
+    // Deactivate the device (soft revoke - keeps record for audit)
+    sqlx::query!(
+        "UPDATE clients SET is_active = 0 WHERE id = ?",
+        device.id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("Admin revoked device: {}", device_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Rename device request
+#[derive(Debug, serde::Deserialize)]
+pub struct RenameDeviceRequest {
+    pub name: String,
+}
+
+/// Rename a device
+/// PATCH /api/v1/admin/devices/:id
+pub async fn rename_device(
+    State(state): State<Arc<AppState>>,
+    Path(device_id): Path<String>,
+    Json(req): Json<RenameDeviceRequest>,
+) -> AppResult<StatusCode> {
+    // Check device exists
+    let device = sqlx::query!(
+        "SELECT id FROM clients WHERE id = ?",
+        device_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| crate::error::AppError::NotFound("Device not found".to_string()))?;
+
+    // Validate name
+    if req.name.trim().is_empty() {
+        return Err(crate::error::AppError::BadRequest("Device name cannot be empty".to_string()));
+    }
+
+    // Update the device name
+    sqlx::query!(
+        "UPDATE clients SET device_name = ? WHERE id = ?",
+        req.name,
+        device.id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("Admin renamed device {}: {}", device_id, req.name);
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -7,6 +7,8 @@
     "refreshing": "Atualizando...",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
+    "close": "Fechar",
+    "save": "Guardar",
     "loading": "Carregando...",
     "email": "E-mail",
     "password": "Senha",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Aprovações pendentes:"
     }
   },
+  "devices": {
+    "title": "Dispositivos",
+    "name": "Nome do dispositivo",
+    "type": "Tipo",
+    "createdAt": "Registado",
+    "lastSeen": "Visto pela última vez",
+    "status": "Estado",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "revoke": "Revogar",
+    "rename": "Renomear",
+    "revokeConfirmTitle": "Revogar dispositivo",
+    "revokeConfirm": "Tem a certeza de que pretende revogar o dispositivo \"{name}\"? Este dispositivo deixará de poder sincronizar.",
+    "revokeWarning": "Este dispositivo deixará de poder sincronizar.",
+    "noDevices": "Nenhum dispositivo registado",
+    "total": "total",
+    "nameRequired": "O nome do dispositivo é obrigatório",
+    "toast": {
+      "revoked": "O dispositivo \"{name}\" foi revogado",
+      "revokeFailed": "Falha ao revogar o dispositivo: {error}",
+      "revokeFailedGeneric": "Falha ao revogar o dispositivo",
+      "renamed": "Dispositivo renomeado com sucesso",
+      "renameFailed": "Falha ao renomear o dispositivo: {error}",
+      "renameFailedGeneric": "Falha ao renomear o dispositivo"
+    }
+  },
   "users": {
     "title": "Utilizadores",
     "loadingUsers": "Carregando utilizadores...",
     "noUsersFound": "Nenhum utilizador encontrado",
     "failedToLoad": "Falha ao carregar utilizadores",
+    "detail": {
+      "title": "Detalhes do utilizador",
+      "userInfo": "Informações do utilizador",
+      "approvedAt": "Aprovado",
+      "lastLogin": "Último acesso",
+      "lastSync": "Última sincronização",
+      "statistics": "Estatísticas",
+      "attachments": "Anexos",
+      "storage": "Armazenamento usado",
+      "quota": "Quota de armazenamento",
+      "viewDevices": "Clique para ver os dispositivos"
+    },
     "filters": {
       "all": "Todos",
       "pending": "Pendentes",
@@ -195,6 +235,18 @@
       "storageUsed": "Armazenamento usado",
       "lastSync": "Última sincronização",
       "never": "Nunca"
+    },
+    "devices": {
+      "title": "Os seus dispositivos",
+      "loadError": "Falha ao carregar os dispositivos",
+      "noDevices": "Nenhum dispositivo registado",
+      "never": "Nunca",
+      "revokeTitle": "Revogar dispositivo",
+      "revokeConfirm": "Tem a certeza de que pretende revogar \"{name}\"? Este dispositivo deixará de poder sincronizar.",
+      "revokeNote": "Revogar um dispositivo impede a sincronização. Pode voltar a registar o dispositivo mais tarde, se necessário.",
+      "revoked": "O dispositivo \"{name}\" foi revogado",
+      "revokeFailed": "Falha ao revogar o dispositivo: {error}",
+      "revokeFailedGeneric": "Falha ao revogar o dispositivo"
     },
     "settings": {
       "title": "Configurações",

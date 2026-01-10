@@ -7,6 +7,8 @@
     "refreshing": "Odświeżanie...",
     "cancel": "Anuluj",
     "confirm": "Potwierdź",
+    "close": "Zamknij",
+    "save": "Zapisz",
     "loading": "Ładowanie...",
     "email": "E-mail",
     "password": "Hasło",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Oczekujące zatwierdzenia:"
     }
   },
+  "devices": {
+    "title": "Urządzenia",
+    "name": "Nazwa urządzenia",
+    "type": "Typ",
+    "createdAt": "Zarejestrowano",
+    "lastSeen": "Ostatnio widziano",
+    "status": "Status",
+    "active": "Aktywne",
+    "inactive": "Nieaktywne",
+    "revoke": "Unieważnij",
+    "rename": "Zmień nazwę",
+    "revokeConfirmTitle": "Unieważnij urządzenie",
+    "revokeConfirm": "Czy na pewno chcesz unieważnić urządzenie \"{name}\"? To urządzenie nie będzie mogło się synchronizować.",
+    "revokeWarning": "To urządzenie nie będzie mogło się synchronizować.",
+    "noDevices": "Brak zarejestrowanych urządzeń",
+    "total": "łącznie",
+    "nameRequired": "Nazwa urządzenia jest wymagana",
+    "toast": {
+      "revoked": "Urządzenie \"{name}\" zostało unieważnione",
+      "revokeFailed": "Nie udało się unieważnić urządzenia: {error}",
+      "revokeFailedGeneric": "Nie udało się unieważnić urządzenia",
+      "renamed": "Nazwa urządzenia została zmieniona",
+      "renameFailed": "Nie udało się zmienić nazwy urządzenia: {error}",
+      "renameFailedGeneric": "Nie udało się zmienić nazwy urządzenia"
+    }
+  },
   "users": {
     "title": "Użytkownicy",
     "loadingUsers": "Ładowanie użytkowników...",
     "noUsersFound": "Nie znaleziono użytkowników",
     "failedToLoad": "Nie udało się załadować użytkowników",
+    "detail": {
+      "title": "Szczegóły użytkownika",
+      "userInfo": "Informacje o użytkowniku",
+      "approvedAt": "Zatwierdzono",
+      "lastLogin": "Ostatnie logowanie",
+      "lastSync": "Ostatnia synchronizacja",
+      "statistics": "Statystyki",
+      "attachments": "Załączniki",
+      "storage": "Użyta pamięć",
+      "quota": "Limit pamięci",
+      "viewDevices": "Kliknij, aby zobaczyć urządzenia"
+    },
     "filters": {
       "all": "Wszyscy",
       "pending": "Oczekujące",
@@ -195,6 +235,18 @@
       "storageUsed": "Użyta pamięć",
       "lastSync": "Ostatnia synchronizacja",
       "never": "Nigdy"
+    },
+    "devices": {
+      "title": "Twoje urządzenia",
+      "loadError": "Nie udało się załadować urządzeń",
+      "noDevices": "Brak zarejestrowanych urządzeń",
+      "never": "Nigdy",
+      "revokeTitle": "Unieważnij urządzenie",
+      "revokeConfirm": "Czy na pewno chcesz unieważnić \"{name}\"? To urządzenie nie będzie mogło się synchronizować.",
+      "revokeNote": "Unieważnienie urządzenia uniemożliwi synchronizację. Możesz ponownie zarejestrować urządzenie później, jeśli zajdzie taka potrzeba.",
+      "revoked": "Urządzenie \"{name}\" zostało unieważnione",
+      "revokeFailed": "Nie udało się unieważnić urządzenia: {error}",
+      "revokeFailedGeneric": "Nie udało się unieważnić urządzenia"
     },
     "settings": {
       "title": "Ustawienia",

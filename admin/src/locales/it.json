@@ -7,6 +7,8 @@
     "refreshing": "Aggiornamento...",
     "cancel": "Annulla",
     "confirm": "Conferma",
+    "close": "Chiudi",
+    "save": "Salva",
     "loading": "Caricamento...",
     "email": "Email",
     "password": "Password",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Approvazioni in attesa:"
     }
   },
+  "devices": {
+    "title": "Dispositivi",
+    "name": "Nome dispositivo",
+    "type": "Tipo",
+    "createdAt": "Registrato",
+    "lastSeen": "Ultima attività",
+    "status": "Stato",
+    "active": "Attivo",
+    "inactive": "Inattivo",
+    "revoke": "Revoca",
+    "rename": "Rinomina",
+    "revokeConfirmTitle": "Revoca dispositivo",
+    "revokeConfirm": "Sei sicuro di voler revocare il dispositivo \"{name}\"? Questo dispositivo non potrà più sincronizzarsi.",
+    "revokeWarning": "Questo dispositivo non potrà più sincronizzarsi.",
+    "noDevices": "Nessun dispositivo registrato",
+    "total": "totale",
+    "nameRequired": "Il nome del dispositivo è obbligatorio",
+    "toast": {
+      "revoked": "Il dispositivo \"{name}\" è stato revocato",
+      "revokeFailed": "Impossibile revocare il dispositivo: {error}",
+      "revokeFailedGeneric": "Impossibile revocare il dispositivo",
+      "renamed": "Dispositivo rinominato con successo",
+      "renameFailed": "Impossibile rinominare il dispositivo: {error}",
+      "renameFailedGeneric": "Impossibile rinominare il dispositivo"
+    }
+  },
   "users": {
     "title": "Utenti",
     "loadingUsers": "Caricamento utenti...",
     "noUsersFound": "Nessun utente trovato",
     "failedToLoad": "Impossibile caricare gli utenti",
+    "detail": {
+      "title": "Dettagli utente",
+      "userInfo": "Informazioni utente",
+      "approvedAt": "Approvato",
+      "lastLogin": "Ultimo accesso",
+      "lastSync": "Ultima sincronizzazione",
+      "statistics": "Statistiche",
+      "attachments": "Allegati",
+      "storage": "Spazio utilizzato",
+      "quota": "Quota di archiviazione",
+      "viewDevices": "Clicca per visualizzare i dispositivi"
+    },
     "filters": {
       "all": "Tutti",
       "pending": "In attesa",
@@ -195,6 +235,18 @@
       "storageUsed": "Spazio utilizzato",
       "lastSync": "Ultima sincronizzazione",
       "never": "Mai"
+    },
+    "devices": {
+      "title": "I tuoi dispositivi",
+      "loadError": "Impossibile caricare i dispositivi",
+      "noDevices": "Nessun dispositivo registrato",
+      "never": "Mai",
+      "revokeTitle": "Revoca dispositivo",
+      "revokeConfirm": "Sei sicuro di voler revocare \"{name}\"? Questo dispositivo non potrà più sincronizzarsi.",
+      "revokeNote": "La revoca di un dispositivo ne impedirà la sincronizzazione. Potrai registrare nuovamente il dispositivo in seguito se necessario.",
+      "revoked": "Il dispositivo \"{name}\" è stato revocato",
+      "revokeFailed": "Impossibile revocare il dispositivo: {error}",
+      "revokeFailedGeneric": "Impossibile revocare il dispositivo"
     },
     "settings": {
       "title": "Impostazioni",

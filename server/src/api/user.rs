@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
@@ -560,5 +560,103 @@ pub async fn logout(
     .await?;
 
     tracing::info!("User logged out: session_id={}", session.id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================================
+// Device Management
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceInfo {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub device_type: String,
+    pub created_at: String,
+    pub last_seen_at: Option<String>,
+    pub is_active: bool,
+}
+
+/// List user's own devices
+/// GET /api/v1/user/devices
+pub async fn list_devices(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<Json<Vec<DeviceInfo>>> {
+    let user_id = &session.user_id;
+
+    let devices = sqlx::query!(
+        r#"
+        SELECT id, device_name, device_type, created_at, last_seen_at, is_active
+        FROM clients
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        "#,
+        user_id
+    )
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to list devices: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    let device_list: Vec<DeviceInfo> = devices
+        .into_iter()
+        .map(|d| DeviceInfo {
+            id: d.id,
+            name: d.device_name,
+            device_type: d.device_type,
+            created_at: d.created_at,
+            last_seen_at: d.last_seen_at,
+            is_active: d.is_active.unwrap_or(0) == 1,
+        })
+        .collect();
+
+    Ok(Json(device_list))
+}
+
+/// Revoke (deactivate) user's own device
+/// DELETE /api/v1/user/devices/:id
+pub async fn revoke_device(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+    Path(device_id): Path<String>,
+) -> AppResult<StatusCode> {
+    let user_id = &session.user_id;
+
+    // Verify the device belongs to this user
+    let device = sqlx::query!(
+        "SELECT user_id FROM clients WHERE id = ?",
+        device_id
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Database error: {}", e);
+        AppError::InternalServerError
+    })?
+    .ok_or_else(|| AppError::NotFound("Device not found".to_string()))?;
+
+    // Verify the device belongs to this user
+    if device.user_id != *user_id {
+        return Err(AppError::Forbidden("Cannot revoke another user's device".to_string()));
+    }
+
+    // Deactivate the device (soft revoke)
+    sqlx::query!(
+        "UPDATE clients SET is_active = 0 WHERE id = ?",
+        device_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to revoke device: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    tracing::info!("User {} revoked device {}", user_id, device_id);
     Ok(StatusCode::NO_CONTENT)
 }

@@ -27,6 +27,15 @@ interface UserAccountInfo {
   lastSyncAt: string | null;
 }
 
+interface Device {
+  id: string;
+  name: string;
+  type: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  isActive: boolean;
+}
+
 interface UserStatusResponse {
   exists: boolean;
   isApproved: boolean;
@@ -148,6 +157,15 @@ class UserApiClient {
     localStorage.removeItem('user_session_token');
   }
 
+  // Device management
+  async getDevices(): Promise<Device[]> {
+    return this.request('GET', '/api/v1/user/devices');
+  }
+
+  async revokeDevice(deviceId: string): Promise<void> {
+    return this.request('DELETE', `/api/v1/user/devices/${deviceId}`);
+  }
+
   // Check user approval status (no auth required)
   async checkStatus(email: string): Promise<UserStatusResponse> {
     const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
@@ -168,4 +186,4 @@ class UserApiClient {
 
 export const userApi = new UserApiClient();
 export { ApiError };
-export type { LoginResponse, UserAccountInfo, UserStatusResponse };
+export type { LoginResponse, UserAccountInfo, UserStatusResponse, Device };

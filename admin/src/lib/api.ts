@@ -48,6 +48,43 @@ interface StatsResponse {
   };
 }
 
+interface Device {
+  id: string;
+  name: string;
+  type: string;
+  createdAt: string;
+  lastSeenAt: string | null;
+  isActive: boolean;
+}
+
+interface UserDetail {
+  id: string;
+  email: string;
+  approved: boolean;
+  isAdmin: boolean;
+  isActive: boolean;
+  createdAt: string;
+  approvedAt: string | null;
+  lastLoginAt: string | null;
+  storageQuotaMb: number;
+  stats: {
+    devices: {
+      total: number;
+      active: number;
+      lastSeen: string | null;
+    };
+    notes: {
+      count: number;
+    };
+    attachments: {
+      count: number;
+      totalBytes: number;
+    };
+    lastSyncAt: string | null;
+  };
+  devices: Device[];
+}
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -128,8 +165,20 @@ class ApiClient {
     return this.request('GET', '/api/v1/admin/users');
   }
 
-  async getUser(id: string): Promise<UserListItem> {
+  async getUser(id: string): Promise<UserDetail> {
     return this.request('GET', `/api/v1/admin/users/${id}`);
+  }
+
+  async getUserDevices(userId: string): Promise<{ devices: Device[] }> {
+    return this.request('GET', `/api/v1/admin/users/${userId}/devices`);
+  }
+
+  async revokeDevice(deviceId: string): Promise<void> {
+    return this.request('DELETE', `/api/v1/admin/devices/${deviceId}`);
+  }
+
+  async renameDevice(deviceId: string, name: string): Promise<void> {
+    return this.request('PATCH', `/api/v1/admin/devices/${deviceId}`, { name });
   }
 
   async approveUser(id: string): Promise<void> {
@@ -170,4 +219,4 @@ class ApiClient {
 
 export const api = new ApiClient();
 export { ApiError };
-export type { LoginResponse, UserListItem, StatsResponse };
+export type { LoginResponse, UserListItem, UserDetail, Device, StatsResponse };

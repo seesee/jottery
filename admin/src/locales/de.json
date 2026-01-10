@@ -7,6 +7,8 @@
     "refreshing": "Aktualisierung...",
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
+    "close": "Schließen",
+    "save": "Speichern",
     "loading": "Laden...",
     "email": "E-Mail",
     "password": "Passwort",
@@ -65,11 +67,49 @@
       "pendingApprovals": "Ausstehende Genehmigungen:"
     }
   },
+  "devices": {
+    "title": "Geräte",
+    "name": "Gerätename",
+    "type": "Typ",
+    "createdAt": "Registriert",
+    "lastSeen": "Zuletzt gesehen",
+    "status": "Status",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "revoke": "Widerrufen",
+    "rename": "Umbenennen",
+    "revokeConfirmTitle": "Gerät widerrufen",
+    "revokeConfirm": "Sind Sie sicher, dass Sie das Gerät \"{name}\" widerrufen möchten? Dieses Gerät kann nicht mehr synchronisiert werden.",
+    "revokeWarning": "Dieses Gerät kann nicht mehr synchronisiert werden.",
+    "noDevices": "Keine Geräte registriert",
+    "total": "insgesamt",
+    "nameRequired": "Gerätename ist erforderlich",
+    "toast": {
+      "revoked": "Gerät \"{name}\" wurde widerrufen",
+      "revokeFailed": "Fehler beim Widerrufen des Geräts: {error}",
+      "revokeFailedGeneric": "Fehler beim Widerrufen des Geräts",
+      "renamed": "Gerät erfolgreich umbenannt",
+      "renameFailed": "Fehler beim Umbenennen des Geräts: {error}",
+      "renameFailedGeneric": "Fehler beim Umbenennen des Geräts"
+    }
+  },
   "users": {
     "title": "Benutzer",
     "loadingUsers": "Benutzer werden geladen...",
     "noUsersFound": "Keine Benutzer gefunden",
     "failedToLoad": "Fehler beim Laden der Benutzer",
+    "detail": {
+      "title": "Benutzerdetails",
+      "userInfo": "Benutzerinformationen",
+      "approvedAt": "Genehmigt",
+      "lastLogin": "Letzte Anmeldung",
+      "lastSync": "Letzte Synchronisation",
+      "statistics": "Statistiken",
+      "attachments": "Anhänge",
+      "storage": "Speichernutzung",
+      "quota": "Speicherkontingent",
+      "viewDevices": "Klicken Sie, um Geräte anzuzeigen"
+    },
     "filters": {
       "all": "Alle",
       "pending": "Ausstehend",
@@ -195,6 +235,18 @@
       "storageUsed": "Speicher genutzt",
       "lastSync": "Letzte Synchronisation",
       "never": "Nie"
+    },
+    "devices": {
+      "title": "Ihre Geräte",
+      "loadError": "Fehler beim Laden der Geräte",
+      "noDevices": "Keine Geräte registriert",
+      "never": "Nie",
+      "revokeTitle": "Gerät widerrufen",
+      "revokeConfirm": "Sind Sie sicher, dass Sie \"{name}\" widerrufen möchten? Dieses Gerät kann nicht mehr synchronisiert werden.",
+      "revokeNote": "Das Widerrufen eines Geräts verhindert die Synchronisation. Sie können das Gerät später bei Bedarf erneut registrieren.",
+      "revoked": "Gerät \"{name}\" wurde widerrufen",
+      "revokeFailed": "Fehler beim Widerrufen des Geräts: {error}",
+      "revokeFailedGeneric": "Fehler beim Widerrufen des Geräts"
     },
     "settings": {
       "title": "Einstellungen",

@@ -7,6 +7,8 @@
     "refreshing": "Vernieuwen...",
     "cancel": "Annuleren",
     "confirm": "Bevestigen",
+    "close": "Sluiten",
+    "save": "Opslaan",
     "loading": "Laden...",
     "email": "E-mail",
     "password": "Wachtwoord",
@@ -65,11 +67,49 @@
       "pendingApprovals": "In behandeling:"
     }
   },
+  "devices": {
+    "title": "Apparaten",
+    "name": "Apparaatnaam",
+    "type": "Type",
+    "createdAt": "Geregistreerd",
+    "lastSeen": "Laatst gezien",
+    "status": "Status",
+    "active": "Actief",
+    "inactive": "Inactief",
+    "revoke": "Intrekken",
+    "rename": "Hernoemen",
+    "revokeConfirmTitle": "Apparaat intrekken",
+    "revokeConfirm": "Weet u zeker dat u apparaat \"{name}\" wilt intrekken? Dit apparaat kan niet meer synchroniseren.",
+    "revokeWarning": "Dit apparaat kan niet meer synchroniseren.",
+    "noDevices": "Geen apparaten geregistreerd",
+    "total": "totaal",
+    "nameRequired": "Apparaatnaam is vereist",
+    "toast": {
+      "revoked": "Apparaat \"{name}\" is ingetrokken",
+      "revokeFailed": "Apparaat intrekken mislukt: {error}",
+      "revokeFailedGeneric": "Apparaat intrekken mislukt",
+      "renamed": "Apparaat succesvol hernoemd",
+      "renameFailed": "Apparaat hernoemen mislukt: {error}",
+      "renameFailedGeneric": "Apparaat hernoemen mislukt"
+    }
+  },
   "users": {
     "title": "Gebruikers",
     "loadingUsers": "Gebruikers laden...",
     "noUsersFound": "Geen gebruikers gevonden",
     "failedToLoad": "Laden van gebruikers mislukt",
+    "detail": {
+      "title": "Gebruikersdetails",
+      "userInfo": "Gebruikersinformatie",
+      "approvedAt": "Goedgekeurd",
+      "lastLogin": "Laatste login",
+      "lastSync": "Laatste synchronisatie",
+      "statistics": "Statistieken",
+      "attachments": "Bijlagen",
+      "storage": "Opslag gebruikt",
+      "quota": "Opslagquotum",
+      "viewDevices": "Klik om apparaten te bekijken"
+    },
     "filters": {
       "all": "Alle",
       "pending": "In behandeling",
@@ -195,6 +235,18 @@
       "storageUsed": "Opslag gebruikt",
       "lastSync": "Laatste synchronisatie",
       "never": "Nooit"
+    },
+    "devices": {
+      "title": "Uw apparaten",
+      "loadError": "Laden van apparaten mislukt",
+      "noDevices": "Geen apparaten geregistreerd",
+      "never": "Nooit",
+      "revokeTitle": "Apparaat intrekken",
+      "revokeConfirm": "Weet u zeker dat u \"{name}\" wilt intrekken? Dit apparaat kan niet meer synchroniseren.",
+      "revokeNote": "Het intrekken van een apparaat voorkomt synchronisatie. U kunt het apparaat later opnieuw registreren indien nodig.",
+      "revoked": "Apparaat \"{name}\" is ingetrokken",
+      "revokeFailed": "Apparaat intrekken mislukt: {error}",
+      "revokeFailedGeneric": "Apparaat intrekken mislukt"
     },
     "settings": {
       "title": "Instellingen",
