@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(size), 0) FROM attachments_meta",
+  "describe": {
+    "columns": [
+      {
+        "name": "COALESCE(SUM(size), 0)",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cb390f3c28a89414cd1e355a2a3fb2b040717784d7c15757785ea11d2e0e932f"
+}

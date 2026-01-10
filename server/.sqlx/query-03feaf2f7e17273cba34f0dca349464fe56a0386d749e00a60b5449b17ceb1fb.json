@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM attachments_data WHERE id IN\n                 (SELECT id FROM attachments_meta WHERE note_id IN\n                  (SELECT id FROM notes WHERE user_id = ?))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "03feaf2f7e17273cba34f0dca349464fe56a0386d749e00a60b5449b17ceb1fb"
+}

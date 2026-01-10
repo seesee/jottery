@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT approved, is_active FROM users WHERE email = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "approved",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "44eb90e9881ebd1ba9b50078d6c876b84c83c3af50b95951baf34093b047d105"
+}
