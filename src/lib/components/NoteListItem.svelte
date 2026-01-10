@@ -104,8 +104,8 @@
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
-      <!-- Multi-select checkbox -->
-      {#if $isMultiSelectMode || isHovered}
+      <!-- Multi-select checkbox: only show when in multi-select mode or this note is selected -->
+      {#if $isMultiSelectMode || isMultiSelected}
         <span
           on:click|stopPropagation={handleCheckboxClick}
           on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
