@@ -8,6 +8,7 @@
 //! The UI is organized into several submodules:
 //!
 //! - [`app`] - Core application state and coordination
+//! - [`app_state`] - Nested state structs for organizing App fields
 //! - [`state`] - State machine types (AppState, InputMode, ViewMode)
 //! - [`rendering`] - UI rendering functions for each screen
 //! - [`operations`] - Business logic operations
@@ -20,6 +21,7 @@
 //! - [`terminal`] - Terminal initialization and management
 
 pub mod app;
+pub mod app_state;
 pub mod calc;
 pub mod color_scheme;
 pub mod event;

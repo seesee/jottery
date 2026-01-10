@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { authService } from '../services/authService';
   import { _ } from 'svelte-i18n';
@@ -282,6 +282,11 @@
 
       registrationStep = 'complete';
       syncError = '';
+
+      // Create sync recovery note (non-blocking)
+      createSyncRecoveryNote().catch(err =>
+        console.warn('[SettingsModal] Failed to create recovery note:', err)
+      );
     } catch (error) {
       console.error('Device registration failed:', error);
       syncError = error instanceof Error ? error.message : 'Device registration failed';

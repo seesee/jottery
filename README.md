@@ -4,9 +4,7 @@ Jottery is a simple, searchable, and privacy-focused scratchpad/notes applicatio
 
 ## Why Jottery?
 
-Jottery was created to solve a common problem: **finding a quick, reliable place to capture fleeting thoughts and temporary data**. Whether you're tweaking text before pasting it elsewhere, saving command output, or jotting down ideas that might be useful later (or might not), you need a scratchpad that's always available and works the way you do.
-
-Most note-taking apps are either too heavy (designed for long-form content) or too limited (basic text files). Jottery strikes a balance: it's lightweight enough for quick captures but powerful enough to handle code snippets, searchable tags, and rich formatting. By providing both web and terminal clients that sync seamlessly, it meets you wherever you're working—whether that's a browser, SSH session, or local terminal.
+Most note-taking apps are either too heavy (designed for long-form documents) or too limited (plain text files). Jottery is a lightweight scratchpad that handles code snippets, searchable tags, and basic formatting. It provides both web and terminal clients that sync seamlessly, so you can access your notes from a browser or SSH session.
 
 ## Features
 
