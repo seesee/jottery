@@ -54,16 +54,12 @@ test.describe('Bulk Operations', () => {
     await expect(noteList.getByText(/First note content/i)).toBeVisible();
     await expect(noteList.getByText(/Second note content/i)).toBeVisible();
 
-    // Enter multi-select mode by clicking the checkbox on first note
-    // First hover to reveal checkbox, then click it
+    // Enter multi-select mode with Ctrl+click on first note
     const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /First note content/i });
-    await firstNoteItem.hover();
-    const firstCheckbox = firstNoteItem.locator('[role="checkbox"]');
-    await firstCheckbox.click();
+    await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
-    // Select second note's checkbox
+    // Now checkboxes are visible - click second note's checkbox
     const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Second note content/i });
-    await secondNoteItem.hover();
     const secondCheckbox = secondNoteItem.locator('[role="checkbox"]');
     await secondCheckbox.click();
 
@@ -113,14 +109,13 @@ test.describe('Bulk Operations', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(1000);
 
-    // Select both notes
+    // Select both notes - Ctrl+click first to enter multi-select mode
     const noteList = page.getByRole('list');
     const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note with tag A/i });
-    await firstNoteItem.hover();
-    await firstNoteItem.locator('[role="checkbox"]').click();
+    await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
+    // Now checkboxes are visible - click second note's checkbox
     const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note with tag B/i });
-    await secondNoteItem.hover();
     await secondNoteItem.locator('[role="checkbox"]').click();
 
     // Click Combine
@@ -154,14 +149,13 @@ test.describe('Bulk Operations', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(1000);
 
-    // Select both notes
+    // Select both notes - Ctrl+click first to enter multi-select mode
     const noteList = page.getByRole('list');
     const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /First note oldest/i });
-    await firstNoteItem.hover();
-    await firstNoteItem.locator('[role="checkbox"]').click();
+    await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
+    // Now checkboxes are visible - click second note's checkbox
     const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Second note newest/i });
-    await secondNoteItem.hover();
     await secondNoteItem.locator('[role="checkbox"]').click();
 
     // Click Combine
@@ -192,11 +186,10 @@ test.describe('Bulk Operations', () => {
     // Create one note
     await createNote(page, 'Single note');
 
-    // Select it
+    // Select it with Ctrl+click
     const noteList = page.getByRole('list');
     const noteItem = noteList.locator('.note-list-item').filter({ hasText: /Single note/i });
-    await noteItem.hover();
-    await noteItem.locator('[role="checkbox"]').click();
+    await noteItem.click({ modifiers: ['ControlOrMeta'] });
 
     // Bulk toolbar should appear with "1 selected"
     await expect(page.getByText(/1.*selected/i)).toBeVisible();
@@ -211,14 +204,13 @@ test.describe('Bulk Operations', () => {
     await createNote(page, 'Note one');
     await createNote(page, 'Note two');
 
-    // Select both notes
+    // Select both notes - Ctrl+click first to enter multi-select mode
     const noteList = page.getByRole('list');
     const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note one/i });
-    await firstNoteItem.hover();
-    await firstNoteItem.locator('[role="checkbox"]').click();
+    await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
+    // Now checkboxes are visible - click second note's checkbox
     const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note two/i });
-    await secondNoteItem.hover();
     await secondNoteItem.locator('[role="checkbox"]').click();
 
     // Click Combine
@@ -251,19 +243,17 @@ test.describe('Bulk Operations', () => {
     await page.waitForTimeout(100);
     await createNote(page, 'CCC Third created');
 
-    // Select all three notes
+    // Select all three notes - Ctrl+click first to enter multi-select mode
     const noteList = page.getByRole('list');
 
     const firstNote = noteList.locator('.note-list-item').filter({ hasText: /AAA First/i });
-    await firstNote.hover();
-    await firstNote.locator('[role="checkbox"]').click();
+    await firstNote.click({ modifiers: ['ControlOrMeta'] });
 
+    // Now checkboxes are visible - click remaining notes' checkboxes
     const secondNote = noteList.locator('.note-list-item').filter({ hasText: /BBB Second/i });
-    await secondNote.hover();
     await secondNote.locator('[role="checkbox"]').click();
 
     const thirdNote = noteList.locator('.note-list-item').filter({ hasText: /CCC Third/i });
-    await thirdNote.hover();
     await thirdNote.locator('[role="checkbox"]').click();
 
     // Should show 3 selected
