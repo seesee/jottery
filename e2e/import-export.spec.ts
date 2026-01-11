@@ -395,12 +395,12 @@ test.describe('Import/Export', () => {
     }
   });
 
-  test('should create new notes on re-import with merge strategy', async ({ page }) => {
-    // The app uses 'merge' strategy which creates new notes with new IDs
-    // This test verifies that behavior - re-importing creates additional notes
+  test('should skip existing notes on re-import with skip strategy', async ({ page }) => {
+    // The app uses 'skip' strategy which skips notes that already exist (by ID)
+    // This test verifies that behavior - re-importing does NOT create duplicates
 
     // Create a note
-    await createNote(page, 'Unique note for import merge test');
+    await createNote(page, 'Unique note for import skip test');
 
     // Export from Advanced tab
     await openAdvancedTab(page);
@@ -441,12 +441,12 @@ test.describe('Import/Export', () => {
 
         // Count notes with the unique content
         const noteList = page.getByRole('list');
-        const matchingNotes = noteList.locator('text=/import merge test/i');
+        const matchingNotes = noteList.locator('text=/import skip test/i');
         const count = await matchingNotes.count();
 
-        // With merge strategy, re-importing creates a second note (both original and imported)
-        // So we expect 2 notes with the same content
-        expect(count).toBe(2);
+        // With skip strategy, re-importing skips notes that already exist (by ID)
+        // So we expect only 1 note (no duplicate created)
+        expect(count).toBe(1);
 
         // Cleanup
         if (downloadPath && fs.existsSync(downloadPath)) {
