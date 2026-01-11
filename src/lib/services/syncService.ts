@@ -201,58 +201,59 @@ class SyncService {
         lastSyncAt: new Date().toISOString(),
       });
 
-      // 5. Reload notes into app state and rebuild search index (batched for performance)
-      console.log('[SyncService] Reloading notes and rebuilding search index...');
+      // 5. Reload notes into app state and rebuild search index
+      // Use incremental update to preserve scroll position and selected note
+      console.log('[SyncService] Refreshing notes from database...');
       let currentSettings: any;
       settings.subscribe(s => currentSettings = s)();
 
       // Set flag to prevent EditorPane from triggering sync during refresh
-      // (selectedNote may briefly become null if selected note isn't in first batch)
       isSyncRefreshing.set(true);
 
-      // Use batched loading to show first notes immediately, load rest in background
-      const firstBatch = await noteService.getAllNotesBatched(
-        currentSettings.sortOrder,
-        50,  // Show first 50 notes immediately
-        (batchedNotes) => {
-          // Background batches update the store incrementally
-          notes.update(currentNotes => {
-            const newNotes = [...currentNotes];
-            batchedNotes.forEach(note => {
-              const index = newNotes.findIndex(n => n.id === note.id);
-              if (index !== -1) {
-                newNotes[index] = note;
-              } else {
-                newNotes.push(note);
-              }
-            });
-            return newNotes;
-          });
-          // Update search index incrementally for background batches
-          batchedNotes.forEach(note => searchService.updateNote(note));
-        }
-      );
+      // Get all notes from database (already decrypted and sorted)
+      const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
 
-      // Set first batch immediately (non-blocking UI)
-      notes.set(firstBatch);
-      searchService.indexNotes(firstBatch);
-      console.log('[SyncService] UI refreshed with first batch, loading remaining notes in background');
+      // Update store incrementally - preserves UI state better than full replace
+      notes.update(currentNotes => {
+        // Build a map of new notes by ID for quick lookup
+        const newNotesMap = new Map(allNotes.map(n => [n.id, n]));
 
-      // Clear flag after a short delay to allow background batches to load
-      // This prevents EditorPane from triggering sync while notes are being refreshed
-      setTimeout(() => isSyncRefreshing.set(false), 500);
+        // Update existing notes and track which ones we've seen
+        const seenIds = new Set<string>();
+        const updatedNotes = currentNotes.map(note => {
+          seenIds.add(note.id);
+          const newNote = newNotesMap.get(note.id);
+          return newNote || note; // Use new version if available
+        }).filter(note => newNotesMap.has(note.id)); // Remove deleted notes
+
+        // Add any new notes that weren't in the current list
+        allNotes.forEach(note => {
+          if (!seenIds.has(note.id)) {
+            updatedNotes.push(note);
+          }
+        });
+
+        return updatedNotes;
+      });
+
+      // Rebuild search index with all notes
+      searchService.indexNotes(allNotes);
+      console.log('[SyncService] Notes refreshed:', allNotes.length);
+
+      // Clear refresh flag
+      isSyncRefreshing.set(false);
 
       return { success: true };
     } catch (error) {
       console.error('Sync failed:', error);
+      // Clear refresh flag immediately on error (no batches loading)
+      isSyncRefreshing.set(false);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     } finally {
       this.isSyncing = false;
-      // Ensure refresh flag is cleared on error (in case we failed before the timeout was set)
-      isSyncRefreshing.set(false);
     }
   }
 
