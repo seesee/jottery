@@ -219,6 +219,20 @@
         "benefit3": "✓ REQUIRES ADMIN APPROVAL",
         "button": "🚀 REGISTER NEW ACCOUNT"
       },
+      "existingAccount": {
+        "title": "Connect existing account",
+        "subtitle": "<strong>Already have an account?</strong> Connect this device",
+        "benefit1": "✓ Use your existing email/password",
+        "benefit2": "✓ Adds this device to your account",
+        "benefit3": "✓ Syncs notes from server to this device",
+        "button": "🔗 Connect to existing account",
+        "formTitle": "Connect to existing account",
+        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Server password",
+        "connectButton": "Connect device",
+        "connecting": "Connecting..."
+      },
       "privacyNote": "<STRONG>🔒 PRIVACY:</STRONG> ALL YOUR NOTES ARE ENCRYPTED END-TO-END. THE SERVER ONLY STORES ENCRYPTED DATA AND CANNOT READ YOUR CONTENT.",
       "selfHostNote": "<STRONG>💡 SELF-HOST?</STRONG> RUN YOUR OWN SERVER - <A HREF=\"HTTPS://GITHUB.COM/YOURUSERNAME/JOTTERY\" TARGET=\"_BLANK\" CLASS=\"UNDERLINE\">SEE GITHUB</A>",
       "back": "← BACK",
@@ -302,6 +316,20 @@
       "syncDisabledDescription": "SYNC IS OPT-IN AND DISABLED BY DEFAULT FOR MAXIMUM PRIVACY.",
       "syncDisabledDetails": "WHEN DISABLED, JOTTERY WILL NOT MAKE ANY NETWORK REQUESTS TO SYNC SERVERS. ALL YOUR NOTES REMAIN COMPLETELY LOCAL TO THIS DEVICE.",
       "toEnableSync": "TO ENABLE SYNC: TOGGLE THE SWITCH ABOVE AND CONFIGURE YOUR SYNC SERVER.",
+      "existingAccount": {
+        "title": "Connect existing account",
+        "subtitle": "<strong>Already have an account?</strong> Connect this device",
+        "benefit1": "✓ Use your existing email/password",
+        "benefit2": "✓ Adds this device to your account",
+        "benefit3": "✓ Syncs notes from server to this device",
+        "button": "🔗 Connect to existing account",
+        "formTitle": "Connect to existing account",
+        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Server password",
+        "connectButton": "Connect device",
+        "connecting": "Connecting..."
+      },
       "privacyNote": "PRIVACY: EVEN WHEN ENABLED, ALL NOTES ARE END-TO-END ENCRYPTED. THE SYNC SERVER CANNOT READ YOUR CONTENT."
     },
     "advancedTab": {

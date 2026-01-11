@@ -171,19 +171,35 @@ export async function importNotes(
 
   for (let i = 0; i < data.notes.length; i++) {
     const exportNote = data.notes[i];
+
+    // Normalize tags to always be an array
+    if (!Array.isArray(exportNote.tags)) {
+      if (typeof exportNote.tags === 'string') {
+        // Handle case where tags is a single string
+        exportNote.tags = exportNote.tags ? [exportNote.tags] : [];
+      } else {
+        exportNote.tags = [];
+      }
+    }
+
     try {
-      // Check if note already exists
+      // Check if note already exists by ID
       const existingNote = await noteRepository.getById(exportNote.id);
+
+      // Determine if we should preserve the original ID
+      let useOriginalId = true;
 
       if (existingNote) {
         if (strategy === 'skip') {
           skipped++;
           continue;
         } else if (strategy === 'replace') {
-          // Delete existing note
+          // Delete existing note, then recreate with same ID
           await noteRepository.delete(exportNote.id);
+        } else {
+          // For 'merge', import with a new ID to create duplicate
+          useOriginalId = false;
         }
-        // For 'merge', we'll import with a new ID
       }
 
       // Process attachments: re-encrypt and store
@@ -230,8 +246,10 @@ export async function importNotes(
         }
       }
 
-      // Create new note with imported content, preserving timestamps and settings
+      // Create note with imported content, preserving timestamps and settings
+      // Preserve original ID unless we're merging (creating intentional duplicate)
       await noteService.createNote(exportNote.content, exportNote.tags, {
+        id: useOriginalId ? exportNote.id : undefined,
         createdAt: exportNote.createdAt,
         modifiedAt: exportNote.modifiedAt,
         pinned: exportNote.pinned,

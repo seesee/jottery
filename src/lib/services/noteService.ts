@@ -21,6 +21,7 @@ class NoteService {
     content: string,
     tags: string[] = [],
     options?: {
+      id?: string; // Optional: preserve ID during import
       createdAt?: string;
       modifiedAt?: string;
       pinned?: boolean;
@@ -36,7 +37,7 @@ class NoteService {
     }
 
     const now = new Date().toISOString();
-    const id = cryptoService.generateUUID();
+    const id = options?.id || cryptoService.generateUUID();
 
     // Encrypt content and tags
     const encryptedContent = await cryptoService.encryptText(content, masterKey.key);
@@ -488,9 +489,16 @@ class NoteService {
             const decryptedTags = await decryptStringArray(encryptedTags, key);
 
             // Defensive check: ensure decrypted tags is an array
+            // (handles edge cases from malformed data or format mismatches)
             if (!Array.isArray(decryptedTags)) {
-              console.error(`[NoteService] Note ${note.id} decrypted tags is not an array:`, typeof decryptedTags, decryptedTags);
-              tags = [];
+              console.warn(`[NoteService] Note ${note.id} decrypted tags is not an array:`, typeof decryptedTags);
+              // Try to salvage: if it's a non-empty string, wrap in array
+              const tagsValue = decryptedTags as unknown;
+              if (typeof tagsValue === 'string' && (tagsValue as string).trim()) {
+                tags = [(tagsValue as string).trim()];
+              } else {
+                tags = [];
+              }
             } else {
               tags = decryptedTags;
             }

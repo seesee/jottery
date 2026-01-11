@@ -931,7 +931,7 @@
       const data = await parseImportFile(file);
       importProgress.total = data.notes.length;
 
-      const result = await importNotes(data, 'merge', (current, total) => {
+      const result = await importNotes(data, 'skip', (current, total) => {
         importProgress = { current, total };
       });
 

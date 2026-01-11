@@ -94,7 +94,33 @@
                     </button>
                   </div>
 
-                  <!-- Option 2: Register with Server (First Device Only) -->
+                  <!-- Option 2: Connect Existing Account -->
+                  <div class="border-2 border-purple-500 dark:border-purple-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                    <div class="flex items-start gap-3 mb-3">
+                      <span class="text-2xl">🔗</span>
+                      <div class="flex-1">
+                        <div class="font-semibold text-purple-900 dark:text-purple-100 mb-1">
+                          {$_('settings.syncSetup.existingAccount.title')}
+                        </div>
+                        <div class="text-xs text-purple-800 dark:text-purple-200 mb-2">
+                          {@html $_('settings.syncSetup.existingAccount.subtitle')}
+                        </div>
+                        <div class="text-xs text-purple-700 dark:text-purple-300 space-y-1">
+                          <div>{$_('settings.syncSetup.existingAccount.benefit1')}</div>
+                          <div>{$_('settings.syncSetup.existingAccount.benefit2')}</div>
+                          <div>{$_('settings.syncSetup.existingAccount.benefit3')}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      on:click={() => registrationMode = 'existingUser'}
+                      class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors"
+                    >
+                      {$_('settings.syncSetup.existingAccount.button')}
+                    </button>
+                  </div>
+
+                  <!-- Option 3: Register with Server (First Device Only) -->
                   <div class="border-2 border-blue-500 dark:border-blue-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
                     <div class="flex items-start gap-3 mb-3">
                       <span class="text-2xl">🌐</span>
@@ -253,10 +279,10 @@
                   {/if}
                 </div>
 {:else if registrationMode === 'existingUser'}
-                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
+                <div class="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 space-y-3">
                   <div class="flex items-center justify-between mb-2">
                     <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                      {$_('settings.syncSetup.linkAccount.title')}
+                      {$_('settings.syncSetup.existingAccount.formTitle')}
                     </h4>
                     <button
                       on:click={onResetRegistrationFlow}
@@ -266,45 +292,43 @@
                     </button>
                   </div>
 
-                  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-3 mb-3">
-                    <p class="text-xs text-blue-800 dark:text-blue-200">
-                      {@html $_('settings.syncSetup.linkAccount.infoText')}
+                  <div class="bg-purple-100 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded p-3 mb-3">
+                    <p class="text-xs text-purple-800 dark:text-purple-200">
+                      {$_('settings.syncSetup.existingAccount.infoText')}
                     </p>
                   </div>
 
                   <div>
                     <label for="existing-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {$_('settings.syncSetup.linkAccount.emailLabel')}
+                      {$_('settings.syncSetup.existingAccount.emailLabel')}
                     </label>
                     <input
                       id="existing-email"
                       type="email"
                       bind:value={userEmail}
                       placeholder={$_('settings.syncSetup.registration.emailPlaceholder')}
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                   <div>
                     <label for="existing-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {$_('settings.syncSetup.linkAccount.passwordLabel')}
+                      {$_('settings.syncSetup.existingAccount.passwordLabel')}
                     </label>
                     <input
                       id="existing-password"
                       type="password"
                       bind:value={userPassword}
                       placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                   <button
-                    disabled
-                    class="w-full px-4 py-2 bg-gray-400 text-white text-sm font-medium rounded-md cursor-not-allowed"
+                    on:click={onRegisterDevice}
+                    disabled={!syncEndpoint || !userEmail || !userPassword || !deviceName || registeringDevice}
+                    class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-sm font-medium rounded-md transition-colors"
                   >
-                    {$_('settings.syncSetup.linkAccount.comingSoon')}
+                    {registeringDevice ? $_('settings.syncSetup.existingAccount.connecting') : $_('settings.syncSetup.existingAccount.connectButton')}
                   </button>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
-                    {$_('settings.syncSetup.linkAccount.futureUpdate')}
-                  </p>
                 </div>
 {:else if registrationMode === 'importCredentials'}
                 <div class="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20 space-y-3">

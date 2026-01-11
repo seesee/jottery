@@ -232,6 +232,20 @@
         "benefit3": "✓ Requires admin approval",
         "button": "🚀 Register new account"
       },
+      "existingAccount": {
+        "title": "Connect existing account",
+        "subtitle": "<strong>Already have an account?</strong> Connect this device",
+        "benefit1": "✓ Use your existing email/password",
+        "benefit2": "✓ Adds this device to your account",
+        "benefit3": "✓ Syncs notes from server to this device",
+        "button": "🔗 Connect to existing account",
+        "formTitle": "Connect to existing account",
+        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Server password",
+        "connectButton": "Connect device",
+        "connecting": "Connecting..."
+      },
       "privacyNote": "<strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server only stores encrypted data and cannot read your content.",
       "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>",
       "back": "← Back",
