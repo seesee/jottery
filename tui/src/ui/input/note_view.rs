@@ -2,10 +2,40 @@
 
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent};
+use std::collections::HashSet;
 
 use crate::ui::app::App;
 use crate::ui::operations;
 use crate::ui::state::{AppState, InputMode};
+
+/// Collect all unique tags from notes
+fn collect_all_tags(app: &App) -> Vec<String> {
+    let mut all_tags: HashSet<String> = HashSet::new();
+    for note in &app.notes {
+        for tag in &note.tags {
+            all_tags.insert(tag.clone());
+        }
+    }
+    let mut tags: Vec<String> = all_tags.into_iter().collect();
+    tags.sort();
+    tags
+}
+
+/// Get tag completions matching the current input
+fn get_tag_completions(app: &App) -> Vec<String> {
+    let query = app.tag_input.to_lowercase();
+    // Require at least one character to start completing
+    if query.is_empty() {
+        return Vec::new();
+    }
+    collect_all_tags(app)
+        .into_iter()
+        .filter(|tag| {
+            let tag_lower = tag.to_lowercase();
+            tag_lower.starts_with(&query) && !app.current_tags.contains(tag)
+        })
+        .collect()
+}
 
 /// Handle key events in note view state
 pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
@@ -50,18 +80,55 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Esc => {
                 // Exit tag mode
                 app.tag_input.clear();
+                app.tag_completions.clear();
+                app.tag_completion_index = 0;
                 app.input_mode = InputMode::Normal;
             }
             KeyCode::Enter => {
-                // Add tag
-                let tag = app.tag_input.trim().to_string();
+                // Add tag (either from completion or typed)
+                let tag = if !app.tag_completions.is_empty() && app.tag_completion_index < app.tag_completions.len() {
+                    app.tag_completions[app.tag_completion_index].clone()
+                } else {
+                    app.tag_input.trim().to_string()
+                };
                 if !tag.is_empty() && !app.current_tags.contains(&tag) {
                     app.current_tags.push(tag);
                 }
                 app.tag_input.clear();
+                app.tag_completions.clear();
+                app.tag_completion_index = 0;
+            }
+            KeyCode::Tab => {
+                // Tab completion - cycle forward through matching tags
+                if app.tag_completions.is_empty() {
+                    // Get new completions
+                    app.tag_completions = get_tag_completions(app);
+                    app.tag_completion_index = 0;
+                } else {
+                    // Cycle to next
+                    app.tag_completion_index = (app.tag_completion_index + 1) % app.tag_completions.len();
+                }
+                // Update input to show current completion
+                if !app.tag_completions.is_empty() {
+                    app.tag_input = app.tag_completions[app.tag_completion_index].clone();
+                }
+            }
+            KeyCode::BackTab => {
+                // Shift+Tab - cycle backward through completions
+                if !app.tag_completions.is_empty() {
+                    if app.tag_completion_index == 0 {
+                        app.tag_completion_index = app.tag_completions.len() - 1;
+                    } else {
+                        app.tag_completion_index -= 1;
+                    }
+                    app.tag_input = app.tag_completions[app.tag_completion_index].clone();
+                }
             }
             KeyCode::Char(c) => {
                 app.tag_input.push(c);
+                // Clear completions when input changes
+                app.tag_completions.clear();
+                app.tag_completion_index = 0;
             }
             KeyCode::Backspace => {
                 if app.tag_input.is_empty() && !app.current_tags.is_empty() {
@@ -70,6 +137,9 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 } else {
                     app.tag_input.pop();
                 }
+                // Clear completions when input changes
+                app.tag_completions.clear();
+                app.tag_completion_index = 0;
             }
             _ => {}
         },

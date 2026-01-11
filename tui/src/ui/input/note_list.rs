@@ -3,6 +3,7 @@
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
+use std::collections::HashSet;
 
 use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
@@ -10,6 +11,37 @@ use crate::ui::app::App;
 use crate::ui::input::text_input::{handle_text_input, TextInputResult};
 use crate::ui::operations;
 use crate::ui::state::{AppState, FocusedPanel, InputMode, ViewMode};
+
+/// Get the tag partial from search input (text after the last # that doesn't contain space)
+fn get_search_tag_partial(input: &str) -> Option<(String, usize)> {
+    let last_hash = input.rfind('#')?;
+    let after_hash = &input[last_hash + 1..];
+    // If there's a space after the #, there's no active tag partial
+    if after_hash.contains(' ') {
+        return None;
+    }
+    Some((after_hash.to_string(), last_hash))
+}
+
+/// Get search tag completions matching the current partial
+fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
+    // Require at least one character to start completing
+    if partial.is_empty() {
+        return Vec::new();
+    }
+    let partial_lower = partial.to_lowercase();
+    let mut all_tags: HashSet<String> = HashSet::new();
+    for note in &app.notes {
+        for tag in &note.tags {
+            if tag.to_lowercase().starts_with(&partial_lower) {
+                all_tags.insert(tag.clone());
+            }
+        }
+    }
+    let mut tags: Vec<String> = all_tags.into_iter().collect();
+    tags.sort();
+    tags
+}
 
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
@@ -186,6 +218,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.search_active = false;
                 app.search_input.clear();
                 app.selected_note = 0;
+                // Clear tag completions
+                app.search_tag_completions.clear();
+                app.search_tag_completion_index = 0;
             }
             KeyCode::Enter => {
                 // Exit search and edit selected note directly
@@ -246,12 +281,18 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.selected_note = 0; // Reset selection when search changes
                 let filtered = app.filtered_notes();
                 app.selected_note_id = filtered.first().map(|n| n.id.clone());
+                // Clear tag completions when input changes
+                app.search_tag_completions.clear();
+                app.search_tag_completion_index = 0;
             }
             KeyCode::Backspace => {
                 app.search_input.pop();
                 app.selected_note = 0;
                 let filtered = app.filtered_notes();
                 app.selected_note_id = filtered.first().map(|n| n.id.clone());
+                // Clear tag completions when input changes
+                app.search_tag_completions.clear();
+                app.search_tag_completion_index = 0;
             }
             KeyCode::Down => {
                 let filtered_count = app.filtered_notes().len();
@@ -271,14 +312,53 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Tab => {
-                // Exit search mode and toggle to attachments panel if there are attachments
-                app.search_active = false;
-                let filtered = app.filtered_notes();
-                if !filtered.is_empty() && app.selected_note < filtered.len() {
-                    let note = &filtered[app.selected_note];
-                    if !note.attachments.is_empty() {
-                        app.focused_panel = FocusedPanel::Attachments;
-                        app.selected_attachment = 0;
+                // Check if there's a tag partial to complete
+                if let Some((partial, hash_index)) = get_search_tag_partial(&app.search_input) {
+                    if app.search_tag_completions.is_empty() {
+                        // Get new completions
+                        app.search_tag_completions = get_search_tag_completions(app, &partial);
+                        app.search_tag_completion_index = 0;
+                    } else {
+                        // Cycle to next
+                        app.search_tag_completion_index =
+                            (app.search_tag_completion_index + 1) % app.search_tag_completions.len();
+                    }
+                    // Update input to show current completion
+                    if !app.search_tag_completions.is_empty() {
+                        let completion = &app.search_tag_completions[app.search_tag_completion_index];
+                        // Replace the partial with the full tag
+                        app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
+                        app.selected_note = 0;
+                        let filtered = app.filtered_notes();
+                        app.selected_note_id = filtered.first().map(|n| n.id.clone());
+                    }
+                } else {
+                    // No tag partial - exit search mode and toggle to attachments panel
+                    app.search_active = false;
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note = &filtered[app.selected_note];
+                        if !note.attachments.is_empty() {
+                            app.focused_panel = FocusedPanel::Attachments;
+                            app.selected_attachment = 0;
+                        }
+                    }
+                }
+            }
+            KeyCode::BackTab => {
+                // Shift+Tab - cycle backward through tag completions
+                if !app.search_tag_completions.is_empty() {
+                    if let Some((_, hash_index)) = get_search_tag_partial(&app.search_input) {
+                        if app.search_tag_completion_index == 0 {
+                            app.search_tag_completion_index = app.search_tag_completions.len() - 1;
+                        } else {
+                            app.search_tag_completion_index -= 1;
+                        }
+                        let completion = &app.search_tag_completions[app.search_tag_completion_index];
+                        app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
+                        app.selected_note = 0;
+                        let filtered = app.filtered_notes();
+                        app.selected_note_id = filtered.first().map(|n| n.id.clone());
                     }
                 }
             }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount } from '../stores/appStore';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
@@ -19,6 +19,11 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showMobileSearch = false;
+
+  // Tag autocomplete state
+  let tagSuggestions: string[] = [];
+  let showTagSuggestions = false;
+  let selectedSuggestionIndex = -1;
 
   // Get current notebook info for display
   const notebook = getCurrentNotebook();
@@ -113,6 +118,88 @@
   function closeMobileMenu() {
     showMobileMenu = false;
   }
+
+  // Tag autocomplete functions
+  function getTagPartial(query: string): { partial: string; startIndex: number } | null {
+    // Find the last # in the query that's being typed (not followed by space)
+    const lastHashIndex = query.lastIndexOf('#');
+    if (lastHashIndex === -1) return null;
+
+    // Extract text after the last #
+    const afterHash = query.slice(lastHashIndex + 1);
+
+    // If there's a space after the partial tag, user finished typing that tag
+    if (afterHash.includes(' ')) return null;
+
+    return { partial: afterHash, startIndex: lastHashIndex };
+  }
+
+  function handleSearchInput() {
+    const tagInfo = getTagPartial($searchQuery);
+    if (tagInfo && tagInfo.partial.length > 0) {
+      // Get suggestions for the partial tag
+      const partial = tagInfo.partial.toLowerCase();
+      const allTags = new Set<string>();
+
+      $notes.forEach((note) => {
+        note.tags.forEach((tag) => {
+          if (tag.toLowerCase().includes(partial)) {
+            allTags.add(tag);
+          }
+        });
+      });
+
+      tagSuggestions = Array.from(allTags).slice(0, 5);
+      showTagSuggestions = tagSuggestions.length > 0;
+      selectedSuggestionIndex = -1;
+    } else {
+      showTagSuggestions = false;
+      tagSuggestions = [];
+    }
+  }
+
+  function selectTagSuggestion(tag: string) {
+    const tagInfo = getTagPartial($searchQuery);
+    if (tagInfo) {
+      // Replace the partial tag with the full tag
+      const before = $searchQuery.slice(0, tagInfo.startIndex);
+      searchQuery.set(before + '#' + tag + ' ');
+    }
+    showTagSuggestions = false;
+    tagSuggestions = [];
+    selectedSuggestionIndex = -1;
+  }
+
+  function handleSearchKeyDown(e: KeyboardEvent) {
+    if (!showTagSuggestions) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, tagSuggestions.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+    } else if (e.key === 'Tab' || e.key === 'Enter') {
+      if (selectedSuggestionIndex >= 0 && tagSuggestions[selectedSuggestionIndex]) {
+        e.preventDefault();
+        selectTagSuggestion(tagSuggestions[selectedSuggestionIndex]);
+      } else if (tagSuggestions.length > 0) {
+        e.preventDefault();
+        selectTagSuggestion(tagSuggestions[0]);
+      }
+    } else if (e.key === 'Escape') {
+      showTagSuggestions = false;
+      selectedSuggestionIndex = -1;
+    }
+  }
+
+  function handleSearchBlur() {
+    // Delay to allow click on suggestion
+    setTimeout(() => {
+      showTagSuggestions = false;
+      selectedSuggestionIndex = -1;
+    }, 200);
+  }
 </script>
 
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
@@ -168,6 +255,9 @@
             id="search-input"
             type="text"
             bind:value={$searchQuery}
+            on:input={handleSearchInput}
+            on:keydown={handleSearchKeyDown}
+            on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
             disabled={loadingNotes}
             class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
@@ -185,6 +275,19 @@
             >
               ✕
             </button>
+          {/if}
+          <!-- Tag suggestions dropdown -->
+          {#if showTagSuggestions}
+            <div class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+              {#each tagSuggestions as suggestion, index}
+                <button
+                  on:click={() => selectTagSuggestion(suggestion)}
+                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+                >
+                  #{suggestion}
+                </button>
+              {/each}
+            </div>
           {/if}
         </div>
         {#if $searchResultCount.isSearching}
@@ -309,6 +412,9 @@
             id="search-input-mobile"
             type="text"
             bind:value={$searchQuery}
+            on:input={handleSearchInput}
+            on:keydown={handleSearchKeyDown}
+            on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
             disabled={loadingNotes}
             class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
@@ -326,6 +432,19 @@
             >
               ✕
             </button>
+          {/if}
+          <!-- Tag suggestions dropdown (mobile) -->
+          {#if showTagSuggestions}
+            <div class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+              {#each tagSuggestions as suggestion, index}
+                <button
+                  on:click={() => selectTagSuggestion(suggestion)}
+                  class="w-full text-left px-3 py-3 min-h-11 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+                >
+                  #{suggestion}
+                </button>
+              {/each}
+            </div>
           {/if}
         </div>
         {#if $searchResultCount.isSearching}
