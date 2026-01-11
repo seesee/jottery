@@ -47,23 +47,19 @@ class SyncService {
    * Register a new client with the server
    */
   async register(endpoint: string, deviceName: string): Promise<AuthRegisterResponse> {
-    console.log('[SyncService] Starting registration...', { endpoint, deviceName });
     endpoint = this.normalizeEndpoint(endpoint);
-    console.log('[SyncService] Normalized endpoint:', endpoint);
+    console.log('[SyncService] Registering device:', deviceName, 'at', endpoint);
 
     const request: AuthRegisterRequest = {
       deviceName,
       deviceType: 'web',
     };
 
-    console.log('[SyncService] Sending registration request...');
     const response = await fetch(`${endpoint}/api/${API_VERSION}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
-
-    console.log('[SyncService] Registration response:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -72,20 +68,16 @@ class SyncService {
     }
 
     const data: AuthRegisterResponse = await response.json();
-    console.log('[SyncService] Registration successful:', { clientId: data.clientId });
 
     // Encrypt and store API key
-    console.log('[SyncService] Encrypting API key...');
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
     }
 
     const encryptedApiKey = await cryptoService.encryptText(data.apiKey, masterKey.key);
-    console.log('[SyncService] API key encrypted');
 
     // Update sync metadata
-    console.log('[SyncService] Saving sync metadata...');
     await syncRepository.updateMetadata({
       apiKey: JSON.stringify(encryptedApiKey),
       clientId: data.clientId,
@@ -95,13 +87,12 @@ class SyncService {
     });
 
     // Update settings
-    console.log('[SyncService] Updating settings...');
     await settingsRepository.update({
       syncEnabled: true,
       syncEndpoint: endpoint,
     });
 
-    console.log('[SyncService] Registration complete!');
+    console.log('[SyncService] Registration complete, clientId:', data.clientId);
 
     // Create sync recovery note (non-blocking)
     createSyncRecoveryNote().catch(err =>
@@ -115,8 +106,8 @@ class SyncService {
    * Configure sync manually with existing credentials
    */
   async configureCredentials(endpoint: string, clientId: string, apiKey: string): Promise<void> {
-    console.log('[SyncService] Configuring sync with manual credentials...');
     endpoint = this.normalizeEndpoint(endpoint);
+    console.log('[SyncService] Configuring sync credentials for', endpoint);
 
     // Verify master key is available
     const masterKey = keyManager.getMasterKey();
@@ -125,11 +116,9 @@ class SyncService {
     }
 
     // Encrypt API key before storing
-    console.log('[SyncService] Encrypting API key...');
     const encryptedApiKey = await cryptoService.encryptText(apiKey, masterKey.key);
 
     // Save sync metadata
-    console.log('[SyncService] Saving sync metadata...');
     await syncRepository.updateMetadata({
       apiKey: JSON.stringify(encryptedApiKey),
       clientId: clientId,
@@ -139,13 +128,12 @@ class SyncService {
     });
 
     // Update settings
-    console.log('[SyncService] Updating settings...');
     await settingsRepository.update({
       syncEnabled: true,
       syncEndpoint: endpoint,
     });
 
-    console.log('[SyncService] Manual configuration complete!');
+    console.log('[SyncService] Credentials configured successfully');
 
     // Create sync recovery note (non-blocking)
     createSyncRecoveryNote().catch(err =>
@@ -157,14 +145,11 @@ class SyncService {
    * Perform full bidirectional sync
    */
   async syncNow(forceFullSync = false): Promise<{ success: boolean; error?: string }> {
-    console.log('[SyncService] ========================================');
-    console.log('[SyncService] syncNow() called with forceFullSync =', forceFullSync);
-    console.log('[SyncService] ========================================');
-
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
 
+    console.log('[SyncService] Starting sync', forceFullSync ? '(force full)' : '');
     this.isSyncing = true;
     try {
       const metadata = await syncRepository.getMetadata();
@@ -185,12 +170,11 @@ class SyncService {
       try {
         await this.getServerStatus(metadata.syncEndpoint, apiKey);
       } catch (error) {
-        console.error('Server status check failed:', error);
+        console.error('[SyncService] Server status check failed:', error);
         // Continue anyway - server might be slow but still functional
       }
 
       // 2. Push local changes (force full sync if requested)
-      console.log('[SyncService] About to call push() with forceFullSync =', forceFullSync);
       await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
 
       // 3. Pull remote changes
@@ -203,7 +187,6 @@ class SyncService {
 
       // 5. Reload notes into app state and rebuild search index
       // Use incremental update to preserve scroll position and selected note
-      console.log('[SyncService] Refreshing notes from database...');
       let currentSettings: any;
       settings.subscribe(s => currentSettings = s)();
 
@@ -261,32 +244,22 @@ class SyncService {
    * Push local changes to server
    */
   private async push(endpoint: string, apiKey: string, forceAll = false): Promise<void> {
-    console.log('[SyncService] ========== PUSH START ==========');
-    console.log('[SyncService] Push called with forceAll =', forceAll);
     endpoint = this.normalizeEndpoint(endpoint);
-    const metadata = await syncRepository.getMetadata();
-    console.log('[SyncService] Last sync timestamp:', metadata?.lastSyncAt || 'NEVER');
 
     let modifiedNotes: Note[];
     if (forceAll) {
       // Force push ALL notes, regardless of timestamps
-      console.log('[SyncService] Force sync enabled - pushing all notes');
       modifiedNotes = await noteRepository.getAll();
-      console.log('[SyncService] Retrieved ALL notes from repository:', modifiedNotes.length);
-      console.log('[SyncService] Note IDs:', modifiedNotes.map(n => n.id));
     } else {
       // Only push notes that need syncing (flagged with needsSync)
-      console.log('[SyncService] Getting notes that need syncing');
       modifiedNotes = await noteRepository.getNotesNeedingSync();
-      console.log('[SyncService] Retrieved notes needing sync:', modifiedNotes.length);
     }
 
     if (modifiedNotes.length === 0) {
-      console.log('[SyncService] No notes to push - exiting');
       return; // Nothing to push
     }
 
-    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes to server`);
+    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes${forceAll ? ' (force)' : ''}`);
 
     // Collect attachments for all modified notes
     const attachmentMap = new Map<string, string>();
@@ -338,14 +311,6 @@ class SyncService {
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
       versions: await this.collectVersionsForPush(modifiedNotes),
     };
-
-    // Debug log tag formats being sent
-    pushRequest.notes.forEach((note, idx) => {
-      console.log(`[SyncService] Push - Note[${idx}] ${note.id}: ${note.tags.length} tags`);
-      if (note.tags.length > 0) {
-        console.log(`[SyncService] Push - Note[${idx}] first tag format:`, note.tags[0].substring(0, 100));
-      }
-    });
 
     // Send to server
     const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/push`, {
@@ -474,16 +439,7 @@ class SyncService {
 
     const result: SyncPullResponse = await response.json();
 
-    console.log(`[SyncService] Pull complete: ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions?.length || 0} deletions`);
-
-    // Debug log tag formats being received
-    result.notes.forEach((note, idx) => {
-      console.log(`[SyncService] Pull - Note[${idx}] ${note.id}: ${note.tags?.length || 0} tags`);
-      if (note.tags && note.tags.length > 0) {
-        console.log(`[SyncService] Pull - Note[${idx}] tags type:`, Array.isArray(note.tags) ? 'array' : typeof note.tags);
-        console.log(`[SyncService] Pull - Note[${idx}] first tag:`, JSON.stringify(note.tags[0]).substring(0, 100));
-      }
-    });
+    console.log(`[SyncService] Pulled ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions?.length || 0} deletions`);
 
     // Get master key for tag conversion
     const masterKey = keyManager.getMasterKey();
@@ -506,18 +462,14 @@ class SyncService {
 
       if (!localNote) {
         // New note from server - create locally
-        console.log(`[SyncService] Creating new note from server: ${remoteNote.id}`);
         await noteRepository.create(noteForStorage);
       } else {
         // Conflict resolution: Last-Write-Wins by modifiedAt
         if (remoteNote.modifiedAt > localNote.modifiedAt) {
           // Server version is newer - update local
-          console.log(`[SyncService] Updating note with server version (newer): ${remoteNote.id}`);
           await noteRepository.update(noteForStorage);
-        } else {
-          // Local version is newer or equal - keep local (already pushed or will be pushed)
-          console.log(`[SyncService] Keeping local version (newer or equal): ${remoteNote.id}`);
         }
+        // Local version is newer or equal - keep local (already pushed or will be pushed)
       }
 
       // Update sync metadata
@@ -534,14 +486,12 @@ class SyncService {
       try {
         const blob = base64ToArrayBuffer(attachment.data);
         await attachmentRepository.storeBlob(attachment.id, blob);
-        console.log(`[SyncService] Downloaded attachment: ${attachment.id}`);
       } catch (error) {
-        console.error(`Failed to download attachment ${attachment.id}:`, error);
+        console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
       }
     }
 
     // Merge versions from server
-    console.log(`[SyncService] Pull - Received ${result.versions.length} versions from server`);
     for (const serverVersion of result.versions) {
       // Check if we already have this version locally
       const existingVersion = await versionRepository.getVersion(
@@ -572,8 +522,6 @@ class SyncService {
             reason: serverVersion.reason as 'sync' | 'manual-sync',
           }
         );
-
-        console.log(`[SyncService] Pull - Stored new version from server: ${serverVersion.versionKey}`);
       }
     }
 
@@ -583,7 +531,6 @@ class SyncService {
         const localNote = await noteRepository.getById(deletion.id);
         if (localNote && !localNote.deleted) {
           // Server says deleted - soft delete locally
-          console.log(`[SyncService] Soft deleting note from server: ${deletion.id}`);
           await noteRepository.softDelete(deletion.id);
         }
       }
@@ -641,12 +588,9 @@ class SyncService {
    */
   enableAutoSync(intervalMinutes: number = 5): void {
     this.disableAutoSync(); // Clear any existing timer
-    console.log(`[SyncService] Enabling auto-sync every ${intervalMinutes} minutes`);
+    console.log(`[SyncService] Auto-sync enabled (${intervalMinutes}m interval)`);
     this.autoSyncTimer = window.setInterval(
-      () => {
-        console.log('[SyncService] Auto-sync triggered');
-        this.syncNow();
-      },
+      () => this.syncNow(),
       intervalMinutes * 60 * 1000
     );
   }
@@ -656,7 +600,6 @@ class SyncService {
    */
   disableAutoSync(): void {
     if (this.autoSyncTimer) {
-      console.log('[SyncService] Disabling auto-sync');
       clearInterval(this.autoSyncTimer);
       this.autoSyncTimer = undefined;
     }
@@ -674,8 +617,6 @@ class SyncService {
    * Clears all sync credentials and metadata, but preserves local notes
    */
   async disconnect(): Promise<void> {
-    console.log('[SyncService] Disconnecting from sync server...');
-
     // Disable auto-sync first
     this.disableAutoSync();
 
@@ -724,7 +665,6 @@ class SyncService {
       }
     }
 
-    console.log(`[SyncService] Push - Sending ${versions.length} versions`);
     return versions;
   }
 }
