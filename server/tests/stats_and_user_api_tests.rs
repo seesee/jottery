@@ -171,6 +171,7 @@ async fn test_admin_stats_requires_authentication() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -215,6 +216,7 @@ async fn test_admin_stats_success() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -279,6 +281,7 @@ async fn test_user_login_success() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -336,6 +339,7 @@ async fn test_user_login_wrong_password() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -386,6 +390,7 @@ async fn test_user_login_nonexistent_user() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -435,6 +440,7 @@ async fn test_get_account_info_success() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -515,6 +521,7 @@ async fn test_get_account_info_requires_authentication() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -561,6 +568,7 @@ async fn test_delete_all_notes_success() {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
