@@ -8,6 +8,9 @@ import type { Note, UserSettings, EncryptionMetadata, NoteVersion } from '../typ
 let DB_NAME = 'jottery'; // Default, can be changed before initialization
 const DB_VERSION = 5;
 
+// Track if database was terminated unexpectedly
+let dbTerminated = false;
+
 // Object store names
 export const STORES = {
   NOTES: 'notes',
@@ -181,8 +184,9 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
       }
     },
     terminated() {
-      console.error('Database connection terminated unexpectedly.');
+      console.error('Database connection terminated unexpectedly. Please refresh the page.');
       dbInstance = null;
+      dbTerminated = true;
     },
   });
 
@@ -224,6 +228,20 @@ export function getDB(): IDBPDatabase<JotteryDB> {
     throw new Error('Database not initialized. Call initDB() first.');
   }
   return dbInstance;
+}
+
+/**
+ * Check if database is available (initialized and not terminated)
+ */
+export function isDBAvailable(): boolean {
+  return dbInstance !== null && !dbTerminated;
+}
+
+/**
+ * Check if database was terminated unexpectedly
+ */
+export function wasDBTerminated(): boolean {
+  return dbTerminated;
 }
 
 /**
