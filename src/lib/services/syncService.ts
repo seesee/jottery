@@ -29,6 +29,7 @@ import { searchService } from './searchService';
 import { notes, settings, isSyncRefreshing } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
+import { isDBAvailable, wasDBTerminated } from './db';
 
 const API_VERSION = 'v1';
 
@@ -145,6 +146,18 @@ class SyncService {
    * Perform full bidirectional sync
    */
   async syncNow(forceFullSync = false): Promise<{ success: boolean; error?: string }> {
+    // Check if database is available before attempting sync
+    if (!isDBAvailable()) {
+      if (wasDBTerminated()) {
+        // Database was terminated - disable auto-sync to stop the error loop
+        this.disableAutoSync();
+        console.error('[SyncService] Database terminated. Auto-sync disabled. Please refresh the page.');
+        toast.error('Database connection lost. Please refresh the page to continue.');
+        return { success: false, error: 'Database connection lost. Please refresh the page.' };
+      }
+      return { success: false, error: 'Database not available' };
+    }
+
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
