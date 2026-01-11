@@ -4,7 +4,7 @@ Jottery is a simple, searchable, scratchpad/notes application. It is designed to
 
 ## Why Jottery?
 
-Most note-taking apps are either too heavy (designed for long-form documents) or too limited (plain text files). Jottery is a lightweight scratchpad that handles code snippets, searchable tags, and basic formatting. It provides both web and terminal clients that sync seamlessly, so you can access your notes from a browser or SSH session. A script to convert Evernote .enex files into something Jottery can import is included for user convenience.
+Most note-taking apps are either too heavy (designed for long-form documents) or too limited (plain text files). Jottery is a lightweight scratchpad that allows notes to be easily created, tagged and found again. It handles code snippets, searchable tags, and includes a handy "repl" calculator. It provides both web and terminal clients that sync seamlessly, so you can access your notes from a browser or SSH session. A script to convert Evernote .enex files into something Jottery can import is included for user convenience.
 
 ## Features
 
