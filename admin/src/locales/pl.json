@@ -9,6 +9,7 @@
     "confirm": "Potwierdź",
     "close": "Zamknij",
     "save": "Zapisz",
+    "edit": "Edytuj",
     "loading": "Ładowanie...",
     "email": "E-mail",
     "password": "Hasło",
@@ -108,7 +109,13 @@
       "attachments": "Załączniki",
       "storage": "Użyta pamięć",
       "quota": "Limit pamięci",
-      "viewDevices": "Kliknij, aby zobaczyć urządzenia"
+      "viewDevices": "Kliknij, aby zobaczyć urządzenia",
+      "settings": "Ustawienia użytkownika",
+      "maxUploadSize": "Maks. rozmiar przesyłania",
+      "maxUploadSizeHelp": "Maksymalny rozmiar na żądanie synchronizacji (zawiera załączniki)",
+      "settingsSaved": "Ustawienia użytkownika zostały zapisane",
+      "settingsSaveFailed": "Nie udało się zapisać ustawień: {error}",
+      "settingsSaveFailedGeneric": "Nie udało się zapisać ustawień"
     },
     "filters": {
       "all": "Wszyscy",

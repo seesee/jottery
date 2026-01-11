@@ -9,6 +9,7 @@
     "confirm": "確認",
     "close": "閉じる",
     "save": "保存",
+    "edit": "編集",
     "loading": "読み込み中...",
     "email": "メール",
     "password": "パスワード",
@@ -108,7 +109,13 @@
       "attachments": "添付ファイル",
       "storage": "使用容量",
       "quota": "ストレージクォータ",
-      "viewDevices": "クリックしてデバイスを表示"
+      "viewDevices": "クリックしてデバイスを表示",
+      "settings": "ユーザー設定",
+      "maxUploadSize": "最大アップロードサイズ",
+      "maxUploadSizeHelp": "同期リクエストあたりの最大サイズ（添付ファイルを含む）",
+      "settingsSaved": "ユーザー設定が正常に保存されました",
+      "settingsSaveFailed": "設定の保存に失敗しました: {error}",
+      "settingsSaveFailedGeneric": "設定の保存に失敗しました"
     },
     "filters": {
       "all": "すべて",
