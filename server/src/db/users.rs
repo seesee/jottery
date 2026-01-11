@@ -18,8 +18,8 @@ impl UserRepository {
 
         sqlx::query!(
             r#"
-            INSERT INTO users (id, email, password_hash, created_at, approved, is_admin, is_active, storage_quota_mb)
-            VALUES (?, ?, ?, ?, 0, 0, 1, 1000)
+            INSERT INTO users (id, email, password_hash, created_at, approved, is_admin, is_active, storage_quota_mb, max_upload_size_mb)
+            VALUES (?, ?, ?, ?, 0, 0, 1, 1000, 5)
             "#,
             id,
             email,

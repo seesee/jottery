@@ -14,6 +14,7 @@ pub enum AppError {
     BadRequest(String),
     Conflict(String),
     Forbidden(String),
+    PayloadTooLarge(String),
     InternalError(String),
     InternalServerError,
 }
@@ -27,6 +28,7 @@ impl std::fmt::Display for AppError {
             AppError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
             AppError::Conflict(msg) => write!(f, "Conflict: {}", msg),
             AppError::Forbidden(msg) => write!(f, "Forbidden: {}", msg),
+            AppError::PayloadTooLarge(msg) => write!(f, "Payload too large: {}", msg),
             AppError::InternalError(msg) => write!(f, "Internal error: {}", msg),
             AppError::InternalServerError => write!(f, "Internal server error"),
         }
@@ -53,6 +55,7 @@ impl IntoResponse for AppError {
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
+            AppError::PayloadTooLarge(msg) => (StatusCode::PAYLOAD_TOO_LARGE, msg),
             AppError::InternalError(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())

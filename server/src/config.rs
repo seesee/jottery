@@ -19,6 +19,7 @@ pub struct Config {
 
     // User settings
     pub default_storage_quota_mb: i32,
+    pub default_max_upload_size_mb: i32,
 }
 
 impl Config {
@@ -44,9 +45,9 @@ impl Config {
                 .parse()
                 .unwrap_or(3030),
             max_payload_size: env::var("MAX_PAYLOAD_SIZE")
-                .unwrap_or_else(|_| "5242880".to_string())
+                .unwrap_or_else(|_| "104857600".to_string())
                 .parse()
-                .unwrap_or(5_242_880), // 5MB default
+                .unwrap_or(104_857_600), // 100MB global limit (per-user limits checked in handlers)
             cors_allowed_origins,
 
             // Security settings
@@ -78,6 +79,10 @@ impl Config {
                 .unwrap_or_else(|_| "1000".to_string())
                 .parse()
                 .unwrap_or(1000),
+            default_max_upload_size_mb: env::var("DEFAULT_MAX_UPLOAD_SIZE_MB")
+                .unwrap_or_else(|_| "5".to_string())
+                .parse()
+                .unwrap_or(5),
         })
     }
 }

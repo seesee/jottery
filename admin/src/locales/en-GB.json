@@ -9,6 +9,7 @@
     "confirm": "Confirm",
     "close": "Close",
     "save": "Save",
+    "edit": "Edit",
     "loading": "Loading...",
     "email": "Email",
     "password": "Password",
@@ -108,7 +109,13 @@
       "attachments": "Attachments",
       "storage": "Storage Used",
       "quota": "Storage Quota",
-      "viewDevices": "Click to view devices"
+      "viewDevices": "Click to view devices",
+      "settings": "User Settings",
+      "maxUploadSize": "Max Upload Size",
+      "maxUploadSizeHelp": "Maximum size per sync request (includes attachments)",
+      "settingsSaved": "User settings saved successfully",
+      "settingsSaveFailed": "Failed to save settings: {error}",
+      "settingsSaveFailedGeneric": "Failed to save settings"
     },
     "filters": {
       "all": "All",

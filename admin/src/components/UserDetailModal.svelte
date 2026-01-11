@@ -20,6 +20,11 @@
   let confirmAction = $state<{ type: 'revoke'; device: Device } | null>(null);
   let editingDevice = $state<{ id: string; name: string } | null>(null);
 
+  // Settings editing
+  let editingSettings = $state(false);
+  let settingsForm = $state({ storageQuotaMb: 0, maxUploadSizeMb: 0 });
+  let savingSettings = $state(false);
+
   // Svelte action to focus element on mount (avoids a11y autofocus warning)
   function focusOnMount(node: HTMLElement) {
     node.focus();
@@ -77,6 +82,38 @@
       } else {
         toast.error($_('devices.toast.renameFailedGeneric'));
       }
+    }
+  }
+
+  function startEditingSettings() {
+    if (!user) return;
+    settingsForm = {
+      storageQuotaMb: user.storageQuotaMb,
+      maxUploadSizeMb: user.maxUploadSizeMb,
+    };
+    editingSettings = true;
+  }
+
+  async function handleSaveSettings() {
+    if (!user) return;
+
+    savingSettings = true;
+    try {
+      await api.updateUserSettings(user.id, {
+        storageQuotaMb: settingsForm.storageQuotaMb,
+        maxUploadSizeMb: settingsForm.maxUploadSizeMb,
+      });
+      toast.success($_('users.detail.settingsSaved'));
+      editingSettings = false;
+      await loadUser();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error($_('users.detail.settingsSaveFailed', { values: { error: err.message } }));
+      } else {
+        toast.error($_('users.detail.settingsSaveFailedGeneric'));
+      }
+    } finally {
+      savingSettings = false;
     }
   }
 
@@ -214,11 +251,87 @@
               <span class="text-sm text-gray-500">{$_('users.detail.storage')}</span>
               <p class="text-2xl font-semibold text-gray-900">{formatBytes(user.stats.attachments.totalBytes)}</p>
             </div>
-            <div class="bg-gray-50 rounded-lg p-4">
-              <span class="text-sm text-gray-500">{$_('users.detail.quota')}</span>
-              <p class="text-2xl font-semibold text-gray-900">{user.storageQuotaMb} MB</p>
-            </div>
           </div>
+        </div>
+
+        <!-- User Settings Section -->
+        <div class="mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">{$_('users.detail.settings')}</h3>
+            {#if !editingSettings}
+              <button
+                onclick={startEditingSettings}
+                class="text-sm text-blue-600 hover:text-blue-800"
+              >
+                {$_('common.edit')}
+              </button>
+            {/if}
+          </div>
+
+          {#if editingSettings}
+            <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+              <div>
+                <label for="storageQuota" class="block text-sm font-medium text-gray-700 mb-1">
+                  {$_('users.detail.quota')}
+                </label>
+                <div class="flex items-center space-x-2">
+                  <input
+                    id="storageQuota"
+                    type="number"
+                    bind:value={settingsForm.storageQuotaMb}
+                    min="1"
+                    max="100000"
+                    class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span class="text-sm text-gray-500">MB</span>
+                </div>
+              </div>
+              <div>
+                <label for="maxUpload" class="block text-sm font-medium text-gray-700 mb-1">
+                  {$_('users.detail.maxUploadSize')}
+                </label>
+                <div class="flex items-center space-x-2">
+                  <input
+                    id="maxUpload"
+                    type="number"
+                    bind:value={settingsForm.maxUploadSizeMb}
+                    min="1"
+                    max="1000"
+                    class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span class="text-sm text-gray-500">MB</span>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">{$_('users.detail.maxUploadSizeHelp')}</p>
+              </div>
+              <div class="flex space-x-2 pt-2">
+                <button
+                  onclick={handleSaveSettings}
+                  disabled={savingSettings}
+                  class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingSettings ? $_('common.saving') : $_('common.save')}
+                </button>
+                <button
+                  onclick={() => editingSettings = false}
+                  disabled={savingSettings}
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                >
+                  {$_('common.cancel')}
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-gray-50 rounded-lg p-4">
+                <span class="text-sm text-gray-500">{$_('users.detail.quota')}</span>
+                <p class="text-2xl font-semibold text-gray-900">{user.storageQuotaMb} MB</p>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-4">
+                <span class="text-sm text-gray-500">{$_('users.detail.maxUploadSize')}</span>
+                <p class="text-2xl font-semibold text-gray-900">{user.maxUploadSizeMb} MB</p>
+              </div>
+            </div>
+          {/if}
         </div>
 
         <!-- Devices Section -->

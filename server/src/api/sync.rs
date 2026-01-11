@@ -80,16 +80,46 @@ pub async fn push(
     Json(push_req): Json<SyncPushRequest>,
 ) -> AppResult<Json<SyncPushResponse>> {
 
+    // Get user's max upload size limit
+    let user = sqlx::query!(
+        "SELECT max_upload_size_mb FROM users WHERE id = ?",
+        client_info.user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let max_upload_bytes = user
+        .map(|u| u.max_upload_size_mb)
+        .unwrap_or(5) as usize * 1024 * 1024;
+
+    // Estimate payload size from attachments (main contributor to size)
+    let estimated_size: usize = push_req.attachments.iter()
+        .map(|a| a.data.len())
+        .sum::<usize>()
+        + push_req.notes.iter()
+            .map(|n| n.content.len())
+            .sum::<usize>();
+
+    if estimated_size > max_upload_bytes {
+        let max_mb = max_upload_bytes / (1024 * 1024);
+        return Err(AppError::PayloadTooLarge(format!(
+            "Upload size (~{}MB) exceeds your limit of {}MB",
+            estimated_size / (1024 * 1024),
+            max_mb
+        )));
+    }
+
     let mut accepted = Vec::new();
     let mut rejected = Vec::new();
     let errors = Vec::new();
 
     tracing::info!(
-        "Push from user {} (client {}): {} notes, {} attachments",
+        "Push from user {} (client {}): {} notes, {} attachments (~{}KB)",
         client_info.user_id,
         client_info.client_id,
         push_req.notes.len(),
-        push_req.attachments.len()
+        push_req.attachments.len(),
+        estimated_size / 1024
     );
 
     let now = chrono::Utc::now().to_rfc3339();

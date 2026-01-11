@@ -1,7 +1,7 @@
 use axum::{
     extract::DefaultBodyLimit,
     http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderName},
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
     Router,
 };
 use sqlx::SqlitePool;
@@ -127,6 +127,7 @@ async fn main() {
         .route("/api/v1/admin/users/:id/toggle-admin", post(api::admin::users::toggle_admin))
         .route("/api/v1/admin/users/:id", delete(api::admin::users::delete_user))
         .route("/api/v1/admin/users/:id/devices", get(api::admin::users::list_user_devices))
+        .route("/api/v1/admin/users/:id/settings", patch(api::admin::users::update_user_settings))
         .route("/api/v1/admin/devices/:id", delete(api::admin::users::revoke_device).patch(api::admin::users::rename_device))
         .route("/api/v1/admin/stats", get(api::admin::stats::get_stats))
         .route("/api/v1/admin/audit", get(api::admin::stats::get_audit_log))
