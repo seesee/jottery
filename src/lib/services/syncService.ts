@@ -416,7 +416,7 @@ class SyncService {
   }
 
   /**
-   * Pull remote changes from server
+   * Pull remote changes from server (with pagination for large datasets)
    */
   private async pull(endpoint: string, apiKey: string): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
@@ -437,132 +437,163 @@ class SyncService {
       }
     }
 
-    const pullRequest: SyncPullRequest = {
-      lastSyncAt,
-      knownNoteIds: knownIds,
-      knownAttachmentIds,
-    };
-
-    const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/pull`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(pullRequest),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      // Handle specific HTTP status codes
-      if (response.status === 413) {
-        const errorMessage = 'Server response too large. Please contact your administrator.';
-        toast.error(errorMessage);
-        throw new Error(errorMessage);
-      }
-
-      throw new Error(`Pull failed: ${response.statusText} - ${errorText}`);
-    }
-
-    const result: SyncPullResponse = await response.json();
-
-    console.log(`[SyncService] Pulled ${result.notes.length} notes, ${result.attachments.length} attachments, ${result.deletions?.length || 0} deletions`);
-
-    // Get master key for tag conversion
+    // Get master key for tag conversion (needed for processing)
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
     }
 
-    // Apply remote changes with Last-Write-Wins conflict resolution
-    for (const remoteNote of result.notes) {
-      // Convert tags from sync format to storage format
-      const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey.key);
+    // Pull in pages to avoid memory limits with large datasets
+    const PULL_BATCH_SIZE = 100;
+    let offset = 0;
+    let hasMore = true;
+    let totalNotes = 0;
+    let totalAttachments = 0;
+    let totalDeletions = 0;
+    let totalCount = 0;
+    let lastSyncedAt: string | undefined;
 
-      const noteForStorage = {
-        ...remoteNote,
-        tags: tagsForStorage,
-        syncedAt: result.syncedAt,
+    while (hasMore) {
+      const pullRequest: SyncPullRequest = {
+        lastSyncAt,
+        knownNoteIds: knownIds,
+        knownAttachmentIds,
+        limit: PULL_BATCH_SIZE,
+        offset,
       };
 
-      const localNote = await noteRepository.getById(remoteNote.id);
-
-      if (!localNote) {
-        // New note from server - create locally
-        await noteRepository.create(noteForStorage);
-      } else {
-        // Conflict resolution: Last-Write-Wins by modifiedAt
-        if (remoteNote.modifiedAt > localNote.modifiedAt) {
-          // Server version is newer - update local
-          await noteRepository.update(noteForStorage);
-        }
-        // Local version is newer or equal - keep local (already pushed or will be pushed)
-      }
-
-      // Update sync metadata
-      await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
-        noteId: remoteNote.id,
-        syncedAt: result.syncedAt,
-        serverVersion: remoteNote.version,
-        lastSyncStatus: 'synced',
+      const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/pull`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(pullRequest),
       });
-    }
 
-    // Download attachments
-    for (const attachment of result.attachments) {
-      try {
-        const blob = base64ToArrayBuffer(attachment.data);
-        await attachmentRepository.storeBlob(attachment.id, blob);
-      } catch (error) {
-        console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        // Handle specific HTTP status codes
+        if (response.status === 413) {
+          const errorMessage = 'Server response too large. Please contact your administrator.';
+          toast.error(errorMessage);
+          throw new Error(errorMessage);
+        }
+
+        throw new Error(`Pull failed: ${response.statusText} - ${errorText}`);
       }
-    }
 
-    // Merge versions from server
-    for (const serverVersion of result.versions) {
-      // Check if we already have this version locally
-      const existingVersion = await versionRepository.getVersion(
-        serverVersion.noteId,
-        serverVersion.version
-      );
+      const result: SyncPullResponse = await response.json();
 
-      if (!existingVersion) {
-        // New version from server - store it locally
-        await versionRepository.createVersion(
-          {
-            id: serverVersion.noteId,
-            content: serverVersion.content,
-            tags: serverVersion.tags,
-            attachments: serverVersion.attachments,
-            version: serverVersion.version,
-            syntaxLanguage: serverVersion.syntaxLanguage,
-            wordWrap: serverVersion.wordWrap,
-            // These fields won't be used since we're directly storing the version
-            createdAt: serverVersion.createdAt,
-            modifiedAt: serverVersion.createdAt,
-            pinned: false,
-            deleted: false,
-            syncedAt: serverVersion.syncedAt,
-          } as Note,
-          {
-            syncedAt: serverVersion.syncedAt,
-            reason: serverVersion.reason as 'sync' | 'manual-sync',
+      // Update pagination state
+      hasMore = result.hasMore ?? false;
+      totalCount = result.totalCount ?? result.notes.length;
+      lastSyncedAt = result.syncedAt;
+      offset += result.notes.length;
+
+      // Track totals
+      totalNotes += result.notes.length;
+      totalAttachments += result.attachments.length;
+      totalDeletions += result.deletions?.length || 0;
+
+      if (totalCount > PULL_BATCH_SIZE) {
+        const page = Math.floor((offset - result.notes.length) / PULL_BATCH_SIZE) + 1;
+        const totalPages = Math.ceil(totalCount / PULL_BATCH_SIZE);
+        console.log(`[SyncService] Pulling page ${page}/${totalPages} (${result.notes.length} notes)`);
+      }
+
+      // Apply remote changes with Last-Write-Wins conflict resolution
+      for (const remoteNote of result.notes) {
+        // Convert tags from sync format to storage format
+        const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey.key);
+
+        const noteForStorage = {
+          ...remoteNote,
+          tags: tagsForStorage,
+          syncedAt: result.syncedAt,
+        };
+
+        const localNote = await noteRepository.getById(remoteNote.id);
+
+        if (!localNote) {
+          // New note from server - create locally
+          await noteRepository.create(noteForStorage);
+        } else {
+          // Conflict resolution: Last-Write-Wins by modifiedAt
+          if (remoteNote.modifiedAt > localNote.modifiedAt) {
+            // Server version is newer - update local
+            await noteRepository.update(noteForStorage);
           }
-        );
-      }
-    }
+          // Local version is newer or equal - keep local (already pushed or will be pushed)
+        }
 
-    // Handle deletions
-    if (result.deletions) {
-      for (const deletion of result.deletions) {
-        const localNote = await noteRepository.getById(deletion.id);
-        if (localNote && !localNote.deleted) {
-          // Server says deleted - soft delete locally
-          await noteRepository.softDelete(deletion.id);
+        // Update sync metadata
+        await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
+          noteId: remoteNote.id,
+          syncedAt: result.syncedAt,
+          serverVersion: remoteNote.version,
+          lastSyncStatus: 'synced',
+        });
+      }
+
+      // Download attachments
+      for (const attachment of result.attachments) {
+        try {
+          const blob = base64ToArrayBuffer(attachment.data);
+          await attachmentRepository.storeBlob(attachment.id, blob);
+        } catch (error) {
+          console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
+        }
+      }
+
+      // Merge versions from server
+      for (const serverVersion of result.versions) {
+        // Check if we already have this version locally
+        const existingVersion = await versionRepository.getVersion(
+          serverVersion.noteId,
+          serverVersion.version
+        );
+
+        if (!existingVersion) {
+          // New version from server - store it locally
+          await versionRepository.createVersion(
+            {
+              id: serverVersion.noteId,
+              content: serverVersion.content,
+              tags: serverVersion.tags,
+              attachments: serverVersion.attachments,
+              version: serverVersion.version,
+              syntaxLanguage: serverVersion.syntaxLanguage,
+              wordWrap: serverVersion.wordWrap,
+              // These fields won't be used since we're directly storing the version
+              createdAt: serverVersion.createdAt,
+              modifiedAt: serverVersion.createdAt,
+              pinned: false,
+              deleted: false,
+              syncedAt: serverVersion.syncedAt,
+            } as Note,
+            {
+              syncedAt: serverVersion.syncedAt,
+              reason: serverVersion.reason as 'sync' | 'manual-sync',
+            }
+          );
+        }
+      }
+
+      // Handle deletions
+      if (result.deletions) {
+        for (const deletion of result.deletions) {
+          const localNote = await noteRepository.getById(deletion.id);
+          if (localNote && !localNote.deleted) {
+            // Server says deleted - soft delete locally
+            await noteRepository.softDelete(deletion.id);
+          }
         }
       }
     }
+
+    console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);
 
     await syncRepository.updateMetadata({
       lastPullAt: new Date().toISOString(),

@@ -341,21 +341,48 @@ pub async fn pull(
     Json(pull_req): Json<SyncPullRequest>,
 ) -> AppResult<Json<SyncPullResponse>> {
 
+    // Default pagination: 100 notes per page to avoid memory issues
+    let limit = pull_req.limit.unwrap_or(100);
+    let offset = pull_req.offset.unwrap_or(0);
+
     tracing::info!(
-        "Pull from user {} (client {}): lastSyncAt={:?}, {} known IDs",
+        "Pull from user {} (client {}): lastSyncAt={:?}, {} known IDs, limit={}, offset={}",
         client_info.user_id,
         client_info.client_id,
         pull_req.last_sync_at,
-        pull_req.known_note_ids.len()
+        pull_req.known_note_ids.len(),
+        limit,
+        offset
     );
 
-    // Get notes modified after lastSyncAt for this user (across all their devices)
-    // We need to build the query string dynamically to avoid type incompatibility
-    let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
-        let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at",
+    // Get total count first (for pagination metadata)
+    let total_count: i64 = if let Some(last_sync) = &pull_req.last_sync_at {
+        let count_result = sqlx::query!(
+            "SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND server_modified_at > ?",
             client_info.user_id,
             last_sync
+        )
+        .fetch_one(&state.pool)
+        .await?;
+        count_result.count as i64
+    } else {
+        let count_result = sqlx::query!(
+            "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
+            client_info.user_id
+        )
+        .fetch_one(&state.pool)
+        .await?;
+        count_result.count as i64
+    };
+
+    // Get notes with pagination (LIMIT/OFFSET)
+    let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
+        let rows = sqlx::query!(
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            client_info.user_id,
+            last_sync,
+            limit,
+            offset
         )
         .fetch_all(&state.pool)
         .await?;
@@ -380,8 +407,10 @@ pub async fn pull(
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? ORDER BY server_modified_at",
-            client_info.user_id
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            client_info.user_id,
+            limit,
+            offset
         )
         .fetch_all(&state.pool)
         .await?;
@@ -405,6 +434,9 @@ pub async fn pull(
             }))
             .collect()
     };
+
+    // Calculate if there are more pages
+    let has_more = offset + (db_notes.len() as i64) < total_count;
 
     // Collect all note IDs for batch attachment query
     let note_ids: Vec<&str> = db_notes.iter().map(|n| n.id.as_str()).collect();
@@ -552,7 +584,14 @@ pub async fn pull(
 
     let synced_at = chrono::Utc::now().to_rfc3339();
 
-    tracing::info!("Pull response: {} notes, {} attachments, {} versions", notes.len(), attachments_data.len(), versions_response.len());
+    tracing::info!(
+        "Pull response: {} notes (total: {}, hasMore: {}), {} attachments, {} versions",
+        notes.len(),
+        total_count,
+        has_more,
+        attachments_data.len(),
+        versions_response.len()
+    );
 
     Ok(Json(SyncPullResponse {
         notes,
@@ -560,6 +599,8 @@ pub async fn pull(
         attachments: attachments_data,
         versions: versions_response,
         synced_at,
+        total_count,
+        has_more,
     }))
 }
 

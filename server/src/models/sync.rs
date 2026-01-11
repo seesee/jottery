@@ -94,6 +94,11 @@ pub struct SyncPullRequest {
     pub known_note_ids: Vec<String>,
     #[serde(rename = "knownAttachmentIds")]
     pub known_attachment_ids: Vec<String>,
+    // Pagination support for large datasets
+    #[serde(default)]
+    pub limit: Option<i64>,
+    #[serde(default)]
+    pub offset: Option<i64>,
 }
 
 // Sync pull response
@@ -105,6 +110,11 @@ pub struct SyncPullResponse {
     pub versions: Vec<SyncNoteVersion>,
     #[serde(rename = "syncedAt")]
     pub synced_at: String,
+    // Pagination metadata for large datasets
+    #[serde(rename = "totalCount")]
+    pub total_count: i64,
+    #[serde(rename = "hasMore")]
+    pub has_more: bool,
 }
 
 #[derive(Debug, Serialize)]
