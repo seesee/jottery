@@ -2,9 +2,10 @@
  * Tests for syncService
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { get } from 'svelte/store';
 import { syncService } from './syncService';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
@@ -12,7 +13,10 @@ import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import type { SyncPushResponse, SyncPullResponse, AuthRegisterResponse } from '../types';
+import { notes, isSyncRefreshing, settings } from '../stores/appStore';
+import { noteService } from './noteService';
+import { DEFAULT_SETTINGS } from '../types';
+import type { SyncPushResponse, SyncPullResponse, AuthRegisterResponse, DecryptedNote } from '../types';
 
 const TEST_ENDPOINT = 'https://sync.example.com';
 const TEST_API_KEY = 'test-api-key-123';
@@ -675,6 +679,222 @@ describe('syncService', () => {
       const lastSyncTime = new Date(metadata!.lastSyncAt!).getTime();
       expect(lastSyncTime).toBeGreaterThanOrEqual(beforeSync);
       expect(lastSyncTime).toBeLessThanOrEqual(afterSync);
+    });
+  });
+
+  describe('Sync Loop Prevention', () => {
+    beforeEach(async () => {
+      const encryptedApiKey = await cryptoService.encryptText(TEST_API_KEY, masterKey);
+      await syncRepository.updateMetadata({
+        apiKey: JSON.stringify(encryptedApiKey),
+        clientId: TEST_CLIENT_ID,
+        syncEnabled: true,
+        syncEndpoint: TEST_ENDPOINT,
+      });
+
+      // Reset stores
+      notes.set([]);
+      isSyncRefreshing.set(false);
+      settings.set(DEFAULT_SETTINGS);
+    });
+
+    afterEach(() => {
+      // Clean up stores
+      notes.set([]);
+      isSyncRefreshing.set(false);
+      settings.set(DEFAULT_SETTINGS);
+    });
+
+    it('should set isSyncRefreshing during sync and clear it after', async () => {
+      // Track isSyncRefreshing values during sync
+      const refreshingValues: boolean[] = [];
+      const unsubscribe = isSyncRefreshing.subscribe(value => {
+        refreshingValues.push(value);
+      });
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 0,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          // Check that isSyncRefreshing is false before notes refresh
+          expect(get(isSyncRefreshing)).toBe(false);
+          return HttpResponse.json({
+            notes: [],
+            attachments: [],
+            versions: [],
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      unsubscribe();
+
+      // Should have been set to true during refresh, then back to false
+      expect(refreshingValues).toContain(true);
+      // Final value should be false
+      expect(get(isSyncRefreshing)).toBe(false);
+    });
+
+    it('should load notes from database into store after sync', async () => {
+      // Create a note in the database using noteService (handles encryption)
+      const testNote = await noteService.createNote('Test note content', ['test']);
+
+      // Store starts empty
+      notes.set([]);
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 1,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({
+            notes: [],
+            attachments: [],
+            versions: [],
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      // The notes store should now contain the note from the database
+      const currentNotes = get(notes);
+      expect(currentNotes.length).toBe(1);
+      expect(currentNotes[0].id).toBe(testNote.id);
+      expect(currentNotes[0].content).toBe('Test note content');
+    });
+
+    it('should clear isSyncRefreshing on sync error', async () => {
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.error();
+        })
+      );
+
+      // Sync should fail
+      const result = await syncService.syncNow();
+      expect(result.success).toBe(false);
+
+      // But isSyncRefreshing should be cleared
+      expect(get(isSyncRefreshing)).toBe(false);
+    });
+
+    it('should update notes incrementally and add new notes from database', async () => {
+      // Create two notes in the database using noteService (handles encryption)
+      const note1 = await noteService.createNote('Note 1', ['one']);
+      const note2 = await noteService.createNote('Note 2', ['two']);
+
+      // Pre-populate store with note1 (simulating notes already loaded)
+      notes.set([{ ...note1 }]);
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 2,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({
+            notes: [],
+            attachments: [],
+            versions: [],
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      const currentNotes = get(notes);
+
+      // Both notes should be present (note1 updated, note2 added)
+      expect(currentNotes.length).toBe(2);
+      expect(currentNotes.some(n => n.id === note1.id)).toBe(true);
+      expect(currentNotes.some(n => n.id === note2.id)).toBe(true);
+    });
+
+    it('should remove deleted notes from store during refresh', async () => {
+      // Create one note in the database using noteService (handles encryption)
+      const note1 = await noteService.createNote('Note 1', ['one']);
+
+      // Pre-populate store with note1 plus a "stale" note not in DB
+      const staleNote: DecryptedNote = {
+        id: 'stale-note-id',
+        content: 'This note was deleted from DB',
+        tags: ['stale'],
+        attachments: [],
+        createdAt: new Date().toISOString(),
+        modifiedAt: new Date().toISOString(),
+        pinned: false,
+        deleted: false,
+        version: 1,
+      };
+      notes.set([{ ...note1 }, staleNote]);
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 1,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({
+            notes: [],
+            attachments: [],
+            versions: [],
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      const currentNotes = get(notes);
+
+      // Only note1 should remain (stale note removed)
+      expect(currentNotes.length).toBe(1);
+      expect(currentNotes[0].id).toBe(note1.id);
+      expect(currentNotes.some(n => n.id === 'stale-note-id')).toBe(false);
     });
   });
 });
