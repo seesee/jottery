@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:all": "node scripts/dev-harness.js",
     "build": "vite build",
     "build:all": "npm run build:tui && vite build",
     "build:tui": "scripts/build-tui.sh",
