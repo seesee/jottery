@@ -2,7 +2,7 @@
  * Tests for syncService
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { get } from 'svelte/store';
@@ -809,7 +809,7 @@ describe('syncService', () => {
       const note2 = await noteService.createNote('Note 2', ['two']);
 
       // Pre-populate store with note1 (simulating notes already loaded)
-      notes.set([{ ...note1 }]);
+      notes.set([{ ...note1, decryptedAt: Date.now() }]);
 
       server.use(
         http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
@@ -857,11 +857,12 @@ describe('syncService', () => {
         attachments: [],
         createdAt: new Date().toISOString(),
         modifiedAt: new Date().toISOString(),
+        decryptedAt: Date.now(),
         pinned: false,
         deleted: false,
         version: 1,
       };
-      notes.set([{ ...note1 }, staleNote]);
+      notes.set([{ ...note1, decryptedAt: Date.now() }, staleNote]);
 
       server.use(
         http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
