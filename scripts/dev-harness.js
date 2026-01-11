@@ -90,7 +90,7 @@ const servers = {
     shortName: 'SRV',
     color: colors.yellow,
     command: 'cargo',
-    args: ['run'],
+    args: ['run', '--bin', 'jottery-server'],
     cwd: join(projectRoot, 'server'),
     port: 3000,
     process: null,
