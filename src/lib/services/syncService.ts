@@ -451,7 +451,6 @@ class SyncService {
     let totalAttachments = 0;
     let totalDeletions = 0;
     let totalCount = 0;
-    let lastSyncedAt: string | undefined;
 
     while (hasMore) {
       const pullRequest: SyncPullRequest = {
@@ -489,7 +488,6 @@ class SyncService {
       // Update pagination state
       hasMore = result.hasMore ?? false;
       totalCount = result.totalCount ?? result.notes.length;
-      lastSyncedAt = result.syncedAt;
       offset += result.notes.length;
 
       // Track totals
