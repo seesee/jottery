@@ -254,7 +254,7 @@ class SyncService {
   }
 
   /**
-   * Push local changes to server
+   * Push local changes to server (in batches to avoid memory limits)
    */
   private async push(endpoint: string, apiKey: string, forceAll = false): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
@@ -272,128 +272,143 @@ class SyncService {
       return; // Nothing to push
     }
 
-    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes${forceAll ? ' (force)' : ''}`);
-
-    // Collect attachments for all modified notes
-    const attachmentMap = new Map<string, string>();
-    for (const note of modifiedNotes) {
-      for (const attachment of note.attachments) {
-        if (!attachmentMap.has(attachment.id)) {
-          const blob = await attachmentRepository.getBlob(attachment.data);
-          if (blob) {
-            const base64 = arrayBufferToBase64(blob);
-            attachmentMap.set(attachment.id, base64);
-          }
-        }
-      }
-    }
-
     // Get master key for tag encryption conversion
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
     }
 
-    // Build push request - convert tags from storage format to sync format
-    const pushRequest: SyncPushRequest = {
-      notes: await Promise.all(modifiedNotes.map(async note => {
-        // Convert tags from storage format to sync format
-        const syncTags = await storageToSync(note.tags, masterKey.key);
+    // Push in batches to avoid JSON.stringify memory limits
+    const BATCH_SIZE = 100;
+    const totalBatches = Math.ceil(modifiedNotes.length / BATCH_SIZE);
+    let totalAccepted = 0;
+    let totalRejected = 0;
 
-        return {
-          id: note.id,
-          createdAt: note.createdAt,
-          modifiedAt: note.modifiedAt,
-          content: note.content,
-          tags: syncTags,
-          attachments: note.attachments.map(a => ({
-            id: a.id,
-            filename: a.filename,
-            mimeType: a.mimeType,
-            size: a.size,
-            data: a.data,
-          })),
-          pinned: note.pinned,
-          deleted: note.deleted,
-          deletedAt: note.deletedAt,
-          version: note.version,
-          wordWrap: note.wordWrap,
-          syntaxLanguage: note.syntaxLanguage,
-        };
-      })),
-      attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
-      versions: await this.collectVersionsForPush(modifiedNotes),
-    };
+    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${totalBatches} batch${totalBatches > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
 
-    // Send to server
-    const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/push`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(pushRequest),
-    });
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const start = batchIndex * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, modifiedNotes.length);
+      const batchNotes = modifiedNotes.slice(start, end);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      // Handle specific HTTP status codes
-      if (response.status === 413) {
-        const errorMessage = 'Upload too large. Please reduce attachment sizes or sync fewer notes at once. Maximum size: 5MB';
-        toast.error(errorMessage);
-        throw new Error(errorMessage);
+      if (totalBatches > 1) {
+        console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
       }
 
-      throw new Error(`Push failed: ${response.statusText} - ${errorText}`);
-    }
+      // Collect attachments for this batch only
+      const attachmentMap = new Map<string, string>();
+      for (const note of batchNotes) {
+        for (const attachment of note.attachments) {
+          if (!attachmentMap.has(attachment.id)) {
+            const blob = await attachmentRepository.getBlob(attachment.data);
+            if (blob) {
+              const base64 = arrayBufferToBase64(blob);
+              attachmentMap.set(attachment.id, base64);
+            }
+          }
+        }
+      }
 
-    const result: SyncPushResponse = await response.json();
+      // Build push request for this batch
+      const pushRequest: SyncPushRequest = {
+        notes: await Promise.all(batchNotes.map(async note => {
+          // Convert tags from storage format to sync format
+          const syncTags = await storageToSync(note.tags, masterKey.key);
 
-    console.log(`[SyncService] Push complete: ${result.accepted.length} accepted, ${result.rejected.length} rejected`);
+          return {
+            id: note.id,
+            createdAt: note.createdAt,
+            modifiedAt: note.modifiedAt,
+            content: note.content,
+            tags: syncTags,
+            attachments: note.attachments.map(a => ({
+              id: a.id,
+              filename: a.filename,
+              mimeType: a.mimeType,
+              size: a.size,
+              data: a.data,
+            })),
+            pinned: note.pinned,
+            deleted: note.deleted,
+            deletedAt: note.deletedAt,
+            version: note.version,
+            wordWrap: note.wordWrap,
+            syntaxLanguage: note.syntaxLanguage,
+          };
+        })),
+        attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
+        versions: await this.collectVersionsForPush(batchNotes),
+      };
 
-    // Update sync metadata for accepted notes
-    for (const accepted of result.accepted) {
-      await syncRepository.updateNoteSyncMetadata(accepted.id, {
-        noteId: accepted.id,
-        syncedAt: accepted.syncedAt,
-        serverVersion: accepted.serverVersion,
-        lastSyncStatus: 'synced',
+      // Send batch to server
+      const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/push`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(pushRequest),
       });
 
-      // Clear needsSync flag for successfully synced notes
-      const note = await noteRepository.getById(accepted.id);
-      if (note) {
-        note.needsSync = false;
-        await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        // Handle specific HTTP status codes
+        if (response.status === 413) {
+          const errorMessage = 'Upload too large. Please reduce attachment sizes or sync fewer notes at once. Maximum size: 5MB';
+          toast.error(errorMessage);
+          throw new Error(errorMessage);
+        }
+
+        throw new Error(`Push failed: ${response.statusText} - ${errorText}`);
       }
 
-      // Version creation is now handled separately by EditorPane idle timer
-      // and on note navigation, not during sync
-    }
+      const result: SyncPushResponse = await response.json();
+      totalAccepted += result.accepted.length;
+      totalRejected += result.rejected.length;
 
-    // Handle rejected notes (conflicts) - store server data for resolution
-    for (const rejected of result.rejected) {
-      console.warn(`[SyncService] Note ${rejected.id} rejected: ${rejected.reason}`);
-      await storeConflict(rejected.id, {
-        serverContent: rejected.serverContent,
-        serverTags: rejected.serverTags,
-        serverModifiedAt: rejected.serverModifiedAt,
-        serverVersion: rejected.serverVersion,
-        serverAttachments: rejected.serverAttachments,
-        serverPinned: rejected.serverPinned,
-        serverSyntaxLanguage: rejected.serverSyntaxLanguage,
-        serverWordWrap: rejected.serverWordWrap,
-      });
+      // Update sync metadata for accepted notes
+      for (const accepted of result.accepted) {
+        await syncRepository.updateNoteSyncMetadata(accepted.id, {
+          noteId: accepted.id,
+          syncedAt: accepted.syncedAt,
+          serverVersion: accepted.serverVersion,
+          lastSyncStatus: 'synced',
+        });
 
-      // Clear needsSync flag to prevent infinite retry loop
-      // User must resolve conflict before note can sync again
-      const note = await noteRepository.getById(rejected.id);
-      if (note) {
-        note.needsSync = false;
-        await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
+        // Clear needsSync flag for successfully synced notes
+        const note = await noteRepository.getById(accepted.id);
+        if (note) {
+          note.needsSync = false;
+          await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
+        }
+      }
+
+      // Handle rejected notes (conflicts) - store server data for resolution
+      for (const rejected of result.rejected) {
+        console.warn(`[SyncService] Note ${rejected.id} rejected: ${rejected.reason}`);
+        await storeConflict(rejected.id, {
+          serverContent: rejected.serverContent,
+          serverTags: rejected.serverTags,
+          serverModifiedAt: rejected.serverModifiedAt,
+          serverVersion: rejected.serverVersion,
+          serverAttachments: rejected.serverAttachments,
+          serverPinned: rejected.serverPinned,
+          serverSyntaxLanguage: rejected.serverSyntaxLanguage,
+          serverWordWrap: rejected.serverWordWrap,
+        });
+
+        // Clear needsSync flag to prevent infinite retry loop
+        // User must resolve conflict before note can sync again
+        const note = await noteRepository.getById(rejected.id);
+        if (note) {
+          note.needsSync = false;
+          await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
+        }
       }
     }
+
+    console.log(`[SyncService] Push complete: ${totalAccepted} accepted, ${totalRejected} rejected`);
 
     await syncRepository.updateMetadata({
       lastPushAt: new Date().toISOString(),
