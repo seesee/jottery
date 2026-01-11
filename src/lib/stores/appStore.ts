@@ -26,6 +26,9 @@ export const settings = writable<UserSettings>(DEFAULT_SETTINGS);
 export const showSettings = writable<boolean>(false);
 export const showRecycleBin = writable<boolean>(false);
 
+// Sync state - prevents EditorPane from triggering sync during batch refresh
+export const isSyncRefreshing = writable<boolean>(false);
+
 // Derived stores
 export const selectedNote = derived(
   [notes, selectedNoteId],

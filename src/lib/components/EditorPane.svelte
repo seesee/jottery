@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery } from '../stores/appStore';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, isSyncRefreshing } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -314,6 +314,10 @@
    * Trigger background sync without blocking UI
    */
   async function triggerBackgroundSync() {
+    // Skip if sync is currently refreshing notes (prevents infinite loop)
+    if ($isSyncRefreshing) {
+      return;
+    }
     try {
       const metadata = await syncRepository.getMetadata();
       if (metadata?.syncEnabled) {

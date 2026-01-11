@@ -26,7 +26,7 @@ import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
-import { notes, settings } from '../stores/appStore';
+import { notes, settings, isSyncRefreshing } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 
@@ -206,6 +206,10 @@ class SyncService {
       let currentSettings: any;
       settings.subscribe(s => currentSettings = s)();
 
+      // Set flag to prevent EditorPane from triggering sync during refresh
+      // (selectedNote may briefly become null if selected note isn't in first batch)
+      isSyncRefreshing.set(true);
+
       // Use batched loading to show first notes immediately, load rest in background
       const firstBatch = await noteService.getAllNotesBatched(
         currentSettings.sortOrder,
@@ -234,6 +238,10 @@ class SyncService {
       searchService.indexNotes(firstBatch);
       console.log('[SyncService] UI refreshed with first batch, loading remaining notes in background');
 
+      // Clear flag after a short delay to allow background batches to load
+      // This prevents EditorPane from triggering sync while notes are being refreshed
+      setTimeout(() => isSyncRefreshing.set(false), 500);
+
       return { success: true };
     } catch (error) {
       console.error('Sync failed:', error);
@@ -243,6 +251,8 @@ class SyncService {
       };
     } finally {
       this.isSyncing = false;
+      // Ensure refresh flag is cleared on error (in case we failed before the timeout was set)
+      isSyncRefreshing.set(false);
     }
   }
 
