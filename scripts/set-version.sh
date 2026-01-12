@@ -68,6 +68,15 @@ fi
 echo "✓ Server tests passed"
 echo ""
 
+# Regenerate SQLx query cache for offline Docker builds
+echo "→ Regenerating SQLx query cache..."
+if ! (cd server && cargo sqlx prepare); then
+    echo "✗ SQLx cache regeneration failed"
+    exit 1
+fi
+echo "✓ SQLx query cache regenerated"
+echo ""
+
 # Run admin dashboard tests
 echo "→ Testing admin dashboard..."
 if ! (cd admin && npm test); then
