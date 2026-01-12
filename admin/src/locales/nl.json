@@ -9,6 +9,7 @@
     "confirm": "Bevestigen",
     "close": "Sluiten",
     "save": "Opslaan",
+    "edit": "Bewerken",
     "loading": "Laden...",
     "email": "E-mail",
     "password": "Wachtwoord",
@@ -108,7 +109,13 @@
       "attachments": "Bijlagen",
       "storage": "Opslag gebruikt",
       "quota": "Opslagquotum",
-      "viewDevices": "Klik om apparaten te bekijken"
+      "viewDevices": "Klik om apparaten te bekijken",
+      "settings": "Gebruikersinstellingen",
+      "maxUploadSize": "Max. uploadgrootte",
+      "maxUploadSizeHelp": "Maximale grootte per synchronisatieverzoek (inclusief bijlagen)",
+      "settingsSaved": "Gebruikersinstellingen succesvol opgeslagen",
+      "settingsSaveFailed": "Instellingen opslaan mislukt: {error}",
+      "settingsSaveFailedGeneric": "Instellingen opslaan mislukt"
     },
     "filters": {
       "all": "Alle",

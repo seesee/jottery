@@ -50,6 +50,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
         argon2_t_cost: 2,
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
     };
 
     let app_state = Arc::new(jottery_server::AppState {

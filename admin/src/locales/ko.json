@@ -9,6 +9,7 @@
     "confirm": "확인",
     "close": "닫기",
     "save": "저장",
+    "edit": "편집",
     "loading": "로딩 중...",
     "email": "이메일",
     "password": "비밀번호",
@@ -108,7 +109,13 @@
       "attachments": "첨부 파일",
       "storage": "사용 중인 저장 공간",
       "quota": "저장 공간 할당량",
-      "viewDevices": "기기를 보려면 클릭"
+      "viewDevices": "기기를 보려면 클릭",
+      "settings": "사용자 설정",
+      "maxUploadSize": "최대 업로드 크기",
+      "maxUploadSizeHelp": "동기화 요청당 최대 크기 (첨부 파일 포함)",
+      "settingsSaved": "사용자 설정이 저장되었습니다",
+      "settingsSaveFailed": "설정 저장 실패: {error}",
+      "settingsSaveFailedGeneric": "설정 저장 실패"
     },
     "filters": {
       "all": "전체",

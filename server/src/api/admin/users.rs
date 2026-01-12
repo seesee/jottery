@@ -82,7 +82,7 @@ pub async fn get_user(
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
     // Get user basic info
     let user = sqlx::query!(
-        r#"SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb FROM users WHERE id = ?"#,
+        r#"SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb, max_upload_size_mb FROM users WHERE id = ?"#,
         user_id
     )
     .fetch_optional(&state.pool)
@@ -178,6 +178,7 @@ pub async fn get_user(
             "approvedAt": user.approved_at,
             "lastLoginAt": user.last_login_at,
             "storageQuotaMb": user.storage_quota_mb,
+            "maxUploadSizeMb": user.max_upload_size_mb,
             "stats": {
                 "devices": {
                     "total": device_stats.total,
@@ -532,5 +533,71 @@ pub async fn change_password(
     .await?;
 
     tracing::info!("Password changed successfully for user: {}", user_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Update user settings (storage quota, max upload size)
+/// PATCH /api/v1/admin/users/:id/settings
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUserSettingsRequest {
+    pub storage_quota_mb: Option<i64>,
+    pub max_upload_size_mb: Option<i64>,
+}
+
+pub async fn update_user_settings(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
+    Json(req): Json<UpdateUserSettingsRequest>,
+) -> AppResult<StatusCode> {
+    // Check user exists
+    let _user = sqlx::query!(
+        "SELECT id FROM users WHERE id = ?",
+        user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
+
+    // Validate values
+    if let Some(max_upload) = req.max_upload_size_mb {
+        if max_upload < 1 || max_upload > 1000 {
+            return Err(crate::error::AppError::BadRequest(
+                "Max upload size must be between 1 and 1000 MB".to_string(),
+            ));
+        }
+    }
+
+    if let Some(quota) = req.storage_quota_mb {
+        if quota < 1 || quota > 100000 {
+            return Err(crate::error::AppError::BadRequest(
+                "Storage quota must be between 1 and 100000 MB".to_string(),
+            ));
+        }
+    }
+
+    // Update settings
+    if let Some(max_upload) = req.max_upload_size_mb {
+        sqlx::query!(
+            "UPDATE users SET max_upload_size_mb = ? WHERE id = ?",
+            max_upload,
+            user_id
+        )
+        .execute(&state.pool)
+        .await?;
+        tracing::info!("Updated max_upload_size_mb to {} for user {}", max_upload, user_id);
+    }
+
+    if let Some(quota) = req.storage_quota_mb {
+        sqlx::query!(
+            "UPDATE users SET storage_quota_mb = ? WHERE id = ?",
+            quota,
+            user_id
+        )
+        .execute(&state.pool)
+        .await?;
+        tracing::info!("Updated storage_quota_mb to {} for user {}", quota, user_id);
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }

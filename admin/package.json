@@ -14,7 +14,7 @@
     "svelte-i18n": "^4.0.1"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5.0.4",
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@testing-library/svelte": "^5.3.1",
     "@types/node": "^25.0.5",
     "autoprefixer": "^10.4.20",
@@ -23,7 +23,7 @@
     "svelte-check": "^4.3.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.3",
-    "vite": "^6.0.7",
+    "vite": "^7.3.0",
     "vitest": "^4.0.16"
   }
 }

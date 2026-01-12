@@ -9,6 +9,7 @@
     "confirm": "Bestätigen",
     "close": "Schließen",
     "save": "Speichern",
+    "edit": "Bearbeiten",
     "loading": "Laden...",
     "email": "E-Mail",
     "password": "Passwort",
@@ -108,7 +109,13 @@
       "attachments": "Anhänge",
       "storage": "Speichernutzung",
       "quota": "Speicherkontingent",
-      "viewDevices": "Klicken Sie, um Geräte anzuzeigen"
+      "viewDevices": "Klicken Sie, um Geräte anzuzeigen",
+      "settings": "Benutzereinstellungen",
+      "maxUploadSize": "Max. Upload-Größe",
+      "maxUploadSizeHelp": "Maximale Größe pro Sync-Anfrage (inkl. Anhänge)",
+      "settingsSaved": "Benutzereinstellungen erfolgreich gespeichert",
+      "settingsSaveFailed": "Fehler beim Speichern der Einstellungen: {error}",
+      "settingsSaveFailedGeneric": "Fehler beim Speichern der Einstellungen"
     },
     "filters": {
       "all": "Alle",

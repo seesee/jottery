@@ -67,6 +67,7 @@ interface UserDetail {
   approvedAt: string | null;
   lastLoginAt: string | null;
   storageQuotaMb: number;
+  maxUploadSizeMb: number;
   stats: {
     devices: {
       total: number;
@@ -83,6 +84,11 @@ interface UserDetail {
     lastSyncAt: string | null;
   };
   devices: Device[];
+}
+
+interface UpdateUserSettingsRequest {
+  storageQuotaMb?: number;
+  maxUploadSizeMb?: number;
 }
 
 class ApiError extends Error {
@@ -201,6 +207,10 @@ class ApiClient {
     return this.request('POST', `/api/v1/admin/users/${id}/toggle-admin`, {
       is_admin: isAdmin,
     });
+  }
+
+  async updateUserSettings(id: string, settings: UpdateUserSettingsRequest): Promise<void> {
+    return this.request('PATCH', `/api/v1/admin/users/${id}/settings`, settings);
   }
 
   // Admin - Stats

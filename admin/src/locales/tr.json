@@ -9,6 +9,7 @@
     "confirm": "Onayla",
     "close": "Kapat",
     "save": "Kaydet",
+    "edit": "Düzenle",
     "loading": "Yükleniyor...",
     "email": "E-posta",
     "password": "Parola",
@@ -108,7 +109,13 @@
       "attachments": "Ekler",
       "storage": "Kullanılan Depolama",
       "quota": "Depolama Kotası",
-      "viewDevices": "Cihazları görmek için tıklayın"
+      "viewDevices": "Cihazları görmek için tıklayın",
+      "settings": "Kullanıcı Ayarları",
+      "maxUploadSize": "Maks. Yükleme Boyutu",
+      "maxUploadSizeHelp": "Senkronizasyon isteği başına maksimum boyut (ekler dahil)",
+      "settingsSaved": "Kullanıcı ayarları başarıyla kaydedildi",
+      "settingsSaveFailed": "Ayarlar kaydedilemedi: {error}",
+      "settingsSaveFailedGeneric": "Ayarlar kaydedilemedi"
     },
     "filters": {
       "all": "Tümü",

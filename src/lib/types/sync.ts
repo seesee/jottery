@@ -125,6 +125,9 @@ export interface SyncPullRequest {
   lastSyncAt?: string;
   knownNoteIds: string[];
   knownAttachmentIds: string[];
+  // Pagination support for large datasets
+  limit?: number;
+  offset?: number;
 }
 
 // Pull response from server
@@ -134,6 +137,9 @@ export interface SyncPullResponse {
   attachments: SyncAttachment[];
   versions: SyncNoteVersion[];
   syncedAt?: string; // Optional for backward compatibility
+  // Pagination metadata for large datasets
+  totalCount?: number;
+  hasMore?: boolean;
 }
 
 // Deleted note info

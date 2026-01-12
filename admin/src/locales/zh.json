@@ -9,6 +9,7 @@
     "confirm": "确认",
     "close": "关闭",
     "save": "保存",
+    "edit": "编辑",
     "loading": "加载中...",
     "email": "电子邮件",
     "password": "密码",
@@ -108,7 +109,13 @@
       "attachments": "附件",
       "storage": "已用存储空间",
       "quota": "存储配额",
-      "viewDevices": "点击查看设备"
+      "viewDevices": "点击查看设备",
+      "settings": "用户设置",
+      "maxUploadSize": "最大上传大小",
+      "maxUploadSizeHelp": "每次同步请求的最大大小（包括附件）",
+      "settingsSaved": "用户设置已成功保存",
+      "settingsSaveFailed": "保存设置失败: {error}",
+      "settingsSaveFailedGeneric": "保存设置失败"
     },
     "filters": {
       "all": "全部",
