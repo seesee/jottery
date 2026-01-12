@@ -57,6 +57,11 @@
         "name": "last_login_at",
         "ordinal": 10,
         "type_info": "Text"
+      },
+      {
+        "name": "max_upload_size_mb",
+        "ordinal": 11,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -73,7 +78,8 @@
       false,
       false,
       true,
-      true
+      true,
+      false
     ]
   },
   "hash": "79d6ec6e0c3275438cf735d6637075398cb2e188b4d55df37eff9d7cabc4dd5f"

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT max_upload_size_mb FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "max_upload_size_mb",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9549fa433959d8a7074984e5facbb1214ab2369994702be01cea326ca15e75a8"
+}

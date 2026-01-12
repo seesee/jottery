@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE users SET max_upload_size_mb = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "157c3ce9d5e826c5d5c26c4e57f2d6a8213d24244f180bd4ee76f22439e8ea96"
+}

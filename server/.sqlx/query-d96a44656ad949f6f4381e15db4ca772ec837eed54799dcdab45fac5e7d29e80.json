@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb FROM users WHERE id = ?",
+  "query": "SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb, max_upload_size_mb FROM users WHERE id = ?",
   "describe": {
     "columns": [
       {
@@ -47,6 +47,11 @@
         "name": "storage_quota_mb",
         "ordinal": 8,
         "type_info": "Integer"
+      },
+      {
+        "name": "max_upload_size_mb",
+        "ordinal": 9,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -61,8 +66,9 @@
       false,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "674c878bd58bcd934c4c552b8689fd3b025dd348240ab416513fa8488f32338c"
+  "hash": "d96a44656ad949f6f4381e15db4ca772ec837eed54799dcdab45fac5e7d29e80"
 }

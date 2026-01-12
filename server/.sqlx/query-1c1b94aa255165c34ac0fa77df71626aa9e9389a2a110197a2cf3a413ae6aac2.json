@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at",
+  "query": "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
   "describe": {
     "columns": [
       {
@@ -75,7 +75,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -94,5 +94,5 @@
       true
     ]
   },
-  "hash": "9c94e47f87bd7e61b56050fc37e1d51f4381e5a167c7fbf052f20c9512b988de"
+  "hash": "1c1b94aa255165c34ac0fa77df71626aa9e9389a2a110197a2cf3a413ae6aac2"
 }
