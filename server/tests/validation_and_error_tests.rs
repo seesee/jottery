@@ -1131,7 +1131,6 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         .with_state(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
-    let now = chrono::Utc::now().to_rfc3339();
     let orphan_attachment_id = uuid::Uuid::new_v4().to_string();
 
     // Push attachment data without corresponding metadata (simulates incomplete sync)
