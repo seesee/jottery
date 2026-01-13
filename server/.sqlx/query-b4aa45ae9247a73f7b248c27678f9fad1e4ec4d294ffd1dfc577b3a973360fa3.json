@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT content, tags, pinned, server_version, syntax_language, word_wrap, modified_at\n                   FROM notes WHERE id = ? AND user_id = ?",
+  "query": "SELECT content, tags, pinned, server_version, syntax_language, word_wrap, show_preview, modified_at\n                   FROM notes WHERE id = ? AND user_id = ?",
   "describe": {
     "columns": [
       {
@@ -34,8 +34,13 @@
         "type_info": "Integer"
       },
       {
-        "name": "modified_at",
+        "name": "show_preview",
         "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "modified_at",
+        "ordinal": 7,
         "type_info": "Text"
       }
     ],
@@ -49,8 +54,9 @@
       false,
       true,
       true,
+      true,
       false
     ]
   },
-  "hash": "689477287e9743948f0fae916fabd19dc0b5baf8dd7c367790075e58d42732f7"
+  "hash": "b4aa45ae9247a73f7b248c27678f9fad1e4ec4d294ffd1dfc577b3a973360fa3"
 }
