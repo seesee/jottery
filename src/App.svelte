@@ -25,6 +25,7 @@
   let showRecycleBin = false;
   let showShortcutsHelp = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
+  let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
 
   // Determine which layout to use based on layoutMode setting
   $: useMobileLayout = $settings.layoutMode === 'mobile' ||
@@ -210,6 +211,7 @@
 
   // Watch lock status and load notes when unlocked
   $: if (!$isLocked && initialized) {
+    wasUnlocked = true;
     loadNotes();
     // Start auto-sync if enabled
     startAutoSync();
@@ -219,8 +221,11 @@
   $: if ($isLocked && initialized) {
     stopAutoLock();
     syncService.disableAutoSync();
-    // Sync on lock to push any changes before going away
-    syncOnLock();
+    // Only sync on lock if we were previously unlocked (not on app start)
+    if (wasUnlocked) {
+      syncOnLock();
+      wasUnlocked = false;
+    }
   }
 
   async function syncOnLock() {
