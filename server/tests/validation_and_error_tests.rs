@@ -955,3 +955,222 @@ async fn test_special_characters_in_content() {
 
     pool.close().await;
 }
+
+// ========== Graceful FK Error Handling Tests ==========
+
+#[tokio::test]
+async fn test_sync_push_skips_versions_for_rejected_notes() {
+    // Test that when a note is rejected (conflict), versions for that note are gracefully skipped
+    // This prevents FK constraint errors when pushing versions for notes that weren't accepted
+    let pool = setup_test_db().await;
+
+    let config = jottery_server::config::Config {
+        database_url: "sqlite::memory:".to_string(),
+        port: 3030,
+        max_payload_size: 5_242_880,
+        cors_allowed_origins: None,
+        session_expiry_days: 7,
+        default_admin_email: "admin@localhost".to_string(),
+        default_admin_password: "changeme".to_string(),
+        argon2_m_cost: 19456,
+        argon2_t_cost: 2,
+        argon2_p_cost: 1,
+        default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
+    };
+
+    let app_state = Arc::new(jottery_server::AppState {
+        pool: pool.clone(),
+        config,
+    });
+
+    let app = axum::Router::new()
+        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            jottery_server::api::middleware::auth_middleware,
+        ))
+        .with_state(app_state);
+
+    let api_key = create_test_user_and_device(&pool).await;
+
+    // Get the user_id for this device
+    let api_key_hash = format!("{:x}", sha2::Sha256::digest(api_key.as_bytes()));
+    let device = sqlx::query!(
+        "SELECT id, user_id FROM clients WHERE api_key = ?",
+        api_key_hash
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("Failed to get device");
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let server_time = chrono::Utc::now().to_rfc3339();
+
+    // First, create a note on the server with a NEWER timestamp
+    sqlx::query!(
+        r#"INSERT INTO notes (id, user_id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, version, server_version)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 2, 2)"#,
+        note_id,
+        device.user_id,
+        device.id,
+        server_time,
+        server_time,  // Server has newer timestamp
+        server_time,
+        "Server content",
+        "[]"
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to create server note");
+
+    // Now push the same note with an OLDER timestamp (will be rejected)
+    // Also include a version for this note (would cause FK error if not handled gracefully)
+    let older_time = "2020-01-01T00:00:00Z";
+    let version_key = format!("{}:1", note_id);
+
+    let request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Client content (older)",
+                        "createdAt": older_time,
+                        "modifiedAt": older_time,  // Older than server
+                        "deleted": false,
+                        "deletedAt": null,
+                        "tags": [],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [],
+                "versions": [
+                    {
+                        "versionKey": version_key,
+                        "noteId": note_id,
+                        "version": 1,
+                        "createdAt": older_time,
+                        "syncedAt": older_time,
+                        "content": "Version content",
+                        "tags": [],
+                        "attachments": [],
+                        "syntaxLanguage": null,
+                        "wordWrap": null,
+                        "reason": "sync"
+                    }
+                ]
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    // Push should still succeed (200 OK), even though note was rejected
+    assert_eq!(response.status(), StatusCode::OK);
+
+    // Parse response to verify note was rejected
+    let body = parse_json_response(response.into_body()).await;
+    assert!(body["rejected"].as_array().unwrap().len() > 0, "Note should be rejected due to conflict");
+    assert_eq!(body["accepted"].as_array().unwrap().len(), 0, "No notes should be accepted");
+
+    // Verify version was NOT inserted (because note was rejected)
+    let version_count: i32 = sqlx::query_scalar!(
+        "SELECT COUNT(*) as count FROM note_versions WHERE version_key = ?",
+        version_key
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("Failed to count versions") as i32;
+
+    assert_eq!(version_count, 0, "Version should not be inserted for rejected note");
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
+    // Test that attachment data for non-existent metadata is gracefully skipped
+    let pool = setup_test_db().await;
+
+    let config = jottery_server::config::Config {
+        database_url: "sqlite::memory:".to_string(),
+        port: 3030,
+        max_payload_size: 5_242_880,
+        cors_allowed_origins: None,
+        session_expiry_days: 7,
+        default_admin_email: "admin@localhost".to_string(),
+        default_admin_password: "changeme".to_string(),
+        argon2_m_cost: 19456,
+        argon2_t_cost: 2,
+        argon2_p_cost: 1,
+        default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
+    };
+
+    let app_state = Arc::new(jottery_server::AppState {
+        pool: pool.clone(),
+        config,
+    });
+
+    let app = axum::Router::new()
+        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            jottery_server::api::middleware::auth_middleware,
+        ))
+        .with_state(app_state);
+
+    let api_key = create_test_user_and_device(&pool).await;
+    let now = chrono::Utc::now().to_rfc3339();
+    let orphan_attachment_id = uuid::Uuid::new_v4().to_string();
+
+    // Push attachment data without corresponding metadata (simulates incomplete sync)
+    // Note: We're sending attachment data but the note referencing it doesn't exist
+    let request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [],
+                "attachments": [
+                    {
+                        "id": orphan_attachment_id,
+                        "data": "SGVsbG8gV29ybGQ="  // Base64 of "Hello World"
+                    }
+                ],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    // Push should succeed despite orphan attachment (graceful handling)
+    assert_eq!(response.status(), StatusCode::OK);
+
+    // Verify attachment data was NOT inserted (no corresponding metadata)
+    let attachment_count: i32 = sqlx::query_scalar!(
+        "SELECT COUNT(*) as count FROM attachments_data WHERE id = ?",
+        orphan_attachment_id
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("Failed to count attachments") as i32;
+
+    assert_eq!(attachment_count, 0, "Orphan attachment data should not be inserted");
+
+    pool.close().await;
+}
