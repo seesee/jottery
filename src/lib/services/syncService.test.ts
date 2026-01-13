@@ -735,12 +735,13 @@ describe('syncService', () => {
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
           // Check that isSyncRefreshing is false before notes refresh
           expect(get(isSyncRefreshing)).toBe(false);
-          // Return a note to trigger refresh (pulledCount > 0)
+          // Return a note with newer modifiedAt to trigger actual change detection
+          // (remote must be newer than local for refresh to occur)
           return HttpResponse.json({
             notes: [{
               id: encryptedNote!.id,
               createdAt: encryptedNote!.createdAt,
-              modifiedAt: encryptedNote!.modifiedAt,
+              modifiedAt: new Date(Date.now() + 1000).toISOString(), // Newer than local
               content: encryptedNote!.content,
               tags: encryptedNote!.tags,
               attachments: [],
@@ -789,12 +790,13 @@ describe('syncService', () => {
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
-          // Return a note to trigger refresh (pulledCount > 0)
+          // Return a note with newer modifiedAt to trigger actual change detection
+          // (remote must be newer than local for refresh to occur)
           return HttpResponse.json({
             notes: [{
               id: encryptedNote!.id,
               createdAt: encryptedNote!.createdAt,
-              modifiedAt: encryptedNote!.modifiedAt,
+              modifiedAt: new Date(Date.now() + 1000).toISOString(), // Newer than local
               content: encryptedNote!.content,
               tags: encryptedNote!.tags,
               attachments: [],
@@ -858,12 +860,13 @@ describe('syncService', () => {
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
-          // Return a note to trigger refresh (pulledCount > 0)
+          // Return a note with newer modifiedAt to trigger actual change detection
+          // (remote must be newer than local for refresh to occur)
           return HttpResponse.json({
             notes: [{
               id: encryptedNote1!.id,
               createdAt: encryptedNote1!.createdAt,
-              modifiedAt: encryptedNote1!.modifiedAt,
+              modifiedAt: new Date(Date.now() + 1000).toISOString(), // Newer than local
               content: encryptedNote1!.content,
               tags: encryptedNote1!.tags,
               attachments: [],
@@ -924,12 +927,13 @@ describe('syncService', () => {
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
-          // Return a note to trigger refresh (pulledCount > 0)
+          // Return a note with newer modifiedAt to trigger actual change detection
+          // (remote must be newer than local for refresh to occur)
           return HttpResponse.json({
             notes: [{
               id: encryptedNote1!.id,
               createdAt: encryptedNote1!.createdAt,
-              modifiedAt: encryptedNote1!.modifiedAt,
+              modifiedAt: new Date(Date.now() + 1000).toISOString(), // Newer than local
               content: encryptedNote1!.content,
               tags: encryptedNote1!.tags,
               attachments: [],
@@ -962,8 +966,9 @@ describe('syncService', () => {
       // Wait a bit then create newer note
       await new Promise(resolve => setTimeout(resolve, 50));
       const newerNote = await noteService.createNote('Newer note', ['new']);
-      // Get encrypted note for pull response
+      // Get encrypted notes for pull response
       const encryptedOlderNote = await noteRepository.getById(olderNote.id);
+      const encryptedNewerNote = await noteRepository.getById(newerNote.id);
 
       // Pre-populate store with notes in WRONG order (older first)
       // This simulates the bug where sync didn't re-sort
@@ -991,19 +996,35 @@ describe('syncService', () => {
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
-          // Return a note to trigger refresh (pulledCount > 0)
+          // Return both notes with newer modifiedAt to trigger actual change detection
+          // (remote must be newer than local for refresh to occur)
+          // Maintain relative order: newerNote still has later modifiedAt than olderNote
+          const baseTime = Date.now() + 1000;
           return HttpResponse.json({
-            notes: [{
-              id: encryptedOlderNote!.id,
-              createdAt: encryptedOlderNote!.createdAt,
-              modifiedAt: encryptedOlderNote!.modifiedAt,
-              content: encryptedOlderNote!.content,
-              tags: encryptedOlderNote!.tags,
-              attachments: [],
-              pinned: false,
-              deleted: false,
-              version: 2,
-            }],
+            notes: [
+              {
+                id: encryptedOlderNote!.id,
+                createdAt: encryptedOlderNote!.createdAt,
+                modifiedAt: new Date(baseTime).toISOString(), // Newer than local
+                content: encryptedOlderNote!.content,
+                tags: encryptedOlderNote!.tags,
+                attachments: [],
+                pinned: false,
+                deleted: false,
+                version: 2,
+              },
+              {
+                id: encryptedNewerNote!.id,
+                createdAt: encryptedNewerNote!.createdAt,
+                modifiedAt: new Date(baseTime + 100).toISOString(), // Even newer - should be first
+                content: encryptedNewerNote!.content,
+                tags: encryptedNewerNote!.tags,
+                attachments: [],
+                pinned: false,
+                deleted: false,
+                version: 2,
+              },
+            ],
             attachments: [],
             versions: [],
           } as SyncPullResponse);

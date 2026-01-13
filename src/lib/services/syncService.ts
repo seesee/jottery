@@ -483,8 +483,7 @@ class SyncService {
       totalCount = result.totalCount ?? result.notes.length;
       offset += result.notes.length;
 
-      // Track totals
-      totalNotes += result.notes.length;
+      // Track totals (totalNotes counts only actual changes - new notes or remote-newer updates)
       totalAttachments += result.attachments.length;
       totalDeletions += result.deletions?.length || 0;
 
@@ -503,6 +502,7 @@ class SyncService {
           ...remoteNote,
           tags: tagsForStorage,
           syncedAt: result.syncedAt,
+          needsSync: false, // Pulled from server - already synced
         };
 
         const localNote = await noteRepository.getById(remoteNote.id);
@@ -510,13 +510,17 @@ class SyncService {
         if (!localNote) {
           // New note from server - create locally
           await noteRepository.create(noteForStorage);
+          totalNotes++; // Count as actual change
         } else {
           // Conflict resolution: Last-Write-Wins by modifiedAt
           if (remoteNote.modifiedAt > localNote.modifiedAt) {
             // Server version is newer - update local
-            await noteRepository.update(noteForStorage);
+            // Preserve server's modifiedAt (false), skip needsSync flag (true) since this came from server
+            await noteRepository.update(noteForStorage, false, true);
+            totalNotes++; // Count as actual change
           }
           // Local version is newer or equal - keep local (already pushed or will be pushed)
+          // NOT counted as a change - no need to refresh the store
         }
 
         // Update sync metadata
