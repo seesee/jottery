@@ -15,7 +15,8 @@
     "settings": "Einstellungen",
     "search": "Suchen",
     "error": "Fehler",
-    "back": "Back"
+    "back": "Back",
+    "edit": "Edit"
   },
   "docs": {
     "title": "Dokumentation",
@@ -310,7 +311,20 @@
       "enabledCount": "{enabled}/{total} aktiviert",
       "defaultNoteType": "Default note type",
       "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
-      "default": "default"
+      "default": "default",
+      "commandsConfigured": "{count} commands configured",
+      "resetToDefaults": "Reset to defaults",
+      "addCommand": "Add command",
+      "noCommands": "No commands configured. Click \"Add command\" to create one.",
+      "addNewCommand": "Add new command",
+      "editCommand": "Edit command",
+      "trigger": "Trigger",
+      "type": "Type",
+      "format": "Format",
+      "formatHelp": "Use YYYY, MM, DD, HH, mm, ss tokens",
+      "value": "Value",
+      "description": "Description",
+      "preview": "Preview"
     },
     "keyboardTab": {
       "description": "Tastenkombinationen anpassen. Klicken Sie auf eine Tastenkombination, um sie zu ändern, und drücken Sie dann die gewünschte Tastenkombination.",

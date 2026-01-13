@@ -13,7 +13,8 @@
   import { perl } from '@codemirror/legacy-modes/mode/perl';
   import { shell } from '@codemirror/legacy-modes/mode/shell';
   import { calcExtension } from '../extensions/calcExtension';
-  import { quickCommandCompletion, quickCommandsExtension } from '../extensions/quickCommands';
+  import { createQuickCommandCompletion, createQuickCommandInputHandler } from '../extensions/quickCommands';
+  import { DEFAULT_QUICK_COMMANDS } from '../types/models';
   import { vim } from '@replit/codemirror-vim';
   import { oneDark } from '@codemirror/theme-one-dark';
   import { lineNumbers } from '@codemirror/view';
@@ -176,8 +177,11 @@
       themeCompartment.of(isDark ? oneDark : []),
       vimCompartment.of($settings.vimMode ? vim() : []),
       quickCommandsCompartment.of(
-        ($settings.quickCommands ?? true)
-          ? [autocompletion({ override: [quickCommandCompletion] }), quickCommandsExtension()]
+        ($settings.quickCommandsEnabled ?? true)
+          ? [
+              autocompletion({ override: [createQuickCommandCompletion($settings.quickCommandsList ?? DEFAULT_QUICK_COMMANDS)] }),
+              createQuickCommandInputHandler($settings.quickCommandsList ?? DEFAULT_QUICK_COMMANDS)
+            ]
           : []
       ),
       EditorView.updateListener.of((update) => {
@@ -306,12 +310,16 @@
     });
   }
 
-  // Update quick commands when settings change
-  $: if (editorView && $settings.quickCommands !== undefined) {
+  // Update quick commands when settings change (enabled state or command list)
+  $: if (editorView && ($settings.quickCommandsEnabled !== undefined || $settings.quickCommandsList)) {
+    const commands = $settings.quickCommandsList ?? DEFAULT_QUICK_COMMANDS;
     editorView.dispatch({
       effects: quickCommandsCompartment.reconfigure(
-        $settings.quickCommands
-          ? [autocompletion({ override: [quickCommandCompletion] }), quickCommandsExtension()]
+        ($settings.quickCommandsEnabled ?? true)
+          ? [
+              autocompletion({ override: [createQuickCommandCompletion(commands)] }),
+              createQuickCommandInputHandler(commands)
+            ]
           : []
       ),
     });

@@ -86,7 +86,21 @@ export interface UserSettings {
   defaultSyntaxLanguage?: string; // Default language for new notes (defaults to 'markdown')
   openLinksInNewTab?: boolean; // Open external links in new tab (defaults to true)
   vimMode?: boolean; // Enable vim keybindings in editor (defaults to false)
-  quickCommands?: boolean; // Enable quick commands like /now, /date, /time (defaults to true)
+  quickCommandsEnabled?: boolean; // Enable quick commands (defaults to true)
+  quickCommandsList?: QuickCommandConfig[]; // Custom quick commands
+}
+
+/**
+ * Quick command configuration
+ * Defines a slash command that expands to generated content
+ */
+export interface QuickCommandConfig {
+  id: string; // Unique identifier for the command
+  trigger: string; // The slash command (e.g., "/now")
+  type: 'datetime' | 'date' | 'time' | 'uuid' | 'text'; // Type of content to generate
+  format?: string; // Format string for datetime/date/time types (e.g., "YYYY-MM-DD")
+  value?: string; // Static text for 'text' type
+  description: string; // Description shown in autocomplete dropdown
 }
 
 /**
@@ -255,6 +269,47 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
 };
 
 /**
+ * Default quick commands
+ * Users can customise these or add their own
+ */
+export const DEFAULT_QUICK_COMMANDS: QuickCommandConfig[] = [
+  {
+    id: 'now',
+    trigger: '/now',
+    type: 'datetime',
+    format: 'YYYY-MM-DD HH:mm:ss',
+    description: 'Current date and time',
+  },
+  {
+    id: 'date',
+    trigger: '/date',
+    type: 'date',
+    format: 'YYYY-MM-DD',
+    description: 'Current date',
+  },
+  {
+    id: 'time',
+    trigger: '/time',
+    type: 'time',
+    format: 'HH:mm:ss',
+    description: 'Current time',
+  },
+  {
+    id: 'uuid',
+    trigger: '/uuid',
+    type: 'uuid',
+    description: 'Random UUID',
+  },
+  {
+    id: 'hr',
+    trigger: '/hr',
+    type: 'text',
+    value: '---',
+    description: 'Horizontal rule',
+  },
+];
+
+/**
  * Default user settings
  */
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -272,5 +327,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultSyntaxLanguage: 'markdown', // Default language for new notes
   openLinksInNewTab: true, // Open external links in new tab by default
   vimMode: false, // Vim keybindings disabled by default
-  quickCommands: true, // Quick commands enabled by default
+  quickCommandsEnabled: true, // Quick commands enabled by default
+  quickCommandsList: DEFAULT_QUICK_COMMANDS, // Default quick commands
 };

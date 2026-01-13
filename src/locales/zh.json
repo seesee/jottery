@@ -15,7 +15,8 @@
     "settings": "设置",
     "search": "搜索",
     "error": "错误",
-    "back": "Back"
+    "back": "Back",
+    "edit": "Edit"
   },
   "docs": {
     "title": "文档",
@@ -310,7 +311,20 @@
       "enabledCount": "已启用 {enabled}/{total}",
       "defaultNoteType": "Default note type",
       "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
-      "default": "default"
+      "default": "default",
+      "commandsConfigured": "{count} commands configured",
+      "resetToDefaults": "Reset to defaults",
+      "addCommand": "Add command",
+      "noCommands": "No commands configured. Click \"Add command\" to create one.",
+      "addNewCommand": "Add new command",
+      "editCommand": "Edit command",
+      "trigger": "Trigger",
+      "type": "Type",
+      "format": "Format",
+      "formatHelp": "Use YYYY, MM, DD, HH, mm, ss tokens",
+      "value": "Value",
+      "description": "Description",
+      "preview": "Preview"
     },
     "keyboardTab": {
       "description": "自定义快捷键。点击快捷键进行修改,然后按下您想要的组合键。",

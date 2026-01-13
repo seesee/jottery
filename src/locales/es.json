@@ -15,7 +15,8 @@
     "settings": "Configuración",
     "search": "Buscar",
     "error": "Error",
-    "back": "Back"
+    "back": "Back",
+    "edit": "Edit"
   },
   "docs": {
     "title": "Documentación",
@@ -310,7 +311,20 @@
       "enabledCount": "{enabled}/{total} habilitados",
       "defaultNoteType": "Default note type",
       "defaultNoteTypeHelp": "Choose the default syntax language for new notes. The default type cannot be deselected from enabled languages.",
-      "default": "default"
+      "default": "default",
+      "commandsConfigured": "{count} commands configured",
+      "resetToDefaults": "Reset to defaults",
+      "addCommand": "Add command",
+      "noCommands": "No commands configured. Click \"Add command\" to create one.",
+      "addNewCommand": "Add new command",
+      "editCommand": "Edit command",
+      "trigger": "Trigger",
+      "type": "Type",
+      "format": "Format",
+      "formatHelp": "Use YYYY, MM, DD, HH, mm, ss tokens",
+      "value": "Value",
+      "description": "Description",
+      "preview": "Preview"
     },
     "keyboardTab": {
       "description": "Personalice los atajos de teclado. Haga clic en un atajo para cambiarlo, luego presione la combinación de teclas deseada.",

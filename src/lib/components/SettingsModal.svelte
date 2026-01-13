@@ -5,8 +5,8 @@
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { authService } from '../services/authService';
   import { _ } from 'svelte-i18n';
-  import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts } from '../types';
-  import { DEFAULT_KEYBOARD_SHORTCUTS } from '../types';
+  import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts, QuickCommandConfig } from '../types';
+  import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab } from './settings';
@@ -28,7 +28,8 @@
   let defaultSyntaxLanguage: string = $settings.defaultSyntaxLanguage || 'markdown';
   let openLinksInNewTab: boolean = $settings.openLinksInNewTab ?? true;
   let vimMode: boolean = $settings.vimMode || false;
-  let quickCommands: boolean = $settings.quickCommands ?? true;
+  let quickCommandsEnabled: boolean = $settings.quickCommandsEnabled ?? true;
+  let quickCommandsList: QuickCommandConfig[] = $settings.quickCommandsList ?? DEFAULT_QUICK_COMMANDS;
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -743,7 +744,8 @@
         defaultSyntaxLanguage,
         openLinksInNewTab,
         vimMode,
-        quickCommands,
+        quickCommandsEnabled,
+        quickCommandsList,
       });
 
       // Update store
@@ -762,7 +764,8 @@
         defaultSyntaxLanguage,
         openLinksInNewTab,
         vimMode,
-        quickCommands,
+        quickCommandsEnabled,
+        quickCommandsList,
       }));
 
       toast.success($_('settings.settingsSaved'));
@@ -1102,7 +1105,7 @@
 
         <!-- EDITOR TAB -->
         {#if currentTab === 'editor'}
-          <EditorTab bind:enabledSyntaxLanguages bind:defaultSyntaxLanguage bind:vimMode bind:quickCommands />
+          <EditorTab bind:enabledSyntaxLanguages bind:defaultSyntaxLanguage bind:vimMode bind:quickCommandsEnabled bind:quickCommandsList />
         {/if}
 
         <!-- KEYBOARD SHORTCUTS TAB -->

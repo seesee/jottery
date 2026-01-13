@@ -1,55 +1,38 @@
 /**
  * Quick Commands Extension for CodeMirror
- * Provides slash commands like /now, /date, /time, /uuid, /hr
- * with both autocomplete dropdown and inline expansion
+ * Provides customisable slash commands with autocomplete and inline expansion
  */
 
 import { EditorView } from '@codemirror/view';
 import type { Extension } from '@codemirror/state';
 import type { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import type { QuickCommandConfig } from '../types/models';
 
 /**
- * Quick command definition
+ * Format a date using a format string
+ * Supported tokens: YYYY, MM, DD, HH, mm, ss
  */
-export interface QuickCommand {
-  trigger: string;      // e.g., "/now"
-  label: string;        // Display name in autocomplete
-  description: string;  // Description shown in dropdown
-  generate: () => string;
-}
-
-/**
- * Format date/time consistently using user's locale
- */
-function formatDateTime(date: Date): string {
+function formatWithPattern(date: Date, format: string): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-}
 
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatTime(date: Date): string {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
+  return format
+    .replace(/YYYY/g, String(year))
+    .replace(/MM/g, month)
+    .replace(/DD/g, day)
+    .replace(/HH/g, hours)
+    .replace(/mm/g, minutes)
+    .replace(/ss/g, seconds);
 }
 
 /**
  * Generate a UUID v4
  */
 function generateUUID(): string {
-  // Use crypto.randomUUID if available (modern browsers)
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
@@ -62,93 +45,78 @@ function generateUUID(): string {
 }
 
 /**
- * Available quick commands
+ * Generate content for a quick command
  */
-export const quickCommands: QuickCommand[] = [
-  {
-    trigger: '/now',
-    label: '/now',
-    description: 'Insert current date and time',
-    generate: () => formatDateTime(new Date()),
-  },
-  {
-    trigger: '/date',
-    label: '/date',
-    description: 'Insert current date',
-    generate: () => formatDate(new Date()),
-  },
-  {
-    trigger: '/time',
-    label: '/time',
-    description: 'Insert current time',
-    generate: () => formatTime(new Date()),
-  },
-  {
-    trigger: '/uuid',
-    label: '/uuid',
-    description: 'Insert random UUID',
-    generate: () => generateUUID(),
-  },
-  {
-    trigger: '/hr',
-    label: '/hr',
-    description: 'Insert horizontal rule',
-    generate: () => '---',
-  },
-];
+export function generateCommandContent(config: QuickCommandConfig): string {
+  const now = new Date();
+
+  switch (config.type) {
+    case 'datetime':
+      return formatWithPattern(now, config.format || 'YYYY-MM-DD HH:mm:ss');
+    case 'date':
+      return formatWithPattern(now, config.format || 'YYYY-MM-DD');
+    case 'time':
+      return formatWithPattern(now, config.format || 'HH:mm:ss');
+    case 'uuid':
+      return generateUUID();
+    case 'text':
+      return config.value || '';
+    default:
+      return '';
+  }
+}
 
 /**
- * Autocomplete source for quick commands
+ * Create autocomplete source for quick commands
  * Shows dropdown when user types / followed by letters
  * Only triggers when / is at start of line or preceded by whitespace
- * (to avoid triggering on paths like "date/time")
  */
-export function quickCommandCompletion(context: CompletionContext): CompletionResult | null {
-  // Match /word pattern - must start with /
-  const word = context.matchBefore(/\/\w*/);
-  if (!word) return null;
+export function createQuickCommandCompletion(commands: QuickCommandConfig[]) {
+  return function quickCommandCompletion(context: CompletionContext): CompletionResult | null {
+    // Match /word pattern - must start with /
+    const word = context.matchBefore(/\/\w*/);
+    if (!word) return null;
 
-  // Check that the slash is at start of line or preceded by whitespace
-  if (word.from > 0) {
-    const charBefore = context.state.doc.sliceString(word.from - 1, word.from);
-    if (!/\s/.test(charBefore)) {
-      return null; // Slash is preceded by non-whitespace (e.g., "date/time")
+    // Check that the slash is at start of line or preceded by whitespace
+    if (word.from > 0) {
+      const charBefore = context.state.doc.sliceString(word.from - 1, word.from);
+      if (!/\s/.test(charBefore)) {
+        return null; // Slash is preceded by non-whitespace (e.g., "date/time")
+      }
     }
-  }
 
-  // Filter commands that match the typed text
-  const matchingCommands = quickCommands.filter(cmd =>
-    cmd.trigger.toLowerCase().startsWith(word.text.toLowerCase())
-  );
+    // Filter commands that match the typed text
+    const matchingCommands = commands.filter(cmd =>
+      cmd.trigger.toLowerCase().startsWith(word.text.toLowerCase())
+    );
 
-  if (matchingCommands.length === 0) return null;
+    if (matchingCommands.length === 0) return null;
 
-  return {
-    from: word.from,
-    options: matchingCommands.map(cmd => ({
-      label: cmd.label,
-      detail: cmd.description,
-      apply: (view: EditorView, completion: { label: string }, from: number, to: number) => {
-        // Replace the slash command with generated text
-        const generated = cmd.generate();
-        view.dispatch({
-          changes: { from, to, insert: generated },
-          selection: { anchor: from + generated.length },
-        });
-      },
-    })),
-    validFor: /^\/\w*$/,
+    return {
+      from: word.from,
+      options: matchingCommands.map(cmd => ({
+        label: cmd.trigger,
+        detail: cmd.description,
+        apply: (view: EditorView, _completion: { label: string }, from: number, to: number) => {
+          const generated = generateCommandContent(cmd);
+          view.dispatch({
+            changes: { from, to, insert: generated },
+            selection: { anchor: from + generated.length },
+          });
+        },
+      })),
+      validFor: /^\/\w*$/,
+    };
   };
 }
 
 /**
- * Input handler for inline expansion
+ * Create input handler for inline expansion
  * Expands commands when user presses space or enter after a complete command
  * Only triggers when / is at start of line or preceded by whitespace
- * (to avoid triggering on paths like "date/time")
  */
-export function quickCommandInputHandler(): Extension {
-  return EditorView.inputHandler.of((view, from, to, text) => {
+export function createQuickCommandInputHandler(commands: QuickCommandConfig[]): Extension {
+  return EditorView.inputHandler.of((view, from, _to, text) => {
     // Only trigger on space or newline
     if (text !== ' ' && text !== '\n') return false;
 
@@ -162,15 +130,14 @@ export function quickCommandInputHandler(): Extension {
     if (!match) return false;
 
     const commandText = match[1]; // The captured group includes the slash
-    const command = quickCommands.find(
+    const command = commands.find(
       cmd => cmd.trigger.toLowerCase() === commandText.toLowerCase()
     );
 
     if (!command) return false;
 
     // Replace the command with generated text (plus the typed space/newline)
-    const generated = command.generate();
-    // Calculate start position: end of line minus command length
+    const generated = generateCommandContent(command);
     const commandStart = from - commandText.length;
 
     view.dispatch({
@@ -178,16 +145,6 @@ export function quickCommandInputHandler(): Extension {
       selection: { anchor: commandStart + generated.length + text.length },
     });
 
-    return true; // We handled this input
+    return true;
   });
-}
-
-/**
- * Create the quick commands extension
- * Returns just the input handler for inline expansion.
- * The autocomplete source (quickCommandCompletion) should be passed
- * to autocompletion() override in the editor configuration.
- */
-export function quickCommandsExtension(): Extension {
-  return quickCommandInputHandler();
 }

@@ -21,9 +21,10 @@ export type {
   SyncOperation,
   KeyboardShortcut,
   KeyboardShortcuts,
+  QuickCommandConfig,
 } from './models';
 
-export { DEFAULT_NOTE, DEFAULT_SETTINGS, DEFAULT_KEYBOARD_SHORTCUTS } from './models';
+export { DEFAULT_NOTE, DEFAULT_SETTINGS, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from './models';
 
 // Repository interfaces
 export type {
