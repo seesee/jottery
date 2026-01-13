@@ -288,6 +288,9 @@
       "error": "오류"
     },
     "editorTab": {
+      "vimMode": "Editor mode",
+      "vimModeHelp": "Enable vim-style keybindings for power users. Supports common vim commands like i, Esc, dd, yy, p, and more.",
+      "enableVimMode": "Enable vim keybindings",
       "syntaxHighlighting": "구문 강조",
       "syntaxHelp": "Markdown 코드 블록 및 미리보기에서 구문 강조를 활성화할 프로그래밍 언어를 선택하세요. 핵심 언어는 항상 활성화됩니다.",
       "languagesEnabled": "{count}개 언어 활성화됨",

@@ -288,6 +288,9 @@
       "error": "Erro"
     },
     "editorTab": {
+      "vimMode": "Editor mode",
+      "vimModeHelp": "Enable vim-style keybindings for power users. Supports common vim commands like i, Esc, dd, yy, p, and more.",
+      "enableVimMode": "Enable vim keybindings",
       "syntaxHighlighting": "Realce de sintaxe",
       "syntaxHelp": "Selecione quais linguagens de programação ativar para realce de sintaxe em blocos de código Markdown e visualizações. Linguagens principais estão sempre ativadas.",
       "languagesEnabled": "{count} linguagens ativadas",

@@ -85,6 +85,7 @@ export interface UserSettings {
   enabledSyntaxLanguages?: string[]; // Enabled syntax highlighting languages (defaults to core languages)
   defaultSyntaxLanguage?: string; // Default language for new notes (defaults to 'markdown')
   openLinksInNewTab?: boolean; // Open external links in new tab (defaults to true)
+  vimMode?: boolean; // Enable vim keybindings in editor (defaults to false)
 }
 
 /**
@@ -268,4 +269,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'perl', 'markdown', 'json', 'xml', 'css', 'bash', 'sql', 'calc'], // Core languages + SQL
   defaultSyntaxLanguage: 'markdown', // Default language for new notes
   openLinksInNewTab: true, // Open external links in new tab by default
+  vimMode: false, // Vim keybindings disabled by default
 };

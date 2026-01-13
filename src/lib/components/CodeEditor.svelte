@@ -13,6 +13,8 @@
   import { perl } from '@codemirror/legacy-modes/mode/perl';
   import { shell } from '@codemirror/legacy-modes/mode/shell';
   import { calcExtension } from '../extensions/calcExtension';
+  import { quickCommandCompletion, quickCommandsExtension } from '../extensions/quickCommands';
+  import { vim } from '@replit/codemirror-vim';
   import { oneDark } from '@codemirror/theme-one-dark';
   import { lineNumbers } from '@codemirror/view';
   import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
@@ -61,6 +63,7 @@
   let wrapCompartment = new Compartment();
   let themeCompartment = new Compartment();
   let mobileAttributesCompartment = new Compartment();
+  let vimCompartment = new Compartment();
   let measuredWidth: number = 0;
 
   // Compute font size from settings
@@ -157,8 +160,11 @@
       highlightSpecialChars(),
       history(),
       bracketMatching(),
-      autocompletion(),
+      autocompletion({
+        override: [quickCommandCompletion],
+      }),
       highlightSelectionMatches(),
+      quickCommandsExtension(),
       keymap.of([
         ...defaultKeymap,
         ...historyKeymap,
@@ -171,6 +177,7 @@
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
       themeCompartment.of(isDark ? oneDark : []),
+      vimCompartment.of($settings.vimMode ? vim() : []),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const newValue = update.state.doc.toString();
@@ -288,6 +295,13 @@
     }
 
     editorView.dispatch({ effects });
+  }
+
+  // Update vim mode when settings change
+  $: if (editorView && $settings.vimMode !== undefined) {
+    editorView.dispatch({
+      effects: vimCompartment.reconfigure($settings.vimMode ? vim() : []),
+    });
   }
 </script>
 

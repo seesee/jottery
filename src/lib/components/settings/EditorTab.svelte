@@ -4,6 +4,7 @@
 
   export let enabledSyntaxLanguages: string[];
   export let defaultSyntaxLanguage: string;
+  export let vimMode: boolean;
 
   // Ensure default language is always in enabled list
   $: if (defaultSyntaxLanguage && !enabledSyntaxLanguages.includes(defaultSyntaxLanguage)) {
@@ -28,6 +29,24 @@
 </script>
 
 <div class="space-y-6">
+  <!-- Vim Mode -->
+  <div>
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{$_('settings.editorTab.vimMode')}</h3>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+      {$_('settings.editorTab.vimModeHelp')}
+    </p>
+    <label class="flex items-center gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        bind:checked={vimMode}
+        class="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+      />
+      <span class="text-sm font-medium text-gray-900 dark:text-white">
+        {$_('settings.editorTab.enableVimMode')}
+      </span>
+    </label>
+  </div>
+
   <!-- Default Note Type -->
   <div>
     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{$_('settings.editorTab.defaultNoteType')}</h3>

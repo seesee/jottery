@@ -288,6 +288,9 @@
       "error": "错误"
     },
     "editorTab": {
+      "vimMode": "Editor mode",
+      "vimModeHelp": "Enable vim-style keybindings for power users. Supports common vim commands like i, Esc, dd, yy, p, and more.",
+      "enableVimMode": "Enable vim keybindings",
       "syntaxHighlighting": "语法高亮",
       "syntaxHelp": "选择要在 Markdown 代码块和预览中启用语法高亮的编程语言。核心语言始终启用。",
       "languagesEnabled": "已启用 {count} 种语言",

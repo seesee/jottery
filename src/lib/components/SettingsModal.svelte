@@ -27,6 +27,7 @@
   let enabledSyntaxLanguages: string[] = $settings.enabledSyntaxLanguages || [];
   let defaultSyntaxLanguage: string = $settings.defaultSyntaxLanguage || 'markdown';
   let openLinksInNewTab: boolean = $settings.openLinksInNewTab ?? true;
+  let vimMode: boolean = $settings.vimMode || false;
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -740,6 +741,7 @@
         enabledSyntaxLanguages,
         defaultSyntaxLanguage,
         openLinksInNewTab,
+        vimMode,
       });
 
       // Update store
@@ -757,6 +759,7 @@
         enabledSyntaxLanguages,
         defaultSyntaxLanguage,
         openLinksInNewTab,
+        vimMode,
       }));
 
       toast.success($_('settings.settingsSaved'));
@@ -1096,7 +1099,7 @@
 
         <!-- EDITOR TAB -->
         {#if currentTab === 'editor'}
-          <EditorTab bind:enabledSyntaxLanguages bind:defaultSyntaxLanguage />
+          <EditorTab bind:enabledSyntaxLanguages bind:defaultSyntaxLanguage bind:vimMode />
         {/if}
 
         <!-- KEYBOARD SHORTCUTS TAB -->
