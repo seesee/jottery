@@ -86,6 +86,7 @@ export interface UserSettings {
   defaultSyntaxLanguage?: string; // Default language for new notes (defaults to 'markdown')
   openLinksInNewTab?: boolean; // Open external links in new tab (defaults to true)
   vimMode?: boolean; // Enable vim keybindings in editor (defaults to false)
+  quickCommands?: boolean; // Enable quick commands like /now, /date, /time (defaults to true)
 }
 
 /**
@@ -271,4 +272,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultSyntaxLanguage: 'markdown', // Default language for new notes
   openLinksInNewTab: true, // Open external links in new tab by default
   vimMode: false, // Vim keybindings disabled by default
+  quickCommands: true, // Quick commands enabled by default
 };

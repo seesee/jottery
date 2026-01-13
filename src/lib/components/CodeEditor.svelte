@@ -64,6 +64,7 @@
   let themeCompartment = new Compartment();
   let mobileAttributesCompartment = new Compartment();
   let vimCompartment = new Compartment();
+  let quickCommandsCompartment = new Compartment();
   let measuredWidth: number = 0;
 
   // Compute font size from settings
@@ -160,11 +161,7 @@
       highlightSpecialChars(),
       history(),
       bracketMatching(),
-      autocompletion({
-        override: [quickCommandCompletion],
-      }),
       highlightSelectionMatches(),
-      quickCommandsExtension(),
       keymap.of([
         ...defaultKeymap,
         ...historyKeymap,
@@ -178,6 +175,11 @@
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
       themeCompartment.of(isDark ? oneDark : []),
       vimCompartment.of($settings.vimMode ? vim() : []),
+      quickCommandsCompartment.of(
+        ($settings.quickCommands ?? true)
+          ? [autocompletion({ override: [quickCommandCompletion] }), quickCommandsExtension()]
+          : []
+      ),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const newValue = update.state.doc.toString();
@@ -301,6 +303,17 @@
   $: if (editorView && $settings.vimMode !== undefined) {
     editorView.dispatch({
       effects: vimCompartment.reconfigure($settings.vimMode ? vim() : []),
+    });
+  }
+
+  // Update quick commands when settings change
+  $: if (editorView && $settings.quickCommands !== undefined) {
+    editorView.dispatch({
+      effects: quickCommandsCompartment.reconfigure(
+        $settings.quickCommands
+          ? [autocompletion({ override: [quickCommandCompletion] }), quickCommandsExtension()]
+          : []
+      ),
     });
   }
 </script>

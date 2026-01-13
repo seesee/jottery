@@ -5,6 +5,7 @@
   export let enabledSyntaxLanguages: string[];
   export let defaultSyntaxLanguage: string;
   export let vimMode: boolean;
+  export let quickCommands: boolean;
 
   // Ensure default language is always in enabled list
   $: if (defaultSyntaxLanguage && !enabledSyntaxLanguages.includes(defaultSyntaxLanguage)) {
@@ -43,6 +44,24 @@
       />
       <span class="text-sm font-medium text-gray-900 dark:text-white">
         {$_('settings.editorTab.enableVimMode')}
+      </span>
+    </label>
+  </div>
+
+  <!-- Quick Commands -->
+  <div>
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{$_('settings.editorTab.quickCommands')}</h3>
+    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+      {$_('settings.editorTab.quickCommandsHelp')}
+    </p>
+    <label class="flex items-center gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        bind:checked={quickCommands}
+        class="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+      />
+      <span class="text-sm font-medium text-gray-900 dark:text-white">
+        {$_('settings.editorTab.enableQuickCommands')}
       </span>
     </label>
   </div>
