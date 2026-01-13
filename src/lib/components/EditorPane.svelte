@@ -323,7 +323,7 @@
       if (metadata?.syncEnabled) {
         // Don't await - let it run in background
         syncService.syncNow().then(result => {
-          if (!result.success) {
+          if (!result.success && result.error !== 'Sync already in progress') {
             console.warn('[EditorPane] Background sync failed:', result.error);
           }
         });
