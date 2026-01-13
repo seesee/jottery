@@ -706,6 +706,9 @@ describe('syncService', () => {
     });
 
     it('should set isSyncRefreshing during sync and clear it after', async () => {
+      // Create a note so we have something to push/pull
+      const testNote = await noteService.createNote('Test note', ['test']);
+
       // Track isSyncRefreshing values during sync
       const refreshingValues: boolean[] = [];
       const unsubscribe = isSyncRefreshing.subscribe(value => {
@@ -718,12 +721,13 @@ describe('syncService', () => {
             serverTime: new Date().toISOString(),
             version: '1.0.0',
             pendingNotes: 0,
-            totalNotes: 0,
+            totalNotes: 1,
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          // Simulate accepting the note so pushedCount > 0
           return HttpResponse.json({
-            accepted: [],
+            accepted: [{ id: testNote.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
@@ -765,8 +769,9 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          // Simulate accepting the note so pushedCount > 0 triggers refresh
           return HttpResponse.json({
-            accepted: [],
+            accepted: [{ id: testNote.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
@@ -821,8 +826,9 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          // Simulate accepting both notes so pushedCount > 0 triggers refresh
           return HttpResponse.json({
-            accepted: [],
+            accepted: [{ id: note1.id }, { id: note2.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
@@ -874,8 +880,9 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          // Simulate accepting note1 so pushedCount > 0 triggers refresh
           return HttpResponse.json({
-            accepted: [],
+            accepted: [{ id: note1.id }],
             rejected: [],
           } as SyncPushResponse);
         }),

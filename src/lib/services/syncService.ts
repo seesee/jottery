@@ -198,34 +198,33 @@ class SyncService {
         lastSyncAt: new Date().toISOString(),
       });
 
-      // 5. Reload notes into app state and rebuild search index
+      // 5. Only reload notes if there were actual sync changes
+      // This avoids expensive re-renders when sync finds nothing new
       const hasChanges = pushedCount > 0 || pulledCount > 0;
 
-      // Always refresh to ensure store consistency with database
-      // But only re-sort if there were actual sync changes
-      let currentSettings: any;
-      settings.subscribe(s => currentSettings = s)();
-
-      // Set flag to prevent EditorPane from triggering sync during refresh
-      isSyncRefreshing.set(true);
-
-      // Get all notes from database (already decrypted and sorted)
-      const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
-
-      // Replace store with properly sorted notes from database
-      notes.set(allNotes);
-
-      // Rebuild search index with all notes
-      searchService.indexNotes(allNotes);
-
       if (hasChanges) {
+        let currentSettings: any;
+        settings.subscribe(s => currentSettings = s)();
+
+        // Set flag to prevent EditorPane from triggering sync during refresh
+        isSyncRefreshing.set(true);
+
+        // Get all notes from database (already decrypted and sorted)
+        const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
+
+        // Replace store with properly sorted notes from database
+        notes.set(allNotes);
+
+        // Rebuild search index with all notes
+        searchService.indexNotes(allNotes);
+
         console.log('[SyncService] Notes refreshed and sorted:', allNotes.length);
+
+        // Clear refresh flag
+        isSyncRefreshing.set(false);
       } else {
         console.log('[SyncService] Sync complete (no changes)');
       }
-
-      // Clear refresh flag
-      isSyncRefreshing.set(false);
 
       return { success: true };
     } catch (error) {

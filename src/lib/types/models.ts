@@ -233,6 +233,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   wordWrap: true,
   syntaxLanguage: 'markdown',
   showPreview: false,
+  needsSync: true, // New notes should be synced
 };
 
 /**
