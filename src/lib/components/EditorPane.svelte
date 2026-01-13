@@ -74,7 +74,10 @@
   }) : '';
 
   // Check if preview is available for current language
-  $: canPreview = language === 'markdown' || language === 'html';
+  $: canPreview = language === 'markdown' || language === 'html' || language === 'xml';
+
+  // Check if preview should use iframe (for HTML/XML with potential scripts)
+  $: useIframePreview = language === 'html' || language === 'xml';
 
   // Compute note statistics
   $: noteStats = {
@@ -1093,6 +1096,8 @@
       onTagClick={handleTagClick}
       onImagePaste={handleImagePaste}
       {previewHtml}
+      {useIframePreview}
+      rawContent={content}
     />
 
     <!-- Attachments Section - Only show if attachments exist or dragging files (hidden on mobile) -->

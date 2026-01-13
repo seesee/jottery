@@ -25,6 +25,12 @@
   // Preview HTML
   export let previewHtml: string;
 
+  // Use iframe for HTML/XML preview (allows scripts to run)
+  export let useIframePreview: boolean = false;
+
+  // Raw content for iframe preview
+  export let rawContent: string = '';
+
   // Handler wrappers
   function handleContentChange(newValue: string) {
     content = newValue;
@@ -102,11 +108,24 @@
 
   <!-- Preview Panel - Only shown when IN preview mode -->
   {#if showPreview && canPreview}
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div bind:this={previewContainer} class="h-full overflow-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" on:click={handlePreviewClick}>
-      <div class="prose dark:prose-invert max-w-none">
-        {@html previewHtml}
+    {#if useIframePreview}
+      <!-- Iframe-based preview for HTML/XML (allows scripts to run safely) -->
+      <div class="h-full w-full bg-white">
+        <iframe
+          srcdoc={rawContent}
+          title="HTML Preview"
+          class="w-full h-full border-0"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+        ></iframe>
       </div>
-    </div>
+    {:else}
+      <!-- Standard markdown preview -->
+      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+      <div bind:this={previewContainer} class="h-full overflow-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" on:click={handlePreviewClick}>
+        <div class="prose dark:prose-invert max-w-none">
+          {@html previewHtml}
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>
