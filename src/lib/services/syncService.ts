@@ -198,11 +198,10 @@ class SyncService {
         lastSyncAt: new Date().toISOString(),
       });
 
-      // 5. Only reload notes if there were actual sync changes
-      // This avoids expensive re-renders when sync finds nothing new
-      const hasChanges = pushedCount > 0 || pulledCount > 0;
-
-      if (hasChanges) {
+      // 5. Only reload notes if we PULLED remote changes
+      // When we push, the store is already up-to-date (we saved locally before syncing)
+      // Refreshing on push was causing UI lag during active editing
+      if (pulledCount > 0) {
         let currentSettings: any;
         settings.subscribe(s => currentSettings = s)();
 
@@ -218,10 +217,12 @@ class SyncService {
         // Rebuild search index with all notes
         searchService.indexNotes(allNotes);
 
-        console.log('[SyncService] Notes refreshed and sorted:', allNotes.length);
+        console.log('[SyncService] Notes refreshed after pull:', allNotes.length);
 
         // Clear refresh flag
         isSyncRefreshing.set(false);
+      } else if (pushedCount > 0) {
+        console.log('[SyncService] Pushed', pushedCount, 'notes (no refresh needed)');
       } else {
         console.log('[SyncService] Sync complete (no changes)');
       }

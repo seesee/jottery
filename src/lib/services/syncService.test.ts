@@ -708,6 +708,8 @@ describe('syncService', () => {
     it('should set isSyncRefreshing during sync and clear it after', async () => {
       // Create a note so we have something to push/pull
       const testNote = await noteService.createNote('Test note', ['test']);
+      // Get the encrypted note for the pull response
+      const encryptedNote = await noteRepository.getById(testNote.id);
 
       // Track isSyncRefreshing values during sync
       const refreshingValues: boolean[] = [];
@@ -725,7 +727,6 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
-          // Simulate accepting the note so pushedCount > 0
           return HttpResponse.json({
             accepted: [{ id: testNote.id }],
             rejected: [],
@@ -734,8 +735,19 @@ describe('syncService', () => {
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
           // Check that isSyncRefreshing is false before notes refresh
           expect(get(isSyncRefreshing)).toBe(false);
+          // Return a note to trigger refresh (pulledCount > 0)
           return HttpResponse.json({
-            notes: [],
+            notes: [{
+              id: encryptedNote!.id,
+              createdAt: encryptedNote!.createdAt,
+              modifiedAt: encryptedNote!.modifiedAt,
+              content: encryptedNote!.content,
+              tags: encryptedNote!.tags,
+              attachments: [],
+              pinned: false,
+              deleted: false,
+              version: 2,
+            }],
             attachments: [],
             versions: [],
           } as SyncPullResponse);
@@ -755,6 +767,8 @@ describe('syncService', () => {
     it('should load notes from database into store after sync', async () => {
       // Create a note in the database using noteService (handles encryption)
       const testNote = await noteService.createNote('Test note content', ['test']);
+      // Get the encrypted note for the pull response
+      const encryptedNote = await noteRepository.getById(testNote.id);
 
       // Store starts empty
       notes.set([]);
@@ -769,15 +783,25 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
-          // Simulate accepting the note so pushedCount > 0 triggers refresh
           return HttpResponse.json({
             accepted: [{ id: testNote.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          // Return a note to trigger refresh (pulledCount > 0)
           return HttpResponse.json({
-            notes: [],
+            notes: [{
+              id: encryptedNote!.id,
+              createdAt: encryptedNote!.createdAt,
+              modifiedAt: encryptedNote!.modifiedAt,
+              content: encryptedNote!.content,
+              tags: encryptedNote!.tags,
+              attachments: [],
+              pinned: false,
+              deleted: false,
+              version: 2,
+            }],
             attachments: [],
             versions: [],
           } as SyncPullResponse);
@@ -812,6 +836,8 @@ describe('syncService', () => {
       // Create two notes in the database using noteService (handles encryption)
       const note1 = await noteService.createNote('Note 1', ['one']);
       const note2 = await noteService.createNote('Note 2', ['two']);
+      // Get encrypted note for pull response
+      const encryptedNote1 = await noteRepository.getById(note1.id);
 
       // Pre-populate store with note1 (simulating notes already loaded)
       notes.set([{ ...note1, decryptedAt: Date.now() }]);
@@ -826,15 +852,25 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
-          // Simulate accepting both notes so pushedCount > 0 triggers refresh
           return HttpResponse.json({
             accepted: [{ id: note1.id }, { id: note2.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          // Return a note to trigger refresh (pulledCount > 0)
           return HttpResponse.json({
-            notes: [],
+            notes: [{
+              id: encryptedNote1!.id,
+              createdAt: encryptedNote1!.createdAt,
+              modifiedAt: encryptedNote1!.modifiedAt,
+              content: encryptedNote1!.content,
+              tags: encryptedNote1!.tags,
+              attachments: [],
+              pinned: false,
+              deleted: false,
+              version: 2,
+            }],
             attachments: [],
             versions: [],
           } as SyncPullResponse);
@@ -854,6 +890,8 @@ describe('syncService', () => {
     it('should remove deleted notes from store during refresh', async () => {
       // Create one note in the database using noteService (handles encryption)
       const note1 = await noteService.createNote('Note 1', ['one']);
+      // Get encrypted note for pull response
+      const encryptedNote1 = await noteRepository.getById(note1.id);
 
       // Pre-populate store with note1 plus a "stale" note not in DB
       const staleNote: DecryptedNote = {
@@ -880,15 +918,25 @@ describe('syncService', () => {
           });
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
-          // Simulate accepting note1 so pushedCount > 0 triggers refresh
           return HttpResponse.json({
             accepted: [{ id: note1.id }],
             rejected: [],
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          // Return a note to trigger refresh (pulledCount > 0)
           return HttpResponse.json({
-            notes: [],
+            notes: [{
+              id: encryptedNote1!.id,
+              createdAt: encryptedNote1!.createdAt,
+              modifiedAt: encryptedNote1!.modifiedAt,
+              content: encryptedNote1!.content,
+              tags: encryptedNote1!.tags,
+              attachments: [],
+              pinned: false,
+              deleted: false,
+              version: 2,
+            }],
             attachments: [],
             versions: [],
           } as SyncPullResponse);
@@ -914,6 +962,8 @@ describe('syncService', () => {
       // Wait a bit then create newer note
       await new Promise(resolve => setTimeout(resolve, 50));
       const newerNote = await noteService.createNote('Newer note', ['new']);
+      // Get encrypted note for pull response
+      const encryptedOlderNote = await noteRepository.getById(olderNote.id);
 
       // Pre-populate store with notes in WRONG order (older first)
       // This simulates the bug where sync didn't re-sort
@@ -941,8 +991,19 @@ describe('syncService', () => {
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          // Return a note to trigger refresh (pulledCount > 0)
           return HttpResponse.json({
-            notes: [],
+            notes: [{
+              id: encryptedOlderNote!.id,
+              createdAt: encryptedOlderNote!.createdAt,
+              modifiedAt: encryptedOlderNote!.modifiedAt,
+              content: encryptedOlderNote!.content,
+              tags: encryptedOlderNote!.tags,
+              attachments: [],
+              pinned: false,
+              deleted: false,
+              version: 2,
+            }],
             attachments: [],
             versions: [],
           } as SyncPullResponse);
