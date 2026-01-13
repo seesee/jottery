@@ -22,6 +22,7 @@
   export let onWordWrapToggle: () => void;
   export let onCopy: () => void;
   export let onExport: () => void;
+  export let onPrintPdf: () => void;
   export let onDuplicate: () => void;
   export let onShowInfo: () => void;
   export let onShowVersionHistory: () => void;
@@ -65,6 +66,11 @@
   function handleExportClick() {
     showMoreMenu = false;
     onExport();
+  }
+
+  function handlePrintPdfClick() {
+    showMoreMenu = false;
+    onPrintPdf();
   }
 
   function handleDuplicateClick() {
@@ -235,6 +241,14 @@
           >
             <span>💾</span>
             <span class="flex-1">{$_('editor.exportToFile')}</span>
+          </button>
+
+          <button
+            on:click={handlePrintPdfClick}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <span>🖨️</span>
+            <span class="flex-1">{$_('editor.printPdf')}</span>
           </button>
 
           <button

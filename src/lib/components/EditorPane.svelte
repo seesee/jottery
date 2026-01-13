@@ -644,6 +644,111 @@
 
   }
 
+  function handlePrintPdf() {
+    if (!content || !$selectedNote) return;
+
+    // Generate title from first line or date
+    const firstLine = content.split('\n')[0].trim();
+    const title = firstLine.substring(0, 100) ||
+      new Date($selectedNote?.createdAt || new Date()).toISOString().split('T')[0];
+
+    // Build the HTML content based on language type
+    let htmlContent: string;
+
+    if (language === 'markdown') {
+      // Use rendered markdown preview
+      htmlContent = previewHtml;
+    } else if (language === 'html' || language === 'xml') {
+      // Use raw HTML/XML content directly
+      htmlContent = content;
+    } else {
+      // For code/plain text, wrap in a pre/code block with styling
+      const escapedContent = content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      htmlContent = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 12px; line-height: 1.5; padding: 1em; background: #f5f5f5; border-radius: 4px;"><code>${escapedContent}</code></pre>`;
+    }
+
+    // Create a print-friendly document
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error($_('editor.printFailed'));
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            @media print {
+              body { margin: 0; padding: 20px; }
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            pre {
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+            }
+            code {
+              font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            h1, h2, h3, h4, h5, h6 {
+              margin-top: 1.5em;
+              margin-bottom: 0.5em;
+            }
+            p {
+              margin: 1em 0;
+            }
+            a {
+              color: #0066cc;
+            }
+            blockquote {
+              border-left: 4px solid #ddd;
+              padding-left: 1em;
+              margin-left: 0;
+              color: #666;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f5f5f5;
+            }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    // Wait for content to load, then print
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }
+
   async function handleDuplicate() {
     if (!$selectedNote) return;
 
@@ -1070,6 +1175,7 @@
       onWordWrapToggle={handleWordWrapToggle}
       onCopy={handleCopy}
       onExport={handleExport}
+      onPrintPdf={handlePrintPdf}
       onDuplicate={handleDuplicate}
       onShowInfo={handleShowInfo}
       onShowVersionHistory={handleShowVersionHistory}
