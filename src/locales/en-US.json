@@ -107,7 +107,10 @@
       "videoNotSupported": "Your browser does not support video playback.",
       "previewNotAvailable": "Preview not available for this file type.",
       "downloadToView": "Download to view"
-    }
+    },
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note"
   },
   "noteList": {
     "deleteNote": "Delete note",

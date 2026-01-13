@@ -107,7 +107,10 @@
       "downloadToView": "Скачайте для просмотра"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "noAttachments": "No attachments yet",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note"
   },
   "noteList": {
     "deleteNote": "Удалить заметку",

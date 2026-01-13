@@ -641,6 +641,44 @@
 
   }
 
+  async function handleDuplicate() {
+    if (!$selectedNote) return;
+
+    try {
+      // Create a duplicate of the current note
+      const newNote = await noteService.duplicateNote($selectedNote.id);
+
+      // Get the decrypted version
+      const decryptedNote = await noteService.getNote(newNote.id);
+      if (!decryptedNote) {
+        throw new Error('Failed to retrieve duplicated note');
+      }
+
+      // Add to notes store
+      notes.update(allNotes => {
+        // Insert after pinned notes (new note is unpinned)
+        const pinnedCount = allNotes.filter(n => n.pinned).length;
+        const newNotes = [...allNotes];
+        newNotes.splice(pinnedCount, 0, decryptedNote);
+        return newNotes;
+      });
+
+      // Update search index
+      searchService.updateNote(decryptedNote);
+
+      // Select the new note
+      selectNote(decryptedNote.id);
+
+      // Trigger background sync
+      triggerBackgroundSync();
+
+      toast.success($_('editor.noteDuplicated'));
+    } catch (error) {
+      console.error('Failed to duplicate note:', error);
+      toast.error($_('editor.duplicateFailed'));
+    }
+  }
+
   function handleShowInfo() {
     showInfoModal = true;
   }
@@ -1029,6 +1067,7 @@
       onWordWrapToggle={handleWordWrapToggle}
       onCopy={handleCopy}
       onExport={handleExport}
+      onDuplicate={handleDuplicate}
       onShowInfo={handleShowInfo}
       onShowVersionHistory={handleShowVersionHistory}
       onDelete={handleDelete}

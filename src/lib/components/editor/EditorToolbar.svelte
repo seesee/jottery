@@ -22,6 +22,7 @@
   export let onWordWrapToggle: () => void;
   export let onCopy: () => void;
   export let onExport: () => void;
+  export let onDuplicate: () => void;
   export let onShowInfo: () => void;
   export let onShowVersionHistory: () => void;
   export let onDelete: () => void;
@@ -64,6 +65,11 @@
   function handleExportClick() {
     showMoreMenu = false;
     onExport();
+  }
+
+  function handleDuplicateClick() {
+    showMoreMenu = false;
+    onDuplicate();
   }
 
   function handleShowInfoClick() {
@@ -229,6 +235,14 @@
           >
             <span>💾</span>
             <span class="flex-1">{$_('editor.exportToFile')}</span>
+          </button>
+
+          <button
+            on:click={handleDuplicateClick}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <span>📄</span>
+            <span class="flex-1">{$_('editor.duplicateNote')}</span>
           </button>
 
           <button

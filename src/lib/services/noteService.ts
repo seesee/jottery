@@ -373,6 +373,33 @@ class NoteService {
   }
 
   /**
+   * Duplicate an existing note
+   * Creates a copy with new ID and timestamps, preserving all content and settings
+   */
+  async duplicateNote(id: string): Promise<Note> {
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new Error('Application is locked.');
+    }
+
+    // Get the original note (decrypted)
+    const original = await this.getNote(id);
+    if (!original) {
+      throw new Error(`Note ${id} not found`);
+    }
+
+    // Create a new note with the same content and settings
+    return await this.createNote(original.content, original.tags, {
+      pinned: false, // Don't duplicate pinned status
+      wordWrap: original.wordWrap,
+      syntaxLanguage: original.syntaxLanguage,
+      showPreview: original.showPreview,
+      // Note: attachments are not duplicated - they reference the same blobs
+      // If we wanted to duplicate attachments, we'd need to copy the blobs too
+    });
+  }
+
+  /**
    * Permanently delete a note and its attachments
    */
   async permanentlyDeleteNote(id: string): Promise<void> {
