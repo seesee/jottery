@@ -45,6 +45,10 @@
   // Responsive preview length: shorter on mobile, longer on desktop
   $: isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   $: previewLength = isMobile ? 60 : 100;
+
+  // Unified condition for showing selection UI (checkbox and delete) on mobile
+  // This ensures both appear simultaneously on first tap
+  $: showMobileSelectionUI = isMobile && isSelected && !note.pinned;
   $: preview = note.content.split('\n').slice(1).join(' ').slice(0, previewLength);
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 
@@ -113,8 +117,8 @@
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
-      <!-- Multi-select checkbox: only show on non-pinned notes when in multi-select mode or this note is the currently viewed note -->
-      {#if !note.pinned && ($isMultiSelectMode || isSelected)}
+      <!-- Multi-select checkbox: show when in multi-select mode, or on mobile when note is selected -->
+      {#if $isMultiSelectMode || showMobileSelectionUI || (!note.pinned && isSelected)}
         <span
           on:click|stopPropagation={handleCheckboxClick}
           on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
@@ -152,7 +156,7 @@
         {title}
       </h3>
     </div>
-    {#if (isHovered || (isMobile && isSelected)) && !note.pinned}
+    {#if isHovered || showMobileSelectionUI}
       <span
         on:click={handleDeleteClick}
         on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}

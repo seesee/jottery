@@ -122,6 +122,7 @@ export interface NoteVersion {
   attachments: Attachment[];
   syntaxLanguage?: string;
   wordWrap?: boolean;
+  showPreview?: boolean;
   reason: 'sync' | 'manual-sync';
 }
 

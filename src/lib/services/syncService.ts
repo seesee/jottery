@@ -323,6 +323,7 @@ class SyncService {
             version: note.version,
             wordWrap: note.wordWrap,
             syntaxLanguage: note.syntaxLanguage,
+            showPreview: note.showPreview,
           };
         })),
         attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
@@ -556,6 +557,7 @@ class SyncService {
               version: serverVersion.version,
               syntaxLanguage: serverVersion.syntaxLanguage,
               wordWrap: serverVersion.wordWrap,
+              showPreview: serverVersion.showPreview,
               // These fields won't be used since we're directly storing the version
               createdAt: serverVersion.createdAt,
               modifiedAt: serverVersion.createdAt,
@@ -711,6 +713,7 @@ class SyncService {
           attachments: version.attachments,
           syntaxLanguage: version.syntaxLanguage,
           wordWrap: version.wordWrap,
+          showPreview: version.showPreview,
           reason: version.reason,
         });
       }

@@ -16,6 +16,7 @@ pub struct Note {
     pub server_version: i64,
     pub word_wrap: Option<i64>,
     pub syntax_language: Option<String>,
+    pub show_preview: Option<i64>,
 }
 
 #[allow(dead_code)]

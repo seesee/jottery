@@ -1001,4 +1001,105 @@ describe('syncService', () => {
       expect(updateCount).toBeGreaterThanOrEqual(0);
     });
   });
+
+  describe('Editor Settings Sync', () => {
+    beforeEach(async () => {
+      const encryptedApiKey = await cryptoService.encryptText(TEST_API_KEY, masterKey);
+      await syncRepository.updateMetadata({
+        apiKey: JSON.stringify(encryptedApiKey),
+        clientId: TEST_CLIENT_ID,
+        syncEnabled: true,
+        syncEndpoint: TEST_ENDPOINT,
+      });
+    });
+
+    it('should include showPreview in sync push request', async () => {
+      // Create a note with showPreview enabled
+      const note = await noteService.createNote('Preview test', ['test']);
+      await noteService.updateNote(note.id, { showPreview: true });
+
+      let capturedRequest: any = null;
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 1,
+            totalNotes: 0,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, async ({ request }) => {
+          capturedRequest = await request.json();
+          return HttpResponse.json({
+            accepted: [{ id: note.id, serverVersion: 1, syncedAt: new Date().toISOString() }],
+            rejected: [],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({
+            notes: [],
+            attachments: [],
+            versions: [],
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      // Verify showPreview was included in the sync request
+      expect(capturedRequest).not.toBeNull();
+      expect(capturedRequest.notes).toHaveLength(1);
+      expect(capturedRequest.notes[0].showPreview).toBe(true);
+    });
+
+    it('should apply showPreview from pull response', async () => {
+      const noteId = 'pulled-note-id';
+      const now = new Date().toISOString();
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: now,
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 1,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({
+            notes: [{
+              id: noteId,
+              createdAt: now,
+              modifiedAt: now,
+              content: 'encrypted-content',
+              tags: ['encrypted-tag'],
+              attachments: [],
+              pinned: false,
+              deleted: false,
+              version: 1,
+              showPreview: true, // Server says preview is enabled
+              syntaxLanguage: 'markdown',
+            }],
+            attachments: [],
+            versions: [],
+            syncedAt: now,
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      // Verify note was stored with showPreview
+      const storedNote = await noteRepository.getById(noteId);
+      expect(storedNote).not.toBeNull();
+      expect(storedNote?.showPreview).toBe(true);
+    });
+  });
 });

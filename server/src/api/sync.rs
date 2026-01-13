@@ -149,6 +149,7 @@ pub async fn push(
             let pinned = if note.pinned { 1 } else { 0 };
             let deleted = if note.deleted { 1 } else { 0 };
             let word_wrap = note.word_wrap.map(|w| if w { 1 } else { 0 });
+            let show_preview = note.show_preview.map(|p| if p { 1 } else { 0 });
 
             // Serialize tags as JSON
             let tags_json = serde_json::to_string(&note.tags)
@@ -167,9 +168,9 @@ pub async fn push(
                 INSERT INTO notes (
                     id, user_id, client_id, created_at, modified_at, server_modified_at,
                     content, tags, pinned, deleted, deleted_at, version, server_version,
-                    word_wrap, syntax_language
+                    word_wrap, syntax_language, show_preview
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
@@ -181,7 +182,8 @@ pub async fn push(
                     version = excluded.version,
                     server_version = excluded.server_version,
                     word_wrap = excluded.word_wrap,
-                    syntax_language = excluded.syntax_language
+                    syntax_language = excluded.syntax_language,
+                    show_preview = excluded.show_preview
                 "#,
                 note.id,
                 client_info.user_id,
@@ -197,7 +199,8 @@ pub async fn push(
                 note.version,
                 server_version,
                 word_wrap,
-                note.syntax_language
+                note.syntax_language,
+                show_preview
             )
             .execute(&state.pool)
             .await?;
@@ -237,7 +240,7 @@ pub async fn push(
         } else {
             // Fetch full server note data for conflict resolution
             let server_note = sqlx::query!(
-                r#"SELECT content, tags, pinned, server_version, syntax_language, word_wrap, modified_at
+                r#"SELECT content, tags, pinned, server_version, syntax_language, word_wrap, show_preview, modified_at
                    FROM notes WHERE id = ? AND user_id = ?"#,
                 note.id,
                 client_info.user_id
@@ -282,6 +285,7 @@ pub async fn push(
                 server_pinned: server_note.pinned == 1,
                 server_syntax_language: server_note.syntax_language,
                 server_word_wrap: server_note.word_wrap.map(|w| w == 1),
+                server_show_preview: server_note.show_preview.map(|p| p == 1),
             });
 
             tracing::debug!("Rejected note: {} (conflict) - included server data for resolution", note.id);
@@ -314,6 +318,7 @@ pub async fn push(
 
         // Convert optional fields
         let word_wrap = version.word_wrap.map(|w| if w { 1 } else { 0 });
+        let show_preview = version.show_preview.map(|p| if p { 1 } else { 0 });
 
         // Upsert version (insert or replace if exists)
         // Use match to handle potential FK errors gracefully
@@ -321,9 +326,9 @@ pub async fn push(
             r#"
             INSERT INTO note_versions (
                 version_key, note_id, user_id, client_id, version, created_at, synced_at,
-                server_synced_at, content, tags, attachments, syntax_language, word_wrap, reason
+                server_synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, reason
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
             ON CONFLICT(version_key) DO UPDATE SET
                 synced_at = excluded.synced_at,
                 server_synced_at = excluded.server_synced_at
@@ -341,6 +346,7 @@ pub async fn push(
             attachments_json,
             version.syntax_language,
             word_wrap,
+            show_preview,
             version.reason
         )
         .execute(&state.pool)
@@ -454,7 +460,7 @@ pub async fn pull(
     // Get notes with pagination (LIMIT/OFFSET)
     let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             last_sync,
             limit,
@@ -479,11 +485,12 @@ pub async fn pull(
                 server_version: row.server_version,
                 word_wrap: row.word_wrap,
                 syntax_language: row.syntax_language,
+                show_preview: row.show_preview,
             }))
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             limit,
             offset
@@ -507,6 +514,7 @@ pub async fn pull(
                 server_version: row.server_version,
                 word_wrap: row.word_wrap,
                 syntax_language: row.syntax_language,
+                show_preview: row.show_preview,
             }))
             .collect()
     };
@@ -583,6 +591,7 @@ pub async fn pull(
             version: db_note.version,
             word_wrap: db_note.word_wrap.map(|w| w != 0),
             syntax_language: db_note.syntax_language,
+            show_preview: db_note.show_preview.map(|p| p != 0),
         });
     }
 
@@ -623,7 +632,7 @@ pub async fn pull(
     let epoch = "1970-01-01T00:00:00Z".to_string();
     let last_sync_filter = pull_req.last_sync_at.as_ref().unwrap_or(&epoch);
     let db_versions = sqlx::query!(
-        "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, reason
+        "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, reason
          FROM note_versions
          WHERE client_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
          ORDER BY note_id, version",
@@ -654,6 +663,7 @@ pub async fn pull(
             attachments,
             syntax_language: db_version.syntax_language,
             word_wrap: db_version.word_wrap.map(|w| w != 0),
+            show_preview: db_version.show_preview.map(|p| p != 0),
             reason: db_version.reason,
         });
     }

@@ -60,6 +60,7 @@ export interface SyncNote {
   version: number;
   wordWrap?: boolean;
   syntaxLanguage?: string;
+  showPreview?: boolean;
 }
 
 // Attachment reference (metadata only)
@@ -104,6 +105,7 @@ export interface SyncRejected {
   serverPinned: boolean;
   serverSyntaxLanguage?: string;
   serverWordWrap?: boolean;
+  serverShowPreview?: boolean;
 }
 
 // Stored conflict data for resolution UI
@@ -117,6 +119,7 @@ export interface ConflictData {
   serverPinned: boolean;
   serverSyntaxLanguage?: string;
   serverWordWrap?: boolean;
+  serverShowPreview?: boolean;
   detectedAt: string;              // When conflict was detected (ISO 8601)
 }
 
@@ -160,6 +163,7 @@ export interface SyncNoteVersion {
   attachments: AttachmentRef[];
   syntaxLanguage?: string;
   wordWrap?: boolean;
+  showPreview?: boolean;
   reason: 'sync' | 'manual-sync';
 }
 
