@@ -100,11 +100,21 @@ export const quickCommands: QuickCommand[] = [
 /**
  * Autocomplete source for quick commands
  * Shows dropdown when user types / followed by letters
+ * Only triggers when / is at start of line or preceded by whitespace
+ * (to avoid triggering on paths like "date/time")
  */
 export function quickCommandCompletion(context: CompletionContext): CompletionResult | null {
   // Match /word pattern - must start with /
   const word = context.matchBefore(/\/\w*/);
   if (!word) return null;
+
+  // Check that the slash is at start of line or preceded by whitespace
+  if (word.from > 0) {
+    const charBefore = context.state.doc.sliceString(word.from - 1, word.from);
+    if (!/\s/.test(charBefore)) {
+      return null; // Slash is preceded by non-whitespace (e.g., "date/time")
+    }
+  }
 
   // Filter commands that match the typed text
   const matchingCommands = quickCommands.filter(cmd =>
@@ -134,6 +144,8 @@ export function quickCommandCompletion(context: CompletionContext): CompletionRe
 /**
  * Input handler for inline expansion
  * Expands commands when user presses space or enter after a complete command
+ * Only triggers when / is at start of line or preceded by whitespace
+ * (to avoid triggering on paths like "date/time")
  */
 export function quickCommandInputHandler(): Extension {
   return EditorView.inputHandler.of((view, from, to, text) => {
@@ -145,10 +157,11 @@ export function quickCommandInputHandler(): Extension {
     const lineText = line.text.slice(0, from - line.from);
 
     // Look for a slash command at the end of the line
-    const match = lineText.match(/\/(\w+)$/);
+    // Must be preceded by whitespace or at start of line (to avoid "date/time")
+    const match = lineText.match(/(?:^|\s)(\/\w+)$/);
     if (!match) return false;
 
-    const commandText = '/' + match[1];
+    const commandText = match[1]; // The captured group includes the slash
     const command = quickCommands.find(
       cmd => cmd.trigger.toLowerCase() === commandText.toLowerCase()
     );
@@ -157,6 +170,7 @@ export function quickCommandInputHandler(): Extension {
 
     // Replace the command with generated text (plus the typed space/newline)
     const generated = command.generate();
+    // Calculate start position: end of line minus command length
     const commandStart = from - commandText.length;
 
     view.dispatch({
