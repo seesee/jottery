@@ -20,6 +20,7 @@
   export let onContentChange: (newContent: string) => void;
   export let onTagsChange: (newTags: string[]) => void;
   export let onTagClick: ((tag: string) => void) | undefined = undefined;
+  export let onImagePaste: ((file: File) => Promise<string | null>) | undefined = undefined;
 
   // Preview HTML
   export let previewHtml: string;
@@ -94,6 +95,7 @@
         {language}
         {wordWrap}
         {isDark}
+        {onImagePaste}
       />
     </div>
   {/if}

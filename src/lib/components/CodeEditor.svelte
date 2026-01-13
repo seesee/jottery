@@ -31,6 +31,7 @@
   export let readonly: boolean = false;
   export let wordWrap: boolean = true;
   export let isDark: boolean = false;
+  export let onImagePaste: ((file: File) => Promise<string | null>) | undefined = undefined;
 
   // Export focus method for parent components to call
   export function focus() {
@@ -179,6 +180,46 @@
         }
       }),
       EditorView.editable.of(!readonly),
+      // Handle paste events for images
+      EditorView.domEventHandlers({
+        paste: (event, view) => {
+          if (!onImagePaste) return false;
+
+          const clipboardData = event.clipboardData;
+          if (!clipboardData) return false;
+
+          // Check for image files in clipboard
+          const items = Array.from(clipboardData.items);
+          const imageItem = items.find(item => item.type.startsWith('image/'));
+
+          if (!imageItem) return false;
+
+          const file = imageItem.getAsFile();
+          if (!file) return false;
+
+          // Prevent default paste behaviour
+          event.preventDefault();
+
+          // Handle the image paste asynchronously
+          (async () => {
+            try {
+              const markdownRef = await onImagePaste(file);
+              if (markdownRef) {
+                // Insert the markdown reference at cursor position
+                const pos = view.state.selection.main.head;
+                view.dispatch({
+                  changes: { from: pos, insert: markdownRef },
+                  selection: { anchor: pos + markdownRef.length },
+                });
+              }
+            } catch (error) {
+              console.error('Failed to handle image paste:', error);
+            }
+          })();
+
+          return true; // Event handled
+        },
+      }),
     ];
 
     const startState = EditorState.create({

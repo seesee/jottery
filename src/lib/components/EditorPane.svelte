@@ -653,6 +653,41 @@
     showAttachmentsModal = true;
   }
 
+  /**
+   * Handle pasting an image from clipboard
+   * Creates an attachment and returns a markdown image reference
+   */
+  async function handleImagePaste(file: File): Promise<string | null> {
+    // Validate file
+    const validation = attachmentService.validateFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error || 'Invalid file');
+      return null;
+    }
+
+    try {
+      // Create the attachment
+      const attachment = await attachmentService.addAttachment(file);
+
+      // Add to attachments array
+      attachments = [...attachments, attachment];
+
+      // Trigger auto-save
+      handleInput();
+
+      // Generate alt text from filename or fallback
+      const altText = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'pasted image';
+
+      // Return markdown image reference using attachment ID
+      // Format: ![alt text](attachment:uuid)
+      return `![${altText}](attachment:${attachment.id})`;
+    } catch (error) {
+      console.error('Failed to create attachment from pasted image:', error);
+      toast.error(`Failed to paste image: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+
   // Handle drag and drop for files
   function handleEditorDragEnter(e: DragEvent) {
     e.preventDefault();
@@ -1017,6 +1052,7 @@
       onContentChange={() => handleInput()}
       onTagsChange={() => handleInput()}
       onTagClick={handleTagClick}
+      onImagePaste={handleImagePaste}
       {previewHtml}
     />
 
