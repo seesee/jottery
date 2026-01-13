@@ -288,8 +288,22 @@ pub async fn push(
         }
     }
 
-    // Store note versions
+    // Collect accepted note IDs for filtering versions and attachments
+    let accepted_note_ids: std::collections::HashSet<String> =
+        accepted.iter().map(|a| a.id.clone()).collect();
+
+    // Store note versions (only for accepted notes to avoid FK errors)
     for version in push_req.versions {
+        // Skip versions for notes that weren't accepted (avoids FK constraint errors)
+        if !accepted_note_ids.contains(&version.note_id) {
+            tracing::debug!(
+                "Skipping version {} for rejected note {}",
+                version.version_key,
+                version.note_id
+            );
+            continue;
+        }
+
         let now_for_version = chrono::Utc::now().to_rfc3339();
 
         // Serialize tags and attachments as JSON
@@ -302,7 +316,8 @@ pub async fn push(
         let word_wrap = version.word_wrap.map(|w| if w { 1 } else { 0 });
 
         // Upsert version (insert or replace if exists)
-        sqlx::query!(
+        // Use match to handle potential FK errors gracefully
+        let result = sqlx::query!(
             r#"
             INSERT INTO note_versions (
                 version_key, note_id, user_id, client_id, version, created_at, synced_at,
@@ -329,20 +344,38 @@ pub async fn push(
             version.reason
         )
         .execute(&state.pool)
-        .await?;
+        .await;
 
-        tracing::debug!("Stored version: {} for note {}", version.version_key, version.note_id);
+        match result {
+            Ok(_) => {
+                tracing::debug!("Stored version: {} for note {}", version.version_key, version.note_id);
+            }
+            Err(e) => {
+                // Log and skip on FK or other errors (graceful degradation)
+                tracing::warn!(
+                    "Failed to store version {} for note {}: {} (skipping)",
+                    version.version_key,
+                    version.note_id,
+                    e
+                );
+            }
+        }
     }
 
     // Store attachment data (binary blobs)
+    // Handle FK errors gracefully - attachment metadata may not exist if note was rejected
     for attachment in push_req.attachments {
         // Decode base64
-        let data = base64::engine::general_purpose::STANDARD
-            .decode(&attachment.data)
-            .map_err(|e| AppError::BadRequest(format!("Invalid base64: {}", e)))?;
+        let data = match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
+            Ok(d) => d,
+            Err(e) => {
+                tracing::warn!("Invalid base64 for attachment {}: {} (skipping)", attachment.id, e);
+                continue;
+            }
+        };
 
         // Store in attachments_data
-        sqlx::query!(
+        let result = sqlx::query!(
             r#"
             INSERT INTO attachments_data (id, data, created_at)
             VALUES (?, ?, ?)
@@ -353,9 +386,22 @@ pub async fn push(
             now
         )
         .execute(&state.pool)
-        .await?;
+        .await;
 
-        tracing::debug!("Stored attachment: {}", attachment.id);
+        match result {
+            Ok(_) => {
+                tracing::debug!("Stored attachment: {}", attachment.id);
+            }
+            Err(e) => {
+                // Log and skip on FK or other errors (graceful degradation)
+                // This can happen if attachment metadata wasn't stored because note was rejected
+                tracing::warn!(
+                    "Failed to store attachment data {}: {} (skipping)",
+                    attachment.id,
+                    e
+                );
+            }
+        }
     }
 
     Ok(Json(SyncPushResponse {

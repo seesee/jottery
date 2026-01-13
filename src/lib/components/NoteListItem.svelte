@@ -63,10 +63,17 @@
       toggleNoteSelection(note.id, index);
     } else {
       // Normal click: single selection
-      selectNote(note.id);
-      // Call mobile navigation callback if provided
-      if (onNoteSelect) {
-        onNoteSelect();
+      // On mobile, if note not already selected, just select without navigating
+      // This shows the checkbox first; second tap will navigate
+      if (onNoteSelect && isMobile && !isSelected) {
+        selectNote(note.id);
+        // Don't navigate yet - let user see the checkbox
+      } else {
+        selectNote(note.id);
+        // Navigate to note (desktop or already-selected on mobile)
+        if (onNoteSelect) {
+          onNoteSelect();
+        }
       }
     }
   }
@@ -145,7 +152,7 @@
         {title}
       </h3>
     </div>
-    {#if isHovered && !note.pinned}
+    {#if (isHovered || (isMobile && isSelected)) && !note.pinned}
       <span
         on:click={handleDeleteClick}
         on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}

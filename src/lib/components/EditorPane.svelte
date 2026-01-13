@@ -998,7 +998,6 @@
       onShowVersionHistory={handleShowVersionHistory}
       onDelete={handleDelete}
       onClose={handleClose}
-      {onBackToList}
       {copyNoteShortcut}
       {noteInfoShortcut}
       {versionHistoryShortcut}

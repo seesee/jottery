@@ -188,10 +188,10 @@ class SyncService {
       }
 
       // 2. Push local changes (force full sync if requested)
-      await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
+      const pushedCount = await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
 
       // 3. Pull remote changes
-      await this.pull(metadata.syncEndpoint, apiKey);
+      const pulledCount = await this.pull(metadata.syncEndpoint, apiKey);
 
       // 4. Update last sync timestamp
       await syncRepository.updateMetadata({
@@ -199,7 +199,10 @@ class SyncService {
       });
 
       // 5. Reload notes into app state and rebuild search index
-      // Use incremental update to preserve scroll position and selected note
+      const hasChanges = pushedCount > 0 || pulledCount > 0;
+
+      // Always refresh to ensure store consistency with database
+      // But only re-sort if there were actual sync changes
       let currentSettings: any;
       settings.subscribe(s => currentSettings = s)();
 
@@ -209,32 +212,17 @@ class SyncService {
       // Get all notes from database (already decrypted and sorted)
       const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
 
-      // Update store incrementally - preserves UI state better than full replace
-      notes.update(currentNotes => {
-        // Build a map of new notes by ID for quick lookup
-        const newNotesMap = new Map(allNotes.map(n => [n.id, n]));
-
-        // Update existing notes and track which ones we've seen
-        const seenIds = new Set<string>();
-        const updatedNotes = currentNotes.map(note => {
-          seenIds.add(note.id);
-          const newNote = newNotesMap.get(note.id);
-          return newNote || note; // Use new version if available
-        }).filter(note => newNotesMap.has(note.id)); // Remove deleted notes
-
-        // Add any new notes that weren't in the current list
-        allNotes.forEach(note => {
-          if (!seenIds.has(note.id)) {
-            updatedNotes.push(note);
-          }
-        });
-
-        return updatedNotes;
-      });
+      // Replace store with properly sorted notes from database
+      notes.set(allNotes);
 
       // Rebuild search index with all notes
       searchService.indexNotes(allNotes);
-      console.log('[SyncService] Notes refreshed:', allNotes.length);
+
+      if (hasChanges) {
+        console.log('[SyncService] Notes refreshed and sorted:', allNotes.length);
+      } else {
+        console.log('[SyncService] Sync complete (no changes)');
+      }
 
       // Clear refresh flag
       isSyncRefreshing.set(false);
@@ -255,8 +243,9 @@ class SyncService {
 
   /**
    * Push local changes to server (in batches to avoid memory limits)
+   * @returns Number of notes accepted by server
    */
-  private async push(endpoint: string, apiKey: string, forceAll = false): Promise<void> {
+  private async push(endpoint: string, apiKey: string, forceAll = false): Promise<number> {
     endpoint = this.normalizeEndpoint(endpoint);
 
     let modifiedNotes: Note[];
@@ -269,7 +258,7 @@ class SyncService {
     }
 
     if (modifiedNotes.length === 0) {
-      return; // Nothing to push
+      return 0; // Nothing to push
     }
 
     // Get master key for tag encryption conversion
@@ -413,12 +402,15 @@ class SyncService {
     await syncRepository.updateMetadata({
       lastPushAt: new Date().toISOString(),
     });
+
+    return totalAccepted;
   }
 
   /**
    * Pull remote changes from server (with pagination for large datasets)
+   * @returns Number of notes received from server
    */
-  private async pull(endpoint: string, apiKey: string): Promise<void> {
+  private async pull(endpoint: string, apiKey: string): Promise<number> {
     endpoint = this.normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt;
@@ -596,6 +588,8 @@ class SyncService {
     await syncRepository.updateMetadata({
       lastPullAt: new Date().toISOString(),
     });
+
+    return totalNotes;
   }
 
   /**
