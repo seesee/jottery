@@ -171,6 +171,7 @@
         }
 
         // Only save and create version if content was actually modified
+        console.log('[EditorPane] Note switch: hasContentChanged =', hasContentChanged, 'for previousNoteId =', previousNoteId);
         if (hasContentChanged) {
           // CRITICAL: Capture values in consts to prevent async closure bug
           // By the time the async function executes, these variables may have been reassigned
@@ -258,6 +259,7 @@
       }
 
       // Only save and create version if content was actually modified
+      console.log('[EditorPane] Editor close: hasContentChanged =', hasContentChanged, 'for previousNoteId =', previousNoteId);
       if (hasContentChanged) {
         // Capture previousNoteId before it gets reset
         const noteIdToSave = previousNoteId;
@@ -347,30 +349,46 @@
   async function createVersionSnapshot(noteId?: string) {
     // Use provided noteId or fall back to current selected note
     const targetNoteId = noteId || $selectedNote?.id;
-    if (!targetNoteId) return;
+    console.log('[EditorPane] createVersionSnapshot called for noteId:', targetNoteId);
+    if (!targetNoteId) {
+      console.log('[EditorPane] createVersionSnapshot: No targetNoteId, returning early');
+      return;
+    }
 
     try {
       // Get the encrypted note from repository (not decrypted from service)
       const currentNote = await noteRepository.getById(targetNoteId);
-      if (!currentNote) return;
+      if (!currentNote) {
+        console.log('[EditorPane] createVersionSnapshot: Note not found in DB');
+        return;
+      }
 
       // Check for duplicate BEFORE incrementing version
       const latestVersion = await versionRepository.getLatestVersion(targetNoteId);
+      console.log('[EditorPane] createVersionSnapshot: latestVersion exists?', !!latestVersion);
+      if (latestVersion) {
+        console.log('[EditorPane] createVersionSnapshot: latestVersion.version =', latestVersion.version);
+        console.log('[EditorPane] createVersionSnapshot: content match?', latestVersion.content === currentNote.content);
+      }
       if (latestVersion && latestVersion.content === currentNote.content) {
+        console.log('[EditorPane] createVersionSnapshot: Skipping - content unchanged from latest version');
         return; // Skip if content unchanged
       }
 
       // Increment version only if we're actually creating a snapshot
-      currentNote.version = (currentNote.version || 0) + 1;
+      const oldVersion = currentNote.version || 0;
+      currentNote.version = oldVersion + 1;
+      console.log('[EditorPane] createVersionSnapshot: Incrementing version from', oldVersion, 'to', currentNote.version);
 
       // Save the note with incremented version (update() will set modifiedAt)
       await noteRepository.update(currentNote);
 
       // Create version snapshot with the new version number
-      await versionRepository.createVersion(currentNote, {
+      const createdVersion = await versionRepository.createVersion(currentNote, {
         syncedAt: new Date().toISOString(),
         reason: 'manual-sync',
       });
+      console.log('[EditorPane] createVersionSnapshot: Version created?', !!createdVersion);
     } catch (error) {
       console.error('[EditorPane] Failed to create version for note:', targetNoteId, error);
     }
@@ -378,6 +396,7 @@
 
   async function handleSave() {
     if (!$selectedNote) return;
+    console.log('[EditorPane] handleSave: Saving note', $selectedNote.id, '- hasContentChanged =', hasContentChanged);
 
     try {
       await noteService.updateNote($selectedNote.id, {
@@ -424,6 +443,7 @@
 
   async function handleInput() {
     hasContentChanged = true;
+    console.log('[EditorPane] handleInput: hasContentChanged set to true');
 
     // Auto-save after 1 second of no typing
     if ($selectedNote) {

@@ -17,8 +17,9 @@ class VersionRepository {
   ): Promise<NoteVersion | null> {
     // Deduplication check
     const latestVersion = await this.getLatestVersion(note.id);
+    console.log(`[versionRepository] createVersion: note.id=${note.id}, note.version=${note.version}, latestVersion=${latestVersion?.version ?? 'none'}`);
     if (latestVersion && latestVersion.content === note.content) {
-      console.log(`[versionRepository] Skipping duplicate version for note ${note.id}`);
+      console.log(`[versionRepository] Skipping duplicate version for note ${note.id} - content matches`);
       return null; // Skip duplicate
     }
 
