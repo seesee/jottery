@@ -19,7 +19,6 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let menuClosing = false;
-  let showMobileSearch = false;
 
   // Tag autocomplete state
   let tagSuggestions: string[] = [];
@@ -38,7 +37,6 @@
   // Format keyboard shortcuts for display
   $: shortcuts = $settings.keyboardShortcuts;
   $: newNoteShortcut = formatShortcutForTooltip(shortcuts?.newNote);
-  $: focusSearchShortcut = formatShortcutForTooltip(shortcuts?.focusSearch);
   $: openSettingsShortcut = formatShortcutForTooltip(shortcuts?.openSettings);
   $: lockAppShortcut = formatShortcutForTooltip(shortcuts?.lockApp);
 
@@ -106,16 +104,6 @@
 
   function toggleMobileMenu() {
     showMobileMenu = !showMobileMenu;
-  }
-
-  function toggleMobileSearch() {
-    showMobileSearch = !showMobileSearch;
-    if (showMobileSearch) {
-      // Focus search input after showing
-      setTimeout(() => {
-        document.getElementById('search-input-mobile')?.focus();
-      }, 100);
-    }
   }
 
   function closeMobileMenu() {
@@ -429,59 +417,6 @@
     {/if}
   </div>
 
-  <!-- Mobile: Expandable Search Bar -->
-  {#if showMobileSearch}
-    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} mt-3 animate-slide-down">
-      <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <input
-            id="search-input-mobile"
-            type="text"
-            bind:value={$searchQuery}
-            on:input={handleSearchInput}
-            on:keydown={handleSearchKeyDown}
-            on:blur={handleSearchBlur}
-            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
-            disabled={loadingNotes}
-            class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
-            style="font-size: {searchFontSize}"
-          />
-          {#if loadingNotes}
-            <div class="absolute right-2 top-1/2 -translate-y-1/2">
-              <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
-            </div>
-          {:else if $searchQuery}
-            <button
-              on:click={() => searchQuery.set('')}
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              title={$_('search.clear')}
-            >
-              ✕
-            </button>
-          {/if}
-          <!-- Tag suggestions dropdown (mobile) -->
-          {#if showTagSuggestions}
-            <div class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
-              {#each tagSuggestions as suggestion, index}
-                <button
-                  on:click={() => selectTagSuggestion(suggestion)}
-                  class="w-full text-left px-3 py-3 min-h-11 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
-                >
-                  #{suggestion}
-                </button>
-              {/each}
-            </div>
-          {/if}
-        </div>
-        {#if $searchResultCount.isSearching}
-          <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">
-            {$searchResultCount.matches}/{$searchResultCount.total}
-          </span>
-        {/if}
-      </div>
-    </div>
-  {/if}
-
   <!-- Mobile Menu Drawer -->
   {#if showMobileMenu}
     <!-- Backdrop -->
@@ -551,26 +486,6 @@
 </header>
 
 <style>
-  @keyframes slide-down {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes slide-in-left {
-    from {
-      transform: translateX(-100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
   @keyframes slide-in-right {
     from {
       transform: translateX(100%);
@@ -587,14 +502,6 @@
     to {
       transform: translateX(100%);
     }
-  }
-
-  .animate-slide-down {
-    animation: slide-down 0.2s ease-out;
-  }
-
-  .animate-slide-in-left {
-    animation: slide-in-left 0.3s ease-out;
   }
 
   .animate-slide-in-right {
