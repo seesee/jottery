@@ -378,6 +378,11 @@
       "syncing": "동기화 중...",
       "lastSync": "마지막 동기화:",
       "syncNow": "지금 동기화",
+      "fullSync": {
+        "title": "전체 동기화",
+        "description": "동기화 상태에 관계없이 모든 노트를 서버로 푸시합니다. 노트가 동기화되지 않았거나 데이터를 가져온 후에 사용하세요.",
+        "button": "전체 동기화"
+      },
       "notesPendingSingle": "{count}개 노트 동기화 대기 중",
       "notesPendingPlural": "{count}개 노트 동기화 대기 중",
       "showCredentials": "다른 기기용 인증정보 표시",

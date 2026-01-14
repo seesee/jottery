@@ -51,6 +51,7 @@
   export let onResetRegistrationFlow: () => void;
   export let onImportCredentials: () => void;
   export let onSyncNow: () => void;
+  export let onFullSync: () => void;
   export let onCopySyncCredentials: () => void;
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
@@ -148,6 +149,7 @@
         bind:loadingAccountInfo
         {syncEndpoint}
         {onSyncNow}
+        {onFullSync}
         {onCopySyncCredentials}
         {onAccountLogin}
         {onAccountLogout}

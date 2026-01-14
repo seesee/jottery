@@ -378,6 +378,11 @@
       "syncing": "Senkronize ediliyor...",
       "lastSync": "Son senkronizasyon:",
       "syncNow": "Şimdi Senkronize Et",
+      "fullSync": {
+        "title": "Tam Senkronizasyon",
+        "description": "Senkronizasyon durumlarına bakılmaksızın TÜM notları sunucuya gönderin. Notlar senkronize değilse veya veri içe aktarıldıktan sonra bunu kullanın.",
+        "button": "Tam Senkronizasyon"
+      },
       "notesPendingSingle": "{count} not senkronizasyon bekliyor",
       "notesPendingPlural": "{count} not senkronizasyon bekliyor",
       "showCredentials": "Diğer Cihazlar İçin Kimlik Bilgilerini Göster",

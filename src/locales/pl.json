@@ -378,6 +378,11 @@
       "syncing": "Synchronizowanie...",
       "lastSync": "Ostatnia synchronizacja:",
       "syncNow": "Synchronizuj teraz",
+      "fullSync": {
+        "title": "Pełna synchronizacja",
+        "description": "Wyślij WSZYSTKIE notatki na serwer, niezależnie od ich statusu synchronizacji. Użyj tego, jeśli notatki są niezsynchronizowane lub po imporcie danych.",
+        "button": "Pełna synchronizacja"
+      },
       "notesPendingSingle": "{count} notatka oczekuje na synchronizację",
       "notesPendingPlural": "{count} notatek oczekuje na synchronizację",
       "showCredentials": "Pokaż dane logowania dla innych urządzeń",

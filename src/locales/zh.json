@@ -378,6 +378,11 @@
       "syncing": "同步中...",
       "lastSync": "上次同步:",
       "syncNow": "立即同步",
+      "fullSync": {
+        "title": "完整同步",
+        "description": "将所有笔记推送到服务器，无论其同步状态如何。如果笔记不同步或导入数据后使用此功能。",
+        "button": "完整同步"
+      },
       "notesPendingSingle": "{count} 条笔记等待同步",
       "notesPendingPlural": "{count} 条笔记等待同步",
       "showCredentials": "显示其他设备的凭据",

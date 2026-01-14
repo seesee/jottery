@@ -378,6 +378,11 @@
       "syncing": "Synchronisiere...",
       "lastSync": "Letzte Synchronisation:",
       "syncNow": "Jetzt synchronisieren",
+      "fullSync": {
+        "title": "Vollsynchronisierung",
+        "description": "ALLE Notizen an den Server senden, unabhängig von ihrem Synchronisierungsstatus. Verwenden Sie dies, wenn Notizen nicht synchronisiert sind oder nach dem Datenimport.",
+        "button": "Vollsynchronisierung"
+      },
       "notesPendingSingle": "{count} Notiz wartet auf Synchronisation",
       "notesPendingPlural": "{count} Notizen warten auf Synchronisation",
       "showCredentials": "Anmeldedaten für andere Geräte anzeigen",

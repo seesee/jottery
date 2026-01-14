@@ -361,6 +361,11 @@
       "syncing": "Syncing...",
       "lastSync": "Last sync:",
       "syncNow": "Sync Now",
+      "fullSync": {
+        "title": "Full Sync",
+        "description": "Push ALL notes to the server, regardless of their sync status. Use this if notes are out of sync or after importing data.",
+        "button": "Full Sync"
+      },
       "notesPendingSingle": "{count} note pending sync",
       "notesPendingPlural": "{count} notes pending sync",
       "showCredentials": "Show Credentials for Other Devices",

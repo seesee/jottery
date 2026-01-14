@@ -378,6 +378,11 @@
       "syncing": "同期中...",
       "lastSync": "最終同期:",
       "syncNow": "今すぐ同期",
+      "fullSync": {
+        "title": "フル同期",
+        "description": "同期状態に関係なく、すべてのノートをサーバーにプッシュします。ノートが同期されていない場合やデータのインポート後に使用してください。",
+        "button": "フル同期"
+      },
       "notesPendingSingle": "{count}件のノートが同期待ち",
       "notesPendingPlural": "{count}件のノートが同期待ち",
       "showCredentials": "他のデバイス用の認証情報を表示",

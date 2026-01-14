@@ -27,6 +27,7 @@
 
   // Callbacks
   export let onSyncNow: () => void;
+  export let onFullSync: () => void;
   export let onCopySyncCredentials: (useLegacyFormat: boolean) => void;
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
@@ -97,20 +98,40 @@
                   </button>
 
                   {#if showLegacyOption}
-                    <div class="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded text-xs">
-                      <label class="flex items-start gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          bind:checked={useLegacyFormat}
-                          class="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                        />
-                        <span class="text-amber-800 dark:text-amber-200">
-                          <strong>{$_('settings.syncCredentials.legacyFormat.label')}</strong><br/>
-                          <span class="text-amber-600 dark:text-amber-400">
-                            {$_('settings.syncCredentials.legacyFormat.warning')}
+                    <div class="mt-2 space-y-3">
+                      <!-- Full Sync Option -->
+                      <div class="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded">
+                        <p class="text-xs text-blue-800 dark:text-blue-200 mb-2">
+                          <strong>{$_('settings.syncTab.fullSync.title')}</strong><br/>
+                          <span class="text-blue-600 dark:text-blue-400">
+                            {$_('settings.syncTab.fullSync.description')}
                           </span>
-                        </span>
-                      </label>
+                        </p>
+                        <button
+                          on:click={onFullSync}
+                          disabled={syncing || syncStatus?.isSyncing}
+                          class="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-medium rounded transition-colors"
+                        >
+                          {syncing || syncStatus?.isSyncing ? $_('settings.syncTab.syncing') : '🔄 ' + $_('settings.syncTab.fullSync.button')}
+                        </button>
+                      </div>
+
+                      <!-- Legacy Format Option -->
+                      <div class="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded text-xs">
+                        <label class="flex items-start gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            bind:checked={useLegacyFormat}
+                            class="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <span class="text-amber-800 dark:text-amber-200">
+                            <strong>{$_('settings.syncCredentials.legacyFormat.label')}</strong><br/>
+                            <span class="text-amber-600 dark:text-amber-400">
+                              {$_('settings.syncCredentials.legacyFormat.warning')}
+                            </span>
+                          </span>
+                        </label>
+                      </div>
                     </div>
                   {/if}
                 </div>

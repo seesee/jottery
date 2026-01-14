@@ -624,8 +624,8 @@
     syncing = true;
     syncError = '';
     try {
-      // Force a full sync to ensure all notes (including imported ones) are pushed
-      const result = await syncService.syncNow(true);
+      // Normal sync - only push notes that need syncing
+      const result = await syncService.syncNow();
       if (result.success) {
         await loadSyncStatus();
       } else {
@@ -634,6 +634,25 @@
     } catch (error) {
       console.error('Sync failed:', error);
       syncError = error instanceof Error ? error.message : 'Sync failed';
+    } finally {
+      syncing = false;
+    }
+  }
+
+  async function handleFullSync() {
+    syncing = true;
+    syncError = '';
+    try {
+      // Full sync - push ALL notes regardless of sync status
+      const result = await syncService.syncNow(true);
+      if (result.success) {
+        await loadSyncStatus();
+      } else {
+        syncError = result.error || 'Sync failed';
+      }
+    } catch (error) {
+      console.error('Full sync failed:', error);
+      syncError = error instanceof Error ? error.message : 'Full sync failed';
     } finally {
       syncing = false;
     }
@@ -1150,6 +1169,7 @@
             onResetRegistrationFlow={resetRegistrationFlow}
             onImportCredentials={handleImportCredentials}
             onSyncNow={handleSyncNow}
+            onFullSync={handleFullSync}
             onCopySyncCredentials={handleCopySyncCredentials}
             onAccountLogin={handleAccountLogin}
             onAccountLogout={handleAccountLogout}

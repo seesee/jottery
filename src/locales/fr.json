@@ -378,6 +378,11 @@
       "syncing": "Synchronisation...",
       "lastSync": "Dernière synchronisation :",
       "syncNow": "Synchroniser maintenant",
+      "fullSync": {
+        "title": "Synchronisation complète",
+        "description": "Envoyer TOUTES les notes au serveur, quel que soit leur état de synchronisation. Utilisez ceci si les notes sont désynchronisées ou après l'importation de données.",
+        "button": "Synchronisation complète"
+      },
       "notesPendingSingle": "{count} note en attente de synchronisation",
       "notesPendingPlural": "{count} notes en attente de synchronisation",
       "showCredentials": "Afficher les identifiants pour d'autres appareils",

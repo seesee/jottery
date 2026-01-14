@@ -378,6 +378,11 @@
       "syncing": "Synchroniseren...",
       "lastSync": "Laatste synchronisatie:",
       "syncNow": "Nu synchroniseren",
+      "fullSync": {
+        "title": "Volledige synchronisatie",
+        "description": "ALLE notities naar de server sturen, ongeacht hun synchronisatiestatus. Gebruik dit als notities niet gesynchroniseerd zijn of na het importeren van gegevens.",
+        "button": "Volledige synchronisatie"
+      },
       "notesPendingSingle": "{count} notitie wacht op synchronisatie",
       "notesPendingPlural": "{count} notities wachten op synchronisatie",
       "showCredentials": "Toon inloggegevens voor andere apparaten",
