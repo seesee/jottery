@@ -17,10 +17,12 @@
       await new Promise(resolve => setTimeout(resolve, 1200));
 
       // Trigger sync if enabled (will save all notes to server)
-      const syncMetadata = await syncRepository.getMetadata();
-      if (syncMetadata?.syncEnabled) {
-        console.log('[KeyboardShortcuts] Syncing before lock...');
-        await syncService.syncNow();
+      if ($settings.syncEnabled) {
+        const syncMetadata = await syncRepository.getMetadata();
+        if (syncMetadata?.apiKey) {
+          console.log('[KeyboardShortcuts] Syncing before lock...');
+          await syncService.syncNow();
+        }
       }
     } catch (error) {
       console.error('[KeyboardShortcuts] Error during pre-lock save/sync:', error);

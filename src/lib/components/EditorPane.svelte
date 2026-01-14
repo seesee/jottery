@@ -317,13 +317,17 @@
    * Trigger background sync without blocking UI
    */
   async function triggerBackgroundSync() {
+    // Skip if sync is disabled in settings
+    if (!$settings.syncEnabled) {
+      return;
+    }
     // Skip if sync is currently refreshing notes (prevents infinite loop)
     if ($isSyncRefreshing) {
       return;
     }
     try {
       const metadata = await syncRepository.getMetadata();
-      if (metadata?.syncEnabled) {
+      if (metadata?.apiKey) {
         // Don't await - let it run in background
         syncService.syncNow().then(result => {
           if (!result.success && result.error !== 'Sync already in progress') {

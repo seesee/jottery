@@ -64,9 +64,11 @@
       await new Promise(resolve => setTimeout(resolve, 1200));
 
       // Trigger sync if enabled (will save all notes to server)
-      const syncMetadata = await syncRepository.getMetadata();
-      if (syncMetadata?.syncEnabled) {
-        await syncService.syncNow();
+      if ($settings.syncEnabled) {
+        const syncMetadata = await syncRepository.getMetadata();
+        if (syncMetadata?.apiKey) {
+          await syncService.syncNow();
+        }
       }
     } catch (error) {
       console.error('[Header] Error during pre-lock save/sync:', error);
