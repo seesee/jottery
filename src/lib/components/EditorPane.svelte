@@ -644,8 +644,14 @@
 
   }
 
-  function handlePrintPdf() {
+  async function handlePrintPdf() {
     if (!content || !$selectedNote) return;
+
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      toast.error($_('editor.printFailed'));
+      return;
+    }
 
     // Generate title from first line or date
     const firstLine = content.split('\n')[0].trim();
@@ -668,6 +674,76 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       htmlContent = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 12px; line-height: 1.5; padding: 1em; background: #f5f5f5; border-radius: 4px;"><code>${escapedContent}</code></pre>`;
+    }
+
+    // For markdown, we need to resolve attachment images to data URLs
+    if (language === 'markdown' && attachments.length > 0) {
+      // Parse the HTML to find and replace attachment images
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+
+      // Helper to convert blob to data URL
+      const blobToDataUrl = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
+
+      // Process images with attachment IDs
+      const imagesById = doc.querySelectorAll('img[data-attachment-id]');
+      for (const img of imagesById) {
+        const attachmentId = img.getAttribute('data-attachment-id');
+        if (!attachmentId) continue;
+
+        try {
+          const attachment = attachments.find(a => a.data === attachmentId);
+          if (attachment) {
+            const blob = await attachmentService.getAttachmentData(attachment);
+            const dataUrl = await blobToDataUrl(blob);
+            img.setAttribute('src', dataUrl);
+          }
+        } catch (error) {
+          console.error(`Failed to load attachment ${attachmentId} for print:`, error);
+        }
+      }
+
+      // Process images with filenames
+      const imagesByFilename = doc.querySelectorAll('img[data-attachment-filename]');
+      for (const img of imagesByFilename) {
+        const filename = img.getAttribute('data-attachment-filename');
+        if (!filename) continue;
+
+        try {
+          // Find attachment by decrypted filename
+          let foundAttachment = null;
+          for (const attachment of attachments) {
+            try {
+              const encryptedFilename = JSON.parse(attachment.filename);
+              const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
+              if (decryptedFilename === filename) {
+                foundAttachment = attachment;
+                break;
+              }
+            } catch (err) {
+              // Skip attachments with decryption errors
+            }
+          }
+
+          if (foundAttachment) {
+            const blob = await attachmentService.getAttachmentData(foundAttachment);
+            const dataUrl = await blobToDataUrl(blob);
+            img.setAttribute('src', dataUrl);
+          }
+        } catch (error) {
+          console.error(`Failed to load attachment by filename ${filename} for print:`, error);
+        }
+      }
+
+      // Get the updated HTML
+      htmlContent = doc.body.innerHTML;
     }
 
     // Create a print-friendly document
