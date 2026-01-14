@@ -299,29 +299,61 @@
     {/if}
 
     {#if forceMobileLayout}
-      <!-- Mobile: Essential Actions (Search, Menu, New Note) -->
-      <div class="flex items-center gap-2">
-        <button
-          on:click={toggleMobileSearch}
-          class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={focusSearchShortcut ? `${$_('search.placeholder')} (${focusSearchShortcut})` : $_('search.placeholder')}
-          aria-label="Search"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
+      <!-- Mobile: Always-visible search bar -->
+      <div class="flex-1 mx-2">
+        <div class="relative">
+          <input
+            id="search-input-mobile"
+            type="text"
+            bind:value={$searchQuery}
+            on:input={handleSearchInput}
+            on:keydown={handleSearchKeyDown}
+            on:blur={handleSearchBlur}
+            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
+            disabled={loadingNotes}
+            class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait text-sm"
+            style="font-size: {searchFontSize}"
+          />
+          {#if loadingNotes}
+            <div class="absolute right-2 top-1/2 -translate-y-1/2">
+              <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
+            </div>
+          {:else if $searchQuery}
+            <button
+              on:click={() => searchQuery.set('')}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              title={$_('search.clear')}
+            >
+              ✕
+            </button>
+          {/if}
+          <!-- Tag suggestions dropdown (mobile) -->
+          {#if showTagSuggestions}
+            <div class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+              {#each tagSuggestions as suggestion, index}
+                <button
+                  on:click={() => selectTagSuggestion(suggestion)}
+                  class="w-full text-left px-3 py-3 min-h-11 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+                >
+                  #{suggestion}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
 
-        <!-- Settings cog (opens menu with settings/recycle bin) -->
+      <!-- Mobile: Menu and New Note buttons -->
+      <div class="flex items-center gap-2">
+        <!-- Hamburger menu (settings/recycle bin/lock) -->
         <button
           on:click={toggleMobileMenu}
           class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={openSettingsShortcut ? `${$_('common.settings')} (${openSettingsShortcut})` : $_('common.settings')}
-          aria-label={$_('common.settings')}
+          title={$_('header.menu')}
+          aria-label={$_('header.menu')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
@@ -477,12 +509,11 @@
       aria-label="Close menu"
     ></div>
 
-    <!-- Drawer -->
-    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800 z-50 shadow-xl animate-slide-in-left">
+    <!-- Drawer (slides in from right) -->
+    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed right-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800 z-50 shadow-xl animate-slide-in-right">
       <div class="flex flex-col h-full">
         <!-- Drawer Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white">{$_('header.menu')}</h2>
           <button
             on:click={closeMobileMenu}
             class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
@@ -492,6 +523,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">{$_('header.menu')}</h2>
         </div>
 
         <!-- Menu Items -->
@@ -554,12 +586,25 @@
     }
   }
 
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
   .animate-slide-down {
     animation: slide-down 0.2s ease-out;
   }
 
   .animate-slide-in-left {
     animation: slide-in-left 0.3s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
   }
 </style>
 
