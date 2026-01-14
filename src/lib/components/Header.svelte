@@ -18,6 +18,7 @@
 
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
+  let menuClosing = false;
   let showMobileSearch = false;
 
   // Tag autocomplete state
@@ -118,7 +119,12 @@
   }
 
   function closeMobileMenu() {
-    showMobileMenu = false;
+    menuClosing = true;
+    // Wait for slide-out animation to complete
+    setTimeout(() => {
+      showMobileMenu = false;
+      menuClosing = false;
+    }, 300);
   }
 
   // Tag autocomplete functions
@@ -298,7 +304,7 @@
 
     {#if forceMobileLayout}
       <!-- Mobile: Always-visible search bar -->
-      <div class="flex-1 mx-2">
+      <div class="flex-1 ml-1 mr-2">
         <div class="relative">
           <input
             id="search-input-mobile"
@@ -499,7 +505,7 @@
   {#if showMobileMenu}
     <!-- Backdrop -->
     <div
-      class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed inset-0 bg-black bg-opacity-50 z-40"
+      class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed inset-0 bg-black z-40 transition-opacity duration-300 {menuClosing ? 'opacity-0' : 'opacity-50'}"
       on:click={closeMobileMenu}
       on:keydown={(e) => e.key === 'Enter' && closeMobileMenu()}
       role="button"
@@ -508,7 +514,7 @@
     ></div>
 
     <!-- Drawer (slides in from right) -->
-    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed right-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800 z-50 shadow-xl animate-slide-in-right">
+    <div class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed right-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800 z-50 shadow-xl {menuClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}">
       <div class="flex flex-col h-full">
         <!-- Drawer Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -593,6 +599,15 @@
     }
   }
 
+  @keyframes slide-out-right {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
   .animate-slide-down {
     animation: slide-down 0.2s ease-out;
   }
@@ -603,6 +618,10 @@
 
   .animate-slide-in-right {
     animation: slide-in-right 0.3s ease-out;
+  }
+
+  .animate-slide-out-right {
+    animation: slide-out-right 0.3s ease-out forwards;
   }
 </style>
 
