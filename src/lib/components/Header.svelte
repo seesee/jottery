@@ -304,7 +304,7 @@
 
     {#if forceMobileLayout}
       <!-- Mobile: Always-visible search bar -->
-      <div class="flex-1 ml-1 mr-2">
+      <div class="flex-1 ml-3 mr-1">
         <div class="relative">
           <input
             id="search-input-mobile"
