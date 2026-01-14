@@ -207,7 +207,7 @@
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
   <div class="flex items-center gap-2 {forceMobileLayout ? 'gap-2' : 'tablet:gap-4'}">
     {#if forceMobileLayout}
-      <!-- Mobile: Back Button when viewing a note -->
+      <!-- Mobile: Back Button (active when viewing note, greyed placeholder on list) -->
       {#if onBackToList}
         <button
           on:click={onBackToList}
@@ -219,6 +219,13 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+      {:else}
+        <!-- Greyed-out placeholder to prevent layout shift -->
+        <div class="min-h-11 min-w-11 p-2.5 opacity-30">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </div>
       {/if}
     {:else}
       <button

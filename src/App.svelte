@@ -6,7 +6,6 @@
   import { locale, _ } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
   import { getCurrentNotebook } from './lib/utils/notebookPath';
-  import { isTouchDevice } from './lib/utils/device';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
@@ -29,12 +28,10 @@
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
 
   // Determine which layout to use based on layoutMode setting
-  // For auto mode: use mobile layout if small screen OR touch device with medium screen
+  // For auto mode: only use mobile layout for narrow screens (phones)
+  // Tablets and other wide touch devices get the regular desktop layout
   $: useMobileLayout = $settings.layoutMode === 'mobile' ||
-    ($settings.layoutMode === 'auto' && (
-      window.matchMedia('(max-width: 767px)').matches ||
-      (isTouchDevice() && window.matchMedia('(max-width: 1024px)').matches)
-    ));
+    ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
 
   let creatingNote = false;
 
