@@ -32,7 +32,6 @@
   // Tablets and other wide touch devices get the regular desktop layout
   $: useMobileLayout = $settings.layoutMode === 'mobile' ||
     ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
-  $: console.log('[App] Layout: layoutMode =', $settings.layoutMode, ', useMobileLayout =', useMobileLayout);
 
   let creatingNote = false;
 
