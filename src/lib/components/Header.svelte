@@ -294,8 +294,6 @@
       </div>
 
       <div class="flex-1 tablet:hidden"></div>
-    {:else}
-      <div class="flex-1"></div>
     {/if}
 
     {#if forceMobileLayout}
