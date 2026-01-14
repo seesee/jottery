@@ -146,6 +146,9 @@
     ($settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   // Watch for note selection changes
+  $: {
+    console.log('[EditorPane] Reactive: $selectedNote =', $selectedNote?.id ?? 'null', ', previousNoteId =', previousNoteId, ', $isDraftMode =', $isDraftMode);
+  }
   $: if ($selectedNote) {
     // If in draft mode, ignore note selection changes
     if ($isDraftMode) {
