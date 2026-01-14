@@ -64,7 +64,7 @@ export function createTestNote(overrides: Partial<Note> = {}): Note {
     attachments: [],
     pinned: false,
     deleted: false,
-    version: 1,
+    version: 0,
     wordWrap: true,
     syntaxLanguage: 'plain',
     ...overrides,

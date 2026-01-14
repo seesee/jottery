@@ -244,7 +244,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   attachments: [],
   pinned: false,
   deleted: false,
-  version: 1,
+  version: 0,
   wordWrap: true,
   syntaxLanguage: 'markdown',
   showPreview: false,
