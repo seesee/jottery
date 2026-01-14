@@ -23,11 +23,13 @@
 
   // Wrapper to handle closing note and returning to list on mobile
   function handleClose() {
+    console.log('[EditorPane] handleClose called - previousNoteId =', previousNoteId, ', hasContentChanged =', hasContentChanged);
     // Exit draft mode if active
     if ($isDraftMode) {
       exitDraftMode();
     }
     clearSelection();
+    console.log('[EditorPane] handleClose: clearSelection called, $selectedNote should now be null');
     if (onBackToList) {
       onBackToList();
     }
