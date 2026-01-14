@@ -236,7 +236,7 @@
     {:else}
       <button
         on:click={toggleMobileMenu}
-        class="tablet:hidden min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+        class="{forceMobileLayout ? '' : 'hidden'} min-h-11 min-w-11 p-2.5 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
         title={$_('header.menu')}
         aria-label={$_('header.menu')}
       >
@@ -250,8 +250,8 @@
     <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
 
     {#if !forceMobileLayout}
-      <!-- Desktop: Search Bar -->
-      <div class="hidden tablet:flex items-center gap-2 flex-1 max-w-md">
+      <!-- Desktop: Search Bar (always visible in desktop mode) -->
+      <div class="flex items-center gap-2 flex-1 max-w-md">
         <div class="relative flex-1">
           <input
             id="search-input"
@@ -298,8 +298,6 @@
           </span>
         {/if}
       </div>
-
-      <div class="flex-1 tablet:hidden"></div>
     {/if}
 
     {#if forceMobileLayout}
@@ -373,37 +371,11 @@
           </svg>
         </button>
       </div>
-    {:else}
-      <!-- Mobile: Essential Actions (responsive) -->
-      <div class="flex tablet:hidden items-center gap-3">
-        <button
-          on:click={toggleMobileSearch}
-          class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          title={focusSearchShortcut ? `${$_('search.placeholder')} (${focusSearchShortcut})` : $_('search.placeholder')}
-          aria-label="Search"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
-
-        <button
-          on:click={handleNewNoteClick}
-          disabled={disableNewNote}
-          class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={disableNewNote ? $_('header.creatingNote') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
-          aria-label="New note"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
     {/if}
 
     {#if !forceMobileLayout}
-      <!-- Desktop: Full Actions -->
-      <div class="hidden tablet:flex items-center gap-2">
+      <!-- Desktop: Full Actions (always visible in desktop mode) -->
+      <div class="flex items-center gap-2">
       <button
         on:click={handleNewNoteClick}
         disabled={$isDraftMode}
@@ -439,8 +411,8 @@
     </div>
     {/if}
 
-    {#if notebook.id !== 'main'}
-      <div class="hidden tablet:block ml-auto">
+    {#if notebook.id !== 'main' && !forceMobileLayout}
+      <div class="block ml-auto">
         <span class="text-xs text-blue-600 dark:text-blue-400 font-medium opacity-75 truncate max-w-[200px] inline-block" title={notebook.displayName}>
           {notebook.displayName}
         </span>
