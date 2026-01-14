@@ -313,21 +313,30 @@
             on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
             disabled={loadingNotes}
-            class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait text-sm"
+            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-20' : 'pr-8'} border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait text-sm"
             style="font-size: {searchFontSize}"
           />
           {#if loadingNotes}
             <div class="absolute right-2 top-1/2 -translate-y-1/2">
               <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
             </div>
-          {:else if $searchQuery}
-            <button
-              on:click={() => searchQuery.set('')}
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              title={$_('search.clear')}
-            >
-              ✕
-            </button>
+          {:else}
+            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {#if $searchResultCount.isSearching}
+                <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">
+                  {$searchResultCount.matches}/{$searchResultCount.total}
+                </span>
+              {/if}
+              {#if $searchQuery}
+                <button
+                  on:click={() => searchQuery.set('')}
+                  class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-1"
+                  title={$_('search.clear')}
+                >
+                  ✕
+                </button>
+              {/if}
+            </div>
           {/if}
           <!-- Tag suggestions dropdown (mobile) -->
           {#if showTagSuggestions}
