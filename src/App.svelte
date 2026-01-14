@@ -134,8 +134,21 @@
     }
   }
 
+  // Reference to EditorPane for calling close() method
+  let editorPaneRef: { close: () => void } | undefined;
+
   function handleBackToList() {
     mobileView = 'list';
+  }
+
+  // Handler for Header back button - triggers EditorPane close with version creation
+  function handleHeaderBackToList() {
+    if (editorPaneRef) {
+      editorPaneRef.close();
+    } else {
+      // Fallback if ref not available
+      handleBackToList();
+    }
   }
 
   function handleNoteSelect() {
@@ -377,7 +390,7 @@
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
-        onBackToList={useMobileLayout && mobileView === 'editor' ? handleBackToList : undefined}
+        onBackToList={useMobileLayout && mobileView === 'editor' ? handleHeaderBackToList : undefined}
         forceMobileLayout={useMobileLayout}
         disableNewNote={creatingNote}
         {loadingNotes}
@@ -391,7 +404,7 @@
             {#if mobileView === 'list'}
               <NoteList onNoteSelect={handleNoteSelect} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
             {:else}
-              <EditorPane onBackToList={handleBackToList} forceMobileLayout={true} />
+              <EditorPane bind:this={editorPaneRef} onBackToList={handleBackToList} forceMobileLayout={true} />
             {/if}
           </div>
         {:else}

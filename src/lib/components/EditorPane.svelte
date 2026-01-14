@@ -16,6 +16,11 @@
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
 
+  // Expose close method for external callers (e.g., Header back button)
+  export function close() {
+    handleClose();
+  }
+
   let content = '';
   let tags: string[] = [];
   let attachments: Attachment[] = [];
