@@ -16,6 +16,7 @@
   export let onNoteSelect: (() => void) | undefined = undefined;
   export let loadingNotes: boolean = false;
   export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
+  export let forceMobileLayout: boolean = false;
 
   let scrollContainer: HTMLDivElement;
   let savedScrollTop = 0;
@@ -345,7 +346,7 @@
           <!-- Render only visible items -->
           {#each visibleNotes as note, i (note.id)}
             <div bind:this={itemElements[i]}>
-              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} />
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
             </div>
           {/each}
         </div>
@@ -395,7 +396,7 @@
         <!-- Render only visible items -->
         {#each visibleNotes as note, i (note.id)}
           <div bind:this={itemElements[i]}>
-            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} />
+            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
           </div>
         {/each}
       </div>

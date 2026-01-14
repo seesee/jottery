@@ -6,6 +6,7 @@
   import { locale, _ } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
   import { getCurrentNotebook } from './lib/utils/notebookPath';
+  import { isTouchDevice } from './lib/utils/device';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
   import NoteList from './lib/components/NoteList.svelte';
@@ -28,8 +29,12 @@
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
 
   // Determine which layout to use based on layoutMode setting
+  // For auto mode: use mobile layout if small screen OR touch device with medium screen
   $: useMobileLayout = $settings.layoutMode === 'mobile' ||
-    ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
+    ($settings.layoutMode === 'auto' && (
+      window.matchMedia('(max-width: 767px)').matches ||
+      (isTouchDevice() && window.matchMedia('(max-width: 1024px)').matches)
+    ));
 
   let creatingNote = false;
 
@@ -386,7 +391,7 @@
           <!-- Mobile: Single view (list OR editor) -->
           <div class="w-full">
             {#if mobileView === 'list'}
-              <NoteList onNoteSelect={handleNoteSelect} {loadingNotes} {loadingProgress} />
+              <NoteList onNoteSelect={handleNoteSelect} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
             {:else}
               <EditorPane onBackToList={handleBackToList} forceMobileLayout={true} />
             {/if}

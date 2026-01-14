@@ -20,6 +20,7 @@
   export let onDeleteRequest: ((note: DecryptedNote) => void) | undefined = undefined;
   export let hasConflict: boolean = false;
   export let onConflictClick: ((note: DecryptedNote) => void) | undefined = undefined;
+  export let forceMobileLayout: boolean = false;
 
   $: isSelected = $selectedNoteId === note.id;
   $: isMultiSelected = $selectedNoteIds.has(note.id);
@@ -43,12 +44,11 @@
 
   $: title = stripMarkdown(note.content.split('\n')[0] || 'Untitled');
   // Responsive preview length: shorter on mobile, longer on desktop
-  $: isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  $: previewLength = isMobile ? 60 : 100;
+  $: previewLength = forceMobileLayout ? 60 : 100;
 
-  // Unified condition for showing selection UI (checkbox and delete) on mobile
-  // This ensures both appear simultaneously on first tap
-  $: showMobileSelectionUI = isMobile && isSelected && !note.pinned;
+  // Show selection UI (checkbox and delete) on mobile when note is selected
+  // This ensures both appear on first tap, then second tap navigates
+  $: showMobileSelectionUI = forceMobileLayout && isSelected && !note.pinned;
   $: preview = note.content.split('\n').slice(1).join(' ').slice(0, previewLength);
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 
@@ -68,10 +68,10 @@
     } else {
       // Normal click: single selection
       // On mobile, if note not already selected, just select without navigating
-      // This shows the checkbox first; second tap will navigate
-      if (onNoteSelect && isMobile && !isSelected) {
+      // This shows the checkbox/delete first; second tap will navigate
+      if (onNoteSelect && forceMobileLayout && !isSelected) {
         selectNote(note.id);
-        // Don't navigate yet - let user see the checkbox
+        // Don't navigate yet - let user see the controls
       } else {
         selectNote(note.id);
         // Navigate to note (desktop or already-selected on mobile)
