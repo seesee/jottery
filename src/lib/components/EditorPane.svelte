@@ -408,8 +408,13 @@
       // Trigger background sync after saving
       triggerBackgroundSync();
 
-      // Reset change tracking after successful save
-      hasContentChanged = false;
+      // NOTE: Do NOT reset hasContentChanged here!
+      // It should only be reset when:
+      // 1. A new note is loaded (line 230)
+      // 2. The editor is closed (line 312)
+      // 3. After a version snapshot is created when switching notes
+      // Resetting here after auto-save would prevent version creation
+      // when the user later switches notes.
 
       // selectedNote will automatically update from the derived store
     } catch (error) {
