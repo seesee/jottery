@@ -22,14 +22,64 @@
   let isEditing = false;
 
   // Wrapper to handle closing note and returning to list on mobile
-  function handleClose() {
+  // IMPORTANT: In mobile mode, onBackToList() will unmount this component,
+  // so we must handle version creation HERE, not in the reactive block
+  async function handleClose() {
     console.log('[EditorPane] handleClose called - previousNoteId =', previousNoteId, ', hasContentChanged =', hasContentChanged);
+
     // Exit draft mode if active
     if ($isDraftMode) {
       exitDraftMode();
     }
+
+    // Save and create version BEFORE unmounting (mobile mode destroys component)
+    if (previousNoteId && hasContentChanged && !$isDraftMode) {
+      const noteIdToSave = previousNoteId;
+      const contentToSave = content;
+      const tagsToSave = [...tags];
+      const attachmentsToSave = [...attachments];
+      const languageToSave = language;
+      const wordWrapToSave = wordWrap;
+      const showPreviewToSave = showPreview;
+
+      console.log('[EditorPane] handleClose: Saving and creating version for', noteIdToSave);
+
+      try {
+        // Save current changes
+        await noteService.updateNote(noteIdToSave, {
+          content: contentToSave,
+          tags: tagsToSave,
+          attachments: attachmentsToSave,
+          syntaxLanguage: languageToSave,
+          wordWrap: wordWrapToSave,
+          showPreview: showPreviewToSave,
+        });
+
+        // Update the store
+        const updatedNote = await noteService.getNote(noteIdToSave);
+        if (updatedNote) {
+          notes.update(allNotes => {
+            const index = allNotes.findIndex(n => n.id === updatedNote.id);
+            if (index !== -1) {
+              allNotes[index] = updatedNote;
+            }
+            return allNotes;
+          });
+        }
+
+        // Create version snapshot
+        await createVersionSnapshot(noteIdToSave);
+
+        // Trigger sync
+        triggerBackgroundSync();
+      } catch (error) {
+        console.error('[EditorPane] Error during handleClose save:', error);
+      }
+    }
+
     clearSelection();
-    console.log('[EditorPane] handleClose: clearSelection called, $selectedNote should now be null');
+    console.log('[EditorPane] handleClose: clearSelection called');
+
     if (onBackToList) {
       onBackToList();
     }
