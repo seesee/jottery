@@ -12,6 +12,10 @@
     selectRange,
   } from '../stores/appStore';
   import { formatTimestamp } from '../utils/timezone';
+  import {
+    shouldShowCheckbox,
+    shouldShowDeleteButton,
+  } from '../utils/noteListItemVisibility';
 
   export let note: DecryptedNote;
   export let index: number = 0;
@@ -46,9 +50,18 @@
   // Responsive preview length: shorter on mobile, longer on desktop
   $: previewLength = forceMobileLayout ? 60 : 100;
 
-  // Show selection UI (checkbox and delete) on mobile when note is selected
-  // This ensures both appear on first tap, then second tap navigates
-  $: showMobileSelectionUI = forceMobileLayout && isSelected && !note.pinned;
+  // Build visibility state for the utility functions
+  $: visibilityState = {
+    isMultiSelectMode: $isMultiSelectMode,
+    isSelected,
+    isHovered,
+    isPinned: note.pinned,
+    forceMobileLayout,
+  };
+
+  // Use utility functions for visibility logic (tested in noteListItemVisibility.test.ts)
+  $: showCheckbox = shouldShowCheckbox(visibilityState);
+  $: showDeleteBtn = shouldShowDeleteButton(visibilityState);
   $: preview = note.content.split('\n').slice(1).join(' ').slice(0, previewLength);
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 
@@ -117,8 +130,8 @@
 >
   <div class="flex items-start justify-between mb-1">
     <div class="flex items-center gap-2 flex-1 min-w-0">
-      <!-- Multi-select checkbox: show when in multi-select mode, or on mobile when note is selected -->
-      {#if $isMultiSelectMode || showMobileSelectionUI || (!note.pinned && isSelected)}
+      <!-- Multi-select checkbox: visibility logic is in noteListItemVisibility.ts -->
+      {#if showCheckbox}
         <span
           on:click|stopPropagation={handleCheckboxClick}
           on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
@@ -156,7 +169,7 @@
         {title}
       </h3>
     </div>
-    {#if isHovered || showMobileSelectionUI}
+    {#if showDeleteBtn}
       <span
         on:click={handleDeleteClick}
         on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}
