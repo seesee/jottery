@@ -19,7 +19,10 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:report": "node scripts/test-report.cjs",
+    "test:report:quick": "node scripts/test-report.cjs --quick",
+    "test:report:history": "node scripts/test-report.cjs --history"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -31,7 +34,10 @@
     "@types/node": "^25.0.3",
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.16",
+    "asciichart": "^1.5.25",
     "autoprefixer": "^10.4.20",
+    "better-sqlite3": "^12.6.2",
+    "chalk": "^4.1.2",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.0.11",
     "msw": "^2.12.7",

@@ -16,6 +16,8 @@ dist-ssr
 test-results/
 playwright-report/
 .playwright/
+coverage/
+scripts/test-history.db
 
 # Editor directories and files
 .vscode/*
