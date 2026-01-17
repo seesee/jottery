@@ -2,6 +2,9 @@
   "name": "jottery-admin",
   "version": "0.9.11",
   "type": "module",
+  "overrides": {
+    "esbuild": "^0.27.2"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -10,7 +13,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "svelte": "^5.20.0",
+    "svelte": "^5.46.4",
     "svelte-i18n": "^4.0.1"
   },
   "devDependencies": {
