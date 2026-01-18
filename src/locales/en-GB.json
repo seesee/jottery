@@ -688,6 +688,9 @@
     "noConflict": "No conflict data found",
     "indicator": "Sync conflict"
   },
+  "sync": {
+    "syncing": "Syncing..."
+  },
   "pullToRefresh": {
     "pull": "Pull down to sync",
     "release": "Release to sync",

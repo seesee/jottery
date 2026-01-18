@@ -26,7 +26,7 @@ import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
-import { notes, settings, isSyncRefreshing } from '../stores/appStore';
+import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { isDBAvailable, wasDBTerminated } from './db';
@@ -164,6 +164,7 @@ class SyncService {
 
     console.log('[SyncService] Starting sync', forceFullSync ? '(force full)' : '');
     this.isSyncing = true;
+    isSyncingStore.set(true);
     try {
       const metadata = await syncRepository.getMetadata();
       if (!metadata || !metadata.syncEnabled || !metadata.apiKey) {
@@ -238,6 +239,7 @@ class SyncService {
       };
     } finally {
       this.isSyncing = false;
+      isSyncingStore.set(false);
     }
   }
 

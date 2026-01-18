@@ -411,13 +411,15 @@
 
       <main class="flex-1 overflow-hidden flex">
         {#if useMobileLayout}
-          <!-- Mobile: Single view (list OR editor) -->
-          <div class="w-full">
-            {#if mobileView === 'list'}
+          <!-- Mobile: Keep both components mounted, toggle visibility with CSS -->
+          <!-- This preserves NoteList state (scroll position, height cache) across navigation -->
+          <div class="w-full h-full relative">
+            <div class="absolute inset-0" class:hidden={mobileView !== 'list'}>
               <NoteList onNoteSelect={handleNoteSelect} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
-            {:else}
+            </div>
+            <div class="absolute inset-0" class:hidden={mobileView !== 'editor'}>
               <EditorPane bind:this={editorPaneRef} onBackToList={handleBackToList} forceMobileLayout={true} />
-            {/if}
+            </div>
           </div>
         {:else}
           <!-- Desktop: Side-by-side layout -->

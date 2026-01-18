@@ -716,5 +716,8 @@
     "progress": "{current} of {total}",
     "selectAll": "Select all",
     "deselectAll": "Deselect all"
+  },
+  "sync": {
+    "syncing": "Syncing..."
   }
 }

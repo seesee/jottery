@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes } from '../stores/appStore';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
@@ -234,8 +234,21 @@
       </button>
     {/if}
 
-    <!-- Brand -->
-    <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
+    <!-- Brand with sync indicator -->
+    <div class="flex items-center gap-2">
+      <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
+      {#if $isSyncing && $settings.syncEnabled}
+        <div class="flex items-center gap-1 text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
+          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {#if !forceMobileLayout}
+            <span class="text-xs">{$_('sync.syncing')}</span>
+          {/if}
+        </div>
+      {/if}
+    </div>
 
     {#if !forceMobileLayout}
       <!-- Desktop: Search Bar (always visible in desktop mode) -->

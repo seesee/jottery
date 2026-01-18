@@ -730,5 +730,8 @@
     "release": "Release to sync",
     "syncing": "Syncing...",
     "region": "Pull to refresh"
+  },
+  "sync": {
+    "syncing": "Syncing..."
   }
 }
