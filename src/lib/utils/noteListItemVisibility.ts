@@ -74,11 +74,18 @@ export function shouldShowCheckbox(state: NoteListItemVisibilityState): boolean 
 /**
  * Determines whether the delete button should be visible.
  *
- * Desktop: Shows on hover (quick access without selection)
+ * Desktop: Shows on hover (quick access without selection), but NOT for pinned notes
  * Mobile: Never shows (swipe reveals delete action)
+ *
+ * Pinned notes are protected from accidental deletion - the delete button is hidden.
  */
 export function shouldShowDeleteButton(state: NoteListItemVisibilityState): boolean {
-  const { isHovered, forceMobileLayout } = state;
+  const { isHovered, forceMobileLayout, isPinned } = state;
+
+  // Never show delete button for pinned notes - they are protected
+  if (isPinned) {
+    return false;
+  }
 
   // On mobile: never show delete button - swipe reveals it instead
   if (forceMobileLayout) {

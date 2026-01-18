@@ -259,4 +259,66 @@ test.describe('Note Metadata Persistence', () => {
       }
     });
   });
+
+  test.describe('Pinned Note Protection', () => {
+    // Use desktop viewport for this test (hover behaviour)
+    test.use({ viewport: { width: 1280, height: 720 } });
+
+    test('should NOT show delete button when hovering over pinned notes', async ({ page }) => {
+      // Create a note
+      await createNote(page, 'Protected pinned note');
+
+      // Click on the note in the list to select it
+      const noteList = page.getByRole('list');
+      await noteList.getByText(/Protected pinned/i).click();
+      await page.waitForTimeout(500);
+
+      // Pin the note
+      const pinButton = page.getByRole('button', { name: 'Pin note' });
+      if (await pinButton.isVisible()) {
+        await pinButton.click();
+        await page.waitForTimeout(1000);
+
+        // Create another note so we're not editing the pinned one
+        await createNote(page, 'Another unpinned note');
+
+        // Find the pinned note in the list
+        const pinnedNoteItem = page.locator('.note-list-item').filter({
+          hasText: /Protected pinned/i
+        });
+        await expect(pinnedNoteItem).toBeVisible();
+
+        // Hover over the pinned note
+        await pinnedNoteItem.hover();
+        await page.waitForTimeout(300);
+
+        // The delete button (x mark) should NOT be visible on pinned notes
+        const deleteButton = pinnedNoteItem.locator('.delete-button, [aria-label*="delete" i], button svg path[d*="M6 18L18 6"]');
+        const deleteButtonVisible = await deleteButton.isVisible().catch(() => false);
+
+        expect(deleteButtonVisible).toBe(false);
+      }
+    });
+
+    test('should show delete button when hovering over unpinned notes', async ({ page }) => {
+      // Create an unpinned note
+      await createNote(page, 'Unpinned deletable note');
+
+      // Find the note in the list
+      const noteItem = page.locator('.note-list-item').filter({
+        hasText: /Unpinned deletable/i
+      });
+      await expect(noteItem).toBeVisible();
+
+      // Hover over the unpinned note
+      await noteItem.hover();
+      await page.waitForTimeout(300);
+
+      // The delete button should be visible for unpinned notes
+      const deleteButton = noteItem.locator('.delete-button');
+      const deleteButtonVisible = await deleteButton.isVisible().catch(() => false);
+
+      expect(deleteButtonVisible).toBe(true);
+    });
+  });
 });

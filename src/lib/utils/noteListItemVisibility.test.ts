@@ -279,15 +279,15 @@ describe('noteListItemVisibility', () => {
       expect(shouldShowDeleteButton(pinnedMobile)).toBe(false);
     });
 
-    it('should show delete button for pinned notes on desktop hover', () => {
-      // Pinned notes can still be deleted via hover on desktop
+    it('should NOT show delete button for pinned notes on desktop hover', () => {
+      // Pinned notes are protected from accidental deletion - hide the delete button
       const pinnedDesktopHover = createState({
         isPinned: true,
         isHovered: true,
         forceMobileLayout: false,
       });
 
-      expect(shouldShowDeleteButton(pinnedDesktopHover)).toBe(true);
+      expect(shouldShowDeleteButton(pinnedDesktopHover)).toBe(false);
     });
   });
 });
