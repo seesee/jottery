@@ -32,6 +32,9 @@ export const isSyncRefreshing = writable<boolean>(false);
 // Sync in progress indicator - for UI feedback
 export const isSyncing = writable<boolean>(false);
 
+// Sync progress - for showing percentage when >= 5 items to sync
+export const syncProgress = writable<{ total: number; completed: number }>({ total: 0, completed: 0 });
+
 // Content-only update flag - prevents unnecessary search recalculation when only note content changed
 // Set this before updating notes store, check it in search reactive block, then reset
 export const isContentOnlyUpdate = writable<boolean>(false);

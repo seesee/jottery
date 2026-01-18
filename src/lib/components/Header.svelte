@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing } from '../stores/appStore';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
@@ -27,6 +27,12 @@
 
   // Get current notebook info for display
   const notebook = getCurrentNotebook();
+
+  // Sync progress - show percentage if >= 5 items, otherwise just spinner
+  $: showSyncPercentage = $syncProgress.total >= 5;
+  $: syncPercentage = $syncProgress.total > 0
+    ? Math.round(($syncProgress.completed / $syncProgress.total) * 100)
+    : 0;
 
   // Check if remember password is enabled
   $: rememberPasswordEnabled = $settings.rememberPassword || false;
@@ -216,10 +222,31 @@
       {:else if $isSyncing && $settings.syncEnabled}
         <!-- Sync indicator in back button space -->
         <div class="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
-          <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+          {#if showSyncPercentage}
+            <!-- Percentage indicator for >= 5 items -->
+            <div class="relative w-6 h-6">
+              <svg class="w-6 h-6 transform -rotate-90" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"></circle>
+                <circle
+                  cx="12" cy="12" r="10"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  fill="none"
+                  stroke-dasharray="62.83"
+                  stroke-dashoffset={62.83 * (1 - syncPercentage / 100)}
+                  stroke-linecap="round"
+                  class="transition-all duration-300"
+                ></circle>
+              </svg>
+              <span class="absolute inset-0 flex items-center justify-center text-[8px] font-bold">{syncPercentage}</span>
+            </div>
+          {:else}
+            <!-- Spinner for < 5 items -->
+            <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          {/if}
         </div>
       {:else}
         <!-- Greyed-out placeholder to prevent layout shift -->
@@ -247,11 +274,32 @@
       <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
       {#if !forceMobileLayout && $isSyncing && $settings.syncEnabled}
         <div class="flex items-center gap-1 text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
-          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span class="text-xs">{$_('sync.syncing')}</span>
+          {#if showSyncPercentage}
+            <!-- Percentage indicator for >= 5 items -->
+            <div class="relative w-4 h-4">
+              <svg class="w-4 h-4 transform -rotate-90" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"></circle>
+                <circle
+                  cx="12" cy="12" r="10"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  fill="none"
+                  stroke-dasharray="62.83"
+                  stroke-dashoffset={62.83 * (1 - syncPercentage / 100)}
+                  stroke-linecap="round"
+                  class="transition-all duration-300"
+                ></circle>
+              </svg>
+            </div>
+            <span class="text-xs">{syncPercentage}%</span>
+          {:else}
+            <!-- Spinner for < 5 items -->
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-xs">{$_('sync.syncing')}</span>
+          {/if}
         </div>
       {/if}
     </div>

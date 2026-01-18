@@ -26,7 +26,7 @@ import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
-import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore } from '../stores/appStore';
+import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { isDBAvailable, wasDBTerminated } from './db';
@@ -165,6 +165,8 @@ class SyncService {
     console.log('[SyncService] Starting sync', forceFullSync ? '(force full)' : '');
     this.isSyncing = true;
     isSyncingStore.set(true);
+    // Reset progress
+    syncProgress.set({ total: 0, completed: 0 });
     try {
       const metadata = await syncRepository.getMetadata();
       if (!metadata || !metadata.syncEnabled || !metadata.apiKey) {
@@ -240,6 +242,8 @@ class SyncService {
     } finally {
       this.isSyncing = false;
       isSyncingStore.set(false);
+      // Reset progress after sync completes
+      syncProgress.set({ total: 0, completed: 0 });
     }
   }
 
@@ -268,6 +272,9 @@ class SyncService {
     if (!masterKey) {
       throw new Error('Application is locked');
     }
+
+    // Update progress with push count (pull will add to this later)
+    syncProgress.update(p => ({ ...p, total: p.total + modifiedNotes.length }));
 
     // Push in batches to avoid JSON.stringify memory limits
     const BATCH_SIZE = 100;
@@ -398,6 +405,9 @@ class SyncService {
           await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
         }
       }
+
+      // Update progress after each batch
+      syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
     }
 
     console.log(`[SyncService] Push complete: ${totalAccepted} accepted, ${totalRejected} rejected`);
@@ -482,8 +492,14 @@ class SyncService {
 
       // Update pagination state
       hasMore = result.hasMore ?? false;
+      const previousTotalCount = totalCount;
       totalCount = result.totalCount ?? result.notes.length;
       offset += result.notes.length;
+
+      // On first response, add pull count to progress total
+      if (previousTotalCount === 0 && totalCount > 0) {
+        syncProgress.update(p => ({ ...p, total: p.total + totalCount }));
+      }
 
       // Track totals (totalNotes counts only actual changes - new notes or remote-newer updates)
       totalAttachments += result.attachments.length;
@@ -589,6 +605,9 @@ class SyncService {
           }
         }
       }
+
+      // Update progress after each batch
+      syncProgress.update(p => ({ ...p, completed: p.completed + result.notes.length }));
     }
 
     console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);
