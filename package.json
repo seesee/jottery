@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "VITE_HTTPS=true VITE_HOST=true vite",
     "dev:all": "node scripts/dev-harness.js",
     "build": "vite build",
     "build:all": "npm run build:tui && vite build",
@@ -32,6 +33,7 @@
     "@testing-library/svelte": "^5.3.1",
     "@tsconfig/svelte": "^5.0.4",
     "@types/node": "^25.0.3",
+    "@vitejs/plugin-basic-ssl": "^2.1.3",
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.16",
     "asciichart": "^1.5.25",

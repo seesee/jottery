@@ -2,11 +2,18 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { visualizer } from 'rollup-plugin-visualizer';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { readFileSync, writeFileSync } from 'fs';
 
 // Read version from package.json
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const version = packageJson.version;
+
+// Mobile testing configuration (via environment variables)
+// Usage: VITE_HTTPS=true VITE_HOST=true VITE_ALLOWED_HOSTS=entrapta,other npm run dev
+const enableHttps = process.env.VITE_HTTPS === 'true';
+const enableHost = process.env.VITE_HOST === 'true';
+const allowedHosts = process.env.VITE_ALLOWED_HOSTS?.split(',').filter(Boolean) || [];
 
 // Plugin to generate version.json during build
 function generateVersionFile() {
@@ -33,6 +40,8 @@ export default defineConfig({
     svelte(),
     viteSingleFile(),
     generateVersionFile(),
+    // Only enable HTTPS when VITE_HTTPS=true (needed for crypto.subtle on mobile)
+    ...(enableHttps ? [basicSsl()] : []),
     visualizer({
       filename: 'dist/stats.html',
       open: false,
@@ -42,6 +51,10 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+    // Enable network access when VITE_HOST=true
+    ...(enableHost && { host: true }),
+    // Allow specific hostnames when VITE_ALLOWED_HOSTS is set
+    ...(allowedHosts.length > 0 && { allowedHosts }),
   },
   build: {
     target: 'esnext',

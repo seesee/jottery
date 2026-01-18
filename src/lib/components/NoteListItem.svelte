@@ -24,6 +24,7 @@
     getSwipeTransform,
     getActionOpacity,
     triggerHapticFeedback,
+    triggerDeleteHapticFeedback,
     type SwipeState,
   } from '../utils/swipeGesture';
 
@@ -43,6 +44,7 @@
   // Swipe gesture state
   let swipeState: SwipeState = createSwipeState();
   let wasThresholdCrossed = false; // Track for haptic feedback
+  let isDeleting = false; // Track delete animation state
 
   // Strip markdown formatting from the title
   function stripMarkdown(text: string): string {
@@ -176,16 +178,30 @@
     if (result.action === 'delete') {
       // Swipe left = delete (unless pinned)
       if (!note.pinned && onDeleteRequest) {
-        onDeleteRequest(note);
+        // Trigger stronger haptic feedback for delete action
+        triggerDeleteHapticFeedback();
+
+        // Start delete animation - whoosh off screen
+        isDeleting = true;
+
+        // Wait for animation to complete before actually deleting
+        setTimeout(() => {
+          onDeleteRequest(note);
+        }, 300); // Match animation duration
+      } else {
+        swipeState = result.state;
       }
     } else if (result.action === 'select') {
       // Swipe right = toggle multi-select (unless pinned)
       if (!note.pinned) {
+        triggerHapticFeedback();
         toggleNoteSelection(note.id, index);
       }
+      swipeState = result.state;
+    } else {
+      swipeState = result.state;
     }
 
-    swipeState = result.state;
     wasThresholdCrossed = false;
   }
 
@@ -197,7 +213,7 @@
 
 <!-- Swipe container wrapper (mobile only) -->
 {#if forceMobileLayout}
-  <div class="swipe-container relative overflow-hidden">
+  <div class="swipe-container relative overflow-hidden {isDeleting ? 'deleting' : ''}">
     <!-- Multi-select action (left side, revealed when swiping right) -->
     <div
       class="swipe-action-left absolute inset-y-0 left-0 w-20 bg-blue-500 flex items-center justify-center"
@@ -450,6 +466,32 @@
       min-height: 36px;
       display: inline-flex;
       align-items: center;
+    }
+  }
+
+  /* Delete animation - whoosh off screen */
+  .swipe-container.deleting {
+    animation: whoosh-delete 0.3s ease-out forwards;
+  }
+
+  @keyframes whoosh-delete {
+    0% {
+      transform: translateX(0);
+      opacity: 1;
+      max-height: 200px;
+    }
+    50% {
+      transform: translateX(-100%);
+      opacity: 0.5;
+      max-height: 200px;
+    }
+    100% {
+      transform: translateX(-100%);
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      padding: 0;
+      border: none;
     }
   }
 </style>

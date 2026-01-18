@@ -169,9 +169,21 @@ export function getActionOpacity(state: SwipeState): number {
 
 /**
  * Triggers haptic feedback if available
+ * Uses a short vibration for threshold crossing
  */
 export function triggerHapticFeedback(): void {
   if (navigator.vibrate) {
     navigator.vibrate(10);
+  }
+}
+
+/**
+ * Triggers stronger haptic feedback for destructive actions
+ * Uses a double-pulse pattern for delete confirmation
+ */
+export function triggerDeleteHapticFeedback(): void {
+  if (navigator.vibrate) {
+    // Double pulse: vibrate-pause-vibrate
+    navigator.vibrate([15, 50, 25]);
   }
 }
