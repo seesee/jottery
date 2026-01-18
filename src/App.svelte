@@ -345,7 +345,7 @@
   }
 
   async function performSearch() {
-    const results = await searchService.searchNotes($searchQuery, $notes);
+    const results = await searchService.searchNotes($searchQuery, $notes, $settings.sortOrder);
     filteredNotes.set(results);
   }
 

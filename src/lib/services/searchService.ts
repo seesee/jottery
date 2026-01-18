@@ -4,7 +4,7 @@
  */
 
 import FlexSearch from 'flexsearch';
-import type { DecryptedNote, SearchQuery } from '../types';
+import type { DecryptedNote, SearchQuery, SortOrder } from '../types';
 
 // Create FlexSearch index
 const index = new FlexSearch.Document({
@@ -288,11 +288,53 @@ function compareDates(noteDate: string, filterDate: string, comparison: 'after' 
 }
 
 /**
+ * Sort notes by specified order, with pinned notes always first
+ */
+function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[] {
+  const sorted = [...notes];
+
+  // Separate pinned and unpinned
+  const pinned = sorted.filter(n => n.pinned);
+  const unpinned = sorted.filter(n => !n.pinned);
+
+  // Get sort function based on sort order
+  let sortFn: (a: DecryptedNote, b: DecryptedNote) => number;
+  switch (sortOrder) {
+    case 'recent':
+      sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
+      break;
+    case 'oldest':
+      sortFn = (a, b) => a.modifiedAt.localeCompare(b.modifiedAt);
+      break;
+    case 'created':
+      sortFn = (a, b) => b.createdAt.localeCompare(a.createdAt);
+      break;
+    case 'alpha':
+      sortFn = (a, b) => {
+        const aTitle = a.content.split('\n')[0].toLowerCase();
+        const bTitle = b.content.split('\n')[0].toLowerCase();
+        return aTitle.localeCompare(bTitle);
+      };
+      break;
+    default:
+      sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
+  }
+
+  // Sort each group
+  pinned.sort(sortFn);
+  unpinned.sort(sortFn);
+
+  // Pinned notes always come first
+  return [...pinned, ...unpinned];
+}
+
+/**
  * Search notes using FlexSearch and structured query
  */
 export async function searchNotes(
   query: string,
-  allNotes: DecryptedNote[]
+  allNotes: DecryptedNote[],
+  sortOrder: SortOrder = 'recent'
 ): Promise<DecryptedNote[]> {
   // First extract advanced modifiers from query
   const { modifiers, remainingQuery } = parseAdvancedModifiers(query);
@@ -321,7 +363,7 @@ export async function searchNotes(
     (!parsed.excludeTags || parsed.excludeTags.length === 0) &&
     !hasModifiers
   ) {
-    return allNotes;
+    return sortNotes(allNotes, sortOrder);
   }
 
   let results = [...allNotes];
@@ -424,7 +466,7 @@ export async function searchNotes(
     results = results.filter((note) => countWords(note.content) <= parsed.wordCountMax!);
   }
 
-  return results;
+  return sortNotes(results, sortOrder);
 }
 
 /**
