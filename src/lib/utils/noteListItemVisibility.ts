@@ -6,17 +6,15 @@
  *
  * Extracted for testability and documentation of the visibility rules.
  *
- * ## Mobile Interaction Model (2 taps to open)
+ * ## Mobile Interaction Model (single tap + swipe)
  *
- * On mobile touch devices, we use a selection-based model, NOT hover-based:
+ * On mobile touch devices:
+ * - Single tap: Opens the note immediately
+ * - Swipe right-to-left: Reveals delete action
+ * - Swipe left-to-right: Reveals checkbox for multi-select
  *
- * 1. First tap: Selects the note, shows checkbox and delete button
- * 2. Second tap: Opens the note
- *
- * We deliberately avoid showing UI elements on hover for mobile because:
- * - Hover events on touch devices are unreliable (mouseenter fires but mouseleave may not)
- * - Elements appearing on hover can intercept the tap (checkbox has stopPropagation)
- * - Multiple notes can end up with hover state, causing multiple checkboxes to show
+ * The checkbox and delete button are NOT shown by default on mobile.
+ * They are revealed through swipe gestures for a cleaner interface.
  *
  * ## Desktop Interaction Model
  *
@@ -46,32 +44,27 @@ export function shouldShowMobileSelectionUI(state: NoteListItemVisibilityState):
 /**
  * Determines whether the multi-select checkbox should be visible.
  *
- * The checkbox appears when:
- * - In multi-select mode (selecting multiple notes)
- * - When the note is selected (allows entering multi-select)
+ * Desktop: Shows when selected or in multi-select mode
+ * Mobile: Only shows in multi-select mode (swipe reveals checkbox otherwise)
  *
  * The checkbox is NEVER shown for pinned notes.
- *
- * NOTE: We intentionally do NOT show the checkbox on hover for mobile.
- * If we did, the checkbox would appear before the click fires and could
- * intercept the tap (via stopPropagation), entering multi-select mode
- * instead of single-selecting the note.
  */
 export function shouldShowCheckbox(state: NoteListItemVisibilityState): boolean {
-  const { isMultiSelectMode, isSelected, isPinned } = state;
+  const { isMultiSelectMode, isSelected, isPinned, forceMobileLayout } = state;
 
   // Never show checkbox for pinned notes
   if (isPinned) {
     return false;
   }
 
-  // Show if in multi-select mode
+  // Show if in multi-select mode (both mobile and desktop)
   if (isMultiSelectMode) {
     return true;
   }
 
-  // Show if note is selected
-  if (isSelected) {
+  // On desktop only: show if note is selected (allows entering multi-select)
+  // On mobile: don't show on selection - swipe reveals checkbox instead
+  if (!forceMobileLayout && isSelected) {
     return true;
   }
 
@@ -82,23 +75,18 @@ export function shouldShowCheckbox(state: NoteListItemVisibilityState): boolean 
  * Determines whether the delete button should be visible.
  *
  * Desktop: Shows on hover (quick access without selection)
- * Mobile: Shows only when selected (avoids hover-related issues)
- *
- * NOTE: On mobile, we don't show the delete button on hover because:
- * 1. Hover state is unreliable (mouseleave may not fire when tapping elsewhere)
- * 2. This can cause multiple notes to show delete buttons simultaneously
- * 3. The delete button could intercept taps meant for selecting the note
+ * Mobile: Never shows (swipe reveals delete action)
  */
 export function shouldShowDeleteButton(state: NoteListItemVisibilityState): boolean {
-  const { isHovered, isPinned, isSelected, forceMobileLayout } = state;
+  const { isHovered, forceMobileLayout } = state;
 
-  // On desktop only: show on hover for quick access
-  if (!forceMobileLayout && isHovered) {
-    return true;
+  // On mobile: never show delete button - swipe reveals it instead
+  if (forceMobileLayout) {
+    return false;
   }
 
-  // On mobile: only show when note is selected
-  if (forceMobileLayout && isSelected && !isPinned) {
+  // On desktop: show on hover for quick access
+  if (isHovered) {
     return true;
   }
 

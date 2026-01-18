@@ -5,9 +5,9 @@
  * are visible in the NoteListItem component.
  *
  * Key design decisions tested:
- * - Mobile uses selection-based visibility (not hover-based)
+ * - Mobile uses swipe gestures for checkbox/delete (not shown by default)
  * - Desktop uses hover for delete button, selection for checkbox
- * - This prevents UI elements from intercepting taps on mobile
+ * - Single tap opens note immediately on mobile
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -92,12 +92,12 @@ describe('noteListItemVisibility', () => {
         expect(shouldShowCheckbox(state)).toBe(true);
       });
 
-      it('should show when selected on mobile', () => {
+      it('should NOT show when selected on mobile (swipe reveals it)', () => {
         const state = createState({
           isSelected: true,
           forceMobileLayout: true,
         });
-        expect(shouldShowCheckbox(state)).toBe(true);
+        expect(shouldShowCheckbox(state)).toBe(false);
       });
 
       it('should NOT show when selected but pinned', () => {
@@ -149,33 +149,22 @@ describe('noteListItemVisibility', () => {
       });
     });
 
-    describe('mobile - NO hover-based visibility', () => {
-      it('should NOT show on mobile hover - prevents unreliable UI', () => {
-        // On mobile, hover state is unreliable (mouseleave may not fire)
-        // This could cause multiple notes to show delete buttons
+    describe('mobile - swipe-based visibility', () => {
+      it('should NEVER show on mobile - swipe reveals delete action', () => {
+        // On mobile, delete button is revealed via swipe gesture
         const state = createState({
           isHovered: true,
           forceMobileLayout: true,
-          isSelected: false,
+          isSelected: true,
         });
         expect(shouldShowDeleteButton(state)).toBe(false);
       });
 
-      it('should show when mobile and selected', () => {
+      it('should NOT show on mobile even when selected', () => {
         const state = createState({
           forceMobileLayout: true,
           isSelected: true,
           isPinned: false,
-          isHovered: false,
-        });
-        expect(shouldShowDeleteButton(state)).toBe(true);
-      });
-
-      it('should NOT show when mobile, selected, but pinned', () => {
-        const state = createState({
-          forceMobileLayout: true,
-          isSelected: true,
-          isPinned: true,
           isHovered: false,
         });
         expect(shouldShowDeleteButton(state)).toBe(false);
@@ -190,81 +179,52 @@ describe('noteListItemVisibility', () => {
     });
   });
 
-  describe('mobile 2-tap interaction model', () => {
+  describe('mobile single-tap + swipe interaction model', () => {
     /**
      * On mobile, the interaction should be:
-     * 1. First tap: Selects the note, shows checkbox and delete
-     * 2. Second tap: Opens the note
+     * - Single tap: Opens the note immediately
+     * - Swipe right-to-left: Reveals delete action
+     * - Swipe left-to-right: Reveals checkbox for multi-select
      *
-     * We use selection-based visibility (not hover) because:
-     * - Hover is unreliable on touch devices
-     * - Elements appearing on hover can intercept taps
-     * - Multiple notes could end up with hover state
+     * No UI elements shown by default - cleaner interface.
      */
 
-    it('before first tap: nothing should show', () => {
-      const beforeTap = createState({
+    it('nothing should show by default on mobile', () => {
+      const defaultState = createState({
         forceMobileLayout: true,
         isSelected: false,
         isHovered: false,
       });
 
-      expect(shouldShowCheckbox(beforeTap)).toBe(false);
-      expect(shouldShowDeleteButton(beforeTap)).toBe(false);
+      expect(shouldShowCheckbox(defaultState)).toBe(false);
+      expect(shouldShowDeleteButton(defaultState)).toBe(false);
     });
 
-    it('during first tap (hover fires): still nothing should show', () => {
-      // Even though mouseenter fires before click, we don't show UI
-      // This prevents the checkbox from intercepting the tap
-      const duringTapHover = createState({
-        forceMobileLayout: true,
-        isSelected: false,
-        isHovered: true,
-      });
-
-      expect(shouldShowCheckbox(duringTapHover)).toBe(false);
-      expect(shouldShowDeleteButton(duringTapHover)).toBe(false);
-    });
-
-    it('after first tap (selected): both should show', () => {
-      // After the click handler runs, note is selected
-      // Now both checkbox and delete appear
-      const afterFirstTap = createState({
-        forceMobileLayout: true,
-        isSelected: true,
-        isHovered: true, // May still be hovered
-        isPinned: false,
-      });
-
-      expect(shouldShowCheckbox(afterFirstTap)).toBe(true);
-      expect(shouldShowDeleteButton(afterFirstTap)).toBe(true);
-    });
-
-    it('after hover ends but still selected: both should still show', () => {
-      const hoverEnded = createState({
+    it('nothing should show even when selected on mobile (swipe reveals controls)', () => {
+      const selectedState = createState({
         forceMobileLayout: true,
         isSelected: true,
         isHovered: false,
         isPinned: false,
       });
 
-      expect(shouldShowCheckbox(hoverEnded)).toBe(true);
-      expect(shouldShowDeleteButton(hoverEnded)).toBe(true);
+      // Checkbox and delete are accessed via swipe, not selection
+      expect(shouldShowCheckbox(selectedState)).toBe(false);
+      expect(shouldShowDeleteButton(selectedState)).toBe(false);
     });
 
-    it('when tapping different note: old note UI should hide', () => {
-      // When user taps note B, note A becomes unselected
-      // Note A's checkbox and delete should hide
-      const oldNoteAfterNewSelection = createState({
+    it('checkbox should show in multi-select mode on mobile', () => {
+      const multiSelectState = createState({
         forceMobileLayout: true,
-        isSelected: false, // No longer selected
-        isHovered: true, // Hover might still be true (unreliable on mobile)
+        isMultiSelectMode: true,
+        isSelected: false,
         isPinned: false,
       });
 
-      // Even with hover=true, nothing shows because we use selection-based visibility
-      expect(shouldShowCheckbox(oldNoteAfterNewSelection)).toBe(false);
-      expect(shouldShowDeleteButton(oldNoteAfterNewSelection)).toBe(false);
+      // In multi-select mode, show checkbox so user can see selection state
+      expect(shouldShowCheckbox(multiSelectState)).toBe(true);
+      // Delete button still hidden - use bulk operations toolbar
+      expect(shouldShowDeleteButton(multiSelectState)).toBe(false);
     });
   });
 
@@ -309,7 +269,7 @@ describe('noteListItemVisibility', () => {
       expect(shouldShowCheckbox(pinnedSelected)).toBe(false);
     });
 
-    it('should not show delete button for pinned notes on mobile even when selected', () => {
+    it('should not show delete button on mobile (swipe disabled for pinned in Phase 4)', () => {
       const pinnedMobile = createState({
         isPinned: true,
         isSelected: true,

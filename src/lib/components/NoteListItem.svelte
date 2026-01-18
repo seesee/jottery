@@ -79,18 +79,12 @@
       // In multi-select mode, normal click toggles selection (not on pinned notes)
       toggleNoteSelection(note.id, index);
     } else {
-      // Normal click: single selection
-      // On mobile, if note not already selected, just select without navigating
-      // This shows the checkbox/delete first; second tap will navigate
-      if (onNoteSelect && forceMobileLayout && !isSelected) {
-        selectNote(note.id);
-        // Don't navigate yet - let user see the controls
-      } else {
-        selectNote(note.id);
-        // Navigate to note (desktop or already-selected on mobile)
-        if (onNoteSelect) {
-          onNoteSelect();
-        }
+      // Normal click: single selection AND open
+      // Single tap opens immediately on both mobile and desktop
+      // (swipe gestures provide checkbox/delete access on mobile)
+      selectNote(note.id);
+      if (onNoteSelect) {
+        onNoteSelect();
       }
     }
   }
