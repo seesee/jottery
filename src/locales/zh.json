@@ -77,9 +77,9 @@
     "exportToFile": "导出为文件",
     "printPdf": "打印 / 导出PDF",
     "printFailed": "无法打开打印窗口",
-    "duplicateNote": "复制笔记",
-    "noteDuplicated": "笔记已复制",
-    "duplicateFailed": "复制笔记失败",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "信息",
     "versionHistory": "版本历史",
     "deleteNote": "删除笔记",
@@ -112,10 +112,7 @@
       "downloadToView": "下载以查看"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "删除笔记",
@@ -453,7 +450,14 @@
       "license": "使用 MIT 许可证授权。"
     },
     "openLinksInNewTab": "在新标签页中打开外部链接",
-    "openLinksInNewTabDescription": "启用后，Markdown 预览中的外部网站链接将在新浏览器标签页中打开，而不是离开 Jottery"
+    "openLinksInNewTabDescription": "启用后，Markdown 预览中的外部网站链接将在新浏览器标签页中打开，而不是离开 Jottery",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "欢迎使用 Jottery",
@@ -489,7 +493,8 @@
         "description": "想要运行自己的同步服务器?Jottery 是开源的,易于自托管。",
         "viewOnGitHub": "在 GitHub 上查看"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "锁定应用程序",

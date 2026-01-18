@@ -88,6 +88,8 @@ export interface UserSettings {
   vimMode?: boolean; // Enable vim keybindings in editor (defaults to false)
   quickCommandsEnabled?: boolean; // Enable quick commands (defaults to true)
   quickCommandsList?: QuickCommandConfig[]; // Custom quick commands
+  persistSession?: boolean; // Enable session persistence across page refresh (tab-scoped)
+  persistSessionTimeout?: number; // Session expiry in minutes (default: 30)
 }
 
 /**
@@ -329,4 +331,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   vimMode: false, // Vim keybindings disabled by default
   quickCommandsEnabled: true, // Quick commands enabled by default
   quickCommandsList: DEFAULT_QUICK_COMMANDS, // Default quick commands
+  persistSession: false, // Session persistence disabled by default
+  persistSessionTimeout: 30, // 30 minutes default expiry
 };

@@ -162,6 +162,13 @@
     "rememberPasswordNote": "Auto-lock will be disabled when this is enabled. Disabling this will immediately lock the application.",
     "openLinksInNewTab": "Open External Links in New Tab",
     "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
     "rememberPasswordModal": {
       "title": "⚠️ Security Warning",
       "insecureWarning": "Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.",
@@ -452,6 +459,7 @@
     "failedAttempts": "Incorrect password. After 3 failed attempts, you may need to delete the database and start over.",
     "deleteAndStartOver": "Delete Database & Start Over",
     "storedPasswordInvalid": "Stored password is invalid. Please re-enter your password.",
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password.",
     "landingPage": {
       "privateEncrypted": {
         "title": "🔒 Private & Encrypted",

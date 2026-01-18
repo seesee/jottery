@@ -77,9 +77,9 @@
     "exportToFile": "Esporta in file",
     "printPdf": "Stampa / Esporta PDF",
     "printFailed": "Impossibile aprire la finestra di stampa",
-    "duplicateNote": "Duplica nota",
-    "noteDuplicated": "Nota duplicata",
-    "duplicateFailed": "Duplicazione nota fallita",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "Info",
     "versionHistory": "Cronologia versioni",
     "deleteNote": "Elimina nota",
@@ -112,10 +112,7 @@
       "downloadToView": "Scarica per visualizzare"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Elimina nota",
@@ -453,7 +450,14 @@
       "license": "Licenza MIT."
     },
     "openLinksInNewTab": "Apri link esterni in nuova scheda",
-    "openLinksInNewTabDescription": "Se abilitato, i link a siti web esterni nell'anteprima Markdown si apriranno in una nuova scheda del browser invece di uscire da Jottery"
+    "openLinksInNewTabDescription": "Se abilitato, i link a siti web esterni nell'anteprima Markdown si apriranno in una nuova scheda del browser invece di uscire da Jottery",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Benvenuto in Jottery",
@@ -489,7 +493,8 @@
         "description": "Vuoi eseguire il tuo server di sincronizzazione? Jottery è open source e facile da self-hostare.",
         "viewOnGitHub": "Visualizza su GitHub"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "Blocca applicazione",

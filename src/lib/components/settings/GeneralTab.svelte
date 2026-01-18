@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import type { Theme } from '../../types';
-  import { AVAILABLE_LOCALES } from '../../services';
+  import { AVAILABLE_LOCALES, sessionStorageService } from '../../services';
 
   export let theme: Theme;
   export let layoutMode: 'auto' | 'mobile' | 'desktop';
@@ -13,6 +13,12 @@
   export let rememberPassword: boolean;
   export let openLinksInNewTab: boolean;
   export let onRememberPasswordToggle: () => void;
+  export let persistSession: boolean;
+  export let persistSessionTimeout: number;
+  export let onPersistSessionToggle: () => void;
+
+  // Check if sessionStorage is available
+  $: sessionStorageAvailable = sessionStorageService.isAvailable();
 
   // Common timezones grouped by region
   const TIMEZONES = [
@@ -193,6 +199,62 @@
     />
     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
   </label>
+</div>
+
+<!-- Persist Session Toggle (Tab-scoped, auto-expires) -->
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+  <div class="flex items-start justify-between">
+    <div class="flex-1">
+      <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+        🔄 {$_('settings.persistSession')}
+      </h4>
+      <p class="text-sm text-blue-700 dark:text-blue-300 mb-2">
+        {$_('settings.persistSessionDescription')}
+      </p>
+      <p class="text-xs text-blue-600 dark:text-blue-400">
+        {$_('settings.persistSessionNote')}
+      </p>
+      {#if !sessionStorageAvailable}
+        <p class="text-xs text-red-600 dark:text-red-400 mt-2">
+          ⚠️ {$_('settings.persistSessionUnavailable')}
+        </p>
+      {:else if rememberPassword}
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          {$_('settings.persistSessionDisabledByRemember')}
+        </p>
+      {/if}
+    </div>
+    <label class="relative inline-flex items-center cursor-pointer ml-4">
+      <input
+        type="checkbox"
+        bind:checked={persistSession}
+        on:change={onPersistSessionToggle}
+        disabled={!sessionStorageAvailable || rememberPassword}
+        class="sr-only peer"
+      />
+      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+    </label>
+  </div>
+
+  <!-- Session timeout input (only visible when persistSession is enabled) -->
+  {#if persistSession && sessionStorageAvailable && !rememberPassword}
+    <div class="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+      <label for="setting-persist-session-timeout" class="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+        {$_('settings.persistSessionTimeout')}
+      </label>
+      <input
+        id="setting-persist-session-timeout"
+        type="number"
+        bind:value={persistSessionTimeout}
+        min="5"
+        max="480"
+        class="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+        {$_('settings.persistSessionTimeoutDescription')}
+      </p>
+    </div>
+  {/if}
 </div>
 
 <!-- Remember Password Toggle -->

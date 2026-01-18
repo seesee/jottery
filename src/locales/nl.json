@@ -77,9 +77,9 @@
     "exportToFile": "Exporteren naar bestand",
     "printPdf": "Afdrukken / PDF exporteren",
     "printFailed": "Kon afdrukvenster niet openen",
-    "duplicateNote": "Notitie dupliceren",
-    "noteDuplicated": "Notitie gedupliceerd",
-    "duplicateFailed": "Dupliceren mislukt",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "Info",
     "versionHistory": "Versiegeschiedenis",
     "deleteNote": "Notitie verwijderen",
@@ -112,10 +112,7 @@
       "downloadToView": "Download om te bekijken"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",
@@ -453,7 +450,14 @@
       "license": "Gelicentieerd onder de MIT-licentie."
     },
     "openLinksInNewTab": "Open externe links in nieuw tabblad",
-    "openLinksInNewTabDescription": "Indien ingeschakeld, worden links naar externe websites in de Markdown-voorvertoning geopend in een nieuw browsertabblad in plaats van Jottery te verlaten"
+    "openLinksInNewTabDescription": "Indien ingeschakeld, worden links naar externe websites in de Markdown-voorvertoning geopend in een nieuw browsertabblad in plaats van Jottery te verlaten",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Welkom bij Jottery",
@@ -489,7 +493,8 @@
         "description": "Wilt u uw eigen synchronisatieserver draaien? Jottery is open source en eenvoudig zelf te hosten.",
         "viewOnGitHub": "Bekijken op GitHub"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "Applicatie vergrendelen",

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
-  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, settingsRepository } from '../services';
+  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -32,6 +32,8 @@
     if (!needsInit) {
       try {
         const settings = await settingsRepository.get();
+
+        // First try rememberPassword (localStorage - permanent)
         if (settings.rememberPassword) {
           const storedPassword = passwordStorageService.get();
           if (storedPassword) {
@@ -46,6 +48,30 @@
               // Clear invalid stored password
               passwordStorageService.clear();
               error = get(_)('unlock.storedPasswordInvalid');
+            } finally {
+              loading = false;
+            }
+          }
+        }
+
+        // Then try persistSession (sessionStorage - tab-scoped with expiry)
+        if (!settings.rememberPassword && settings.persistSession && sessionStorageService.isAvailable()) {
+          const sessionTimeout = settings.persistSessionTimeout ?? 30;
+          const sessionPassword = sessionStorageService.get(sessionTimeout);
+          if (sessionPassword) {
+            loading = true;
+            try {
+              await unlock(sessionPassword);
+              // Refresh the session timestamp on successful unlock
+              sessionStorageService.refresh();
+              isLocked.set(false);
+              // Don't focus input - we're unlocked
+              return;
+            } catch (err) {
+              console.error('[UnlockScreen] Session auto-unlock failed:', err);
+              // Clear invalid session
+              sessionStorageService.clear();
+              error = get(_)('unlock.sessionExpiredOrInvalid');
             } finally {
               loading = false;
             }
@@ -88,11 +114,14 @@
       // Update store to trigger UI change
       isLocked.set(false);
 
-      // Store password if rememberPassword is enabled
+      // Store password if rememberPassword or persistSession is enabled
       try {
         const settings = await settingsRepository.get();
         if (settings.rememberPassword) {
           passwordStorageService.store(passwordToStore);
+        } else if (settings.persistSession && sessionStorageService.isAvailable()) {
+          // Store session password (tab-scoped, will expire)
+          sessionStorageService.store(passwordToStore);
         }
       } catch (err) {
         console.error('[UnlockScreen] Failed to store password:', err);

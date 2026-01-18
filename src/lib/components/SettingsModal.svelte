@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, noteRepository, createSyncRecoveryNote } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { authService } from '../services/authService';
   import { _ } from 'svelte-i18n';
@@ -30,6 +30,8 @@
   let vimMode: boolean = $settings.vimMode || false;
   let quickCommandsEnabled: boolean = $settings.quickCommandsEnabled ?? true;
   let quickCommandsList: QuickCommandConfig[] = $settings.quickCommandsList ?? DEFAULT_QUICK_COMMANDS;
+  let persistSession: boolean = $settings.persistSession ?? false;
+  let persistSessionTimeout: number = $settings.persistSessionTimeout ?? 30;
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -765,6 +767,8 @@
         vimMode,
         quickCommandsEnabled,
         quickCommandsList,
+        persistSession,
+        persistSessionTimeout,
       });
 
       // Update store
@@ -785,6 +789,8 @@
         vimMode,
         quickCommandsEnabled,
         quickCommandsList,
+        persistSession,
+        persistSessionTimeout,
       }));
 
       toast.success($_('settings.settingsSaved'));
@@ -824,6 +830,14 @@
       // Just disabled (value is now false) - clear stored password and lock
       handleDisableRememberPassword();
     }
+  }
+
+  function handlePersistSessionToggle() {
+    if (!persistSession) {
+      // Just disabled (value is now false) - clear session storage
+      sessionStorageService.clear();
+    }
+    // When enabled, session will be stored on next successful unlock
   }
 
   async function confirmEnableRememberPassword() {
@@ -1118,7 +1132,10 @@
             bind:timezone
             bind:rememberPassword
             bind:openLinksInNewTab
+            bind:persistSession
+            bind:persistSessionTimeout
             onRememberPasswordToggle={handleRememberPasswordToggle}
+            onPersistSessionToggle={handlePersistSessionToggle}
           />
         {/if}
 

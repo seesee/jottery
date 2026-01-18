@@ -10,6 +10,7 @@ import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
+import { sessionStorageService } from './sessionStorageService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 
 const DEFAULT_ITERATIONS = 100000;
@@ -246,6 +247,7 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
  */
 export function lock(): void {
   keyManager.clearMasterKey();
+  sessionStorageService.clear();
 }
 
 /**

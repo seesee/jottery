@@ -77,9 +77,9 @@
     "exportToFile": "ファイルにエクスポート",
     "printPdf": "印刷 / PDF出力",
     "printFailed": "印刷ウィンドウを開けませんでした",
-    "duplicateNote": "ノートを複製",
-    "noteDuplicated": "ノートを複製しました",
-    "duplicateFailed": "ノートの複製に失敗しました",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "情報",
     "versionHistory": "バージョン履歴",
     "deleteNote": "ノートを削除",
@@ -112,10 +112,7 @@
       "downloadToView": "表示するにはダウンロードしてください"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "ノートを削除",
@@ -453,7 +450,14 @@
       "license": "MITライセンスの下でライセンスされています。"
     },
     "openLinksInNewTab": "外部リンクを新しいタブで開く",
-    "openLinksInNewTabDescription": "有効にすると、Markdownプレビュー内の外部ウェブサイトへのリンクは、Jotteryから離れることなく新しいブラウザタブで開きます"
+    "openLinksInNewTabDescription": "有効にすると、Markdownプレビュー内の外部ウェブサイトへのリンクは、Jotteryから離れることなく新しいブラウザタブで開きます",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Jotteryへようこそ",
@@ -489,7 +493,8 @@
         "description": "独自の同期サーバーを運用したいですか? Jotteryはオープンソースで、セルフホストが簡単です。",
         "viewOnGitHub": "GitHubで表示"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "アプリケーションをロック",

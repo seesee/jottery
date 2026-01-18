@@ -77,9 +77,9 @@
     "exportToFile": "Εξαγωγή σε αρχείο",
     "printPdf": "Εκτύπωση / Εξαγωγή PDF",
     "printFailed": "Αδυναμία ανοίγματος παραθύρου εκτύπωσης",
-    "duplicateNote": "Αντιγραφή σημείωσης",
-    "noteDuplicated": "Η σημείωση αντιγράφηκε",
-    "duplicateFailed": "Αποτυχία αντιγραφής σημείωσης",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "Πληροφορίες",
     "versionHistory": "Ιστορικό εκδόσεων",
     "deleteNote": "Διαγραφή σημείωσης",
@@ -112,10 +112,7 @@
       "downloadToView": "Κάντε λήψη για προβολή"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",
@@ -453,7 +450,14 @@
       "license": "Με άδεια MIT License."
     },
     "openLinksInNewTab": "Άνοιγμα εξωτερικών συνδέσμων σε νέα καρτέλα",
-    "openLinksInNewTabDescription": "Όταν είναι ενεργοποιημένο, οι σύνδεσμοι προς εξωτερικές ιστοσελίδες στην προεπισκόπηση Markdown θα ανοίγουν σε νέα καρτέλα αντί να φεύγετε από το Jottery"
+    "openLinksInNewTabDescription": "Όταν είναι ενεργοποιημένο, οι σύνδεσμοι προς εξωτερικές ιστοσελίδες στην προεπισκόπηση Markdown θα ανοίγουν σε νέα καρτέλα αντί να φεύγετε από το Jottery",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Καλώς ήρθατε στο Jottery",
@@ -489,7 +493,8 @@
         "description": "Θέλετε να εκτελέσετε τον δικό σας διακομιστή συγχρονισμού; Το Jottery είναι ανοιχτού κώδικα και εύκολο στην αυτο-φιλοξένηση.",
         "viewOnGitHub": "Προβολή στο GitHub"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "Κλείδωμα εφαρμογής",

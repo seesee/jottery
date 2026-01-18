@@ -77,9 +77,9 @@
     "exportToFile": "Dosyaya Aktar",
     "printPdf": "Yazdır / PDF Dışa Aktar",
     "printFailed": "Yazdırma penceresi açılamadı",
-    "duplicateNote": "Notu Çoğalt",
-    "noteDuplicated": "Not çoğaltıldı",
-    "duplicateFailed": "Not çoğaltılamadı",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "Bilgi",
     "versionHistory": "Sürüm Geçmişi",
     "deleteNote": "Notu Sil",
@@ -112,10 +112,7 @@
       "downloadToView": "Görüntülemek için indirin"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Notu sil",
@@ -453,7 +450,14 @@
       "license": "MIT Lisansı altında lisanslanmıştır."
     },
     "openLinksInNewTab": "Dış bağlantıları yeni sekmede aç",
-    "openLinksInNewTabDescription": "Etkinleştirildiğinde, Markdown önizlemesindeki harici web sitelerine bağlantılar Jottery'den ayrılmak yerine yeni bir tarayıcı sekmesinde açılır"
+    "openLinksInNewTabDescription": "Etkinleştirildiğinde, Markdown önizlemesindeki harici web sitelerine bağlantılar Jottery'den ayrılmak yerine yeni bir tarayıcı sekmesinde açılır",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Jottery'ye Hoş Geldiniz",
@@ -489,7 +493,8 @@
         "description": "Kendi senkronizasyon sunucunuzu çalıştırmak ister misiniz? Jottery açık kaynaktır ve kendi kendine barındırması kolaydır.",
         "viewOnGitHub": "GitHub'da Görüntüle"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "Uygulamayı Kilitle",

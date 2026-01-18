@@ -112,10 +112,7 @@
       "videoNotSupported": "Your browser does not support video playback.",
       "previewNotAvailable": "Preview not available for this file type.",
       "downloadToView": "Download to view"
-    },
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    }
   },
   "noteList": {
     "deleteNote": "Delete note",
@@ -439,7 +436,14 @@
       "license": "Licensed under the MIT License."
     },
     "openLinksInNewTab": "Open External Links in New Tab",
-    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery"
+    "openLinksInNewTabDescription": "When enabled, links to external websites in markdown preview will open in a new browser tab instead of navigating away from Jottery",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Welcome to Jottery",
@@ -475,7 +479,8 @@
         "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
         "viewOnGitHub": "View on GitHub"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "Lock Application",

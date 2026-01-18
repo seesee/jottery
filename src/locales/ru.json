@@ -77,9 +77,9 @@
     "exportToFile": "Экспортировать в файл",
     "printPdf": "Печать / Экспорт PDF",
     "printFailed": "Не удалось открыть окно печати",
-    "duplicateNote": "Дублировать заметку",
-    "noteDuplicated": "Заметка скопирована",
-    "duplicateFailed": "Не удалось дублировать заметку",
+    "duplicateNote": "Duplicate Note",
+    "noteDuplicated": "Note duplicated",
+    "duplicateFailed": "Failed to duplicate note",
     "info": "Информация",
     "versionHistory": "История версий",
     "deleteNote": "Удалить заметку",
@@ -112,10 +112,7 @@
       "downloadToView": "Скачайте для просмотра"
     },
     "attachments": "Attachments",
-    "noAttachments": "No attachments yet",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note"
+    "noAttachments": "No attachments yet"
   },
   "noteList": {
     "deleteNote": "Удалить заметку",
@@ -453,7 +450,14 @@
       "license": "Лицензировано под лицензией MIT."
     },
     "openLinksInNewTab": "Открывать внешние ссылки в новой вкладке",
-    "openLinksInNewTabDescription": "При включении ссылки на внешние сайты в предпросмотре Markdown будут открываться в новой вкладке браузера вместо перехода из Jottery"
+    "openLinksInNewTabDescription": "При включении ссылки на внешние сайты в предпросмотре Markdown будут открываться в новой вкладке браузера вместо перехода из Jottery",
+    "persistSession": "Persist Session Across Page Refresh",
+    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
+    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
+    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
+    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
+    "persistSessionTimeout": "Session Timeout (minutes)",
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
   },
   "unlock": {
     "welcome": "Добро пожаловать в Jottery",
@@ -489,7 +493,8 @@
         "description": "Хотите запустить собственный сервер синхронизации? Jottery - это открытый исходный код, его легко разместить самостоятельно.",
         "viewOnGitHub": "Просмотреть на GitHub"
       }
-    }
+    },
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
   },
   "lock": {
     "title": "Заблокировать приложение",
