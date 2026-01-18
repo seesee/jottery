@@ -360,8 +360,9 @@
   // Perform search when query changes (indexing happens in loadNotes)
   $: {
     if ($notes.length > 0 && !loadingNotes) {
-      // Skip full search if this is just a content-only update (note being edited)
-      // This optimises back navigation on mobile - no need to re-search when only content changed
+      // Skip full search for mobile back navigation only
+      // This flag is only set when closing a note on mobile (via back button)
+      // Desktop always runs full search to maintain proper sort order
       if ($isContentOnlyUpdate) {
         isContentOnlyUpdate.set(false);
         // Update the note in filteredNotes to reflect the content change

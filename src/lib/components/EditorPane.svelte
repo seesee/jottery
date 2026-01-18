@@ -46,7 +46,9 @@
     const showPreviewToSave = showPreview;
 
     // Set content-only update flag so NoteList doesn't trigger full search
-    if (shouldSave) {
+    // Only do this on mobile where we're navigating back to the list
+    // On desktop, we want the full search to run so sorting is correct
+    if (shouldSave && onBackToList) {
       isContentOnlyUpdate.set(true);
     }
 
@@ -460,11 +462,9 @@
       // Get just the updated note (much faster than reloading all notes)
       const updatedNote = await noteService.getNote($selectedNote.id);
       if (updatedNote) {
-        // Set flag to skip search re-execution - content-only updates don't need re-search
-        // This optimises mobile back navigation performance
-        isContentOnlyUpdate.set(true);
-
         // Update only this note in the store
+        // This will trigger the reactive block in App.svelte which runs performSearch()
+        // to maintain proper sort order based on modifiedAt
         notes.update(allNotes => {
           const index = allNotes.findIndex(n => n.id === updatedNote.id);
           if (index !== -1) {
