@@ -96,17 +96,18 @@
 
 <!-- Toolbar -->
 <div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center gap-2">
-  <!-- Mobile: Back Button -->
+  <!-- Mobile: Back Button with app name for larger hit area -->
   {#if onBackToList}
     <button
       on:click={onBackToList}
-      class="tablet:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
+      class="tablet:hidden py-2 pl-2 pr-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0 flex items-center gap-1 -ml-1"
       title={$_('editor.backToNotes')}
       aria-label={$_('editor.backToNotes')}
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
+      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{$_('app.name')}</span>
     </button>
   {/if}
 
