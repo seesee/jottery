@@ -296,10 +296,17 @@
     }
   });
 
+  // Track if we were visible before the update
+  let wasVisible = false;
+
   // Save scroll position before DOM updates
   beforeUpdate(() => {
     if (scrollContainer) {
-      savedScrollTop = scrollContainer.scrollTop;
+      // Only save if we're currently visible (offsetParent is non-null when visible)
+      wasVisible = scrollContainer.offsetParent !== null;
+      if (wasVisible) {
+        savedScrollTop = scrollContainer.scrollTop;
+      }
     }
   });
 
@@ -308,9 +315,25 @@
     // Measure heights of rendered items
     measureHeights();
 
-    // Restore scroll position
-    if (scrollContainer && savedScrollTop >= 0) {
-      scrollContainer.scrollTop = savedScrollTop;
+    if (scrollContainer) {
+      const isVisible = scrollContainer.offsetParent !== null;
+
+      // If we just became visible (was hidden, now visible), restore from global store
+      if (isVisible && !wasVisible) {
+        const savedPosition = $noteListScrollPosition;
+        if (savedPosition > 0) {
+          // Use requestAnimationFrame to ensure layout is settled
+          requestAnimationFrame(() => {
+            if (scrollContainer) {
+              scrollContainer.scrollTop = savedPosition;
+              updateVisibleRange();
+            }
+          });
+        }
+      } else if (savedScrollTop >= 0) {
+        // Normal case: restore scroll position after DOM update
+        scrollContainer.scrollTop = savedScrollTop;
+      }
     }
   });
 
