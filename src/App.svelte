@@ -360,10 +360,18 @@
   // Perform search when query changes (indexing happens in loadNotes)
   $: {
     if ($notes.length > 0 && !loadingNotes) {
-      // Skip search if this is just a content-only update (note being edited)
+      // Skip full search if this is just a content-only update (note being edited)
       // This optimises back navigation on mobile - no need to re-search when only content changed
       if ($isContentOnlyUpdate) {
         isContentOnlyUpdate.set(false);
+        // Update the note in filteredNotes to reflect the content change
+        // without running a full search (which is expensive with many notes)
+        filteredNotes.update(current => {
+          return current.map(note => {
+            const updated = $notes.find(n => n.id === note.id);
+            return updated || note;
+          });
+        });
       } else {
         // Only search, don't re-index (indexing happens once in loadNotes)
         performSearch();
