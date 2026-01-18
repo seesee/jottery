@@ -366,11 +366,10 @@
         isContentOnlyUpdate.set(false);
         // Update the note in filteredNotes to reflect the content change
         // without running a full search (which is expensive with many notes)
+        // Use a Map for O(1) lookups instead of O(n) find() calls
+        const notesMap = new Map($notes.map(n => [n.id, n]));
         filteredNotes.update(current => {
-          return current.map(note => {
-            const updated = $notes.find(n => n.id === note.id);
-            return updated || note;
-          });
+          return current.map(note => notesMap.get(note.id) || note);
         });
       } else {
         // Only search, don't re-index (indexing happens once in loadNotes)

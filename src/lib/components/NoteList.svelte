@@ -39,16 +39,35 @@
   let showConflictModal = false;
   let conflictNoteId: string | undefined = undefined;
 
-  // Load notes with conflicts
+  // Load notes with conflicts - optimised to avoid blocking UI
   async function loadConflictNotes() {
+    // Only check for conflicts if sync is enabled
+    if (!$settings.syncEnabled) {
+      conflictNoteIds = new Set();
+      return;
+    }
+
+    // Get all sync metadata in parallel batches to avoid blocking
     const allNotes = await noteRepository.getAllActive();
     const conflicts = new Set<string>();
-    for (const note of allNotes) {
-      const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
-      if (syncMeta?.lastSyncStatus === 'conflict' && syncMeta.conflictData) {
-        conflicts.add(note.id);
+
+    // Process in batches of 50 to avoid overwhelming the browser
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < allNotes.length; i += BATCH_SIZE) {
+      const batch = allNotes.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (note) => {
+          const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
+          return { id: note.id, isConflict: syncMeta?.lastSyncStatus === 'conflict' && !!syncMeta.conflictData };
+        })
+      );
+      for (const result of results) {
+        if (result.isConflict) {
+          conflicts.add(result.id);
+        }
       }
     }
+
     conflictNoteIds = conflicts;
   }
 
@@ -77,6 +96,12 @@
   let heightCache = new Map<string, number>();
   let itemElements: (HTMLElement | null)[] = [];
 
+  // Prefix sum cache for O(1) offset lookups
+  // prefixSums[i] = sum of heights from index 0 to i-1 (prefixSums[0] = 0)
+  let prefixSums: number[] = [];
+  let cachedTotalHeight = 0;
+  let prefixSumsValid = false;
+
   // Get height for a note (measured or estimated)
   function getItemHeight(index: number): number {
     if (index < 0 || index >= $filteredNotes.length) return ESTIMATED_ITEM_HEIGHT;
@@ -84,35 +109,59 @@
     return heightCache.get(noteId) || ESTIMATED_ITEM_HEIGHT;
   }
 
-  // Calculate total height based on measured/estimated heights
+  // Rebuild prefix sums array (called when heights change or notes change)
+  function rebuildPrefixSums(): void {
+    const len = $filteredNotes.length;
+    prefixSums = new Array(len + 1);
+    prefixSums[0] = 0;
+
+    for (let i = 0; i < len; i++) {
+      prefixSums[i + 1] = prefixSums[i] + getItemHeight(i);
+    }
+
+    cachedTotalHeight = prefixSums[len] || 0;
+    prefixSumsValid = true;
+  }
+
+  // Calculate total height - O(1) with cache
   function calculateTotalHeight(): number {
-    let total = 0;
-    for (let i = 0; i < $filteredNotes.length; i++) {
-      total += getItemHeight(i);
-    }
-    return total;
+    if (!prefixSumsValid) rebuildPrefixSums();
+    return cachedTotalHeight;
   }
 
-  // Calculate offset for items before startIndex
+  // Calculate offset for items before startIndex - O(1) with prefix sums
   function calculateOffset(upToIndex: number): number {
-    let offset = 0;
-    for (let i = 0; i < upToIndex && i < $filteredNotes.length; i++) {
-      offset += getItemHeight(i);
-    }
-    return offset;
+    if (!prefixSumsValid) rebuildPrefixSums();
+    if (upToIndex <= 0) return 0;
+    if (upToIndex >= prefixSums.length) return cachedTotalHeight;
+    return prefixSums[upToIndex];
   }
 
-  // Find which item index contains a given scroll position
+  // Find which item index contains a given scroll position - O(log n) with binary search
   function findIndexAtPosition(position: number): number {
-    let currentPos = 0;
-    for (let i = 0; i < $filteredNotes.length; i++) {
-      const itemHeight = getItemHeight(i);
-      if (currentPos + itemHeight > position) {
-        return i;
+    if (!prefixSumsValid) rebuildPrefixSums();
+    if ($filteredNotes.length === 0) return 0;
+    if (position <= 0) return 0;
+
+    // Binary search for the largest index where prefixSums[index] <= position
+    let left = 0;
+    let right = $filteredNotes.length;
+
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2);
+      if (prefixSums[mid + 1] <= position) {
+        left = mid + 1;
+      } else {
+        right = mid;
       }
-      currentPos += itemHeight;
     }
-    return Math.max(0, $filteredNotes.length - 1);
+
+    return Math.min(left, $filteredNotes.length - 1);
+  }
+
+  // Invalidate prefix sums when notes change
+  function invalidatePrefixSums(): void {
+    prefixSumsValid = false;
   }
 
   // Calculate visible range based on scroll position
@@ -154,8 +203,9 @@
       }
     }
 
-    // If heights changed, recalculate visible range
+    // If heights changed, invalidate prefix sums and recalculate visible range
     if (heightsChanged) {
+      invalidatePrefixSums();
       updateVisibleRange();
     }
   }
@@ -171,6 +221,7 @@
 
   // Update visible range when filtered notes change
   $: if ($filteredNotes) {
+    invalidatePrefixSums();
     updateVisibleRange();
   }
 
