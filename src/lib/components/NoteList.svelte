@@ -215,14 +215,32 @@
     loadConflictNotes();
 
     // Restore scroll position from global store (preserved across mobile view switches)
+    // iOS/WebKit needs multiple animation frames for virtual scrolling to settle
     const savedPosition = $noteListScrollPosition;
     if (savedPosition > 0 && scrollContainer) {
-      // Use requestAnimationFrame to ensure DOM is ready
+      // First frame: ensure initial DOM is rendered
       requestAnimationFrame(() => {
-        if (scrollContainer) {
+        if (!scrollContainer) return;
+
+        // Second frame: virtual scrolling calculations have settled
+        requestAnimationFrame(() => {
+          if (!scrollContainer) return;
+
           scrollContainer.scrollTop = savedPosition;
           updateVisibleRange();
-        }
+
+          // Third frame: verify scroll was applied (iOS sometimes needs this)
+          requestAnimationFrame(() => {
+            if (!scrollContainer) return;
+
+            // If scroll wasn't applied (can happen on iOS with virtual scroll),
+            // try again with a small delay
+            if (Math.abs(scrollContainer.scrollTop - savedPosition) > 10) {
+              scrollContainer.scrollTop = savedPosition;
+              updateVisibleRange();
+            }
+          });
+        });
       });
     }
   });

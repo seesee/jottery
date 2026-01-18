@@ -27,61 +27,73 @@
   let isEditing = false;
 
   // Wrapper to handle closing note and returning to list on mobile
-  // IMPORTANT: In mobile mode, onBackToList() will unmount this component,
-  // so we must handle version creation HERE, not in the reactive block
-  async function handleClose() {
+  // IMPORTANT: Navigate IMMEDIATELY for instant feedback, then save in background.
+  // JavaScript promises continue to run even after component unmounts, so saves will complete.
+  function handleClose() {
     // Exit draft mode if active
     if ($isDraftMode) {
       exitDraftMode();
     }
 
-    // Save and create version BEFORE unmounting (mobile mode destroys component)
-    if (previousNoteId && hasContentChanged && !$isDraftMode) {
-      const noteIdToSave = previousNoteId;
-      const contentToSave = content;
-      const tagsToSave = [...tags];
-      const attachmentsToSave = [...attachments];
-      const languageToSave = language;
-      const wordWrapToSave = wordWrap;
-      const showPreviewToSave = showPreview;
+    // Capture values before navigating (component may unmount after navigation)
+    const shouldSave = previousNoteId && hasContentChanged && !$isDraftMode;
+    const noteIdToSave = previousNoteId;
+    const contentToSave = content;
+    const tagsToSave = [...tags];
+    const attachmentsToSave = [...attachments];
+    const languageToSave = language;
+    const wordWrapToSave = wordWrap;
+    const showPreviewToSave = showPreview;
 
-      try {
-        // Save current changes
-        await noteService.updateNote(noteIdToSave, {
-          content: contentToSave,
-          tags: tagsToSave,
-          attachments: attachmentsToSave,
-          syntaxLanguage: languageToSave,
-          wordWrap: wordWrapToSave,
-          showPreview: showPreviewToSave,
-        });
-
-        // Update the store
-        const updatedNote = await noteService.getNote(noteIdToSave);
-        if (updatedNote) {
-          notes.update(allNotes => {
-            const index = allNotes.findIndex(n => n.id === updatedNote.id);
-            if (index !== -1) {
-              allNotes[index] = updatedNote;
-            }
-            return allNotes;
-          });
-        }
-
-        // Create version snapshot
-        await createVersionSnapshot(noteIdToSave);
-
-        // Trigger sync
-        triggerBackgroundSync();
-      } catch (error) {
-        console.error('[EditorPane] Error during handleClose save:', error);
-      }
+    // Set content-only update flag so NoteList doesn't trigger full search
+    if (shouldSave) {
+      isContentOnlyUpdate.set(true);
     }
 
+    // Clear selection state
     clearSelection();
 
+    // NAVIGATE IMMEDIATELY - this gives instant visual feedback
     if (onBackToList) {
       onBackToList();
+    }
+
+    // Fire off save operations in background (don't await)
+    // These will complete even after component unmounts
+    if (shouldSave && noteIdToSave) {
+      (async () => {
+        try {
+          // Save current changes to IndexedDB
+          await noteService.updateNote(noteIdToSave, {
+            content: contentToSave,
+            tags: tagsToSave,
+            attachments: attachmentsToSave,
+            syntaxLanguage: languageToSave,
+            wordWrap: wordWrapToSave,
+            showPreview: showPreviewToSave,
+          });
+
+          // Update the global notes store (store is global, so this works even after unmount)
+          const updatedNote = await noteService.getNote(noteIdToSave);
+          if (updatedNote) {
+            notes.update(allNotes => {
+              const index = allNotes.findIndex(n => n.id === updatedNote.id);
+              if (index !== -1) {
+                allNotes[index] = updatedNote;
+              }
+              return allNotes;
+            });
+          }
+
+          // Create version snapshot
+          await createVersionSnapshot(noteIdToSave);
+
+          // Trigger sync
+          triggerBackgroundSync();
+        } catch (error) {
+          console.error('[EditorPane] Error during background save:', error);
+        }
+      })();
     }
   }
 
