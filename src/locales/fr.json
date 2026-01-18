@@ -457,7 +457,11 @@
     "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
     "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
     "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480."
+    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Enter your password to enable:",
+      "enableButton": "Enable Session Persistence"
+    }
   },
   "unlock": {
     "welcome": "Bienvenue dans Jottery",

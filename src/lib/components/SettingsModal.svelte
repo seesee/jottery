@@ -38,6 +38,9 @@
   let showRememberPasswordWarning = false;
   let rememberPasswordConfirmInput = '';
   let rememberPasswordError = '';
+  let showPersistSessionConfirm = false;
+  let persistSessionConfirmInput = '';
+  let persistSessionError = '';
 
   // Sync state
   let syncEndpoint = $settings.syncEndpoint || '';
@@ -833,11 +836,70 @@
   }
 
   function handlePersistSessionToggle() {
-    if (!persistSession) {
+    if (persistSession) {
+      // Just enabled (value is now true) - show confirmation to get password
+      showPersistSessionConfirm = true;
+    } else {
       // Just disabled (value is now false) - clear session storage
       sessionStorageService.clear();
     }
-    // When enabled, session will be stored on next successful unlock
+  }
+
+  async function confirmEnablePersistSession() {
+    if (!persistSessionConfirmInput) {
+      persistSessionError = $_('settings.rememberPasswordModal.passwordPlaceholder');
+      return;
+    }
+
+    persistSessionError = '';
+
+    try {
+      // Verify the password by attempting to derive key and decrypt
+      const metadata = await encryptionRepository.getMetadata();
+      if (!metadata) {
+        throw new Error('Encryption not initialized');
+      }
+
+      const salt = base64ToUint8Array(metadata.salt);
+      const derivedKey = await cryptoService.deriveKey({
+        password: persistSessionConfirmInput,
+        salt,
+        iterations: metadata.iterations,
+        algorithm: 'PBKDF2',
+      });
+
+      // Try to decrypt a note to verify password is correct
+      const allNotes = await noteRepository.getAllActive();
+      if (allNotes.length > 0) {
+        const testNote = allNotes[0];
+        const encryptedContent = JSON.parse(testNote.content);
+        await cryptoService.decryptText(encryptedContent, derivedKey);
+      }
+
+      // Password is correct! Store it in session storage
+      sessionStorageService.store(persistSessionConfirmInput);
+
+      // Save the setting immediately to persist it
+      await settingsRepository.update({ persistSession: true, persistSessionTimeout });
+      settings.update(s => ({ ...s, persistSession: true, persistSessionTimeout }));
+
+      // Close modal and clear input
+      showPersistSessionConfirm = false;
+      persistSessionConfirmInput = '';
+      persistSession = true;
+    } catch (error) {
+      console.error('Password verification failed:', error);
+      persistSessionError = $_('unlock.incorrectPassword');
+      persistSessionConfirmInput = '';
+      persistSession = false;
+    }
+  }
+
+  function cancelEnablePersistSession() {
+    showPersistSessionConfirm = false;
+    persistSession = false;
+    persistSessionConfirmInput = '';
+    persistSessionError = '';
   }
 
   async function confirmEnableRememberPassword() {
@@ -1336,6 +1398,58 @@
             class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md transition-colors"
           >
             {$_('settings.rememberPasswordModal.enableButton')}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Persist Session Confirmation Modal -->
+  {#if showPersistSessionConfirm}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+        <h3 class="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4">
+          🔄 {$_('settings.persistSession')}
+        </h3>
+
+        <div class="mb-4 text-sm text-gray-700 dark:text-gray-300 space-y-2">
+          <p>
+            {$_('settings.persistSessionDescription')}
+          </p>
+          <p class="text-blue-700 dark:text-blue-300">
+            {$_('settings.persistSessionNote')}
+          </p>
+        </div>
+
+        <div class="mb-4">
+          <label for="persist-session-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {$_('settings.persistSessionModal.confirmPassword')}
+          </label>
+          <input
+            id="persist-session-confirm"
+            type="password"
+            bind:value={persistSessionConfirmInput}
+            on:keydown={(e) => e.key === 'Enter' && confirmEnablePersistSession()}
+            placeholder="{$_('settings.rememberPasswordModal.passwordPlaceholder')}"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {#if persistSessionError}
+            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{persistSessionError}</p>
+          {/if}
+        </div>
+
+        <div class="flex gap-3 justify-end">
+          <button
+            on:click={cancelEnablePersistSession}
+            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          >
+            {$_('common.cancel')}
+          </button>
+          <button
+            on:click={confirmEnablePersistSession}
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
+          >
+            {$_('settings.persistSessionModal.enableButton')}
           </button>
         </div>
       </div>

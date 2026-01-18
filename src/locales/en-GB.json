@@ -169,6 +169,10 @@
     "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
     "persistSessionTimeout": "Session Timeout (minutes)",
     "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Enter your password to enable:",
+      "enableButton": "Enable Session Persistence"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Security Warning",
       "insecureWarning": "Enabling this feature will store your password in plain text in localStorage, which is HIGHLY INSECURE.",
