@@ -1,6 +1,6 @@
 {
   "name": "jottery-admin",
-  "version": "0.9.13",
+  "version": "0.9.14",
   "type": "module",
   "overrides": {
     "esbuild": "^0.27.2"
