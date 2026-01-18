@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -163,6 +163,10 @@
   // Handle scroll events
   function handleScroll() {
     updateVisibleRange();
+    // Save scroll position to global store for preservation across mobile view switches
+    if (scrollContainer) {
+      noteListScrollPosition.set(scrollContainer.scrollTop);
+    }
   }
 
   // Update visible range when filtered notes change
@@ -209,6 +213,18 @@
     updateVisibleRange();
     // Load conflict notes on mount
     loadConflictNotes();
+
+    // Restore scroll position from global store (preserved across mobile view switches)
+    const savedPosition = $noteListScrollPosition;
+    if (savedPosition > 0 && scrollContainer) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        if (scrollContainer) {
+          scrollContainer.scrollTop = savedPosition;
+          updateVisibleRange();
+        }
+      });
+    }
   });
 
   // Save scroll position before DOM updates
