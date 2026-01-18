@@ -26,6 +26,10 @@
 
   // Handle pull-to-refresh
   async function handleRefresh() {
+    // Always force a full re-render to recover from any corrupted virtual scroll state
+    // This provides a recovery mechanism if the list gets into a bad state
+    forceFullRender();
+
     // Only sync if enabled
     if ($settings.syncEnabled) {
       await syncService.syncNow();
@@ -164,6 +168,9 @@
     prefixSumsValid = false;
   }
 
+  // Minimum items to render to prevent empty/broken states
+  const MIN_VISIBLE_ITEMS = 30;
+
   // Calculate visible range based on scroll position
   function updateVisibleRange() {
     if (!scrollContainer) return;
@@ -171,16 +178,47 @@
     viewportHeight = scrollContainer.clientHeight;
     scrollTop = scrollContainer.scrollTop;
 
+    // Guard against zero viewport height (happens when element is hidden)
+    // Use a sensible default to prevent rendering too few items
+    const effectiveViewportHeight = viewportHeight > 0 ? viewportHeight : 800;
+
     // Find start index based on scroll position (subtract OVERSCAN for buffer above)
     startIndex = Math.max(0, findIndexAtPosition(scrollTop) - OVERSCAN);
 
     // Find end index based on scroll position + viewport height (add OVERSCAN for buffer below)
-    const endPosition = scrollTop + viewportHeight;
-    endIndex = Math.min($filteredNotes.length, findIndexAtPosition(endPosition) + 1 + OVERSCAN);
+    const endPosition = scrollTop + effectiveViewportHeight;
+    let calculatedEndIndex = Math.min($filteredNotes.length, findIndexAtPosition(endPosition) + 1 + OVERSCAN);
+
+    // Ensure we always render at least MIN_VISIBLE_ITEMS (or all notes if fewer)
+    const minEndIndex = Math.min(startIndex + MIN_VISIBLE_ITEMS, $filteredNotes.length);
+    endIndex = Math.max(calculatedEndIndex, minEndIndex);
 
     visibleNotes = $filteredNotes.slice(startIndex, endIndex);
     totalHeight = calculateTotalHeight();
     offsetY = calculateOffset(startIndex);
+  }
+
+  // Force a complete re-render of the virtual list
+  // Call this to recover from corrupted states
+  function forceFullRender() {
+    // Reset all virtual scrolling state
+    heightCache.clear();
+    prefixSumsValid = false;
+    startIndex = 0;
+    endIndex = 0;
+    visibleNotes = [];
+    totalHeight = 0;
+    offsetY = 0;
+
+    // Rebuild everything
+    invalidatePrefixSums();
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      if (scrollContainer) {
+        updateVisibleRange();
+      }
+    });
   }
 
   // Measure heights of rendered items
@@ -216,6 +254,13 @@
     // Save scroll position to global store for preservation across mobile view switches
     if (scrollContainer) {
       noteListScrollPosition.set(scrollContainer.scrollTop);
+
+      // Detect corrupted state during scroll: if we have many notes but very few visible
+      const expectedMinVisible = Math.min($filteredNotes.length, MIN_VISIBLE_ITEMS);
+      if ($filteredNotes.length > MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
+        console.warn('[NoteList] Detected corrupted virtual scroll state during scroll, forcing full render');
+        forceFullRender();
+      }
     }
   }
 
@@ -321,15 +366,25 @@
       // If we just became visible (was hidden, now visible), restore from global store
       if (isVisible && !wasVisible) {
         const savedPosition = $noteListScrollPosition;
-        if (savedPosition > 0) {
-          // Use requestAnimationFrame to ensure layout is settled
-          requestAnimationFrame(() => {
-            if (scrollContainer) {
-              scrollContainer.scrollTop = savedPosition;
-              updateVisibleRange();
-            }
-          });
-        }
+        // Use requestAnimationFrame to ensure layout is settled
+        requestAnimationFrame(() => {
+          if (!scrollContainer) return;
+
+          // Restore scroll position if we had one
+          if (savedPosition > 0) {
+            scrollContainer.scrollTop = savedPosition;
+          }
+
+          // Force recalculation when becoming visible
+          updateVisibleRange();
+
+          // Detect corrupted state: if we have many notes but very few visible, force full render
+          const expectedMinVisible = Math.min($filteredNotes.length, MIN_VISIBLE_ITEMS);
+          if ($filteredNotes.length > MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
+            console.warn('[NoteList] Detected corrupted virtual scroll state, forcing full render');
+            forceFullRender();
+          }
+        });
       } else if (savedScrollTop >= 0) {
         // Normal case: restore scroll position after DOM update
         scrollContainer.scrollTop = savedScrollTop;
