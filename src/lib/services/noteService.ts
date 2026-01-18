@@ -324,22 +324,25 @@ class NoteService {
       hasContentChange = true;
     }
 
-    // Update word wrap if provided
-    if (updates.wordWrap !== undefined) {
+    // Update word wrap if provided and changed
+    if (updates.wordWrap !== undefined && updates.wordWrap !== note.wordWrap) {
       note.wordWrap = updates.wordWrap;
+      hasContentChange = true; // UI state changes should also sync
     }
 
-    // Update syntax language if provided
-    if (updates.syntaxLanguage !== undefined) {
+    // Update syntax language if provided and changed
+    if (updates.syntaxLanguage !== undefined && updates.syntaxLanguage !== note.syntaxLanguage) {
       note.syntaxLanguage = updates.syntaxLanguage;
+      hasContentChange = true; // UI state changes should also sync
     }
 
-    // Update show preview if provided
-    if (updates.showPreview !== undefined) {
+    // Update show preview if provided and changed
+    if (updates.showPreview !== undefined && updates.showPreview !== note.showPreview) {
       note.showPreview = updates.showPreview;
+      hasContentChange = true; // UI state changes should also sync
     }
 
-    // Only update modifiedAt if there was an actual content change
+    // Update modifiedAt for any change (content or UI state) so it syncs properly
     return await noteRepository.update(note, hasContentChange);
   }
 
