@@ -201,6 +201,11 @@
       const allNotes = await noteService.getAllNotes($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
+
+      // Trigger background sync so pin state syncs to other devices
+      if ($settings.syncEnabled) {
+        syncService.syncNow();
+      }
     } catch (error) {
       console.error('Failed to toggle pin:', error);
     }

@@ -522,6 +522,9 @@
         searchService.updateNote(updatedNote);
       }
 
+      // Trigger background sync so pin state syncs to other devices
+      triggerBackgroundSync();
+
       // selectedNote will automatically update from the derived store
     } catch (error) {
       console.error('Failed to toggle pin:', error);
