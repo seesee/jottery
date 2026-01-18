@@ -29,6 +29,13 @@ export const showRecycleBin = writable<boolean>(false);
 // Sync state - prevents EditorPane from triggering sync during batch refresh
 export const isSyncRefreshing = writable<boolean>(false);
 
+// Content-only update flag - prevents unnecessary search recalculation when only note content changed
+// Set this before updating notes store, check it in search reactive block, then reset
+export const isContentOnlyUpdate = writable<boolean>(false);
+
+// Note list scroll position - preserved across mobile view transitions
+export const noteListScrollPosition = writable<number>(0);
+
 // Derived stores
 export const selectedNote = derived(
   [notes, selectedNoteId],

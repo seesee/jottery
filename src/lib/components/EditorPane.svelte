@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, isSyncRefreshing, selectNote } from '../stores/appStore';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, isSyncRefreshing, selectNote, isContentOnlyUpdate } from '../stores/appStore';
   import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager, cryptoService } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -448,6 +448,10 @@
       // Get just the updated note (much faster than reloading all notes)
       const updatedNote = await noteService.getNote($selectedNote.id);
       if (updatedNote) {
+        // Set flag to skip search re-execution - content-only updates don't need re-search
+        // This optimises mobile back navigation performance
+        isContentOnlyUpdate.set(true);
+
         // Update only this note in the store
         notes.update(allNotes => {
           const index = allNotes.findIndex(n => n.id === updatedNote.id);
