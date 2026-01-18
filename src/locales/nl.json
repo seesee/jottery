@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Open externe links in nieuw tabblad",
     "openLinksInNewTabDescription": "Indien ingeschakeld, worden links naar externe websites in de Markdown-voorvertoning geopend in een nieuw browsertabblad in plaats van Jottery te verlaten",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Sessie behouden na paginavernieuwing",
+    "persistSessionDescription": "Houd je sessie actief bij het vernieuwen van de pagina. Het wachtwoord wordt tijdelijk opgeslagen in de sessie-opslag van je browser.",
+    "persistSessionNote": "Veiliger dan 'Wachtwoord onthouden' - verloopt automatisch en wordt gewist bij het sluiten van het tabblad.",
+    "persistSessionUnavailable": "Sessie-opslag is niet beschikbaar (file:// URL of browser-privacyinstellingen).",
+    "persistSessionDisabledByRemember": "Uitgeschakeld wanneer 'Wachtwoord onthouden' is ingeschakeld.",
+    "persistSessionTimeout": "Sessietime-out (minuten)",
+    "persistSessionTimeoutDescription": "Sessie verloopt na dit aantal minuten. Bereik: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Voer je wachtwoord in om in te schakelen:",
+      "enableButton": "Sessiepersistentie inschakelen"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "Bekijken op GitHub"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Sessie verlopen of ongeldig. Voer je wachtwoord in."
   },
   "lock": {
     "title": "Applicatie vergrendelen",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Synchroniseren..."
   }
 }

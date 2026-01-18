@@ -201,7 +201,7 @@
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
   <div class="flex items-center gap-2 {forceMobileLayout ? 'gap-2' : 'tablet:gap-4'}">
     {#if forceMobileLayout}
-      <!-- Mobile: Back Button (active when viewing note, greyed placeholder on list) -->
+      <!-- Mobile: Back Button OR Sync indicator (when syncing and on list view) -->
       {#if onBackToList}
         <button
           on:click={onBackToList}
@@ -213,6 +213,14 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+      {:else if $isSyncing && $settings.syncEnabled}
+        <!-- Sync indicator in back button space -->
+        <div class="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
+          <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
       {:else}
         <!-- Greyed-out placeholder to prevent layout shift -->
         <div class="min-h-11 min-w-11 p-2.5 opacity-30">
@@ -234,18 +242,16 @@
       </button>
     {/if}
 
-    <!-- Brand with sync indicator -->
+    <!-- Brand with sync indicator (desktop only - mobile shows in back button space) -->
     <div class="flex items-center gap-2">
       <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
-      {#if $isSyncing && $settings.syncEnabled}
+      {#if !forceMobileLayout && $isSyncing && $settings.syncEnabled}
         <div class="flex items-center gap-1 text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
           <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          {#if !forceMobileLayout}
-            <span class="text-xs">{$_('sync.syncing')}</span>
-          {/if}
+          <span class="text-xs">{$_('sync.syncing')}</span>
         </div>
       {/if}
     </div>

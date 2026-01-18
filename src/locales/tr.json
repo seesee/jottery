@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Dış bağlantıları yeni sekmede aç",
     "openLinksInNewTabDescription": "Etkinleştirildiğinde, Markdown önizlemesindeki harici web sitelerine bağlantılar Jottery'den ayrılmak yerine yeni bir tarayıcı sekmesinde açılır",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Sayfa yenilemesinde oturumu koru",
+    "persistSessionDescription": "Sayfayı yenilerken oturumunuzu aktif tutun. Şifre, tarayıcınızın oturum deposunda geçici olarak saklanır.",
+    "persistSessionNote": "'Şifreyi hatırla'dan daha güvenli - otomatik olarak sona erer ve sekmeyi kapattığınızda silinir.",
+    "persistSessionUnavailable": "Oturum deposu kullanılamıyor (file:// URL veya tarayıcı gizlilik ayarları).",
+    "persistSessionDisabledByRemember": "'Şifreyi hatırla' etkinleştirildiğinde devre dışı bırakılır.",
+    "persistSessionTimeout": "Oturum zaman aşımı (dakika)",
+    "persistSessionTimeoutDescription": "Oturum bu dakika sonra sona erer. Aralık: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Etkinleştirmek için şifrenizi girin:",
+      "enableButton": "Oturum kalıcılığını etkinleştir"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "GitHub'da Görüntüle"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Oturum süresi doldu veya geçersiz. Lütfen şifrenizi girin."
   },
   "lock": {
     "title": "Uygulamayı Kilitle",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Senkronize ediliyor..."
   }
 }

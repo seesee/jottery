@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Ouvrir les liens externes dans un nouvel onglet",
     "openLinksInNewTabDescription": "Lorsque activé, les liens vers des sites web externes dans l'aperçu Markdown s'ouvriront dans un nouvel onglet au lieu de quitter Jottery",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Conserver la session lors du rafraîchissement",
+    "persistSessionDescription": "Gardez votre session active lors du rafraîchissement de la page. Le mot de passe est stocké temporairement dans le stockage de session de votre navigateur.",
+    "persistSessionNote": "Plus sécurisé que 'Mémoriser le mot de passe' - expire automatiquement et s'efface à la fermeture de l'onglet.",
+    "persistSessionUnavailable": "Le stockage de session n'est pas disponible (URL file:// ou paramètres de confidentialité du navigateur).",
+    "persistSessionDisabledByRemember": "Désactivé lorsque 'Mémoriser le mot de passe' est activé.",
+    "persistSessionTimeout": "Délai d'expiration de session (minutes)",
+    "persistSessionTimeoutDescription": "La session expire après ce nombre de minutes. Plage : 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Entrez votre mot de passe pour activer :",
+      "enableButton": "Activer la persistance de session"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "Voir sur GitHub"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Session expirée ou invalide. Veuillez entrer votre mot de passe."
   },
   "lock": {
     "title": "Verrouiller l'application",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Synchronisation..."
   }
 }

@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "在新标签页中打开外部链接",
     "openLinksInNewTabDescription": "启用后，Markdown 预览中的外部网站链接将在新浏览器标签页中打开，而不是离开 Jottery",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "页面刷新后保持会话",
+    "persistSessionDescription": "刷新页面时保持会话活跃。密码会临时存储在浏览器的会话存储中。",
+    "persistSessionNote": "比「记住密码」更安全 - 会自动过期，关闭标签页时会被清除。",
+    "persistSessionUnavailable": "会话存储不可用（file:// URL 或浏览器隐私设置）。",
+    "persistSessionDisabledByRemember": "启用「记住密码」时此选项将被禁用。",
+    "persistSessionTimeout": "会话超时（分钟）",
+    "persistSessionTimeoutDescription": "会话在此分钟数后过期。范围：5-480。",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "输入密码以启用：",
+      "enableButton": "启用会话保持"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "在 GitHub 上查看"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "会话已过期或无效。请输入密码。"
   },
   "lock": {
     "title": "锁定应用程序",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "同步中..."
   }
 }

@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Открывать внешние ссылки в новой вкладке",
     "openLinksInNewTabDescription": "При включении ссылки на внешние сайты в предпросмотре Markdown будут открываться в новой вкладке браузера вместо перехода из Jottery",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Сохранять сессию после обновления страницы",
+    "persistSessionDescription": "Сохраняйте сессию активной при обновлении страницы. Пароль временно хранится в сессионном хранилище браузера.",
+    "persistSessionNote": "Безопаснее, чем 'Запомнить пароль' - автоматически истекает и удаляется при закрытии вкладки.",
+    "persistSessionUnavailable": "Сессионное хранилище недоступно (URL file:// или настройки конфиденциальности браузера).",
+    "persistSessionDisabledByRemember": "Отключено, когда включено 'Запомнить пароль'.",
+    "persistSessionTimeout": "Тайм-аут сессии (минуты)",
+    "persistSessionTimeoutDescription": "Сессия истекает через указанное количество минут. Диапазон: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Введите пароль для включения:",
+      "enableButton": "Включить сохранение сессии"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "Просмотреть на GitHub"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Сессия истекла или недействительна. Пожалуйста, введите пароль."
   },
   "lock": {
     "title": "Заблокировать приложение",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Синхронизация..."
   }
 }

@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "새 탭에서 외부 링크 열기",
     "openLinksInNewTabDescription": "활성화하면 Markdown 미리보기의 외부 웹사이트 링크가 Jottery를 떠나지 않고 새 브라우저 탭에서 열립니다",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "페이지 새로고침 후 세션 유지",
+    "persistSessionDescription": "페이지를 새로고침해도 세션을 유지합니다. 비밀번호는 브라우저의 세션 저장소에 임시로 저장됩니다.",
+    "persistSessionNote": "'비밀번호 기억'보다 안전합니다 - 자동으로 만료되고 탭을 닫으면 삭제됩니다.",
+    "persistSessionUnavailable": "세션 저장소를 사용할 수 없습니다 (file:// URL 또는 브라우저 개인정보 설정).",
+    "persistSessionDisabledByRemember": "'비밀번호 기억'이 활성화되면 비활성화됩니다.",
+    "persistSessionTimeout": "세션 시간 제한 (분)",
+    "persistSessionTimeoutDescription": "이 시간(분) 후 세션이 만료됩니다. 범위: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "활성화하려면 비밀번호를 입력하세요:",
+      "enableButton": "세션 유지 활성화"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "GitHub에서 보기"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "세션이 만료되었거나 유효하지 않습니다. 비밀번호를 입력하세요."
   },
   "lock": {
     "title": "애플리케이션 잠금",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "동기화 중..."
   }
 }

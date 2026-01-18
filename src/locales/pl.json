@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Otwieraj zewnętrzne linki w nowej karcie",
     "openLinksInNewTabDescription": "Po włączeniu linki do zewnętrznych stron w podglądzie Markdown będą otwierane w nowej karcie przeglądarki zamiast opuszczać Jottery",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Zachowaj sesję po odświeżeniu strony",
+    "persistSessionDescription": "Utrzymuj sesję aktywną podczas odświeżania strony. Hasło jest tymczasowo przechowywane w pamięci sesji przeglądarki.",
+    "persistSessionNote": "Bezpieczniejsze niż 'Zapamiętaj hasło' - wygasa automatycznie i jest usuwane po zamknięciu karty.",
+    "persistSessionUnavailable": "Pamięć sesji nie jest dostępna (URL file:// lub ustawienia prywatności przeglądarki).",
+    "persistSessionDisabledByRemember": "Wyłączone, gdy 'Zapamiętaj hasło' jest włączone.",
+    "persistSessionTimeout": "Limit czasu sesji (minuty)",
+    "persistSessionTimeoutDescription": "Sesja wygasa po tej liczbie minut. Zakres: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Wprowadź hasło, aby włączyć:",
+      "enableButton": "Włącz zachowanie sesji"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "Zobacz na GitHub"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Sesja wygasła lub jest nieprawidłowa. Wprowadź swoje hasło."
   },
   "lock": {
     "title": "Zablokuj aplikację",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Synchronizacja..."
   }
 }

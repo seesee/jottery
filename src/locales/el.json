@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Άνοιγμα εξωτερικών συνδέσμων σε νέα καρτέλα",
     "openLinksInNewTabDescription": "Όταν είναι ενεργοποιημένο, οι σύνδεσμοι προς εξωτερικές ιστοσελίδες στην προεπισκόπηση Markdown θα ανοίγουν σε νέα καρτέλα αντί να φεύγετε από το Jottery",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Διατήρηση συνεδρίας μετά την ανανέωση σελίδας",
+    "persistSessionDescription": "Διατηρήστε τη συνεδρία σας ενεργή κατά την ανανέωση της σελίδας. Ο κωδικός πρόσβασης αποθηκεύεται προσωρινά στην αποθήκευση συνεδρίας του προγράμματος περιήγησής σας.",
+    "persistSessionNote": "Πιο ασφαλές από την 'Απομνημόνευση κωδικού πρόσβασης' - λήγει αυτόματα και διαγράφεται όταν κλείσετε την καρτέλα.",
+    "persistSessionUnavailable": "Η αποθήκευση συνεδρίας δεν είναι διαθέσιμη (URL file:// ή ρυθμίσεις απορρήτου προγράμματος περιήγησης).",
+    "persistSessionDisabledByRemember": "Απενεργοποιημένο όταν είναι ενεργοποιημένη η 'Απομνημόνευση κωδικού πρόσβασης'.",
+    "persistSessionTimeout": "Χρονικό όριο συνεδρίας (λεπτά)",
+    "persistSessionTimeoutDescription": "Η συνεδρία λήγει μετά από αυτά τα λεπτά. Εύρος: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Εισαγάγετε τον κωδικό πρόσβασής σας για ενεργοποίηση:",
+      "enableButton": "Ενεργοποίηση διατήρησης συνεδρίας"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "Προβολή στο GitHub"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Η συνεδρία έληξε ή δεν είναι έγκυρη. Παρακαλώ εισαγάγετε τον κωδικό πρόσβασής σας."
   },
   "lock": {
     "title": "Κλείδωμα εφαρμογής",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Συγχρονισμός..."
   }
 }

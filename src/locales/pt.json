@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "Abrir links externos em nova aba",
     "openLinksInNewTabDescription": "Quando ativado, links para sites externos na visualização Markdown abrirão em uma nova aba do navegador em vez de sair do Jottery",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "Manter sessão após atualização da página",
+    "persistSessionDescription": "Mantenha sua sessão ativa ao atualizar a página. A senha é armazenada temporariamente no armazenamento de sessão do navegador.",
+    "persistSessionNote": "Mais seguro que 'Lembrar senha' - expira automaticamente e é apagado ao fechar a aba.",
+    "persistSessionUnavailable": "O armazenamento de sessão não está disponível (URL file:// ou configurações de privacidade do navegador).",
+    "persistSessionDisabledByRemember": "Desativado quando 'Lembrar senha' está ativado.",
+    "persistSessionTimeout": "Tempo limite da sessão (minutos)",
+    "persistSessionTimeoutDescription": "A sessão expira após estes minutos. Intervalo: 5-480.",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "Digite sua senha para ativar:",
+      "enableButton": "Ativar persistência de sessão"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "Ver no GitHub"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Sessão expirada ou inválida. Por favor, digite sua senha."
   },
   "lock": {
     "title": "Bloquear aplicativo",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Sincronizando..."
   }
 }

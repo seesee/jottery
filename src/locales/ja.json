@@ -451,16 +451,16 @@
     },
     "openLinksInNewTab": "外部リンクを新しいタブで開く",
     "openLinksInNewTabDescription": "有効にすると、Markdownプレビュー内の外部ウェブサイトへのリンクは、Jotteryから離れることなく新しいブラウザタブで開きます",
-    "persistSession": "Persist Session Across Page Refresh",
-    "persistSessionDescription": "Keep your session active when refreshing the page. Password is stored temporarily in your browser's session storage.",
-    "persistSessionNote": "More secure than 'Remember Password' - expires automatically and clears when you close the tab.",
-    "persistSessionUnavailable": "Session storage is not available (file:// URL or browser privacy settings).",
-    "persistSessionDisabledByRemember": "Disabled when 'Remember Password' is enabled.",
-    "persistSessionTimeout": "Session Timeout (minutes)",
-    "persistSessionTimeoutDescription": "Session expires after this many minutes. Range: 5-480.",
+    "persistSession": "ページ更新後もセッションを維持",
+    "persistSessionDescription": "ページを更新してもセッションを維持します。パスワードはブラウザのセッションストレージに一時的に保存されます。",
+    "persistSessionNote": "「パスワードを記憶」より安全です - 自動的に期限切れになり、タブを閉じると消去されます。",
+    "persistSessionUnavailable": "セッションストレージが利用できません（file:// URLまたはブラウザのプライバシー設定）。",
+    "persistSessionDisabledByRemember": "「パスワードを記憶」が有効な場合は無効になります。",
+    "persistSessionTimeout": "セッションタイムアウト（分）",
+    "persistSessionTimeoutDescription": "この分数後にセッションが期限切れになります。範囲：5-480。",
     "persistSessionModal": {
-      "confirmPassword": "Enter your password to enable:",
-      "enableButton": "Enable Session Persistence"
+      "confirmPassword": "有効にするにはパスワードを入力してください：",
+      "enableButton": "セッション維持を有効化"
     }
   },
   "unlock": {
@@ -498,7 +498,7 @@
         "viewOnGitHub": "GitHubで表示"
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "セッションが期限切れまたは無効です。パスワードを入力してください。"
   },
   "lock": {
     "title": "アプリケーションをロック",
@@ -732,6 +732,6 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "同期中..."
   }
 }
