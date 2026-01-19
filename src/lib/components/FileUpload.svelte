@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { dropzone } from '../actions';
 
   export let onUpload: (files: FileList) => void;
   export let disabled: boolean = false;
@@ -7,44 +8,8 @@
   let isDragging = false;
   let fileInput: HTMLInputElement;
 
-  function handleDragEnter(e: DragEvent) {
-    if (disabled) return;
-    e.preventDefault();
-    e.stopPropagation();
-    isDragging = true;
-  }
-
-  function handleDragLeave(e: DragEvent) {
-    if (disabled) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Only set isDragging to false if we're leaving the drop zone
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
-
-    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
-      isDragging = false;
-    }
-  }
-
-  function handleDragOver(e: DragEvent) {
-    if (disabled) return;
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function handleDrop(e: DragEvent) {
-    if (disabled) return;
-    e.preventDefault();
-    e.stopPropagation();
-    isDragging = false;
-
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      onUpload(files);
-    }
+  function handleDragStateChange(dragging: boolean) {
+    isDragging = dragging;
   }
 
   function handleFileSelect(e: Event) {
@@ -70,10 +35,7 @@
     : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800'} {disabled
     ? 'opacity-50 cursor-not-allowed'
     : 'cursor-pointer hover:border-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700'}"
-  on:dragenter={handleDragEnter}
-  on:dragleave={handleDragLeave}
-  on:dragover={handleDragOver}
-  on:drop={handleDrop}
+  use:dropzone={{ onDrop: onUpload, onDragStateChange: handleDragStateChange, disabled }}
   on:click={openFileDialog}
   role="button"
   tabindex="0"

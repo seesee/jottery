@@ -13,6 +13,7 @@
   import { toast } from '../utils/toast.svelte';
   import { resolveAttachmentPreviews } from '../utils/attachmentPreviewResolver';
   import { copyToClipboard, exportAsFile, printNote } from '../utils/noteExport';
+  import { dropzone } from '../actions';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
 
   export let onBackToList: (() => void) | undefined = undefined;
@@ -115,7 +116,6 @@
   let previousNoteId: string | null = null;
   let isDraggingFile: boolean = false;
   let isAttachmentsExpanded: boolean = false;
-  let dragCounter: number = 0; // Track nested drag events
   let codeEditor: any = null; // Reference to CodeEditor component
   let showInfoModal: boolean = false;
   let showVersionHistory: boolean = false;
@@ -778,40 +778,9 @@
     }
   }
 
-  // Handle drag and drop for files
-  function handleEditorDragEnter(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter++;
-    if (e.dataTransfer?.types.includes('Files')) {
-      isDraggingFile = true;
-    }
-  }
-
-  function handleEditorDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter--;
-    if (dragCounter === 0) {
-      isDraggingFile = false;
-    }
-  }
-
-  function handleEditorDragOver(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function handleEditorDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter = 0;
-    isDraggingFile = false;
-
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      handleFileUpload(files);
-    }
+  // Handle drag state change for file drop zone
+  function handleDragStateChange(isDragging: boolean) {
+    isDraggingFile = isDragging;
   }
 
   function toggleAttachments() {
@@ -907,10 +876,7 @@
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
-    on:dragenter={handleEditorDragEnter}
-    on:dragleave={handleEditorDragLeave}
-    on:dragover={handleEditorDragOver}
-    on:drop={handleEditorDrop}
+    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
     role="region"
     aria-label="Note editor"
   >
