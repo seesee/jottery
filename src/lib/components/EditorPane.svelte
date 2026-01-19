@@ -12,6 +12,7 @@
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
   import { resolveAttachmentPreviews } from '../utils/attachmentPreviewResolver';
+  import { copyToClipboard, exportAsFile, printNote } from '../utils/noteExport';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
 
   export let onBackToList: (() => void) | undefined = undefined;
@@ -663,251 +664,33 @@
   }
 
   async function handleCopy() {
-    if (!content) return;
-
-    try {
-      await navigator.clipboard.writeText(content);
-      // Could show a toast notification here
-    } catch (error) {
-      console.error('Failed to copy note:', error);
-      // Fallback for older browsers
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = content;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      } catch (fallbackError) {
-        console.error('Failed to copy note (fallback):', fallbackError);
-      }
-    }
+    await copyToClipboard(content);
   }
 
   function handleExport() {
-    if (!content || !$selectedNote) return;
+    if (!$selectedNote) return;
 
-    // Map syntax language to file extension
-    const extensionMap: Record<string, string> = {
-      'plain': 'txt',
-      'javascript': 'js',
-      'python': 'py',
-      'markdown': 'md',
-      'json': 'json',
-      'html': 'html',
-      'css': 'css',
-      'sql': 'sql',
-      'bash': 'sh',
-      'perl': 'pl',
-    };
-
-    const extension = extensionMap[language] || 'txt';
-
-    // Generate filename from first line or date
-    const firstLine = content.split('\n')[0].trim();
-    const sanitizedFirstLine = firstLine
-      .substring(0, 50) // Max 50 chars
-      .replace(/[^a-z0-9_\-\.]/gi, '_') // Replace invalid chars
-      .replace(/_{2,}/g, '_') // Replace multiple underscores
-      .replace(/^_|_$/g, ''); // Trim underscores
-
-    const filename = sanitizedFirstLine ||
-      new Date($selectedNote?.createdAt || new Date()).toISOString().split('T')[0];
-
-    // Create blob and download
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.${extension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
+    exportAsFile({
+      content,
+      language,
+      createdAt: $selectedNote.createdAt,
+    });
   }
 
   async function handlePrintPdf() {
-    if (!content || !$selectedNote) return;
+    if (!$selectedNote) return;
 
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) {
+    const success = await printNote({
+      content,
+      language,
+      createdAt: $selectedNote.createdAt,
+      previewHtml,
+      attachments,
+    });
+
+    if (!success) {
       toast.error($_('editor.printFailed'));
-      return;
     }
-
-    // Generate title from first line or date
-    const firstLine = content.split('\n')[0].trim();
-    const title = firstLine.substring(0, 100) ||
-      new Date($selectedNote?.createdAt || new Date()).toISOString().split('T')[0];
-
-    // Build the HTML content based on language type
-    let htmlContent: string;
-
-    if (language === 'markdown') {
-      // Use rendered markdown preview
-      htmlContent = previewHtml;
-    } else if (language === 'html' || language === 'xml') {
-      // Use raw HTML/XML content directly
-      htmlContent = content;
-    } else {
-      // For code/plain text, wrap in a pre/code block with styling
-      const escapedContent = content
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      htmlContent = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 12px; line-height: 1.5; padding: 1em; background: #f5f5f5; border-radius: 4px;"><code>${escapedContent}</code></pre>`;
-    }
-
-    // For markdown, we need to resolve attachment images to data URLs
-    if (language === 'markdown' && attachments.length > 0) {
-      // Parse the HTML to find and replace attachment images
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
-
-      // Helper to convert blob to data URL
-      const blobToDataUrl = (blob: Blob): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      };
-
-      // Process images with attachment IDs
-      const imagesById = doc.querySelectorAll('img[data-attachment-id]');
-      for (const img of imagesById) {
-        const attachmentId = img.getAttribute('data-attachment-id');
-        if (!attachmentId) continue;
-
-        try {
-          const attachment = attachments.find(a => a.data === attachmentId);
-          if (attachment) {
-            const blob = await attachmentService.getAttachmentData(attachment);
-            const dataUrl = await blobToDataUrl(blob);
-            img.setAttribute('src', dataUrl);
-          }
-        } catch (error) {
-          console.error(`Failed to load attachment ${attachmentId} for print:`, error);
-        }
-      }
-
-      // Process images with filenames
-      const imagesByFilename = doc.querySelectorAll('img[data-attachment-filename]');
-      for (const img of imagesByFilename) {
-        const filename = img.getAttribute('data-attachment-filename');
-        if (!filename) continue;
-
-        try {
-          // Find attachment by decrypted filename
-          let foundAttachment = null;
-          for (const attachment of attachments) {
-            try {
-              const encryptedFilename = JSON.parse(attachment.filename);
-              const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-              if (decryptedFilename === filename) {
-                foundAttachment = attachment;
-                break;
-              }
-            } catch (err) {
-              // Skip attachments with decryption errors
-            }
-          }
-
-          if (foundAttachment) {
-            const blob = await attachmentService.getAttachmentData(foundAttachment);
-            const dataUrl = await blobToDataUrl(blob);
-            img.setAttribute('src', dataUrl);
-          }
-        } catch (error) {
-          console.error(`Failed to load attachment by filename ${filename} for print:`, error);
-        }
-      }
-
-      // Get the updated HTML
-      htmlContent = doc.body.innerHTML;
-    }
-
-    // Create a print-friendly document
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error($_('editor.printFailed'));
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            @media print {
-              body { margin: 0; padding: 20px; }
-            }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            pre {
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-            }
-            code {
-              font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-            }
-            img {
-              max-width: 100%;
-              height: auto;
-            }
-            h1, h2, h3, h4, h5, h6 {
-              margin-top: 1.5em;
-              margin-bottom: 0.5em;
-            }
-            p {
-              margin: 1em 0;
-            }
-            a {
-              color: #0066cc;
-            }
-            blockquote {
-              border-left: 4px solid #ddd;
-              padding-left: 1em;
-              margin-left: 0;
-              color: #666;
-            }
-            table {
-              border-collapse: collapse;
-              width: 100%;
-            }
-            th, td {
-              border: 1px solid #ddd;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f5f5f5;
-            }
-          </style>
-        </head>
-        <body>
-          ${htmlContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-
-    // Wait for content to load, then print
-    printWindow.onload = () => {
-      printWindow.print();
-    };
   }
 
   async function handleDuplicate() {
