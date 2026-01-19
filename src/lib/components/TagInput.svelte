@@ -117,6 +117,9 @@
       on:keydown={handleKeyDown}
       on:blur={handleBlur}
       {placeholder}
+      enterkeyhint="done"
+      autocapitalize="none"
+      autocomplete="off"
       class="flex-1 min-w-[120px] outline-none bg-transparent text-sm text-gray-900 dark:text-gray-100"
     />
   </div>
