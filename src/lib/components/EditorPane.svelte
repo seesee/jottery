@@ -2,7 +2,7 @@
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, isSyncRefreshing, selectNote, isContentOnlyUpdate } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager, cryptoService } from '../services';
+  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
@@ -11,6 +11,7 @@
   import { getPreviewHtml } from '../utils/markdownPreview';
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
+  import { resolveAttachmentPreviews } from '../utils/attachmentPreviewResolver';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
 
   export let onBackToList: (() => void) | undefined = undefined;
@@ -1105,203 +1106,18 @@
   afterUpdate(async () => {
     if (!showPreview) return;
 
-    // Find all attachment images and download links
+    // Find the preview container
     const previewContainer = document.querySelector('.prose');
     if (!previewContainer) return;
 
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) return;
-
-    // Process images with attachment IDs (already resolved)
-    const imagesById = previewContainer.querySelectorAll('img[data-attachment-id]');
-    for (const img of imagesById) {
-      const attachmentId = img.getAttribute('data-attachment-id');
-      if (!attachmentId) continue;
-
-      // Skip if already loaded
-      if (img.getAttribute('data-loaded') === 'true') continue;
-
-      try {
-        // Find the attachment object to get decrypted data
-        const attachment = attachments.find(a => a.data === attachmentId);
-        if (attachment) {
-          // Load and decrypt the blob using attachmentService
-          const blob = await attachmentService.getAttachmentData(attachment);
-          const blobUrl = URL.createObjectURL(blob);
-          img.setAttribute('src', blobUrl);
-          img.setAttribute('data-loaded', 'true');
-
-          // Track blob URL for cleanup
-          blobUrls.add(blobUrl);
-        } else {
-          console.error(`Failed to find attachment with data: ${attachmentId}`);
-          img.setAttribute('alt', '[Attachment not found]');
-          img.setAttribute('data-loaded', 'true');
-        }
-      } catch (error) {
-        console.error(`Failed to load attachment ${attachmentId}:`, error);
-        img.setAttribute('alt', '[Failed to load image]');
-        img.setAttribute('data-loaded', 'true'); // Mark as processed even on error
-      }
-    }
-
-    // Process images with filenames (need to resolve)
-    const imagesByFilename = previewContainer.querySelectorAll('img[data-attachment-filename]');
-    for (const img of imagesByFilename) {
-      const filename = img.getAttribute('data-attachment-filename');
-      if (!filename) continue;
-
-      // Skip if already loaded
-      if (img.getAttribute('data-loaded') === 'true') continue;
-
-      try {
-        // Find attachment by decrypted filename
-        let foundAttachment = null;
-
-        for (const attachment of attachments) {
-          try {
-            const encryptedFilename = JSON.parse(attachment.filename);
-            const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-
-            if (decryptedFilename === filename) {
-              foundAttachment = attachment;
-              break;
-            }
-          } catch (err) {
-            console.error('Failed to decrypt filename for attachment:', attachment.id, err);
-          }
-        }
-
-        if (foundAttachment) {
-          // Load and decrypt the blob using attachmentService
-          const blob = await attachmentService.getAttachmentData(foundAttachment);
-          const blobUrl = URL.createObjectURL(blob);
-          img.setAttribute('src', blobUrl);
-          img.setAttribute('data-loaded', 'true');
-
-          // Track blob URL for cleanup
-          blobUrls.add(blobUrl);
-        } else {
-          console.error(`[Preview] No attachment found with filename: ${filename}`);
-          img.setAttribute('alt', `[Attachment not found: ${filename}]`);
-          img.setAttribute('data-loaded', 'true');
-        }
-      } catch (error) {
-        console.error(`Failed to load attachment by filename ${filename}:`, error);
-        img.setAttribute('alt', '[Failed to load image]');
-        img.setAttribute('data-loaded', 'true');
-      }
-    }
-
-    // Process download links
-    const downloads = previewContainer.querySelectorAll('.attachment-download[data-attachment-id]');
-    for (const div of downloads) {
-      const attachmentId = div.getAttribute('data-attachment-id');
-      if (!attachmentId) continue;
-
-      // Skip if already processed
-      if (div.classList.contains('clickable')) continue;
-
-      const htmlDiv = div as HTMLElement;
-      htmlDiv.classList.add('clickable');
-      htmlDiv.style.cursor = 'pointer';
-
-      div.addEventListener('click', async () => {
-        try {
-          const attachment = attachments.find(a => a.id === attachmentId);
-          if (attachment) {
-            // Open preview instead of downloading
-            await handlePreviewAttachment(attachment);
-          }
-        } catch (error) {
-          console.error(`Failed to preview attachment ${attachmentId}:`, error);
-        }
-      });
-    }
-
-    // Process download links by filename (need to resolve by decrypting filenames)
-    const downloadsByFilename = previewContainer.querySelectorAll('.attachment-download[data-attachment-filename]');
-    for (const div of downloadsByFilename) {
-      const filename = div.getAttribute('data-attachment-filename');
-      if (!filename) continue;
-
-      // Skip if already loaded
-      if (div.getAttribute('data-loaded') === 'true') continue;
-
-      try {
-        // Find attachment by decrypted filename
-        let foundAttachment = null;
-
-        for (const attachment of attachments) {
-          try {
-            const encryptedFilename = JSON.parse(attachment.filename);
-            const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-
-            if (decryptedFilename === filename) {
-              foundAttachment = attachment;
-              break;
-            }
-          } catch (err) {
-            console.error('Failed to decrypt filename for attachment:', attachment.id, err);
-          }
-        }
-
-        if (foundAttachment) {
-          // Update the div with the attachment ID and mark as loaded
-          div.setAttribute('data-attachment-id', foundAttachment.id);
-          div.setAttribute('data-attachment-data', foundAttachment.data);
-          div.setAttribute('data-loaded', 'true');
-          div.removeAttribute('data-attachment-filename');
-
-          // Skip if already has click handler
-          if (div.classList.contains('clickable')) continue;
-
-          div.classList.add('clickable');
-
-          div.addEventListener('click', async () => {
-            try {
-              await handlePreviewAttachment(foundAttachment);
-            } catch (error) {
-              console.error(`Failed to preview attachment ${foundAttachment.id}:`, error);
-            }
-          });
-        } else {
-          // Attachment not found - show error message
-          console.error(`No attachment found with filename: ${filename}`);
-          div.setAttribute('data-loaded', 'true');
-          div.removeAttribute('data-attachment-filename');
-
-          // Update content to show error
-          div.innerHTML = `
-            <span class="text-2xl mr-2">⚠️</span>
-            <div class="flex-1">
-              <span class="font-medium text-red-700 dark:text-red-400">Attachment not found</span>
-              <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
-            </div>
-          `;
-
-          // Update styling to show error state
-          div.classList.remove('bg-gray-50', 'dark:bg-gray-800', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'cursor-pointer', 'border-gray-300', 'dark:border-gray-600');
-          div.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-300', 'dark:border-red-700', 'cursor-not-allowed');
-        }
-      } catch (error) {
-        console.error(`Failed to resolve attachment by filename ${filename}:`, error);
-        div.setAttribute('data-loaded', 'true');
-        div.removeAttribute('data-attachment-filename');
-
-        // Show error state for resolution failure
-        div.innerHTML = `
-          <span class="text-2xl mr-2">⚠️</span>
-          <div class="flex-1">
-            <span class="font-medium text-red-700 dark:text-red-400">${$_('editor.errors.loadingAttachment')}</span>
-            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
-          </div>
-        `;
-
-        div.classList.remove('bg-gray-50', 'dark:bg-gray-800', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'cursor-pointer', 'border-gray-300', 'dark:border-gray-600');
-        div.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-300', 'dark:border-red-700', 'cursor-not-allowed');
-      }
-    }
+    // Resolve all attachment references using the extracted utility
+    await resolveAttachmentPreviews({
+      container: previewContainer,
+      attachments,
+      blobUrls,
+      onPreviewAttachment: handlePreviewAttachment,
+      getErrorMessage: () => $_('editor.errors.loadingAttachment'),
+    });
   });
 </script>
 
