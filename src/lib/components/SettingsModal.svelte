@@ -4,6 +4,7 @@
   import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { authService } from '../services/authService';
+  import { exportCredentials, parseAndStoreImportedCredentials, copyToClipboard } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts, QuickCommandConfig } from '../types';
   import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
@@ -459,73 +460,22 @@
   }
 
   async function handleCopySyncCredentials(useLegacyFormat: boolean = false) {
-    try {
-      // Get all required data
-      const masterKey = keyManager.getMasterKey();
-      if (!masterKey) {
-        throw new Error('Application is locked');
-      }
+    const result = await exportCredentials(useLegacyFormat);
 
-      const metadata = await syncRepository.getMetadata();
-      if (!metadata || !metadata.apiKey || !metadata.clientId) {
-        throw new Error('Sync not configured');
-      }
-
-      const encryptionMeta = await encryptionRepository.getMetadata();
-      if (!encryptionMeta) {
-        throw new Error('Encryption not initialized');
-      }
-
-      // Decrypt API key
-      const encryptedApiKey = JSON.parse(metadata.apiKey);
-      const apiKey = await cryptoService.decryptText(encryptedApiKey, masterKey.key);
-
-      let base64: string;
-
-      if (useLegacyFormat) {
-        // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
-        const credentials = {
-          endpoint: metadata.syncEndpoint,
-          clientId: metadata.clientId,
-          apiKey: apiKey,
-          salt: encryptionMeta.salt,
-        };
-        base64 = btoa(JSON.stringify(credentials));
-        console.warn('[SettingsModal] Using legacy unencrypted credentials format');
-      } else {
-        // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-        const credentials = {
-          endpoint: metadata.syncEndpoint,
-          clientId: metadata.clientId,
-          apiKey: apiKey,
-        };
-        const json = JSON.stringify(credentials);
-        const encrypted = await cryptoService.encryptText(json, masterKey.key);
-        const encryptedJson = JSON.stringify(encrypted);
-        base64 = `jottery:v1:${encryptionMeta.salt}.${btoa(encryptedJson)}`;
-      }
-
-      // Try to copy to clipboard (best effort - may fail over SSH or in some browsers)
-      try {
-        await navigator.clipboard.writeText(base64);
-      } catch (clipboardError) {
-        console.warn('[SettingsModal] Clipboard copy failed (this is OK):', clipboardError);
-      }
+    if (result.success && result.credentials) {
+      // Try to copy to clipboard (best effort)
+      await copyToClipboard(result.credentials);
 
       // Always show the modal with text for manual copy
-      credentialsText = base64;
+      credentialsText = result.credentials;
       showCredentialsModal = true;
-
-    } catch (error) {
-      console.error('Failed to generate credentials:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to generate credentials';
+    } else {
+      syncError = result.error || 'Failed to generate credentials';
     }
   }
 
   async function handleImportCredentials() {
-
     if (!importCredentialsText.trim()) {
-      console.error('[Import] No credentials text provided');
       syncError = 'Please paste the credentials';
       return;
     }
@@ -534,77 +484,17 @@
     syncError = '';
 
     try {
-      const input = importCredentialsText.trim();
-      let credentials: { endpoint: string; clientId: string; apiKey: string };
-      let salt: string;
+      const result = await parseAndStoreImportedCredentials(importCredentialsText);
 
-      // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
-      if (input.startsWith('jottery:v1:')) {
-        const payload = input.substring('jottery:v1:'.length);
-        const dotIndex = payload.indexOf('.');
-        if (dotIndex === -1) {
-          throw new Error('Invalid encrypted credentials format');
-        }
-
-        salt = payload.substring(0, dotIndex);
-        const encryptedPayload = payload.substring(dotIndex + 1);
-
-        // Store the encrypted payload for deferred decryption after unlock
-        // The initService will decrypt this when the app is unlocked with the correct password
-        await encryptionRepository.setMetadata({
-          salt: salt,
-          iterations: 100000,
-          createdAt: new Date().toISOString(),
-          algorithm: 'AES-256-GCM',
-        });
-
-        await syncRepository.updateMetadata({
-          syncEnabled: false,
-          // Store encrypted payload with marker - will be decrypted on unlock
-          apiKey: `ENCRYPTED:${encryptedPayload}`,
-        });
-
-        await settingsRepository.update({
-          syncEnabled: false,
-        });
-      } else {
-        // Legacy unencrypted format: base64(JSON)
-        const json = atob(input);
-        credentials = JSON.parse(json);
-
-        // Validate structure - legacy format includes salt
-        if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey) {
-          console.error('[Import] Invalid credentials structure');
-          throw new Error('Invalid credentials format - missing required fields');
-        }
-
-        // Legacy format has salt in the credentials object
-        const legacyCredentials = credentials as { endpoint: string; clientId: string; apiKey: string; salt?: string };
-        if (!legacyCredentials.salt) {
-          throw new Error('Invalid credentials format - missing salt (legacy format)');
-        }
-        salt = legacyCredentials.salt;
-
-        await encryptionRepository.setMetadata({
-          salt: salt,
-          iterations: 100000,
-          createdAt: new Date().toISOString(),
-          algorithm: 'AES-256-GCM',
-        });
-
-        await syncRepository.updateMetadata({
-          clientId: credentials.clientId,
-          syncEndpoint: credentials.endpoint,
-          syncEnabled: false,
-          apiKey: `IMPORT:${credentials.apiKey}`,
-        });
-
-        await settingsRepository.update({
-          syncEndpoint: credentials.endpoint,
-          syncEnabled: false,
-        });
+      if (!result.success) {
+        syncError = result.error || 'Failed to import credentials';
+        return;
       }
 
+      // Update settings to disable sync (will be enabled after unlock)
+      await settingsRepository.update({
+        syncEnabled: false,
+      });
 
       // Close the modal first
       onClose();
@@ -613,10 +503,8 @@
       lock();
       isLocked.set(true);
 
-
       // Clear the import text
       importCredentialsText = '';
-
     } catch (error) {
       console.error('[Import] ERROR:', error);
       syncError = error instanceof Error ? error.message : 'Failed to import credentials';
