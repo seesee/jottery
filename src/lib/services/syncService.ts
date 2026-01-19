@@ -5,12 +5,6 @@
 import type {
   SyncStatus,
   SyncPushRequest,
-  SyncPushResponse,
-  SyncPullRequest,
-  SyncPullResponse,
-  SyncStatusResponse,
-  AuthRegisterRequest,
-  AuthRegisterResponse,
   Note,
   SyncNoteVersion,
 } from '../types';
@@ -30,45 +24,26 @@ import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncPro
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { isDBAvailable, wasDBTerminated } from './db';
-
-const API_VERSION = 'v1';
+import {
+  normalizeEndpoint,
+  registerDevice as registerDeviceApi,
+  pushToServer,
+  pullFromServer,
+  getServerStatus,
+} from './syncClient';
 
 class SyncService {
   private isSyncing = false;
   private autoSyncTimer?: number;
 
   /**
-   * Normalize endpoint URL by removing trailing slash
-   */
-  private normalizeEndpoint(endpoint: string): string {
-    return endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
-  }
-
-  /**
    * Register a new client with the server
    */
-  async register(endpoint: string, deviceName: string): Promise<AuthRegisterResponse> {
-    endpoint = this.normalizeEndpoint(endpoint);
+  async register(endpoint: string, deviceName: string): Promise<{ clientId: string; apiKey: string }> {
+    endpoint = normalizeEndpoint(endpoint);
     console.log('[SyncService] Registering device:', deviceName, 'at', endpoint);
 
-    const request: AuthRegisterRequest = {
-      deviceName,
-      deviceType: 'web',
-    };
-
-    const response = await fetch(`${endpoint}/api/${API_VERSION}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[SyncService] Registration failed:', errorText);
-      throw new Error(`Registration failed: ${response.statusText} - ${errorText}`);
-    }
-
-    const data: AuthRegisterResponse = await response.json();
+    const data = await registerDeviceApi(endpoint, deviceName);
 
     // Encrypt and store API key
     const masterKey = keyManager.getMasterKey();
@@ -107,7 +82,7 @@ class SyncService {
    * Configure sync manually with existing credentials
    */
   async configureCredentials(endpoint: string, clientId: string, apiKey: string): Promise<void> {
-    endpoint = this.normalizeEndpoint(endpoint);
+    endpoint = normalizeEndpoint(endpoint);
     console.log('[SyncService] Configuring sync credentials for', endpoint);
 
     // Verify master key is available
@@ -184,7 +159,7 @@ class SyncService {
 
       // 1. Check server status (optional, but good for error detection)
       try {
-        await this.getServerStatus(metadata.syncEndpoint, apiKey);
+        await getServerStatus(metadata.syncEndpoint || '', apiKey);
       } catch (error) {
         console.error('[SyncService] Server status check failed:', error);
         // Continue anyway - server might be slow but still functional
@@ -252,7 +227,7 @@ class SyncService {
    * @returns Number of notes accepted by server
    */
   private async push(endpoint: string, apiKey: string, forceAll = false): Promise<number> {
-    endpoint = this.normalizeEndpoint(endpoint);
+    endpoint = normalizeEndpoint(endpoint);
 
     let modifiedNotes: Note[];
     if (forceAll) {
@@ -340,29 +315,7 @@ class SyncService {
       };
 
       // Send batch to server
-      const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/push`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(pushRequest),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        // Handle specific HTTP status codes
-        if (response.status === 413) {
-          const errorMessage = 'Upload too large. Please reduce attachment sizes or sync fewer notes at once. Maximum size: 5MB';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-
-        throw new Error(`Push failed: ${response.statusText} - ${errorText}`);
-      }
-
-      const result: SyncPushResponse = await response.json();
+      const result = await pushToServer(endpoint, apiKey, pushRequest);
       totalAccepted += result.accepted.length;
       totalRejected += result.rejected.length;
 
@@ -424,7 +377,7 @@ class SyncService {
    * @returns Number of notes received from server
    */
   private async pull(endpoint: string, apiKey: string): Promise<number> {
-    endpoint = this.normalizeEndpoint(endpoint);
+    endpoint = normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
     const lastSyncAt = metadata?.lastSyncAt;
 
@@ -466,29 +419,7 @@ class SyncService {
         offset,
       };
 
-      const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/pull`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(pullRequest),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        // Handle specific HTTP status codes
-        if (response.status === 413) {
-          const errorMessage = 'Server response too large. Please contact your administrator.';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-
-        throw new Error(`Pull failed: ${response.statusText} - ${errorText}`);
-      }
-
-      const result: SyncPullResponse = await response.json();
+      const result = await pullFromServer(endpoint, apiKey, pullRequest);
 
       // Update pagination state
       hasMore = result.hasMore ?? false;
@@ -617,29 +548,6 @@ class SyncService {
     });
 
     return totalNotes;
-  }
-
-  /**
-   * Get server status
-   */
-  private async getServerStatus(
-    endpoint: string,
-    apiKey: string
-  ): Promise<SyncStatusResponse> {
-    endpoint = this.normalizeEndpoint(endpoint);
-    const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/status`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Status check failed: ${response.statusText} - ${errorText}`);
-    }
-
-    return await response.json();
   }
 
   /**
