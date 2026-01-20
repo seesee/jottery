@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { authService } from '../services/authService';
   import { exportCredentials, parseAndStoreImportedCredentials, copyToClipboard } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
+  import { modal, createBackdropHandler } from '../actions';
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts, QuickCommandConfig } from '../types';
   import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -887,11 +888,7 @@
     isLocked.set(true);
   }
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  }
+  $: backdropHandler = createBackdropHandler(onClose);
 
   async function loadNoteStats() {
     try {
@@ -971,12 +968,15 @@
   // Handle Escape key to close modal
   function handleKeyDown(event: KeyboardEvent) {
     if (show && event.key === 'Escape') {
-      // Check if any child modal is open (they have z-50 class and are visible)
-      const modals = document.querySelectorAll('.z-50');
-      const hasOpenChildModal = Array.from(modals).some(modal => {
-        const style = window.getComputedStyle(modal as HTMLElement);
-        return style.display !== 'none' && style.visibility !== 'hidden' && modal.getAttribute('role') === 'dialog';
-      });
+      // Check if any child modal is open by checking our state flags
+      const hasOpenChildModal = showDeleteConfirm ||
+        showRememberPasswordWarning ||
+        showPersistSessionConfirm ||
+        showCredentialsModal ||
+        showDeleteServerNotesConfirm ||
+        showDisconnectConfirm ||
+        showDocumentation ||
+        importing;
 
       // Only close settings modal if no child modal is open
       if (!hasOpenChildModal) {
@@ -987,8 +987,6 @@
   }
 
   onMount(async () => {
-    window.addEventListener('keydown', handleKeyDown);
-
     // Check if current server offers sync and use as default
     if (!syncEndpoint && typeof window !== 'undefined') {
       try {
@@ -1009,19 +1007,17 @@
     }
   });
 
-  onDestroy(() => {
-    window.removeEventListener('keydown', handleKeyDown);
-  });
 </script>
 
 {#if show}
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && onClose()}
+    on:click={backdropHandler}
+    on:keydown={handleKeyDown}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
   >
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
@@ -1205,7 +1201,13 @@
 
   <!-- Remember Password Warning Modal -->
   {#if showRememberPasswordWarning}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      use:modal={{ onEscape: cancelEnableRememberPassword }}
+    >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4">
           {$_('settings.rememberPasswordModal.title')}
@@ -1263,7 +1265,13 @@
 
   <!-- Persist Session Confirmation Modal -->
   {#if showPersistSessionConfirm}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      use:modal={{ onEscape: cancelEnablePersistSession }}
+    >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4">
           🔄 {$_('settings.persistSession')}
@@ -1317,19 +1325,16 @@
   {#if showCredentialsModal}
     <div
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      on:click={() => showCredentialsModal = false}
-      on:keydown={(e) => e.key === 'Enter' && (showCredentialsModal = false)}
-      role="button"
+      on:click={createBackdropHandler(() => showCredentialsModal = false)}
+      role="dialog"
+      aria-modal="true"
       tabindex="-1"
-      aria-label="Close credentials modal"
+      use:modal={{ onEscape: () => showCredentialsModal = false }}
     >
       <div
         class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
         on:click|stopPropagation
-        on:keydown|stopPropagation
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
+        role="document"
       >
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -1384,7 +1389,13 @@
 
 <!-- Import Progress Modal -->
 {#if importing}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
+  <div
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    use:modal={{ onEscape: importResult ? closeImportModal : undefined }}
+  >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
       <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
         {importResult ? $_('settings.importDialog.complete') : $_('settings.importDialog.importing')}

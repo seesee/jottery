@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { _ } from 'svelte-i18n';
   import { conflictService, cryptoService, keyManager, decryptJSON } from '../services';
   import type { ConflictInfo } from '../services/conflictService';
   import { formatDate } from '../utils/dateFormat';
   import { toast } from '../utils/toast.svelte';
+  import { modal, createBackdropHandler } from '../actions';
 
   // Helper to get formatted date synchronously
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -19,21 +19,7 @@
 
   let loading = false;
 
-  // Lock body scroll when modal is open
-  $: if (typeof document !== 'undefined') {
-    if (show) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-  }
-
-  // Clean up on destroy
-  onDestroy(() => {
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = '';
-    }
-  });
+  $: backdropHandler = createBackdropHandler(onClose);
   let resolving = false;
   let conflictInfo: ConflictInfo | null = null;
   let localContent: string = '';
@@ -123,12 +109,6 @@
     }
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      onClose();
-    }
-  }
-
   $: if (show && noteId) {
     loadConflict();
   }
@@ -140,18 +120,19 @@
   }
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
 {#if show}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-hidden"
-    on:click={onClose}
+    on:click={backdropHandler}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    use:modal={{ onEscape: onClose }}
   >
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-4 overflow-hidden"
       on:click|stopPropagation
+      role="document"
     >
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">

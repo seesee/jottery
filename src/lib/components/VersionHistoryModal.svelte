@@ -6,6 +6,7 @@
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
+  import { modal, createBackdropHandler } from '../actions';
 
   // Helper to get formatted date synchronously (for use in templates)
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -120,8 +121,11 @@
     }
   }
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
+  $: backdropHandler = createBackdropHandler(onClose);
+
+  // Handle escape - only close if no child modal is open
+  function handleEscape() {
+    if (!showRestoreConfirm) {
       onClose();
     }
   }
@@ -148,11 +152,11 @@
 {#if show}
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && onClose()}
+    on:click={backdropHandler}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: handleEscape }}
   >
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-6xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->
