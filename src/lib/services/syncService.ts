@@ -5,6 +5,7 @@
 import type {
   SyncStatus,
   SyncPushRequest,
+  SyncPullRequest,
   Note,
   SyncNoteVersion,
 } from '../types';
