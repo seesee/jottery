@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
@@ -968,12 +968,15 @@
   // Handle Escape key to close modal
   function handleKeyDown(event: KeyboardEvent) {
     if (show && event.key === 'Escape') {
-      // Check if any child modal is open (they have z-50 class and are visible)
-      const modals = document.querySelectorAll('.z-50');
-      const hasOpenChildModal = Array.from(modals).some(modal => {
-        const style = window.getComputedStyle(modal as HTMLElement);
-        return style.display !== 'none' && style.visibility !== 'hidden' && modal.getAttribute('role') === 'dialog';
-      });
+      // Check if any child modal is open by checking our state flags
+      const hasOpenChildModal = showDeleteConfirm ||
+        showRememberPasswordWarning ||
+        showPersistSessionConfirm ||
+        showCredentialsModal ||
+        showDeleteServerNotesConfirm ||
+        showDisconnectConfirm ||
+        showDocumentation ||
+        importing;
 
       // Only close settings modal if no child modal is open
       if (!hasOpenChildModal) {
@@ -984,8 +987,6 @@
   }
 
   onMount(async () => {
-    window.addEventListener('keydown', handleKeyDown);
-
     // Check if current server offers sync and use as default
     if (!syncEndpoint && typeof window !== 'undefined') {
       try {
@@ -1006,15 +1007,14 @@
     }
   });
 
-  onDestroy(() => {
-    window.removeEventListener('keydown', handleKeyDown);
-  });
 </script>
 
 {#if show}
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
     on:click={backdropHandler}
+    on:keydown={handleKeyDown}
     role="dialog"
     aria-modal="true"
     tabindex="-1"
@@ -1389,7 +1389,13 @@
 
 <!-- Import Progress Modal -->
 {#if importing}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
+  <div
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    use:modal={{ onEscape: importResult ? closeImportModal : undefined }}
+  >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
       <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
         {importResult ? $_('settings.importDialog.complete') : $_('settings.importDialog.importing')}
