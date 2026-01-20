@@ -63,7 +63,7 @@
   }
 </script>
 
-<div class="flex flex-col h-full">
+<div class="flex-1 min-h-0 flex flex-col">
   <!-- Tab Navigation -->
   <div
     class="border-b border-gray-200 dark:border-gray-700 flex overflow-x-auto flex-shrink-0"
