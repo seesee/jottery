@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { modal, createBackdropHandler } from '../actions';
 
   export let show: boolean = false;
   export let title: string = 'Confirm';
@@ -15,12 +16,6 @@
 
   $: canConfirm = requireTextMatch ? inputValue === requireTextMatch : true;
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      handleCancel();
-    }
-  }
-
   function handleConfirm() {
     if (canConfirm) {
       inputValue = '';
@@ -33,23 +28,24 @@
     onCancel();
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      handleCancel();
-    } else if (e.key === 'Enter' && canConfirm) {
+  function handleEnterKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' && canConfirm) {
       handleConfirm();
     }
   }
+
+  $: backdropHandler = createBackdropHandler(handleCancel);
 </script>
 
 {#if show}
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-    on:click={handleBackdropClick}
-    on:keydown={handleKeydown}
+    on:click={backdropHandler}
+    on:keydown={handleEnterKey}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: handleCancel }}
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
       <!-- Header -->

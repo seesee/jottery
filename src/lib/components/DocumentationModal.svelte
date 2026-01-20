@@ -4,17 +4,14 @@
   import { toast } from '../utils/toast.svelte';
   import { getHljsInstance } from '../utils/syntaxHighlighter';
   import { loadDocumentation, defaultDocumentation } from '../docs';
+  import { modal, createBackdropHandler } from '../actions';
 
   const hljs = getHljsInstance();
 
   export let show = false;
   export let onClose: () => void = () => {};
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  }
+  $: backdropHandler = createBackdropHandler(onClose);
 
   // Documentation content loaded based on locale
   let documentationMarkdown = defaultDocumentation;
@@ -131,11 +128,11 @@
 {#if show}
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 tablet:p-4"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && onClose()}
+    on:click={backdropHandler}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: onClose }}
   >
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-4xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->

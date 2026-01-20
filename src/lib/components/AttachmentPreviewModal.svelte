@@ -3,6 +3,7 @@
   import { attachmentService } from '../services/attachmentService';
   import PdfViewer from './PdfViewer.svelte';
   import type { Attachment } from '../types';
+  import { modal, createBackdropHandler } from '../actions';
 
   export let show: boolean = false;
   export let attachment: Attachment | null = null;
@@ -95,17 +96,7 @@
     }
   }
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      handleClose();
-    }
-  }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      handleClose();
-    }
-  }
+  $: backdropHandler = createBackdropHandler(handleClose);
 
   $: displayFilename = filename || attachment?.filename || $_('attachments.preview.title');
 </script>
@@ -113,18 +104,16 @@
 {#if show && attachment}
   <div
     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-    on:click={handleBackdropClick}
-    on:keydown={handleKeydown}
+    on:click={backdropHandler}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: handleClose }}
   >
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col"
       on:click|stopPropagation
-      on:keydown|stopPropagation
-      role="presentation"
-      tabindex="-1"
+      role="document"
     >
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
