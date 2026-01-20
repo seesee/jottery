@@ -258,4 +258,121 @@ test.describe('Settings', () => {
       expect(true).toBe(true);
     }
   });
+
+  test('should navigate between tabs by clicking', async ({ page }) => {
+    await openSettings(page);
+
+    // Find tab buttons
+    const tabButtons = page.locator('[role="tab"]');
+    const tabCount = await tabButtons.count();
+
+    // Should have multiple tabs
+    expect(tabCount).toBeGreaterThan(1);
+
+    // Click each tab and verify it becomes active
+    for (let i = 0; i < Math.min(tabCount, 3); i++) {
+      const tab = tabButtons.nth(i);
+      await tab.click();
+      await page.waitForTimeout(300);
+
+      // Verify the clicked tab is now selected
+      const isSelected = await tab.getAttribute('aria-selected');
+      expect(isSelected).toBe('true');
+    }
+  });
+
+  test('should navigate tabs with keyboard arrow keys', async ({ page }) => {
+    await openSettings(page);
+
+    // Find and click the first tab to ensure it's focused and selected
+    const tabs = page.locator('[role="tab"]');
+    await tabs.first().click();
+    await page.waitForTimeout(200);
+
+    // Verify first tab is selected
+    let firstTabSelected = await tabs.first().getAttribute('aria-selected');
+    expect(firstTabSelected).toBe('true');
+
+    // Press right arrow to move to next tab
+    await page.keyboard.press('ArrowRight');
+    await page.waitForTimeout(300);
+
+    // Second tab should now be selected (re-query to get fresh state)
+    const secondTabSelected = await tabs.nth(1).getAttribute('aria-selected');
+    expect(secondTabSelected).toBe('true');
+
+    // Verify first tab is no longer selected
+    firstTabSelected = await tabs.first().getAttribute('aria-selected');
+    expect(firstTabSelected).toBe('false');
+  });
+
+  test('should show different content for each tab', async ({ page }) => {
+    await openSettings(page);
+
+    const tabButtons = page.locator('[role="tab"]');
+    const tabPanel = page.locator('[role="tabpanel"]');
+
+    // Click first tab (General) and check for theme-related content
+    await tabButtons.first().click();
+    await page.waitForTimeout(300);
+    const generalContent = await tabPanel.textContent();
+    expect(generalContent?.toLowerCase()).toMatch(/theme|language|appearance/i);
+
+    // Click a different tab and verify content changes
+    const tabCount = await tabButtons.count();
+    if (tabCount > 1) {
+      // Click the last tab (About)
+      await tabButtons.last().click();
+      await page.waitForTimeout(300);
+      const aboutContent = await tabPanel.textContent();
+      // About tab should have different content
+      expect(aboutContent?.toLowerCase()).toMatch(/about|version|documentation/i);
+    }
+  });
+
+  test('should have scrollable tab content', async ({ page }) => {
+    await openSettings(page);
+
+    // Navigate to a tab with lots of content (Editor or Keyboard)
+    const keyboardTab = page.locator('[role="tab"]').filter({ hasText: /keyboard/i });
+    if (await keyboardTab.count() > 0) {
+      await keyboardTab.click();
+      await page.waitForTimeout(300);
+    }
+
+    // Find the tab panel
+    const tabPanel = page.locator('[role="tabpanel"]');
+
+    // Check that the tabpanel has overflow-y-auto (scrollable)
+    const hasOverflow = await tabPanel.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return style.overflowY === 'auto' || style.overflowY === 'scroll';
+    });
+
+    expect(hasOverflow).toBe(true);
+  });
+
+  test('tabs should have proper ARIA attributes', async ({ page }) => {
+    await openSettings(page);
+
+    // Check tablist exists
+    const tablist = page.locator('[role="tablist"]');
+    await expect(tablist).toBeVisible();
+
+    // Check tabs have required attributes
+    const tabs = page.locator('[role="tab"]');
+    const firstTab = tabs.first();
+
+    // Should have aria-selected
+    const ariaSelected = await firstTab.getAttribute('aria-selected');
+    expect(ariaSelected).toBeTruthy();
+
+    // Should have aria-controls pointing to a tabpanel
+    const ariaControls = await firstTab.getAttribute('aria-controls');
+    expect(ariaControls).toBeTruthy();
+
+    // The tabpanel should exist
+    const tabPanel = page.locator(`#${ariaControls}`);
+    await expect(tabPanel).toBeVisible();
+  });
 });

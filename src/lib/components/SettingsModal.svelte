@@ -10,6 +10,7 @@
   import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
+  import TabContainer from './TabContainer.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab } from './settings';
   import { toast } from '../utils/toast.svelte';
 
@@ -98,6 +99,16 @@
   // Tab state
   type Tab = 'general' | 'editor' | 'keyboard' | 'sync' | 'advanced' | 'about';
   let currentTab: Tab = 'general';
+
+  // Tabs configuration (reactive to pick up translations)
+  $: settingsTabs = [
+    { id: 'general', label: $_('settings.tabs.general') },
+    { id: 'editor', label: $_('settings.tabs.editor') },
+    { id: 'keyboard', label: $_('settings.tabs.keyboard') },
+    { id: 'sync', label: $_('settings.tabs.sync') },
+    { id: 'advanced', label: $_('settings.tabs.advanced') },
+    { id: 'about', label: $_('settings.tabs.about') },
+  ];
 
   // Detect user's architecture
   function detectArchitecture(): string {
@@ -1025,51 +1036,9 @@
         </button>
       </div>
 
-      <!-- Tab Navigation -->
-      <div class="border-b border-gray-200 dark:border-gray-700 flex overflow-x-auto flex-shrink-0">
-        <button
-          on:click={() => currentTab = 'general'}
-          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'general' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
-        >
-          {$_('settings.tabs.general')}
-        </button>
-        <button
-          on:click={() => currentTab = 'editor'}
-          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'editor' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
-        >
-          {$_('settings.tabs.editor')}
-        </button>
-        <button
-          on:click={() => currentTab = 'keyboard'}
-          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'keyboard' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
-        >
-          {$_('settings.tabs.keyboard')}
-        </button>
-        <button
-          on:click={() => currentTab = 'sync'}
-          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'sync' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
-        >
-          {$_('settings.tabs.sync')}
-        </button>
-        <button
-          on:click={() => currentTab = 'advanced'}
-          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'advanced' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
-        >
-          {$_('settings.tabs.advanced')}
-        </button>
-        <button
-          on:click={() => currentTab = 'about'}
-          class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors {currentTab === 'about' ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}"
-        >
-          {$_('settings.tabs.about')}
-        </button>
-      </div>
-
-      <!-- Content (scrollable) -->
-      <div class="flex-1 overflow-y-auto">
-
-      <!-- Content -->
-      <div class="p-6 space-y-6">
+      <!-- Tab Navigation and Content -->
+      <TabContainer tabs={settingsTabs} bind:currentTab ariaLabel={$_('settings.title')}>
+        <div class="p-6 space-y-6">
         <!-- GENERAL TAB -->
         {#if currentTab === 'general'}
           <GeneralTab
@@ -1165,8 +1134,8 @@
             notes={$notes}
           />
         {/if}
-      </div>
-      </div>
+        </div>
+      </TabContainer>
 
       <!-- Footer -->
       <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center gap-3 flex-shrink-0">
