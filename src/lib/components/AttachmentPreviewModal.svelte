@@ -102,6 +102,7 @@
 </script>
 
 {#if show && attachment}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
   <div
     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
     on:click={backdropHandler}
@@ -110,6 +111,7 @@
     tabindex="-1"
     use:modal={{ onEscape: handleClose }}
   >
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col"
       on:click|stopPropagation

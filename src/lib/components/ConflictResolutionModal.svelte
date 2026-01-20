@@ -121,6 +121,7 @@
 </script>
 
 {#if show}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-hidden"
     on:click={backdropHandler}
@@ -129,6 +130,7 @@
     tabindex="-1"
     use:modal={{ onEscape: onClose }}
   >
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col mx-4 overflow-hidden"
       on:click|stopPropagation
