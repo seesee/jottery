@@ -15,8 +15,8 @@
     "settings": "Настройки",
     "search": "Поиск",
     "error": "Ошибка",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Назад",
+    "edit": "Редактировать"
   },
   "docs": {
     "title": "Документация",
@@ -77,9 +77,9 @@
     "exportToFile": "Экспортировать в файл",
     "printPdf": "Печать / Экспорт PDF",
     "printFailed": "Не удалось открыть окно печати",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Дублировать заметку",
+    "noteDuplicated": "Заметка дублирована",
+    "duplicateFailed": "Не удалось дублировать заметку",
     "info": "Информация",
     "versionHistory": "История версий",
     "deleteNote": "Удалить заметку",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Предпросмотр недоступен для этого типа файла.",
       "downloadToView": "Скачайте для просмотра"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Вложения",
+    "noAttachments": "Нет вложений"
   },
   "noteList": {
     "deleteNote": "Удалить заметку",
@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Конфиденциальность:</strong> Все ваши заметки шифруются сквозным шифрованием. Сервер хранит только зашифрованные данные и не может прочитать ваш контент.",
-      "selfHostNote": "<strong>💡 Самостоятельное размещение?</strong> Запустите свой собственный сервер - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">см. GitHub</a>",
+      "selfHostNote": "<strong>💡 Самостоятельное размещение?</strong> Запустите свой собственный сервер - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">см. GitHub</a>",
       "back": "← Назад",
       "registration": {
         "title": "Регистрация новой учётной записи пользователя",

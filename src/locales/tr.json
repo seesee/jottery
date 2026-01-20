@@ -15,8 +15,8 @@
     "settings": "Ayarlar",
     "search": "Ara",
     "error": "Hata",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Geri",
+    "edit": "Düzenle"
   },
   "docs": {
     "title": "Belgeler",
@@ -77,9 +77,9 @@
     "exportToFile": "Dosyaya Aktar",
     "printPdf": "Yazdır / PDF Dışa Aktar",
     "printFailed": "Yazdırma penceresi açılamadı",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Notu çoğalt",
+    "noteDuplicated": "Not çoğaltıldı",
+    "duplicateFailed": "Not çoğaltılamadı",
     "info": "Bilgi",
     "versionHistory": "Sürüm Geçmişi",
     "deleteNote": "Notu Sil",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
       "downloadToView": "Görüntülemek için indirin"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Ekler",
+    "noAttachments": "Henüz ek yok"
   },
   "noteList": {
     "deleteNote": "Notu sil",
@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Gizlilik:</strong> Tüm notlarınız uçtan uca şifrelenir. Sunucu yalnızca şifreli verileri saklar ve içeriğinizi okuyamaz.",
-      "selfHostNote": "<strong>💡 Kendi sunucunuz?</strong> Kendi sunucunuzu çalıştırın - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHub'a bakın</a>",
+      "selfHostNote": "<strong>💡 Kendi sunucunuz?</strong> Kendi sunucunuzu çalıştırın - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">GitHub'a bakın</a>",
       "back": "← Geri",
       "registration": {
         "title": "Yeni kullanıcı hesabı kaydet",

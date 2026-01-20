@@ -15,8 +15,8 @@
     "settings": "Ρυθμίσεις",
     "search": "Αναζήτηση",
     "error": "Σφάλμα",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Πίσω",
+    "edit": "Επεξεργασία"
   },
   "docs": {
     "title": "Τεκμηρίωση",
@@ -77,9 +77,9 @@
     "exportToFile": "Εξαγωγή σε αρχείο",
     "printPdf": "Εκτύπωση / Εξαγωγή PDF",
     "printFailed": "Αδυναμία ανοίγματος παραθύρου εκτύπωσης",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Αντιγραφή σημείωσης",
+    "noteDuplicated": "Η σημείωση αντιγράφηκε",
+    "duplicateFailed": "Αποτυχία αντιγραφής",
     "info": "Πληροφορίες",
     "versionHistory": "Ιστορικό εκδόσεων",
     "deleteNote": "Διαγραφή σημείωσης",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Η προεπισκόπηση δεν είναι διαθέσιμη για αυτόν τον τύπο αρχείου.",
       "downloadToView": "Κάντε λήψη για προβολή"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Συνημμένα",
+    "noAttachments": "Δεν υπάρχουν συνημμένα"
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",
@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Ιδιωτικότητα:</strong> Όλες οι σημειώσεις σας είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής αποθηκεύει μόνο κρυπτογραφημένα δεδομένα και δεν μπορεί να διαβάσει το περιεχόμενό σας.",
-      "selfHostNote": "<strong>💡 Αυτο-φιλοξένηση;</strong> Εκτελέστε τον δικό σας διακομιστή - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">δείτε το GitHub</a>",
+      "selfHostNote": "<strong>💡 Αυτο-φιλοξένηση;</strong> Εκτελέστε τον δικό σας διακομιστή - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">δείτε το GitHub</a>",
       "back": "← Πίσω",
       "registration": {
         "title": "Εγγραφή νέου λογαριασμού χρήστη",

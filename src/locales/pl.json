@@ -15,8 +15,8 @@
     "settings": "Ustawienia",
     "search": "Szukaj",
     "error": "Błąd",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Wstecz",
+    "edit": "Edytuj"
   },
   "docs": {
     "title": "Dokumentacja",
@@ -77,9 +77,9 @@
     "exportToFile": "Eksportuj do pliku",
     "printPdf": "Drukuj / Eksportuj PDF",
     "printFailed": "Nie można otworzyć okna drukowania",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Duplikuj notatkę",
+    "noteDuplicated": "Notatka zduplikowana",
+    "duplicateFailed": "Nie udało się zduplikować",
     "info": "Informacje",
     "versionHistory": "Historia wersji",
     "deleteNote": "Usuń notatkę",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Podgląd niedostępny dla tego typu pliku.",
       "downloadToView": "Pobierz, aby wyświetlić"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Załączniki",
+    "noAttachments": "Brak załączników"
   },
   "noteList": {
     "deleteNote": "Usuń notatkę",
@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Prywatność:</strong> Wszystkie notatki są szyfrowane end-to-end. Serwer przechowuje tylko zaszyfrowane dane i nie może odczytać treści.",
-      "selfHostNote": "<strong>💡 Samodzielny hosting?</strong> Uruchom własny serwer - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">zobacz GitHub</a>",
+      "selfHostNote": "<strong>💡 Samodzielny hosting?</strong> Uruchom własny serwer - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">zobacz GitHub</a>",
       "back": "← Wstecz",
       "registration": {
         "title": "Zarejestruj nowe konto użytkownika",

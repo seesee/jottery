@@ -15,8 +15,8 @@
     "settings": "Impostazioni",
     "search": "Cerca",
     "error": "Errore",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Indietro",
+    "edit": "Modifica"
   },
   "docs": {
     "title": "Documentazione",
@@ -77,9 +77,9 @@
     "exportToFile": "Esporta in file",
     "printPdf": "Stampa / Esporta PDF",
     "printFailed": "Impossibile aprire la finestra di stampa",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Duplica nota",
+    "noteDuplicated": "Nota duplicata",
+    "duplicateFailed": "Duplicazione nota fallita",
     "info": "Info",
     "versionHistory": "Cronologia versioni",
     "deleteNote": "Elimina nota",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Anteprima non disponibile per questo tipo di file.",
       "downloadToView": "Scarica per visualizzare"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Allegati",
+    "noAttachments": "Nessun allegato"
   },
   "noteList": {
     "deleteNote": "Elimina nota",
@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> Tutte le note sono crittografate end-to-end. Il server memorizza solo dati crittografati e non può leggere il contenuto.",
-      "selfHostNote": "<strong>💡 Self-host?</strong> Esegui il tuo server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">vedi GitHub</a>",
+      "selfHostNote": "<strong>💡 Self-host?</strong> Esegui il tuo server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">vedi GitHub</a>",
       "back": "← Indietro",
       "registration": {
         "title": "Registra nuovo account utente",

@@ -98,6 +98,9 @@
         });
         searchService.updateNote(decryptedNote);
         selectNote(decryptedNote.id);
+
+        // Trigger background sync for new note
+        syncService.triggerBackgroundSync();
       }
 
       // Switch to editor view on mobile

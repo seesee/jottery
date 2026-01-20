@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, isSyncRefreshing, selectNote, isContentOnlyUpdate } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository, keyManager, cryptoService } from '../services';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate } from '../stores/appStore';
+  import { noteService, tagService, searchService, attachmentService, syncService, versionRepository, noteRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
@@ -11,6 +11,9 @@
   import { getPreviewHtml } from '../utils/markdownPreview';
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
+  import { resolveAttachmentPreviews } from '../utils/attachmentPreviewResolver';
+  import { copyToClipboard, exportAsFile, printNote } from '../utils/noteExport';
+  import { dropzone } from '../actions';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
 
   export let onBackToList: (() => void) | undefined = undefined;
@@ -113,7 +116,6 @@
   let previousNoteId: string | null = null;
   let isDraggingFile: boolean = false;
   let isAttachmentsExpanded: boolean = false;
-  let dragCounter: number = 0; // Track nested drag events
   let codeEditor: any = null; // Reference to CodeEditor component
   let showInfoModal: boolean = false;
   let showVersionHistory: boolean = false;
@@ -382,28 +384,8 @@
   /**
    * Trigger background sync without blocking UI
    */
-  async function triggerBackgroundSync() {
-    // Skip if sync is disabled in settings
-    if (!$settings.syncEnabled) {
-      return;
-    }
-    // Skip if sync is currently refreshing notes (prevents infinite loop)
-    if ($isSyncRefreshing) {
-      return;
-    }
-    try {
-      const metadata = await syncRepository.getMetadata();
-      if (metadata?.apiKey) {
-        // Don't await - let it run in background
-        syncService.syncNow().then(result => {
-          if (!result.success && result.error !== 'Sync already in progress') {
-            console.warn('[EditorPane] Background sync failed:', result.error);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('[EditorPane] Failed to check sync status:', error);
-    }
+  function triggerBackgroundSync() {
+    syncService.triggerBackgroundSync();
   }
 
   /**
@@ -662,251 +644,33 @@
   }
 
   async function handleCopy() {
-    if (!content) return;
-
-    try {
-      await navigator.clipboard.writeText(content);
-      // Could show a toast notification here
-    } catch (error) {
-      console.error('Failed to copy note:', error);
-      // Fallback for older browsers
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = content;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      } catch (fallbackError) {
-        console.error('Failed to copy note (fallback):', fallbackError);
-      }
-    }
+    await copyToClipboard(content);
   }
 
   function handleExport() {
-    if (!content || !$selectedNote) return;
+    if (!$selectedNote) return;
 
-    // Map syntax language to file extension
-    const extensionMap: Record<string, string> = {
-      'plain': 'txt',
-      'javascript': 'js',
-      'python': 'py',
-      'markdown': 'md',
-      'json': 'json',
-      'html': 'html',
-      'css': 'css',
-      'sql': 'sql',
-      'bash': 'sh',
-      'perl': 'pl',
-    };
-
-    const extension = extensionMap[language] || 'txt';
-
-    // Generate filename from first line or date
-    const firstLine = content.split('\n')[0].trim();
-    const sanitizedFirstLine = firstLine
-      .substring(0, 50) // Max 50 chars
-      .replace(/[^a-z0-9_\-\.]/gi, '_') // Replace invalid chars
-      .replace(/_{2,}/g, '_') // Replace multiple underscores
-      .replace(/^_|_$/g, ''); // Trim underscores
-
-    const filename = sanitizedFirstLine ||
-      new Date($selectedNote?.createdAt || new Date()).toISOString().split('T')[0];
-
-    // Create blob and download
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.${extension}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
+    exportAsFile({
+      content,
+      language,
+      createdAt: $selectedNote.createdAt,
+    });
   }
 
   async function handlePrintPdf() {
-    if (!content || !$selectedNote) return;
+    if (!$selectedNote) return;
 
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) {
+    const success = await printNote({
+      content,
+      language,
+      createdAt: $selectedNote.createdAt,
+      previewHtml,
+      attachments,
+    });
+
+    if (!success) {
       toast.error($_('editor.printFailed'));
-      return;
     }
-
-    // Generate title from first line or date
-    const firstLine = content.split('\n')[0].trim();
-    const title = firstLine.substring(0, 100) ||
-      new Date($selectedNote?.createdAt || new Date()).toISOString().split('T')[0];
-
-    // Build the HTML content based on language type
-    let htmlContent: string;
-
-    if (language === 'markdown') {
-      // Use rendered markdown preview
-      htmlContent = previewHtml;
-    } else if (language === 'html' || language === 'xml') {
-      // Use raw HTML/XML content directly
-      htmlContent = content;
-    } else {
-      // For code/plain text, wrap in a pre/code block with styling
-      const escapedContent = content
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      htmlContent = `<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 12px; line-height: 1.5; padding: 1em; background: #f5f5f5; border-radius: 4px;"><code>${escapedContent}</code></pre>`;
-    }
-
-    // For markdown, we need to resolve attachment images to data URLs
-    if (language === 'markdown' && attachments.length > 0) {
-      // Parse the HTML to find and replace attachment images
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
-
-      // Helper to convert blob to data URL
-      const blobToDataUrl = (blob: Blob): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      };
-
-      // Process images with attachment IDs
-      const imagesById = doc.querySelectorAll('img[data-attachment-id]');
-      for (const img of imagesById) {
-        const attachmentId = img.getAttribute('data-attachment-id');
-        if (!attachmentId) continue;
-
-        try {
-          const attachment = attachments.find(a => a.data === attachmentId);
-          if (attachment) {
-            const blob = await attachmentService.getAttachmentData(attachment);
-            const dataUrl = await blobToDataUrl(blob);
-            img.setAttribute('src', dataUrl);
-          }
-        } catch (error) {
-          console.error(`Failed to load attachment ${attachmentId} for print:`, error);
-        }
-      }
-
-      // Process images with filenames
-      const imagesByFilename = doc.querySelectorAll('img[data-attachment-filename]');
-      for (const img of imagesByFilename) {
-        const filename = img.getAttribute('data-attachment-filename');
-        if (!filename) continue;
-
-        try {
-          // Find attachment by decrypted filename
-          let foundAttachment = null;
-          for (const attachment of attachments) {
-            try {
-              const encryptedFilename = JSON.parse(attachment.filename);
-              const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-              if (decryptedFilename === filename) {
-                foundAttachment = attachment;
-                break;
-              }
-            } catch (err) {
-              // Skip attachments with decryption errors
-            }
-          }
-
-          if (foundAttachment) {
-            const blob = await attachmentService.getAttachmentData(foundAttachment);
-            const dataUrl = await blobToDataUrl(blob);
-            img.setAttribute('src', dataUrl);
-          }
-        } catch (error) {
-          console.error(`Failed to load attachment by filename ${filename} for print:`, error);
-        }
-      }
-
-      // Get the updated HTML
-      htmlContent = doc.body.innerHTML;
-    }
-
-    // Create a print-friendly document
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error($_('editor.printFailed'));
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${title}</title>
-          <style>
-            @media print {
-              body { margin: 0; padding: 20px; }
-            }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            pre {
-              white-space: pre-wrap;
-              word-wrap: break-word;
-              overflow-wrap: break-word;
-            }
-            code {
-              font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-            }
-            img {
-              max-width: 100%;
-              height: auto;
-            }
-            h1, h2, h3, h4, h5, h6 {
-              margin-top: 1.5em;
-              margin-bottom: 0.5em;
-            }
-            p {
-              margin: 1em 0;
-            }
-            a {
-              color: #0066cc;
-            }
-            blockquote {
-              border-left: 4px solid #ddd;
-              padding-left: 1em;
-              margin-left: 0;
-              color: #666;
-            }
-            table {
-              border-collapse: collapse;
-              width: 100%;
-            }
-            th, td {
-              border: 1px solid #ddd;
-              padding: 8px;
-              text-align: left;
-            }
-            th {
-              background-color: #f5f5f5;
-            }
-          </style>
-        </head>
-        <body>
-          ${htmlContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-
-    // Wait for content to load, then print
-    printWindow.onload = () => {
-      printWindow.print();
-    };
   }
 
   async function handleDuplicate() {
@@ -994,40 +758,9 @@
     }
   }
 
-  // Handle drag and drop for files
-  function handleEditorDragEnter(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter++;
-    if (e.dataTransfer?.types.includes('Files')) {
-      isDraggingFile = true;
-    }
-  }
-
-  function handleEditorDragLeave(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter--;
-    if (dragCounter === 0) {
-      isDraggingFile = false;
-    }
-  }
-
-  function handleEditorDragOver(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function handleEditorDrop(e: DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter = 0;
-    isDraggingFile = false;
-
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      handleFileUpload(files);
-    }
+  // Handle drag state change for file drop zone
+  function handleDragStateChange(isDragging: boolean) {
+    isDraggingFile = isDragging;
   }
 
   function toggleAttachments() {
@@ -1105,213 +838,25 @@
   afterUpdate(async () => {
     if (!showPreview) return;
 
-    // Find all attachment images and download links
+    // Find the preview container
     const previewContainer = document.querySelector('.prose');
     if (!previewContainer) return;
 
-    const masterKey = keyManager.getMasterKey();
-    if (!masterKey) return;
-
-    // Process images with attachment IDs (already resolved)
-    const imagesById = previewContainer.querySelectorAll('img[data-attachment-id]');
-    for (const img of imagesById) {
-      const attachmentId = img.getAttribute('data-attachment-id');
-      if (!attachmentId) continue;
-
-      // Skip if already loaded
-      if (img.getAttribute('data-loaded') === 'true') continue;
-
-      try {
-        // Find the attachment object to get decrypted data
-        const attachment = attachments.find(a => a.data === attachmentId);
-        if (attachment) {
-          // Load and decrypt the blob using attachmentService
-          const blob = await attachmentService.getAttachmentData(attachment);
-          const blobUrl = URL.createObjectURL(blob);
-          img.setAttribute('src', blobUrl);
-          img.setAttribute('data-loaded', 'true');
-
-          // Track blob URL for cleanup
-          blobUrls.add(blobUrl);
-        } else {
-          console.error(`Failed to find attachment with data: ${attachmentId}`);
-          img.setAttribute('alt', '[Attachment not found]');
-          img.setAttribute('data-loaded', 'true');
-        }
-      } catch (error) {
-        console.error(`Failed to load attachment ${attachmentId}:`, error);
-        img.setAttribute('alt', '[Failed to load image]');
-        img.setAttribute('data-loaded', 'true'); // Mark as processed even on error
-      }
-    }
-
-    // Process images with filenames (need to resolve)
-    const imagesByFilename = previewContainer.querySelectorAll('img[data-attachment-filename]');
-    for (const img of imagesByFilename) {
-      const filename = img.getAttribute('data-attachment-filename');
-      if (!filename) continue;
-
-      // Skip if already loaded
-      if (img.getAttribute('data-loaded') === 'true') continue;
-
-      try {
-        // Find attachment by decrypted filename
-        let foundAttachment = null;
-
-        for (const attachment of attachments) {
-          try {
-            const encryptedFilename = JSON.parse(attachment.filename);
-            const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-
-            if (decryptedFilename === filename) {
-              foundAttachment = attachment;
-              break;
-            }
-          } catch (err) {
-            console.error('Failed to decrypt filename for attachment:', attachment.id, err);
-          }
-        }
-
-        if (foundAttachment) {
-          // Load and decrypt the blob using attachmentService
-          const blob = await attachmentService.getAttachmentData(foundAttachment);
-          const blobUrl = URL.createObjectURL(blob);
-          img.setAttribute('src', blobUrl);
-          img.setAttribute('data-loaded', 'true');
-
-          // Track blob URL for cleanup
-          blobUrls.add(blobUrl);
-        } else {
-          console.error(`[Preview] No attachment found with filename: ${filename}`);
-          img.setAttribute('alt', `[Attachment not found: ${filename}]`);
-          img.setAttribute('data-loaded', 'true');
-        }
-      } catch (error) {
-        console.error(`Failed to load attachment by filename ${filename}:`, error);
-        img.setAttribute('alt', '[Failed to load image]');
-        img.setAttribute('data-loaded', 'true');
-      }
-    }
-
-    // Process download links
-    const downloads = previewContainer.querySelectorAll('.attachment-download[data-attachment-id]');
-    for (const div of downloads) {
-      const attachmentId = div.getAttribute('data-attachment-id');
-      if (!attachmentId) continue;
-
-      // Skip if already processed
-      if (div.classList.contains('clickable')) continue;
-
-      const htmlDiv = div as HTMLElement;
-      htmlDiv.classList.add('clickable');
-      htmlDiv.style.cursor = 'pointer';
-
-      div.addEventListener('click', async () => {
-        try {
-          const attachment = attachments.find(a => a.id === attachmentId);
-          if (attachment) {
-            // Open preview instead of downloading
-            await handlePreviewAttachment(attachment);
-          }
-        } catch (error) {
-          console.error(`Failed to preview attachment ${attachmentId}:`, error);
-        }
-      });
-    }
-
-    // Process download links by filename (need to resolve by decrypting filenames)
-    const downloadsByFilename = previewContainer.querySelectorAll('.attachment-download[data-attachment-filename]');
-    for (const div of downloadsByFilename) {
-      const filename = div.getAttribute('data-attachment-filename');
-      if (!filename) continue;
-
-      // Skip if already loaded
-      if (div.getAttribute('data-loaded') === 'true') continue;
-
-      try {
-        // Find attachment by decrypted filename
-        let foundAttachment = null;
-
-        for (const attachment of attachments) {
-          try {
-            const encryptedFilename = JSON.parse(attachment.filename);
-            const decryptedFilename = await cryptoService.decryptText(encryptedFilename, masterKey.key);
-
-            if (decryptedFilename === filename) {
-              foundAttachment = attachment;
-              break;
-            }
-          } catch (err) {
-            console.error('Failed to decrypt filename for attachment:', attachment.id, err);
-          }
-        }
-
-        if (foundAttachment) {
-          // Update the div with the attachment ID and mark as loaded
-          div.setAttribute('data-attachment-id', foundAttachment.id);
-          div.setAttribute('data-attachment-data', foundAttachment.data);
-          div.setAttribute('data-loaded', 'true');
-          div.removeAttribute('data-attachment-filename');
-
-          // Skip if already has click handler
-          if (div.classList.contains('clickable')) continue;
-
-          div.classList.add('clickable');
-
-          div.addEventListener('click', async () => {
-            try {
-              await handlePreviewAttachment(foundAttachment);
-            } catch (error) {
-              console.error(`Failed to preview attachment ${foundAttachment.id}:`, error);
-            }
-          });
-        } else {
-          // Attachment not found - show error message
-          console.error(`No attachment found with filename: ${filename}`);
-          div.setAttribute('data-loaded', 'true');
-          div.removeAttribute('data-attachment-filename');
-
-          // Update content to show error
-          div.innerHTML = `
-            <span class="text-2xl mr-2">⚠️</span>
-            <div class="flex-1">
-              <span class="font-medium text-red-700 dark:text-red-400">Attachment not found</span>
-              <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
-            </div>
-          `;
-
-          // Update styling to show error state
-          div.classList.remove('bg-gray-50', 'dark:bg-gray-800', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'cursor-pointer', 'border-gray-300', 'dark:border-gray-600');
-          div.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-300', 'dark:border-red-700', 'cursor-not-allowed');
-        }
-      } catch (error) {
-        console.error(`Failed to resolve attachment by filename ${filename}:`, error);
-        div.setAttribute('data-loaded', 'true');
-        div.removeAttribute('data-attachment-filename');
-
-        // Show error state for resolution failure
-        div.innerHTML = `
-          <span class="text-2xl mr-2">⚠️</span>
-          <div class="flex-1">
-            <span class="font-medium text-red-700 dark:text-red-400">${$_('editor.errors.loadingAttachment')}</span>
-            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">${filename}</span>
-          </div>
-        `;
-
-        div.classList.remove('bg-gray-50', 'dark:bg-gray-800', 'hover:bg-gray-100', 'dark:hover:bg-gray-700', 'cursor-pointer', 'border-gray-300', 'dark:border-gray-600');
-        div.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-300', 'dark:border-red-700', 'cursor-not-allowed');
-      }
-    }
+    // Resolve all attachment references using the extracted utility
+    await resolveAttachmentPreviews({
+      container: previewContainer,
+      attachments,
+      blobUrls,
+      onPreviewAttachment: handlePreviewAttachment,
+      getErrorMessage: () => $_('editor.errors.loadingAttachment'),
+    });
   });
 </script>
 
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
-    on:dragenter={handleEditorDragEnter}
-    on:dragleave={handleEditorDragLeave}
-    on:dragover={handleEditorDragOver}
-    on:drop={handleEditorDrop}
+    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
     role="region"
     aria-label="Note editor"
   >
