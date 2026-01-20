@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server only stores encrypted data and cannot read your content.",
-      "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>",
+      "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>",
       "back": "← Back",
       "registration": {
         "title": "Register new user account",

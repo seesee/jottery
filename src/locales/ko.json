@@ -251,7 +251,7 @@
         "connecting": "연결 중..."
       },
       "privacyNote": "<strong>🔒 개인정보:</strong> 모든 노트는 종단간 암호화됩니다. 서버는 암호화된 데이터만 저장하며 내용을 읽을 수 없습니다.",
-      "selfHostNote": "<strong>💡 자체 호스팅?</strong> 자신의 서버를 실행하세요 - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHub 보기</a>",
+      "selfHostNote": "<strong>💡 자체 호스팅?</strong> 자신의 서버를 실행하세요 - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">GitHub 보기</a>",
       "back": "← 뒤로",
       "registration": {
         "title": "새 사용자 계정 등록",

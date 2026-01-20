@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Ιδιωτικότητα:</strong> Όλες οι σημειώσεις σας είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής αποθηκεύει μόνο κρυπτογραφημένα δεδομένα και δεν μπορεί να διαβάσει το περιεχόμενό σας.",
-      "selfHostNote": "<strong>💡 Αυτο-φιλοξένηση;</strong> Εκτελέστε τον δικό σας διακομιστή - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">δείτε το GitHub</a>",
+      "selfHostNote": "<strong>💡 Αυτο-φιλοξένηση;</strong> Εκτελέστε τον δικό σας διακομιστή - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">δείτε το GitHub</a>",
       "back": "← Πίσω",
       "registration": {
         "title": "Εγγραφή νέου λογαριασμού χρήστη",

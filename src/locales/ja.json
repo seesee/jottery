@@ -251,7 +251,7 @@
         "connecting": "接続中..."
       },
       "privacyNote": "<strong>🔒 プライバシー:</strong> すべてのノートはエンドツーエンドで暗号化されています。サーバーには暗号化されたデータのみが保存され、内容を読み取ることはできません。",
-      "selfHostNote": "<strong>💡 セルフホスト?</strong> 独自のサーバーを運用できます - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHubを参照</a>",
+      "selfHostNote": "<strong>💡 セルフホスト?</strong> 独自のサーバーを運用できます - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">GitHubを参照</a>",
       "back": "← 戻る",
       "registration": {
         "title": "新規ユーザーアカウントを登録",

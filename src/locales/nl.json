@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> Al uw notities zijn end-to-end versleuteld. De server slaat alleen versleutelde gegevens op en kan uw inhoud niet lezen.",
-      "selfHostNote": "<strong>💡 Zelf hosten?</strong> Draai uw eigen server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">zie GitHub</a>",
+      "selfHostNote": "<strong>💡 Zelf hosten?</strong> Draai uw eigen server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">zie GitHub</a>",
       "back": "← Terug",
       "registration": {
         "title": "Nieuw gebruikersaccount registreren",

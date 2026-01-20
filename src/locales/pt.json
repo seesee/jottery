@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Privacidade:</strong> Todas as suas notas são criptografadas ponta a ponta. O servidor armazena apenas dados criptografados e não pode ler seu conteúdo.",
-      "selfHostNote": "<strong>💡 Auto-hospedar?</strong> Execute seu próprio servidor - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">veja no GitHub</a>",
+      "selfHostNote": "<strong>💡 Auto-hospedar?</strong> Execute seu próprio servidor - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">veja no GitHub</a>",
       "back": "← Voltar",
       "registration": {
         "title": "Registrar nova conta de usuário",

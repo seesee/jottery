@@ -251,7 +251,7 @@
         "connecting": "连接中..."
       },
       "privacyNote": "<strong>🔒 隐私:</strong> 您的所有笔记都经过端到端加密。服务器只存储加密数据,无法读取您的内容。",
-      "selfHostNote": "<strong>💡 自托管?</strong> 运行您自己的服务器 - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">查看 GitHub</a>",
+      "selfHostNote": "<strong>💡 自托管?</strong> 运行您自己的服务器 - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">查看 GitHub</a>",
       "back": "← 返回",
       "registration": {
         "title": "注册新用户账户",

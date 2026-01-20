@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> Tutte le note sono crittografate end-to-end. Il server memorizza solo dati crittografati e non può leggere il contenuto.",
-      "selfHostNote": "<strong>💡 Self-host?</strong> Esegui il tuo server - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">vedi GitHub</a>",
+      "selfHostNote": "<strong>💡 Self-host?</strong> Esegui il tuo server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">vedi GitHub</a>",
       "back": "← Indietro",
       "registration": {
         "title": "Registra nuovo account utente",

@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Конфиденциальность:</strong> Все ваши заметки шифруются сквозным шифрованием. Сервер хранит только зашифрованные данные и не может прочитать ваш контент.",
-      "selfHostNote": "<strong>💡 Самостоятельное размещение?</strong> Запустите свой собственный сервер - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">см. GitHub</a>",
+      "selfHostNote": "<strong>💡 Самостоятельное размещение?</strong> Запустите свой собственный сервер - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">см. GitHub</a>",
       "back": "← Назад",
       "registration": {
         "title": "Регистрация новой учётной записи пользователя",

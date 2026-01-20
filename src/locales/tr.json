@@ -251,7 +251,7 @@
         "connecting": "Connecting..."
       },
       "privacyNote": "<strong>🔒 Gizlilik:</strong> Tüm notlarınız uçtan uca şifrelenir. Sunucu yalnızca şifreli verileri saklar ve içeriğinizi okuyamaz.",
-      "selfHostNote": "<strong>💡 Kendi sunucunuz?</strong> Kendi sunucunuzu çalıştırın - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHub'a bakın</a>",
+      "selfHostNote": "<strong>💡 Kendi sunucunuz?</strong> Kendi sunucunuzu çalıştırın - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">GitHub'a bakın</a>",
       "back": "← Geri",
       "registration": {
         "title": "Yeni kullanıcı hesabı kaydet",
