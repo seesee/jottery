@@ -15,8 +15,8 @@
     "settings": "설정",
     "search": "검색",
     "error": "오류",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "뒤로",
+    "edit": "편집"
   },
   "docs": {
     "title": "문서",
@@ -77,9 +77,9 @@
     "exportToFile": "파일로 내보내기",
     "printPdf": "인쇄 / PDF 내보내기",
     "printFailed": "인쇄 창을 열 수 없습니다",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "노트 복제",
+    "noteDuplicated": "노트가 복제되었습니다",
+    "duplicateFailed": "노트 복제 실패",
     "info": "정보",
     "versionHistory": "버전 기록",
     "deleteNote": "노트 삭제",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "이 파일 형식은 미리보기가 불가능합니다.",
       "downloadToView": "다운로드하여 보기"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "첨부파일",
+    "noAttachments": "첨부파일이 없습니다"
   },
   "noteList": {
     "deleteNote": "노트 삭제",
@@ -237,18 +237,18 @@
         "button": "🚀 새 계정 등록"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "기존 계정에 연결",
+        "subtitle": "<strong>이미 계정이 있으신가요?</strong> 이 기기를 연결하세요",
+        "benefit1": "✓ 기존 이메일/비밀번호 사용",
+        "benefit2": "✓ 이 기기를 계정에 추가",
+        "benefit3": "✓ 서버에서 이 기기로 노트 동기화",
+        "button": "🔗 기존 계정에 연결",
+        "formTitle": "기존 계정에 연결",
+        "infoText": "동기화 서버 자격 증명을 입력하세요. 연결 후 기존 노트가 이 기기에 동기화됩니다.",
+        "emailLabel": "이메일 주소",
+        "passwordLabel": "서버 비밀번호",
+        "connectButton": "기기 연결",
+        "connecting": "연결 중..."
       },
       "privacyNote": "<strong>🔒 개인정보:</strong> 모든 노트는 종단간 암호화됩니다. 서버는 암호화된 데이터만 저장하며 내용을 읽을 수 없습니다.",
       "selfHostNote": "<strong>💡 자체 호스팅?</strong> 자신의 서버를 실행하세요 - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHub 보기</a>",
@@ -272,7 +272,7 @@
         "successText": "기기가 등록되었으며 <strong>모든 기존 노트가 서버에 동기화되었습니다</strong>. 향후 변경 사항은 자동으로 동기화됩니다.",
         "successNextSteps": "📋 다른 기기를 추가하려면: 아래의 \"동기화 자격 증명 내보내기\"를 클릭하여 다른 기기에 가져오세요.",
         "done": "완료",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "사용자 포털에서 승인 상태 확인 →"
       },
       "linkAccount": {
         "title": "계정 연결 (선택 사항)",
@@ -357,18 +357,18 @@
       "syncDisabledDetails": "비활성화되면 Jottery는 동기화 서버에 네트워크 요청을 하지 않습니다. 모든 노트는 이 기기에 완전히 로컬로 유지됩니다.",
       "toEnableSync": "동기화를 활성화하려면: 위의 스위치를 전환하고 동기화 서버를 구성하세요.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "기존 계정에 연결",
+        "subtitle": "<strong>이미 계정이 있으신가요?</strong> 이 기기를 연결하세요",
+        "benefit1": "✓ 기존 이메일/비밀번호 사용",
+        "benefit2": "✓ 이 기기를 계정에 추가",
+        "benefit3": "✓ 서버에서 이 기기로 노트 동기화",
+        "button": "🔗 기존 계정에 연결",
+        "formTitle": "기존 계정에 연결",
+        "infoText": "동기화 서버 자격 증명을 입력하세요. 연결 후 기존 노트가 이 기기에 동기화됩니다.",
+        "emailLabel": "이메일 주소",
+        "passwordLabel": "서버 비밀번호",
+        "connectButton": "기기 연결",
+        "connecting": "연결 중..."
       },
       "privacyNote": "개인정보: 활성화되어도 모든 노트는 종단간 암호화됩니다. 동기화 서버는 내용을 읽을 수 없습니다.",
       "syncEnabled": "동기화 활성화됨",
@@ -686,8 +686,8 @@
     "message": "다시 로드하여 최신 기능 및 개선 사항 받기",
     "reloadButton": "지금 다시 로드",
     "dismissLabel": "무시",
-    "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backupButton": "먼저 백업",
+    "backingUp": "백업 중..."
   },
   "bulk": {
     "toggleSelect": "선택 전환",
@@ -711,25 +711,25 @@
     "deselectAll": "전체 선택 해제"
   },
   "conflict": {
-    "title": "Sync Conflict Detected",
-    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
-    "yourVersion": "Your version",
-    "serverVersion": "Server version",
-    "chooseAction": "Choose how to resolve this conflict:",
-    "keepMine": "Keep mine",
-    "keepServer": "Keep server",
-    "keepBoth": "Keep both",
-    "merge": "Merge",
-    "resolved": "Conflict resolved",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
-    "indicator": "Sync conflict"
+    "title": "동기화 충돌 감지됨",
+    "description": "이 노트가 로컬과 서버에서 모두 수정되었습니다. 충돌을 해결할 방법을 선택하세요.",
+    "yourVersion": "내 버전",
+    "serverVersion": "서버 버전",
+    "chooseAction": "이 충돌을 해결할 방법을 선택하세요:",
+    "keepMine": "내 것 유지",
+    "keepServer": "서버 것 유지",
+    "keepBoth": "둘 다 유지",
+    "merge": "병합",
+    "resolved": "충돌 해결됨",
+    "resolvedBoth": "충돌 해결됨 - 복제 노트 생성됨",
+    "noConflict": "충돌 데이터를 찾을 수 없습니다",
+    "indicator": "동기화 충돌"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "pull": "아래로 당겨서 동기화",
+    "release": "놓아서 동기화",
+    "syncing": "동기화 중...",
+    "region": "당겨서 새로고침"
   },
   "sync": {
     "syncing": "동기화 중..."

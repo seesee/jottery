@@ -15,8 +15,8 @@
     "settings": "Instellingen",
     "search": "Zoeken",
     "error": "Fout",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Terug",
+    "edit": "Bewerken"
   },
   "docs": {
     "title": "Documentatie",
@@ -77,9 +77,9 @@
     "exportToFile": "Exporteren naar bestand",
     "printPdf": "Afdrukken / PDF exporteren",
     "printFailed": "Kon afdrukvenster niet openen",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Notitie dupliceren",
+    "noteDuplicated": "Notitie gedupliceerd",
+    "duplicateFailed": "Dupliceren mislukt",
     "info": "Info",
     "versionHistory": "Versiegeschiedenis",
     "deleteNote": "Notitie verwijderen",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Voorvertoning niet beschikbaar voor dit bestandstype.",
       "downloadToView": "Download om te bekijken"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Bijlagen",
+    "noAttachments": "Geen bijlagen"
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",

@@ -15,8 +15,8 @@
     "settings": "設定",
     "search": "検索",
     "error": "エラー",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "戻る",
+    "edit": "編集"
   },
   "docs": {
     "title": "ドキュメント",
@@ -77,9 +77,9 @@
     "exportToFile": "ファイルにエクスポート",
     "printPdf": "印刷 / PDF出力",
     "printFailed": "印刷ウィンドウを開けませんでした",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "ノートを複製",
+    "noteDuplicated": "ノートを複製しました",
+    "duplicateFailed": "ノートの複製に失敗しました",
     "info": "情報",
     "versionHistory": "バージョン履歴",
     "deleteNote": "ノートを削除",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "このファイルタイプのプレビューは利用できません。",
       "downloadToView": "表示するにはダウンロードしてください"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "添付ファイル",
+    "noAttachments": "添付ファイルはまだありません"
   },
   "noteList": {
     "deleteNote": "ノートを削除",
@@ -237,18 +237,18 @@
         "button": "🚀 新規アカウントを登録"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "既存のアカウントに接続",
+        "subtitle": "<strong>すでにアカウントをお持ちですか?</strong> このデバイスを接続",
+        "benefit1": "✓ 既存のメール/パスワードを使用",
+        "benefit2": "✓ このデバイスをアカウントに追加",
+        "benefit3": "✓ サーバーからノートを同期",
+        "button": "🔗 既存のアカウントに接続",
+        "formTitle": "既存のアカウントに接続",
+        "infoText": "同期サーバーの認証情報を入力してください。接続後、既存のノートがこのデバイスに同期されます。",
+        "emailLabel": "メールアドレス",
+        "passwordLabel": "サーバーパスワード",
+        "connectButton": "デバイスを接続",
+        "connecting": "接続中..."
       },
       "privacyNote": "<strong>🔒 プライバシー:</strong> すべてのノートはエンドツーエンドで暗号化されています。サーバーには暗号化されたデータのみが保存され、内容を読み取ることはできません。",
       "selfHostNote": "<strong>💡 セルフホスト?</strong> 独自のサーバーを運用できます - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">GitHubを参照</a>",
@@ -272,7 +272,7 @@
         "successText": "デバイスが登録され、<strong>既存のすべてのノートがサーバーに同期されました</strong>。今後の変更は自動的に同期されます。",
         "successNextSteps": "📋 別のデバイスを追加するには: 以下の「同期認証情報をエクスポート」をクリックして、他のデバイスにインポートしてください。",
         "done": "完了",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "ユーザーポータルで承認状況を確認 →"
       },
       "linkAccount": {
         "title": "アカウントをリンク(オプション)",
@@ -357,18 +357,18 @@
       "syncDisabledDetails": "無効の場合、Jotteryは同期サーバーへのネットワークリクエストを一切行いません。すべてのノートは完全にこのデバイスにローカル保存されます。",
       "toEnableSync": "同期を有効にするには: 上記のスイッチを切り替えて、同期サーバーを設定してください。",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "既存のアカウントに接続",
+        "subtitle": "<strong>すでにアカウントをお持ちですか?</strong> このデバイスを接続",
+        "benefit1": "✓ 既存のメール/パスワードを使用",
+        "benefit2": "✓ このデバイスをアカウントに追加",
+        "benefit3": "✓ サーバーからノートを同期",
+        "button": "🔗 既存のアカウントに接続",
+        "formTitle": "既存のアカウントに接続",
+        "infoText": "同期サーバーの認証情報を入力してください。接続後、既存のノートがこのデバイスに同期されます。",
+        "emailLabel": "メールアドレス",
+        "passwordLabel": "サーバーパスワード",
+        "connectButton": "デバイスを接続",
+        "connecting": "接続中..."
       },
       "privacyNote": "プライバシー: 有効にしても、すべてのノートはエンドツーエンドで暗号化されています。同期サーバーは内容を読み取ることができません。",
       "syncEnabled": "同期が有効",
@@ -686,8 +686,8 @@
     "message": "リロードして最新の機能と改善を入手してください",
     "reloadButton": "今すぐリロード",
     "dismissLabel": "閉じる",
-    "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backupButton": "先にバックアップ",
+    "backingUp": "バックアップ中..."
   },
   "bulk": {
     "toggleSelect": "選択を切り替え",
@@ -711,25 +711,25 @@
     "deselectAll": "すべて選択解除"
   },
   "conflict": {
-    "title": "Sync Conflict Detected",
-    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
-    "yourVersion": "Your version",
-    "serverVersion": "Server version",
-    "chooseAction": "Choose how to resolve this conflict:",
-    "keepMine": "Keep mine",
-    "keepServer": "Keep server",
-    "keepBoth": "Keep both",
-    "merge": "Merge",
-    "resolved": "Conflict resolved",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
-    "indicator": "Sync conflict"
+    "title": "同期の競合を検出",
+    "description": "このノートはローカルとサーバーの両方で変更されました。競合の解決方法を選択してください。",
+    "yourVersion": "あなたのバージョン",
+    "serverVersion": "サーバーのバージョン",
+    "chooseAction": "この競合の解決方法を選択:",
+    "keepMine": "自分のを保持",
+    "keepServer": "サーバーを保持",
+    "keepBoth": "両方を保持",
+    "merge": "マージ",
+    "resolved": "競合が解決しました",
+    "resolvedBoth": "競合が解決しました - 複製ノートが作成されました",
+    "noConflict": "競合データが見つかりません",
+    "indicator": "同期の競合"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "pull": "下に引いて同期",
+    "release": "離して同期",
+    "syncing": "同期中...",
+    "region": "引いて更新"
   },
   "sync": {
     "syncing": "同期中..."

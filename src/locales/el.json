@@ -15,8 +15,8 @@
     "settings": "Ρυθμίσεις",
     "search": "Αναζήτηση",
     "error": "Σφάλμα",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Πίσω",
+    "edit": "Επεξεργασία"
   },
   "docs": {
     "title": "Τεκμηρίωση",
@@ -77,9 +77,9 @@
     "exportToFile": "Εξαγωγή σε αρχείο",
     "printPdf": "Εκτύπωση / Εξαγωγή PDF",
     "printFailed": "Αδυναμία ανοίγματος παραθύρου εκτύπωσης",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Αντιγραφή σημείωσης",
+    "noteDuplicated": "Η σημείωση αντιγράφηκε",
+    "duplicateFailed": "Αποτυχία αντιγραφής",
     "info": "Πληροφορίες",
     "versionHistory": "Ιστορικό εκδόσεων",
     "deleteNote": "Διαγραφή σημείωσης",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Η προεπισκόπηση δεν είναι διαθέσιμη για αυτόν τον τύπο αρχείου.",
       "downloadToView": "Κάντε λήψη για προβολή"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Συνημμένα",
+    "noAttachments": "Δεν υπάρχουν συνημμένα"
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",

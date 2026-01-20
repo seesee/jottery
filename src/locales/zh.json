@@ -15,8 +15,8 @@
     "settings": "设置",
     "search": "搜索",
     "error": "错误",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "返回",
+    "edit": "编辑"
   },
   "docs": {
     "title": "文档",
@@ -77,9 +77,9 @@
     "exportToFile": "导出为文件",
     "printPdf": "打印 / 导出PDF",
     "printFailed": "无法打开打印窗口",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "复制笔记",
+    "noteDuplicated": "笔记已复制",
+    "duplicateFailed": "复制笔记失败",
     "info": "信息",
     "versionHistory": "版本历史",
     "deleteNote": "删除笔记",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "此文件类型无法预览。",
       "downloadToView": "下载以查看"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "附件",
+    "noAttachments": "暂无附件"
   },
   "noteList": {
     "deleteNote": "删除笔记",
@@ -237,18 +237,18 @@
         "button": "🚀 注册新账户"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "连接现有账户",
+        "subtitle": "<strong>已有账户?</strong> 连接此设备",
+        "benefit1": "✓ 使用您现有的电子邮件/密码",
+        "benefit2": "✓ 将此设备添加到您的账户",
+        "benefit3": "✓ 从服务器同步笔记到此设备",
+        "button": "🔗 连接到现有账户",
+        "formTitle": "连接到现有账户",
+        "infoText": "输入您的同步服务器凭据。连接后,您现有的笔记将同步到此设备。",
+        "emailLabel": "电子邮件地址",
+        "passwordLabel": "服务器密码",
+        "connectButton": "连接设备",
+        "connecting": "连接中..."
       },
       "privacyNote": "<strong>🔒 隐私:</strong> 您的所有笔记都经过端到端加密。服务器只存储加密数据,无法读取您的内容。",
       "selfHostNote": "<strong>💡 自托管?</strong> 运行您自己的服务器 - <a href=\"https://github.com/yourusername/jottery\" target=\"_blank\" class=\"underline\">查看 GitHub</a>",
@@ -272,7 +272,7 @@
         "successText": "您的设备现已注册,<strong>所有现有笔记已同步到服务器</strong>。未来的更改将自动同步。",
         "successNextSteps": "📋 添加另一台设备:点击下方的\"导出同步凭据\"并将其导入到您的其他设备。",
         "done": "完成",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "在用户门户查看您的审批状态 →"
       },
       "linkAccount": {
         "title": "关联账户 (可选)",
@@ -357,18 +357,18 @@
       "syncDisabledDetails": "禁用时,Jottery 不会向同步服务器发出任何网络请求。您的所有笔记都完全保留在此设备上。",
       "toEnableSync": "要启用同步:切换上方的开关并配置您的同步服务器。",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "连接现有账户",
+        "subtitle": "<strong>已有账户?</strong> 连接此设备",
+        "benefit1": "✓ 使用您现有的电子邮件/密码",
+        "benefit2": "✓ 将此设备添加到您的账户",
+        "benefit3": "✓ 从服务器同步笔记到此设备",
+        "button": "🔗 连接到现有账户",
+        "formTitle": "连接到现有账户",
+        "infoText": "输入您的同步服务器凭据。连接后,您现有的笔记将同步到此设备。",
+        "emailLabel": "电子邮件地址",
+        "passwordLabel": "服务器密码",
+        "connectButton": "连接设备",
+        "connecting": "连接中..."
       },
       "privacyNote": "隐私:即使启用,所有笔记也是端到端加密的。同步服务器无法读取您的内容。",
       "syncEnabled": "同步已启用",
@@ -686,8 +686,8 @@
     "message": "重新加载以获取最新功能和改进",
     "reloadButton": "立即重新加载",
     "dismissLabel": "忽略",
-    "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backupButton": "先备份",
+    "backingUp": "备份中..."
   },
   "bulk": {
     "toggleSelect": "切换选择",
@@ -711,25 +711,25 @@
     "deselectAll": "取消全选"
   },
   "conflict": {
-    "title": "Sync Conflict Detected",
-    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
-    "yourVersion": "Your version",
-    "serverVersion": "Server version",
-    "chooseAction": "Choose how to resolve this conflict:",
-    "keepMine": "Keep mine",
-    "keepServer": "Keep server",
-    "keepBoth": "Keep both",
-    "merge": "Merge",
-    "resolved": "Conflict resolved",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
-    "indicator": "Sync conflict"
+    "title": "检测到同步冲突",
+    "description": "此笔记在本地和服务器上都被修改过。请选择如何解决冲突。",
+    "yourVersion": "您的版本",
+    "serverVersion": "服务器版本",
+    "chooseAction": "选择如何解决此冲突:",
+    "keepMine": "保留我的",
+    "keepServer": "保留服务器",
+    "keepBoth": "两者都保留",
+    "merge": "合并",
+    "resolved": "冲突已解决",
+    "resolvedBoth": "冲突已解决 - 已创建副本",
+    "noConflict": "未找到冲突数据",
+    "indicator": "同步冲突"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "pull": "下拉同步",
+    "release": "释放同步",
+    "syncing": "同步中...",
+    "region": "下拉刷新"
   },
   "sync": {
     "syncing": "同步中..."

@@ -15,8 +15,8 @@
     "settings": "Paramètres",
     "search": "Rechercher",
     "error": "Erreur",
-    "back": "Back",
-    "edit": "Edit"
+    "back": "Retour",
+    "edit": "Modifier"
   },
   "docs": {
     "title": "Documentation",
@@ -77,9 +77,9 @@
     "exportToFile": "Exporter vers un fichier",
     "printPdf": "Imprimer / Exporter PDF",
     "printFailed": "Impossible d'ouvrir la fenêtre d'impression",
-    "duplicateNote": "Duplicate Note",
-    "noteDuplicated": "Note duplicated",
-    "duplicateFailed": "Failed to duplicate note",
+    "duplicateNote": "Dupliquer la note",
+    "noteDuplicated": "Note dupliquée",
+    "duplicateFailed": "Échec de la duplication",
     "info": "Informations",
     "versionHistory": "Historique des versions",
     "deleteNote": "Supprimer la note",
@@ -111,8 +111,8 @@
       "previewNotAvailable": "Aperçu non disponible pour ce type de fichier.",
       "downloadToView": "Téléchargez pour visualiser"
     },
-    "attachments": "Attachments",
-    "noAttachments": "No attachments yet"
+    "attachments": "Pièces jointes",
+    "noAttachments": "Aucune pièce jointe"
   },
   "noteList": {
     "deleteNote": "Supprimer la note",
