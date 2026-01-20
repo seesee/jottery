@@ -6,7 +6,7 @@
   import { authService } from '../services/authService';
   import { exportCredentials, parseAndStoreImportedCredentials, copyToClipboard } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
-  import { createBackdropHandler } from '../actions';
+  import { modal, createBackdropHandler } from '../actions';
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts, QuickCommandConfig } from '../types';
   import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -1201,7 +1201,13 @@
 
   <!-- Remember Password Warning Modal -->
   {#if showRememberPasswordWarning}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      use:modal={{ onEscape: cancelEnableRememberPassword }}
+    >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-xl font-bold text-orange-600 dark:text-orange-400 mb-4">
           {$_('settings.rememberPasswordModal.title')}
@@ -1259,7 +1265,13 @@
 
   <!-- Persist Session Confirmation Modal -->
   {#if showPersistSessionConfirm}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      use:modal={{ onEscape: cancelEnablePersistSession }}
+    >
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
         <h3 class="text-xl font-bold text-blue-600 dark:text-blue-400 mb-4">
           🔄 {$_('settings.persistSession')}
@@ -1313,19 +1325,16 @@
   {#if showCredentialsModal}
     <div
       class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      on:click={() => showCredentialsModal = false}
-      on:keydown={(e) => e.key === 'Enter' && (showCredentialsModal = false)}
-      role="button"
+      on:click={createBackdropHandler(() => showCredentialsModal = false)}
+      role="dialog"
+      aria-modal="true"
       tabindex="-1"
-      aria-label="Close credentials modal"
+      use:modal={{ onEscape: () => showCredentialsModal = false }}
     >
       <div
         class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
         on:click|stopPropagation
-        on:keydown|stopPropagation
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
+        role="document"
       >
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
