@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, isSyncRefreshing, selectNote, isContentOnlyUpdate } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, syncRepository, versionRepository, noteRepository } from '../services';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate } from '../stores/appStore';
+  import { noteService, tagService, searchService, attachmentService, syncService, versionRepository, noteRepository } from '../services';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment } from '../types';
@@ -384,28 +384,8 @@
   /**
    * Trigger background sync without blocking UI
    */
-  async function triggerBackgroundSync() {
-    // Skip if sync is disabled in settings
-    if (!$settings.syncEnabled) {
-      return;
-    }
-    // Skip if sync is currently refreshing notes (prevents infinite loop)
-    if ($isSyncRefreshing) {
-      return;
-    }
-    try {
-      const metadata = await syncRepository.getMetadata();
-      if (metadata?.apiKey) {
-        // Don't await - let it run in background
-        syncService.syncNow().then(result => {
-          if (!result.success && result.error !== 'Sync already in progress') {
-            console.warn('[EditorPane] Background sync failed:', result.error);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('[EditorPane] Failed to check sync status:', error);
-    }
+  function triggerBackgroundSync() {
+    syncService.triggerBackgroundSync();
   }
 
   /**

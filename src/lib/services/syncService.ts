@@ -224,6 +224,40 @@ class SyncService {
   }
 
   /**
+   * Trigger background sync without blocking
+   * Safe to call from anywhere - checks all preconditions
+   */
+  async triggerBackgroundSync(): Promise<void> {
+    // Skip if sync is disabled in settings
+    let currentSettings: { syncEnabled?: boolean } | undefined;
+    settings.subscribe(s => currentSettings = s)();
+    if (!currentSettings?.syncEnabled) {
+      return;
+    }
+
+    // Skip if sync is currently refreshing notes (prevents infinite loop)
+    let isRefreshing = false;
+    isSyncRefreshing.subscribe(v => isRefreshing = v)();
+    if (isRefreshing) {
+      return;
+    }
+
+    try {
+      const metadata = await syncRepository.getMetadata();
+      if (metadata?.apiKey) {
+        // Don't await - let it run in background
+        this.syncNow().then(result => {
+          if (!result.success && result.error !== 'Sync already in progress') {
+            console.warn('[SyncService] Background sync failed:', result.error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[SyncService] Failed to trigger background sync:', error);
+    }
+  }
+
+  /**
    * Push local changes to server (in batches to avoid memory limits)
    * @returns Number of notes accepted by server
    */
