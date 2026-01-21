@@ -16,6 +16,7 @@
   import { dropzone } from '../actions';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
   import ColorPickerModal from './ColorPickerModal.svelte';
+  import { getColorHex, resolveTheme } from '../services/colorService';
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
@@ -214,6 +215,10 @@
   // Determine if dark mode is active
   $: isDark = $settings.theme === 'dark' ||
     ($settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  // Compute note background color based on theme
+  $: currentTheme = resolveTheme($settings.theme);
+  $: noteBackgroundColor = $selectedNote?.color ? getColorHex($selectedNote.color, currentTheme) : undefined;
 
   // Watch for note selection changes
   $: if ($selectedNote) {
@@ -896,6 +901,7 @@
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
+    style:background-color={noteBackgroundColor}
     use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
     role="region"
     aria-label="Note editor"

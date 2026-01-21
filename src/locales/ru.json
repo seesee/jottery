@@ -160,7 +160,11 @@
       "tagColorsDescription": "Назначить цвета тегам глобально",
       "addTagColor": "Добавить Цвет Тега",
       "removeTagColor": "Удалить",
-      "noColor": "Нет"
+      "noColor": "Нет",
+      "noTagColors": "Цвета тегов еще не назначены",
+      "tagNamePlaceholder": "Название тега...",
+      "selectColor": "Выбрать цвет",
+      "selectTag": "Выбрать тег"
     },
     "theme": "Тема",
     "themeLight": "Светлая",

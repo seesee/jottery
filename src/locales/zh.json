@@ -160,7 +160,11 @@
       "tagColorsDescription": "全局分配标签颜色",
       "addTagColor": "添加标签颜色",
       "removeTagColor": "移除",
-      "noColor": "无"
+      "noColor": "无",
+      "noTagColors": "尚未分配标签颜色",
+      "tagNamePlaceholder": "标签名称...",
+      "selectColor": "选择颜色",
+      "selectTag": "选择一个标签"
     },
     "theme": "主题",
     "themeLight": "浅色",

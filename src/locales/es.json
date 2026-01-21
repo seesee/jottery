@@ -161,7 +161,11 @@
       "tagColorsDescription": "Asignar colores a las etiquetas globalmente",
       "addTagColor": "Añadir Color de Etiqueta",
       "removeTagColor": "Quitar",
-      "noColor": "Ninguno"
+      "noColor": "Ninguno",
+      "noTagColors": "Aún no se han asignado colores de etiquetas",
+      "tagNamePlaceholder": "Nombre de etiqueta...",
+      "selectColor": "Seleccionar color",
+      "selectTag": "Seleccionar una etiqueta"
     },
     "theme": "Tema",
     "themeLight": "Claro",

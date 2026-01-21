@@ -160,7 +160,11 @@
       "tagColorsDescription": "Przypisz kolory do tagów globalnie",
       "addTagColor": "Dodaj Kolor Tagu",
       "removeTagColor": "Usuń",
-      "noColor": "Brak"
+      "noColor": "Brak",
+      "noTagColors": "Nie przypisano jeszcze kolorów tagów",
+      "tagNamePlaceholder": "Nazwa tagu...",
+      "selectColor": "Wybierz kolor",
+      "selectTag": "Wybierz tag"
     },
     "theme": "Motyw",
     "themeLight": "Jasny",

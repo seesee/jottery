@@ -160,7 +160,11 @@
       "tagColorsDescription": "Attribuer des couleurs aux étiquettes globalement",
       "addTagColor": "Ajouter une Couleur d'Étiquette",
       "removeTagColor": "Supprimer",
-      "noColor": "Aucune"
+      "noColor": "Aucune",
+      "noTagColors": "Aucune couleur d'étiquette attribuée pour le moment",
+      "tagNamePlaceholder": "Nom de l'étiquette...",
+      "selectColor": "Sélectionner une couleur",
+      "selectTag": "Sélectionner une étiquette"
     },
     "theme": "Thème",
     "themeLight": "Clair",

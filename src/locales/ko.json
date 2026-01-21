@@ -160,7 +160,11 @@
       "tagColorsDescription": "태그에 색상을 전역으로 할당",
       "addTagColor": "태그 색상 추가",
       "removeTagColor": "제거",
-      "noColor": "없음"
+      "noColor": "없음",
+      "noTagColors": "아직 할당된 태그 색상이 없습니다",
+      "tagNamePlaceholder": "태그 이름...",
+      "selectColor": "색상 선택",
+      "selectTag": "태그 선택"
     },
     "theme": "테마",
     "themeLight": "밝게",

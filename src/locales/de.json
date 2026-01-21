@@ -160,7 +160,11 @@
       "tagColorsDescription": "Farben Tags global zuweisen",
       "addTagColor": "Tag-Farbe hinzufügen",
       "removeTagColor": "Entfernen",
-      "noColor": "Keine"
+      "noColor": "Keine",
+      "noTagColors": "Noch keine Tag-Farben zugewiesen",
+      "tagNamePlaceholder": "Tag-Name...",
+      "selectColor": "Farbe auswählen",
+      "selectTag": "Wählen Sie einen Tag aus"
     },
     "theme": "Design",
     "themeLight": "Hell",

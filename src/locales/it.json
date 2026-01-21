@@ -160,7 +160,11 @@
       "tagColorsDescription": "Assegna colori ai tag globalmente",
       "addTagColor": "Aggiungi Colore Tag",
       "removeTagColor": "Rimuovi",
-      "noColor": "Nessuno"
+      "noColor": "Nessuno",
+      "noTagColors": "Nessun colore tag assegnato ancora",
+      "tagNamePlaceholder": "Nome tag...",
+      "selectColor": "Seleziona colore",
+      "selectTag": "Seleziona un tag"
     },
     "theme": "Tema",
     "themeLight": "Chiaro",

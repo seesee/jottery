@@ -160,7 +160,11 @@
       "tagColorsDescription": "タグに色をグローバルに割り当て",
       "addTagColor": "タグの色を追加",
       "removeTagColor": "削除",
-      "noColor": "なし"
+      "noColor": "なし",
+      "noTagColors": "まだタグの色が割り当てられていません",
+      "tagNamePlaceholder": "タグ名...",
+      "selectColor": "色を選択",
+      "selectTag": "タグを選択"
     },
     "theme": "テーマ",
     "themeLight": "ライト",

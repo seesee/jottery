@@ -160,7 +160,11 @@
       "tagColorsDescription": "Ανάθεση χρωμάτων σε ετικέτες καθολικά",
       "addTagColor": "Προσθήκη Χρώματος Ετικέτας",
       "removeTagColor": "Αφαίρεση",
-      "noColor": "Κανένα"
+      "noColor": "Κανένα",
+      "noTagColors": "Δεν έχουν ανατεθεί χρώματα ετικετών ακόμα",
+      "tagNamePlaceholder": "Όνομα ετικέτας...",
+      "selectColor": "Επιλέξτε χρώμα",
+      "selectTag": "Επιλέξτε μια ετικέτα"
     },
     "theme": "Θέμα",
     "themeLight": "Φωτεινό",

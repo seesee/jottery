@@ -160,7 +160,11 @@
       "tagColorsDescription": "Kleuren globaal aan tags toewijzen",
       "addTagColor": "Tag Kleur Toevoegen",
       "removeTagColor": "Verwijderen",
-      "noColor": "Geen"
+      "noColor": "Geen",
+      "noTagColors": "Nog geen tag kleuren toegewezen",
+      "tagNamePlaceholder": "Tagnaam...",
+      "selectColor": "Selecteer kleur",
+      "selectTag": "Selecteer een tag"
     },
     "theme": "Thema",
     "themeLight": "Licht",

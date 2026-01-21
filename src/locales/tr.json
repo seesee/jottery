@@ -160,7 +160,11 @@
       "tagColorsDescription": "Etiketlere global olarak renk ata",
       "addTagColor": "Etiket Rengi Ekle",
       "removeTagColor": "Kaldır",
-      "noColor": "Yok"
+      "noColor": "Yok",
+      "noTagColors": "Henüz etiket renkleri atanmamış",
+      "tagNamePlaceholder": "Etiket adı...",
+      "selectColor": "Renk seç",
+      "selectTag": "Bir etiket seçin"
     },
     "theme": "Tema",
     "themeLight": "Açık",
