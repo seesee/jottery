@@ -37,10 +37,32 @@
 
   // Internal state
   let showMoreMenu = false;
+  let showBackSpinner = false;
+  let backSpinnerTimeout: number | null = null;
 
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
   }
+
+  function handleBackClick() {
+    // Show spinner after 0.2s delay (prevents flash for quick transitions)
+    backSpinnerTimeout = window.setTimeout(() => {
+      showBackSpinner = true;
+    }, 200);
+
+    // Call the parent callback
+    if (onBackToList) {
+      onBackToList();
+    }
+  }
+
+  // Cleanup timeout on component destroy
+  import { onDestroy } from 'svelte';
+  onDestroy(() => {
+    if (backSpinnerTimeout !== null) {
+      clearTimeout(backSpinnerTimeout);
+    }
+  });
 
   // Wrapper functions that close menu before calling parent callbacks
   function handleUndoClick() {
@@ -99,14 +121,22 @@
   <!-- Mobile: Back Button with app name for larger hit area -->
   {#if onBackToList}
     <button
-      on:click={onBackToList}
-      class="tablet:hidden py-2 pl-2 pr-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0 flex items-center gap-1 -ml-1"
+      on:click={handleBackClick}
+      disabled={showBackSpinner}
+      class="tablet:hidden py-2 pl-2 pr-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0 flex items-center gap-1 -ml-1 disabled:opacity-75"
       title={$_('editor.backToNotes')}
       aria-label={$_('editor.backToNotes')}
     >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-      </svg>
+      {#if showBackSpinner}
+        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      {:else}
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      {/if}
       <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{$_('app.name')}</span>
     </button>
   {/if}
@@ -151,10 +181,10 @@
     >
       {#if showPreview}
         <span>📝</span>
-        <span>{$_('editor.edit')}</span>
+        <span class="hidden tablet:inline">{$_('editor.edit')}</span>
       {:else}
         <span>👁️</span>
-        <span>{$_('editor.preview')}</span>
+        <span class="hidden tablet:inline">{$_('editor.preview')}</span>
       {/if}
     </button>
   {/if}
@@ -167,7 +197,7 @@
       title={$_('editor.attachments')}
     >
       <span>📎</span>
-      <span>{$_('editor.attachments')}</span>
+      <span class="hidden tablet:inline">{$_('editor.attachments')}</span>
       {#if attachmentCount > 0}
         <span class="px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 rounded">
           {attachmentCount}
@@ -192,7 +222,7 @@
     </button>
 
     {#if showMoreMenu}
-      <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+      <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[calc(100vh-5rem)] overflow-y-auto">
         <div class="py-1">
           <button
             on:click={handleUndoClick}
