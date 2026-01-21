@@ -495,25 +495,49 @@ class SyncService {
           // New note from server - create locally
           await noteRepository.create(noteForStorage);
           totalNotes++; // Count as actual change
+
+          // Update sync metadata for new note
+          await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
+            noteId: remoteNote.id,
+            syncedAt: result.syncedAt,
+            serverVersion: remoteNote.version,
+            lastSyncStatus: 'synced',
+          });
         } else {
-          // Conflict resolution: Last-Write-Wins by modifiedAt
-          if (remoteNote.modifiedAt > localNote.modifiedAt) {
-            // Server version is newer - update local
+          // Check for conflict: server is newer AND local has unsaved changes
+          if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+            // Conflict detected - local note has unsaved changes and server has a newer version
+            console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}: local has unsaved changes, server is newer`);
+
+            // Store conflict data
+            await storeConflict(remoteNote.id, {
+              serverContent: remoteNote.content,
+              serverTags: remoteNote.tags,
+              serverModifiedAt: remoteNote.modifiedAt,
+              serverVersion: remoteNote.version,
+              serverAttachments: remoteNote.attachments,
+              serverPinned: remoteNote.pinned,
+              serverSyntaxLanguage: remoteNote.syntaxLanguage,
+              serverWordWrap: remoteNote.wordWrap,
+            });
+            // Don't update the local note - keep it for conflict resolution
+          } else if (remoteNote.modifiedAt > localNote.modifiedAt) {
+            // Server version is newer and local has no unsaved changes - safe to update
             // Preserve server's modifiedAt (false), skip needsSync flag (true) since this came from server
             await noteRepository.update(noteForStorage, false, true);
             totalNotes++; // Count as actual change
+
+            // Update sync metadata
+            await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
+              noteId: remoteNote.id,
+              syncedAt: result.syncedAt,
+              serverVersion: remoteNote.version,
+              lastSyncStatus: 'synced',
+            });
           }
           // Local version is newer or equal - keep local (already pushed or will be pushed)
           // NOT counted as a change - no need to refresh the store
         }
-
-        // Update sync metadata
-        await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
-          noteId: remoteNote.id,
-          syncedAt: result.syncedAt,
-          serverVersion: remoteNote.version,
-          lastSyncStatus: 'synced',
-        });
       }
 
       // Download attachments
