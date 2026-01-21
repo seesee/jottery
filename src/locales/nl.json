@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Notities zoeken...",
     "clear": "Zoekopdracht wissen",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Opgeslagen Zoekopdrachten",
+    "newSavedSearch": "Huidige Zoekopdracht Opslaan",
+    "editSearch": "Bewerken",
+    "deleteSearch": "Verwijderen",
+    "searchName": "Naam Zoekopdracht",
+    "query": "Query",
+    "saveSearch": "Opslaan",
+    "applySavedSearch": "Toepassen",
+    "confirmDeleteSearch": "Opgeslagen zoekopdracht \"{name}\" verwijderen?",
+    "noSavedSearches": "Geen opgeslagen zoekopdrachten",
+    "noCurrentQuery": "Geen huidige zoekopdracht om op te slaan"
   },
   "editor": {
     "noNoteSelected": "Geen notitie geselecteerd",
@@ -112,7 +123,11 @@
       "downloadToView": "Download om te bekijken"
     },
     "attachments": "Bijlagen",
-    "noAttachments": "Geen bijlagen"
+    "noAttachments": "Geen bijlagen",
+    "noteColor": "Notitie Kleur",
+    "setColor": "Kleur Instellen",
+    "removeColor": "Kleur Verwijderen",
+    "selectColor": "Selecteer een kleur"
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Algemeen",
       "editor": "Editor",
+      "colors": "Kleuren",
       "keyboard": "Sneltoetsen",
       "sync": "Synchronisatie",
       "advanced": "Geavanceerd",
       "about": "Over"
+    },
+    "colors": {
+      "paletteTitle": "Kleurenpalet",
+      "paletteDescription": "Kleuren voor notities en tags aanpassen",
+      "lightMode": "Lichte Modus",
+      "darkMode": "Donkere Modus",
+      "resetPalette": "Standaardwaarden Herstellen",
+      "tagColorsTitle": "Tag Kleuren",
+      "tagColorsDescription": "Kleuren globaal aan tags toewijzen",
+      "addTagColor": "Tag Kleur Toevoegen",
+      "removeTagColor": "Verwijderen",
+      "noColor": "Geen"
     },
     "theme": "Thema",
     "themeLight": "Licht",
@@ -694,6 +722,9 @@
     "selected": "geselecteerd",
     "addTags": "Tags toevoegen",
     "removeTags": "Tags verwijderen",
+    "setColor": "Kleur Instellen",
+    "colorSet": "Kleur ingesteld voor {count} notities",
+    "selectColorForBulk": "Selecteer kleur voor geselecteerde notities",
     "delete": "Verwijderen",
     "export": "Exporteren",
     "combine": "Samenvoegen",

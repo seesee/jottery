@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Αναζήτηση σημειώσεων...",
     "clear": "Εκκαθάριση αναζήτησης",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Αποθηκευμένες Αναζητήσεις",
+    "newSavedSearch": "Αποθήκευση Τρέχουσας Αναζήτησης",
+    "editSearch": "Επεξεργασία",
+    "deleteSearch": "Διαγραφή",
+    "searchName": "Όνομα Αναζήτησης",
+    "query": "Ερώτημα",
+    "saveSearch": "Αποθήκευση",
+    "applySavedSearch": "Εφαρμογή",
+    "confirmDeleteSearch": "Διαγραφή αποθηκευμένης αναζήτησης \"{name}\";",
+    "noSavedSearches": "Δεν υπάρχουν αποθηκευμένες αναζητήσεις",
+    "noCurrentQuery": "Δεν υπάρχει τρέχουσα αναζήτηση για αποθήκευση"
   },
   "editor": {
     "noNoteSelected": "Δεν επιλέχθηκε σημείωση",
@@ -112,7 +123,11 @@
       "downloadToView": "Κάντε λήψη για προβολή"
     },
     "attachments": "Συνημμένα",
-    "noAttachments": "Δεν υπάρχουν συνημμένα"
+    "noAttachments": "Δεν υπάρχουν συνημμένα",
+    "noteColor": "Χρώμα Σημείωσης",
+    "setColor": "Ορισμός Χρώματος",
+    "removeColor": "Αφαίρεση Χρώματος",
+    "selectColor": "Επιλογή χρώματος"
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Γενικά",
       "editor": "Επεξεργαστής",
+      "colors": "Χρώματα",
       "keyboard": "Συντομεύσεις πληκτρολογίου",
       "sync": "Συγχρονισμός",
       "advanced": "Για προχωρημένους",
       "about": "Σχετικά"
+    },
+    "colors": {
+      "paletteTitle": "Παλέτα Χρωμάτων",
+      "paletteDescription": "Προσαρμογή χρωμάτων που χρησιμοποιούνται για σημειώσεις και ετικέτες",
+      "lightMode": "Φωτεινή Λειτουργία",
+      "darkMode": "Σκοτεινή Λειτουργία",
+      "resetPalette": "Επαναφορά στις Προεπιλογές",
+      "tagColorsTitle": "Χρώματα Ετικετών",
+      "tagColorsDescription": "Ανάθεση χρωμάτων σε ετικέτες καθολικά",
+      "addTagColor": "Προσθήκη Χρώματος Ετικέτας",
+      "removeTagColor": "Αφαίρεση",
+      "noColor": "Κανένα"
     },
     "theme": "Θέμα",
     "themeLight": "Φωτεινό",
@@ -694,6 +722,9 @@
     "selected": "επιλεγμένα",
     "addTags": "Προσθήκη ετικετών",
     "removeTags": "Αφαίρεση ετικετών",
+    "setColor": "Ορισμός Χρώματος",
+    "colorSet": "Το χρώμα ορίστηκε για {count} σημειώσεις",
+    "selectColorForBulk": "Επιλογή χρώματος για τις επιλεγμένες σημειώσεις",
     "delete": "Διαγραφή",
     "export": "Εξαγωγή",
     "combine": "Συνδυασμός",

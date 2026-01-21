@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Notlarda ara...",
     "clear": "Aramayı temizle",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Kaydedilmiş Aramalar",
+    "newSavedSearch": "Mevcut Aramayı Kaydet",
+    "editSearch": "Düzenle",
+    "deleteSearch": "Sil",
+    "searchName": "Arama Adı",
+    "query": "Sorgu",
+    "saveSearch": "Kaydet",
+    "applySavedSearch": "Uygula",
+    "confirmDeleteSearch": "Kaydedilmiş arama \"{name}\" silinsin mi?",
+    "noSavedSearches": "Kaydedilmiş arama yok",
+    "noCurrentQuery": "Kaydedilecek mevcut arama yok"
   },
   "editor": {
     "noNoteSelected": "Not seçilmedi",
@@ -112,7 +123,11 @@
       "downloadToView": "Görüntülemek için indirin"
     },
     "attachments": "Ekler",
-    "noAttachments": "Henüz ek yok"
+    "noAttachments": "Henüz ek yok",
+    "noteColor": "Not Rengi",
+    "setColor": "Renk Ayarla",
+    "removeColor": "Rengi Kaldır",
+    "selectColor": "Renk seçin"
   },
   "noteList": {
     "deleteNote": "Notu sil",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Genel",
       "editor": "Düzenleyici",
+      "colors": "Renkler",
       "keyboard": "Klavye Kısayolları",
       "sync": "Senkronizasyon",
       "advanced": "Gelişmiş",
       "about": "Hakkında"
+    },
+    "colors": {
+      "paletteTitle": "Renk Paleti",
+      "paletteDescription": "Notlar ve etiketler için kullanılan renkleri özelleştir",
+      "lightMode": "Açık Mod",
+      "darkMode": "Koyu Mod",
+      "resetPalette": "Varsayılanlara Sıfırla",
+      "tagColorsTitle": "Etiket Renkleri",
+      "tagColorsDescription": "Etiketlere global olarak renk ata",
+      "addTagColor": "Etiket Rengi Ekle",
+      "removeTagColor": "Kaldır",
+      "noColor": "Yok"
     },
     "theme": "Tema",
     "themeLight": "Açık",
@@ -694,6 +722,9 @@
     "selected": "seçili",
     "addTags": "Etiket ekle",
     "removeTags": "Etiketleri kaldır",
+    "setColor": "Renk Ayarla",
+    "colorSet": "{count} not için renk ayarlandı",
+    "selectColorForBulk": "Seçili notlar için renk seçin",
     "delete": "Sil",
     "export": "Dışa aktar",
     "combine": "Birleştir",

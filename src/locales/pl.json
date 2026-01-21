@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Szukaj notatek...",
     "clear": "Wyczyść wyszukiwanie",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Zapisane Wyszukiwania",
+    "newSavedSearch": "Zapisz Bieżące Wyszukiwanie",
+    "editSearch": "Edytuj",
+    "deleteSearch": "Usuń",
+    "searchName": "Nazwa Wyszukiwania",
+    "query": "Zapytanie",
+    "saveSearch": "Zapisz",
+    "applySavedSearch": "Zastosuj",
+    "confirmDeleteSearch": "Usunąć zapisane wyszukiwanie \"{name}\"?",
+    "noSavedSearches": "Brak zapisanych wyszukiwań",
+    "noCurrentQuery": "Brak bieżącego wyszukiwania do zapisania"
   },
   "editor": {
     "noNoteSelected": "Nie wybrano notatki",
@@ -112,7 +123,11 @@
       "downloadToView": "Pobierz, aby wyświetlić"
     },
     "attachments": "Załączniki",
-    "noAttachments": "Brak załączników"
+    "noAttachments": "Brak załączników",
+    "noteColor": "Kolor Notatki",
+    "setColor": "Ustaw Kolor",
+    "removeColor": "Usuń Kolor",
+    "selectColor": "Wybierz kolor"
   },
   "noteList": {
     "deleteNote": "Usuń notatkę",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Ogólne",
       "editor": "Edytor",
+      "colors": "Kolory",
       "keyboard": "Skróty klawiszowe",
       "sync": "Synchronizacja",
       "advanced": "Zaawansowane",
       "about": "O programie"
+    },
+    "colors": {
+      "paletteTitle": "Paleta Kolorów",
+      "paletteDescription": "Dostosuj kolory używane dla notatek i tagów",
+      "lightMode": "Tryb Jasny",
+      "darkMode": "Tryb Ciemny",
+      "resetPalette": "Przywróć Domyślne",
+      "tagColorsTitle": "Kolory Tagów",
+      "tagColorsDescription": "Przypisz kolory do tagów globalnie",
+      "addTagColor": "Dodaj Kolor Tagu",
+      "removeTagColor": "Usuń",
+      "noColor": "Brak"
     },
     "theme": "Motyw",
     "themeLight": "Jasny",
@@ -694,6 +722,9 @@
     "selected": "zaznaczono",
     "addTags": "Dodaj tagi",
     "removeTags": "Usuń tagi",
+    "setColor": "Ustaw Kolor",
+    "colorSet": "Kolor ustawiony dla {count} notatek",
+    "selectColorForBulk": "Wybierz kolor dla zaznaczonych notatek",
     "delete": "Usuń",
     "export": "Eksportuj",
     "combine": "Połącz",

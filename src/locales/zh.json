@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "搜索笔记...",
     "clear": "清除搜索",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "保存的搜索",
+    "newSavedSearch": "保存当前搜索",
+    "editSearch": "编辑",
+    "deleteSearch": "删除",
+    "searchName": "搜索名称",
+    "query": "查询",
+    "saveSearch": "保存",
+    "applySavedSearch": "应用",
+    "confirmDeleteSearch": "删除保存的搜索 \"{name}\"?",
+    "noSavedSearches": "没有保存的搜索",
+    "noCurrentQuery": "没有要保存的当前搜索"
   },
   "editor": {
     "noNoteSelected": "未选择笔记",
@@ -112,7 +123,11 @@
       "downloadToView": "下载以查看"
     },
     "attachments": "附件",
-    "noAttachments": "暂无附件"
+    "noAttachments": "暂无附件",
+    "noteColor": "笔记颜色",
+    "setColor": "设置颜色",
+    "removeColor": "移除颜色",
+    "selectColor": "选择颜色"
   },
   "noteList": {
     "deleteNote": "删除笔记",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "通用",
       "editor": "编辑器",
+      "colors": "颜色",
       "keyboard": "快捷键",
       "sync": "同步",
       "advanced": "高级",
       "about": "关于"
+    },
+    "colors": {
+      "paletteTitle": "调色板",
+      "paletteDescription": "自定义用于笔记和标签的颜色",
+      "lightMode": "浅色模式",
+      "darkMode": "深色模式",
+      "resetPalette": "重置为默认值",
+      "tagColorsTitle": "标签颜色",
+      "tagColorsDescription": "全局分配标签颜色",
+      "addTagColor": "添加标签颜色",
+      "removeTagColor": "移除",
+      "noColor": "无"
     },
     "theme": "主题",
     "themeLight": "浅色",
@@ -694,6 +722,9 @@
     "selected": "已选择",
     "addTags": "添加标签",
     "removeTags": "移除标签",
+    "setColor": "设置颜色",
+    "colorSet": "已为 {count} 条笔记设置颜色",
+    "selectColorForBulk": "为所选笔记选择颜色",
     "delete": "删除",
     "export": "导出",
     "combine": "合并",

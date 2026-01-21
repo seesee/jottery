@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Поиск заметок...",
     "clear": "Очистить поиск",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Сохраненные Поиски",
+    "newSavedSearch": "Сохранить Текущий Поиск",
+    "editSearch": "Редактировать",
+    "deleteSearch": "Удалить",
+    "searchName": "Название Поиска",
+    "query": "Запрос",
+    "saveSearch": "Сохранить",
+    "applySavedSearch": "Применить",
+    "confirmDeleteSearch": "Удалить сохраненный поиск \"{name}\"?",
+    "noSavedSearches": "Нет сохраненных поисков",
+    "noCurrentQuery": "Нет текущего поиска для сохранения"
   },
   "editor": {
     "noNoteSelected": "Заметка не выбрана",
@@ -112,7 +123,11 @@
       "downloadToView": "Скачайте для просмотра"
     },
     "attachments": "Вложения",
-    "noAttachments": "Нет вложений"
+    "noAttachments": "Нет вложений",
+    "noteColor": "Цвет Заметки",
+    "setColor": "Установить Цвет",
+    "removeColor": "Удалить Цвет",
+    "selectColor": "Выбрать цвет"
   },
   "noteList": {
     "deleteNote": "Удалить заметку",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Основные",
       "editor": "Редактор",
+      "colors": "Цвета",
       "keyboard": "Горячие клавиши",
       "sync": "Синхронизация",
       "advanced": "Дополнительно",
       "about": "О программе"
+    },
+    "colors": {
+      "paletteTitle": "Цветовая Палитра",
+      "paletteDescription": "Настройка цветов для заметок и тегов",
+      "lightMode": "Светлый Режим",
+      "darkMode": "Темный Режим",
+      "resetPalette": "Сбросить к Значениям по Умолчанию",
+      "tagColorsTitle": "Цвета Тегов",
+      "tagColorsDescription": "Назначить цвета тегам глобально",
+      "addTagColor": "Добавить Цвет Тега",
+      "removeTagColor": "Удалить",
+      "noColor": "Нет"
     },
     "theme": "Тема",
     "themeLight": "Светлая",
@@ -694,6 +722,9 @@
     "selected": "выбрано",
     "addTags": "Добавить теги",
     "removeTags": "Удалить теги",
+    "setColor": "Установить Цвет",
+    "colorSet": "Цвет установлен для {count} заметок",
+    "selectColorForBulk": "Выбрать цвет для выбранных заметок",
     "delete": "Удалить",
     "export": "Экспортировать",
     "combine": "Объединить",

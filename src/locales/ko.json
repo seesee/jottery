@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "노트 검색...",
     "clear": "검색 지우기",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "저장된 검색",
+    "newSavedSearch": "현재 검색 저장",
+    "editSearch": "편집",
+    "deleteSearch": "삭제",
+    "searchName": "검색 이름",
+    "query": "쿼리",
+    "saveSearch": "저장",
+    "applySavedSearch": "적용",
+    "confirmDeleteSearch": "저장된 검색 \"{name}\"을(를) 삭제하시겠습니까?",
+    "noSavedSearches": "저장된 검색이 없습니다",
+    "noCurrentQuery": "저장할 검색이 없습니다"
   },
   "editor": {
     "noNoteSelected": "선택된 노트 없음",
@@ -112,7 +123,11 @@
       "downloadToView": "다운로드하여 보기"
     },
     "attachments": "첨부파일",
-    "noAttachments": "첨부파일이 없습니다"
+    "noAttachments": "첨부파일이 없습니다",
+    "noteColor": "노트 색상",
+    "setColor": "색상 설정",
+    "removeColor": "색상 제거",
+    "selectColor": "색상 선택"
   },
   "noteList": {
     "deleteNote": "노트 삭제",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "일반",
       "editor": "편집기",
+      "colors": "색상",
       "keyboard": "단축키",
       "sync": "동기화",
       "advanced": "고급",
       "about": "정보"
+    },
+    "colors": {
+      "paletteTitle": "색상 팔레트",
+      "paletteDescription": "노트와 태그에 사용되는 색상 커스터마이즈",
+      "lightMode": "라이트 모드",
+      "darkMode": "다크 모드",
+      "resetPalette": "기본값으로 재설정",
+      "tagColorsTitle": "태그 색상",
+      "tagColorsDescription": "태그에 색상을 전역으로 할당",
+      "addTagColor": "태그 색상 추가",
+      "removeTagColor": "제거",
+      "noColor": "없음"
     },
     "theme": "테마",
     "themeLight": "밝게",
@@ -694,6 +722,9 @@
     "selected": "개 선택됨",
     "addTags": "태그 추가",
     "removeTags": "태그 제거",
+    "setColor": "색상 설정",
+    "colorSet": "{count}개 노트에 색상이 설정되었습니다",
+    "selectColorForBulk": "선택한 노트의 색상 선택",
     "delete": "삭제",
     "export": "내보내기",
     "combine": "병합",

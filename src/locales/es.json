@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Buscar notas...",
     "clear": "Limpiar búsqueda",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Búsquedas Guardadas",
+    "newSavedSearch": "Guardar Búsqueda Actual",
+    "editSearch": "Editar",
+    "deleteSearch": "Eliminar",
+    "searchName": "Nombre de Búsqueda",
+    "query": "Consulta",
+    "saveSearch": "Guardar",
+    "applySavedSearch": "Aplicar",
+    "confirmDeleteSearch": "¿Eliminar búsqueda guardada \"{name}\"?",
+    "noSavedSearches": "Aún no hay búsquedas guardadas. Haz clic en 'Guardar Búsqueda Actual' para crear una.",
+    "noCurrentQuery": "Introduce primero una consulta de búsqueda"
   },
   "editor": {
     "noNoteSelected": "Ninguna nota seleccionada",
@@ -111,6 +122,11 @@
       "previewNotAvailable": "Vista previa no disponible para este tipo de archivo.",
       "downloadToView": "Descargue para ver"
     },
+    "noteColor": "Color de Nota",
+    "setColor": "Establecer Color",
+    "removeColor": "Quitar Color",
+    "selectColor": "Seleccionar un color"
+  },
     "attachments": "Adjuntos",
     "noAttachments": "Sin adjuntos"
   },
@@ -127,10 +143,23 @@
     "tabs": {
       "general": "General",
       "editor": "Editor",
+      "colors": "Colores",
       "keyboard": "Atajos de teclado",
       "sync": "Sincronización",
       "advanced": "Avanzado",
       "about": "Acerca de"
+    },
+    "colors": {
+      "paletteTitle": "Paleta de Colores",
+      "paletteDescription": "Personalizar los colores utilizados para notas y etiquetas",
+      "lightMode": "Modo Claro",
+      "darkMode": "Modo Oscuro",
+      "resetPalette": "Restablecer a Predeterminados",
+      "tagColorsTitle": "Colores de Etiquetas",
+      "tagColorsDescription": "Asignar colores a las etiquetas globalmente",
+      "addTagColor": "Añadir Color de Etiqueta",
+      "removeTagColor": "Quitar",
+      "noColor": "Ninguno"
     },
     "theme": "Tema",
     "themeLight": "Claro",
@@ -694,6 +723,9 @@
     "selected": "seleccionado(s)",
     "addTags": "Agregar etiquetas",
     "removeTags": "Eliminar etiquetas",
+    "setColor": "Establecer Color",
+    "colorSet": "Color establecido para {count} notas",
+    "selectColorForBulk": "Seleccionar color para las notas seleccionadas",
     "delete": "Eliminar",
     "export": "Exportar",
     "combine": "Combinar",

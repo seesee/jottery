@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Notizen durchsuchen...",
     "clear": "Suche löschen",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Gespeicherte Suchen",
+    "newSavedSearch": "Aktuelle Suche speichern",
+    "editSearch": "Bearbeiten",
+    "deleteSearch": "Löschen",
+    "searchName": "Suchname",
+    "query": "Abfrage",
+    "saveSearch": "Speichern",
+    "applySavedSearch": "Anwenden",
+    "confirmDeleteSearch": "Gespeicherte Suche \"{name}\" löschen?",
+    "noSavedSearches": "Noch keine gespeicherten Suchen. Klicken Sie auf 'Aktuelle Suche speichern', um eine zu erstellen.",
+    "noCurrentQuery": "Geben Sie zuerst eine Suchanfrage ein"
   },
   "editor": {
     "noNoteSelected": "Keine Notiz ausgewählt",
@@ -112,7 +123,11 @@
       "downloadToView": "Zum Anzeigen herunterladen"
     },
     "attachments": "Anhänge",
-    "noAttachments": "Noch keine Anhänge"
+    "noAttachments": "Noch keine Anhänge",
+    "noteColor": "Notizfarbe",
+    "setColor": "Farbe festlegen",
+    "removeColor": "Farbe entfernen",
+    "selectColor": "Farbe auswählen"
   },
   "noteList": {
     "deleteNote": "Notiz löschen",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Allgemein",
       "editor": "Editor",
+      "colors": "Farben",
       "keyboard": "Tastenkombinationen",
       "sync": "Synchronisation",
       "advanced": "Erweitert",
       "about": "Über"
+    },
+    "colors": {
+      "paletteTitle": "Farbpalette",
+      "paletteDescription": "Farben für Notizen und Tags anpassen",
+      "lightMode": "Heller Modus",
+      "darkMode": "Dunkler Modus",
+      "resetPalette": "Auf Standard zurücksetzen",
+      "tagColorsTitle": "Tag-Farben",
+      "tagColorsDescription": "Farben Tags global zuweisen",
+      "addTagColor": "Tag-Farbe hinzufügen",
+      "removeTagColor": "Entfernen",
+      "noColor": "Keine"
     },
     "theme": "Design",
     "themeLight": "Hell",
@@ -708,7 +736,10 @@
     "enterTags": "Schlagwörter eingeben (kommagetrennt)",
     "progress": "{current} von {total}",
     "selectAll": "Alle auswählen",
-    "deselectAll": "Alle abwählen"
+    "deselectAll": "Alle abwählen",
+    "setColor": "Farbe festlegen",
+    "colorSet": "Farbe für {count} Notizen festgelegt",
+    "selectColorForBulk": "Farbe für ausgewählte Notizen auswählen"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

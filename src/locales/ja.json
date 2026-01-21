@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "ノートを検索...",
     "clear": "検索をクリア",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "保存された検索",
+    "newSavedSearch": "現在の検索を保存",
+    "editSearch": "編集",
+    "deleteSearch": "削除",
+    "searchName": "検索名",
+    "query": "クエリ",
+    "saveSearch": "保存",
+    "applySavedSearch": "適用",
+    "confirmDeleteSearch": "保存された検索「{name}」を削除しますか？",
+    "noSavedSearches": "保存された検索がありません",
+    "noCurrentQuery": "保存する検索がありません"
   },
   "editor": {
     "noNoteSelected": "ノートが選択されていません",
@@ -112,7 +123,11 @@
       "downloadToView": "表示するにはダウンロードしてください"
     },
     "attachments": "添付ファイル",
-    "noAttachments": "添付ファイルはまだありません"
+    "noAttachments": "添付ファイルはまだありません",
+    "noteColor": "ノートの色",
+    "setColor": "色を設定",
+    "removeColor": "色を削除",
+    "selectColor": "色を選択"
   },
   "noteList": {
     "deleteNote": "ノートを削除",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "一般",
       "editor": "エディター",
+      "colors": "色",
       "keyboard": "キーボードショートカット",
       "sync": "同期",
       "advanced": "詳細設定",
       "about": "アプリについて"
+    },
+    "colors": {
+      "paletteTitle": "カラーパレット",
+      "paletteDescription": "ノートとタグに使用する色をカスタマイズ",
+      "lightMode": "ライトモード",
+      "darkMode": "ダークモード",
+      "resetPalette": "デフォルトに戻す",
+      "tagColorsTitle": "タグの色",
+      "tagColorsDescription": "タグに色をグローバルに割り当て",
+      "addTagColor": "タグの色を追加",
+      "removeTagColor": "削除",
+      "noColor": "なし"
     },
     "theme": "テーマ",
     "themeLight": "ライト",
@@ -694,6 +722,9 @@
     "selected": "件選択中",
     "addTags": "タグを追加",
     "removeTags": "タグを削除",
+    "setColor": "色を設定",
+    "colorSet": "{count}件のノートに色を設定しました",
+    "selectColorForBulk": "選択したノートの色を選択",
     "delete": "削除",
     "export": "エクスポート",
     "combine": "結合",

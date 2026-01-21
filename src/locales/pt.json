@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Pesquisar notas...",
     "clear": "Limpar pesquisa",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Pesquisas Salvas",
+    "newSavedSearch": "Salvar Pesquisa Atual",
+    "editSearch": "Editar",
+    "deleteSearch": "Excluir",
+    "searchName": "Nome da Pesquisa",
+    "query": "Consulta",
+    "saveSearch": "Salvar",
+    "applySavedSearch": "Aplicar",
+    "confirmDeleteSearch": "Excluir pesquisa salva \"{name}\"?",
+    "noSavedSearches": "Nenhuma pesquisa salva",
+    "noCurrentQuery": "Nenhuma pesquisa atual para salvar"
   },
   "editor": {
     "noNoteSelected": "Nenhuma nota selecionada",
@@ -112,7 +123,11 @@
       "downloadToView": "Baixe para visualizar"
     },
     "attachments": "Anexos",
-    "noAttachments": "Sem anexos"
+    "noAttachments": "Sem anexos",
+    "noteColor": "Cor da Nota",
+    "setColor": "Definir Cor",
+    "removeColor": "Remover Cor",
+    "selectColor": "Selecionar uma cor"
   },
   "noteList": {
     "deleteNote": "Excluir nota",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Geral",
       "editor": "Editor",
+      "colors": "Cores",
       "keyboard": "Atalhos de teclado",
       "sync": "Sincronização",
       "advanced": "Avançado",
       "about": "Sobre"
+    },
+    "colors": {
+      "paletteTitle": "Paleta de Cores",
+      "paletteDescription": "Personalizar as cores usadas para notas e tags",
+      "lightMode": "Modo Claro",
+      "darkMode": "Modo Escuro",
+      "resetPalette": "Redefinir para Padrão",
+      "tagColorsTitle": "Cores de Tags",
+      "tagColorsDescription": "Atribuir cores às tags globalmente",
+      "addTagColor": "Adicionar Cor de Tag",
+      "removeTagColor": "Remover",
+      "noColor": "Nenhuma"
     },
     "theme": "Tema",
     "themeLight": "Claro",
@@ -694,6 +722,9 @@
     "selected": "selecionado(s)",
     "addTags": "Adicionar tags",
     "removeTags": "Remover tags",
+    "setColor": "Definir Cor",
+    "colorSet": "Cor definida para {count} notas",
+    "selectColorForBulk": "Selecionar cor para as notas selecionadas",
     "delete": "Excluir",
     "export": "Exportar",
     "combine": "Combinar",

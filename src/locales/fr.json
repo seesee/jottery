@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Rechercher des notes...",
     "clear": "Effacer la recherche",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Recherches Enregistrées",
+    "newSavedSearch": "Enregistrer la Recherche Actuelle",
+    "editSearch": "Modifier",
+    "deleteSearch": "Supprimer",
+    "searchName": "Nom de la Recherche",
+    "query": "Requête",
+    "saveSearch": "Enregistrer",
+    "applySavedSearch": "Appliquer",
+    "confirmDeleteSearch": "Supprimer la recherche enregistrée \"{name}\" ?",
+    "noSavedSearches": "Aucune recherche enregistrée",
+    "noCurrentQuery": "Aucune recherche actuelle à enregistrer"
   },
   "editor": {
     "noNoteSelected": "Aucune note sélectionnée",
@@ -112,7 +123,11 @@
       "downloadToView": "Téléchargez pour visualiser"
     },
     "attachments": "Pièces jointes",
-    "noAttachments": "Aucune pièce jointe"
+    "noAttachments": "Aucune pièce jointe",
+    "noteColor": "Couleur de la Note",
+    "setColor": "Définir la Couleur",
+    "removeColor": "Supprimer la Couleur",
+    "selectColor": "Sélectionner une couleur"
   },
   "noteList": {
     "deleteNote": "Supprimer la note",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "Général",
       "editor": "Éditeur",
+      "colors": "Couleurs",
       "keyboard": "Raccourcis clavier",
       "sync": "Synchronisation",
       "advanced": "Avancé",
       "about": "À propos"
+    },
+    "colors": {
+      "paletteTitle": "Palette de Couleurs",
+      "paletteDescription": "Personnaliser les couleurs utilisées pour les notes et les étiquettes",
+      "lightMode": "Mode Clair",
+      "darkMode": "Mode Sombre",
+      "resetPalette": "Réinitialiser aux Valeurs par Défaut",
+      "tagColorsTitle": "Couleurs des Étiquettes",
+      "tagColorsDescription": "Attribuer des couleurs aux étiquettes globalement",
+      "addTagColor": "Ajouter une Couleur d'Étiquette",
+      "removeTagColor": "Supprimer",
+      "noColor": "Aucune"
     },
     "theme": "Thème",
     "themeLight": "Clair",
@@ -694,6 +722,9 @@
     "selected": "sélectionné(s)",
     "addTags": "Ajouter des étiquettes",
     "removeTags": "Supprimer des étiquettes",
+    "setColor": "Définir la Couleur",
+    "colorSet": "Couleur définie pour {count} notes",
+    "selectColorForBulk": "Sélectionner la couleur pour les notes sélectionnées",
     "delete": "Supprimer",
     "export": "Exporter",
     "combine": "Combiner",
