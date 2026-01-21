@@ -1,5 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { settings } from '../../stores/appStore';
+  import { getColorHex, resolveTheme } from '../../services/colorService';
 
   // State props
   export let pinned: boolean;
@@ -10,6 +12,7 @@
   export let forceMobileLayout: boolean;
   export let isDraftMode: boolean;
   export let wordWrap: boolean;
+  export let color: string | undefined = undefined;
   export let availableLanguages: Array<{id: string, name: string}>;
 
   // Callback props
@@ -20,6 +23,7 @@
   export let onUndo: () => void;
   export let onRedo: () => void;
   export let onWordWrapToggle: () => void;
+  export let onSetColor: () => void;
   export let onCopy: () => void;
   export let onExport: () => void;
   export let onPrintPdf: () => void;
@@ -37,6 +41,10 @@
 
   // Internal state
   let showMoreMenu = false;
+
+  // Color preview
+  $: currentTheme = resolveTheme($settings.theme);
+  $: colorPreviewHex = color ? getColorHex(color, currentTheme) : undefined;
 
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
@@ -56,6 +64,11 @@
   function handleWordWrapClick() {
     showMoreMenu = false;
     onWordWrapToggle();
+  }
+
+  function handleSetColorClick() {
+    showMoreMenu = false;
+    onSetColor();
   }
 
   function handleCopyClick() {
@@ -224,6 +237,20 @@
               <span>{$_('editor.wordWrapOff')}</span>
             {/if}
           </button>
+
+          <button
+            on:click={handleSetColorClick}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            {#if colorPreviewHex}
+              <span class="w-4 h-4 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0" style="background-color: {colorPreviewHex}"></span>
+            {:else}
+              <span>🎨</span>
+            {/if}
+            <span>{$_('editor.setColor')}</span>
+          </button>
+
+          <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
           <button
             on:click={handleCopyClick}

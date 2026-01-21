@@ -15,6 +15,7 @@
   import { copyToClipboard, exportAsFile, printNote } from '../utils/noteExport';
   import { dropzone } from '../actions';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
+  import ColorPickerModal from './ColorPickerModal.svelte';
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
@@ -120,6 +121,7 @@
   let showInfoModal: boolean = false;
   let showVersionHistory: boolean = false;
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
+  let showColorPicker: boolean = false;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
 
   // Track blob URLs for cleanup
@@ -723,6 +725,44 @@
     showAttachmentsModal = true;
   }
 
+  function handleSetColor() {
+    showColorPicker = true;
+  }
+
+  async function handleColorSelected(color: string | undefined) {
+    if (!$selectedNote || $isDraftMode) return;
+
+    try {
+      await noteService.updateNote($selectedNote.id, { color });
+
+      // Update the global notes store
+      const updatedNote = await noteService.getNote($selectedNote.id);
+      if (updatedNote) {
+        notes.update(allNotes => {
+          const index = allNotes.findIndex(n => n.id === updatedNote.id);
+          if (index !== -1) {
+            allNotes[index] = updatedNote;
+          }
+          return allNotes;
+        });
+
+        // Update searchService index
+        searchService.updateNote(updatedNote);
+
+        // Also update selectedNote in the store
+        selectNote($selectedNote.id);
+      }
+
+      // Trigger background sync
+      triggerBackgroundSync();
+
+      toast.info($_(color ? 'editor.colorSet' : 'editor.colorRemoved'));
+    } catch (error) {
+      console.error('[EditorPane] Error updating note color:', error);
+      toast.error($_('editor.errors.updateFailed'));
+    }
+  }
+
   /**
    * Handle pasting an image from clipboard
    * Creates an attachment and returns a markdown image reference
@@ -870,6 +910,7 @@
       {forceMobileLayout}
       isDraftMode={$isDraftMode}
       {wordWrap}
+      color={$selectedNote?.color}
       {availableLanguages}
       onPin={handleTogglePin}
       onLanguageChange={handleLanguageChange}
@@ -878,6 +919,7 @@
       onUndo={handleUndo}
       onRedo={handleRedo}
       onWordWrapToggle={handleWordWrapToggle}
+      onSetColor={handleSetColor}
       onCopy={handleCopy}
       onExport={handleExport}
       onPrintPdf={handlePrintPdf}
@@ -1030,4 +1072,12 @@
   onClose={() => showAttachmentsModal = false}
   onDelete={handleDeleteAttachment}
   onFileUpload={handleFileUpload}
+/>
+
+<!-- Color Picker Modal -->
+<ColorPickerModal
+  show={showColorPicker}
+  currentColor={$selectedNote?.color}
+  onColorSelect={handleColorSelected}
+  onClose={() => showColorPicker = false}
 />
