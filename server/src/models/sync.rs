@@ -6,6 +6,9 @@ pub struct SyncPushRequest {
     pub notes: Vec<SyncNote>,
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
+    #[serde(default)]
+    #[serde(rename = "savedSearches")]
+    pub saved_searches: Vec<super::saved_search::SyncSavedSearch>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -112,6 +115,8 @@ pub struct SyncPullResponse {
     pub deletions: Vec<SyncDeletion>,
     pub attachments: Vec<SyncAttachmentData>,
     pub versions: Vec<SyncNoteVersion>,
+    #[serde(rename = "savedSearches")]
+    pub saved_searches: Vec<super::saved_search::SyncSavedSearch>,
     #[serde(rename = "syncedAt")]
     pub synced_at: String,
     // Pagination metadata for large datasets

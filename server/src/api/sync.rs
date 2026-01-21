@@ -410,6 +410,65 @@ pub async fn push(
         }
     }
 
+    // Store saved searches (similar to notes, with last-write-wins conflict resolution)
+    for search in push_req.saved_searches {
+        // Check if saved search exists for this user
+        let existing = sqlx::query!(
+            "SELECT modified_at FROM saved_searches WHERE id = ? AND user_id = ?",
+            search.id,
+            client_info.user_id
+        )
+        .fetch_optional(&state.pool)
+        .await?;
+
+        let should_accept = match &existing {
+            None => true, // New saved search
+            Some(existing_search) => {
+                // Last-Write-Wins: compare modifiedAt
+                search.modified_at >= existing_search.modified_at
+            }
+        };
+
+        if should_accept {
+            let deleted = if search.deleted { 1 } else { 0 };
+
+            // Upsert saved search
+            sqlx::query!(
+                r#"
+                INSERT INTO saved_searches (
+                    id, user_id, name, query, "order", created_at, modified_at,
+                    synced_at, deleted, deleted_at, version
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    query = excluded.query,
+                    "order" = excluded."order",
+                    modified_at = excluded.modified_at,
+                    synced_at = excluded.synced_at,
+                    deleted = excluded.deleted,
+                    deleted_at = excluded.deleted_at,
+                    version = excluded.version
+                "#,
+                search.id,
+                client_info.user_id,
+                search.name,
+                search.query,
+                search.order,
+                search.created_at,
+                search.modified_at,
+                now,
+                deleted,
+                search.deleted_at,
+                search.version
+            )
+            .execute(&state.pool)
+            .await?;
+
+            tracing::debug!("Stored saved search: {}", search.id);
+        }
+    }
+
     Ok(Json(SyncPushResponse {
         accepted,
         rejected,
@@ -670,13 +729,44 @@ pub async fn pull(
 
     let synced_at = chrono::Utc::now().to_rfc3339();
 
+    // Fetch saved searches for this user (modified since last sync)
+    let db_saved_searches: Vec<crate::models::SavedSearch> = if let Some(last_sync) = &pull_req.last_sync_at {
+        sqlx::query_as!(
+            crate::models::SavedSearch,
+            r#"SELECT id, user_id, name, query, "order", created_at, modified_at, synced_at, deleted, deleted_at, version
+               FROM saved_searches WHERE user_id = ? AND modified_at > ?
+               ORDER BY "order""#,
+            client_info.user_id,
+            last_sync
+        )
+        .fetch_all(&state.pool)
+        .await?
+    } else {
+        sqlx::query_as!(
+            crate::models::SavedSearch,
+            r#"SELECT id, user_id, name, query, "order", created_at, modified_at, synced_at, deleted, deleted_at, version
+               FROM saved_searches WHERE user_id = ?
+               ORDER BY "order""#,
+            client_info.user_id
+        )
+        .fetch_all(&state.pool)
+        .await?
+    };
+
+    // Convert to sync models
+    let saved_searches: Vec<crate::models::SyncSavedSearch> = db_saved_searches
+        .into_iter()
+        .map(|db| db.into())
+        .collect();
+
     tracing::info!(
-        "Pull response: {} notes (total: {}, hasMore: {}), {} attachments, {} versions",
+        "Pull response: {} notes (total: {}, hasMore: {}), {} attachments, {} versions, {} saved searches",
         notes.len(),
         total_count,
         has_more,
         attachments_data.len(),
-        versions_response.len()
+        versions_response.len(),
+        saved_searches.len()
     );
 
     Ok(Json(SyncPullResponse {
@@ -684,6 +774,7 @@ pub async fn pull(
         deletions,
         attachments: attachments_data,
         versions: versions_response,
+        saved_searches,
         synced_at,
         total_count,
         has_more,
