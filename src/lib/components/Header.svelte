@@ -5,6 +5,7 @@
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import MobileMenuDrawer from './MobileMenuDrawer.svelte';
+  import SavedSearchesPanel from './SavedSearchesPanel.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import { getFontSizeCSS } from '../utils/fontSize';
 
@@ -19,6 +20,7 @@
 
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
+  let showSavedSearches = false;
 
   // Tag autocomplete state
   let tagSuggestions: string[] = [];
@@ -197,6 +199,19 @@
       selectedSuggestionIndex = -1;
     }, 200);
   }
+
+  function toggleSavedSearches() {
+    showSavedSearches = !showSavedSearches;
+  }
+
+  function closeSavedSearches() {
+    showSavedSearches = false;
+  }
+
+  function handleApplySavedSearch(query: string) {
+    searchQuery.set(query);
+    closeSavedSearches();
+  }
 </script>
 
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
@@ -342,6 +357,15 @@
             </div>
           {/if}
         </div>
+        <button
+          on:click={toggleSavedSearches}
+          class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors flex items-center gap-1"
+          title={$_('search.savedSearches')}
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </button>
         {#if $searchResultCount.isSearching}
           <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap" title={$_('search.resultCount')}>
             {$searchResultCount.matches}/{$searchResultCount.total}
@@ -363,7 +387,7 @@
             on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
             disabled={loadingNotes}
-            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-20' : 'pr-8'} border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait text-sm"
+            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-24' : 'pr-12'} border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait text-sm"
             style="font-size: {searchFontSize}"
           />
           {#if loadingNotes}
@@ -377,6 +401,16 @@
                   {$searchResultCount.matches}/{$searchResultCount.total}
                 </span>
               {/if}
+              <button
+                on:click={toggleSavedSearches}
+                class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1"
+                title={$_('search.savedSearches')}
+                aria-label={$_('search.savedSearches')}
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              </button>
               {#if $searchQuery}
                 <button
                   on:click={() => searchQuery.set('')}
@@ -502,4 +536,11 @@
   confirmClass="bg-orange-600 hover:bg-orange-700"
   onConfirm={handleDisableRememberPasswordConfirm}
   onCancel={handleDisableRememberPasswordCancel}
+/>
+
+<SavedSearchesPanel
+  show={showSavedSearches}
+  currentQuery={$searchQuery}
+  onClose={closeSavedSearches}
+  onApply={handleApplySavedSearch}
 />
