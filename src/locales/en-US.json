@@ -50,7 +50,18 @@
   "search": {
     "placeholder": "Search notes...",
     "clear": "Clear search",
-    "resultCount": "Search results: matches / total"
+    "resultCount": "Search results: matches / total",
+    "savedSearches": "Saved Searches",
+    "newSavedSearch": "Save Current Search",
+    "editSearch": "Edit",
+    "deleteSearch": "Delete",
+    "searchName": "Search Name",
+    "query": "Query",
+    "saveSearch": "Save",
+    "applySavedSearch": "Apply",
+    "confirmDeleteSearch": "Delete saved search \"{name}\"?",
+    "noSavedSearches": "No saved searches yet. Click 'Save Current Search' to create one.",
+    "noCurrentQuery": "Enter a search query first"
   },
   "editor": {
     "noNoteSelected": "No note selected",
@@ -112,7 +123,11 @@
       "videoNotSupported": "Your browser does not support video playback.",
       "previewNotAvailable": "Preview not available for this file type.",
       "downloadToView": "Download to view"
-    }
+    },
+    "noteColor": "Note Color",
+    "setColor": "Set Color",
+    "removeColor": "Remove Color",
+    "selectColor": "Select a color"
   },
   "noteList": {
     "deleteNote": "Delete note",
@@ -127,10 +142,23 @@
     "tabs": {
       "general": "General",
       "editor": "Editor",
+      "colors": "Colors",
       "keyboard": "Keyboard Shortcuts",
       "sync": "Sync",
       "advanced": "Advanced",
       "about": "About"
+    },
+    "colors": {
+      "paletteTitle": "Color Palette",
+      "paletteDescription": "Customize the colors used for notes and tags",
+      "lightMode": "Light Mode",
+      "darkMode": "Dark Mode",
+      "resetPalette": "Reset to Defaults",
+      "tagColorsTitle": "Tag Colors",
+      "tagColorsDescription": "Assign colors to tags globally",
+      "addTagColor": "Add Tag Color",
+      "removeTagColor": "Remove",
+      "noColor": "None"
     },
     "theme": "Theme",
     "themeLight": "Light",
@@ -701,6 +729,7 @@
     "selected": "selected",
     "addTags": "Add tags",
     "removeTags": "Remove tags",
+    "setColor": "Set Color",
     "delete": "Delete",
     "export": "Export",
     "combine": "Combine",
@@ -712,6 +741,8 @@
     "mergeTagsOption": "Merge tags from all notes",
     "mergeTagsDescription": "When unchecked, only tags from the first (oldest) note will be kept.",
     "combinedSuccess": "Combined {count} notes",
+    "colorSet": "Color set for {count} notes",
+    "selectColorForBulk": "Select color for selected notes",
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",
     "selectAll": "Select all",
