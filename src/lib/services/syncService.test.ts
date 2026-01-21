@@ -448,6 +448,77 @@ describe('syncService', () => {
 
       expect(capturedHeaders?.get('Authorization')).toBe(`Bearer ${TEST_API_KEY}`);
     });
+
+    it('should detect conflict when pulling note with local unsaved changes', async () => {
+      // Create a local note using noteService (properly encrypted and stored)
+      const createdNote = await noteService.createNote('Local modified content');
+
+      // Mark it as needing sync by updating it
+      const localNote = await noteRepository.getById(createdNote.id);
+      if (!localNote) throw new Error('Note not found');
+      localNote.needsSync = true;
+      await noteRepository.update(localNote, false, true);
+
+      // Get the encrypted content for comparison
+      const localEncryptedContent = localNote.content;
+
+      // Server has a newer version of the same note
+      const futureTime = new Date(Date.now() + 60000).toISOString(); // 1 minute newer
+      const serverContent = await cryptoService.encryptText('Server newer content', masterKey);
+      const serverTag = await cryptoService.encryptText('server', masterKey);
+
+      const remoteNote = {
+        id: localNote.id,
+        createdAt: localNote.createdAt,
+        modifiedAt: futureTime, // Newer than local
+        content: JSON.stringify(serverContent),
+        tags: [JSON.stringify(serverTag)],
+        attachments: [],
+        pinned: false,
+        deleted: false,
+        version: 2,
+        syntaxLanguage: undefined,
+        wordWrap: undefined,
+      };
+
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 1,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+            syncedAt: new Date().toISOString(),
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({
+            notes: [remoteNote],
+            attachments: [],
+            versions: [],
+            syncedAt: new Date().toISOString(),
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      // Verify local note was NOT overwritten (still has local encrypted content)
+      const updatedLocalNote = await noteRepository.getById(localNote.id);
+      expect(updatedLocalNote?.content).toBe(localEncryptedContent);
+
+      // Verify conflict was stored
+      const syncMeta = await syncRepository.getNoteSyncMetadata(localNote.id);
+      expect(syncMeta?.lastSyncStatus).toBe('conflict');
+      expect(syncMeta?.conflictData).toBeDefined();
+      expect(syncMeta?.conflictData?.serverModifiedAt).toBe(futureTime);
+    });
   });
 
   describe('Error Handling', () => {
