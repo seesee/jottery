@@ -3,10 +3,10 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Note, UserSettings, EncryptionMetadata, NoteVersion } from '../types';
+import type { Note, UserSettings, EncryptionMetadata, NoteVersion, SavedSearch } from '../types';
 
 let DB_NAME = 'jottery'; // Default, can be changed before initialization
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 // Track if database was terminated unexpectedly
 let dbTerminated = false;
@@ -20,6 +20,7 @@ export const STORES = {
   ENCRYPTION: 'encryption',
   SYNC_METADATA: 'sync_metadata',
   NOTE_VERSIONS: 'note_versions',
+  SAVED_SEARCHES: 'saved_searches',
 } as const;
 
 export interface JotteryDB {
@@ -60,6 +61,17 @@ export interface JotteryDB {
       noteId: string;
       createdAt: string;
       'noteId-version': [string, number];
+    };
+  };
+  saved_searches: {
+    key: string; // UUID
+    value: SavedSearch;
+    indexes: {
+      order: number;
+      deleted: number;
+      modifiedAt: string;
+      'deleted-order': [number, number];
+      needsSync: number;
     };
   };
 }
@@ -166,6 +178,21 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
           }
         }
         console.log('[DB] v5 schema updates complete');
+      }
+
+      // Version 6: Add saved_searches store
+      if (oldVersion < 6) {
+        console.log('[DB] Creating v6 schema (saved_searches store)...');
+        const savedSearchesStore = db.createObjectStore(STORES.SAVED_SEARCHES, {
+          keyPath: 'id',
+        });
+
+        savedSearchesStore.createIndex('order', 'order');
+        savedSearchesStore.createIndex('deleted', 'deleted');
+        savedSearchesStore.createIndex('modifiedAt', 'modifiedAt');
+        savedSearchesStore.createIndex('deleted-order', ['deleted', 'order']);
+        savedSearchesStore.createIndex('needsSync', 'needsSync');
+        console.log('[DB] saved_searches store created successfully');
       }
 
       console.log('[DB] Upgrade complete');
