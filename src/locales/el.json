@@ -127,7 +127,9 @@
     "noteColor": "Χρώμα Σημείωσης",
     "setColor": "Ορισμός Χρώματος",
     "removeColor": "Αφαίρεση Χρώματος",
-    "selectColor": "Επιλογή χρώματος"
+    "selectColor": "Επιλογή χρώματος",
+    "colorSet": "Το χρώμα ορίστηκε",
+    "colorRemoved": "Το χρώμα αφαιρέθηκε"
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",

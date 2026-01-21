@@ -346,8 +346,8 @@ class NoteService {
     }
 
     // Update color if provided and changed
-    if (updates.color !== undefined && updates.color !== note.color) {
-      note.color = updates.color || undefined; // Allow removing color by setting to empty string
+    if ('color' in updates && updates.color !== note.color) {
+      note.color = updates.color || undefined; // Allow removing color by setting to empty string or undefined
       hasContentChange = true; // UI state changes should also sync
     }
 

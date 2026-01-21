@@ -127,7 +127,9 @@
     "noteColor": "Note Colour",
     "setColor": "Set Colour",
     "removeColor": "Remove Colour",
-    "selectColor": "Select a colour"
+    "selectColor": "Select a colour",
+    "colorSet": "Colour set",
+    "colorRemoved": "Colour removed"
   },
   "noteList": {
     "deleteNote": "Delete note",

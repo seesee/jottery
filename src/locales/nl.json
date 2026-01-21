@@ -127,7 +127,9 @@
     "noteColor": "Notitie Kleur",
     "setColor": "Kleur Instellen",
     "removeColor": "Kleur Verwijderen",
-    "selectColor": "Selecteer een kleur"
+    "selectColor": "Selecteer een kleur",
+    "colorSet": "Kleur ingesteld",
+    "colorRemoved": "Kleur verwijderd"
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",

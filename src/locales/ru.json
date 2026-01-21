@@ -127,7 +127,9 @@
     "noteColor": "Цвет Заметки",
     "setColor": "Установить Цвет",
     "removeColor": "Удалить Цвет",
-    "selectColor": "Выбрать цвет"
+    "selectColor": "Выбрать цвет",
+    "colorSet": "Цвет установлен",
+    "colorRemoved": "Цвет удален"
   },
   "noteList": {
     "deleteNote": "Удалить заметку",

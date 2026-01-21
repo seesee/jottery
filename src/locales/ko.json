@@ -127,7 +127,9 @@
     "noteColor": "노트 색상",
     "setColor": "색상 설정",
     "removeColor": "색상 제거",
-    "selectColor": "색상 선택"
+    "selectColor": "색상 선택",
+    "colorSet": "색상이 설정되었습니다",
+    "colorRemoved": "색상이 제거되었습니다"
   },
   "noteList": {
     "deleteNote": "노트 삭제",

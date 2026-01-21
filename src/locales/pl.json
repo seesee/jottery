@@ -127,7 +127,9 @@
     "noteColor": "Kolor Notatki",
     "setColor": "Ustaw Kolor",
     "removeColor": "Usuń Kolor",
-    "selectColor": "Wybierz kolor"
+    "selectColor": "Wybierz kolor",
+    "colorSet": "Kolor ustawiony",
+    "colorRemoved": "Kolor usunięty"
   },
   "noteList": {
     "deleteNote": "Usuń notatkę",

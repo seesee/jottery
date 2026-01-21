@@ -127,7 +127,9 @@
     "noteColor": "Not Rengi",
     "setColor": "Renk Ayarla",
     "removeColor": "Rengi Kaldır",
-    "selectColor": "Renk seçin"
+    "selectColor": "Renk seçin",
+    "colorSet": "Renk ayarlandı",
+    "colorRemoved": "Renk kaldırıldı"
   },
   "noteList": {
     "deleteNote": "Notu sil",

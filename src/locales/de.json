@@ -127,7 +127,9 @@
     "noteColor": "Notizfarbe",
     "setColor": "Farbe festlegen",
     "removeColor": "Farbe entfernen",
-    "selectColor": "Farbe auswählen"
+    "selectColor": "Farbe auswählen",
+    "colorSet": "Farbe festgelegt",
+    "colorRemoved": "Farbe entfernt"
   },
   "noteList": {
     "deleteNote": "Notiz löschen",

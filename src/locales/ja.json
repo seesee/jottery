@@ -127,7 +127,9 @@
     "noteColor": "ノートの色",
     "setColor": "色を設定",
     "removeColor": "色を削除",
-    "selectColor": "色を選択"
+    "selectColor": "色を選択",
+    "colorSet": "色を設定しました",
+    "colorRemoved": "色を削除しました"
   },
   "noteList": {
     "deleteNote": "ノートを削除",

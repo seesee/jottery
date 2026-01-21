@@ -127,7 +127,9 @@
     "noteColor": "笔记颜色",
     "setColor": "设置颜色",
     "removeColor": "移除颜色",
-    "selectColor": "选择颜色"
+    "selectColor": "选择颜色",
+    "colorSet": "已设置颜色",
+    "colorRemoved": "已移除颜色"
   },
   "noteList": {
     "deleteNote": "删除笔记",

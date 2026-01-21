@@ -125,7 +125,9 @@
     "noteColor": "Color de Nota",
     "setColor": "Establecer Color",
     "removeColor": "Quitar Color",
-    "selectColor": "Seleccionar un color"
+    "selectColor": "Seleccionar un color",
+    "colorSet": "Color establecido",
+    "colorRemoved": "Color eliminado"
   },
     "attachments": "Adjuntos",
     "noAttachments": "Sin adjuntos"

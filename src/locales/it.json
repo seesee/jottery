@@ -127,7 +127,9 @@
     "noteColor": "Colore Nota",
     "setColor": "Imposta Colore",
     "removeColor": "Rimuovi Colore",
-    "selectColor": "Seleziona un colore"
+    "selectColor": "Seleziona un colore",
+    "colorSet": "Colore impostato",
+    "colorRemoved": "Colore rimosso"
   },
   "noteList": {
     "deleteNote": "Elimina nota",
