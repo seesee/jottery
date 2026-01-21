@@ -38,9 +38,10 @@ export async function create(name: string, query: string): Promise<SavedSearch> 
  */
 export async function getAll(): Promise<SavedSearch[]> {
   const db = getDB();
-  const index = db.transaction(STORES.SAVED_SEARCHES).store.index('deleted-order');
-  const range = IDBKeyRange.bound([0, Number.MIN_SAFE_INTEGER], [0, Number.MAX_SAFE_INTEGER]);
-  return await index.getAll(range);
+  const searches = await db.getAll(STORES.SAVED_SEARCHES);
+  return searches
+    .filter(s => !s.deleted)
+    .sort((a, b) => a.order - b.order);
 }
 
 /**
@@ -107,8 +108,8 @@ export async function reorder(orderedIds: string[]): Promise<void> {
  */
 export async function getAllNeedingSync(): Promise<SavedSearch[]> {
   const db = getDB();
-  const index = db.transaction(STORES.SAVED_SEARCHES).store.index('needsSync');
-  return await index.getAll(IDBKeyRange.only(1));
+  const searches = await db.getAll(STORES.SAVED_SEARCHES);
+  return searches.filter(s => s.needsSync === true);
 }
 
 /**
