@@ -28,6 +28,7 @@ class NoteService {
       wordWrap?: boolean;
       syntaxLanguage?: string;
       showPreview?: boolean;
+      color?: string; // Semantic color name (e.g., 'red', 'blue')
       attachments?: Attachment[];
     }
   ): Promise<Note> {
@@ -52,6 +53,7 @@ class NoteService {
       wordWrap: options?.wordWrap ?? true,
       syntaxLanguage: options?.syntaxLanguage || 'markdown',
       showPreview: options?.showPreview ?? false,
+      color: options?.color,
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
       attachments: options?.attachments || [],
@@ -237,6 +239,7 @@ class NoteService {
       wordWrap?: boolean;
       syntaxLanguage?: string;
       showPreview?: boolean;
+      color?: string; // Semantic color name (or undefined to remove)
     }
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
@@ -339,6 +342,12 @@ class NoteService {
     // Update show preview if provided and changed
     if (updates.showPreview !== undefined && updates.showPreview !== note.showPreview) {
       note.showPreview = updates.showPreview;
+      hasContentChange = true; // UI state changes should also sync
+    }
+
+    // Update color if provided and changed
+    if (updates.color !== undefined && updates.color !== note.color) {
+      note.color = updates.color || undefined; // Allow removing color by setting to empty string
       hasContentChange = true; // UI state changes should also sync
     }
 

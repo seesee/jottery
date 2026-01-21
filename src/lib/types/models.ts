@@ -23,6 +23,7 @@ export interface Note {
   wordWrap?: boolean; // Word wrap enabled (default: true)
   syntaxLanguage?: string; // Syntax highlighting language (any supported language ID)
   showPreview?: boolean; // Show preview panel for markdown/html (default: false)
+  color?: string; // Semantic color name (e.g., 'red', 'blue') - unencrypted
   needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
 }
 
@@ -38,6 +39,37 @@ export interface Attachment {
   data: string; // Reference to encrypted blob store
   thumbnailData?: string; // Optional thumbnail for images
 }
+
+/**
+ * Color palette for notes and tags
+ * Maps semantic color names to hex codes for light and dark modes
+ */
+export interface ColorPalette {
+  [colorName: string]: {
+    light: string; // Hex code for light mode (e.g., '#FFE5E5')
+    dark: string; // Hex code for dark mode (e.g., '#5C1A1A')
+  };
+}
+
+/**
+ * Default 8-color palette
+ * Users can customise these hex values in settings
+ */
+export const DEFAULT_COLOR_PALETTE: ColorPalette = {
+  red: { light: '#FFE5E5', dark: '#5C1A1A' },
+  orange: { light: '#FFF0E0', dark: '#5C3A1A' },
+  yellow: { light: '#FFFACD', dark: '#5C5520' },
+  green: { light: '#E5F5E5', dark: '#1A4D1A' },
+  blue: { light: '#E5F0FF', dark: '#1A3A5C' },
+  purple: { light: '#F0E5FF', dark: '#3A1A5C' },
+  pink: { light: '#FFE5F0', dark: '#5C1A3A' },
+  gray: { light: '#F0F0F0', dark: '#2A2A2A' },
+};
+
+/**
+ * Array of default color names for easy iteration
+ */
+export const COLOR_NAMES = Object.keys(DEFAULT_COLOR_PALETTE);
 
 /**
  * Keyboard shortcut configuration
@@ -90,6 +122,8 @@ export interface UserSettings {
   quickCommandsList?: QuickCommandConfig[]; // Custom quick commands
   persistSession?: boolean; // Enable session persistence across page refresh (tab-scoped)
   persistSessionTimeout?: number; // Session expiry in minutes (default: 30)
+  colorPalette?: ColorPalette; // User-customised color palette (defaults to DEFAULT_COLOR_PALETTE)
+  tagColors?: Record<string, string>; // Global tag name → color name mapping
 }
 
 /**
@@ -171,6 +205,27 @@ export interface SearchQuery {
   modifiedBefore?: string; // ISO date string - notes modified before this date
   wordCountMin?: number; // Minimum word count
   wordCountMax?: number; // Maximum word count
+  colors?: string[]; // Color names to match (OR logic)
+  excludeColors?: string[]; // Color names to exclude (AND logic)
+  colorTarget?: 'note' | 'tag' | 'both'; // Where to look for colors (default: 'both')
+}
+
+/**
+ * Saved search query
+ * Allows users to save frequently used searches
+ */
+export interface SavedSearch {
+  id: string; // UUID v4
+  name: string; // User-provided name
+  query: string; // Search query string
+  order: number; // Display order
+  createdAt: string; // ISO 8601 with timezone
+  modifiedAt: string; // ISO 8601 with timezone
+  syncedAt?: string; // ISO 8601 with timezone
+  deleted: boolean; // Soft delete flag
+  deletedAt?: string; // Deletion timestamp
+  version: number; // Optimistic locking
+  needsSync?: boolean; // Local-only flag indicating search needs to be synced
 }
 
 /**
@@ -215,6 +270,7 @@ export interface ExportNote {
   wordWrap?: boolean;
   syntaxLanguage?: string; // Any supported language ID
   showPreview?: boolean;
+  color?: string; // Semantic color name
 }
 
 /**
@@ -333,4 +389,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   quickCommandsList: DEFAULT_QUICK_COMMANDS, // Default quick commands
   persistSession: false, // Session persistence disabled by default
   persistSessionTimeout: 30, // 30 minutes default expiry
+  colorPalette: DEFAULT_COLOR_PALETTE, // Default color palette
+  tagColors: {}, // No tag colors by default
 };
