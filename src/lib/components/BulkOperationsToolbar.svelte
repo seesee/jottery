@@ -4,11 +4,13 @@
   import { bulkOperationsService, type BulkProgress } from '../services/bulkOperationsService';
   import { toast } from '../utils/toast.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
+  import ColorPickerModal from './ColorPickerModal.svelte';
   import { get } from 'svelte/store';
 
   // Modal states
   let showAddTagsModal = false;
   let showRemoveTagsModal = false;
+  let showColorPicker = false;
   let showCombineConfirm = false;
   let showDeleteConfirm = false;
 
@@ -91,6 +93,24 @@
     try {
       await bulkOperationsService.removeTagsFromNotes(noteIds, tags, handleProgress);
       toast.success($_('bulk.removeTags') + `: ${tags.join(', ')}`);
+      clearMultiSelection();
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      isProcessing = false;
+      progress = null;
+    }
+  }
+
+  async function handleSetColor(color: string | undefined) {
+    const noteIds = Array.from(get(selectedNoteIds));
+    isProcessing = true;
+    showColorPicker = false;
+
+    try {
+      await bulkOperationsService.setColorForNotes(noteIds, color, handleProgress);
+      const colorName = color || $_('settings.colors.noColor');
+      toast.success($_('bulk.colorSet', { values: { color: colorName, count: noteIds.length } }));
       clearMultiSelection();
     } catch (error) {
       toast.error(String(error));
@@ -241,6 +261,14 @@
               class="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 transition-colors"
             >
               {$_('bulk.removeTags')}
+            </button>
+
+            <!-- Set Colour -->
+            <button
+              on:click={() => showColorPicker = true}
+              class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+            >
+              {$_('bulk.setColor')}
             </button>
 
             <!-- Export -->
@@ -456,6 +484,14 @@
   confirmClass="bg-red-600 hover:bg-red-700"
   onConfirm={handleDelete}
   onCancel={() => showDeleteConfirm = false}
+/>
+
+<!-- Color Picker Modal -->
+<ColorPickerModal
+  show={showColorPicker}
+  currentColor={undefined}
+  onColorSelect={handleSetColor}
+  onClose={() => showColorPicker = false}
 />
 
 <style>

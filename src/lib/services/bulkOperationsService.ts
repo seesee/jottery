@@ -191,6 +191,7 @@ export async function exportNotes(
         wordWrap: note.wordWrap,
         syntaxLanguage: note.syntaxLanguage,
         showPreview: note.showPreview,
+        color: note.color,
       });
     }
 
@@ -233,6 +234,53 @@ export function downloadExport(jsonData: string, filename: string = 'jottery-exp
 
 export interface CombineNotesOptions {
   mergeTags?: boolean; // If true, merge tags from all notes; if false, only keep tags from first note
+}
+
+/**
+ * Set color for multiple notes
+ */
+export async function setColorForNotes(
+  noteIds: string[],
+  color: string | undefined,
+  onProgress?: ProgressCallback
+): Promise<void> {
+  const allNotes = get(notes);
+  const total = noteIds.length;
+
+  for (let i = 0; i < noteIds.length; i++) {
+    const noteId = noteIds[i];
+    const note = allNotes.find((n) => n.id === noteId);
+
+    if (note) {
+      // Update note with new color (properly persists via noteService)
+      await noteService.updateNote(noteId, { color });
+
+      // Update store with decrypted version
+      const updated: DecryptedNote = {
+        ...note,
+        color,
+        modifiedAt: new Date().toISOString(),
+      };
+      notes.update((n) =>
+        n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
+      );
+
+      // Update search index
+      searchService.updateNote(updated);
+    }
+
+    onProgress?.({
+      current: i + 1,
+      total,
+      status: 'running',
+    });
+  }
+
+  onProgress?.({
+    current: total,
+    total,
+    status: 'complete',
+  });
 }
 
 /**
@@ -321,6 +369,7 @@ export async function combineNotes(
 export const bulkOperationsService = {
   addTagsToNotes,
   removeTagsFromNotes,
+  setColorForNotes,
   deleteNotes,
   exportNotes,
   downloadExport,
