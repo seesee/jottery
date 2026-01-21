@@ -5,6 +5,7 @@
 
 import FlexSearch from 'flexsearch';
 import type { DecryptedNote, SearchQuery, SortOrder } from '../types';
+import { getTagColor } from './colorService';
 
 // Create FlexSearch index
 const index = new FlexSearch.Document({
@@ -67,6 +68,9 @@ const MODIFIER_PATTERNS = {
   wordsMin: /\bwords:>(\d+)\b/g,
   wordsMax: /\bwords:<(\d+)\b/g,
   wordsRange: /\bwords:(\d+)\.\.(\d+)\b/g,
+  colorNoteQualifier: /\bcolou?r:([a-z0-9#]+)\s+note\b/gi,
+  colorTagQualifier: /\bcolou?r:([a-z0-9#]+)\s+tag\b/gi,
+  colorSimple: /\bcolou?r:([a-z0-9#]+)\b/gi,
 };
 
 /**
@@ -146,6 +150,32 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
     if (wordsMaxMatch) {
       modifiers.wordCountMax = parseInt(wordsMaxMatch[1], 10);
       remaining = remaining.replace(/\bwords:<\d+\b/, '');
+    }
+  }
+
+  // color:red note (notes with red color)
+  const colorNoteMatches = [...remaining.matchAll(/\bcolou?r:([a-z0-9#]+)\s+note\b/gi)];
+  if (colorNoteMatches.length > 0) {
+    modifiers.colors = colorNoteMatches.map(m => m[1].toLowerCase());
+    modifiers.colorTarget = 'note';
+    remaining = remaining.replace(/\bcolou?r:[a-z0-9#]+\s+note\b/gi, '');
+  }
+
+  // color:red tag (notes with red-colored tags)
+  const colorTagMatches = [...remaining.matchAll(/\bcolou?r:([a-z0-9#]+)\s+tag\b/gi)];
+  if (colorTagMatches.length > 0) {
+    modifiers.colors = colorTagMatches.map(m => m[1].toLowerCase());
+    modifiers.colorTarget = 'tag';
+    remaining = remaining.replace(/\bcolou?r:[a-z0-9#]+\s+tag\b/gi, '');
+  }
+
+  // color:red (both notes and tags) - only if not already set by qualifiers
+  if (!modifiers.colorTarget) {
+    const colorSimpleMatches = [...remaining.matchAll(/\bcolou?r:([a-z0-9#]+)\b/gi)];
+    if (colorSimpleMatches.length > 0) {
+      modifiers.colors = colorSimpleMatches.map(m => m[1].toLowerCase());
+      modifiers.colorTarget = 'both';
+      remaining = remaining.replace(/\bcolou?r:[a-z0-9#]+\b/gi, '');
     }
   }
 
@@ -353,7 +383,9 @@ export async function searchNotes(
     parsed.modifiedAfter ||
     parsed.modifiedBefore ||
     parsed.wordCountMin !== undefined ||
-    parsed.wordCountMax !== undefined;
+    parsed.wordCountMax !== undefined ||
+    parsed.colors?.length ||
+    parsed.excludeColors?.length;
 
   if (
     !parsed.text &&
@@ -464,6 +496,50 @@ export async function searchNotes(
   // words:<N (maximum word count)
   if (parsed.wordCountMax !== undefined) {
     results = results.filter((note) => countWords(note.content) <= parsed.wordCountMax!);
+  }
+
+  // Color filter
+  if (parsed.colors && parsed.colors.length > 0) {
+    const target = parsed.colorTarget || 'both';
+
+    results = results.filter((note) => {
+      const noteHasColor = parsed.colors!.some(
+        color => note.color?.toLowerCase() === color.toLowerCase()
+      );
+
+      let tagHasColor = false;
+      if (target === 'tag' || target === 'both') {
+        // Check if any of the note's tags have matching color
+        tagHasColor = note.tags.some(tag => {
+          const tagColor = getTagColor(tag);
+          return tagColor && parsed.colors!.some(
+            color => tagColor.toLowerCase() === color.toLowerCase()
+          );
+        });
+      }
+
+      if (target === 'note') return noteHasColor;
+      if (target === 'tag') return tagHasColor;
+      return noteHasColor || tagHasColor;  // 'both'
+    });
+  }
+
+  // Exclude colors
+  if (parsed.excludeColors && parsed.excludeColors.length > 0) {
+    results = results.filter((note) => {
+      const noteColorExcluded = parsed.excludeColors!.some(
+        color => note.color?.toLowerCase() === color.toLowerCase()
+      );
+
+      const tagColorExcluded = note.tags.some(tag => {
+        const tagColor = getTagColor(tag);
+        return tagColor && parsed.excludeColors!.some(
+          color => tagColor.toLowerCase() === color.toLowerCase()
+        );
+      });
+
+      return !noteColorExcluded && !tagColorExcluded;
+    });
   }
 
   return sortNotes(results, sortOrder);
