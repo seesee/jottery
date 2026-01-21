@@ -124,10 +124,10 @@
       "previewNotAvailable": "Preview not available for this file type.",
       "downloadToView": "Download to view"
     },
-    "noteColour": "Note Colour",
-    "setColour": "Set Colour",
-    "removeColour": "Remove Colour",
-    "selectColour": "Select a colour"
+    "noteColor": "Note Colour",
+    "setColor": "Set Colour",
+    "removeColor": "Remove Colour",
+    "selectColor": "Select a colour"
   },
   "noteList": {
     "deleteNote": "Delete note",
@@ -142,23 +142,23 @@
     "tabs": {
       "general": "General",
       "editor": "Editor",
-      "colours": "Colours",
+      "colors": "Colours",
       "keyboard": "Keyboard Shortcuts",
       "sync": "Sync",
       "advanced": "Advanced",
       "about": "About"
     },
-    "colours": {
+    "colors": {
       "paletteTitle": "Colour Palette",
       "paletteDescription": "Customise the colours used for notes and tags",
       "lightMode": "Light Mode",
       "darkMode": "Dark Mode",
       "resetPalette": "Reset to Defaults",
-      "tagColoursTitle": "Tag Colours",
-      "tagColoursDescription": "Assign colours to tags globally",
-      "addTagColour": "Add Tag Colour",
-      "removeTagColour": "Remove",
-      "noColour": "None"
+      "tagColorsTitle": "Tag Colours",
+      "tagColorsDescription": "Assign colours to tags globally",
+      "addTagColor": "Add Tag Colour",
+      "removeTagColor": "Remove",
+      "noColor": "None"
     },
     "theme": "Theme",
     "themeLight": "Light",
@@ -730,7 +730,7 @@
     "selected": "selected",
     "addTags": "Add tags",
     "removeTags": "Remove tags",
-    "setColour": "Set Colour",
+    "setColor": "Set Colour",
     "delete": "Delete",
     "export": "Export",
     "combine": "Combine",
@@ -742,8 +742,8 @@
     "mergeTagsOption": "Merge tags from all notes",
     "mergeTagsDescription": "When unchecked, only tags from the first (oldest) note will be kept.",
     "combinedSuccess": "Combined {count} notes",
-    "colourSet": "Colour set for {count} notes",
-    "selectColourForBulk": "Select colour for selected notes",
+    "colorSet": "Colour set for {count} notes",
+    "selectColorForBulk": "Select colour for selected notes",
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",
     "selectAll": "Select all",
