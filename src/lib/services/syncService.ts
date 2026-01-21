@@ -8,6 +8,7 @@ import type {
   SyncPullRequest,
   Note,
   SyncNoteVersion,
+  SyncSavedSearch,
 } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
@@ -15,6 +16,7 @@ import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { versionRepository } from './versionRepository';
+import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
 import { storageToSync, syncToStorage } from './tagConversionService';
 import { noteService } from './noteService';
@@ -317,6 +319,25 @@ class SyncService {
         }
       }
 
+      // Collect saved searches for push (only in first batch to avoid duplication)
+      const savedSearchesForPush: SyncSavedSearch[] = [];
+      if (batchIndex === 0) {
+        const savedSearches = await savedSearchRepository.getAllNeedingSync();
+        for (const search of savedSearches) {
+          savedSearchesForPush.push({
+            id: search.id,
+            name: search.name,
+            query: search.query,
+            order: search.order,
+            createdAt: search.createdAt,
+            modifiedAt: search.modifiedAt,
+            deleted: search.deleted,
+            deletedAt: search.deletedAt,
+            version: search.version,
+          });
+        }
+      }
+
       // Build push request for this batch
       const pushRequest: SyncPushRequest = {
         notes: await Promise.all(batchNotes.map(async note => {
@@ -347,6 +368,7 @@ class SyncService {
         })),
         attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
         versions: await this.collectVersionsForPush(batchNotes),
+        savedSearches: savedSearchesForPush.length > 0 ? savedSearchesForPush : undefined,
       };
 
       // Send batch to server
@@ -396,6 +418,14 @@ class SyncService {
 
       // Update progress after each batch
       syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
+
+      // Mark saved searches as synced (only in first batch where they were sent)
+      if (batchIndex === 0 && savedSearchesForPush.length > 0) {
+        for (const search of savedSearchesForPush) {
+          await savedSearchRepository.markSynced(search.id);
+        }
+        console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
+      }
     }
 
     console.log(`[SyncService] Push complete: ${totalAccepted} accepted, ${totalRejected} rejected`);
@@ -583,6 +613,37 @@ class SyncService {
             }
           );
         }
+      }
+
+      // Process saved searches from server (Last-Write-Wins)
+      if (result.savedSearches && result.savedSearches.length > 0) {
+        const { getDB, STORES } = await import('./db');
+        const db = getDB();
+
+        for (const remoteSearch of result.savedSearches) {
+          const localSearch = await savedSearchRepository.getById(remoteSearch.id);
+
+          if (!localSearch || remoteSearch.modifiedAt > localSearch.modifiedAt) {
+            // New search from server OR server version is newer - store/update locally
+            const searchForStorage = {
+              id: remoteSearch.id,
+              name: remoteSearch.name,
+              query: remoteSearch.query,
+              order: remoteSearch.order,
+              createdAt: remoteSearch.createdAt,
+              modifiedAt: remoteSearch.modifiedAt,
+              syncedAt: result.syncedAt,
+              deleted: remoteSearch.deleted,
+              deletedAt: remoteSearch.deletedAt,
+              version: remoteSearch.version,
+              needsSync: false, // Came from server - already synced
+            };
+
+            await db.put(STORES.SAVED_SEARCHES, searchForStorage);
+          }
+          // Local version is newer or equal - keep local
+        }
+        console.log(`[SyncService] Processed ${result.savedSearches.length} saved searches from server`);
       }
 
       // Handle deletions

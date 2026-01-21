@@ -39,11 +39,25 @@ export interface SyncStatus {
   syncEndpoint?: string;
 }
 
+// Sync saved search structure (matches server expectations)
+export interface SyncSavedSearch {
+  id: string;
+  name: string;
+  query: string;
+  order: number;
+  createdAt: string;
+  modifiedAt: string;
+  deleted: boolean;
+  deletedAt?: string;
+  version: number;
+}
+
 // Push request payload
 export interface SyncPushRequest {
   notes: SyncNote[];
   attachments: SyncAttachment[];
   versions: SyncNoteVersion[];
+  savedSearches?: SyncSavedSearch[];
 }
 
 // Note structure for sync (matches server expectations)
@@ -139,6 +153,7 @@ export interface SyncPullResponse {
   deletions?: SyncDeletion[]; // Optional for backward compatibility
   attachments: SyncAttachment[];
   versions: SyncNoteVersion[];
+  savedSearches?: SyncSavedSearch[];
   syncedAt?: string; // Optional for backward compatibility
   // Pagination metadata for large datasets
   totalCount?: number;
