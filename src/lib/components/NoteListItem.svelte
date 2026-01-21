@@ -10,7 +10,9 @@
     lastSelectedIndex,
     toggleNoteSelection,
     selectRange,
+    settings,
   } from '../stores/appStore';
+  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
   import {
     shouldShowCheckbox,
@@ -40,6 +42,16 @@
   $: isSelected = $selectedNoteId === note.id;
   $: isMultiSelected = $selectedNoteIds.has(note.id);
   let isHovered = false;
+
+  // Color support: resolve theme and compute note/tag colors
+  $: currentTheme = resolveTheme($settings.theme);
+  $: noteBackgroundColor = note.color ? getColorHex(note.color, currentTheme) : undefined;
+
+  // Helper function to get tag color
+  function getTagBackgroundColor(tag: string): string | undefined {
+    const tagColorName = getTagColor(tag);
+    return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
+  }
 
   // Swipe gesture state
   let swipeState: SwipeState = createSwipeState();
@@ -243,8 +255,8 @@
       on:touchmove={handleTouchMove}
       on:touchend={handleTouchEnd}
       on:touchcancel={handleTouchCancel}
-      class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
-      style="transform: translateX({swipeTransform}px); transition: {isSwipeActive ? 'none' : 'transform 0.2s ease-out'}"
+      class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : noteBackgroundColor ? '' : 'bg-white dark:bg-gray-900'}"
+      style="transform: translateX({swipeTransform}px); transition: {isSwipeActive ? 'none' : 'transform 0.2s ease-out'}; {noteBackgroundColor && !isMultiSelected ? `background-color: ${noteBackgroundColor};` : ''}"
     >
       <div class="flex items-start justify-between mb-1">
         <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -325,7 +337,8 @@
     on:click={handleClick}
     on:mouseenter={() => isHovered = true}
     on:mouseleave={() => isHovered = false}
-    class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
+    class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
+    style:background-color={!isSelected && !isMultiSelected && noteBackgroundColor ? noteBackgroundColor : undefined}
   >
     <div class="flex items-start justify-between mb-1">
       <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -396,12 +409,14 @@
       {#if note.tags.length > 0}
         <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
           {#each note.tags.slice(0, 2) as tag}
+            {@const tagBgColor = getTagBackgroundColor(tag)}
             <span
               on:click={(e) => handleTagClick(e, tag)}
               on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
               role="button"
               tabindex="0"
-              class="note-tag bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer"
+              class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? '' : 'bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700'}"
+              style:background-color={tagBgColor}
               title={$_('noteList.filterByTag', { values: { tag } })}
             >
               #{tag}
