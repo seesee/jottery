@@ -12,7 +12,7 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
   import TabContainer from './TabContainer.svelte';
-  import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab } from './settings';
+  import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
   import { toast } from '../utils/toast.svelte';
 
   export let show = false;
@@ -35,6 +35,8 @@
   let quickCommandsList: QuickCommandConfig[] = $settings.quickCommandsList ?? DEFAULT_QUICK_COMMANDS;
   let persistSession: boolean = $settings.persistSession ?? false;
   let persistSessionTimeout: number = $settings.persistSessionTimeout ?? 30;
+  let colorPalette = $settings.colorPalette || {};
+  let tagColors = $settings.tagColors || {};
   let saving = false;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
@@ -98,13 +100,14 @@
   let noteStats: { total: number; active: number; deleted: number; pinned: number; } | null = null;
 
   // Tab state
-  type Tab = 'general' | 'editor' | 'keyboard' | 'sync' | 'advanced' | 'about';
+  type Tab = 'general' | 'editor' | 'colors' | 'keyboard' | 'sync' | 'advanced' | 'about';
   let currentTab: Tab = 'general';
 
   // Tabs configuration (reactive to pick up translations)
   $: settingsTabs = [
     { id: 'general', label: $_('settings.tabs.general') },
     { id: 'editor', label: $_('settings.tabs.editor') },
+    { id: 'colors', label: $_('settings.tabs.colors') },
     { id: 'keyboard', label: $_('settings.tabs.keyboard') },
     { id: 'sync', label: $_('settings.tabs.sync') },
     { id: 'advanced', label: $_('settings.tabs.advanced') },
@@ -672,6 +675,8 @@
         quickCommandsList,
         persistSession,
         persistSessionTimeout,
+        colorPalette,
+        tagColors,
       });
 
       // Update store
@@ -694,6 +699,8 @@
         quickCommandsList,
         persistSession,
         persistSessionTimeout,
+        colorPalette,
+        tagColors,
       }));
 
       toast.success($_('settings.settingsSaved'));
@@ -1057,6 +1064,11 @@
         <!-- EDITOR TAB -->
         {#if currentTab === 'editor'}
           <EditorTab bind:enabledSyntaxLanguages bind:defaultSyntaxLanguage bind:vimMode bind:quickCommandsEnabled bind:quickCommandsList />
+        {/if}
+
+        <!-- COLORS TAB -->
+        {#if currentTab === 'colors'}
+          <ColorsTab bind:colorPalette bind:tagColors />
         {/if}
 
         <!-- KEYBOARD SHORTCUTS TAB -->
