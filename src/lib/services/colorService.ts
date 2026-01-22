@@ -80,6 +80,26 @@ export function getColorDisplayName(colorName: string): string {
 }
 
 /**
+ * Find a color key by its display name (case-insensitive)
+ * @param displayName - Display name to search for
+ * @returns Color key or undefined if not found
+ */
+export function getColorKeyByDisplayName(displayName: string): string | undefined {
+  const palette = getColorPalette();
+  const normalizedSearch = displayName.toLowerCase().trim();
+
+  // Search through palette for matching display name
+  for (const [colorKey, colorValue] of Object.entries(palette)) {
+    const colorDisplayName = colorValue.displayName || colorKey;
+    if (colorDisplayName.toLowerCase() === normalizedSearch) {
+      return colorKey;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Resolve the current theme to 'light' or 'dark'
  * Handles 'auto' theme by checking system preference
  * @param themePreference - User's theme preference

@@ -5,7 +5,7 @@
 
 import FlexSearch from 'flexsearch';
 import type { DecryptedNote, SearchQuery, SortOrder } from '../types';
-import { getTagColor } from './colorService';
+import { getTagColor, getColorKeyByDisplayName } from './colorService';
 
 // Create FlexSearch index
 const index = new FlexSearch.Document({
@@ -71,6 +71,9 @@ const MODIFIER_PATTERNS = {
   colorNoteQualifier: /\bcolou?r:([a-z0-9#]+)\s+note\b/gi,
   colorTagQualifier: /\bcolou?r:([a-z0-9#]+)\s+tag\b/gi,
   colorSimple: /\bcolou?r:([a-z0-9#]+)\b/gi,
+  categoryNoteQualifier: /\bcategory:([\w\s-]+)\s+note\b/gi,
+  categoryTagQualifier: /\bcategory:([\w\s-]+)\s+tag\b/gi,
+  categorySimple: /\bcategory:([\w\s-]+)\b/gi,
 };
 
 /**
@@ -179,6 +182,51 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
     }
   }
 
+  // category:important note (notes with category named "important")
+  // Category uses display names instead of color keys
+  const categoryNoteMatches = [...remaining.matchAll(/\bcategory:([\w\s-]+)\s+note\b/gi)];
+  if (categoryNoteMatches.length > 0) {
+    const colorKeys = categoryNoteMatches
+      .map(m => getColorKeyByDisplayName(m[1].trim()))
+      .filter(Boolean) as string[];
+
+    if (colorKeys.length > 0) {
+      modifiers.colors = colorKeys;
+      modifiers.colorTarget = 'note';
+    }
+    remaining = remaining.replace(/\bcategory:[\w\s-]+\s+note\b/gi, '');
+  }
+
+  // category:important tag (notes with tags in category named "important")
+  const categoryTagMatches = [...remaining.matchAll(/\bcategory:([\w\s-]+)\s+tag\b/gi)];
+  if (categoryTagMatches.length > 0) {
+    const colorKeys = categoryTagMatches
+      .map(m => getColorKeyByDisplayName(m[1].trim()))
+      .filter(Boolean) as string[];
+
+    if (colorKeys.length > 0) {
+      modifiers.colors = colorKeys;
+      modifiers.colorTarget = 'tag';
+    }
+    remaining = remaining.replace(/\bcategory:[\w\s-]+\s+tag\b/gi, '');
+  }
+
+  // category:important (both notes and tags) - only if not already set by qualifiers
+  if (!modifiers.colorTarget) {
+    const categorySimpleMatches = [...remaining.matchAll(/\bcategory:([\w\s-]+)\b/gi)];
+    if (categorySimpleMatches.length > 0) {
+      const colorKeys = categorySimpleMatches
+        .map(m => getColorKeyByDisplayName(m[1].trim()))
+        .filter(Boolean) as string[];
+
+      if (colorKeys.length > 0) {
+        modifiers.colors = colorKeys;
+        modifiers.colorTarget = 'both';
+      }
+      remaining = remaining.replace(/\bcategory:[\w\s-]+\b/gi, '');
+    }
+  }
+
   // Clean up extra whitespace
   remaining = remaining.replace(/\s+/g, ' ').trim();
 
@@ -201,6 +249,8 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
  * - created:>DATE, created:<DATE, created:DATE..DATE - Created date filters
  * - modified:>DATE, modified:<DATE, modified:DATE..DATE - Modified date filters
  * - words:>N, words:<N, words:N..N - Word count filters
+ * - color:KEY, color:KEY note, color:KEY tag - Search by color key (e.g., red, blue)
+ * - category:NAME, category:NAME note, category:NAME tag - Search by category display name
  */
 export function parseSearchQuery(query: string): SearchQuery {
   const parsed: SearchQuery = {
