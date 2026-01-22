@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { settings } from '../stores/appStore';
-  import { getColorHex, getColorNames, resolveTheme } from '../services/colorService';
+  import { getColorHex, getColorNames, getColorDisplayName, resolveTheme } from '../services/colorService';
 
   export let show = false;
   export let currentColor: string | undefined = undefined;
@@ -58,21 +58,27 @@
       <div class="grid grid-cols-4 gap-3 mb-4">
         {#each colorNames as colorName}
           {@const colorHex = getColorHex(colorName, currentTheme)}
+          {@const displayName = getColorDisplayName(colorName)}
           {@const isSelected = currentColor === colorName}
-          <button
-            on:click={() => handleColorClick(colorName)}
-            class="aspect-square rounded-lg border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 {isSelected ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-800' : 'border-gray-300 dark:border-gray-600'}"
-            style="background-color: {colorHex}"
-            title={colorName}
-            aria-label="{colorName} color"
-            aria-pressed={isSelected}
-          >
-            {#if isSelected}
-              <svg class="w-full h-full p-2 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-              </svg>
-            {/if}
-          </button>
+          <div class="flex flex-col items-center gap-1">
+            <button
+              on:click={() => handleColorClick(colorName)}
+              class="aspect-square w-full rounded-lg border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 {isSelected ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-800' : 'border-gray-300 dark:border-gray-600'}"
+              style="background-color: {colorHex}"
+              title={displayName}
+              aria-label="{displayName} color"
+              aria-pressed={isSelected}
+            >
+              {#if isSelected}
+                <svg class="w-full h-full p-2 text-gray-900 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              {/if}
+            </button>
+            <span class="text-xs text-gray-600 dark:text-gray-400 text-center capitalize truncate w-full">
+              {displayName}
+            </span>
+          </div>
         {/each}
       </div>
 

@@ -312,12 +312,14 @@
         {#if note.tags.length > 0}
           <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
             {#each note.tags.slice(0, 2) as tag}
+              {@const tagBgColor = getTagBackgroundColor(tag)}
               <span
                 on:click={(e) => handleTagClick(e, tag)}
                 on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
                 role="button"
                 tabindex="0"
-                class="note-tag bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer"
+                class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? '' : 'bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700'}"
+                style:background-color={tagBgColor}
                 title={$_('noteList.filterByTag', { values: { tag } })}
               >
                 #{tag}

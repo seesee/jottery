@@ -48,6 +48,7 @@ export interface ColorPalette {
   [colorName: string]: {
     light: string; // Hex code for light mode (e.g., '#FFE5E5')
     dark: string; // Hex code for dark mode (e.g., '#5C1A1A')
+    displayName?: string; // Optional user-defined display name (e.g., 'Urgent', 'Personal')
   };
 }
 

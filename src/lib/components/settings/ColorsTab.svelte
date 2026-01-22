@@ -5,7 +5,7 @@
   import { DEFAULT_COLOR_PALETTE } from '../../types/models';
   import { tagService } from '../../services';
   import { settings, notes } from '../../stores/appStore';
-  import { resolveTheme } from '../../services/colorService';
+  import { resolveTheme, getColorDisplayName } from '../../services/colorService';
 
   export let colorPalette: ColorPalette;
   export let tagColors: Record<string, string>;
@@ -17,8 +17,8 @@
   $: currentTheme = resolveTheme($settings.theme);
 
   onMount(async () => {
-    // Load all existing tags from the notes store
-    allTags = tagService.getAllTags($notes);
+    // Load all existing tags from the notes store and normalize to lowercase
+    allTags = tagService.getAllTags($notes).map(tag => tag.toLowerCase());
   });
 
   function resetPalette() {
@@ -27,7 +27,9 @@
 
   function addTagColor() {
     if (newTagName && newTagColor) {
-      tagColors = { ...tagColors, [newTagName]: newTagColor };
+      // Normalize tag name to lowercase for case-insensitive storage
+      const normalizedTag = newTagName.toLowerCase().trim();
+      tagColors = { ...tagColors, [normalizedTag]: newTagColor };
       newTagName = '';
       newTagColor = '';
     }
@@ -43,6 +45,7 @@
   $: colorOptions = Object.keys(colorPalette);
 
   // Get unassigned tags (tags that exist but don't have colors)
+  // allTags are already normalized to lowercase
   $: unassignedTags = allTags.filter(tag => !tagColors[tag]);
 
   // Sort tag colors alphabetically
@@ -58,13 +61,22 @@
     {$_('settings.colors.paletteDescription')}
   </p>
 
-  <div class="space-y-3">
+  <div class="space-y-4">
     {#each Object.entries(colorPalette) as [name, colors]}
-      <div class="flex items-center gap-3">
-        <span class="w-20 text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-          {name}
-        </span>
-        <div class="flex items-center gap-2 flex-1">
+      <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+        <div class="flex items-center gap-3 mb-2">
+          <span class="text-xs text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0">
+            {name}
+          </span>
+          <input
+            type="text"
+            bind:value={colors.displayName}
+            placeholder="{name}"
+            class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Display name for {name}"
+          />
+        </div>
+        <div class="flex items-center gap-2">
           <div class="flex items-center gap-2">
             <label for="color-{name}-light" class="text-xs text-gray-600 dark:text-gray-400">
               {$_('settings.colors.lightMode')}
@@ -89,12 +101,12 @@
               aria-label="{name} dark mode color"
             />
           </div>
+          <div
+            class="w-20 h-8 rounded border border-gray-300 dark:border-gray-600 ml-auto"
+            style="background-color: {currentTheme === 'light' ? colors.light : colors.dark}"
+            title="Preview ({currentTheme} mode)"
+          ></div>
         </div>
-        <div
-          class="w-20 h-8 rounded border border-gray-300 dark:border-gray-600"
-          style="background-color: {currentTheme === 'light' ? colors.light : colors.dark}"
-          title="Preview ({currentTheme} mode)"
-        ></div>
       </div>
     {/each}
   </div>
@@ -129,7 +141,7 @@
             class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {#each colorOptions as colorName}
-              <option value={colorName}>{colorName}</option>
+              <option value={colorName}>{getColorDisplayName(colorName)}</option>
             {/each}
           </select>
           <div
@@ -187,7 +199,7 @@
       >
         <option value="">{$_('settings.colors.selectColor')}</option>
         {#each colorOptions as colorName}
-          <option value={colorName}>{colorName}</option>
+          <option value={colorName}>{getColorDisplayName(colorName)}</option>
         {/each}
       </select>
 

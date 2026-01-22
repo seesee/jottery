@@ -53,7 +53,9 @@ export function getColorNames(): string[] {
  */
 export function getTagColor(tagName: string): string | undefined {
   const userSettings = get(settings);
-  return userSettings.tagColors?.[tagName];
+  // Normalize tag name to lowercase for case-insensitive lookup
+  const normalizedTag = tagName.toLowerCase().trim();
+  return userSettings.tagColors?.[normalizedTag];
 }
 
 /**
@@ -63,6 +65,18 @@ export function getTagColor(tagName: string): string | undefined {
 export function getColorPalette(): ColorPalette {
   const userSettings = get(settings);
   return userSettings.colorPalette || DEFAULT_COLOR_PALETTE;
+}
+
+/**
+ * Get the display name for a color
+ * Returns the user-defined displayName if set, otherwise returns the color key
+ * @param colorName - Color key name
+ * @returns Display name or color key
+ */
+export function getColorDisplayName(colorName: string): string {
+  const userSettings = get(settings);
+  const palette = userSettings.colorPalette || DEFAULT_COLOR_PALETTE;
+  return palette[colorName]?.displayName || colorName;
 }
 
 /**
