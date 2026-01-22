@@ -75,6 +75,7 @@ export interface SyncNote {
   wordWrap?: boolean;
   syntaxLanguage?: string;
   showPreview?: boolean;
+  color?: string;               // Semantic color name (unencrypted)
 }
 
 // Attachment reference (metadata only)
@@ -179,6 +180,7 @@ export interface SyncNoteVersion {
   syntaxLanguage?: string;
   wordWrap?: boolean;
   showPreview?: boolean;
+  color?: string;            // Semantic color name (unencrypted)
   reason: 'sync' | 'manual-sync';
 }
 

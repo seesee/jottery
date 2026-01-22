@@ -32,6 +32,7 @@ pub struct SyncNote {
     pub syntax_language: Option<String>,
     #[serde(rename = "showPreview")]
     pub show_preview: Option<bool>,
+    pub color: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -90,6 +91,8 @@ pub struct SyncRejected {
     pub server_word_wrap: Option<bool>,
     #[serde(rename = "serverShowPreview")]
     pub server_show_preview: Option<bool>,
+    #[serde(rename = "serverColor")]
+    pub server_color: Option<String>,
 }
 
 // Sync pull request
@@ -173,5 +176,6 @@ pub struct SyncNoteVersion {
     pub word_wrap: Option<bool>,
     #[serde(rename = "showPreview")]
     pub show_preview: Option<bool>,
+    pub color: Option<String>,
     pub reason: String,             // 'sync' or 'manual-sync'
 }

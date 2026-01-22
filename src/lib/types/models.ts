@@ -176,6 +176,7 @@ export interface NoteVersion {
   syntaxLanguage?: string;
   wordWrap?: boolean;
   showPreview?: boolean;
+  color?: string; // Semantic color name (unencrypted)
   reason: 'sync' | 'manual-sync';
 }
 
