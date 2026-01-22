@@ -1,4 +1,18 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+/// Color definition for light and dark modes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ColorDefinition {
+    pub light: String,       // Hex color for light mode
+    pub dark: String,        // Hex color for dark mode
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "displayName")]
+    pub display_name: Option<String>, // Optional user-defined display name
+}
+
+/// Color palette mapping color names to light/dark hex values
+pub type ColorPalette = HashMap<String, ColorDefinition>;
 
 /// User application settings
 /// Stored unencrypted in the database
@@ -15,6 +29,12 @@ pub struct UserSettings {
     #[serde(default)]
     pub remember_password: bool, // Whether to store password for auto-unlock
     pub stored_password: Option<String>, // Encrypted password (JSON encrypted data)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "colorPalette")]
+    pub color_palette: Option<ColorPalette>, // User-customized color palette
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "tagColors")]
+    pub tag_colors: Option<HashMap<String, String>>, // Tag name → color name mapping
 }
 
 fn default_auto_sync_interval() -> i32 {
@@ -165,7 +185,90 @@ impl UserSettings {
             auto_sync_interval_minutes: 1, // 1 minute for responsive sync
             remember_password: false, // Disabled by default for security
             stored_password: None,
+            color_palette: None, // Will use default palette if None
+            tag_colors: None,    // No tag colors by default
         }
+    }
+
+    /// Get default color palette
+    pub fn default_color_palette() -> ColorPalette {
+        let mut palette = HashMap::new();
+
+        palette.insert("red".to_string(), ColorDefinition {
+            light: "#FFE5E5".to_string(),
+            dark: "#5C1A1A".to_string(),
+            display_name: None,
+        });
+        palette.insert("orange".to_string(), ColorDefinition {
+            light: "#FFF0E0".to_string(),
+            dark: "#5C3A1A".to_string(),
+            display_name: None,
+        });
+        palette.insert("yellow".to_string(), ColorDefinition {
+            light: "#FFFACD".to_string(),
+            dark: "#5C5520".to_string(),
+            display_name: None,
+        });
+        palette.insert("green".to_string(), ColorDefinition {
+            light: "#E5F5E5".to_string(),
+            dark: "#1A4D1A".to_string(),
+            display_name: None,
+        });
+        palette.insert("blue".to_string(), ColorDefinition {
+            light: "#E5F0FF".to_string(),
+            dark: "#1A3A5C".to_string(),
+            display_name: None,
+        });
+        palette.insert("purple".to_string(), ColorDefinition {
+            light: "#F0E5FF".to_string(),
+            dark: "#3A1A5C".to_string(),
+            display_name: None,
+        });
+        palette.insert("pink".to_string(), ColorDefinition {
+            light: "#FFE5F0".to_string(),
+            dark: "#5C1A3A".to_string(),
+            display_name: None,
+        });
+        palette.insert("gray".to_string(), ColorDefinition {
+            light: "#F0F0F0".to_string(),
+            dark: "#2A2A2A".to_string(),
+            display_name: None,
+        });
+
+        palette
+    }
+
+    /// Get color palette (returns default if not set)
+    pub fn get_color_palette(&self) -> ColorPalette {
+        self.color_palette.clone().unwrap_or_else(Self::default_color_palette)
+    }
+
+    /// Get tag color for a given tag name (case-insensitive)
+    pub fn get_tag_color(&self, tag_name: &str) -> Option<String> {
+        self.tag_colors.as_ref()?.get(&tag_name.to_lowercase()).cloned()
+    }
+
+    /// Get color display name or fallback to key
+    pub fn get_color_display_name(&self, color_key: &str) -> String {
+        let palette = self.get_color_palette();
+        palette.get(color_key)
+            .and_then(|def| def.display_name.clone())
+            .unwrap_or_else(|| color_key.to_string())
+    }
+
+    /// Find color key by display name (case-insensitive)
+    pub fn get_color_key_by_display_name(&self, display_name: &str) -> Option<String> {
+        let palette = self.get_color_palette();
+        let search = display_name.to_lowercase();
+
+        for (key, def) in palette.iter() {
+            let name = def.display_name.as_ref().unwrap_or(key).to_lowercase();
+            if name == search {
+                return Some(key.clone());
+            }
+        }
+
+        None
     }
 
     /// Validate settings

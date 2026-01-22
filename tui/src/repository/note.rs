@@ -34,8 +34,8 @@ impl<'a> NoteRepository<'a> {
         self.conn.execute(
             "INSERT INTO notes (
                 id, created_at, modified_at, synced_at, content, tags, attachments,
-                pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+                pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             params![
                 &note.id,
                 note.created_at.to_rfc3339(),
@@ -51,6 +51,7 @@ impl<'a> NoteRepository<'a> {
                 note.version,
                 note.word_wrap as i32,
                 note.syntax_language.to_string(),
+                &note.color,
             ],
         )?;
 
@@ -61,7 +62,7 @@ impl<'a> NoteRepository<'a> {
     pub fn get(&self, id: &str, key: &[u8; 32]) -> Result<Option<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
+                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE id = ?1"
         )?;
 
@@ -82,6 +83,7 @@ impl<'a> NoteRepository<'a> {
                     row.get::<_, i32>(11)?,        // version
                     row.get::<_, i32>(12)?,        // word_wrap
                     row.get::<_, String>(13)?,     // syntax_language
+                    row.get::<_, Option<String>>(14)?, // color
                 ))
             })
             .optional()?;
@@ -102,6 +104,7 @@ impl<'a> NoteRepository<'a> {
                 version,
                 word_wrap,
                 syntax_language,
+                color,
             )) => {
                 // Decrypt content and tags
                 let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -128,6 +131,7 @@ impl<'a> NoteRepository<'a> {
                     version,
                     word_wrap: word_wrap != 0,
                     syntax_language: syntax_language.parse().unwrap_or_default(),
+                    color,
                 }))
             }
             None => Ok(None),
@@ -146,8 +150,8 @@ impl<'a> NoteRepository<'a> {
             "UPDATE notes SET
                 modified_at = ?1, synced_at = ?2, content = ?3, tags = ?4, attachments = ?5,
                 pinned = ?6, deleted = ?7, deleted_at = ?8, sync_hash = ?9, version = ?10,
-                word_wrap = ?11, syntax_language = ?12
-             WHERE id = ?13",
+                word_wrap = ?11, syntax_language = ?12, color = ?13
+             WHERE id = ?14",
             params![
                 note.modified_at.to_rfc3339(),
                 note.synced_at.map(|dt| dt.to_rfc3339()),
@@ -161,6 +165,7 @@ impl<'a> NoteRepository<'a> {
                 note.version,
                 note.word_wrap as i32,
                 note.syntax_language.to_string(),
+                &note.color,
                 &note.id,
             ],
         )?;
@@ -188,11 +193,11 @@ impl<'a> NoteRepository<'a> {
     pub fn list(&self, include_deleted: bool, key: &[u8; 32]) -> Result<Vec<Note>> {
         let query = if include_deleted {
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
+                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes ORDER BY modified_at DESC"
         } else {
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
+                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE deleted = 0 ORDER BY modified_at DESC"
         };
 
@@ -213,6 +218,7 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, i32>(11)?,
                 row.get::<_, i32>(12)?,
                 row.get::<_, String>(13)?,
+                row.get::<_, Option<String>>(14)?,
             ))
         })?;
 
@@ -233,6 +239,7 @@ impl<'a> NoteRepository<'a> {
                 version,
                 word_wrap,
                 syntax_language,
+                color,
             ) = row?;
 
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -257,6 +264,7 @@ impl<'a> NoteRepository<'a> {
                 version,
                 word_wrap: word_wrap != 0,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
+                color,
             });
         }
 
@@ -271,7 +279,7 @@ impl<'a> NoteRepository<'a> {
     ) -> Result<Vec<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
+                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE modified_at > ?1 ORDER BY modified_at DESC"
         )?;
 
@@ -291,6 +299,7 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, i32>(11)?,
                 row.get::<_, i32>(12)?,
                 row.get::<_, String>(13)?,
+                row.get::<_, Option<String>>(14)?,
             ))
         })?;
 
@@ -311,6 +320,7 @@ impl<'a> NoteRepository<'a> {
                 version,
                 word_wrap,
                 syntax_language,
+                color,
             ) = row?;
 
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -335,6 +345,7 @@ impl<'a> NoteRepository<'a> {
                 version,
                 word_wrap: word_wrap != 0,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
+                color,
             });
         }
 
@@ -356,7 +367,7 @@ impl<'a> NoteRepository<'a> {
     /// Get only deleted notes (for recycle bin)
     pub fn get_deleted(&self, key: &[u8; 32]) -> Result<Vec<Note>> {
         let query = "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language
+                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE deleted = 1 ORDER BY deleted_at DESC";
 
         let mut stmt = self.conn.prepare(query)?;
@@ -378,12 +389,13 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, i32>(11)?,     // version
                 row.get::<_, bool>(12)?,    // word_wrap
                 row.get::<_, String>(13)?,  // syntax_language
+                row.get::<_, Option<String>>(14)?,  // color
             ))
         })?;
 
         for row_result in rows {
             let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language) = row_result?;
+                 pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
 
             // Decrypt content and tags
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -416,6 +428,7 @@ impl<'a> NoteRepository<'a> {
                 version,
                 word_wrap,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
+                color,
             });
         }
 

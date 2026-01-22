@@ -20,6 +20,7 @@ pub struct Note {
     pub version: i32,
     pub word_wrap: bool,
     pub syntax_language: SyntaxLanguage,
+    pub color: Option<String>,        // Semantic color name (unencrypted)
 }
 
 /// Syntax highlighting language options
@@ -148,6 +149,7 @@ impl Note {
             version: 1,
             word_wrap: true,
             syntax_language: SyntaxLanguage::Markdown,
+            color: None,
         }
     }
 

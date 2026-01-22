@@ -20,13 +20,23 @@ impl<'a> SettingsRepository<'a> {
     pub fn get(&self) -> Result<UserSettings> {
         let result = self.conn
             .query_row(
-                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password
+                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password, color_palette, tag_colors
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
                     // Decode stored password if present
                     let stored_password: Option<String> = row.get(8)?;
                     let decoded_password = stored_password.map(|p| decode_password(&p));
+
+                    // Parse color_palette JSON if present
+                    let color_palette_json: Option<String> = row.get(9)?;
+                    let color_palette = color_palette_json
+                        .and_then(|json| serde_json::from_str(&json).ok());
+
+                    // Parse tag_colors JSON if present
+                    let tag_colors_json: Option<String> = row.get(10)?;
+                    let tag_colors = tag_colors_json
+                        .and_then(|json| serde_json::from_str(&json).ok());
 
                     Ok(UserSettings {
                         language: row.get(0)?,
@@ -38,6 +48,8 @@ impl<'a> SettingsRepository<'a> {
                         auto_sync_interval_minutes: row.get::<_, Option<i32>>(6)?.unwrap_or(1),
                         remember_password: row.get::<_, Option<i32>>(7)?.unwrap_or(0) != 0,
                         stored_password: decoded_password,
+                        color_palette,
+                        tag_colors,
                     })
                 },
             )
@@ -53,9 +65,19 @@ impl<'a> SettingsRepository<'a> {
         // Encode password if present
         let encoded_password = settings.stored_password.as_ref().map(|p| encode_password(p));
 
+        // Serialize color_palette to JSON if present
+        let color_palette_json = settings.color_palette.as_ref()
+            .map(|p| serde_json::to_string(p))
+            .transpose()?;
+
+        // Serialize tag_colors to JSON if present
+        let tag_colors_json = settings.tag_colors.as_ref()
+            .map(|tc| serde_json::to_string(tc))
+            .transpose()?;
+
         self.conn.execute(
-            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password)
-             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password, color_palette, tag_colors)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 &settings.language,
                 settings.theme.to_string(),
@@ -66,6 +88,8 @@ impl<'a> SettingsRepository<'a> {
                 settings.auto_sync_interval_minutes,
                 settings.remember_password as i32,
                 &encoded_password,
+                &color_palette_json,
+                &tag_colors_json,
             ],
         )?;
 
