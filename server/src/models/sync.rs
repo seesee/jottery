@@ -22,6 +22,9 @@ pub struct SyncNote {
     pub tags: Vec<String>,
     pub attachments: Vec<AttachmentRef>,
     pub pinned: bool,
+    pub archived: bool,
+    #[serde(rename = "archivedAt")]
+    pub archived_at: Option<String>,
     pub deleted: bool,
     #[serde(rename = "deletedAt")]
     pub deleted_at: Option<String>,
@@ -85,6 +88,10 @@ pub struct SyncRejected {
     pub server_attachments: Vec<AttachmentRef>,
     #[serde(rename = "serverPinned")]
     pub server_pinned: bool,
+    #[serde(rename = "serverArchived")]
+    pub server_archived: bool,
+    #[serde(rename = "serverArchivedAt")]
+    pub server_archived_at: Option<String>,
     #[serde(rename = "serverSyntaxLanguage")]
     pub server_syntax_language: Option<String>,
     #[serde(rename = "serverWordWrap")]

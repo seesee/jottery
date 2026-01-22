@@ -247,7 +247,7 @@ pub async fn push(
         } else {
             // Fetch full server note data for conflict resolution
             let server_note = sqlx::query!(
-                r#"SELECT content, tags, pinned, server_version, syntax_language, word_wrap, show_preview, color, modified_at
+                r#"SELECT content, tags, pinned, archived, archived_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at
                    FROM notes WHERE id = ? AND user_id = ?"#,
                 note.id,
                 client_info.user_id
@@ -290,6 +290,8 @@ pub async fn push(
                 server_version: server_note.server_version,
                 server_attachments,
                 server_pinned: server_note.pinned == 1,
+                server_archived: server_note.archived,
+                server_archived_at: server_note.archived_at,
                 server_syntax_language: server_note.syntax_language,
                 server_word_wrap: server_note.word_wrap.map(|w| w == 1),
                 server_show_preview: server_note.show_preview.map(|p| p == 1),
@@ -547,7 +549,7 @@ pub async fn pull(
                 content: row.content,
                 tags: row.tags,
                 pinned: row.pinned,
-                archived: row.archived,
+                archived: if row.archived { 1 } else { 0 },
                 archived_at: row.archived_at,
                 deleted: row.deleted,
                 deleted_at: row.deleted_at,
@@ -579,7 +581,7 @@ pub async fn pull(
                 content: row.content,
                 tags: row.tags,
                 pinned: row.pinned,
-                archived: row.archived,
+                archived: if row.archived { 1 } else { 0 },
                 archived_at: row.archived_at,
                 deleted: row.deleted,
                 deleted_at: row.deleted_at,
@@ -660,6 +662,8 @@ pub async fn pull(
             tags,
             attachments,
             pinned: db_note.pinned != 0,
+            archived: db_note.archived != 0,
+            archived_at: db_note.archived_at,
             deleted: db_note.deleted != 0,
             deleted_at: db_note.deleted_at,
             version: db_note.version,
