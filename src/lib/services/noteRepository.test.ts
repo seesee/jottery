@@ -280,6 +280,113 @@ describe('NoteRepository', () => {
     });
   });
 
+  describe('Archive Operations', () => {
+    describe('archive', () => {
+      test('should archive a note', async () => {
+        const note = createTestNote();
+        await noteRepository.create(note);
+
+        await noteRepository.archive(note.id);
+
+        const retrieved = await noteRepository.getById(note.id);
+        expect(retrieved?.archived).toBe(true);
+        expect(retrieved?.archivedAt).toBeDefined();
+      });
+
+      test('should set archivedAt timestamp', async () => {
+        const note = createTestNote();
+        await noteRepository.create(note);
+
+        const beforeArchive = Date.now();
+        await noteRepository.archive(note.id);
+        const afterArchive = Date.now();
+
+        const retrieved = await noteRepository.getById(note.id);
+        const archivedTime = new Date(retrieved!.archivedAt!).getTime();
+        expect(archivedTime).toBeGreaterThanOrEqual(beforeArchive);
+        expect(archivedTime).toBeLessThanOrEqual(afterArchive);
+      });
+
+      test('should throw error for non-existent note', async () => {
+        await expect(noteRepository.archive('non-existent')).rejects.toThrow(
+          'Note non-existent not found'
+        );
+      });
+
+      test('should set needsSync flag', async () => {
+        const note = createTestNote();
+        await noteRepository.create(note);
+
+        await noteRepository.archive(note.id);
+
+        const retrieved = await noteRepository.getById(note.id);
+        expect(retrieved?.needsSync).toBe(true);
+      });
+    });
+
+    describe('unarchive', () => {
+      test('should unarchive archived note', async () => {
+        const note = createTestNote();
+        await noteRepository.create(note);
+        await noteRepository.archive(note.id);
+
+        await noteRepository.unarchive(note.id);
+
+        const retrieved = await noteRepository.getById(note.id);
+        expect(retrieved?.archived).toBe(false);
+        expect(retrieved?.archivedAt).toBeUndefined();
+      });
+
+      test('should throw error for non-existent note', async () => {
+        await expect(noteRepository.unarchive('non-existent')).rejects.toThrow(
+          'Note non-existent not found'
+        );
+      });
+    });
+
+    describe('getArchived', () => {
+      test('should return only archived notes', async () => {
+        const notes = createTestNotes(3);
+        for (const note of notes) {
+          await noteRepository.create(note);
+        }
+        await noteRepository.archive(notes[0].id);
+        await noteRepository.archive(notes[2].id);
+
+        const archivedNotes = await noteRepository.getArchived();
+
+        expect(archivedNotes).toHaveLength(2);
+        expect(archivedNotes.map(n => n.id)).toContain(notes[0].id);
+        expect(archivedNotes.map(n => n.id)).toContain(notes[2].id);
+      });
+
+      test('should return empty array when no archived notes', async () => {
+        const notes = createTestNotes(2);
+        for (const note of notes) {
+          await noteRepository.create(note);
+        }
+
+        const archivedNotes = await noteRepository.getArchived();
+
+        expect(archivedNotes).toHaveLength(0);
+      });
+
+      test('should exclude deleted notes from archived', async () => {
+        const notes = createTestNotes(2);
+        for (const note of notes) {
+          await noteRepository.create(note);
+          await noteRepository.archive(note.id);
+        }
+        await noteRepository.softDelete(notes[1].id);
+
+        const archivedNotes = await noteRepository.getArchived();
+
+        expect(archivedNotes).toHaveLength(1);
+        expect(archivedNotes[0].id).toBe(notes[0].id);
+      });
+    });
+  });
+
   describe('Query Operations', () => {
     describe('getAll', () => {
       test('should return all notes including deleted', async () => {
@@ -325,6 +432,34 @@ describe('NoteRepository', () => {
         const activeNotes = await noteRepository.getAllActive();
 
         expect(activeNotes).toHaveLength(0);
+      });
+
+      test('should exclude archived notes', async () => {
+        const notes = createTestNotes(3);
+        for (const note of notes) {
+          await noteRepository.create(note);
+        }
+        await noteRepository.archive(notes[1].id);
+
+        const activeNotes = await noteRepository.getAllActive();
+
+        expect(activeNotes).toHaveLength(2);
+        expect(activeNotes.find(n => n.id === notes[1].id)).toBeUndefined();
+      });
+
+      test('should exclude both deleted and archived notes', async () => {
+        const notes = createTestNotes(4);
+        for (const note of notes) {
+          await noteRepository.create(note);
+        }
+        await noteRepository.softDelete(notes[1].id);
+        await noteRepository.archive(notes[2].id);
+
+        const activeNotes = await noteRepository.getAllActive();
+
+        expect(activeNotes).toHaveLength(2);
+        expect(activeNotes.map(n => n.id)).toContain(notes[0].id);
+        expect(activeNotes.map(n => n.id)).toContain(notes[3].id);
       });
     });
 
@@ -380,6 +515,21 @@ describe('NoteRepository', () => {
           await noteRepository.create(note);
         }
         await noteRepository.softDelete(notes[1].id);
+
+        const pinnedNotes = await noteRepository.getPinned();
+
+        expect(pinnedNotes).toHaveLength(1);
+        expect(pinnedNotes[0].id).toBe(notes[0].id);
+      });
+
+      test('should exclude archived notes from pinned', async () => {
+        const notes = createTestNotes(2);
+        notes[0].pinned = true;
+        notes[1].pinned = true;
+        for (const note of notes) {
+          await noteRepository.create(note);
+        }
+        await noteRepository.archive(notes[1].id);
 
         const pinnedNotes = await noteRepository.getPinned();
 

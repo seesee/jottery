@@ -90,7 +90,7 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
   console.log(`[Jottery Client v${__APP_VERSION__}] Opening database. Current version: ${DB_VERSION}`);
 
   dbInstance = await openDB<JotteryDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion, newVersion, transaction) {
+    async upgrade(db, oldVersion, newVersion, transaction) {
       console.log(`[DB] Upgrading database from v${oldVersion} to v${newVersion}`);
 
       // Version 1: Initial schema
@@ -242,7 +242,7 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
 
         // Migrate existing notes to add archived field (default: false)
         const notesStore = transaction.objectStore(STORES.NOTES);
-        const notesCursor = await notesStore.openCursor();
+        let notesCursor = await notesStore.openCursor();
         let migratedCount = 0;
 
         while (notesCursor) {
@@ -253,7 +253,7 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
             await notesCursor.update(note);
             migratedCount++;
           }
-          await notesCursor.continue();
+          notesCursor = await notesCursor.continue();
         }
 
         console.log(`[DB] Migrated ${migratedCount} notes to add archived field`);

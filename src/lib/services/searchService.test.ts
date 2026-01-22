@@ -255,4 +255,103 @@ describe('searchService', () => {
       expect(results).toHaveLength(3);
     });
   });
+
+  describe('Archive modifier', () => {
+    let notes: DecryptedNote[];
+
+    beforeEach(() => {
+      notes = [
+        createTestNote({
+          id: 'note-1',
+          content: 'Active note 1',
+          archived: false,
+        }),
+        createTestNote({
+          id: 'note-2',
+          content: 'Archived note 1',
+          archived: true,
+          archivedAt: '2024-01-02T10:00:00.000Z',
+        }),
+        createTestNote({
+          id: 'note-3',
+          content: 'Active note 2',
+          archived: false,
+        }),
+        createTestNote({
+          id: 'note-4',
+          content: 'Archived note 2',
+          archived: true,
+          archivedAt: '2024-01-03T10:00:00.000Z',
+        }),
+      ];
+
+      indexNotes(notes);
+    });
+
+    it('should exclude archived notes by default', async () => {
+      const results = await searchNotes('', notes, 'recent');
+
+      expect(results).toHaveLength(2);
+      expect(results.every(n => !n.archived)).toBe(true);
+      expect(results.some(n => n.id === 'note-1')).toBe(true);
+      expect(results.some(n => n.id === 'note-3')).toBe(true);
+    });
+
+    it('should show only archived notes with archive:true', async () => {
+      const results = await searchNotes('archive:true', notes, 'recent');
+
+      expect(results).toHaveLength(2);
+      expect(results.every(n => n.archived === true)).toBe(true);
+      expect(results.some(n => n.id === 'note-2')).toBe(true);
+      expect(results.some(n => n.id === 'note-4')).toBe(true);
+    });
+
+    it('should show only active notes with archive:false', async () => {
+      const results = await searchNotes('archive:false', notes, 'recent');
+
+      expect(results).toHaveLength(2);
+      expect(results.every(n => !n.archived)).toBe(true);
+      expect(results.some(n => n.id === 'note-1')).toBe(true);
+      expect(results.some(n => n.id === 'note-3')).toBe(true);
+    });
+
+    it('should show only archived notes with archived shorthand', async () => {
+      const results = await searchNotes('archived', notes, 'recent');
+
+      expect(results).toHaveLength(2);
+      expect(results.every(n => n.archived === true)).toBe(true);
+      expect(results.some(n => n.id === 'note-2')).toBe(true);
+      expect(results.some(n => n.id === 'note-4')).toBe(true);
+    });
+
+    it('should combine archive modifier with text search', async () => {
+      const results = await searchNotes('archive:true note 2', notes, 'recent');
+
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('note-4');
+      expect(results[0].archived).toBe(true);
+    });
+
+    it('should combine archive modifier with tag search', async () => {
+      const testNotes = [
+        ...notes,
+        createTestNote({
+          id: 'note-5',
+          content: 'Tagged archived note',
+          tags: ['important'],
+          archived: true,
+          archivedAt: '2024-01-04T10:00:00.000Z',
+        }),
+      ];
+
+      indexNotes(testNotes);
+
+      const results = await searchNotes('archive:true #important', testNotes, 'recent');
+
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('note-5');
+      expect(results[0].archived).toBe(true);
+      expect(results[0].tags).toContain('important');
+    });
+  });
 });

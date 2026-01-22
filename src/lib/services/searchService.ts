@@ -461,7 +461,9 @@ export async function searchNotes(
     (!parsed.excludeTags || parsed.excludeTags.length === 0) &&
     !hasModifiers
   ) {
-    return sortNotes(allNotes, sortOrder);
+    // No query: return all notes, excluding archived by default
+    const filteredNotes = allNotes.filter((note) => !note.archived);
+    return sortNotes(filteredNotes, sortOrder);
   }
 
   let results = [...allNotes];
@@ -535,8 +537,12 @@ export async function searchNotes(
   }
 
   // archive: or archive:true/false
+  // Default behavior: exclude archived notes unless explicitly requested
   if (parsed.archived !== undefined) {
     results = results.filter((note) => note.archived === parsed.archived);
+  } else {
+    // No archive modifier specified: exclude archived notes by default
+    results = results.filter((note) => !note.archived);
   }
 
   // created:>DATE (created after)
