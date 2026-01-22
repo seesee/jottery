@@ -1,5 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { settings } from '../stores/appStore';
+  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
 
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};
@@ -13,6 +15,15 @@
 
   // All available tags from existing notes (would be passed as prop in real implementation)
   export let availableTags: string[] = [];
+
+  // Color support: resolve theme (reactive dependency on settings for reactivity)
+  $: currentTheme = resolveTheme($settings.theme);
+
+  // Helper function to get tag color
+  function getTagBackgroundColor(tag: string): string | undefined {
+    const tagColorName = getTagColor(tag);
+    return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
+  }
 
   function handleInput() {
     if (inputValue.trim()) {
@@ -83,7 +94,11 @@
   <div class="tag-input-container flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 min-h-[2.5rem]">
     <!-- Existing tags -->
     {#each tags as tag, index}
-      <span class="tag-pill inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-sm rounded-md">
+      {@const tagBgColor = getTagBackgroundColor(tag)}
+      <span
+        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {tagBgColor ? '' : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'}"
+        style:background-color={tagBgColor}
+      >
         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
         <span
           on:click={() => onTagClick?.(tag)}
