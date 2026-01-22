@@ -7,6 +7,8 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
   import { modal, createBackdropHandler } from '../actions';
+  import { settings } from '../stores/appStore';
+  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
 
   // Helper to get formatted date synchronously (for use in templates)
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -24,6 +26,15 @@
   let selectedVersion: DecryptedNoteVersion | null = null;
   let showRestoreConfirm = false;
   let versionToRestore: number | null = null;
+
+  // Color support: resolve theme (reactive dependency on settings for reactivity)
+  $: currentTheme = resolveTheme($settings.theme);
+
+  // Helper function to get tag color
+  function getTagBackgroundColor(tag: string): string | undefined {
+    const tagColorName = getTagColor(tag);
+    return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
+  }
 
   async function decryptVersion(version: NoteVersion): Promise<DecryptedNoteVersion> {
     const masterKey = keyManager.getMasterKey();
@@ -250,7 +261,11 @@
                         <span class="text-gray-600 dark:text-gray-400">{$_('versionHistory.tags')}</span>
                         <div class="flex gap-1 mt-1 flex-wrap">
                           {#each selectedVersion.tags as tag}
-                            <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs">
+                            {@const tagBgColor = getTagBackgroundColor(tag)}
+                            <span
+                              class="px-2 py-0.5 rounded text-xs {tagBgColor ? '' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'}"
+                              style:background-color={tagBgColor}
+                            >
                               #{tag}
                             </span>
                           {/each}

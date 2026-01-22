@@ -6,8 +6,9 @@
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
-  import { notes } from '../stores/appStore';
+  import { notes, settings } from '../stores/appStore';
   import { searchService } from '../services/searchService';
+  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
 
   // Helper to get formatted date synchronously (for use in templates)
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -22,6 +23,15 @@
   let showPermanentDeleteConfirm = false;
   let showEmptyBinConfirm = false;
   let noteToDelete: string | null = null;
+
+  // Color support: resolve theme (reactive dependency on settings for reactivity)
+  $: currentTheme = resolveTheme($settings.theme);
+
+  // Helper function to get tag color
+  function getTagBackgroundColor(tag: string): string | undefined {
+    const tagColorName = getTagColor(tag);
+    return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
+  }
 
   async function loadDeletedNotes() {
     loading = true;
@@ -174,7 +184,11 @@
                     {#if note.tags.length > 0}
                       <div class="flex gap-1 mt-2">
                         {#each note.tags.slice(0, 3) as tag}
-                          <span class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded">
+                          {@const tagBgColor = getTagBackgroundColor(tag)}
+                          <span
+                            class="text-xs px-2 py-0.5 rounded {tagBgColor ? '' : 'bg-gray-200 dark:bg-gray-600'}"
+                            style:background-color={tagBgColor}
+                          >
                             #{tag}
                           </span>
                         {/each}
