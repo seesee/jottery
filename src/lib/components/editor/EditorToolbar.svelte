@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { settings } from '../../stores/appStore';
-  import { getColorHex, resolveTheme } from '../../services/colorService';
+  import { getColorHex, resolveTheme, hexWithOpacity } from '../../services/colorService';
 
   // State props
   export let pinned: boolean;
@@ -42,9 +42,10 @@
   // Internal state
   let showMoreMenu = false;
 
-  // Color preview
+  // Color preview and background
   $: currentTheme = resolveTheme($settings.theme);
   $: colorPreviewHex = color ? getColorHex(color, currentTheme) : undefined;
+  $: toolbarBackgroundColor = color ? hexWithOpacity(getColorHex(color, currentTheme), 0.3) : undefined;
 
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
@@ -108,7 +109,10 @@
 </script>
 
 <!-- Toolbar -->
-<div class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center gap-2">
+<div
+  class="border-b border-gray-200 dark:border-gray-700 p-2 flex items-center gap-2"
+  style:background-color={toolbarBackgroundColor}
+>
   <!-- Mobile: Back Button with app name for larger hit area -->
   {#if onBackToList}
     <button
