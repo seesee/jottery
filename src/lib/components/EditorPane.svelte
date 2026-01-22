@@ -16,7 +16,7 @@
   import { dropzone } from '../actions';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
   import ColorPickerModal from './ColorPickerModal.svelte';
-  import { getColorHex, resolveTheme } from '../services/colorService';
+  import { getColorHex, resolveTheme, hexWithOpacity } from '../services/colorService';
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
@@ -901,7 +901,6 @@
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
-    style:background-color={noteBackgroundColor}
     use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
     role="region"
     aria-label="Note editor"
@@ -966,6 +965,7 @@
         isExpanded={isAttachmentsExpanded}
         {isDraggingFile}
         {isUploading}
+        backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.15) : undefined}
         onToggleExpanded={toggleAttachments}
         onDelete={handleDeleteAttachment}
         onFileUpload={handleFileUpload}
@@ -974,7 +974,11 @@
 
     <!-- Metadata Footer -->
     {#if $selectedNote}
-      <EditorFooter {createdAtFormatted} {modifiedAtFormatted} />
+      <EditorFooter
+        {createdAtFormatted}
+        {modifiedAtFormatted}
+        backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.3) : undefined}
+      />
     {/if}
   </div>
 {:else}

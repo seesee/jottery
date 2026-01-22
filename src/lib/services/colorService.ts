@@ -111,3 +111,26 @@ export function resolveTheme(themePreference: 'light' | 'dark' | 'auto'): 'light
   }
   return themePreference;
 }
+
+/**
+ * Add opacity to a hex color code
+ * @param hexColor - Hex color code (e.g., '#FF0000' or '#F00')
+ * @param opacity - Opacity value between 0 and 1 (e.g., 0.3 for 30%)
+ * @returns Hex color with alpha channel (e.g., '#FF000033' for 20% opacity)
+ */
+export function hexWithOpacity(hexColor: string | undefined, opacity: number): string | undefined {
+  if (!hexColor) return undefined;
+
+  // Remove # if present
+  const hex = hexColor.replace('#', '');
+
+  // Convert 3-digit hex to 6-digit
+  const fullHex = hex.length === 3
+    ? hex.split('').map(char => char + char).join('')
+    : hex;
+
+  // Convert opacity (0-1) to hex (00-FF)
+  const alpha = Math.round(opacity * 255).toString(16).padStart(2, '0');
+
+  return `#${fullHex}${alpha}`;
+}

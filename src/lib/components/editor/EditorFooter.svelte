@@ -4,10 +4,14 @@
 
   export let createdAtFormatted: Readable<string> | null;
   export let modifiedAtFormatted: Readable<string> | null;
+  export let backgroundColor: string | undefined = undefined;
 </script>
 
 <!-- Metadata Footer -->
-<div class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400">
+<div
+  class="border-t border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-500 dark:text-gray-400"
+  style:background-color={backgroundColor}
+>
   <div class="flex justify-between">
     <span>{$_('note.created')}: {createdAtFormatted ? $createdAtFormatted : ''}</span>
     <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>

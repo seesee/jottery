@@ -9,6 +9,7 @@
   export let isExpanded: boolean;
   export let isDraggingFile: boolean;
   export let isUploading: boolean;
+  export let backgroundColor: string | undefined = undefined;
 
   // Callbacks
   export let onToggleExpanded: () => void;
@@ -17,7 +18,10 @@
 </script>
 
 <!-- Attachments Section -->
-<div class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+<div
+  class="border-t border-gray-200 dark:border-gray-700 {backgroundColor ? '' : 'bg-gray-50 dark:bg-gray-800/50'}"
+  style:background-color={backgroundColor}
+>
   <!-- Header - Always visible -->
   <button
     on:click={onToggleExpanded}

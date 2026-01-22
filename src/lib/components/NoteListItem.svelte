@@ -12,7 +12,7 @@
     selectRange,
     settings,
   } from '../stores/appStore';
-  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
+  import { getColorHex, getTagColor, resolveTheme, hexWithOpacity } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
   import {
     shouldShowCheckbox,
@@ -43,9 +43,11 @@
   $: isMultiSelected = $selectedNoteIds.has(note.id);
   let isHovered = false;
 
-  // Color support: resolve theme and compute note/tag colors
+  // Color support: resolve theme and compute note/tag colors (30% opacity)
   $: currentTheme = resolveTheme($settings.theme);
-  $: noteBackgroundColor = note.color ? getColorHex(note.color, currentTheme) : undefined;
+  $: noteBackgroundColor = note.color
+    ? hexWithOpacity(getColorHex(note.color, currentTheme), 0.3)
+    : undefined;
 
   // Helper function to get tag color
   function getTagBackgroundColor(tag: string): string | undefined {
