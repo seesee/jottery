@@ -288,6 +288,14 @@ help:
   search_exclude_desc: 単語を除外 (否定)
   search_and_key: 単語1 単語2
   search_and_desc: すべての単語に一致 (AND)
+  search_color_key: "color:red"
+  search_color_desc: "色で検索（ノートまたはタグ）"
+  search_color_note_key: "color:red note"
+  search_color_note_desc: "色付きノートを検索"
+  search_color_tag_key: "color:red tag"
+  search_color_tag_desc: "色付きタグのノートを検索"
+  search_category_key: "category:important"
+  search_category_desc: "色カテゴリー名で検索"
   enter_open_editor_key: Enter
   enter_open_editor_desc: $EDITORでノートを開く
   esc_exit_search_key: Esc

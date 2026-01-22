@@ -288,6 +288,14 @@ help:
   search_exclude_desc: Εξαίρεση λέξης (άρνηση)
   search_and_key: λέξη1 λέξη2
   search_and_desc: Αντιστοίχιση όλων των λέξεων (ΚΑΙ)
+  search_color_key: "color:red"
+  search_color_desc: "Αναζήτηση κατά χρώμα (σημείωση ή ετικέτα)"
+  search_color_note_key: "color:red note"
+  search_color_note_desc: "Αναζήτηση σημειώσεων με χρώμα"
+  search_color_tag_key: "color:red tag"
+  search_color_tag_desc: "Αναζήτηση σημειώσεων με χρωματιστές ετικέτες"
+  search_category_key: "category:important"
+  search_category_desc: "Αναζήτηση κατά όνομα κατηγορίας χρώματος"
   enter_open_editor_key: Enter
   enter_open_editor_desc: Άνοιγμα σημείωσης στο $EDITOR
   esc_exit_search_key: Esc

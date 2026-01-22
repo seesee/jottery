@@ -288,6 +288,14 @@ help:
   search_exclude_desc: 단어 제외 (부정)
   search_and_key: 단어1 단어2
   search_and_desc: 모든 단어 일치 (AND)
+  search_color_key: "color:red"
+  search_color_desc: "색상으로 검색 (노트 또는 태그)"
+  search_color_note_key: "color:red note"
+  search_color_note_desc: "색상이 있는 노트 검색"
+  search_color_tag_key: "color:red tag"
+  search_color_tag_desc: "색상 태그가 있는 노트 검색"
+  search_category_key: "category:important"
+  search_category_desc: "색상 카테고리 이름으로 검색"
   enter_open_editor_key: Enter
   enter_open_editor_desc: $EDITOR에서 노트 열기
   esc_exit_search_key: Esc

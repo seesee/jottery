@@ -288,6 +288,14 @@ help:
   search_exclude_desc: Escludi parola (negazione)
   search_and_key: parola1 parola2
   search_and_desc: Trova tutte le parole (E)
+  search_color_key: "color:red"
+  search_color_desc: "Cerca per colore (nota o tag)"
+  search_color_note_key: "color:red note"
+  search_color_note_desc: "Cerca note con colore"
+  search_color_tag_key: "color:red tag"
+  search_color_tag_desc: "Cerca note con tag colorati"
+  search_category_key: "category:important"
+  search_category_desc: "Cerca per nome categoria colore"
   enter_open_editor_key: Invio
   enter_open_editor_desc: Apri nota in $EDITOR
   esc_exit_search_key: Esc

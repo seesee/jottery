@@ -288,6 +288,14 @@ help:
   search_exclude_desc: Wort ausschließen (Negation)
   search_and_key: wort1 wort2
   search_and_desc: Alle Wörter finden (UND)
+  search_color_key: "color:red"
+  search_color_desc: "Nach Farbe suchen (Notiz oder Tag)"
+  search_color_note_key: "color:red note"
+  search_color_note_desc: "Notizen mit Farbe suchen"
+  search_color_tag_key: "color:red tag"
+  search_color_tag_desc: "Notizen mit farbigen Tags suchen"
+  search_category_key: "category:important"
+  search_category_desc: "Nach Farbkategoriename suchen"
   enter_open_editor_key: Enter
   enter_open_editor_desc: Notiz in $EDITOR öffnen
   esc_exit_search_key: Esc

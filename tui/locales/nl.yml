@@ -288,6 +288,14 @@ help:
   search_exclude_desc: Woord uitsluiten (negatie)
   search_and_key: woord1 woord2
   search_and_desc: Alle woorden vinden (EN)
+  search_color_key: "color:red"
+  search_color_desc: "Zoeken op kleur (notitie of label)"
+  search_color_note_key: "color:red note"
+  search_color_note_desc: "Notities met kleur zoeken"
+  search_color_tag_key: "color:red tag"
+  search_color_tag_desc: "Notities met gekleurde labels zoeken"
+  search_category_key: "category:important"
+  search_category_desc: "Zoeken op kleurcategorienaam"
   enter_open_editor_key: Enter
   enter_open_editor_desc: Notitie openen in $EDITOR
   esc_exit_search_key: Esc
