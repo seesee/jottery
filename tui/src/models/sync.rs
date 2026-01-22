@@ -344,4 +344,158 @@ mod tests {
         let result = SyncCredentials::from_base64("invalid!!!base64");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_sync_note_includes_color_field() {
+        // Test that SyncNote struct serializes with color field
+        let sync_note = SyncNote {
+            id: "test-id".to_string(),
+            created_at: Utc::now(),
+            modified_at: Utc::now(),
+            content: "encrypted-content".to_string(),
+            tags: vec!["tag1".to_string()],
+            attachments: vec![],
+            pinned: false,
+            deleted: false,
+            deleted_at: None,
+            version: 1,
+            word_wrap: Some(true),
+            syntax_language: Some("markdown".to_string()),
+            color: Some("red".to_string()),
+        };
+
+        // Serialize to JSON
+        let json = serde_json::to_string(&sync_note).expect("Failed to serialize");
+
+        // Verify color field is present in JSON
+        assert!(json.contains("\"color\""), "JSON should contain color field");
+        assert!(json.contains("\"red\""), "JSON should contain red color value");
+    }
+
+    #[test]
+    fn test_sync_note_color_none() {
+        // Test that SyncNote with no color serializes correctly
+        let sync_note = SyncNote {
+            id: "test-id".to_string(),
+            created_at: Utc::now(),
+            modified_at: Utc::now(),
+            content: "encrypted-content".to_string(),
+            tags: vec![],
+            attachments: vec![],
+            pinned: false,
+            deleted: false,
+            deleted_at: None,
+            version: 1,
+            word_wrap: Some(true),
+            syntax_language: Some("markdown".to_string()),
+            color: None,
+        };
+
+        let json = serde_json::to_string(&sync_note).expect("Failed to serialize");
+
+        // Verify color field is null or omitted in JSON
+        assert!(json.contains("\"color\":null") || !json.contains("\"color\""),
+                "Color should be null or omitted");
+    }
+
+    #[test]
+    fn test_sync_note_version_includes_color() {
+        // Test that SyncNoteVersion includes color field
+        let version = SyncNoteVersion {
+            version_key: "note-id:1".to_string(),
+            note_id: "note-id".to_string(),
+            version: 1,
+            created_at: Utc::now(),
+            synced_at: Utc::now(),
+            content: "encrypted-content".to_string(),
+            tags: vec![],
+            attachments: vec![],
+            syntax_language: Some("markdown".to_string()),
+            word_wrap: Some(true),
+            color: Some("blue".to_string()),
+            reason: "sync".to_string(),
+        };
+
+        let json = serde_json::to_string(&version).expect("Failed to serialize");
+
+        assert!(json.contains("\"color\""), "Version JSON should contain color");
+        assert!(json.contains("\"blue\""), "Version JSON should contain blue color");
+    }
+
+    #[test]
+    fn test_conflict_data_includes_server_color() {
+        // Test that ConflictData includes server_color field
+        let conflict = ConflictData {
+            note_id: "note-id".to_string(),
+            server_content: "server-content".to_string(),
+            server_tags: vec![],
+            server_modified_at: Utc::now(),
+            server_version: 2,
+            server_attachments: vec![],
+            server_pinned: false,
+            server_syntax_language: Some("markdown".to_string()),
+            server_word_wrap: Some(true),
+            server_color: Some("green".to_string()),
+            detected_at: Utc::now(),
+        };
+
+        let json = serde_json::to_string(&conflict).expect("Failed to serialize");
+
+        assert!(json.contains("\"serverColor\""), "Conflict JSON should contain serverColor");
+        assert!(json.contains("\"green\""), "Conflict JSON should contain green color");
+    }
+
+    #[test]
+    fn test_sync_rejected_includes_server_color() {
+        // Test that SyncRejected includes server_color field
+        let rejected = SyncRejected {
+            id: "note-id".to_string(),
+            reason: "conflict".to_string(),
+            server_modified_at: Utc::now(),
+            server_content: "server-content".to_string(),
+            server_tags: vec![],
+            server_version: 2,
+            server_attachments: vec![],
+            server_pinned: false,
+            server_syntax_language: Some("markdown".to_string()),
+            server_word_wrap: Some(true),
+            server_color: Some("yellow".to_string()),
+        };
+
+        let json = serde_json::to_string(&rejected).expect("Failed to serialize");
+
+        assert!(json.contains("\"serverColor\""), "Rejected JSON should contain serverColor");
+        assert!(json.contains("\"yellow\""), "Rejected JSON should contain yellow color");
+    }
+
+    #[test]
+    fn test_color_roundtrip_serialization() {
+        // Test that color field survives JSON roundtrip
+        let original = SyncNote {
+            id: "test-id".to_string(),
+            created_at: Utc::now(),
+            modified_at: Utc::now(),
+            content: "content".to_string(),
+            tags: vec![],
+            attachments: vec![],
+            pinned: false,
+            deleted: false,
+            deleted_at: None,
+            version: 1,
+            word_wrap: Some(true),
+            syntax_language: Some("markdown".to_string()),
+            color: Some("purple".to_string()),
+        };
+
+        // Serialize and deserialize
+        let json = serde_json::to_string(&original).expect("Failed to serialize");
+        let deserialized: SyncNote =
+            serde_json::from_str(&json).expect("Failed to deserialize");
+
+        // Verify color is preserved
+        assert_eq!(deserialized.color, Some("purple".to_string()),
+                   "Color should be preserved through roundtrip");
+        assert_eq!(deserialized.id, original.id);
+        assert_eq!(deserialized.version, original.version);
+    }
 }
