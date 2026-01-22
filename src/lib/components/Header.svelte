@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress } from '../stores/appStore';
-  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
+  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
+  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository, searchService } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -12,7 +12,6 @@
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
-  export let onOpenArchive: () => void = () => {};
   export let onBackToList: (() => void) | undefined = undefined; // Mobile: back to list handler
   export let forceMobileLayout: boolean = false;
   export let disableNewNote: boolean = false;
@@ -22,6 +21,7 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showSavedSearches = false;
+  let crossModeMatchCount = 0;
 
   // Tag autocomplete state
   let tagSuggestions: string[] = [];
@@ -48,6 +48,19 @@
   $: newNoteShortcut = formatShortcutForTooltip(shortcuts?.newNote);
   $: openSettingsShortcut = formatShortcutForTooltip(shortcuts?.openSettings);
   $: lockAppShortcut = formatShortcutForTooltip(shortcuts?.lockApp);
+
+  // Update cross-mode match count when search query or archive mode changes
+  $: if ($searchQuery && $searchQuery.trim()) {
+    searchService.countCrossModeMatches($searchQuery, $notes, $archiveMode).then(count => {
+      crossModeMatchCount = count;
+    });
+  } else {
+    // Count all notes in opposite mode when no search query
+    crossModeMatchCount = $notes.filter(n => n.archived === !$archiveMode).length;
+  }
+
+  // Update placeholder text based on archive mode
+  $: searchPlaceholder = $archiveMode ? $_('search.placeholderArchive') : $_('search.placeholder');
 
   function handleNewNoteClick() {
     // Call parent handler
@@ -326,9 +339,9 @@
             on:input={handleSearchInput}
             on:keydown={handleSearchKeyDown}
             on:blur={handleSearchBlur}
-            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
+            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
-            class="w-full px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait"
+            class="w-full px-3 py-1.5 pr-8 border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
           {#if loadingNotes}
@@ -359,6 +372,15 @@
           {/if}
         </div>
         <button
+          on:click={toggleArchiveMode}
+          class="px-3 py-1.5 {$archiveMode ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors flex items-center gap-1"
+          title={$archiveMode ? $_('archive.exitMode') : $_('archive.enterMode')}
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+        </button>
+        <button
           on:click={toggleSavedSearches}
           class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors flex items-center gap-1"
           title={$_('search.savedSearches')}
@@ -371,6 +393,15 @@
           <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap" title={$_('search.resultCount')}>
             {$searchResultCount.matches}/{$searchResultCount.total}
           </span>
+        {/if}
+        {#if crossModeMatchCount > 0}
+          <button
+            on:click={toggleArchiveMode}
+            class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline whitespace-nowrap"
+            title={$archiveMode ? $_('archive.crossModeHintActive') : $_('archive.crossModeHintArchive')}
+          >
+            {crossModeMatchCount} {$archiveMode ? $_('archive.inActive') : $_('archive.inArchive')}
+          </button>
         {/if}
       </div>
     {/if}
@@ -386,9 +417,9 @@
             on:input={handleSearchInput}
             on:keydown={handleSearchKeyDown}
             on:blur={handleSearchBlur}
-            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : $_('search.placeholder')}
+            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
-            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-24' : 'pr-12'} border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-60 disabled:cursor-wait text-sm"
+            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-24' : 'pr-12'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
           {#if loadingNotes}
@@ -488,11 +519,11 @@
       </button>
 
       <button
-        on:click={onOpenArchive}
-        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
-        title={$_('archive.title')}
+        on:click={toggleArchiveMode}
+        class="px-3 py-1.5 {$archiveMode ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
+        title={$archiveMode ? $_('archive.exitMode') : $_('archive.enterMode')}
       >
-        📦 {$_('archive.title')}
+        📦 {$archiveMode ? $_('archive.exitMode') : $_('archive.mode')}
       </button>
 
       <button
@@ -530,9 +561,10 @@
     {rememberPasswordEnabled}
     {openSettingsShortcut}
     {lockAppShortcut}
+    archiveMode={$archiveMode}
     onClose={closeMobileMenu}
     onOpenRecycleBin={onOpenRecycleBin}
-    onOpenArchive={onOpenArchive}
+    onToggleArchiveMode={toggleArchiveMode}
     onOpenSettings={onOpenSettings}
     onLock={handleLockRequest}
   />

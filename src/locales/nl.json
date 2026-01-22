@@ -62,7 +62,8 @@
     "applySavedSearch": "Toepassen",
     "confirmDeleteSearch": "Opgeslagen zoekopdracht \"{name}\" verwijderen?",
     "noSavedSearches": "Geen opgeslagen zoekopdrachten",
-    "noCurrentQuery": "Geen huidige zoekopdracht om op te slaan"
+    "noCurrentQuery": "Geen huidige zoekopdracht om op te slaan",
+    "placeholderArchive": "Search archived notes..."
   },
   "editor": {
     "noNoteSelected": "Geen notitie geselecteerd",
@@ -791,6 +792,13 @@
     },
     "error": {
       "unarchive": "Failed to unarchive note"
-    }
+    },
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search"
   }
 }

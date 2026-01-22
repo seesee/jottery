@@ -25,6 +25,7 @@ export const settings = writable<UserSettings>(DEFAULT_SETTINGS);
 // UI state
 export const showSettings = writable<boolean>(false);
 export const showRecycleBin = writable<boolean>(false);
+export const archiveMode = writable<boolean>(false);
 
 // Sync state - prevents EditorPane from triggering sync during batch refresh
 export const isSyncRefreshing = writable<boolean>(false);
@@ -163,4 +164,16 @@ export function clearMultiSelection() {
   selectedNoteIds.set(new Set());
   isMultiSelectMode.set(false);
   lastSelectedIndex.set(null);
+}
+
+/**
+ * Toggle archive mode on/off
+ * When enabled, shows archived notes instead of active notes
+ */
+export function toggleArchiveMode() {
+  archiveMode.update((mode) => !mode);
+  // Clear search query when toggling modes
+  searchQuery.set('');
+  // Clear multi-select when toggling modes
+  clearMultiSelection();
 }

@@ -62,7 +62,8 @@
     "applySavedSearch": "Εφαρμογή",
     "confirmDeleteSearch": "Διαγραφή αποθηκευμένης αναζήτησης \"{name}\";",
     "noSavedSearches": "Δεν υπάρχουν αποθηκευμένες αναζητήσεις",
-    "noCurrentQuery": "Δεν υπάρχει τρέχουσα αναζήτηση για αποθήκευση"
+    "noCurrentQuery": "Δεν υπάρχει τρέχουσα αναζήτηση για αποθήκευση",
+    "placeholderArchive": "Search archived notes..."
   },
   "editor": {
     "noNoteSelected": "Δεν επιλέχθηκε σημείωση",
@@ -791,6 +792,13 @@
     },
     "error": {
       "unarchive": "Failed to unarchive note"
-    }
+    },
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search"
   }
 }

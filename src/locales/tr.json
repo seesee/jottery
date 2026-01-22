@@ -62,7 +62,8 @@
     "applySavedSearch": "Uygula",
     "confirmDeleteSearch": "Kaydedilmiş arama \"{name}\" silinsin mi?",
     "noSavedSearches": "Kaydedilmiş arama yok",
-    "noCurrentQuery": "Kaydedilecek mevcut arama yok"
+    "noCurrentQuery": "Kaydedilecek mevcut arama yok",
+    "placeholderArchive": "Search archived notes..."
   },
   "editor": {
     "noNoteSelected": "Not seçilmedi",
@@ -791,6 +792,13 @@
     },
     "error": {
       "unarchive": "Failed to unarchive note"
-    }
+    },
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search"
   }
 }

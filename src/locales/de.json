@@ -62,7 +62,8 @@
     "applySavedSearch": "Anwenden",
     "confirmDeleteSearch": "Gespeicherte Suche \"{name}\" löschen?",
     "noSavedSearches": "Noch keine gespeicherten Suchen. Klicken Sie auf 'Aktuelle Suche speichern', um eine zu erstellen.",
-    "noCurrentQuery": "Geben Sie zuerst eine Suchanfrage ein"
+    "noCurrentQuery": "Geben Sie zuerst eine Suchanfrage ein",
+    "placeholderArchive": "Search archived notes..."
   },
   "editor": {
     "noNoteSelected": "Keine Notiz ausgewählt",
@@ -791,6 +792,13 @@
     },
     "error": {
       "unarchive": "Failed to unarchive note"
-    }
+    },
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search"
   }
 }

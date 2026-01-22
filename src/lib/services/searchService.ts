@@ -429,7 +429,8 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
 export async function searchNotes(
   query: string,
   allNotes: DecryptedNote[],
-  sortOrder: SortOrder = 'recent'
+  sortOrder: SortOrder = 'recent',
+  archiveMode: boolean = false
 ): Promise<DecryptedNote[]> {
   // First extract advanced modifiers from query
   const { modifiers, remainingQuery } = parseAdvancedModifiers(query);
@@ -461,8 +462,8 @@ export async function searchNotes(
     (!parsed.excludeTags || parsed.excludeTags.length === 0) &&
     !hasModifiers
   ) {
-    // No query: return all notes, excluding archived by default
-    const filteredNotes = allNotes.filter((note) => !note.archived);
+    // No query: return notes based on archive mode
+    const filteredNotes = allNotes.filter((note) => note.archived === archiveMode);
     return sortNotes(filteredNotes, sortOrder);
   }
 
@@ -537,12 +538,13 @@ export async function searchNotes(
   }
 
   // archive: or archive:true/false
-  // Default behavior: exclude archived notes unless explicitly requested
+  // Default behavior: filter based on archiveMode unless explicitly overridden
   if (parsed.archived !== undefined) {
+    // Explicit archive modifier overrides archiveMode
     results = results.filter((note) => note.archived === parsed.archived);
   } else {
-    // No archive modifier specified: exclude archived notes by default
-    results = results.filter((note) => !note.archived);
+    // No archive modifier: filter based on archiveMode
+    results = results.filter((note) => note.archived === archiveMode);
   }
 
   // created:>DATE (created after)
@@ -651,6 +653,20 @@ export function getSearchSuggestions(
 }
 
 /**
+ * Count search results in the opposite archive mode
+ * Used to show "x notes match in archive" hint
+ */
+export async function countCrossModeMatches(
+  query: string,
+  allNotes: DecryptedNote[],
+  currentArchiveMode: boolean
+): Promise<number> {
+  const oppositeMode = !currentArchiveMode;
+  const results = await searchNotes(query, allNotes, 'recent', oppositeMode);
+  return results.length;
+}
+
+/**
  * Export for use in stores and components
  */
 export const searchService = {
@@ -660,4 +676,5 @@ export const searchService = {
   parseSearchQuery,
   searchNotes,
   getSearchSuggestions,
+  countCrossModeMatches,
 };

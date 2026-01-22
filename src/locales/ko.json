@@ -62,7 +62,8 @@
     "applySavedSearch": "적용",
     "confirmDeleteSearch": "저장된 검색 \"{name}\"을(를) 삭제하시겠습니까?",
     "noSavedSearches": "저장된 검색이 없습니다",
-    "noCurrentQuery": "저장할 검색이 없습니다"
+    "noCurrentQuery": "저장할 검색이 없습니다",
+    "placeholderArchive": "Search archived notes..."
   },
   "editor": {
     "noNoteSelected": "선택된 노트 없음",
@@ -791,6 +792,13 @@
     },
     "error": {
       "unarchive": "Failed to unarchive note"
-    }
+    },
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search"
   }
 }

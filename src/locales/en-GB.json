@@ -50,6 +50,7 @@
   },
   "search": {
     "placeholder": "Search notes...",
+    "placeholderArchive": "Search archived notes...",
     "clear": "Clear search",
     "resultCount": "Search results: matches / total",
     "savedSearches": "Saved Searches",
@@ -565,6 +566,9 @@
   },
   "archive": {
     "title": "Archive",
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
     "closeLabel": "Close archive",
     "loading": "Loading archived notes...",
     "empty": "No archived notes",
@@ -576,6 +580,10 @@
     "unarchive": "Unarchive",
     "unarchiveTitle": "Restore note to active list",
     "unarchived": "Note unarchived",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search",
     "footer": {
       "single": "{count} archived note",
       "multiple": "{count} archived notes"

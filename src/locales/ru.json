@@ -62,7 +62,8 @@
     "applySavedSearch": "Применить",
     "confirmDeleteSearch": "Удалить сохраненный поиск \"{name}\"?",
     "noSavedSearches": "Нет сохраненных поисков",
-    "noCurrentQuery": "Нет текущего поиска для сохранения"
+    "noCurrentQuery": "Нет текущего поиска для сохранения",
+    "placeholderArchive": "Search archived notes..."
   },
   "editor": {
     "noNoteSelected": "Заметка не выбрана",
@@ -791,6 +792,13 @@
     },
     "error": {
       "unarchive": "Failed to unarchive note"
-    }
+    },
+    "mode": "Archive",
+    "enterMode": "Show archived notes",
+    "exitMode": "Show active notes",
+    "inActive": "in active",
+    "inArchive": "in archive",
+    "crossModeHintActive": "Click to view archived notes matching this search",
+    "crossModeHintArchive": "Click to view active notes matching this search"
   }
 }
