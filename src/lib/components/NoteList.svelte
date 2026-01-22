@@ -584,7 +584,7 @@
 
       <!-- Cross-mode match indicator (only shown when searching with few results) -->
       {#if showCrossModeHint}
-        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-center">
           <button
             on:click={toggleArchiveMode}
             class="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline"

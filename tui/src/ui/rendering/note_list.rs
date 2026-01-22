@@ -42,12 +42,17 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let filtered = app.filtered_notes();
     let title = match app.view_mode {
         ViewMode::RecycleBin => "Recycle Bin".to_string(),
-        ViewMode::Archive => "Archive".to_string(),
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
         ViewMode::VersionHistory => "Version History".to_string(),
         ViewMode::ConflictResolution => "Conflict Resolution".to_string(),
         ViewMode::NoteList => {
-            if app.search_active && !app.search_input.is_empty() {
+            if app.archive_mode {
+                if app.search_active && !app.search_input.is_empty() {
+                    format!("Jottery v{} - Archive ({}/{})", env!("CARGO_PKG_VERSION"), filtered.len(), app.notes.len())
+                } else {
+                    format!("Jottery v{} - Archive", env!("CARGO_PKG_VERSION"))
+                }
+            } else if app.search_active && !app.search_input.is_empty() {
                 format!("Jottery v{} - Notes ({}/{})", env!("CARGO_PKG_VERSION"), filtered.len(), app.notes.len())
             } else {
                 format!("Jottery v{} - Notes", env!("CARGO_PKG_VERSION"))
@@ -176,9 +181,6 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             ViewMode::RecycleBin => {
                 "r: restore | E: empty bin | Esc: back to notes | ↑/↓: navigate".to_string()
             }
-            ViewMode::Archive => {
-                "A: unarchive | Esc: back to notes | ↑/↓: navigate".to_string()
-            }
             ViewMode::AttachmentViewer => {
                 "↑/↓: navigate | 1-9: quick select | Enter: view | d: delete | Esc: close".to_string()
             }
@@ -189,10 +191,12 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 "1: Keep Mine | 2: Keep Server | 3: Keep Both | Tab: switch | j/k: scroll | Esc: cancel".to_string()
             }
             ViewMode::NoteList => {
-                if app.is_multi_select_mode {
+                if app.archive_mode {
+                    "A: unarchive | Shift+A: toggle mode | ↑/↓: navigate | /: search | Esc: exit archive".to_string()
+                } else if app.is_multi_select_mode {
                     format!("Space: toggle | Esc: clear | t: add tags | d: delete | c: combine | e: export ({} selected)", app.selected_note_ids.len())
                 } else {
-                    "?: help | /: search | Space: select | p: pin | t: tags | []: type | r: bin | A: archive | v: ver | n: new".to_string()
+                    "?: help | /: search | Space: select | p: pin | t: tags | []: type | r: bin | Shift+A: archive | v: ver | n: new".to_string()
                 }
             }
         }

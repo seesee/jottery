@@ -395,7 +395,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         ViewMode::NoteList => {
                             app.state = AppState::Quit;
                         }
-                        ViewMode::RecycleBin | ViewMode::Archive => {
+                        ViewMode::RecycleBin => {
                             app.view_mode = ViewMode::NoteList;
                             app.selected_note = 0;
                             app.preview_scroll_offset = 0;
@@ -831,31 +831,37 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Archive => {
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
                         // 'r' does nothing in these views
                     }
                 }
             }
-            KeyCode::Char('A') => {
-                // Toggle archive view or unarchive note
-                match app.view_mode {
-                    ViewMode::NoteList => {
-                        // Switch to archive view
-                        app.view_mode = ViewMode::Archive;
-                        app.selected_note = 0;
-                        app.preview_scroll_offset = 0;
-                        if let Err(e) = operations::notes::load_archived_notes(app) {
-                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+            KeyCode::Char('A') if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                // Shift+A: Toggle archive mode (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    app.archive_mode = !app.archive_mode;
+                    app.selected_note = 0;
+                    app.preview_scroll_offset = 0;
+                    // Note filtering will happen automatically via filtered_notes()
+                }
+            }
+            KeyCode::Char('a') if app.archive_mode && key.modifiers.is_empty() => {
+                // 'a' in archive mode: Unarchive selected note (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note_id = filtered[app.selected_note].id.clone();
+                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
+                            note.archived = false;
+                            note.touch();
+                            // Save to database
+                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    app.error = Some(t!("note.archive_failed", error = e.to_string()).to_string());
+                                }
+                            }
                         }
-                    }
-                    ViewMode::Archive => {
-                        // Unarchive selected note
-                        if let Err(e) = operations::notes::unarchive_note(app) {
-                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                        }
-                    }
-                    ViewMode::RecycleBin | ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
-                        // 'A' does nothing in these views
                     }
                 }
             }
@@ -876,6 +882,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 } else if app.is_multi_select_mode {
                     // Clear multi-selection
                     app.clear_multi_selection();
+                } else if app.archive_mode {
+                    // Exit archive mode
+                    app.archive_mode = false;
+                    app.selected_note = 0;
+                    app.preview_scroll_offset = 0;
                 } else if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     // Exit attachment viewer
                     app.view_mode = ViewMode::NoteList;
@@ -885,8 +896,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.loaded_versions.clear();
                     app.versions_note_id = None;
                     app.version_preview_scroll_offset = 0;
-                } else if matches!(app.view_mode, ViewMode::RecycleBin | ViewMode::Archive) {
-                    // Exit recycle bin or archive view
+                } else if matches!(app.view_mode, ViewMode::RecycleBin) {
+                    // Exit recycle bin view
                     app.view_mode = ViewMode::NoteList;
                     app.selected_note = 0;
                     app.preview_scroll_offset = 0;
@@ -982,8 +993,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.select_all_filtered();
                 }
             }
-            KeyCode::Char('a') => {
-                // Open attachment viewer modal
+            KeyCode::Char('a') if !app.archive_mode && key.modifiers.is_empty() => {
+                // 'a' in normal mode: Open attachment viewer modal
                 app.debug_log("'a' key pressed - attempting to open attachment viewer");
                 let filtered = app.filtered_notes();
                 app.debug_log(&format!("  filtered.len() = {}, selected_note = {}", filtered.len(), app.selected_note));

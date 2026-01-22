@@ -99,6 +99,8 @@ pub struct App {
     pub search_input: String,
     /// Whether search mode is active
     pub search_active: bool,
+    /// Whether archive mode is active (shows archived notes instead of active)
+    pub archive_mode: bool,
     /// Sync status message
     pub sync_status: Option<String>,
     /// Current error message
@@ -236,6 +238,7 @@ impl App {
             current_tags: Vec::new(),
             search_input: String::new(),
             search_active: false,
+            archive_mode: false,
             sync_status: None,
             error: None,
             need_redraw: false,
@@ -666,7 +669,9 @@ impl App {
     /// Filter notes based on search query and sort (pinned first, then by modified date)
     pub fn filtered_notes(&self) -> Vec<&Note> {
         let mut notes: Vec<&Note> = if self.search_input.is_empty() {
-            self.notes.iter().collect()
+            self.notes.iter()
+                .filter(|note| note.archived == self.archive_mode)
+                .collect()
         } else {
             let query = self.search_input.to_lowercase();
 
@@ -678,6 +683,10 @@ impl App {
             self.notes
                 .iter()
                 .filter(|note| {
+                    // Filter by archive mode first
+                    if note.archived != self.archive_mode {
+                        return false;
+                    }
                     let content_lower = note.content.to_lowercase();
 
                     // Apply advanced modifiers first

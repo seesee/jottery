@@ -172,8 +172,6 @@ export function clearMultiSelection() {
  */
 export function toggleArchiveMode() {
   archiveMode.update((mode) => !mode);
-  // Clear search query when toggling modes
-  searchQuery.set('');
-  // Clear multi-select when toggling modes
+  // Clear multi-select when toggling modes (but preserve search query)
   clearMultiSelection();
 }
