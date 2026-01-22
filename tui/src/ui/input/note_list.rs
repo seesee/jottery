@@ -1033,18 +1033,6 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
-            KeyCode::Char('A') => {
-                // Enter attachment path input mode (only in note list view)
-                if matches!(app.view_mode, ViewMode::NoteList) {
-                    let filtered = app.filtered_notes();
-                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        app.input_mode = InputMode::AttachmentPath;
-                        app.attachment_path_input.clear();
-                    } else {
-                        app.error = Some(t!("note.no_notes").to_string());
-                    }
-                }
-            }
             KeyCode::Char('X') => {
                 // Remove selected attachment (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {

@@ -86,6 +86,7 @@ impl Database {
             (7, include_str!("../migrations/007_add_conflict_data.sql")),
             (8, include_str!("../migrations/008_add_pending_registration.sql")),
             (9, include_str!("../migrations/009_add_note_colors.sql")),
+            (10, include_str!("../migrations/010_add_archive_support.sql")),
         ];
 
         // Run pending migrations
@@ -200,7 +201,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory("test_password").unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 9);
+        assert_eq!(db.schema_version().unwrap(), 10);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -228,13 +229,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 9);
+            assert_eq!(db.schema_version().unwrap(), 10);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 9);
+            assert_eq!(db.schema_version().unwrap(), 10);
         }
     }
 }

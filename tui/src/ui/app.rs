@@ -1846,7 +1846,7 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{UserSettings, ColorDefinition, ColorPalette};
+    use crate::models::{UserSettings, ColorPalette};
     use std::collections::HashMap;
 
     fn create_test_settings_with_colors() -> UserSettings {

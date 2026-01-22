@@ -218,7 +218,7 @@ pub fn load_archived_notes(app: &mut App) -> Result<()> {
 
 /// Archive a note (soft archive)
 pub fn archive_note(app: &mut App) -> Result<()> {
-    if let (Some(db), Some(key)) = (&app.db, &app.key) {
+    if let (Some(db), Some(_key)) = (&app.db, &app.key) {
         if !app.notes.is_empty() && app.selected_note < app.notes.len() {
             let note = &app.notes[app.selected_note];
             let repo = NoteRepository::new(db.connection());

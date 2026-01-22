@@ -295,7 +295,7 @@ impl<'a> NoteRepository<'a> {
     ) -> Result<Vec<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE modified_at > ?1 ORDER BY modified_at DESC"
         )?;
 
@@ -311,11 +311,13 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, i32>(7)?,
                 row.get::<_, i32>(8)?,
                 row.get::<_, Option<String>>(9)?,
-                row.get::<_, Option<String>>(10)?,
-                row.get::<_, i32>(11)?,
-                row.get::<_, i32>(12)?,
-                row.get::<_, String>(13)?,
-                row.get::<_, Option<String>>(14)?,
+                row.get::<_, i32>(10)?,
+                row.get::<_, Option<String>>(11)?,
+                row.get::<_, Option<String>>(12)?,
+                row.get::<_, i32>(13)?,
+                row.get::<_, i32>(14)?,
+                row.get::<_, String>(15)?,
+                row.get::<_, Option<String>>(16)?,
             ))
         })?;
 
@@ -330,6 +332,8 @@ impl<'a> NoteRepository<'a> {
                 tags_json,
                 attachments_json,
                 pinned,
+                archived,
+                archived_at,
                 deleted,
                 deleted_at,
                 sync_hash,
@@ -355,6 +359,8 @@ impl<'a> NoteRepository<'a> {
                 tags,
                 attachments,
                 pinned: pinned != 0,
+                archived: archived != 0,
+                archived_at: archived_at.map(|s| s.parse()).transpose()?,
                 deleted: deleted != 0,
                 deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
                 sync_hash,
