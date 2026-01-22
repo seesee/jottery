@@ -97,6 +97,8 @@ pub enum ViewMode {
     NoteList,
     /// Recycle bin view (deleted notes)
     RecycleBin,
+    /// Archive view (archived notes)
+    Archive,
     /// Attachment viewer modal
     AttachmentViewer,
     /// Version history viewer modal

@@ -395,7 +395,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         ViewMode::NoteList => {
                             app.state = AppState::Quit;
                         }
-                        ViewMode::RecycleBin => {
+                        ViewMode::RecycleBin | ViewMode::Archive => {
                             app.view_mode = ViewMode::NoteList;
                             app.selected_note = 0;
                             app.preview_scroll_offset = 0;
@@ -831,8 +831,31 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Archive => {
                         // 'r' does nothing in these views
+                    }
+                }
+            }
+            KeyCode::Char('A') => {
+                // Toggle archive view or unarchive note
+                match app.view_mode {
+                    ViewMode::NoteList => {
+                        // Switch to archive view
+                        app.view_mode = ViewMode::Archive;
+                        app.selected_note = 0;
+                        app.preview_scroll_offset = 0;
+                        if let Err(e) = operations::notes::load_archived_notes(app) {
+                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+                        }
+                    }
+                    ViewMode::Archive => {
+                        // Unarchive selected note
+                        if let Err(e) = operations::notes::unarchive_note(app) {
+                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+                        }
+                    }
+                    ViewMode::RecycleBin | ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
+                        // 'A' does nothing in these views
                     }
                 }
             }
@@ -862,8 +885,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.loaded_versions.clear();
                     app.versions_note_id = None;
                     app.version_preview_scroll_offset = 0;
-                } else if matches!(app.view_mode, ViewMode::RecycleBin) {
-                    // Exit recycle bin view
+                } else if matches!(app.view_mode, ViewMode::RecycleBin | ViewMode::Archive) {
+                    // Exit recycle bin or archive view
                     app.view_mode = ViewMode::NoteList;
                     app.selected_note = 0;
                     app.preview_scroll_offset = 0;

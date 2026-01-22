@@ -42,6 +42,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let filtered = app.filtered_notes();
     let title = match app.view_mode {
         ViewMode::RecycleBin => "Recycle Bin".to_string(),
+        ViewMode::Archive => "Archive".to_string(),
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
         ViewMode::VersionHistory => "Version History".to_string(),
         ViewMode::ConflictResolution => "Conflict Resolution".to_string(),
@@ -175,6 +176,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             ViewMode::RecycleBin => {
                 "r: restore | E: empty bin | Esc: back to notes | ↑/↓: navigate".to_string()
             }
+            ViewMode::Archive => {
+                "A: unarchive | Esc: back to notes | ↑/↓: navigate".to_string()
+            }
             ViewMode::AttachmentViewer => {
                 "↑/↓: navigate | 1-9: quick select | Enter: view | d: delete | Esc: close".to_string()
             }
@@ -188,7 +192,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 if app.is_multi_select_mode {
                     format!("Space: toggle | Esc: clear | t: add tags | d: delete | c: combine | e: export ({} selected)", app.selected_note_ids.len())
                 } else {
-                    "?: help | /: search | Space: select | p: pin | t: tags | []: type | r: bin | v: ver | n: new".to_string()
+                    "?: help | /: search | Space: select | p: pin | t: tags | []: type | r: bin | A: archive | v: ver | n: new".to_string()
                 }
             }
         }
