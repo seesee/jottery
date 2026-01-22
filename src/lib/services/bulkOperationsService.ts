@@ -173,8 +173,14 @@ export async function archiveNotes(
 
     await noteService.archiveNote(noteId);
 
-    // Update store
-    notes.update((n) => n.filter((note) => note.id !== noteId));
+    // Get updated note and update store
+    const updatedNote = await noteService.getNote(noteId);
+    if (updatedNote) {
+      notes.update((allNotes) =>
+        allNotes.map((n) => (n.id === noteId ? updatedNote : n))
+      );
+      searchService.updateNote(updatedNote);
+    }
 
     onProgress?.({
       current: i + 1,

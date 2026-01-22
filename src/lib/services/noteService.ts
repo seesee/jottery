@@ -114,8 +114,8 @@ class NoteService {
       throw new Error('Application is locked. Please unlock to view notes.');
     }
 
-    // Get all encrypted notes
-    const notes = await noteRepository.getAllActive();
+    // Get all non-deleted notes (includes archived for filtering)
+    const notes = await noteRepository.getAllNonDeleted();
 
     // Sort encrypted notes first (by metadata) to maintain correct order
     const sortedNotes = this.sortEncryptedNotes(notes, sortOrder);

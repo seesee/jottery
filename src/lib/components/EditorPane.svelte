@@ -539,20 +539,15 @@
       // Get updated note
       const updatedNote = await noteService.getNote(noteId);
       if (updatedNote) {
+        // Update the note in the store (don't remove it)
+        notes.update(allNotes =>
+          allNotes.map(n => n.id === noteId ? updatedNote : n)
+        );
+        searchService.updateNote(updatedNote);
+
         if (isArchived) {
-          // Unarchived: Add back to notes list
-          notes.update(allNotes => {
-            const pinnedCount = allNotes.filter(n => n.pinned).length;
-            const newNotes = [...allNotes];
-            newNotes.splice(pinnedCount, 0, updatedNote);
-            return newNotes;
-          });
-          searchService.updateNote(updatedNote);
+          // Unarchived: select the note
           selectNote(updatedNote.id);
-        } else {
-          // Archived: Remove from notes list
-          notes.update(allNotes => allNotes.filter(n => n.id !== noteId));
-          searchService.removeNote(noteId);
         }
       }
 

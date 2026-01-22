@@ -83,6 +83,15 @@ class IndexedDBNoteRepository implements NoteRepository {
   }
 
   /**
+   * Get all non-deleted notes (includes archived)
+   */
+  async getAllNonDeleted(): Promise<Note[]> {
+    const db = getDB();
+    const notes = await db.getAll(STORES.NOTES);
+    return notes.filter((note) => !note.deleted);
+  }
+
+  /**
    * Get deleted notes (recycle bin)
    */
   async getDeleted(): Promise<Note[]> {
