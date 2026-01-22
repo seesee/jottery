@@ -124,6 +124,13 @@ class SyncService {
    * Perform full bidirectional sync
    */
   async syncNow(forceFullSync = false): Promise<{ success: boolean; error?: string }> {
+    // Check if sync is enabled in user settings first
+    let currentSettings: { syncEnabled?: boolean } | undefined;
+    settings.subscribe(s => currentSettings = s)();
+    if (!currentSettings?.syncEnabled) {
+      return { success: false, error: 'Sync is disabled' };
+    }
+
     // Check if database is available before attempting sync
     if (!isDBAvailable()) {
       if (wasDBTerminated()) {

@@ -37,11 +37,17 @@ export async function create(name: string, query: string): Promise<SavedSearch> 
  * Get all non-deleted saved searches, ordered by order field
  */
 export async function getAll(): Promise<SavedSearch[]> {
-  const db = getDB();
-  const searches = await db.getAll(STORES.SAVED_SEARCHES);
-  return searches
-    .filter(s => !s.deleted)
-    .sort((a, b) => a.order - b.order);
+  try {
+    const db = getDB();
+    const searches = await db.getAll(STORES.SAVED_SEARCHES);
+    return searches
+      .filter(s => !s.deleted)
+      .sort((a, b) => a.order - b.order);
+  } catch (error) {
+    // If saved_searches store doesn't exist yet (pre-v6 database), return empty array
+    console.warn('[savedSearchRepository] Store not available yet:', error);
+    return [];
+  }
 }
 
 /**
@@ -107,9 +113,15 @@ export async function reorder(orderedIds: string[]): Promise<void> {
  * Get all saved searches that need to be synced
  */
 export async function getAllNeedingSync(): Promise<SavedSearch[]> {
-  const db = getDB();
-  const searches = await db.getAll(STORES.SAVED_SEARCHES);
-  return searches.filter(s => s.needsSync === true);
+  try {
+    const db = getDB();
+    const searches = await db.getAll(STORES.SAVED_SEARCHES);
+    return searches.filter(s => s.needsSync === true);
+  } catch (error) {
+    // If saved_searches store doesn't exist yet (pre-v6 database), return empty array
+    console.warn('[savedSearchRepository] Store not available yet:', error);
+    return [];
+  }
 }
 
 /**
