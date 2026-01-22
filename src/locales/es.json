@@ -104,6 +104,8 @@
     "noteId": "ID de nota:",
     "uploading": "Subiendo...",
     "attachmentsHeader": "Archivos adjuntos ({count})",
+    "attachments": "Adjuntos",
+    "noAttachments": "Sin adjuntos",
     "status": {
       "uploading": "Subiendo...",
       "processingNotes": "Procesando {current} de {total} notas...",
@@ -128,9 +130,6 @@
     "selectColor": "Seleccionar un color",
     "colorSet": "Color establecido",
     "colorRemoved": "Color eliminado"
-  },
-    "attachments": "Adjuntos",
-    "noAttachments": "Sin adjuntos"
   },
   "noteList": {
     "deleteNote": "Eliminar nota",

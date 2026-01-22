@@ -46,12 +46,16 @@ describe('syncService', () => {
       derivedAt: Date.now(),
     });
 
+    // Initialize settings store with syncEnabled
+    settings.set({ ...DEFAULT_SETTINGS, syncEnabled: true });
+
     // Reset MSW handlers
     server.resetHandlers();
   });
 
   afterEach(async () => {
     keyManager.clearMasterKey();
+    settings.set(DEFAULT_SETTINGS);
     await cleanupTestDB();
   });
 
@@ -766,14 +770,14 @@ describe('syncService', () => {
       // Reset stores
       notes.set([]);
       isSyncRefreshing.set(false);
-      settings.set(DEFAULT_SETTINGS);
+      settings.set({ ...DEFAULT_SETTINGS, syncEnabled: true });
     });
 
     afterEach(() => {
       // Clean up stores
       notes.set([]);
       isSyncRefreshing.set(false);
-      settings.set(DEFAULT_SETTINGS);
+      settings.set({ ...DEFAULT_SETTINGS, syncEnabled: true });
     });
 
     it('should set isSyncRefreshing during sync and clear it after', async () => {
