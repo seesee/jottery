@@ -108,6 +108,7 @@ pub struct SyncNote {
     pub version: i32,
     pub word_wrap: Option<bool>,
     pub syntax_language: Option<String>,
+    pub color: Option<String>,        // Semantic color name (unencrypted)
 }
 
 /// Attachment reference (metadata only)
@@ -160,6 +161,7 @@ pub struct SyncRejected {
     pub server_pinned: bool,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
+    pub server_color: Option<String>,     // Semantic color name
 }
 
 /// Stored conflict data for resolution UI
@@ -175,6 +177,7 @@ pub struct ConflictData {
     pub server_pinned: bool,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
+    pub server_color: Option<String>,     // Semantic color name
     pub detected_at: DateTime<Utc>,       // When conflict was detected
 }
 
@@ -220,6 +223,7 @@ pub struct SyncNoteVersion {
     pub attachments: Vec<AttachmentRef>,
     pub syntax_language: Option<String>,
     pub word_wrap: Option<bool>,
+    pub color: Option<String>,     // Semantic color name (unencrypted)
     pub reason: String,            // 'sync' or 'manual-sync'
 }
 

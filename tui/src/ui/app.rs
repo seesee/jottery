@@ -57,6 +57,16 @@ struct SearchModifiers {
     modified_before: Option<String>,
     word_count_min: Option<usize>,
     word_count_max: Option<usize>,
+    colors: Vec<String>,           // Color keys to match
+    color_target: ColorTarget,      // Where to look for colors
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+enum ColorTarget {
+    #[default]
+    Both,   // Match colors on notes or tags (default)
+    Note,   // Match only note colors
+    Tag,    // Match only tag colors
 }
 
 /// Application state and coordinator
@@ -748,6 +758,38 @@ impl App {
                         }
                     }
 
+                    // Color filtering
+                    if !modifiers.colors.is_empty() {
+                        let note_has_color = modifiers.colors.iter().any(|color_key| {
+                            note.color.as_ref().map_or(false, |c| c.to_lowercase() == color_key.to_lowercase())
+                        });
+
+                        let tag_has_color = note.tags.iter().any(|tag| {
+                            let tag_color = self.settings.get_tag_color(tag);
+                            tag_color.map_or(false, |tc| {
+                                modifiers.colors.iter().any(|color_key| tc.to_lowercase() == color_key.to_lowercase())
+                            })
+                        });
+
+                        match modifiers.color_target {
+                            ColorTarget::Note => {
+                                if !note_has_color {
+                                    return false;
+                                }
+                            }
+                            ColorTarget::Tag => {
+                                if !tag_has_color {
+                                    return false;
+                                }
+                            }
+                            ColorTarget::Both => {
+                                if !note_has_color && !tag_has_color {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+
                     true
                 })
                 .collect()
@@ -851,6 +893,74 @@ impl App {
             modifiers.word_count_max = caps[2].parse().ok();
         }
 
+        // color:red note (notes with red color)
+        if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\s+note\b")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.colors.push(caps[1].to_lowercase());
+            modifiers.color_target = ColorTarget::Note;
+        }
+
+        // color:red tag (notes with red-colored tags)
+        if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\s+tag\b")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            modifiers.colors.push(caps[1].to_lowercase());
+            modifiers.color_target = ColorTarget::Tag;
+        }
+
+        // color:red (both notes and tags)
+        if modifiers.colors.is_empty() {
+            if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\b")
+                .ok()
+                .and_then(|re| re.captures(query))
+            {
+                modifiers.colors.push(caps[1].to_lowercase());
+                modifiers.color_target = ColorTarget::Both;
+            }
+        }
+
+        // category:important note (notes with category named "important")
+        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w\s-]+)\s+note\b")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            let category_name = caps[1].trim();
+            // Look up color key by display name
+            if let Some(color_key) = self.settings.get_color_key_by_display_name(category_name) {
+                modifiers.colors.push(color_key);
+                modifiers.color_target = ColorTarget::Note;
+            }
+        }
+
+        // category:important tag (notes with tags in category named "important")
+        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w\s-]+)\s+tag\b")
+            .ok()
+            .and_then(|re| re.captures(query))
+        {
+            let category_name = caps[1].trim();
+            if let Some(color_key) = self.settings.get_color_key_by_display_name(category_name) {
+                modifiers.colors.push(color_key);
+                modifiers.color_target = ColorTarget::Tag;
+            }
+        }
+
+        // category:important (both notes and tags)
+        if modifiers.colors.is_empty() {
+            if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w\s-]+)\b")
+                .ok()
+                .and_then(|re| re.captures(query))
+            {
+                let category_name = caps[1].trim();
+                if let Some(color_key) = self.settings.get_color_key_by_display_name(category_name) {
+                    modifiers.colors.push(color_key);
+                    modifiers.color_target = ColorTarget::Both;
+                }
+            }
+        }
+
         modifiers
     }
 
@@ -872,6 +982,12 @@ impl App {
             r"words:>\d+",
             r"words:<\d+",
             r"words:\d+\.\.\d+",
+            r"(?i)\bcolou?r:[a-z0-9#]+\s+note\b",
+            r"(?i)\bcolou?r:[a-z0-9#]+\s+tag\b",
+            r"(?i)\bcolou?r:[a-z0-9#]+\b",
+            r"(?i)\bcategory:[\w\s-]+\s+note\b",
+            r"(?i)\bcategory:[\w\s-]+\s+tag\b",
+            r"(?i)\bcategory:[\w\s-]+\b",
         ];
 
         for pattern in patterns {
@@ -1010,6 +1126,7 @@ impl App {
                     version: note.version,
                     word_wrap: Some(note.word_wrap),
                     syntax_language: Some(note.syntax_language.to_string()),
+                    color: note.color.clone(),
                 })
             }).collect();
 
@@ -1057,6 +1174,7 @@ impl App {
                         attachments: attachment_refs,
                         syntax_language: version.syntax_language.as_ref().map(|s| s.to_string()),
                         word_wrap: version.word_wrap,
+                        color: version.color.clone(),
                         reason: version.reason.to_string(),
                     });
                 }
@@ -1334,6 +1452,7 @@ impl App {
                     if let Some(lang_str) = &remote_note.syntax_language {
                         local_note.syntax_language = lang_str.parse().unwrap_or_default();
                     }
+                    local_note.color = remote_note.color.clone();
 
                     note_repo.update(&local_note, key)?;
 
@@ -1362,6 +1481,7 @@ impl App {
                 if let Some(lang_str) = &remote_note.syntax_language {
                     new_note.syntax_language = lang_str.parse().unwrap_or_default();
                 }
+                new_note.color = remote_note.color.clone();
 
                 note_repo.create(&new_note, key)?;
 
