@@ -8,25 +8,33 @@
  * - Admin web app (Vite on port 5174)
  * - Sync server (Rust on port 3000)
  *
- * Usage: node scripts/dev-harness.js
+ * Usage: node scripts/dev-harness.js [options]
+ *
+ * Options:
+ *   -k, --kill  Kill any processes on server ports before starting
  *
  * Keys:
  *   1/2/3  - Focus server panel
  *   r      - Restart focused server
  *   s      - Stop focused server
+ *   k      - Kill process on focused server's port
  *   a      - Start all servers
  *   R      - Restart all servers
  *   S      - Stop all servers
+ *   K      - Kill processes on all ports
  *   c      - Clear log of focused server
  *   q      - Quit
  *   Tab    - Cycle focus
  */
 
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import { createInterface } from 'readline';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
@@ -103,6 +111,69 @@ const servers = {
 const serverKeys = Object.keys(servers);
 let focusedServer = 0;
 let running = true;
+
+/**
+ * Kill any process listening on the specified port
+ */
+async function killPort(port, server) {
+  try {
+    const { stdout } = await execAsync(`lsof -ti:${port}`);
+    const pids = stdout.trim().split('\n').filter(Boolean);
+
+    if (pids.length > 0) {
+      for (const pid of pids) {
+        try {
+          await execAsync(`kill -9 ${pid}`);
+          if (server) {
+            addLog(server, `[Harness] Killed process ${pid} on port ${port}`);
+          }
+        } catch (err) {
+          // Process may have already exited
+        }
+      }
+      return true;
+    } else {
+      if (server) {
+        addLog(server, `[Harness] No process found on port ${port}`);
+      }
+    }
+    return false;
+  } catch (err) {
+    // No process found on port (exit code 1 from lsof)
+    if (server) {
+      addLog(server, `[Harness] No process found on port ${port}`);
+    }
+    return false;
+  }
+}
+
+/**
+ * Kill process on a single server's port
+ */
+async function killServerPort(key) {
+  const server = servers[key];
+  addLog(server, `[Harness] Killing process on port ${server.port}...`);
+  await killPort(server.port, server);
+
+  // Wait a moment for port to be released
+  await new Promise(resolve => setTimeout(resolve, 500));
+  render();
+}
+
+/**
+ * Kill all processes on all server ports
+ */
+async function killAllPorts() {
+  for (const key of serverKeys) {
+    const server = servers[key];
+    addLog(server, `[Harness] Killing process on port ${server.port}...`);
+    await killPort(server.port, server);
+  }
+
+  // Wait a moment for ports to be released
+  await new Promise(resolve => setTimeout(resolve, 500));
+  render();
+}
 
 // Maximum log lines to keep per server
 const MAX_LOG_LINES = 500;
@@ -340,7 +411,7 @@ function render() {
     `${colors.blue}╠${'═'.repeat(columns - 2)}╣${colors.reset}`
   );
   moveTo(rows - 1, 1);
-  const helpText = ' [1-3] Focus | [r]estart | [s]top | [a]ll start | [R]estart all | [S]top all | [c]lear | [q]uit ';
+  const helpText = ' [1-3] Focus | [r]estart | [s]top | [k]ill port | [a]ll start | [R]estart all | [S]top all | [K]ill all ports | [c]lear | [q]uit ';
   process.stdout.write(
     `${colors.blue}║${colors.reset}${colors.dim}${helpText.padEnd(columns - 3)}${colors.reset}${colors.blue}║${colors.reset}`
   );
@@ -376,6 +447,14 @@ function handleKey(key) {
       break;
     case 'S':
       serverKeys.forEach(k => stopServer(k));
+      break;
+    case 'k':
+      // Kill process on focused server's port
+      killServerPort(currentKey);
+      break;
+    case 'K':
+      // Kill processes on all server ports
+      killAllPorts();
       break;
     case 'c':
       servers[currentKey].logs = [];
@@ -415,9 +494,24 @@ function cleanup() {
 
 // Main
 async function main() {
+  // Parse command-line arguments
+  const args = process.argv.slice(2);
+  const shouldKillPorts = args.includes('-k') || args.includes('--kill');
+
   // Check if admin directory exists
   if (!existsSync(join(projectRoot, 'admin'))) {
     console.log(`${colors.yellow}Warning: admin directory not found${colors.reset}`);
+  }
+
+  // Kill existing processes on ports if requested
+  if (shouldKillPorts) {
+    console.log('Killing existing processes on server ports...');
+    for (const key of serverKeys) {
+      const server = servers[key];
+      await killPort(server.port, null);
+    }
+    console.log('Ports cleared. Starting dev harness...\n');
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   // Setup terminal
