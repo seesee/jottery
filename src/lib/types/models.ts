@@ -256,6 +256,10 @@ export interface ExportData {
   version: string;
   exportDate: string; // ISO 8601
   notes: ExportNote[];
+  settings?: {
+    colorPalette?: ColorPalette;
+    tagColors?: Record<string, string>;
+  };
 }
 
 /**

@@ -29,10 +29,18 @@ export async function exportAllNotes(): Promise<ExportData> {
     exportNotes.push(exportNote);
   }
 
+  // Export color settings
+  const { settingsRepository } = await import('./settingsRepository');
+  const userSettings = await settingsRepository.get();
+
   return {
     version: EXPORT_VERSION,
     exportDate: new Date().toISOString(),
     notes: exportNotes,
+    settings: {
+      colorPalette: userSettings.colorPalette,
+      tagColors: userSettings.tagColors,
+    },
   };
 }
 
@@ -53,10 +61,18 @@ export async function exportNotes(noteIds: string[]): Promise<ExportData> {
     exportNotes.push(exportNote);
   }
 
+  // Export color settings
+  const { settingsRepository } = await import('./settingsRepository');
+  const userSettings = await settingsRepository.get();
+
   return {
     version: EXPORT_VERSION,
     exportDate: new Date().toISOString(),
     notes: exportNotes,
+    settings: {
+      colorPalette: userSettings.colorPalette,
+      tagColors: userSettings.tagColors,
+    },
   };
 }
 
@@ -133,6 +149,7 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
     wordWrap: note.wordWrap,
     syntaxLanguage: note.syntaxLanguage,
     showPreview: note.showPreview,
+    color: note.color,
   };
 }
 
@@ -165,6 +182,19 @@ export async function importNotes(
   if (data.version !== EXPORT_VERSION) {
     errors.push(`Unsupported export version: ${data.version}`);
     return { imported, skipped, errors, attachments, tags };
+  }
+
+  // Import color settings if present
+  if (data.settings) {
+    const { settingsRepository } = await import('./settingsRepository');
+    const currentSettings = await settingsRepository.get();
+
+    // Merge color settings (don't overwrite other settings)
+    await settingsRepository.update({
+      ...currentSettings,
+      colorPalette: data.settings.colorPalette || currentSettings.colorPalette,
+      tagColors: data.settings.tagColors || currentSettings.tagColors,
+    });
   }
 
   const totalNotes = data.notes.length;
@@ -256,6 +286,7 @@ export async function importNotes(
         wordWrap: exportNote.wordWrap,
         syntaxLanguage: exportNote.syntaxLanguage as 'markdown' | 'javascript' | 'python' | 'json' | 'css' | 'bash' | 'sql' | 'plain' | 'html' | undefined,
         showPreview: exportNote.showPreview,
+        color: exportNote.color,
         attachments: noteAttachments,
       });
 
