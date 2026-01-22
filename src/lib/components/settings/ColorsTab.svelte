@@ -2,9 +2,9 @@
   import { _ } from 'svelte-i18n';
   import { onMount } from 'svelte';
   import type { ColorPalette } from '../../types/models';
-  import { DEFAULT_COLOR_PALETTE, COLOR_NAMES } from '../../types/models';
+  import { DEFAULT_COLOR_PALETTE } from '../../types/models';
   import { tagService } from '../../services';
-  import { settings } from '../../stores/appStore';
+  import { settings, notes } from '../../stores/appStore';
   import { resolveTheme } from '../../services/colorService';
 
   export let colorPalette: ColorPalette;
@@ -17,8 +17,8 @@
   $: currentTheme = resolveTheme($settings.theme);
 
   onMount(async () => {
-    // Load all existing tags
-    allTags = await tagService.getAllTags();
+    // Load all existing tags from the notes store
+    allTags = tagService.getAllTags($notes);
   });
 
   function resetPalette() {

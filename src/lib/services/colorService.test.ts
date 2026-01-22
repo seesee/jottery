@@ -1,8 +1,6 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { getColorHex, getColorNames, isValidColor, getTagColor, resolveTheme } from './colorService';
 import { DEFAULT_COLOR_PALETTE } from '../types/models';
-import { settings } from '../stores/appStore';
-import { get } from 'svelte/store';
 
 describe('colorService', () => {
   describe('getColorHex', () => {
@@ -129,7 +127,7 @@ describe('colorService', () => {
 
   describe('color palette validation', () => {
     test('all default colors should have both light and dark variants', () => {
-      Object.entries(DEFAULT_COLOR_PALETTE).forEach(([name, colors]) => {
+      Object.entries(DEFAULT_COLOR_PALETTE).forEach(([_name, colors]) => {
         expect(colors).toHaveProperty('light');
         expect(colors).toHaveProperty('dark');
         expect(typeof colors.light).toBe('string');

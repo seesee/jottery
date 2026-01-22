@@ -100,7 +100,6 @@ export async function permanentDelete(id: string): Promise<void> {
  * Reorder saved searches
  */
 export async function reorder(orderedIds: string[]): Promise<void> {
-  const db = getDB();
   for (let i = 0; i < orderedIds.length; i++) {
     const savedSearch = await getById(orderedIds[i]);
     if (savedSearch) {

@@ -2,7 +2,6 @@
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { modal, createBackdropHandler } from '../actions';
-  import { searchQuery } from '../stores/appStore';
   import { savedSearchRepository } from '../services/savedSearchRepository';
   import type { SavedSearch } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';

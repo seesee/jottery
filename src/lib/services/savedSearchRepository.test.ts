@@ -1,6 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach } from 'vitest';
 import * as savedSearchRepository from './savedSearchRepository';
-import type { SavedSearch } from '../types/models';
 import { initDB, getDB, STORES } from './db';
 
 describe('savedSearchRepository', () => {
@@ -93,9 +92,9 @@ describe('savedSearchRepository', () => {
     });
 
     test('should return searches ordered by order field', async () => {
-      const search1 = await savedSearchRepository.create('Search 1', 'query1');
-      const search2 = await savedSearchRepository.create('Search 2', 'query2');
-      const search3 = await savedSearchRepository.create('Search 3', 'query3');
+      await savedSearchRepository.create('Search 1', 'query1');
+      await savedSearchRepository.create('Search 2', 'query2');
+      await savedSearchRepository.create('Search 3', 'query3');
 
       const searches = await savedSearchRepository.getAll();
       expect(searches[0].order).toBeLessThanOrEqual(searches[1].order);
