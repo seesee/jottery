@@ -16,6 +16,8 @@ export interface Note {
   tags: string[]; // Encrypted array of tags
   attachments: Attachment[]; // Array of attachment references
   pinned: boolean; // Pin status
+  archived: boolean; // Archive status
+  archivedAt?: string; // Archive timestamp
   deleted: boolean; // Soft delete flag
   deletedAt?: string; // Deletion timestamp
   syncHash?: string; // Hash for conflict detection
@@ -210,6 +212,7 @@ export interface SearchQuery {
   colors?: string[]; // Color names to match (OR logic)
   excludeColors?: string[]; // Color names to exclude (AND logic)
   colorTarget?: 'note' | 'tag' | 'both'; // Where to look for colors (default: 'both')
+  archived?: boolean; // Filter archived notes (true = archived only, false = non-archived only, undefined = both)
 }
 
 /**
@@ -273,6 +276,7 @@ export interface ExportNote {
   tags: string[]; // Decrypted
   attachments: ExportAttachment[];
   pinned: boolean;
+  archived: boolean;
   wordWrap?: boolean;
   syntaxLanguage?: string; // Any supported language ID
   showPreview?: boolean;

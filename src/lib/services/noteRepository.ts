@@ -74,12 +74,12 @@ class IndexedDBNoteRepository implements NoteRepository {
   }
 
   /**
-   * Get all active (non-deleted) notes
+   * Get all active (non-deleted, non-archived) notes
    */
   async getAllActive(): Promise<Note[]> {
     const db = getDB();
     const notes = await db.getAll(STORES.NOTES);
-    return notes.filter((note) => !note.deleted);
+    return notes.filter((note) => !note.deleted && !note.archived);
   }
 
   /**
@@ -92,12 +92,21 @@ class IndexedDBNoteRepository implements NoteRepository {
   }
 
   /**
+   * Get archived notes
+   */
+  async getArchived(): Promise<Note[]> {
+    const db = getDB();
+    const notes = await db.getAll(STORES.NOTES);
+    return notes.filter((note) => note.archived && !note.deleted);
+  }
+
+  /**
    * Get pinned notes (active only)
    */
   async getPinned(): Promise<Note[]> {
     const db = getDB();
     const notes = await db.getAll(STORES.NOTES);
-    return notes.filter((note) => note.pinned && !note.deleted);
+    return notes.filter((note) => note.pinned && !note.deleted && !note.archived);
   }
 
   /**
@@ -127,6 +136,32 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.deleted = false;
     note.deletedAt = undefined;
+    await this.update(note);
+  }
+
+  /**
+   * Archive a note
+   */
+  async archive(id: string): Promise<void> {
+    const note = await this.getById(id);
+    if (!note) {
+      throw new Error(`Note ${id} not found`);
+    }
+    note.archived = true;
+    note.archivedAt = new Date().toISOString();
+    await this.update(note);
+  }
+
+  /**
+   * Unarchive a note
+   */
+  async unarchive(id: string): Promise<void> {
+    const note = await this.getById(id);
+    if (!note) {
+      throw new Error(`Note ${id} not found`);
+    }
+    note.archived = false;
+    note.archivedAt = undefined;
     await this.update(note);
   }
 

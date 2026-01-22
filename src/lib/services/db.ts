@@ -6,7 +6,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata, NoteVersion, SavedSearch } from '../types';
 
 let DB_NAME = 'jottery'; // Default, can be changed before initialization
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 
 // Track if database was terminated unexpectedly
 let dbTerminated = false;
@@ -32,6 +32,7 @@ export interface JotteryDB {
       createdAt: string;
       deleted: number; // 0 or 1 for filtering
       pinned: number; // 0 or 1 for filtering
+      archived: number; // 0 or 1 for filtering
     };
   };
   attachments: {
@@ -217,6 +218,46 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
         }
 
         console.log('[DB] v7 schema updates complete');
+      }
+
+      // Version 8: Add archive support (archived field and index)
+      if (oldVersion < 8) {
+        console.log('[DB] Applying v8 schema updates (archive support)...');
+
+        // Add archived index to notes store
+        if (db.objectStoreNames.contains(STORES.NOTES)) {
+          const notesStore = transaction.objectStore(STORES.NOTES);
+
+          if (!notesStore.indexNames.contains('archived')) {
+            notesStore.createIndex('archived', 'archived');
+            console.log('[DB] Created archived index');
+          }
+
+          // Add compound index for efficient archived queries
+          if (!notesStore.indexNames.contains('archived-modifiedAt')) {
+            notesStore.createIndex('archived-modifiedAt', ['archived', 'modifiedAt']);
+            console.log('[DB] Created archived-modifiedAt compound index');
+          }
+        }
+
+        // Migrate existing notes to add archived field (default: false)
+        const notesStore = transaction.objectStore(STORES.NOTES);
+        const notesCursor = await notesStore.openCursor();
+        let migratedCount = 0;
+
+        while (notesCursor) {
+          const note = notesCursor.value;
+          if (note.archived === undefined) {
+            note.archived = false;
+            note.archivedAt = undefined;
+            await notesCursor.update(note);
+            migratedCount++;
+          }
+          await notesCursor.continue();
+        }
+
+        console.log(`[DB] Migrated ${migratedCount} notes to add archived field`);
+        console.log('[DB] v8 schema updates complete');
       }
 
       console.log('[DB] Upgrade complete');

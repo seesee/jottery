@@ -14,6 +14,8 @@ pub struct Note {
     pub tags: Vec<String>,            // Encrypted array of tags
     pub attachments: Vec<Attachment>, // Array of attachment references
     pub pinned: bool,
+    pub archived: bool,
+    pub archived_at: Option<DateTime<Utc>>,
     pub deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
     pub sync_hash: Option<String>,
@@ -143,6 +145,8 @@ impl Note {
             tags: Vec::new(),
             attachments: Vec::new(),
             pinned: false,
+            archived: false,
+            archived_at: None,
             deleted: false,
             deleted_at: None,
             sync_hash: None,
@@ -171,6 +175,20 @@ impl Note {
     pub fn restore(&mut self) {
         self.deleted = false;
         self.deleted_at = None;
+        self.touch();
+    }
+
+    /// Mark note as archived
+    pub fn archive(&mut self) {
+        self.archived = true;
+        self.archived_at = Some(Utc::now());
+        self.touch();
+    }
+
+    /// Unarchive a note
+    pub fn unarchive(&mut self) {
+        self.archived = false;
+        self.archived_at = None;
         self.touch();
     }
 

@@ -10,6 +10,8 @@ pub struct Note {
     pub content: String,
     pub tags: String, // JSON string
     pub pinned: i64,
+    pub archived: i64,
+    pub archived_at: Option<String>,
     pub deleted: i64,
     pub deleted_at: Option<String>,
     pub version: i64,
