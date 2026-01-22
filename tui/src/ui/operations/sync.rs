@@ -176,6 +176,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 version: note.version,
                 word_wrap: Some(note.word_wrap),
                 syntax_language: Some(note.syntax_language.to_string()),
+                color: note.color.clone(),
             })
         }).collect();
 
@@ -222,6 +223,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     attachments: attachment_refs,
                     syntax_language: version.syntax_language.as_ref().map(|s| s.to_string()),
                     word_wrap: version.word_wrap,
+                    color: version.color.clone(),
                     reason: version.reason.to_string(),
                 });
             }
@@ -307,6 +309,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 server_pinned: rejected.server_pinned,
                 server_syntax_language: rejected.server_syntax_language.clone(),
                 server_word_wrap: rejected.server_word_wrap,
+                server_color: rejected.server_color.clone(),
                 detected_at: Utc::now(),
             };
 
@@ -653,6 +656,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     .as_ref()
                     .and_then(|s| s.parse().ok()),
                 word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
+                color: server_version.color.clone(),
                 reason,
             };
 

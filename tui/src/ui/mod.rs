@@ -32,6 +32,7 @@ pub mod rendering;
 pub mod state;
 pub mod syntax;
 pub mod terminal;
+pub mod note_colors;
 
 pub use app::App;
 pub use color_scheme::ColorScheme;

@@ -20,6 +20,7 @@ pub struct NoteVersion {
     pub attachments: Vec<Attachment>,
     pub syntax_language: Option<SyntaxLanguage>,
     pub word_wrap: Option<bool>,
+    pub color: Option<String>,  // Semantic color name
     pub reason: VersionReason,
 }
 
@@ -96,8 +97,8 @@ impl<'a> NoteVersionRepository<'a> {
         self.conn.execute(
             "INSERT INTO note_versions (
                 version_key, note_id, version, created_at, synced_at, content, tags,
-                attachments, syntax_language, word_wrap, reason
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                attachments, syntax_language, word_wrap, color, reason
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 &version_key,
                 &note.id,
@@ -109,6 +110,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 note.syntax_language.to_string(),
                 note.word_wrap as i32,
+                note.color.as_ref(),
                 reason.to_string(),
             ],
         )?;
@@ -121,7 +123,7 @@ impl<'a> NoteVersionRepository<'a> {
     pub fn get_versions_for_note(&self, note_id: &str, key: &[u8; 32]) -> Result<Vec<NoteVersion>> {
         let mut stmt = self.conn.prepare(
             "SELECT version_key, note_id, version, created_at, synced_at, content, tags,
-                    attachments, syntax_language, word_wrap, reason
+                    attachments, syntax_language, word_wrap, color, reason
              FROM note_versions
              WHERE note_id = ?1
              ORDER BY version DESC"
@@ -129,17 +131,18 @@ impl<'a> NoteVersionRepository<'a> {
 
         let versions = stmt.query_map(params![note_id], |row| {
             Ok((
-                row.get::<_, String>(0)?,  // version_key
-                row.get::<_, String>(1)?,  // note_id
-                row.get::<_, i32>(2)?,     // version
-                row.get::<_, String>(3)?,  // created_at
-                row.get::<_, String>(4)?,  // synced_at
-                row.get::<_, String>(5)?,  // content (encrypted)
-                row.get::<_, String>(6)?,  // tags (encrypted)
-                row.get::<_, String>(7)?,  // attachments
-                row.get::<_, String>(8)?,  // syntax_language
-                row.get::<_, i32>(9)?,     // word_wrap
-                row.get::<_, String>(10)?, // reason
+                row.get::<_, String>(0)?,   // version_key
+                row.get::<_, String>(1)?,   // note_id
+                row.get::<_, i32>(2)?,      // version
+                row.get::<_, String>(3)?,   // created_at
+                row.get::<_, String>(4)?,   // synced_at
+                row.get::<_, String>(5)?,   // content (encrypted)
+                row.get::<_, String>(6)?,   // tags (encrypted)
+                row.get::<_, String>(7)?,   // attachments
+                row.get::<_, String>(8)?,   // syntax_language
+                row.get::<_, i32>(9)?,      // word_wrap
+                row.get::<_, Option<String>>(10)?, // color
+                row.get::<_, String>(11)?,  // reason
             ))
         })?;
 
@@ -156,6 +159,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 syntax_language,
                 word_wrap,
+                color,
                 reason,
             ) = version_data?;
 
@@ -180,6 +184,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments,
                 syntax_language: Some(syntax_language.parse().unwrap_or_default()),
                 word_wrap: Some(word_wrap != 0),
+                color,
                 reason: reason.parse().unwrap_or(VersionReason::Sync),
             });
         }
@@ -193,24 +198,25 @@ impl<'a> NoteVersionRepository<'a> {
 
         let mut stmt = self.conn.prepare(
             "SELECT version_key, note_id, version, created_at, synced_at, content, tags,
-                    attachments, syntax_language, word_wrap, reason
+                    attachments, syntax_language, word_wrap, color, reason
              FROM note_versions
              WHERE version_key = ?1"
         )?;
 
         let result = stmt.query_row(params![&version_key], |row| {
             Ok((
-                row.get::<_, String>(0)?,  // version_key
-                row.get::<_, String>(1)?,  // note_id
-                row.get::<_, i32>(2)?,     // version
-                row.get::<_, String>(3)?,  // created_at
-                row.get::<_, String>(4)?,  // synced_at
-                row.get::<_, String>(5)?,  // content (encrypted)
-                row.get::<_, String>(6)?,  // tags (encrypted)
-                row.get::<_, String>(7)?,  // attachments
-                row.get::<_, String>(8)?,  // syntax_language
-                row.get::<_, i32>(9)?,     // word_wrap
-                row.get::<_, String>(10)?, // reason
+                row.get::<_, String>(0)?,   // version_key
+                row.get::<_, String>(1)?,   // note_id
+                row.get::<_, i32>(2)?,      // version
+                row.get::<_, String>(3)?,   // created_at
+                row.get::<_, String>(4)?,   // synced_at
+                row.get::<_, String>(5)?,   // content (encrypted)
+                row.get::<_, String>(6)?,   // tags (encrypted)
+                row.get::<_, String>(7)?,   // attachments
+                row.get::<_, String>(8)?,   // syntax_language
+                row.get::<_, i32>(9)?,      // word_wrap
+                row.get::<_, Option<String>>(10)?, // color
+                row.get::<_, String>(11)?,  // reason
             ))
         });
 
@@ -232,6 +238,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 syntax_language,
                 word_wrap,
+                color,
                 reason,
             )) => {
                 // Decrypt content and tags
@@ -255,6 +262,7 @@ impl<'a> NoteVersionRepository<'a> {
                     attachments,
                     syntax_language: Some(syntax_language.parse().unwrap_or_default()),
                     word_wrap: Some(word_wrap != 0),
+                    color,
                     reason: reason.parse().unwrap_or(VersionReason::Sync),
                 }))
             }

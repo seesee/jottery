@@ -2,6 +2,10 @@
 -- This field stores the semantic color name for a note (e.g., 'red', 'blue')
 ALTER TABLE notes ADD COLUMN color TEXT;
 
+-- Add color field to note_versions table
+-- This field stores the semantic color name for versioned notes
+ALTER TABLE note_versions ADD COLUMN color TEXT;
+
 -- Add color_palette to settings table (stored as JSON)
 -- Contains user-customized color palette with light/dark hex values
 ALTER TABLE settings ADD COLUMN color_palette TEXT;

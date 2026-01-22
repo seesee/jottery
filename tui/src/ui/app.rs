@@ -671,7 +671,7 @@ impl App {
             let query = self.search_input.to_lowercase();
 
             // Parse advanced modifiers from query
-            let modifiers = Self::parse_search_modifiers(&query);
+            let modifiers = Self::parse_search_modifiers(&query, &self.settings);
             let remaining_query = Self::remove_modifiers_from_query(&query);
             let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
 
@@ -808,7 +808,7 @@ impl App {
     }
 
     /// Parse search modifiers from query string
-    fn parse_search_modifiers(query: &str) -> SearchModifiers {
+    fn parse_search_modifiers(query: &str, settings: &crate::models::UserSettings) -> SearchModifiers {
         use regex::Regex;
 
         let mut modifiers = SearchModifiers::default();
@@ -929,7 +929,7 @@ impl App {
         {
             let category_name = caps[1].trim();
             // Look up color key by display name
-            if let Some(color_key) = self.settings.get_color_key_by_display_name(category_name) {
+            if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
                 modifiers.colors.push(color_key);
                 modifiers.color_target = ColorTarget::Note;
             }
@@ -941,7 +941,7 @@ impl App {
             .and_then(|re| re.captures(query))
         {
             let category_name = caps[1].trim();
-            if let Some(color_key) = self.settings.get_color_key_by_display_name(category_name) {
+            if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
                 modifiers.colors.push(color_key);
                 modifiers.color_target = ColorTarget::Tag;
             }
@@ -954,7 +954,7 @@ impl App {
                 .and_then(|re| re.captures(query))
             {
                 let category_name = caps[1].trim();
-                if let Some(color_key) = self.settings.get_color_key_by_display_name(category_name) {
+                if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
                     modifiers.colors.push(color_key);
                     modifiers.color_target = ColorTarget::Both;
                 }
@@ -1565,6 +1565,7 @@ impl App {
                         .as_ref()
                         .and_then(|s| s.parse().ok()),
                     word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
+                    color: server_version.color.clone(),
                     reason,
                 };
 

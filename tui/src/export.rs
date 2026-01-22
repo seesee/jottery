@@ -38,6 +38,7 @@ pub struct ExportNote {
     pub word_wrap: Option<bool>,
     #[serde(rename = "syntaxLanguage")]
     pub syntax_language: Option<String>,
+    pub color: Option<String>,
 }
 
 impl From<&Note> for ExportNote {
@@ -51,6 +52,7 @@ impl From<&Note> for ExportNote {
             pinned: note.pinned,
             word_wrap: Some(note.word_wrap),
             syntax_language: Some(note.syntax_language.to_string()),
+            color: note.color.clone(),
         }
     }
 }
@@ -121,6 +123,7 @@ pub fn import_notes<P: AsRef<Path>>(
                 .syntax_language
                 .and_then(|s| s.parse().ok())
                 .unwrap_or_default(),
+            color: export_note.color,
         };
 
         // Try to create (will fail if already exists, which is fine)

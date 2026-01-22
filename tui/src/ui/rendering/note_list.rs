@@ -11,6 +11,7 @@ use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal};
 use crate::ui::rendering::modal::render_confirmation_modal;
+use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
 use crate::models::SyntaxLanguage;
 
 /// Render note list (split pane view)
@@ -114,14 +115,25 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 preview = format!("{}{}", indicators, preview);
             }
 
+            // Get note background color if set
+            let theme_name = app.settings.theme.to_string();
+            let is_dark = is_dark_theme(&theme_name);
+            let note_bg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
+
             // Style selected notes differently in multi-select mode
             let is_selected = app.selected_note_ids.contains(&note.id);
-            if is_selected {
-                ListItem::new(preview)
-                    .style(Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD))
+            let mut style = if is_selected {
+                Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
             } else {
-                ListItem::new(preview)
+                Style::default()
+            };
+
+            // Apply note background color if present
+            if let Some(bg_color) = note_bg_color {
+                style = style.bg(bg_color);
             }
+
+            ListItem::new(preview).style(style)
         })
         .collect();
 
@@ -213,9 +225,6 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     if !filtered.is_empty() && app.selected_note < filtered.len() {
         let note = filtered[app.selected_note];
 
-        // Build metadata line (tags and syntax language)
-        let mut metadata_parts = Vec::new();
-
         // Show tags (or n/a if none)
         // Also calculate tag positions for click detection
         let tags_prefix = "Tags: ";
@@ -223,23 +232,43 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let preview_inner_y = preview_area.y + 1; // Account for title bar
         let scroll_offset = app.preview_scroll_offset;
 
-        let tags_str = if !note.tags.is_empty() {
+        // Determine theme for tag colors
+        let theme_name = app.settings.theme.to_string();
+        let is_dark = is_dark_theme(&theme_name);
+
+        let tags_spans = if !note.tags.is_empty() {
             let mut x_offset = preview_inner_x + tags_prefix.len() as u16;
-            for tag in &note.tags {
+            let mut spans = vec![Span::raw(tags_prefix)];
+
+            for (i, tag) in note.tags.iter().enumerate() {
                 let tag_str = format!("#{}", tag);
                 let tag_len = tag_str.len() as u16;
+
                 // Store position only if visible (scroll offset is 0 for tags line)
                 if scroll_offset == 0 {
                     tag_positions_local.push((tag.clone(), x_offset, x_offset + tag_len));
                 }
                 x_offset += tag_len + 1; // +1 for space separator
+
+                // Get tag color and create styled span
+                let tag_color = get_tag_color(tag, &app.settings, is_dark);
+                let tag_style = if let Some(color) = tag_color {
+                    Style::default().bg(color).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+
+                spans.push(Span::styled(tag_str, tag_style));
+
+                // Add space separator if not the last tag
+                if i < note.tags.len() - 1 {
+                    spans.push(Span::raw(" "));
+                }
             }
-            note.tags.iter()
-                .map(|t| format!("#{}", t))
-                .collect::<Vec<_>>()
-                .join(" ")
+
+            Some(spans)
         } else {
-            "n/a".to_string()
+            None
         };
 
         // Store tags line area for click detection (only visible when scroll offset is 0)
@@ -254,16 +283,31 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             None
         };
 
-        metadata_parts.push(format!("{}{}", tags_prefix, tags_str));
+        // Build metadata line with spans
+        let mut metadata_spans = Vec::new();
 
-        // Show syntax language
-        metadata_parts.push(format!("Type: {}", note.syntax_language));
+        // Add tags spans (or "n/a")
+        if let Some(mut tag_spans) = tags_spans {
+            metadata_spans.append(&mut tag_spans);
+        } else {
+            metadata_spans.push(Span::raw("Tags: "));
+            metadata_spans.push(Span::raw("n/a"));
+        }
 
-        let metadata_line = metadata_parts.join(" | ");
+        // Add separator
+        metadata_spans.push(Span::raw(" | "));
+
+        // Add syntax language
+        metadata_spans.push(Span::styled(
+            format!("Type: {}", note.syntax_language),
+            Style::default().fg(app.color_scheme.accent_secondary)
+        ));
+
+        let metadata_line = Line::from(metadata_spans);
 
         // Render content based on type
         let mut lines = vec![
-            Line::styled(metadata_line, Style::default().fg(app.color_scheme.accent_secondary)),
+            metadata_line,
             Line::raw(""),  // Blank line
         ];
 
