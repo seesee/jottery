@@ -147,6 +147,7 @@ pub async fn push(
         if should_accept {
             // Convert types
             let pinned = if note.pinned { 1 } else { 0 };
+            let archived = if note.archived { 1 } else { 0 };
             let deleted = if note.deleted { 1 } else { 0 };
             let word_wrap = note.word_wrap.map(|w| if w { 1 } else { 0 });
             let show_preview = note.show_preview.map(|p| if p { 1 } else { 0 });
@@ -167,16 +168,18 @@ pub async fn push(
                 r#"
                 INSERT INTO notes (
                     id, user_id, client_id, created_at, modified_at, server_modified_at,
-                    content, tags, pinned, deleted, deleted_at, version, server_version,
+                    content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version,
                     word_wrap, syntax_language, show_preview, color
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
                     content = excluded.content,
                     tags = excluded.tags,
                     pinned = excluded.pinned,
+                    archived = excluded.archived,
+                    archived_at = excluded.archived_at,
                     deleted = excluded.deleted,
                     deleted_at = excluded.deleted_at,
                     version = excluded.version,
@@ -195,6 +198,8 @@ pub async fn push(
                 note.content,
                 tags_json,
                 pinned,
+                archived,
+                note.archived_at,
                 deleted,
                 note.deleted_at,
                 note.version,
@@ -523,7 +528,7 @@ pub async fn pull(
     // Get notes with pagination (LIMIT/OFFSET)
     let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             last_sync,
             limit,
@@ -542,6 +547,8 @@ pub async fn pull(
                 content: row.content,
                 tags: row.tags,
                 pinned: row.pinned,
+                archived: row.archived,
+                archived_at: row.archived_at,
                 deleted: row.deleted,
                 deleted_at: row.deleted_at,
                 version: row.version,
@@ -554,7 +561,7 @@ pub async fn pull(
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             limit,
             offset
@@ -572,6 +579,8 @@ pub async fn pull(
                 content: row.content,
                 tags: row.tags,
                 pinned: row.pinned,
+                archived: row.archived,
+                archived_at: row.archived_at,
                 deleted: row.deleted,
                 deleted_at: row.deleted_at,
                 version: row.version,
