@@ -5,6 +5,7 @@
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
+  import { DEFAULT_SETTINGS } from './lib/types';
   import { getCurrentNotebook } from './lib/utils/notebookPath';
   import UnlockScreen from './lib/components/UnlockScreen.svelte';
   import Header from './lib/components/Header.svelte';
@@ -196,9 +197,9 @@
       // Initialize database
       await initDB();
 
-      // Load settings
+      // Load settings (merge with defaults to ensure new fields exist)
       const userSettings = await settingsRepository.get();
-      settings.set(userSettings);
+      settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
 
       // Initialize i18n with user's language preference
       const initialLocale = getInitialLocale(userSettings.language);
@@ -208,7 +209,7 @@
       // If language was auto-detected (empty string), save the detected locale
       if (!userSettings.language || userSettings.language === '') {
         const updated = await settingsRepository.update({ language: initialLocale });
-        settings.set(updated);
+        settings.set({ ...DEFAULT_SETTINGS, ...updated });
       }
 
       // Apply theme

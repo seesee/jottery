@@ -11,11 +11,13 @@ const SETTINGS_KEY = 'user-settings';
 class IndexedDBSettingsRepository implements SettingsRepository {
   /**
    * Get current user settings
+   * Always merges with DEFAULT_SETTINGS to ensure new fields exist
    */
   async get(): Promise<UserSettings> {
     const db = getDB();
     const settings = await db.get(STORES.SETTINGS, SETTINGS_KEY);
-    return settings || DEFAULT_SETTINGS;
+    // Merge with defaults to ensure new fields (like colorPalette) exist even in old databases
+    return settings ? { ...DEFAULT_SETTINGS, ...settings } : DEFAULT_SETTINGS;
   }
 
   /**
