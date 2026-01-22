@@ -493,15 +493,16 @@
       >
         ⚙️ {$_('common.settings')}
       </button>
+    </div>
 
+      <!-- Lock button (right-aligned) -->
       <button
         on:click={handleLockRequest}
-        class="px-3 py-1.5 {rememberPasswordEnabled ? 'opacity-50 cursor-default' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
+        class="ml-auto px-3 py-1.5 {rememberPasswordEnabled ? 'opacity-50 cursor-default' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
         title={rememberPasswordEnabled ? 'Password remembered - click to disable' : lockAppShortcut ? `${$_('keyboard.lockApp')} (${lockAppShortcut})` : $_('keyboard.lockApp')}
       >
         {rememberPasswordEnabled ? '🔓' : '🔒'} {$_('common.lock')}
       </button>
-    </div>
     {/if}
 
     {#if notebook.id !== 'main' && !forceMobileLayout}
