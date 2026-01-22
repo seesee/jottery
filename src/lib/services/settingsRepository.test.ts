@@ -4,12 +4,23 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { settingsRepository } from './settingsRepository';
-import { DEFAULT_SETTINGS, type KeyboardShortcuts } from '../types';
+import { DEFAULT_SETTINGS, type KeyboardShortcuts, type ColorPalette } from '../types';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
+import { keyManager } from './keyManager';
+import { getDB, STORES } from './db';
 
 describe('settingsRepository', () => {
+  let masterKey: CryptoKey;
+
   beforeEach(async () => {
-    await initTestDB();
+    const testDB = await initTestDB();
+    masterKey = testDB.masterKey;
+
+    // Set up authenticated key manager for encryption tests
+    keyManager.setMasterKey({
+      key: masterKey,
+      derivedAt: Date.now(),
+    });
   });
 
   afterEach(async () => {
@@ -410,6 +421,255 @@ describe('settingsRepository', () => {
         const settings = await settingsRepository.get();
         expect(settings.language).toBe(language);
       }
+    });
+  });
+
+  describe('colorPalette encryption', () => {
+    it('should encrypt displayNames in colorPalette when stored', async () => {
+      const customPalette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Project Alpha', // Should be encrypted
+        },
+        blue: {
+          light: '#E5F0FF',
+          dark: '#1A3A5C',
+          displayName: 'Client Beta', // Should be encrypted
+        },
+        green: {
+          light: '#E5F5E5',
+          dark: '#1A4D1A',
+          // No displayName - should work fine
+        },
+      };
+
+      await settingsRepository.update({ colorPalette: customPalette });
+
+      // Check raw storage
+      const db = await getDB();
+      const stored = await db.get(STORES.SETTINGS, 'user-settings');
+
+      // DisplayNames should be encrypted JSON strings
+      expect(stored?.colorPalette?.red?.displayName).not.toBe('Project Alpha');
+      expect(stored?.colorPalette?.red?.displayName?.startsWith('{')).toBe(true);
+      expect(stored?.colorPalette?.red?.displayName).toContain('"ciphertext"');
+
+      expect(stored?.colorPalette?.blue?.displayName).not.toBe('Client Beta');
+      expect(stored?.colorPalette?.blue?.displayName?.startsWith('{')).toBe(true);
+
+      // Green has no displayName, should be undefined
+      expect(stored?.colorPalette?.green?.displayName).toBeUndefined();
+
+      // Light/dark colors should NOT be encrypted
+      expect(stored?.colorPalette?.red?.light).toBe('#FFE5E5');
+      expect(stored?.colorPalette?.red?.dark).toBe('#5C1A1A');
+    });
+
+    it('should decrypt displayNames when retrieved', async () => {
+      const customPalette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Important Project',
+        },
+        yellow: {
+          light: '#FFFACD',
+          dark: '#5C5520',
+          displayName: 'Follow-up Tasks',
+        },
+      };
+
+      await settingsRepository.update({ colorPalette: customPalette });
+      const retrieved = await settingsRepository.get();
+
+      expect(retrieved.colorPalette?.red?.displayName).toBe('Important Project');
+      expect(retrieved.colorPalette?.yellow?.displayName).toBe('Follow-up Tasks');
+    });
+
+    it('should handle colorPalette without displayNames', async () => {
+      const simplePalette: ColorPalette = {
+        red: { light: '#FFE5E5', dark: '#5C1A1A' },
+        blue: { light: '#E5F0FF', dark: '#1A3A5C' },
+      };
+
+      const updated = await settingsRepository.update({ colorPalette: simplePalette });
+
+      expect(updated.colorPalette?.red?.light).toBe('#FFE5E5');
+      expect(updated.colorPalette?.red?.displayName).toBeUndefined();
+      expect(updated.colorPalette?.blue?.light).toBe('#E5F0FF');
+      expect(updated.colorPalette?.blue?.displayName).toBeUndefined();
+    });
+
+    it('should handle legacy unencrypted displayNames', async () => {
+      // Manually insert unencrypted data (simulating old data)
+      const db = await getDB();
+      const legacySettings = {
+        ...DEFAULT_SETTINGS,
+        colorPalette: {
+          red: {
+            light: '#FFE5E5',
+            dark: '#5C1A1A',
+            displayName: 'Legacy Name', // Not encrypted
+          },
+        },
+      };
+      await db.put(STORES.SETTINGS, legacySettings, 'user-settings');
+
+      // Should read legacy data without errors
+      const retrieved = await settingsRepository.get();
+      expect(retrieved.colorPalette?.red?.displayName).toBe('Legacy Name');
+    });
+
+    it('should encrypt displayNames with special characters', async () => {
+      const specialPalette: ColorPalette = {
+        purple: {
+          light: '#F0E5FF',
+          dark: '#3A1A5C',
+          displayName: 'Clîënt Prøjéct 🎨 with émojis & spëcial çhars',
+        },
+      };
+
+      await settingsRepository.update({ colorPalette: specialPalette });
+      const retrieved = await settingsRepository.get();
+
+      expect(retrieved.colorPalette?.purple?.displayName).toBe(
+        'Clîënt Prøjéct 🎨 with émojis & spëcial çhars'
+      );
+    });
+
+    it('should update displayNames correctly', async () => {
+      // Create palette with displayName
+      const initialPalette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Original Name',
+        },
+      };
+      await settingsRepository.update({ colorPalette: initialPalette });
+
+      // Update displayName
+      const updatedPalette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Updated Name',
+        },
+      };
+      await settingsRepository.update({ colorPalette: updatedPalette });
+
+      // Verify encryption
+      const db = await getDB();
+      const stored = await db.get(STORES.SETTINGS, 'user-settings');
+      expect(stored?.colorPalette?.red?.displayName).not.toBe('Updated Name');
+      expect(stored?.colorPalette?.red?.displayName?.startsWith('{')).toBe(true);
+
+      // Verify decryption
+      const retrieved = await settingsRepository.get();
+      expect(retrieved.colorPalette?.red?.displayName).toBe('Updated Name');
+    });
+
+    it('should handle mixed encrypted and unencrypted colors in palette', async () => {
+      const mixedPalette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Encrypted Name',
+        },
+        blue: {
+          light: '#E5F0FF',
+          dark: '#1A3A5C',
+          // No displayName
+        },
+        green: {
+          light: '#E5F5E5',
+          dark: '#1A4D1A',
+          displayName: 'Another Encrypted',
+        },
+      };
+
+      await settingsRepository.update({ colorPalette: mixedPalette });
+      const retrieved = await settingsRepository.get();
+
+      expect(retrieved.colorPalette?.red?.displayName).toBe('Encrypted Name');
+      expect(retrieved.colorPalette?.blue?.displayName).toBeUndefined();
+      expect(retrieved.colorPalette?.green?.displayName).toBe('Another Encrypted');
+    });
+
+    it('should fail gracefully when app is locked during update', async () => {
+      // Clear master key to simulate locked state
+      keyManager.clearMasterKey();
+
+      const palette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Test',
+        },
+      };
+
+      await expect(settingsRepository.update({ colorPalette: palette })).rejects.toThrow(
+        'Application is locked'
+      );
+
+      // Restore key for cleanup
+      keyManager.setMasterKey({
+        key: masterKey,
+        derivedAt: Date.now(),
+      });
+    });
+
+    it('should return as-is when app is locked during get', async () => {
+      // Store encrypted palette while unlocked
+      const palette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Test Name',
+        },
+      };
+      await settingsRepository.update({ colorPalette: palette });
+
+      // Clear master key to simulate locked state
+      keyManager.clearMasterKey();
+
+      // Should return encrypted displayName (can't decrypt without key)
+      const retrieved = await settingsRepository.get();
+      expect(retrieved.colorPalette?.red?.displayName).not.toBe('Test Name');
+      expect(retrieved.colorPalette?.red?.displayName?.startsWith('{')).toBe(true);
+
+      // Restore key for cleanup
+      keyManager.setMasterKey({
+        key: masterKey,
+        derivedAt: Date.now(),
+      });
+    });
+
+    it('should preserve tagColors alongside colorPalette', async () => {
+      const palette: ColorPalette = {
+        red: {
+          light: '#FFE5E5',
+          dark: '#5C1A1A',
+          displayName: 'Important',
+        },
+      };
+
+      const tagColors = {
+        work: 'blue',
+        personal: 'green',
+        urgent: 'red',
+      };
+
+      await settingsRepository.update({
+        colorPalette: palette,
+        tagColors: tagColors,
+      });
+
+      const retrieved = await settingsRepository.get();
+
+      expect(retrieved.colorPalette?.red?.displayName).toBe('Important');
+      expect(retrieved.tagColors).toEqual(tagColors);
     });
   });
 });

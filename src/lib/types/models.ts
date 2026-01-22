@@ -48,7 +48,7 @@ export interface ColorPalette {
   [colorName: string]: {
     light: string; // Hex code for light mode (e.g., '#FFE5E5')
     dark: string; // Hex code for dark mode (e.g., '#5C1A1A')
-    displayName?: string; // Optional user-defined display name (e.g., 'Urgent', 'Personal')
+    displayName?: string; // Optional user-defined display name (ENCRYPTED, e.g., 'Project X', 'Client ABC')
   };
 }
 
@@ -218,8 +218,8 @@ export interface SearchQuery {
  */
 export interface SavedSearch {
   id: string; // UUID v4
-  name: string; // User-provided name
-  query: string; // Search query string
+  name: string; // User-provided name (ENCRYPTED)
+  query: string; // Search query string (ENCRYPTED)
   order: number; // Display order
   createdAt: string; // ISO 8601 with timezone
   modifiedAt: string; // ISO 8601 with timezone

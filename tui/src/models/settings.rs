@@ -8,7 +8,7 @@ pub struct ColorDefinition {
     pub dark: String,        // Hex color for dark mode
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "displayName")]
-    pub display_name: Option<String>, // Optional user-defined display name
+    pub display_name: Option<String>, // Optional user-defined display name (ENCRYPTED)
 }
 
 /// Color palette mapping color names to light/dark hex values

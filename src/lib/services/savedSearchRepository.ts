@@ -5,6 +5,8 @@
 import type { SavedSearch } from '../types';
 import { getDB, STORES } from './db';
 import { v4 as uuidv4 } from 'uuid';
+import { keyManager } from './keyManager';
+import { cryptoService } from './crypto';
 
 /**
  * Create a new saved search
@@ -13,14 +15,23 @@ export async function create(name: string, query: string): Promise<SavedSearch> 
   const db = getDB();
   const now = new Date().toISOString();
 
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new Error('Application is locked');
+  }
+
   // Get max order
   const all = await getAll();
   const maxOrder = all.length > 0 ? Math.max(...all.map(s => s.order)) : 0;
 
+  // Encrypt sensitive fields
+  const encryptedName = await cryptoService.encryptText(name, masterKey.key);
+  const encryptedQuery = await cryptoService.encryptText(query, masterKey.key);
+
   const savedSearch: SavedSearch = {
     id: uuidv4(),
-    name,
-    query,
+    name: JSON.stringify(encryptedName),
+    query: JSON.stringify(encryptedQuery),
     order: maxOrder + 1,
     createdAt: now,
     modifiedAt: now,
@@ -30,7 +41,59 @@ export async function create(name: string, query: string): Promise<SavedSearch> 
   };
 
   await db.put(STORES.SAVED_SEARCHES, savedSearch);
-  return savedSearch;
+
+  // Return decrypted version for use in app
+  return {
+    ...savedSearch,
+    name,
+    query,
+  };
+}
+
+/**
+ * Decrypt a saved search
+ */
+async function decryptSavedSearch(savedSearch: SavedSearch): Promise<SavedSearch> {
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new Error('Application is locked');
+  }
+
+  try {
+    // Decrypt name
+    let name: string;
+    try {
+      const encryptedName = JSON.parse(savedSearch.name);
+      name = await cryptoService.decryptText(encryptedName, masterKey.key);
+    } catch {
+      // Handle unencrypted data (legacy)
+      name = savedSearch.name;
+    }
+
+    // Decrypt query
+    let query: string;
+    try {
+      const encryptedQuery = JSON.parse(savedSearch.query);
+      query = await cryptoService.decryptText(encryptedQuery, masterKey.key);
+    } catch {
+      // Handle unencrypted data (legacy)
+      query = savedSearch.query;
+    }
+
+    return {
+      ...savedSearch,
+      name,
+      query,
+    };
+  } catch (error) {
+    console.error('Failed to decrypt saved search:', error);
+    // Return with [Encrypted] placeholder if decryption fails
+    return {
+      ...savedSearch,
+      name: '[Encrypted]',
+      query: '[Encrypted]',
+    };
+  }
 }
 
 /**
@@ -40,11 +103,14 @@ export async function getAll(): Promise<SavedSearch[]> {
   try {
     const db = getDB();
     const searches = await db.getAll(STORES.SAVED_SEARCHES);
-    return searches
+    const filtered = searches
       .filter(s => !s.deleted)
       .sort((a, b) => a.order - b.order);
+
+    // Decrypt all searches
+    return await Promise.all(filtered.map(s => decryptSavedSearch(s)));
   } catch (error) {
-    // If saved_searches store doesn't exist yet (pre-v6 database), return empty array
+    // If saved_searches store doesn't exist yet (pre-v7 database), return empty array
     console.warn('[savedSearchRepository] Store not available yet:', error);
     return [];
   }
@@ -55,7 +121,9 @@ export async function getAll(): Promise<SavedSearch[]> {
  */
 export async function getById(id: string): Promise<SavedSearch | undefined> {
   const db = getDB();
-  return await db.get(STORES.SAVED_SEARCHES, id);
+  const savedSearch = await db.get(STORES.SAVED_SEARCHES, id);
+  if (!savedSearch) return undefined;
+  return await decryptSavedSearch(savedSearch);
 }
 
 /**
@@ -63,19 +131,39 @@ export async function getById(id: string): Promise<SavedSearch | undefined> {
  */
 export async function update(id: string, updates: Partial<SavedSearch>): Promise<SavedSearch> {
   const db = getDB();
-  const existing = await getById(id);
+  const existing = await db.get(STORES.SAVED_SEARCHES, id); // Get encrypted version from DB
   if (!existing) throw new Error('SavedSearch not found');
+
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new Error('Application is locked');
+  }
+
+  // Encrypt updated fields if provided
+  const encryptedUpdates: Partial<SavedSearch> = { ...updates };
+
+  if (updates.name !== undefined) {
+    const encryptedName = await cryptoService.encryptText(updates.name, masterKey.key);
+    encryptedUpdates.name = JSON.stringify(encryptedName);
+  }
+
+  if (updates.query !== undefined) {
+    const encryptedQuery = await cryptoService.encryptText(updates.query, masterKey.key);
+    encryptedUpdates.query = JSON.stringify(encryptedQuery);
+  }
 
   const updated: SavedSearch = {
     ...existing,
-    ...updates,
+    ...encryptedUpdates,
     modifiedAt: new Date().toISOString(),
     version: existing.version + 1,
     needsSync: true,
   };
 
   await db.put(STORES.SAVED_SEARCHES, updated);
-  return updated;
+
+  // Return decrypted version
+  return await decryptSavedSearch(updated);
 }
 
 /**
@@ -110,14 +198,16 @@ export async function reorder(orderedIds: string[]): Promise<void> {
 
 /**
  * Get all saved searches that need to be synced
+ * Returns encrypted data for transmission to server
  */
 export async function getAllNeedingSync(): Promise<SavedSearch[]> {
   try {
     const db = getDB();
     const searches = await db.getAll(STORES.SAVED_SEARCHES);
+    // Return encrypted data as-is for sync (server stores encrypted)
     return searches.filter(s => s.needsSync === true);
   } catch (error) {
-    // If saved_searches store doesn't exist yet (pre-v6 database), return empty array
+    // If saved_searches store doesn't exist yet (pre-v7 database), return empty array
     console.warn('[savedSearchRepository] Store not available yet:', error);
     return [];
   }

@@ -1,10 +1,23 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import * as savedSearchRepository from './savedSearchRepository';
 import { initDB, getDB, STORES } from './db';
+import { initTestDB, cleanupTestDB } from '../../test/db-utils';
+import { keyManager } from './keyManager';
 
 describe('savedSearchRepository', () => {
+  let masterKey: CryptoKey;
+
   // Initialize and clear the database before each test
   beforeEach(async () => {
+    const testDB = await initTestDB();
+    masterKey = testDB.masterKey;
+
+    // Set up authenticated key manager for encryption tests
+    keyManager.setMasterKey({
+      key: masterKey,
+      derivedAt: Date.now(),
+    });
+
     await initDB();
     const db = await getDB();
     const tx = db.transaction(STORES.SAVED_SEARCHES, 'readwrite');
@@ -359,6 +372,123 @@ describe('savedSearchRepository', () => {
       const needingSync = await savedSearchRepository.getAllNeedingSync();
       expect(needingSync.length).toBe(1);
       expect(needingSync[0].id).toBe(search1.id);
+    });
+  });
+
+  describe('encryption', () => {
+    test('should encrypt name and query when stored', async () => {
+      const search = await savedSearchRepository.create('My Secret Search', 'color:red #confidential');
+
+      // Retrieve raw data from database to verify encryption
+      const db = await getDB();
+      const stored = await db.get(STORES.SAVED_SEARCHES, search.id);
+
+      // Stored name should be encrypted JSON, not plain text
+      expect(stored?.name).not.toBe('My Secret Search');
+      expect(stored?.name.startsWith('{')).toBe(true); // JSON format
+      expect(stored?.name).toContain('"ciphertext"');
+      expect(stored?.name).toContain('"iv"');
+
+      // Stored query should be encrypted JSON, not plain text
+      expect(stored?.query).not.toBe('color:red #confidential');
+      expect(stored?.query.startsWith('{')).toBe(true);
+      expect(stored?.query).toContain('"ciphertext"');
+      expect(stored?.query).toContain('"iv"');
+    });
+
+    test('should decrypt name and query when retrieved', async () => {
+      const search = await savedSearchRepository.create('Decrypt Test', 'test query');
+
+      // Retrieve via repository (should decrypt)
+      const retrieved = await savedSearchRepository.getById(search.id);
+
+      expect(retrieved?.name).toBe('Decrypt Test');
+      expect(retrieved?.query).toBe('test query');
+    });
+
+    test('should handle legacy unencrypted data', async () => {
+      // Manually insert unencrypted data (simulating old data)
+      const db = await getDB();
+      const legacySearch = {
+        id: 'legacy-1',
+        name: 'Legacy Search', // Not encrypted
+        query: 'legacy query',  // Not encrypted
+        order: 1,
+        createdAt: new Date().toISOString(),
+        modifiedAt: new Date().toISOString(),
+        deleted: false,
+        version: 1,
+        needsSync: false,
+      };
+      await db.put(STORES.SAVED_SEARCHES, legacySearch);
+
+      // Should read legacy data without errors
+      const retrieved = await savedSearchRepository.getById('legacy-1');
+      expect(retrieved?.name).toBe('Legacy Search');
+      expect(retrieved?.query).toBe('legacy query');
+    });
+
+    test('should encrypt updated name and query', async () => {
+      const search = await savedSearchRepository.create('Original Name', 'original query');
+
+      // Update name and query
+      await savedSearchRepository.update(search.id, {
+        name: 'Updated Name',
+        query: 'updated query',
+      });
+
+      // Check raw storage
+      const db = await getDB();
+      const stored = await db.get(STORES.SAVED_SEARCHES, search.id);
+
+      expect(stored?.name).not.toBe('Updated Name');
+      expect(stored?.name.startsWith('{')).toBe(true);
+      expect(stored?.query).not.toBe('updated query');
+      expect(stored?.query.startsWith('{')).toBe(true);
+
+      // Check decrypted retrieval
+      const retrieved = await savedSearchRepository.getById(search.id);
+      expect(retrieved?.name).toBe('Updated Name');
+      expect(retrieved?.query).toBe('updated query');
+    });
+
+    test('getAllNeedingSync should return encrypted data for server', async () => {
+      await savedSearchRepository.create('Sync Test', 'sync query');
+
+      const needingSync = await savedSearchRepository.getAllNeedingSync();
+      expect(needingSync.length).toBe(1);
+
+      // Data returned for sync should be encrypted (not decrypted)
+      expect(needingSync[0].name).not.toBe('Sync Test');
+      expect(needingSync[0].name.startsWith('{')).toBe(true);
+      expect(needingSync[0].query).not.toBe('sync query');
+      expect(needingSync[0].query.startsWith('{')).toBe(true);
+    });
+
+    test('should handle encryption with special characters', async () => {
+      const specialName = 'Test with émojis 🔒 and spëcial çhars';
+      const specialQuery = 'color:red #tag-with-dashes tag:special@chars';
+
+      const search = await savedSearchRepository.create(specialName, specialQuery);
+      const retrieved = await savedSearchRepository.getById(search.id);
+
+      expect(retrieved?.name).toBe(specialName);
+      expect(retrieved?.query).toBe(specialQuery);
+    });
+
+    test('should fail gracefully when app is locked', async () => {
+      // Clear master key to simulate locked state
+      keyManager.clearMasterKey();
+
+      await expect(
+        savedSearchRepository.create('Locked Test', 'test')
+      ).rejects.toThrow('Application is locked');
+
+      // Restore key for cleanup
+      keyManager.setMasterKey({
+        key: masterKey,
+        derivedAt: Date.now(),
+      });
     });
   });
 });
