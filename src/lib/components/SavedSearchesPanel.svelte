@@ -24,6 +24,20 @@
 
   $: backdropHandler = createBackdropHandler(onClose);
 
+  // Handle keyboard events on backdrop
+  function handleBackdropKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClose();
+    }
+  }
+
+  // Action to focus an element when it's rendered
+  function focusOnMount(node: HTMLElement) {
+    node.focus();
+    return {};
+  }
+
   onMount(async () => {
     await loadSavedSearches();
   });
@@ -162,6 +176,7 @@
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={backdropHandler}
+    on:keydown={handleBackdropKeydown}
     role="dialog"
     aria-modal="true"
     tabindex="-1"
@@ -179,7 +194,7 @@
       </div>
 
       <!-- Content -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-2">
+      <div class="flex-1 overflow-y-auto p-4 space-y-2" role="list">
         {#if savedSearches.length === 0}
           <div class="text-center py-8 text-gray-500 dark:text-gray-400">
             <p>{$_('search.noSavedSearches')}</p>
@@ -192,6 +207,7 @@
               on:dragover={handleDragOver}
               on:drop={(e) => handleDrop(e, search.id)}
               class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600 {draggedId === search.id ? 'opacity-50' : ''} {editingId !== search.id ? 'cursor-move' : ''}"
+              role="listitem"
             >
               {#if editingId === search.id}
                 <!-- Edit mode -->
@@ -211,7 +227,7 @@
                     rows="2"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm resize-none"
                     aria-label={$_('search.query')}
-                  />
+                  ></textarea>
                   <div class="flex gap-2 justify-end">
                     <button
                       on:click={cancelEdit}
@@ -295,7 +311,7 @@
                 placeholder={$_('search.searchName')}
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-label={$_('search.searchName')}
-                autofocus
+                use:focusOnMount
               />
               <div class="bg-gray-100 dark:bg-gray-700 rounded-md px-3 py-2 font-mono text-sm text-gray-700 dark:text-gray-300">
                 {currentQuery || $_('search.noCurrentQuery')}

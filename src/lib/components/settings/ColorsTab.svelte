@@ -66,10 +66,11 @@
         </span>
         <div class="flex items-center gap-2 flex-1">
           <div class="flex items-center gap-2">
-            <label class="text-xs text-gray-600 dark:text-gray-400">
+            <label for="color-{name}-light" class="text-xs text-gray-600 dark:text-gray-400">
               {$_('settings.colors.lightMode')}
             </label>
             <input
+              id="color-{name}-light"
               type="color"
               bind:value={colors.light}
               class="w-12 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
@@ -77,10 +78,11 @@
             />
           </div>
           <div class="flex items-center gap-2">
-            <label class="text-xs text-gray-600 dark:text-gray-400">
+            <label for="color-{name}-dark" class="text-xs text-gray-600 dark:text-gray-400">
               {$_('settings.colors.darkMode')}
             </label>
             <input
+              id="color-{name}-dark"
               type="color"
               bind:value={colors.dark}
               class="w-12 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
