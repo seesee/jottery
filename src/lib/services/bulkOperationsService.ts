@@ -188,6 +188,7 @@ export async function exportNotes(
           data: a.data,
         })),
         pinned: note.pinned,
+        archived: note.archived,
         wordWrap: note.wordWrap,
         syntaxLanguage: note.syntaxLanguage,
         showPreview: note.showPreview,

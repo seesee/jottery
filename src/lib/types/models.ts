@@ -311,6 +311,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   tags: [],
   attachments: [],
   pinned: false,
+  archived: false,
   deleted: false,
   version: 0,
   wordWrap: true,

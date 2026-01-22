@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import * as savedSearchRepository from './savedSearchRepository';
 import { initDB, getDB, STORES } from './db';
-import { initTestDB, cleanupTestDB } from '../../test/db-utils';
+import { initTestDB } from '../../test/db-utils';
 import { keyManager } from './keyManager';
 
 describe('savedSearchRepository', () => {

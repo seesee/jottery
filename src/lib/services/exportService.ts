@@ -146,6 +146,7 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
     tags,
     attachments: exportAttachments,
     pinned: note.pinned,
+    archived: note.archived,
     wordWrap: note.wordWrap,
     syntaxLanguage: note.syntaxLanguage,
     showPreview: note.showPreview,

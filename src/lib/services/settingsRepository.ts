@@ -24,12 +24,13 @@ async function encryptColorPalette(palette?: ColorPalette): Promise<ColorPalette
   const encrypted: ColorPalette = {};
 
   for (const [colorKey, colorDef] of Object.entries(palette)) {
-    encrypted[colorKey] = { ...colorDef };
+    const typedColorDef = colorDef as { light: string; dark: string; displayName?: string };
+    encrypted[colorKey] = { ...typedColorDef };
 
     // Encrypt displayName if present
-    if (colorDef.displayName) {
+    if (typedColorDef.displayName) {
       const encryptedDisplayName = await cryptoService.encryptText(
-        colorDef.displayName,
+        typedColorDef.displayName,
         masterKey.key
       );
       encrypted[colorKey].displayName = JSON.stringify(encryptedDisplayName);
@@ -54,19 +55,20 @@ async function decryptColorPalette(palette?: ColorPalette): Promise<ColorPalette
   const decrypted: ColorPalette = {};
 
   for (const [colorKey, colorDef] of Object.entries(palette)) {
-    decrypted[colorKey] = { ...colorDef };
+    const typedColorDef = colorDef as { light: string; dark: string; displayName?: string };
+    decrypted[colorKey] = { ...typedColorDef };
 
     // Decrypt displayName if present
-    if (colorDef.displayName) {
+    if (typedColorDef.displayName) {
       try {
-        const encryptedDisplayName = JSON.parse(colorDef.displayName);
+        const encryptedDisplayName = JSON.parse(typedColorDef.displayName);
         decrypted[colorKey].displayName = await cryptoService.decryptText(
           encryptedDisplayName,
           masterKey.key
         );
       } catch {
         // Handle legacy unencrypted displayNames
-        decrypted[colorKey].displayName = colorDef.displayName;
+        decrypted[colorKey].displayName = typedColorDef.displayName;
       }
     }
   }

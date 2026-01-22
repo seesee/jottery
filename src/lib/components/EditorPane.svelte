@@ -548,7 +548,7 @@
             return newNotes;
           });
           searchService.updateNote(updatedNote);
-          selectedNote.set(updatedNote);
+          selectNote(updatedNote.id);
         } else {
           // Archived: Remove from notes list
           notes.update(allNotes => allNotes.filter(n => n.id !== noteId));

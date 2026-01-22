@@ -63,6 +63,7 @@ export function createTestNote(overrides: Partial<Note> = {}): Note {
     tags: ['test'],
     attachments: [],
     pinned: false,
+    archived: false,
     deleted: false,
     version: 0,
     wordWrap: true,

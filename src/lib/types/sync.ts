@@ -69,6 +69,8 @@ export interface SyncNote {
   tags: string[];               // Array of encrypted JSON strings
   attachments: AttachmentRef[];
   pinned: boolean;
+  archived: boolean;
+  archivedAt?: string;
   deleted: boolean;
   deletedAt?: string;
   version: number;

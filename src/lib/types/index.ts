@@ -23,9 +23,10 @@ export type {
   KeyboardShortcuts,
   QuickCommandConfig,
   SavedSearch,
+  ColorPalette,
 } from './models';
 
-export { DEFAULT_NOTE, DEFAULT_SETTINGS, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from './models';
+export { DEFAULT_NOTE, DEFAULT_SETTINGS, DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS, DEFAULT_COLOR_PALETTE } from './models';
 
 // Repository interfaces
 export type {
