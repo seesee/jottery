@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, user_id, name, query, \"order\", created_at, modified_at, synced_at, deleted, deleted_at, version\n               FROM saved_searches WHERE user_id = ?\n               ORDER BY \"order\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "query",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "order",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "modified_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "synced_at",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "deleted",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "deleted_at",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "version",
+        "ordinal": 10,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "50d7cf2b62b1a9c315e7712a7ba0b5efe41fa349726719028059663f91e1595b"
+}

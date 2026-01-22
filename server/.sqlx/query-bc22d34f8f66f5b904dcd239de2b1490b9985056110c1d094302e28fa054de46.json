@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                INSERT INTO saved_searches (\n                    id, user_id, name, query, \"order\", created_at, modified_at,\n                    synced_at, deleted, deleted_at, version\n                )\n                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n                ON CONFLICT(id) DO UPDATE SET\n                    name = excluded.name,\n                    query = excluded.query,\n                    \"order\" = excluded.\"order\",\n                    modified_at = excluded.modified_at,\n                    synced_at = excluded.synced_at,\n                    deleted = excluded.deleted,\n                    deleted_at = excluded.deleted_at,\n                    version = excluded.version\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "bc22d34f8f66f5b904dcd239de2b1490b9985056110c1d094302e28fa054de46"
+}
