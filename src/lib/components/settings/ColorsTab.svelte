@@ -13,6 +13,9 @@
   let allTags: string[] = [];
   let newTagName = '';
   let newTagColor = '';
+  let tagSuggestions: string[] = [];
+  let showTagSuggestions = false;
+  let selectedTagIndex = -1;
 
   $: currentTheme = resolveTheme($settings.theme);
 
@@ -23,6 +26,58 @@
 
   function resetPalette() {
     colorPalette = { ...DEFAULT_COLOR_PALETTE };
+  }
+
+  function handleTagInput() {
+    if (newTagName.trim()) {
+      // Filter available tags for suggestions (case-insensitive)
+      const query = newTagName.toLowerCase().trim();
+      tagSuggestions = unassignedTags
+        .filter(tag => tag.toLowerCase().includes(query))
+        .slice(0, 8); // Show up to 8 suggestions
+      showTagSuggestions = tagSuggestions.length > 0;
+      selectedTagIndex = -1;
+    } else {
+      showTagSuggestions = false;
+      tagSuggestions = [];
+    }
+  }
+
+  function selectTag(tag: string) {
+    newTagName = tag;
+    showTagSuggestions = false;
+    tagSuggestions = [];
+    selectedTagIndex = -1;
+  }
+
+  function handleTagKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (selectedTagIndex >= 0 && tagSuggestions[selectedTagIndex]) {
+        selectTag(tagSuggestions[selectedTagIndex]);
+      }
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (showTagSuggestions) {
+        selectedTagIndex = Math.min(selectedTagIndex + 1, tagSuggestions.length - 1);
+      }
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (showTagSuggestions) {
+        selectedTagIndex = Math.max(selectedTagIndex - 1, -1);
+      }
+    } else if (event.key === 'Escape') {
+      showTagSuggestions = false;
+      selectedTagIndex = -1;
+    }
+  }
+
+  function handleTagBlur() {
+    // Delay to allow click on suggestion
+    setTimeout(() => {
+      showTagSuggestions = false;
+      selectedTagIndex = -1;
+    }, 200);
   }
 
   function addTagColor() {
@@ -171,24 +226,32 @@
     </p>
     <div class="flex items-center gap-2">
       <!-- Tag name input with autocomplete -->
-      <div class="flex-1">
-        {#if unassignedTags.length > 0}
-          <select
-            bind:value={newTagName}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">{$_('settings.colors.selectTag')}</option>
-            {#each unassignedTags as tag}
-              <option value={tag}>#{tag}</option>
+      <div class="flex-1 relative">
+        <input
+          type="text"
+          bind:value={newTagName}
+          on:input={handleTagInput}
+          on:keydown={handleTagKeydown}
+          on:blur={handleTagBlur}
+          placeholder={$_('settings.colors.tagNamePlaceholder')}
+          autocomplete="off"
+          autocapitalize="none"
+          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        <!-- Autocomplete suggestions -->
+        {#if showTagSuggestions}
+          <div class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            {#each tagSuggestions as suggestion, index}
+              <button
+                type="button"
+                on:click={() => selectTag(suggestion)}
+                class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors {index === selectedTagIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+              >
+                #{suggestion}
+              </button>
             {/each}
-          </select>
-        {:else}
-          <input
-            type="text"
-            bind:value={newTagName}
-            placeholder={$_('settings.colors.tagNamePlaceholder')}
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          </div>
         {/if}
       </div>
 
