@@ -46,7 +46,9 @@
     "noResultsFound": "結果が見つかりませんでした",
     "tryDifferentSearch": "別の検索クエリを試してください",
     "noNotes": "ノートがありません",
-    "somethingWentWrong": "問題が発生しました"
+    "somethingWentWrong": "問題が発生しました",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "ノートを検索...",
@@ -747,7 +749,8 @@
     "enterTags": "タグを入力（カンマ区切り）",
     "progress": "{total}件中{current}件",
     "selectAll": "すべて選択",
-    "deselectAll": "すべて選択解除"
+    "deselectAll": "すべて選択解除",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "同期の競合を検出",

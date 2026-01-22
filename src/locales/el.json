@@ -46,7 +46,9 @@
     "noResultsFound": "Δεν βρέθηκαν αποτελέσματα",
     "tryDifferentSearch": "Δοκιμάστε διαφορετική αναζήτηση",
     "noNotes": "Δεν υπάρχουν σημειώσεις",
-    "somethingWentWrong": "Κάτι πήγε στραβά"
+    "somethingWentWrong": "Κάτι πήγε στραβά",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Αναζήτηση σημειώσεων...",
@@ -747,7 +749,8 @@
     "enterTags": "Εισαγάγετε ετικέτες (διαχωρισμένες με κόμμα)",
     "progress": "{current} από {total}",
     "selectAll": "Επιλογή όλων",
-    "deselectAll": "Αποεπιλογή όλων"
+    "deselectAll": "Αποεπιλογή όλων",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

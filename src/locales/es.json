@@ -46,7 +46,9 @@
     "noResultsFound": "No se encontraron resultados",
     "tryDifferentSearch": "Intente con una búsqueda diferente",
     "noNotes": "Sin notas",
-    "somethingWentWrong": "Algo salió mal"
+    "somethingWentWrong": "Algo salió mal",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Buscar notas...",
@@ -747,7 +749,8 @@
     "enterTags": "Ingrese etiquetas (separadas por comas)",
     "progress": "{current} de {total}",
     "selectAll": "Seleccionar todo",
-    "deselectAll": "Deseleccionar todo"
+    "deselectAll": "Deseleccionar todo",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

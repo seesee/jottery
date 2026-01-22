@@ -46,7 +46,9 @@
     "noResultsFound": "Sonuç bulunamadı",
     "tryDifferentSearch": "Farklı bir arama deneyin",
     "noNotes": "Not yok",
-    "somethingWentWrong": "Bir şeyler ters gitti"
+    "somethingWentWrong": "Bir şeyler ters gitti",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Notlarda ara...",
@@ -747,7 +749,8 @@
     "enterTags": "Etiketleri girin (virgülle ayırın)",
     "progress": "{total} nottan {current}.",
     "selectAll": "Tümünü seç",
-    "deselectAll": "Tümünün seçimini kaldır"
+    "deselectAll": "Tümünün seçimini kaldır",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

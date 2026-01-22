@@ -46,7 +46,9 @@
     "noResultsFound": "Geen resultaten gevonden",
     "tryDifferentSearch": "Probeer een andere zoekopdracht",
     "noNotes": "Geen notities",
-    "somethingWentWrong": "Er is iets misgegaan"
+    "somethingWentWrong": "Er is iets misgegaan",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Notities zoeken...",
@@ -747,7 +749,8 @@
     "enterTags": "Voer tags in (gescheiden door komma's)",
     "progress": "{current} van {total}",
     "selectAll": "Alles selecteren",
-    "deselectAll": "Alles deselecteren"
+    "deselectAll": "Alles deselecteren",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

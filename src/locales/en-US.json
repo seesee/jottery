@@ -46,7 +46,9 @@
     "noResultsFound": "No results found",
     "tryDifferentSearch": "Try a different search query",
     "noNotes": "No notes",
-    "somethingWentWrong": "Something went wrong"
+    "somethingWentWrong": "Something went wrong",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Search notes...",
@@ -782,7 +784,8 @@
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",
     "selectAll": "Select all",
-    "deselectAll": "Deselect all"
+    "deselectAll": "Deselect all",
+    "archive": "Archive"
   },
   "sync": {
     "syncing": "Syncing..."

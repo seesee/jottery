@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -10,6 +10,7 @@
   import { keyManager } from '../services/keyManager';
   import { syncService } from '../services/syncService';
   import { syncRepository } from '../services/syncRepository';
+  import { searchService } from '../services/searchService';
   import { isMobileTouchDevice } from '../utils/device';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
 
@@ -95,6 +96,23 @@
   let visibleNotes: DecryptedNote[] = [];
   let totalHeight = 0;
   let offsetY = 0;
+
+  // Cross-mode match indicator
+  let crossModeMatchCount = 0;
+  const MAX_RESULTS_FOR_HINT = 10; // Only show hint when there are 10 or fewer results
+
+  // Calculate cross-mode matches when search query or archive mode changes
+  $: if ($searchQuery && $searchQuery.trim()) {
+    searchService.countCrossModeMatches($searchQuery, $notes, $archiveMode).then(count => {
+      crossModeMatchCount = count;
+    });
+  } else {
+    // Count all notes in opposite mode when no search query
+    crossModeMatchCount = $notes.filter(n => n.archived === !$archiveMode).length;
+  }
+
+  // Show cross-mode hint only when searching with few results
+  $: showCrossModeHint = crossModeMatchCount > 0 && $searchQuery.trim() !== '' && $filteredNotes.length <= MAX_RESULTS_FOR_HINT;
 
   // Height cache: stores measured heights for each note ID
   let heightCache = new Map<string, number>();
@@ -563,6 +581,19 @@
           </div>
         {/each}
       </div>
+
+      <!-- Cross-mode match indicator (only shown when searching with few results) -->
+      {#if showCrossModeHint}
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <button
+            on:click={toggleArchiveMode}
+            class="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline"
+            title={$archiveMode ? $_('archive.crossModeHintActive') : $_('archive.crossModeHintArchive')}
+          >
+            {crossModeMatchCount} {crossModeMatchCount === 1 ? $_('note.matchSingular') : $_('note.matchPlural')} {$archiveMode ? $_('archive.inActive') : $_('archive.inArchive')}
+          </button>
+        </div>
+      {/if}
     {/if}
   </div>
 {/if}

@@ -46,7 +46,9 @@
     "noResultsFound": "No results found",
     "tryDifferentSearch": "Try a different search query",
     "noNotes": "No notes",
-    "somethingWentWrong": "Something went wrong"
+    "somethingWentWrong": "Something went wrong",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Search notes...",
@@ -767,6 +769,7 @@
     "addTags": "Add tags",
     "removeTags": "Remove tags",
     "setColor": "Set Colour",
+    "archive": "Archive",
     "delete": "Delete",
     "export": "Export",
     "combine": "Combine",

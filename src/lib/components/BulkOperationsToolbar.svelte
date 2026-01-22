@@ -120,6 +120,22 @@
     }
   }
 
+  async function handleArchive() {
+    const noteIds = Array.from(get(selectedNoteIds));
+    isProcessing = true;
+
+    try {
+      await bulkOperationsService.archiveNotes(noteIds, handleProgress);
+      toast.success($_('bulk.archive') + `: ${noteIds.length}`);
+      // clearMultiSelection is called inside archiveNotes
+    } catch (error) {
+      toast.error(String(error));
+    } finally {
+      isProcessing = false;
+      progress = null;
+    }
+  }
+
   async function handleDelete() {
     const noteIds = Array.from(get(selectedNoteIds));
     isProcessing = true;
@@ -288,6 +304,14 @@
                 {$_('bulk.combine')}
               </button>
             {/if}
+
+            <!-- Archive -->
+            <button
+              on:click={handleArchive}
+              class="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700 active:bg-amber-800 transition-colors"
+            >
+              {$_('bulk.archive')}
+            </button>
 
             <!-- Delete -->
             <button

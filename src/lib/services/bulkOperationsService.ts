@@ -160,6 +160,40 @@ export async function deleteNotes(
 }
 
 /**
+ * Archive multiple notes
+ */
+export async function archiveNotes(
+  noteIds: string[],
+  onProgress?: ProgressCallback
+): Promise<void> {
+  const total = noteIds.length;
+
+  for (let i = 0; i < noteIds.length; i++) {
+    const noteId = noteIds[i];
+
+    await noteService.archiveNote(noteId);
+
+    // Update store
+    notes.update((n) => n.filter((note) => note.id !== noteId));
+
+    onProgress?.({
+      current: i + 1,
+      total,
+      status: 'running',
+    });
+  }
+
+  // Clear multi-selection after archive
+  clearMultiSelection();
+
+  onProgress?.({
+    current: total,
+    total,
+    status: 'complete',
+  });
+}
+
+/**
  * Export multiple notes as JSON
  */
 export async function exportNotes(
@@ -372,6 +406,7 @@ export const bulkOperationsService = {
   removeTagsFromNotes,
   setColorForNotes,
   deleteNotes,
+  archiveNotes,
   exportNotes,
   downloadExport,
   combineNotes,

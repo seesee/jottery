@@ -46,7 +46,9 @@
     "noResultsFound": "未找到结果",
     "tryDifferentSearch": "请尝试不同的搜索关键词",
     "noNotes": "没有笔记",
-    "somethingWentWrong": "出现问题"
+    "somethingWentWrong": "出现问题",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "搜索笔记...",
@@ -747,7 +749,8 @@
     "enterTags": "输入标签（用逗号分隔）",
     "progress": "{current} / {total}",
     "selectAll": "全选",
-    "deselectAll": "取消全选"
+    "deselectAll": "取消全选",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "检测到同步冲突",

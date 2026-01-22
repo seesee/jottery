@@ -1,6 +1,6 @@
 <script lang="ts">
   import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
-  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository, searchService } from '../services';
+  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -21,7 +21,6 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showSavedSearches = false;
-  let crossModeMatchCount = 0;
 
   // Tag autocomplete state
   let tagSuggestions: string[] = [];
@@ -48,16 +47,6 @@
   $: newNoteShortcut = formatShortcutForTooltip(shortcuts?.newNote);
   $: openSettingsShortcut = formatShortcutForTooltip(shortcuts?.openSettings);
   $: lockAppShortcut = formatShortcutForTooltip(shortcuts?.lockApp);
-
-  // Update cross-mode match count when search query or archive mode changes
-  $: if ($searchQuery && $searchQuery.trim()) {
-    searchService.countCrossModeMatches($searchQuery, $notes, $archiveMode).then(count => {
-      crossModeMatchCount = count;
-    });
-  } else {
-    // Count all notes in opposite mode when no search query
-    crossModeMatchCount = $notes.filter(n => n.archived === !$archiveMode).length;
-  }
 
   // Update placeholder text based on archive mode
   $: searchPlaceholder = $archiveMode ? $_('search.placeholderArchive') : $_('search.placeholder');
@@ -372,15 +361,6 @@
           {/if}
         </div>
         <button
-          on:click={toggleArchiveMode}
-          class="px-3 py-1.5 {$archiveMode ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors flex items-center gap-1"
-          title={$archiveMode ? $_('archive.exitMode') : $_('archive.enterMode')}
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-          </svg>
-        </button>
-        <button
           on:click={toggleSavedSearches}
           class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors flex items-center gap-1"
           title={$_('search.savedSearches')}
@@ -393,15 +373,6 @@
           <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap" title={$_('search.resultCount')}>
             {$searchResultCount.matches}/{$searchResultCount.total}
           </span>
-        {/if}
-        {#if crossModeMatchCount > 0}
-          <button
-            on:click={toggleArchiveMode}
-            class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline whitespace-nowrap"
-            title={$archiveMode ? $_('archive.crossModeHintActive') : $_('archive.crossModeHintArchive')}
-          >
-            {crossModeMatchCount} {$archiveMode ? $_('archive.inActive') : $_('archive.inArchive')}
-          </button>
         {/if}
       </div>
     {/if}

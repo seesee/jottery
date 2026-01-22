@@ -46,7 +46,9 @@
     "noResultsFound": "Aucun résultat trouvé",
     "tryDifferentSearch": "Essayez une recherche différente",
     "noNotes": "Aucune note",
-    "somethingWentWrong": "Une erreur s'est produite"
+    "somethingWentWrong": "Une erreur s'est produite",
+    "matchSingular": "match",
+    "matchPlural": "matches"
   },
   "search": {
     "placeholder": "Rechercher des notes...",
@@ -747,7 +749,8 @@
     "enterTags": "Entrez les étiquettes (séparées par des virgules)",
     "progress": "{current} sur {total}",
     "selectAll": "Tout sélectionner",
-    "deselectAll": "Tout désélectionner"
+    "deselectAll": "Tout désélectionner",
+    "archive": "Archive"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

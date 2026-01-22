@@ -399,8 +399,9 @@
     } else {
       filteredNotes.set([]);
     }
-    // Make reactive to searchQuery
+    // Make reactive to searchQuery and archiveMode
     $searchQuery;
+    $archiveMode;
   }
 </script>
 
