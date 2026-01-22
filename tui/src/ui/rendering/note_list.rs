@@ -85,7 +85,12 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         .iter()
         .map(|note| {
             let first_line = note.content.lines().next().unwrap_or("");
-            let content = strip_markdown(first_line);
+            // Only strip markdown for markdown files
+            let content = if note.syntax_language == SyntaxLanguage::Markdown {
+                strip_markdown(first_line)
+            } else {
+                first_line.to_string()
+            };
             let mut preview = if content.len() > 30 {
                 format!("{}...", &content[..30])
             } else {

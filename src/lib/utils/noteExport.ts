@@ -11,6 +11,7 @@
 
 import type { Attachment } from '../types';
 import { attachmentService, cryptoService, keyManager } from '../services';
+import { stripMarkdownSignifiers, isMarkdownLanguage } from './markdownStrip';
 
 /**
  * Map syntax language to file extension
@@ -73,9 +74,18 @@ export async function copyToClipboard(content: string): Promise<boolean> {
 
 /**
  * Generate a safe filename from content
+ * @param content - Note content
+ * @param createdAt - Creation date (fallback if no content)
+ * @param language - Syntax language (used to determine if markdown stripping is needed)
  */
-export function generateFilename(content: string, createdAt?: string): string {
-  const firstLine = content.split('\n')[0].trim();
+export function generateFilename(content: string, createdAt?: string, language?: string): string {
+  let firstLine = content.split('\n')[0].trim();
+
+  // Strip markdown signifiers for markdown files
+  if (isMarkdownLanguage(language)) {
+    firstLine = stripMarkdownSignifiers(firstLine);
+  }
+
   const sanitizedFirstLine = firstLine
     .substring(0, 50) // Max 50 chars
     .replace(/[^a-z0-9_\-\.]/gi, '_') // Replace invalid chars
@@ -108,7 +118,7 @@ export function exportAsFile(options: ExportOptions): void {
   if (!content) return;
 
   const extension = getFileExtension(language);
-  const filename = generateFilename(content, createdAt);
+  const filename = generateFilename(content, createdAt, language);
 
   // Create blob and download
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -164,7 +174,13 @@ export async function generatePrintHtml(options: PrintOptions): Promise<string |
   if (!masterKey) return null;
 
   // Generate title from first line or date
-  const firstLine = content.split('\n')[0].trim();
+  let firstLine = content.split('\n')[0].trim();
+
+  // Strip markdown signifiers for markdown files
+  if (isMarkdownLanguage(language)) {
+    firstLine = stripMarkdownSignifiers(firstLine);
+  }
+
   const title = firstLine.substring(0, 100) ||
     new Date(createdAt || new Date().toISOString()).toISOString().split('T')[0];
 

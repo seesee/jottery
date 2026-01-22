@@ -14,6 +14,7 @@
   } from '../stores/appStore';
   import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
+  import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
   import {
     shouldShowCheckbox,
     shouldShowDeleteButton,
@@ -90,7 +91,13 @@
   // Use utility functions for visibility logic (tested in noteListItemVisibility.test.ts)
   $: showCheckbox = shouldShowCheckbox(visibilityState);
   $: showDeleteBtn = shouldShowDeleteButton(visibilityState);
-  $: preview = note.content.split('\n').slice(1).join(' ').slice(0, previewLength);
+
+  // Strip markdown from preview only for markdown language
+  $: rawPreview = note.content.split('\n').slice(1).join(' ');
+  $: preview = isMarkdownLanguage(note.syntaxLanguage)
+    ? stripMarkdownSignifiers(rawPreview).slice(0, previewLength)
+    : rawPreview.slice(0, previewLength);
+
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 
   // Computed swipe values for rendering

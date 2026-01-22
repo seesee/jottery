@@ -8,25 +8,52 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use ratatui::text::Line;
 
-/// Strip markdown formatting from text (for display in note list)
+/// Strip markdown formatting from text (for display in note list and filenames)
 pub fn strip_markdown(text: &str) -> String {
     let mut result = text.to_string();
 
-    // Remove markdown headers (# ## ### etc.)
-    if let Some(stripped) = result.strip_prefix('#') {
-        let mut chars = stripped.chars();
-        // Skip additional # characters
-        while chars.as_str().starts_with('#') {
+    // Remove markdown headers (# ## ### etc.) at the start of the line
+    if result.starts_with('#') {
+        let mut chars = result.chars();
+        // Skip all # characters
+        while matches!(chars.as_str().chars().next(), Some('#')) {
             chars.next();
         }
-        // Skip whitespace after #
         result = chars.as_str().trim_start().to_string();
+    }
+
+    // Remove horizontal rules (---, ***, ___)
+    result = result.replace("---", "").replace("***", "").replace("___", "");
+
+    // Remove blockquote markers (> text)
+    if result.starts_with('>') {
+        result = result.trim_start_matches('>').trim_start().to_string();
+    }
+
+    // Remove list markers (-, *, +, 1., 2., etc.)
+    let list_marker_patterns = [
+        "- ", "* ", "+ ",
+        "1. ", "2. ", "3. ", "4. ", "5. ", "6. ", "7. ", "8. ", "9. ",
+    ];
+    for marker in &list_marker_patterns {
+        if result.starts_with(marker) {
+            result = result.trim_start_matches(marker).to_string();
+            break;
+        }
+    }
+
+    // Remove task list markers (- [ ] or - [x])
+    if result.starts_with("- [ ] ") || result.starts_with("- [x] ") {
+        result = result.replacen("- [ ] ", "", 1).replacen("- [x] ", "", 1);
     }
 
     // Remove bold (**text** or __text__)
     result = result.replace("**", "").replace("__", "");
 
-    // Remove italic (*text* or _text_) - simple approach
+    // Remove strikethrough (~~text~~)
+    result = result.replace("~~", "");
+
+    // Remove inline code backticks and links
     let mut cleaned = String::new();
     let mut chars = result.chars().peekable();
     let mut in_code = false;
@@ -34,12 +61,30 @@ pub fn strip_markdown(text: &str) -> String {
     while let Some(ch) = chars.next() {
         match ch {
             '`' => {
+                // Skip backticks (inline code markers)
                 in_code = !in_code;
-                cleaned.push(ch);
             }
             '*' | '_' if !in_code => {
                 // Skip single * or _ used for emphasis
                 continue;
+            }
+            '!' if !in_code && chars.peek() == Some(&'[') => {
+                // Handle images ![alt](url) - skip entirely
+                chars.next(); // skip [
+                for c in chars.by_ref() {
+                    if c == ']' {
+                        break;
+                    }
+                }
+                // Skip (url) part
+                if chars.peek() == Some(&'(') {
+                    chars.next(); // skip (
+                    for c in chars.by_ref() {
+                        if c == ')' {
+                            break;
+                        }
+                    }
+                }
             }
             '[' if !in_code => {
                 // Handle links [text](url) - extract text only
@@ -55,11 +100,18 @@ pub fn strip_markdown(text: &str) -> String {
                 }
 
                 if found_closing {
-                    // Skip the (url) part
+                    // Skip the (url) or [ref] part
                     if chars.peek() == Some(&'(') {
                         chars.next(); // skip (
                         for c in chars.by_ref() {
                             if c == ')' {
+                                break;
+                            }
+                        }
+                    } else if chars.peek() == Some(&'[') {
+                        chars.next(); // skip [
+                        for c in chars.by_ref() {
+                            if c == ']' {
                                 break;
                             }
                         }
@@ -70,11 +122,24 @@ pub fn strip_markdown(text: &str) -> String {
                     cleaned.push_str(&link_text);
                 }
             }
-            _ => cleaned.push(ch),
+            '<' if !in_code => {
+                // Remove HTML tags
+                for c in chars.by_ref() {
+                    if c == '>' {
+                        break;
+                    }
+                }
+            }
+            _ => {
+                if !in_code || ch != '`' {
+                    cleaned.push(ch);
+                }
+            }
         }
     }
 
-    cleaned.trim().to_string()
+    // Normalize whitespace
+    cleaned.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Render markdown for terminal display using pulldown-cmark parser
