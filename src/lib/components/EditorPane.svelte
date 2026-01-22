@@ -520,6 +520,50 @@
     }
   }
 
+  async function handleArchive() {
+    if (!$selectedNote) return;
+    try {
+      const noteId = $selectedNote.id;
+      const isArchived = $selectedNote.archived;
+
+      if (isArchived) {
+        // Unarchive
+        await noteService.unarchiveNote(noteId);
+        toast.success($_('archive.unarchived'));
+      } else {
+        // Archive
+        await noteService.archiveNote(noteId);
+        handleClose(); // Close editor and return to list
+      }
+
+      // Get updated note
+      const updatedNote = await noteService.getNote(noteId);
+      if (updatedNote) {
+        if (isArchived) {
+          // Unarchived: Add back to notes list
+          notes.update(allNotes => {
+            const pinnedCount = allNotes.filter(n => n.pinned).length;
+            const newNotes = [...allNotes];
+            newNotes.splice(pinnedCount, 0, updatedNote);
+            return newNotes;
+          });
+          searchService.updateNote(updatedNote);
+          selectedNote.set(updatedNote);
+        } else {
+          // Archived: Remove from notes list
+          notes.update(allNotes => allNotes.filter(n => n.id !== noteId));
+          searchService.removeNote(noteId);
+        }
+      }
+
+      // Trigger background sync
+      triggerBackgroundSync();
+    } catch (error) {
+      console.error('Failed to toggle archive:', error);
+      toast.error(`Failed to ${$selectedNote.archived ? 'unarchive' : 'archive'} note: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   async function handleDelete() {
     if (!$selectedNote) {
       return;
@@ -908,6 +952,7 @@
     <!-- Toolbar -->
     <EditorToolbar
       pinned={$selectedNote?.pinned || false}
+      archived={$selectedNote?.archived || false}
       {language}
       {showPreview}
       {canPreview}
@@ -918,6 +963,7 @@
       color={$selectedNote?.color}
       {availableLanguages}
       onPin={handleTogglePin}
+      onArchive={handleArchive}
       onLanguageChange={handleLanguageChange}
       onTogglePreview={handlePreviewToggle}
       onShowAttachments={handleShowAttachments}

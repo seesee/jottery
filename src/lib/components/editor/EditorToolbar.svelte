@@ -5,6 +5,7 @@
 
   // State props
   export let pinned: boolean;
+  export let archived: boolean;
   export let language: string;
   export let showPreview: boolean;
   export let canPreview: boolean;
@@ -17,6 +18,7 @@
 
   // Callback props
   export let onPin: () => void;
+  export let onArchive: () => void;
   export let onLanguageChange: (e: Event) => void;
   export let onTogglePreview: () => void;
   export let onShowAttachments: () => void;
@@ -70,6 +72,11 @@
   function handleSetColorClick() {
     showMoreMenu = false;
     onSetColor();
+  }
+
+  function handleArchiveClick() {
+    showMoreMenu = false;
+    onArchive();
   }
 
   function handleCopyClick() {
@@ -252,6 +259,15 @@
               <span>🎨</span>
             {/if}
             <span>{$_('editor.setColor')}</span>
+          </button>
+
+          <button
+            on:click={handleArchiveClick}
+            disabled={isDraftMode}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>📦</span>
+            <span>{archived ? $_('archive.unarchive') : $_('archive.archive')}</span>
           </button>
 
           <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>

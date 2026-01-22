@@ -779,6 +779,7 @@
     "empty": "No archived notes",
     "emptyDescription": "Notes you archive will appear here",
     "archived": "Archived",
+    "archive": "Archive",
     "unknown": "Unknown",
     "untitled": "Untitled",
     "unarchive": "Unarchive",
