@@ -385,6 +385,35 @@ class NoteService {
   }
 
   /**
+   * Archive a note
+   */
+  async archiveNote(id: string): Promise<void> {
+    await noteRepository.archive(id);
+  }
+
+  /**
+   * Unarchive a note
+   */
+  async unarchiveNote(id: string): Promise<void> {
+    await noteRepository.unarchive(id);
+  }
+
+  /**
+   * Get archived notes
+   */
+  async getArchivedNotes(): Promise<DecryptedNote[]> {
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new Error('Application is locked.');
+    }
+
+    const notes = await noteRepository.getArchived();
+    return await Promise.all(
+      notes.map(note => this.decryptNote(note, masterKey.key))
+    );
+  }
+
+  /**
    * Duplicate an existing note
    * Creates a copy with new ID and timestamps, preserving all content and settings
    */

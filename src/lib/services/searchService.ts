@@ -59,6 +59,8 @@ export function removeNote(noteId: string): void {
  */
 const MODIFIER_PATTERNS = {
   hasAttachment: /\bhas:attachment\b/gi,
+  archived: /\barchived?:(true|false|yes|no|1|0)\b/gi,
+  archivedSimple: /\barchived?\b/gi,
   createdAfter: /\bcreated:>(\d{4}-\d{2}-\d{2})\b/g,
   createdBefore: /\bcreated:<(\d{4}-\d{2}-\d{2})\b/g,
   createdRange: /\bcreated:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})\b/g,
@@ -88,6 +90,19 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
   if (MODIFIER_PATTERNS.hasAttachment.test(remaining)) {
     modifiers.hasAttachment = true;
     remaining = remaining.replace(MODIFIER_PATTERNS.hasAttachment, '');
+  }
+
+  // archive:true or archive:false (explicit value)
+  const archivedMatch = remaining.match(/\barchived?:(true|false|yes|no|1|0)\b/i);
+  if (archivedMatch) {
+    const value = archivedMatch[1].toLowerCase();
+    modifiers.archived = value === 'true' || value === 'yes' || value === '1';
+    remaining = remaining.replace(/\barchived?:(true|false|yes|no|1|0)\b/gi, '');
+  }
+  // archive (shorthand for archive:true)
+  else if (/\barchived?\b/i.test(remaining)) {
+    modifiers.archived = true;
+    remaining = remaining.replace(/\barchived?\b/gi, '');
   }
 
   // created:START..END (range - check first before single comparisons)
@@ -428,6 +443,7 @@ export async function searchNotes(
   // If query is empty (no text, tags, or modifiers), return all notes
   const hasModifiers =
     parsed.hasAttachment ||
+    parsed.archived !== undefined ||
     parsed.createdAfter ||
     parsed.createdBefore ||
     parsed.modifiedAfter ||
@@ -516,6 +532,11 @@ export async function searchNotes(
   // has:attachment
   if (parsed.hasAttachment) {
     results = results.filter((note) => note.attachments && note.attachments.length > 0);
+  }
+
+  // archive: or archive:true/false
+  if (parsed.archived !== undefined) {
+    results = results.filter((note) => note.archived === parsed.archived);
   }
 
   // created:>DATE (created after)
