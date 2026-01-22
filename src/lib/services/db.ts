@@ -6,7 +6,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata, NoteVersion, SavedSearch } from '../types';
 
 let DB_NAME = 'jottery'; // Default, can be changed before initialization
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 // Track if database was terminated unexpectedly
 let dbTerminated = false;
@@ -195,6 +195,30 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
         console.log('[DB] saved_searches store created successfully');
       }
 
+      // Version 7: Defensive fix - ensure saved_searches exists (fix corrupted v6 databases)
+      if (oldVersion < 7) {
+        console.log('[DB] Applying v7 schema updates (defensive saved_searches check)...');
+
+        // Check if saved_searches exists, create if missing
+        if (!db.objectStoreNames.contains(STORES.SAVED_SEARCHES)) {
+          console.log('[DB] saved_searches store is missing from v6 database, creating it now...');
+          const savedSearchesStore = db.createObjectStore(STORES.SAVED_SEARCHES, {
+            keyPath: 'id',
+          });
+
+          savedSearchesStore.createIndex('order', 'order');
+          savedSearchesStore.createIndex('deleted', 'deleted');
+          savedSearchesStore.createIndex('modifiedAt', 'modifiedAt');
+          savedSearchesStore.createIndex('deleted-order', ['deleted', 'order']);
+          savedSearchesStore.createIndex('needsSync', 'needsSync');
+          console.log('[DB] saved_searches store created successfully (defensive fix)');
+        } else {
+          console.log('[DB] saved_searches store already exists, no migration needed');
+        }
+
+        console.log('[DB] v7 schema updates complete');
+      }
+
       console.log('[DB] Upgrade complete');
     },
     blocked() {
@@ -240,6 +264,17 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
     console.error(`[DB] Current database version: ${dbInstance.version}, expected: ${DB_VERSION}`);
     throw new Error(
       'Database is in inconsistent state. The note_versions store is missing. ' +
+      'Please do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) to load the updated code.'
+    );
+  }
+
+  if (!dbInstance.objectStoreNames.contains(STORES.SAVED_SEARCHES)) {
+    console.error(`[DB] ERROR: saved_searches store is missing! Database is in inconsistent state.`);
+    console.error(`[DB] This should have been fixed by v7 migration.`);
+    console.error(`[DB] Please do a hard refresh (Ctrl+Shift+R / Cmd+Shift+R)`);
+    console.error(`[DB] Current database version: ${dbInstance.version}, expected: ${DB_VERSION}`);
+    throw new Error(
+      'Database is in inconsistent state. The saved_searches store is missing. ' +
       'Please do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) to load the updated code.'
     );
   }
