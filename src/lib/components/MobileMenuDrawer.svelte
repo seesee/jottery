@@ -9,6 +9,7 @@
 
   export let onClose: () => void;
   export let onOpenRecycleBin: () => void;
+  export let onOpenArchive: () => void;
   export let onOpenSettings: () => void;
   export let onLock: () => void;
 
@@ -70,6 +71,14 @@
         >
           <span class="text-xl">🗑️</span>
           <span class="flex-1 text-sm font-medium">{$_('recycleBin.title')}</span>
+        </button>
+
+        <button
+          on:click={() => handleItemClick(onOpenArchive)}
+          class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+        >
+          <span class="text-xl">📦</span>
+          <span class="flex-1 text-sm font-medium">{$_('archive.title')}</span>
         </button>
 
         <button

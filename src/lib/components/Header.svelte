@@ -12,6 +12,7 @@
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
   export let onOpenRecycleBin: () => void = () => {};
+  export let onOpenArchive: () => void = () => {};
   export let onBackToList: (() => void) | undefined = undefined; // Mobile: back to list handler
   export let forceMobileLayout: boolean = false;
   export let disableNewNote: boolean = false;
@@ -487,6 +488,14 @@
       </button>
 
       <button
+        on:click={onOpenArchive}
+        class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
+        title={$_('archive.title')}
+      >
+        📦 {$_('archive.title')}
+      </button>
+
+      <button
         on:click={onOpenSettings}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
         title={openSettingsShortcut ? `${$_('common.settings')} (${openSettingsShortcut})` : $_('common.settings')}
@@ -523,6 +532,7 @@
     {lockAppShortcut}
     onClose={closeMobileMenu}
     onOpenRecycleBin={onOpenRecycleBin}
+    onOpenArchive={onOpenArchive}
     onOpenSettings={onOpenSettings}
     onLock={handleLockRequest}
   />

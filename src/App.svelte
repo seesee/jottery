@@ -14,6 +14,7 @@
   import SettingsModal from './lib/components/SettingsModal.svelte';
   import KeyboardShortcuts from './lib/components/KeyboardShortcuts.svelte';
   import RecycleBin from './lib/components/RecycleBin.svelte';
+  import Archive from './lib/components/Archive.svelte';
   import KeyboardShortcutsHelp from './lib/components/KeyboardShortcutsHelp.svelte';
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
   import Toast from './lib/components/Toast.svelte';
@@ -24,6 +25,7 @@
   let loadingProgress = { current: 0, total: 0 };
   let showSettings = false;
   let showRecycleBin = false;
+  let showArchive = false;
   let showShortcutsHelp = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
@@ -119,6 +121,10 @@
 
   function handleOpenRecycleBin() {
     showRecycleBin = true;
+  }
+
+  function handleOpenArchive() {
+    showArchive = true;
   }
 
   function handleOpenShortcutsHelp() {
@@ -423,6 +429,7 @@
         onOpenSettings={handleOpenSettings}
         onNewNote={handleNewNote}
         onOpenRecycleBin={handleOpenRecycleBin}
+        onOpenArchive={handleOpenArchive}
         onBackToList={useMobileLayout && mobileView === 'editor' ? handleHeaderBackToList : undefined}
         forceMobileLayout={useMobileLayout}
         disableNewNote={creatingNote}
@@ -481,6 +488,12 @@
     <RecycleBin
       show={showRecycleBin}
       onClose={() => showRecycleBin = false}
+    />
+
+    <!-- Archive Modal -->
+    <Archive
+      show={showArchive}
+      onClose={() => showArchive = false}
     />
 
     <!-- Keyboard Shortcuts Help Modal -->
