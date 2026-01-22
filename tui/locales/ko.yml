@@ -53,6 +53,18 @@ note:
   pin_failed: "고정 상태 업데이트 실패: %{error}"
   no_notes: 노트를 찾을 수 없습니다
   total: "%{count}개의 노트"
+archive:
+  view: "View archive"
+  title: "Archive"
+  no_notes: "No archived notes"
+  archive: "Archive note"
+  unarchive: "Unarchive note"
+  archived: "Archived"
+  unarchived: "Unarchived"
+  failed: "Failed to archive note: %{error}"
+  unarchive_failed: "Failed to unarchive note: %{error}"
+  count: "%{count} archived notes"
+
 editor:
   title: 제목
   content: 내용

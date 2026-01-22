@@ -771,5 +771,25 @@
   },
   "sync": {
     "syncing": "Синхронизация..."
+  },
+  "archive": {
+    "title": "Archive",
+    "closeLabel": "Close archive",
+    "loading": "Loading archived notes...",
+    "empty": "No archived notes",
+    "emptyDescription": "Notes you archive will appear here",
+    "archived": "Archived",
+    "unknown": "Unknown",
+    "untitled": "Untitled",
+    "unarchive": "Unarchive",
+    "unarchiveTitle": "Restore note to active list",
+    "unarchived": "Note unarchived",
+    "footer": {
+      "single": "{count} archived note",
+      "multiple": "{count} archived notes"
+    },
+    "error": {
+      "unarchive": "Failed to unarchive note"
+    }
   }
 }

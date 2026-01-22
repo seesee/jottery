@@ -53,6 +53,18 @@ note:
   pin_failed: "Αποτυχία ενημέρωσης κατάστασης καρφιτσώματος: %{error}"
   no_notes: Δεν βρέθηκαν σημειώσεις
   total: "%{count} σημειώσεις"
+archive:
+  view: "View archive"
+  title: "Archive"
+  no_notes: "No archived notes"
+  archive: "Archive note"
+  unarchive: "Unarchive note"
+  archived: "Archived"
+  unarchived: "Unarchived"
+  failed: "Failed to archive note: %{error}"
+  unarchive_failed: "Failed to unarchive note: %{error}"
+  count: "%{count} archived notes"
+
 editor:
   title: Τίτλος
   content: Περιεχόμενο

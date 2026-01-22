@@ -53,6 +53,18 @@ note:
   pin_failed: "Error al actualizar el estado de fijación: %{error}"
   no_notes: No se encontraron notas
   total: "%{count} notas"
+archive:
+  view: "View archive"
+  title: "Archive"
+  no_notes: "No archived notes"
+  archive: "Archive note"
+  unarchive: "Unarchive note"
+  archived: "Archived"
+  unarchived: "Unarchived"
+  failed: "Failed to archive note: %{error}"
+  unarchive_failed: "Failed to unarchive note: %{error}"
+  count: "%{count} archived notes"
+
 editor:
   title: Título
   content: Contenido

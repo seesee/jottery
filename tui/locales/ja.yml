@@ -53,6 +53,18 @@ note:
   pin_failed: "固定状態の更新に失敗: %{error}"
   no_notes: ノートが見つかりません
   total: "%{count} 件のノート"
+archive:
+  view: "View archive"
+  title: "Archive"
+  no_notes: "No archived notes"
+  archive: "Archive note"
+  unarchive: "Unarchive note"
+  archived: "Archived"
+  unarchived: "Unarchived"
+  failed: "Failed to archive note: %{error}"
+  unarchive_failed: "Failed to unarchive note: %{error}"
+  count: "%{count} archived notes"
+
 editor:
   title: タイトル
   content: 内容
