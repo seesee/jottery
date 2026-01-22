@@ -923,7 +923,7 @@ impl App {
         }
 
         // category:important note (notes with category named "important")
-        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w\s-]+)\s+note\b")
+        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\s+note\b")
             .ok()
             .and_then(|re| re.captures(query))
         {
@@ -936,7 +936,7 @@ impl App {
         }
 
         // category:important tag (notes with tags in category named "important")
-        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w\s-]+)\s+tag\b")
+        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\s+tag\b")
             .ok()
             .and_then(|re| re.captures(query))
         {
@@ -949,7 +949,7 @@ impl App {
 
         // category:important (both notes and tags)
         if modifiers.colors.is_empty() {
-            if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w\s-]+)\b")
+            if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\b")
                 .ok()
                 .and_then(|re| re.captures(query))
             {
@@ -985,9 +985,9 @@ impl App {
             r"(?i)\bcolou?r:[a-z0-9#]+\s+note\b",
             r"(?i)\bcolou?r:[a-z0-9#]+\s+tag\b",
             r"(?i)\bcolou?r:[a-z0-9#]+\b",
-            r"(?i)\bcategory:[\w\s-]+\s+note\b",
-            r"(?i)\bcategory:[\w\s-]+\s+tag\b",
-            r"(?i)\bcategory:[\w\s-]+\b",
+            r"(?i)\bcategory:[\w-]+\s+note\b",
+            r"(?i)\bcategory:[\w-]+\s+tag\b",
+            r"(?i)\bcategory:[\w-]+\b",
         ];
 
         for pattern in patterns {
@@ -1840,5 +1840,122 @@ impl App {
     /// Check if app should quit
     pub fn should_quit(&self) -> bool {
         matches!(self.state, AppState::Quit)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{UserSettings, ColorDefinition, ColorPalette};
+    use std::collections::HashMap;
+
+    fn create_test_settings_with_colors() -> UserSettings {
+        let mut settings = UserSettings::default();
+
+        // Add tag colors
+        let mut tag_colors = HashMap::new();
+        tag_colors.insert("work".to_string(), "blue".to_string());
+        tag_colors.insert("urgent".to_string(), "red".to_string());
+        settings.tag_colors = Some(tag_colors);
+
+        // Customize color palette with display names
+        let mut palette: ColorPalette = settings.get_color_palette().clone();
+        if let Some(red_def) = palette.get_mut("red") {
+            red_def.display_name = Some("important".to_string());
+        }
+        settings.color_palette = Some(palette);
+
+        settings
+    }
+
+    #[test]
+    fn test_parse_color_search_simple() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("color:red", &settings);
+
+        assert_eq!(modifiers.colors, vec!["red"]);
+        assert_eq!(modifiers.color_target, ColorTarget::Both);
+    }
+
+    #[test]
+    fn test_parse_color_search_note_qualifier() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("color:blue note", &settings);
+
+        assert_eq!(modifiers.colors, vec!["blue"]);
+        assert_eq!(modifiers.color_target, ColorTarget::Note);
+    }
+
+    #[test]
+    fn test_parse_color_search_tag_qualifier() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("color:green tag", &settings);
+
+        assert_eq!(modifiers.colors, vec!["green"]);
+        assert_eq!(modifiers.color_target, ColorTarget::Tag);
+    }
+
+    #[test]
+    fn test_parse_category_search_simple() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("category:important", &settings);
+
+        // "important" should map to "red" via display name
+        assert_eq!(modifiers.colors, vec!["red"]);
+        assert_eq!(modifiers.color_target, ColorTarget::Both);
+    }
+
+    #[test]
+    fn test_parse_category_search_note_qualifier() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("category:important note", &settings);
+
+        assert_eq!(modifiers.colors, vec!["red"]);
+        assert_eq!(modifiers.color_target, ColorTarget::Note);
+    }
+
+    #[test]
+    fn test_parse_category_search_tag_qualifier() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("category:important tag", &settings);
+
+        assert_eq!(modifiers.colors, vec!["red"]);
+        assert_eq!(modifiers.color_target, ColorTarget::Tag);
+    }
+
+    #[test]
+    fn test_parse_category_search_invalid() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("category:nonexistent", &settings);
+
+        // Should not find any colors for nonexistent category
+        assert!(modifiers.colors.is_empty());
+    }
+
+    #[test]
+    fn test_parse_single_color_modifier() {
+        let settings = create_test_settings_with_colors();
+        let modifiers = App::parse_search_modifiers("color:red some text", &settings);
+
+        // Should capture the color
+        assert_eq!(modifiers.colors.len(), 1);
+        assert_eq!(modifiers.colors[0], "red");
+        assert_eq!(modifiers.color_target, ColorTarget::Both);
+    }
+
+    #[test]
+    fn test_remove_modifiers_from_query() {
+        let cleaned = App::remove_modifiers_from_query("color:red important meeting");
+        assert!(!cleaned.contains("color:red"));
+        assert!(cleaned.contains("important"));
+        assert!(cleaned.contains("meeting"));
+    }
+
+    #[test]
+    fn test_remove_category_modifiers_from_query() {
+        let cleaned = App::remove_modifiers_from_query("category:important urgent task");
+        assert!(!cleaned.contains("category:important"));
+        assert!(cleaned.contains("urgent"));
+        assert!(cleaned.contains("task"));
     }
 }

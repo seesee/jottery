@@ -129,4 +129,93 @@ mod tests {
         assert!(!is_dark_theme("solarized-light"));
         assert!(!is_dark_theme("gruvbox-light"));
     }
+
+    #[test]
+    fn test_get_note_color_with_default_palette() {
+        let settings = crate::models::UserSettings::default();
+
+        // Test getting a color that exists in default palette
+        let color = get_note_color(Some(&"red".to_string()), &settings, true);
+        assert!(color.is_some());
+
+        // Test with light theme
+        let color_light = get_note_color(Some(&"red".to_string()), &settings, false);
+        assert!(color_light.is_some());
+
+        // Colors should be different for light/dark themes
+        assert_ne!(color, color_light);
+    }
+
+    #[test]
+    fn test_get_note_color_none() {
+        let settings = crate::models::UserSettings::default();
+
+        // Test with no color
+        let color = get_note_color(None, &settings, true);
+        assert!(color.is_none());
+    }
+
+    #[test]
+    fn test_get_note_color_invalid() {
+        let settings = crate::models::UserSettings::default();
+
+        // Test with invalid color name
+        let color = get_note_color(Some(&"nonexistent".to_string()), &settings, true);
+        assert!(color.is_none());
+    }
+
+    #[test]
+    fn test_get_tag_color() {
+        use std::collections::HashMap;
+
+        let mut settings = crate::models::UserSettings::default();
+
+        // Set up tag colors
+        let mut tag_colors = HashMap::new();
+        tag_colors.insert("work".to_string(), "blue".to_string());
+        tag_colors.insert("personal".to_string(), "green".to_string());
+        settings.tag_colors = Some(tag_colors);
+
+        // Test getting a tag color
+        let color = get_tag_color("work", &settings, true);
+        assert!(color.is_some());
+
+        // Test tag without color
+        let no_color = get_tag_color("uncolored", &settings, true);
+        assert!(no_color.is_none());
+
+        // Test case insensitivity
+        let color_uppercase = get_tag_color("WORK", &settings, true);
+        assert!(color_uppercase.is_some());
+    }
+
+    #[test]
+    fn test_get_tag_color_no_mappings() {
+        let settings = crate::models::UserSettings::default();
+
+        // Test with no tag color mappings
+        let color = get_tag_color("anytag", &settings, true);
+        assert!(color.is_none());
+    }
+
+    #[test]
+    fn test_all_default_colors_valid() {
+        let settings = crate::models::UserSettings::default();
+        let palette = settings.get_color_palette();
+
+        // Test that all default color hex values are valid
+        for (color_name, color_def) in palette.iter() {
+            let light_color = hex_to_color(&color_def.light);
+            assert!(
+                light_color.is_some(),
+                "Light hex for {} should be valid", color_name
+            );
+
+            let dark_color = hex_to_color(&color_def.dark);
+            assert!(
+                dark_color.is_some(),
+                "Dark hex for {} should be valid", color_name
+            );
+        }
+    }
 }
