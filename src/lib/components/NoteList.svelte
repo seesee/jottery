@@ -4,7 +4,7 @@
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
-  import { beforeUpdate, afterUpdate, onMount } from 'svelte';
+  import { beforeUpdate, afterUpdate, onMount, onDestroy } from 'svelte';
   import { noteRepository } from '../services/noteRepository';
   import { noteService } from '../services/noteService';
   import { keyManager } from '../services/keyManager';
@@ -321,12 +321,25 @@
     // If note is already visible, don't scroll
   }
 
+  // Theme observer to force refresh when theme changes
+  let themeObserver: MutationObserver | null = null;
+
   // Initialize on mount
   onMount(() => {
     isMobile = isMobileTouchDevice();
     updateVisibleRange();
     // Load conflict notes on mount
     loadConflictNotes();
+
+    // Set up theme observer to refresh note list when theme changes
+    themeObserver = new MutationObserver(() => {
+      // Force full render when theme changes to ensure all NoteListItem components update
+      forceFullRender();
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
     // Restore scroll position from global store (preserved across mobile view switches)
     // iOS/WebKit needs multiple animation frames for virtual scrolling to settle
@@ -356,6 +369,13 @@
           });
         });
       });
+    }
+  });
+
+  onDestroy(() => {
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
     }
   });
 
