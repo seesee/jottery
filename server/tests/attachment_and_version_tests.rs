@@ -154,6 +154,10 @@ async fn test_push_note_with_attachment() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [
                             {
@@ -255,6 +259,10 @@ async fn test_pull_note_with_attachment() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [
                             {
@@ -375,6 +383,8 @@ async fn test_pull_excludes_known_attachments() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [
                             {
@@ -479,6 +489,8 @@ async fn test_multiple_attachments_per_note() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [
                             {
@@ -565,6 +577,8 @@ async fn test_conflict_older_update_rejected() {
                         "modifiedAt": time2,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [],
                         "pinned": false,
@@ -607,6 +621,8 @@ async fn test_conflict_older_update_rejected() {
                         "modifiedAt": time1,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [],
                         "pinned": false,
@@ -681,6 +697,8 @@ async fn test_conflict_newer_update_accepted() {
                         "modifiedAt": time1,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [],
                         "pinned": false,
@@ -721,6 +739,8 @@ async fn test_conflict_newer_update_accepted() {
                         "modifiedAt": time2,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [],
                         "pinned": false,
@@ -791,6 +811,8 @@ async fn test_version_history_creation() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": ["tag1"],
                         "attachments": [],
                         "pinned": false,
@@ -865,6 +887,8 @@ async fn test_pull_includes_versions() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [],
                         "pinned": false,
@@ -970,6 +994,8 @@ async fn test_large_attachment_handling() {
                         "modifiedAt": now,
                         "deleted": false,
                         "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
                         "tags": [],
                         "attachments": [
                             {

@@ -248,14 +248,6 @@ impl UserSettings {
         self.tag_colors.as_ref()?.get(&tag_name.to_lowercase()).cloned()
     }
 
-    /// Get color display name or fallback to key
-    pub fn get_color_display_name(&self, color_key: &str) -> String {
-        let palette = self.get_color_palette();
-        palette.get(color_key)
-            .and_then(|def| def.display_name.clone())
-            .unwrap_or_else(|| color_key.to_string())
-    }
-
     /// Find color key by display name (case-insensitive)
     pub fn get_color_key_by_display_name(&self, display_name: &str) -> Option<String> {
         let palette = self.get_color_palette();

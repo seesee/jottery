@@ -178,20 +178,6 @@ impl Note {
         self.touch();
     }
 
-    /// Mark note as archived
-    pub fn archive(&mut self) {
-        self.archived = true;
-        self.archived_at = Some(Utc::now());
-        self.touch();
-    }
-
-    /// Unarchive a note
-    pub fn unarchive(&mut self) {
-        self.archived = false;
-        self.archived_at = None;
-        self.touch();
-    }
-
     /// Toggle pinned status
     #[allow(dead_code)]
     pub fn toggle_pin(&mut self) {
