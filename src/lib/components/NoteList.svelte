@@ -323,6 +323,7 @@
 
   // Theme observer to force refresh when theme changes
   let themeObserver: MutationObserver | null = null;
+  let themeKey = 0; // Increment this to force Svelte to remount all components
 
   // Initialize on mount
   onMount(() => {
@@ -333,7 +334,9 @@
 
     // Set up theme observer to refresh note list when theme changes
     themeObserver = new MutationObserver(() => {
-      // Force full render when theme changes to ensure all NoteListItem components update
+      // Increment themeKey to force Svelte to destroy and recreate all NoteListItem components
+      themeKey++;
+      // Also force full render to reset virtual scrolling state
       forceFullRender();
     });
     themeObserver.observe(document.documentElement, {
@@ -545,11 +548,13 @@
           <div style="height: {offsetY}px;"></div>
 
           <!-- Render only visible items -->
-          {#each visibleNotes as note, i (note.id)}
-            <div bind:this={itemElements[i]}>
-              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
-            </div>
-          {/each}
+          {#key themeKey}
+            {#each visibleNotes as note, i (note.id)}
+              <div bind:this={itemElements[i]}>
+                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+              </div>
+            {/each}
+          {/key}
         </div>
       {/if}
     </div>
@@ -595,11 +600,13 @@
         <div style="height: {offsetY}px;"></div>
 
         <!-- Render only visible items -->
-        {#each visibleNotes as note, i (note.id)}
-          <div bind:this={itemElements[i]}>
-            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
-          </div>
-        {/each}
+        {#key themeKey}
+          {#each visibleNotes as note, i (note.id)}
+            <div bind:this={itemElements[i]}>
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+            </div>
+          {/each}
+        {/key}
       </div>
 
       <!-- Cross-mode match indicator (only shown when searching with few results) -->
