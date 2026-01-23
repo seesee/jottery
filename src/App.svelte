@@ -212,8 +212,13 @@
         settings.set({ ...DEFAULT_SETTINGS, ...updated });
       }
 
+      // Check for theme override from URL parameter (?theme=light or ?theme=dark)
+      const urlParams = new URLSearchParams(window.location.search);
+      const themeParam = urlParams.get('theme');
+      const themeToApply = (themeParam === 'light' || themeParam === 'dark') ? themeParam : userSettings.theme;
+
       // Apply theme
-      applyTheme(userSettings.theme);
+      applyTheme(themeToApply);
 
       // Check lock status
       isLocked.set(checkLocked());

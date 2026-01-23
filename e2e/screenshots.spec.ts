@@ -85,21 +85,6 @@ async function setTagColors(page: any, tagColors: Record<string, string>) {
   await page.waitForTimeout(500);
 }
 
-// Helper to set theme by applying document class and triggering component updates
-async function setTheme(page: any, theme: 'light' | 'dark') {
-  await page.evaluate((themeValue: string) => {
-    // Apply theme class to document (MutationObservers will detect this)
-    if (themeValue === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, theme);
-
-  // Wait for theme to apply and all components to react via MutationObservers
-  await page.waitForTimeout(1500);
-}
-
 test.describe('Landing Page Screenshots - Light Mode', () => {
   test.beforeEach(async ({ page }) => {
     // Clear all storage before test
@@ -114,8 +99,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       });
     });
 
-    // Reload and set up password
-    await page.goto('/');
+    // Reload with theme parameter and set up password
+    await page.goto('/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -137,9 +122,6 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Set light theme via Settings UI (saves to IndexedDB)
-    await setTheme(page, 'light');
-
     // Import demo notes
     await importDemoNotes(page);
 
@@ -150,15 +132,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       notes: 'purple',
     });
 
-    // Force component refresh to apply tag colors (theme toggle triggers NoteList refresh)
-    const currentTheme = await page.evaluate(() => document.documentElement.classList.contains('dark'));
-    if (currentTheme) {
-      await setTheme(page, 'light');
-      await setTheme(page, 'dark');
-    } else {
-      await setTheme(page, 'dark');
-      await setTheme(page, 'light');
-    }
+    // Wait for tag colors to apply
+    await page.waitForTimeout(1000);
   });
 
   test('01-light. Main Interface - Note List and Editor', async ({ page }) => {
@@ -312,8 +287,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       });
     });
 
-    // Reload and set up password
-    await page.goto('/');
+    // Reload with theme parameter and set up password
+    await page.goto('/?theme=dark');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -335,9 +310,6 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Set dark theme via Settings UI (saves to IndexedDB)
-    await setTheme(page, 'dark');
-
     // Import demo notes
     await importDemoNotes(page);
 
@@ -348,15 +320,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       notes: 'purple',
     });
 
-    // Force component refresh to apply tag colors (theme toggle triggers NoteList refresh)
-    const currentTheme = await page.evaluate(() => document.documentElement.classList.contains('dark'));
-    if (currentTheme) {
-      await setTheme(page, 'light');
-      await setTheme(page, 'dark');
-    } else {
-      await setTheme(page, 'dark');
-      await setTheme(page, 'light');
-    }
+    // Wait for tag colors to apply
+    await page.waitForTimeout(1000);
   });
 
   test('01-dark. Main Interface - Note List and Editor', async ({ page }) => {
