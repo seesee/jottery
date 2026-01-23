@@ -1,8 +1,31 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { onMount } from 'svelte';
   import ScreenshotPlaceholder from './ScreenshotPlaceholder.svelte';
 
   export let onGetStarted: () => void;
+
+  let isDarkMode = false;
+
+  // Detect theme on mount
+  onMount(() => {
+    const updateTheme = () => {
+      // Check if document has dark class
+      isDarkMode = document.documentElement.classList.contains('dark');
+    };
+
+    // Initial check
+    updateTheme();
+
+    // Watch for theme changes
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  });
 
   const features = [
     { icon: '🔒', key: 'encrypted' },
@@ -16,10 +39,30 @@
   ];
 
   const webFeatures = [
-    { key: 'richEditor', icon: '✏️', screenshot: '/screenshots/02-rich-editor.png' },
-    { key: 'multiSelect', icon: '☑️', screenshot: '/screenshots/03-multi-select.png' },
-    { key: 'versions', icon: '📜', screenshot: null }, // Keep placeholder
-    { key: 'calculator', icon: '🧮', screenshot: '/screenshots/05-calculator.png' },
+    {
+      key: 'richEditor',
+      icon: '✏️',
+      screenshotLight: '/screenshots/02-rich-editor-light.png',
+      screenshotDark: '/screenshots/02-rich-editor-dark.png',
+    },
+    {
+      key: 'multiSelect',
+      icon: '☑️',
+      screenshotLight: '/screenshots/03-multi-select-light.png',
+      screenshotDark: null, // TODO: Generate dark version
+    },
+    {
+      key: 'versions',
+      icon: '📜',
+      screenshotLight: null, // Keep placeholder
+      screenshotDark: null,
+    },
+    {
+      key: 'calculator',
+      icon: '🧮',
+      screenshotLight: '/screenshots/05-calculator-light.png',
+      screenshotDark: null, // TODO: Generate dark version
+    },
   ];
 
   const tuiFeatures = [
@@ -28,6 +71,19 @@
     { key: 'piping', icon: '🔗' },
     { key: 'crossPlatform', icon: '🌐' },
   ];
+
+  // Helper to get the appropriate screenshot based on theme
+  $: getScreenshot = (feature: any) => {
+    if (isDarkMode && feature.screenshotDark) {
+      return feature.screenshotDark;
+    }
+    return feature.screenshotLight;
+  };
+
+  // Hero screenshot (main interface)
+  $: heroScreenshot = isDarkMode
+    ? '/screenshots/01-main-interface-dark.png'
+    : '/screenshots/01-main-interface-light.png';
 </script>
 
 <div class="landing-page">
@@ -54,7 +110,7 @@
 
       <div class="hero-screenshot">
         <img
-          src="/screenshots/01-main-interface.png"
+          src={heroScreenshot}
           alt={$_('landing.screenshots.mainInterface')}
           class="hero-image"
         />
@@ -98,9 +154,9 @@
               </ul>
             </div>
             <div class="showcase-screenshot">
-              {#if feature.screenshot}
+              {#if getScreenshot(feature)}
                 <img
-                  src={feature.screenshot}
+                  src={getScreenshot(feature)}
                   alt={$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}
                   class="showcase-image"
                 />
