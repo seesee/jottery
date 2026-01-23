@@ -189,9 +189,9 @@
       // Update document title based on notebook
       const notebook = getCurrentNotebook();
       if (notebook.id === 'main') {
-        document.title = 'Jottery - Privacy-Focused Notes';
+        document.title = 'Jottery';
       } else {
-        document.title = `Jottery - ${notebook.displayName}`;
+        document.title = `Jottery: ${notebook.displayName}`;
       }
 
       // Initialize database

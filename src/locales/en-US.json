@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Privacy-focused • Local-first • Encrypted"
+    "tagline": "Powerful, local-first note management"
   },
   "common": {
     "loading": "Loading...",

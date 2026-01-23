@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Privacy-gericht • Lokaal eerst • Versleuteld"
+    "tagline": "Powerful, local-first note management"
   },
   "common": {
     "loading": "Laden...",
