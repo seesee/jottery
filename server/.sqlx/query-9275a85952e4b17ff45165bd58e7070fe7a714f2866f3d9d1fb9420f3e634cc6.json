@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT content, tags, pinned, server_version, syntax_language, word_wrap, show_preview, color, modified_at\n                   FROM notes WHERE id = ? AND user_id = ?",
+  "query": "SELECT content, tags, pinned, archived, archived_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at\n                   FROM notes WHERE id = ? AND user_id = ?",
   "describe": {
     "columns": [
       {
@@ -19,33 +19,43 @@
         "type_info": "Integer"
       },
       {
-        "name": "server_version",
+        "name": "archived",
         "ordinal": 3,
-        "type_info": "Integer"
+        "type_info": "Bool"
       },
       {
-        "name": "syntax_language",
+        "name": "archived_at",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "word_wrap",
+        "name": "server_version",
         "ordinal": 5,
         "type_info": "Integer"
       },
       {
-        "name": "show_preview",
+        "name": "syntax_language",
         "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "word_wrap",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "show_preview",
+        "ordinal": 8,
         "type_info": "Integer"
       },
       {
         "name": "color",
-        "ordinal": 7,
+        "ordinal": 9,
         "type_info": "Text"
       },
       {
         "name": "modified_at",
-        "ordinal": 8,
+        "ordinal": 10,
         "type_info": "Text"
       }
     ],
@@ -58,11 +68,13 @@
       false,
       false,
       true,
+      false,
+      true,
       true,
       true,
       true,
       false
     ]
   },
-  "hash": "f5ab2a3c7caff63e5a33a59d2c6685a21be1e4f463563925a0c062b5d5f7345a"
+  "hash": "9275a85952e4b17ff45165bd58e7070fe7a714f2866f3d9d1fb9420f3e634cc6"
 }
