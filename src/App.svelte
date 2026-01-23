@@ -238,9 +238,12 @@
     }
   });
 
-  // Watch for theme changes
-  $: if ($settings) {
-    applyTheme($settings.theme);
+  // Watch for theme changes (but respect URL parameter override)
+  $: if ($settings && initialized) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const themeParam = urlParams.get('theme');
+    const themeToApply = (themeParam === 'light' || themeParam === 'dark') ? themeParam : $settings.theme;
+    applyTheme(themeToApply);
   }
 
   // Watch for language changes (only after initialization to avoid race condition)

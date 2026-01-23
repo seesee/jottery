@@ -138,11 +138,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
   });
 
   test('01-light. Main Interface - Note List and Editor', async ({ page }) => {
-    // Ensure light theme is applied
-    await page.evaluate(() => {
-      document.documentElement.classList.remove('dark');
-    });
-    await page.waitForTimeout(500);
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
 
     // Click on the welcome note (should be pinned at top)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
@@ -161,11 +158,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
   });
 
   test('02-light. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
-    // Ensure light theme is applied
-    await page.evaluate(() => {
-      document.documentElement.classList.remove('dark');
-    });
-    await page.waitForTimeout(500);
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
 
     // Create a new note with Python code
     const newButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
@@ -211,11 +205,8 @@ print(f"Sorted: {sorted_numbers}")`, { delay: 5 });
   });
 
   test('03-light. Multi-Select - Bulk Operations', async ({ page }) => {
-    // Ensure light theme is applied
-    await page.evaluate(() => {
-      document.documentElement.classList.remove('dark');
-    });
-    await page.waitForTimeout(500);
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
 
     // Select first 3 notes using checkboxes or Ctrl+Click
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
@@ -250,11 +241,8 @@ print(f"Sorted: {sorted_numbers}")`, { delay: 5 });
   });
 
   test('05-light. REPL Calculator', async ({ page }) => {
-    // Ensure light theme is applied
-    await page.evaluate(() => {
-      document.documentElement.classList.remove('dark');
-    });
-    await page.waitForTimeout(500);
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
 
     // Try keyboard shortcut
     await page.keyboard.press('Control+Shift+C');
@@ -350,11 +338,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
   });
 
   test('01-dark. Main Interface - Note List and Editor', async ({ page }) => {
-    // Ensure dark theme is applied
-    await page.evaluate(() => {
-      document.documentElement.classList.add('dark');
-    });
-    await page.waitForTimeout(500);
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
 
     // Click on the welcome note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
@@ -372,11 +357,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
   });
 
   test('02-dark. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
-    // Ensure dark theme is applied
-    await page.evaluate(() => {
-      document.documentElement.classList.add('dark');
-    });
-    await page.waitForTimeout(500);
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
 
     // Create a new note with Python code
     const newButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
