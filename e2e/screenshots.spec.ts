@@ -1,6 +1,7 @@
 /**
  * Screenshot generation for landing page placeholders
- * Run with: npx playwright test screenshots --project=chromium
+ * Run with: npx playwright test screenshots --project=firefox
+ * Note: Firefox is used instead of Chromium due to rendering issues with theme switching
  * Screenshots will be saved to: screenshots/
  */
 
