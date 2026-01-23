@@ -41,15 +41,6 @@ fi
 echo "✓ Web client type check passed"
 echo ""
 
-# Run web client E2E tests
-echo "→ Running E2E tests..."
-if ! npm run test:e2e; then
-    echo "✗ E2E tests failed"
-    exit 1
-fi
-echo "✓ E2E tests passed"
-echo ""
-
 # Run TUI tests
 echo "→ Testing TUI client..."
 if ! (cd tui && cargo test); then
@@ -93,6 +84,15 @@ if ! (cd admin && npm run check); then
     exit 1
 fi
 echo "✓ Admin dashboard type check passed"
+echo ""
+
+# Run web client E2E tests (slow - run last)
+echo "→ Running E2E tests (this may take 10-15 minutes)..."
+if ! npm run test:e2e; then
+    echo "✗ E2E tests failed"
+    exit 1
+fi
+echo "✓ E2E tests passed"
 echo ""
 
 echo "All tests passed! Setting version to $VERSION across all components..."
