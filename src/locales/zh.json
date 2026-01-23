@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery 是一个注重隐私、自托管的便签应用程序,用于捕获、组织和搜索具有丰富内容、语法高亮和加密的笔记。",
       "viewOnGithub": "在 GitHub 上查看",
       "license": "使用 MIT 许可证授权。"
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "一款强大的、隐私优先的笔记应用，具有端到端加密、高级搜索和可选同步功能。从网页或终端访问您的笔记。",
+      "cta": "立即试用",
+      "note": "无需注册 • 离线工作 • 可自托管"
     },
-    "openLinksInNewTab": "在新标签页中打开外部链接",
+    "screenshots": {
+      "mainInterface": "显示笔记列表和编辑器的主界面"
+    },
+    "features": {
+      "title": "您所需的一切",
+      "encrypted": {
+        "title": "端到端加密",
+        "description": "所有笔记在存储或同步之前都使用 AES-256-GCM 在本地加密。"
+      },
+      "localFirst": {
+        "title": "本地优先存储",
+        "description": "完全离线工作。除非您选择同步，否则数据将保留在您的设备上。"
+      },
+      "optionalSync": {
+        "title": "可选同步",
+        "description": "自托管您自己的同步服务器，以跨设备访问笔记。"
+      },
+      "powerfulSearch": {
+        "title": "强大的搜索",
+        "description": "具有修饰符、日期过滤器、字数统计等功能的高级搜索。"
+      },
+      "tagging": {
+        "title": "智能标签",
+        "description": "使用标签和颜色类别整理笔记，以便快速进行视觉识别。"
+      },
+      "attachments": {
+        "title": "附件",
+        "description": "向笔记添加文件、图片和文档。全部加密。"
+      },
+      "keyboard": {
+        "title": "键盘快捷键",
+        "description": "完全可定制的键盘快捷键，实现高效的笔记管理。"
+      },
+      "categories": {
+        "title": "颜色类别",
+        "description": "为笔记和标签分配颜色以进行视觉组织。"
+      }
+    },
+    "webFeatures": {
+      "title": "网页应用",
+      "subtitle": "采用现代网页技术的丰富编辑体验",
+      "richEditor": {
+        "title": "富文本编辑器",
+        "description": "基于 CodeMirror 6 构建，支持 20 多种编程语言的语法高亮、Markdown 支持和实时预览。",
+        "points": [
+          "代码片段的语法高亮",
+          "Markdown 渲染和预览",
+          "查找和替换",
+          "自动换行切换",
+          "可配置的字体和主题"
+        ],
+        "screenshotDescription": "带有语法高亮和 Markdown 预览的编辑器"
+      },
+      "multiSelect": {
+        "title": "多选和批量操作",
+        "description": "一次选择多个笔记并执行批量操作以实现高效的笔记管理。",
+        "points": [
+          "Ctrl/Cmd+点击切换选择",
+          "Shift+点击进行范围选择",
+          "批量标签操作",
+          "批量导出和删除",
+          "选择所有已过滤的笔记"
+        ],
+        "screenshotDescription": "带有批量操作工具栏的多选模式"
+      },
+      "versions": {
+        "title": "版本历史",
+        "description": "自动版本控制跟踪更改。查看、比较和恢复笔记的先前版本。",
+        "points": [
+          "自动创建版本",
+          "并排差异视图",
+          "恢复先前版本",
+          "版本元数据跟踪",
+          "冲突解决支持"
+        ],
+        "screenshotDescription": "带有差异查看器的版本历史"
+      },
+      "calculator": {
+        "title": "REPL 计算器",
+        "description": "具有持久历史记录的内置计算器。非常适合快速计算和转换。",
+        "points": [
+          "基本和高级数学运算",
+          "变量存储",
+          "计算历史",
+          "单位转换",
+          "将结果复制到笔记"
+        ],
+        "screenshotDescription": "REPL 计算器界面"
+      }
+    },
+    "tuiFeatures": {
+      "title": "终端用户界面",
+      "subtitle": "为命令行爱好者和 SSH 会话提供功能齐全的 TUI",
+      "terminal": {
+        "title": "快速 TUI 界面",
+        "description": "使用 Ratatui 构建的超快终端界面。无需离开终端即可浏览笔记。",
+        "screenshotDescription": "显示笔记列表和预览的终端界面",
+        "code": ""
+      },
+      "cli": {
+        "title": "强大的 CLI 命令",
+        "description": "用于快速笔记操作和自动化的命令行工具。",
+        "screenshotDescription": "运行中的 CLI 命令",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "直接管道内容",
+        "description": "立即将命令输出捕获为笔记。非常适合日志记录和文档编写。",
+        "screenshotDescription": "将命令输出管道到笔记",
+        "code": "echo \"快速笔记\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "跨平台同步",
+        "description": "在网页和 TUI 客户端之间无缝同步笔记。相同的加密，相同的数据。",
+        "screenshotDescription": "网页和 TUI 之间的同步状态",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "安全和隐私优先",
+      "lead": "您的笔记属于您。Jottery 在设计时将隐私和安全放在核心位置。",
+      "encryption": {
+        "title": "强加密",
+        "description": "采用 PBKDF2 密钥派生的 AES-256-GCM 加密。您的密码就是密钥——没有密码，笔记在数学上无法读取。"
+      },
+      "selfHosted": {
+        "title": "自托管",
+        "description": "完全控制运行您自己的同步服务器。服务器只存储它无法解密的加密数据。"
+      },
+      "noTracking": {
+        "title": "零追踪",
+        "description": "无分析、无追踪、无第三方服务。您的数据永远不会离开您的控制。"
+      }
+    },
+    "finalCta": {
+      "title": "准备好开始了吗？",
+      "subtitle": "几秒钟内设置您的加密笔记本。无需注册。",
+      "viewOnGitHub": "在 GitHub 上查看"
+    }
+  },
+  "unlock": {
+    "welcome": "欢迎使用 Jottery",
+    "enterPassword": "输入密码解锁",
     "openLinksInNewTabDescription": "启用后，Markdown 预览中的外部网站链接将在新浏览器标签页中打开，而不是离开 Jottery",
     "persistSession": "页面刷新后保持会话",
     "persistSessionDescription": "刷新页面时保持会话活跃。密码会临时存储在浏览器的会话存储中。",

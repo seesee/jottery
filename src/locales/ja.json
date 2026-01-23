@@ -487,8 +487,158 @@
       "aboutDescription": "Jotteryは、リッチコンテンツ、シンタックスハイライト、暗号化を備えた、ノートをキャプチャ、整理、検索するためのプライバシー重視のセルフホスト型スクラッチパッドアプリケーションです。",
       "viewOnGithub": "GitHubで表示",
       "license": "MITライセンスの下でライセンスされています。"
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "エンドツーエンド暗号化、高度な検索、オプションの同期機能を備えた、プライバシー重視の強力なノートアプリ。Webまたはターミナルからノートにアクセスできます。",
+      "cta": "試してみる",
+      "note": "アカウント不要 • オフラインで動作 • セルフホスト可能"
     },
-    "openLinksInNewTab": "外部リンクを新しいタブで開く",
+    "screenshots": {
+      "mainInterface": "ノートリストとエディターを表示するメインインターフェース"
+    },
+    "features": {
+      "title": "必要なすべてが揃っています",
+      "encrypted": {
+        "title": "エンドツーエンド暗号化",
+        "description": "すべてのノートは保存または同期の前に、AES-256-GCMでローカルに暗号化されます。"
+      },
+      "localFirst": {
+        "title": "ローカルファーストストレージ",
+        "description": "完全にオフラインで動作します。同期を選択しない限り、データはデバイスに保存されます。"
+      },
+      "optionalSync": {
+        "title": "オプションの同期",
+        "description": "独自の同期サーバーをセルフホストして、複数のデバイスでノートにアクセスできます。"
+      },
+      "powerfulSearch": {
+        "title": "強力な検索",
+        "description": "修飾子、日付フィルター、単語数などを使用した高度な検索。"
+      },
+      "tagging": {
+        "title": "スマートタグ付け",
+        "description": "タグとカラーカテゴリーでノートを整理し、すばやく視覚的に識別できます。"
+      },
+      "attachments": {
+        "title": "添付ファイル",
+        "description": "ファイル、画像、ドキュメントをノートに追加できます。すべて暗号化されます。"
+      },
+      "keyboard": {
+        "title": "キーボードショートカット",
+        "description": "効率的なノート管理のために完全にカスタマイズ可能なキーボードショートカット。"
+      },
+      "categories": {
+        "title": "カラーカテゴリー",
+        "description": "ノートとタグに色を割り当てて視覚的に整理できます。"
+      }
+    },
+    "webFeatures": {
+      "title": "Webアプリケーション",
+      "subtitle": "最新のWeb技術による豊富な編集体験",
+      "richEditor": {
+        "title": "リッチテキストエディター",
+        "description": "20以上のプログラミング言語のシンタックスハイライト、Markdownサポート、ライブプレビューを備えたCodeMirror 6ベース。",
+        "points": [
+          "コードスニペットのシンタックスハイライト",
+          "Markdownのレンダリングとプレビュー",
+          "検索と置換",
+          "折り返し切り替え",
+          "カスタマイズ可能なフォントとテーマ"
+        ],
+        "screenshotDescription": "シンタックスハイライトとMarkdownプレビュー付きエディター"
+      },
+      "multiSelect": {
+        "title": "複数選択と一括操作",
+        "description": "複数のノートを一度に選択し、効率的なノート管理のためにバッチ操作を実行できます。",
+        "points": [
+          "Ctrl/Cmd+クリックで選択を切り替え",
+          "Shift+クリックで範囲選択",
+          "一括タグ操作",
+          "バッチエクスポートと削除",
+          "フィルタされたすべてのノートを選択"
+        ],
+        "screenshotDescription": "一括操作ツールバー付き複数選択モード"
+      },
+      "versions": {
+        "title": "バージョン履歴",
+        "description": "自動バージョン管理で変更を追跡。ノートの以前のバージョンを表示、比較、復元できます。",
+        "points": [
+          "自動バージョン作成",
+          "並べて表示する差分ビュー",
+          "以前のバージョンを復元",
+          "バージョンメタデータの追跡",
+          "競合解決サポート"
+        ],
+        "screenshotDescription": "差分ビューアー付きバージョン履歴"
+      },
+      "calculator": {
+        "title": "REPL電卓",
+        "description": "永続的な履歴を持つ内蔵電卓。素早い計算と変換に最適です。",
+        "points": [
+          "基本および高度な数学演算",
+          "変数ストレージ",
+          "計算履歴",
+          "単位変換",
+          "結果をノートにコピー"
+        ],
+        "screenshotDescription": "REPL電卓インターフェース"
+      }
+    },
+    "tuiFeatures": {
+      "title": "ターミナルユーザーインターフェース",
+      "subtitle": "コマンドライン愛好家とSSHセッション向けのフル機能TUI",
+      "terminal": {
+        "title": "高速TUIインターフェース",
+        "description": "Ratatuiで構築された超高速ターミナルインターフェース。ターミナルを離れることなくノートをナビゲートできます。",
+        "screenshotDescription": "ノートリストとプレビューを表示するターミナルインターフェース",
+        "code": ""
+      },
+      "cli": {
+        "title": "強力なCLIコマンド",
+        "description": "迅速なノート操作と自動化のためのコマンドラインツール。",
+        "screenshotDescription": "実行中のCLIコマンド",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "コンテンツを直接パイプ",
+        "description": "コマンド出力を即座にノートとしてキャプチャします。ロギングとドキュメント作成に最適です。",
+        "screenshotDescription": "コマンド出力をノートにパイプ",
+        "code": "echo \"クイックノート\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "クロスプラットフォーム同期",
+        "description": "WebクライアントとTUIクライアント間でノートをシームレスに同期。同じ暗号化、同じデータ。",
+        "screenshotDescription": "WebとTUI間の同期ステータス",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "セキュリティとプライバシーを最優先",
+      "lead": "あなたのノートはあなたのものです。Jotteryはプライバシーとセキュリティを中核に設計されています。",
+      "encryption": {
+        "title": "強力な暗号化",
+        "description": "PBKDF2鍵導出を使用したAES-256-GCM暗号化。パスワードが鍵です。パスワードなしでは、ノートは数学的に読み取り不可能です。"
+      },
+      "selfHosted": {
+        "title": "セルフホスト",
+        "description": "完全なコントロールで独自の同期サーバーを実行できます。サーバーは復号化できない暗号化されたデータのみを保存します。"
+      },
+      "noTracking": {
+        "title": "トラッキングゼロ",
+        "description": "分析なし、トラッキングなし、サードパーティサービスなし。データは常にあなたのコントロール下にあります。"
+      }
+    },
+    "finalCta": {
+      "title": "始める準備はできましたか？",
+      "subtitle": "数秒で暗号化されたノートブックをセットアップ。アカウント不要。",
+      "viewOnGitHub": "GitHubで表示"
+    }
+  },
+  "unlock": {
+    "welcome": "Jotteryへようこそ",
+    "enterPassword": "ロック解除するにはパスワードを入力してください",
     "openLinksInNewTabDescription": "有効にすると、Markdownプレビュー内の外部ウェブサイトへのリンクは、Jotteryから離れることなく新しいブラウザタブで開きます",
     "persistSession": "ページ更新後もセッションを維持",
     "persistSessionDescription": "ページを更新してもセッションを維持します。パスワードはブラウザのセッションストレージに一時的に保存されます。",

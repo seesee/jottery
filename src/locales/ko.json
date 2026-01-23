@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery는 풍부한 콘텐츠, 구문 강조 및 암호화를 사용하여 노트를 캡처, 구성 및 검색하기 위한 개인정보 중심의 자체 호스팅 메모장 애플리케이션입니다.",
       "viewOnGithub": "GitHub에서 보기",
       "license": "MIT 라이선스로 제공됩니다."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "종단간 암호화, 고급 검색 및 선택적 동기화 기능을 갖춘 강력하고 개인정보 보호 중심 노트 앱. 웹 또는 터미널에서 노트에 액세스하세요.",
+      "cta": "체험하기",
+      "note": "계정 불필요 • 오프라인 작동 • 자체 호스팅 가능"
     },
-    "openLinksInNewTab": "새 탭에서 외부 링크 열기",
+    "screenshots": {
+      "mainInterface": "노트 목록과 편집기를 보여주는 메인 인터페이스"
+    },
+    "features": {
+      "title": "필요한 모든 기능",
+      "encrypted": {
+        "title": "종단간 암호화",
+        "description": "모든 노트는 저장 또는 동기화 전에 AES-256-GCM으로 로컬에서 암호화됩니다."
+      },
+      "localFirst": {
+        "title": "로컬 우선 저장",
+        "description": "완전히 오프라인으로 작동합니다. 동기화를 선택하지 않는 한 데이터는 장치에 남아 있습니다."
+      },
+      "optionalSync": {
+        "title": "선택적 동기화",
+        "description": "자체 동기화 서버를 호스팅하여 여러 장치에서 노트에 액세스하세요."
+      },
+      "powerfulSearch": {
+        "title": "강력한 검색",
+        "description": "수정자, 날짜 필터, 단어 수 등이 포함된 고급 검색."
+      },
+      "tagging": {
+        "title": "스마트 태깅",
+        "description": "태그와 색상 카테고리로 노트를 정리하여 빠른 시각적 식별이 가능합니다."
+      },
+      "attachments": {
+        "title": "첨부 파일",
+        "description": "노트에 파일, 이미지 및 문서를 추가하세요. 모두 암호화됩니다."
+      },
+      "keyboard": {
+        "title": "키보드 단축키",
+        "description": "효율적인 노트 관리를 위한 완전히 사용자 정의 가능한 키보드 단축키."
+      },
+      "categories": {
+        "title": "색상 카테고리",
+        "description": "시각적 정리를 위해 노트와 태그에 색상을 할당하세요."
+      }
+    },
+    "webFeatures": {
+      "title": "웹 애플리케이션",
+      "subtitle": "현대적인 웹 기술로 풍부한 편집 경험",
+      "richEditor": {
+        "title": "리치 텍스트 편집기",
+        "description": "20개 이상의 프로그래밍 언어에 대한 구문 강조, 마크다운 지원 및 실시간 미리보기가 있는 CodeMirror 6 기반.",
+        "points": [
+          "코드 스니펫의 구문 강조",
+          "마크다운 렌더링 및 미리보기",
+          "찾기 및 바꾸기",
+          "자동 줄바꿈 전환",
+          "구성 가능한 글꼴 및 테마"
+        ],
+        "screenshotDescription": "구문 강조 및 마크다운 미리보기가 있는 편집기"
+      },
+      "multiSelect": {
+        "title": "다중 선택 및 대량 작업",
+        "description": "한 번에 여러 노트를 선택하고 효율적인 노트 관리를 위한 일괄 작업을 수행하세요.",
+        "points": [
+          "Ctrl/Cmd+클릭으로 선택 전환",
+          "Shift+클릭으로 범위 선택",
+          "대량 태그 작업",
+          "일괄 내보내기 및 삭제",
+          "필터링된 모든 노트 선택"
+        ],
+        "screenshotDescription": "대량 작업 도구 모음이 있는 다중 선택 모드"
+      },
+      "versions": {
+        "title": "버전 기록",
+        "description": "자동 버전 관리가 변경 사항을 추적합니다. 노트의 이전 버전을 보고, 비교하고, 복원하세요.",
+        "points": [
+          "자동 버전 생성",
+          "나란히 비교 보기",
+          "이전 버전 복원",
+          "버전 메타데이터 추적",
+          "충돌 해결 지원"
+        ],
+        "screenshotDescription": "비교 뷰어가 있는 버전 기록"
+      },
+      "calculator": {
+        "title": "REPL 계산기",
+        "description": "영구 기록이 있는 내장 계산기. 빠른 계산 및 변환에 완벽합니다.",
+        "points": [
+          "기본 및 고급 수학 연산",
+          "변수 저장",
+          "계산 기록",
+          "단위 변환",
+          "결과를 노트에 복사"
+        ],
+        "screenshotDescription": "REPL 계산기 인터페이스"
+      }
+    },
+    "tuiFeatures": {
+      "title": "터미널 사용자 인터페이스",
+      "subtitle": "명령줄 애호가와 SSH 세션을 위한 완전한 기능의 TUI",
+      "terminal": {
+        "title": "빠른 TUI 인터페이스",
+        "description": "Ratatui로 구축된 초고속 터미널 인터페이스. 터미널을 떠나지 않고 노트를 탐색하세요.",
+        "screenshotDescription": "노트 목록과 미리보기를 보여주는 터미널 인터페이스",
+        "code": ""
+      },
+      "cli": {
+        "title": "강력한 CLI 명령",
+        "description": "빠른 노트 작업 및 자동화를 위한 명령줄 도구.",
+        "screenshotDescription": "실행 중인 CLI 명령",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "콘텐츠 직접 파이프",
+        "description": "명령 출력을 노트로 즉시 캡처하세요. 로깅 및 문서화에 완벽합니다.",
+        "screenshotDescription": "명령 출력을 노트로 파이프",
+        "code": "echo \"빠른 노트\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "크로스 플랫폼 동기화",
+        "description": "웹 및 TUI 클라이언트 간에 노트를 원활하게 동기화하세요. 동일한 암호화, 동일한 데이터.",
+        "screenshotDescription": "웹과 TUI 간 동기화 상태",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "보안 및 개인정보 보호 우선",
+      "lead": "노트는 여러분의 것입니다. Jottery는 개인정보 보호와 보안을 핵심으로 설계되었습니다.",
+      "encryption": {
+        "title": "강력한 암호화",
+        "description": "PBKDF2 키 유도를 사용한 AES-256-GCM 암호화. 비밀번호가 키입니다. 비밀번호가 없으면 노트는 수학적으로 읽을 수 없습니다."
+      },
+      "selfHosted": {
+        "title": "자체 호스팅",
+        "description": "완전한 제어로 자체 동기화 서버를 실행하세요. 서버는 복호화할 수 없는 암호화된 데이터만 저장합니다."
+      },
+      "noTracking": {
+        "title": "추적 제로",
+        "description": "분석 없음, 추적 없음, 타사 서비스 없음. 데이터는 절대 사용자의 제어를 벗어나지 않습니다."
+      }
+    },
+    "finalCta": {
+      "title": "시작할 준비가 되셨나요?",
+      "subtitle": "몇 초 안에 암호화된 노트북을 설정하세요. 계정이 필요하지 않습니다.",
+      "viewOnGitHub": "GitHub에서 보기"
+    }
+  },
+  "unlock": {
+    "welcome": "Jottery에 오신 것을 환영합니다",
+    "enterPassword": "잠금 해제하려면 비밀번호를 입력하세요",
     "openLinksInNewTabDescription": "활성화하면 Markdown 미리보기의 외부 웹사이트 링크가 Jottery를 떠나지 않고 새 브라우저 탭에서 열립니다",
     "persistSession": "페이지 새로고침 후 세션 유지",
     "persistSessionDescription": "페이지를 새로고침해도 세션을 유지합니다. 비밀번호는 브라우저의 세션 저장소에 임시로 저장됩니다.",
