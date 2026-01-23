@@ -137,6 +137,10 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
   });
 
   test('01-light. Main Interface - Note List and Editor', async ({ page }) => {
+    // Ensure we're on the correct URL with theme parameter
+    await page.goto('/?theme=light');
+    await page.waitForTimeout(500);
+
     // Click on the welcome note (should be pinned at top)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const firstNote = noteListItems.first();
@@ -154,6 +158,10 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
   });
 
   test('02-light. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
+    // Ensure we're on the correct URL with theme parameter
+    await page.goto('/?theme=light');
+    await page.waitForTimeout(500);
+
     // Create a new note with Python code
     const newButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newButton.waitFor({ state: 'visible', timeout: 10000 });
@@ -198,6 +206,10 @@ print(f"Sorted: {sorted_numbers}")`, { delay: 5 });
   });
 
   test('03-light. Multi-Select - Bulk Operations', async ({ page }) => {
+    // Ensure we're on the correct URL with theme parameter
+    await page.goto('/?theme=light');
+    await page.waitForTimeout(500);
+
     // Select first 3 notes using checkboxes or Ctrl+Click
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const noteCount = await noteListItems.count();
@@ -231,6 +243,10 @@ print(f"Sorted: {sorted_numbers}")`, { delay: 5 });
   });
 
   test('05-light. REPL Calculator', async ({ page }) => {
+    // Ensure we're on the correct URL with theme parameter
+    await page.goto('/?theme=light');
+    await page.waitForTimeout(500);
+
     // Try keyboard shortcut
     await page.keyboard.press('Control+Shift+C');
     await page.waitForTimeout(500);
@@ -325,6 +341,10 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
   });
 
   test('01-dark. Main Interface - Note List and Editor', async ({ page }) => {
+    // Ensure we're on the correct URL with theme parameter
+    await page.goto('/?theme=dark');
+    await page.waitForTimeout(500);
+
     // Click on the welcome note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const firstNote = noteListItems.first();
@@ -341,6 +361,10 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
   });
 
   test('02-dark. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
+    // Ensure we're on the correct URL with theme parameter
+    await page.goto('/?theme=dark');
+    await page.waitForTimeout(500);
+
     // Create a new note with Python code
     const newButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newButton.waitFor({ state: 'visible', timeout: 10000 });
