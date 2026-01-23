@@ -13,7 +13,7 @@ export const documentation = `# Jottery Documentation
   - [Advanced Search Modifiers](#advanced-search-modifiers)
 - [Multi-Select & Bulk Operations](#multi-select-bulk-operations)
 - [Archive Mode](#archive-mode)
-- [Color System](#color-system)
+- [Categories](#categories)
 - [Version History](#version-history)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Sync](#sync)
@@ -125,11 +125,11 @@ Type in the search box to find notes. The search looks at both note content and 
 | \`words:>N\` | More than N words | \`words:>100\` |
 | \`words:<N\` | Fewer than N words | \`words:<50\` |
 | \`words:N..M\` | Word count in range | \`words:50..200\` |
-| \`color:NAME\` | Notes or tags with color | \`color:red\` |
-| \`color:NAME note\` | Notes with color | \`color:blue note\` |
-| \`color:NAME tag\` | Tags with color | \`color:green tag\` |
+| \`category:NAME\` | Notes or tags with category | \`category:red\` |
+| \`category:NAME note\` | Notes with category | \`category:blue note\` |
+| \`category:NAME tag\` | Tags with category | \`category:green tag\` |
 
-**Combining modifiers:** \`#project color:blue has:attachment modified:>2024-01-01 words:>100\`
+**Combining modifiers:** \`#project category:blue has:attachment modified:>2024-01-01 words:>100\`
 
 ---
 
@@ -184,46 +184,50 @@ When searching with ≤10 results, Jottery shows a count of matches in the oppos
 
 ---
 
-## Color System
+## Categories
 
-Organize notes and tags visually with colors. Note colors affect the note list background, while tag colors affect tag pills.
+Organize notes and tags visually with categories. Each category has a distinct color that helps you quickly identify related content. Note categories affect the note list background, while tag categories affect tag pills.
 
-### Note Colors
+### Note Categories
 
 | Action | How to do it |
 |--------|--------------|
-| **Set note color** | Click ⋮ menu → "Set Color" and choose from 8 colors |
-| **Remove color** | Select "No Color" from the color picker |
-| **Bulk color** | Select multiple notes → "Set Color" in bottom toolbar |
+| **Set note category** | Click ⋮ menu → "Set Color" and choose from 8 categories |
+| **Remove category** | Select "No Color" from the picker |
+| **Bulk categorize** | Select multiple notes → "Set Color" in bottom toolbar |
 
-### Tag Colors
+Categories available: **red**, **orange**, **yellow**, **green**, **blue**, **purple**, **pink**, **gray**
+
+### Tag Categories
 
 | Action | How to do it |
 |--------|--------------|
 | **Configure** | Settings → Colors → Tag Colors section |
-| **Assign color** | Select a tag and choose a color |
-| **Global mapping** | All notes with the same tag show the same color |
+| **Assign category** | Select a tag and choose a category color |
+| **Global mapping** | All notes with the same tag show the same category color |
 
-### Customizing the Palette
+### Customizing Category Colors
 
-In Settings → Colors, you can customize the 8-color palette:
+In Settings → Colors, you can customize the color for each category:
 
-- Each color has separate values for light and dark modes
+- Each category has separate color values for light and dark modes
 - Colors are shown as hex codes (e.g., \`#FFE5E5\`)
 - Click "Reset to Defaults" to restore the original palette
 - Changes apply immediately across all notes and tags
 
-### Color Search
+### Category Search
 
-Search for notes by color:
+Search for notes by category using the category name:
 
 | Syntax | Description |
 |--------|-------------|
-| \`color:red\` | Notes OR tags with red color |
-| \`color:red note\` | Only notes with red color |
-| \`color:red tag\` | Only tags with red color |
+| \`category:red\` | Notes OR tags in the red category |
+| \`category:red note\` | Only notes in the red category |
+| \`category:red tag\` | Only tags in the red category |
 
-Combine with other search terms: \`#project color:blue has:attachment\`
+You can search by any category name: \`red\`, \`orange\`, \`yellow\`, \`green\`, \`blue\`, \`purple\`, \`pink\`, \`gray\`
+
+Combine with other search terms: \`#project category:blue has:attachment\`
 
 ---
 
