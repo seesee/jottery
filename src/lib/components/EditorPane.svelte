@@ -124,6 +124,7 @@
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
   let showColorPicker: boolean = false;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
+  let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
 
   // Track blob URLs for cleanup
   let blobUrls: Set<string> = new Set();
@@ -211,10 +212,6 @@
 
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
-
-  // Determine if dark mode is active
-  $: isDark = $settings.theme === 'dark' ||
-    ($settings.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   // Compute note background color based on theme
   $: currentTheme = resolveTheme($settings.theme);
@@ -906,12 +903,35 @@
     }
   }
 
+  let themeObserver: MutationObserver | null = null;
+
   onMount(() => {
     window.addEventListener('keydown', handleEditorKeydown);
+
+    // Set up theme observer to watch for dark mode changes
+    const updateTheme = () => {
+      isDarkMode = document.documentElement.classList.contains('dark');
+    };
+
+    // Initial check
+    updateTheme();
+
+    // Watch for theme changes
+    themeObserver = new MutationObserver(updateTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
   });
 
   onDestroy(() => {
     window.removeEventListener('keydown', handleEditorKeydown);
+
+    // Disconnect theme observer
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
+    }
 
     // Clean up all blob URLs
     blobUrls.forEach(url => URL.revokeObjectURL(url));
@@ -987,7 +1007,7 @@
       bind:tags
       {language}
       {wordWrap}
-      {isDark}
+      isDark={isDarkMode}
       {availableTags}
       bind:codeEditor
       onContentChange={() => handleInput()}

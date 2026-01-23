@@ -17,6 +17,7 @@
   import { DEFAULT_QUICK_COMMANDS } from '../types/models';
   import { vim } from '@replit/codemirror-vim';
   import { oneDark } from '@codemirror/theme-one-dark';
+  import { githubLight } from '@uiw/codemirror-theme-github';
   import { lineNumbers } from '@codemirror/view';
   import { highlightActiveLine, highlightSpecialChars } from '@codemirror/view';
   import { history, historyKeymap, undo as undoCommand, redo as redoCommand } from '@codemirror/commands';
@@ -174,7 +175,7 @@
       mobileAttributesCompartment.of(getMobileAttributes()),
       languageCompartment.of(getLanguageExtension()),
       wrapCompartment.of(wordWrap ? EditorView.lineWrapping : []),
-      themeCompartment.of(isDark ? oneDark : []),
+      themeCompartment.of(isDark ? oneDark : githubLight),
       vimCompartment.of($settings.vimMode ? vim() : []),
       quickCommandsCompartment.of(
         ($settings.quickCommandsEnabled ?? true)
@@ -293,7 +294,7 @@
 
   // Update theme when isDark prop changes
   $: if (editorView && isDark !== undefined) {
-    const effects = [themeCompartment.reconfigure(isDark ? oneDark : [])];
+    const effects = [themeCompartment.reconfigure(isDark ? oneDark : githubLight)];
 
     // Also reconfigure calc extension for theme-aware syntax highlighting
     if (language === 'calc') {
