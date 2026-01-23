@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery ist eine datenschutzorientierte, selbst gehostete Notizblock-Anwendung zum Erfassen, Organisieren und Durchsuchen von Notizen mit reichhaltigem Inhalt, Syntaxhervorhebung und Verschlüsselung.",
       "viewOnGithub": "Auf GitHub ansehen",
       "license": "Lizenziert unter der MIT-Lizenz."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "Eine leistungsstarke, datenschutzorientierte Notiz-App mit Ende-zu-Ende-Verschlüsselung, erweiterter Suche und optionaler Synchronisation. Greifen Sie über Web oder Terminal auf Ihre Notizen zu.",
+      "cta": "Jetzt ausprobieren",
+      "note": "Kein Konto erforderlich • Funktioniert offline • Selbst hostbar"
     },
-    "openLinksInNewTab": "Externe Links in neuem Tab öffnen",
+    "screenshots": {
+      "mainInterface": "Hauptoberfläche mit Notizliste und Editor"
+    },
+    "features": {
+      "title": "Alles was Sie brauchen",
+      "encrypted": {
+        "title": "Ende-zu-Ende-Verschlüsselt",
+        "description": "Alle Ihre Notizen werden lokal mit AES-256-GCM vor der Speicherung oder Synchronisation verschlüsselt."
+      },
+      "localFirst": {
+        "title": "Lokale Speicherung zuerst",
+        "description": "Funktioniert vollständig offline. Ihre Daten bleiben auf Ihrem Gerät, es sei denn, Sie wählen die Synchronisation."
+      },
+      "optionalSync": {
+        "title": "Optionale Synchronisation",
+        "description": "Hosten Sie Ihren eigenen Synchronisierungsserver, um auf Notizen über mehrere Geräte zuzugreifen."
+      },
+      "powerfulSearch": {
+        "title": "Leistungsstarke Suche",
+        "description": "Erweiterte Suche mit Modifikatoren, Datumsfiltern, Wortzählungen und mehr."
+      },
+      "tagging": {
+        "title": "Intelligente Verschlagwortung",
+        "description": "Organisieren Sie Notizen mit Tags und Farbkategorien zur schnellen visuellen Identifizierung."
+      },
+      "attachments": {
+        "title": "Anhänge",
+        "description": "Fügen Sie Dateien, Bilder und Dokumente zu Ihren Notizen hinzu. Alles verschlüsselt."
+      },
+      "keyboard": {
+        "title": "Tastaturkürzel",
+        "description": "Vollständig anpassbare Tastaturkürzel für effizientes Notizmanagement."
+      },
+      "categories": {
+        "title": "Farbkategorien",
+        "description": "Weisen Sie Farben zu Notizen und Tags für visuelle Organisation zu."
+      }
+    },
+    "webFeatures": {
+      "title": "Webanwendung",
+      "subtitle": "Umfangreiches Bearbeitungserlebnis mit modernen Webtechnologien",
+      "richEditor": {
+        "title": "Rich-Text-Editor",
+        "description": "Basiert auf CodeMirror 6 mit Syntaxhervorhebung für über 20 Programmiersprachen, Markdown-Unterstützung und Live-Vorschau.",
+        "points": [
+          "Syntaxhervorhebung für Code-Snippets",
+          "Markdown-Rendering und Vorschau",
+          "Suchen und Ersetzen",
+          "Zeilenumbruch umschalten",
+          "Konfigurierbare Schriftart und Theme"
+        ],
+        "screenshotDescription": "Editor mit Syntaxhervorhebung und Markdown-Vorschau"
+      },
+      "multiSelect": {
+        "title": "Mehrfachauswahl & Massenoperationen",
+        "description": "Wählen Sie mehrere Notizen gleichzeitig aus und führen Sie Stapeloperationen für effizientes Notizmanagement durch.",
+        "points": [
+          "Strg/Cmd+Klick zum Umschalten der Auswahl",
+          "Umschalt+Klick für Bereichsauswahl",
+          "Massen-Tag-Operationen",
+          "Stapelexport und Löschen",
+          "Alle gefilterten Notizen auswählen"
+        ],
+        "screenshotDescription": "Mehrfachauswahlmodus mit Massenoperations-Symbolleiste"
+      },
+      "versions": {
+        "title": "Versionsverlauf",
+        "description": "Automatische Versionierung verfolgt Änderungen. Anzeigen, Vergleichen und Wiederherstellen früherer Versionen Ihrer Notizen.",
+        "points": [
+          "Automatische Versionserstellung",
+          "Nebeneinander-Diff-Ansicht",
+          "Frühere Versionen wiederherstellen",
+          "Versionmetadaten-Verfolgung",
+          "Konfliktlösungsunterstützung"
+        ],
+        "screenshotDescription": "Versionsverlauf mit Diff-Viewer"
+      },
+      "calculator": {
+        "title": "REPL-Rechner",
+        "description": "Integrierter Rechner mit persistenter Historie. Perfekt für schnelle Berechnungen und Umrechnungen.",
+        "points": [
+          "Grundlegende und erweiterte mathematische Operationen",
+          "Variablenspeicherung",
+          "Berechnungshistorie",
+          "Einheitenumrechnungen",
+          "Ergebnisse in Notizen kopieren"
+        ],
+        "screenshotDescription": "REPL-Rechner-Oberfläche"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Terminal-Benutzeroberfläche",
+      "subtitle": "Vollständige TUI für Kommandozeilen-Enthusiasten und SSH-Sitzungen",
+      "terminal": {
+        "title": "Schnelle TUI-Oberfläche",
+        "description": "Blitzschnelle Terminal-Oberfläche mit Ratatui erstellt. Navigieren Sie durch Ihre Notizen, ohne das Terminal zu verlassen.",
+        "screenshotDescription": "Terminal-Oberfläche mit Notizliste und Vorschau",
+        "code": ""
+      },
+      "cli": {
+        "title": "Leistungsstarke CLI-Befehle",
+        "description": "Kommandozeilen-Tools für schnelle Notizoperationen und Automatisierung.",
+        "screenshotDescription": "CLI-Befehle in Aktion",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "Inhalte direkt weiterleiten",
+        "description": "Erfassen Sie Befehlsausgaben sofort als Notizen. Perfekt für Protokollierung und Dokumentation.",
+        "screenshotDescription": "Befehlsausgabe an Notizen weiterleiten",
+        "code": "echo \"Schnelle Notiz\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Plattformübergreifende Synchronisation",
+        "description": "Nahtlose Synchronisation von Notizen zwischen Web- und TUI-Clients. Gleiche Verschlüsselung, gleiche Daten.",
+        "screenshotDescription": "Synchronisationsstatus über Web und TUI",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Sicherheit & Datenschutz zuerst",
+      "lead": "Ihre Notizen gehören Ihnen. Jottery ist mit Datenschutz und Sicherheit im Kern konzipiert.",
+      "encryption": {
+        "title": "Starke Verschlüsselung",
+        "description": "AES-256-GCM-Verschlüsselung mit PBKDF2-Schlüsselableitung. Ihr Passwort ist der Schlüssel – ohne es sind Notizen mathematisch nicht lesbar."
+      },
+      "selfHosted": {
+        "title": "Selbst gehostet",
+        "description": "Betreiben Sie Ihren eigenen Synchronisierungsserver mit vollständiger Kontrolle. Der Server speichert nur verschlüsselte Daten, die er nicht entschlüsseln kann."
+      },
+      "noTracking": {
+        "title": "Kein Tracking",
+        "description": "Keine Analysen, kein Tracking, keine Drittanbieterdienste. Ihre Daten verlassen niemals Ihre Kontrolle."
+      }
+    },
+    "finalCta": {
+      "title": "Bereit loszulegen?",
+      "subtitle": "Richten Sie Ihr verschlüsseltes Notizbuch in Sekunden ein. Kein Konto erforderlich.",
+      "viewOnGitHub": "Auf GitHub ansehen"
+    }
+  },
+  "unlock": {
+    "welcome": "Willkommen bei Jottery",
+    "enterPassword": "Geben Sie Ihr Passwort zum Entsperren ein",
     "openLinksInNewTabDescription": "Wenn aktiviert, werden Links zu externen Websites in der Markdown-Vorschau in einem neuen Browser-Tab geöffnet, anstatt von Jottery wegzunavigieren",
     "persistSession": "Sitzung über Seitenaktualisierung beibehalten",
     "persistSessionDescription": "Halten Sie Ihre Sitzung aktiv, wenn Sie die Seite aktualisieren. Das Passwort wird vorübergehend im Sitzungsspeicher Ihres Browsers gespeichert.",

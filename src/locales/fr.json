@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery est une application de bloc-notes auto-hébergée axée sur la confidentialité pour capturer, organiser et rechercher des notes avec du contenu riche, de la coloration syntaxique et du chiffrement.",
       "viewOnGithub": "Voir sur GitHub",
       "license": "Sous licence MIT."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "Une application de prise de notes puissante et axée sur la confidentialité avec chiffrement de bout en bout, recherche avancée et synchronisation optionnelle. Accédez à vos notes depuis le web ou le terminal.",
+      "cta": "Essayer maintenant",
+      "note": "Aucun compte requis • Fonctionne hors ligne • Auto-hébergeable"
     },
-    "openLinksInNewTab": "Ouvrir les liens externes dans un nouvel onglet",
+    "screenshots": {
+      "mainInterface": "Interface principale montrant la liste des notes et l'éditeur"
+    },
+    "features": {
+      "title": "Tout ce dont vous avez besoin",
+      "encrypted": {
+        "title": "Chiffrement de bout en bout",
+        "description": "Toutes vos notes sont chiffrées localement avec AES-256-GCM avant le stockage ou la synchronisation."
+      },
+      "localFirst": {
+        "title": "Stockage local d'abord",
+        "description": "Fonctionne complètement hors ligne. Vos données restent sur votre appareil sauf si vous choisissez de synchroniser."
+      },
+      "optionalSync": {
+        "title": "Synchronisation optionnelle",
+        "description": "Auto-hébergez votre propre serveur de synchronisation pour accéder aux notes sur plusieurs appareils."
+      },
+      "powerfulSearch": {
+        "title": "Recherche puissante",
+        "description": "Recherche avancée avec modificateurs, filtres de date, comptage de mots et plus encore."
+      },
+      "tagging": {
+        "title": "Étiquetage intelligent",
+        "description": "Organisez les notes avec des étiquettes et des catégories de couleurs pour une identification visuelle rapide."
+      },
+      "attachments": {
+        "title": "Pièces jointes",
+        "description": "Ajoutez des fichiers, des images et des documents à vos notes. Tout est chiffré."
+      },
+      "keyboard": {
+        "title": "Raccourcis clavier",
+        "description": "Raccourcis clavier entièrement personnalisables pour une gestion efficace des notes."
+      },
+      "categories": {
+        "title": "Catégories de couleurs",
+        "description": "Attribuez des couleurs aux notes et étiquettes pour une organisation visuelle."
+      }
+    },
+    "webFeatures": {
+      "title": "Application web",
+      "subtitle": "Expérience d'édition enrichie avec des technologies web modernes",
+      "richEditor": {
+        "title": "Éditeur de texte enrichi",
+        "description": "Construit sur CodeMirror 6 avec coloration syntaxique pour plus de 20 langages de programmation, support markdown et aperçu en direct.",
+        "points": [
+          "Coloration syntaxique pour les fragments de code",
+          "Rendu et aperçu Markdown",
+          "Rechercher et remplacer",
+          "Basculer le retour à la ligne",
+          "Police et thème configurables"
+        ],
+        "screenshotDescription": "Éditeur avec coloration syntaxique et aperçu markdown"
+      },
+      "multiSelect": {
+        "title": "Multi-sélection et opérations en masse",
+        "description": "Sélectionnez plusieurs notes à la fois et effectuez des opérations par lots pour une gestion efficace des notes.",
+        "points": [
+          "Ctrl/Cmd+Clic pour basculer la sélection",
+          "Maj+Clic pour sélection par plage",
+          "Opérations d'étiquettes en masse",
+          "Exportation et suppression par lots",
+          "Sélectionner toutes les notes filtrées"
+        ],
+        "screenshotDescription": "Mode multi-sélection avec barre d'outils d'opérations en masse"
+      },
+      "versions": {
+        "title": "Historique des versions",
+        "description": "Le versionnage automatique suit les modifications. Affichez, comparez et restaurez les versions précédentes de vos notes.",
+        "points": [
+          "Création automatique de versions",
+          "Vue de différences côte à côte",
+          "Restaurer les versions précédentes",
+          "Suivi des métadonnées de version",
+          "Support de résolution de conflits"
+        ],
+        "screenshotDescription": "Historique des versions avec visualiseur de différences"
+      },
+      "calculator": {
+        "title": "Calculatrice REPL",
+        "description": "Calculatrice intégrée avec historique persistant. Parfaite pour les calculs rapides et les conversions.",
+        "points": [
+          "Opérations mathématiques de base et avancées",
+          "Stockage de variables",
+          "Historique des calculs",
+          "Conversions d'unités",
+          "Copier les résultats dans les notes"
+        ],
+        "screenshotDescription": "Interface de calculatrice REPL"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Interface utilisateur de terminal",
+      "subtitle": "TUI complet pour les passionnés de ligne de commande et les sessions SSH",
+      "terminal": {
+        "title": "Interface TUI rapide",
+        "description": "Interface de terminal ultra-rapide construite avec Ratatui. Naviguez dans vos notes sans quitter le terminal.",
+        "screenshotDescription": "Interface de terminal montrant la liste des notes et l'aperçu",
+        "code": ""
+      },
+      "cli": {
+        "title": "Commandes CLI puissantes",
+        "description": "Outils en ligne de commande pour les opérations rapides sur les notes et l'automatisation.",
+        "screenshotDescription": "Commandes CLI en action",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "Rediriger le contenu directement",
+        "description": "Capturez la sortie de commande en tant que notes instantanément. Parfait pour la journalisation et la documentation.",
+        "screenshotDescription": "Redirection de sortie de commande vers les notes",
+        "code": "echo \"Note rapide\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Synchronisation multiplateforme",
+        "description": "Synchronisez les notes de manière transparente entre les clients web et TUI. Même chiffrement, mêmes données.",
+        "screenshotDescription": "État de synchronisation entre web et TUI",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Sécurité et confidentialité d'abord",
+      "lead": "Vos notes vous appartiennent. Jottery est conçu avec la confidentialité et la sécurité au cœur.",
+      "encryption": {
+        "title": "Chiffrement fort",
+        "description": "Chiffrement AES-256-GCM avec dérivation de clé PBKDF2. Votre mot de passe est la clé : sans lui, les notes sont mathématiquement illisibles."
+      },
+      "selfHosted": {
+        "title": "Auto-hébergé",
+        "description": "Exécutez votre propre serveur de synchronisation avec un contrôle complet. Le serveur ne stocke que des données chiffrées qu'il ne peut pas déchiffrer."
+      },
+      "noTracking": {
+        "title": "Zéro suivi",
+        "description": "Pas d'analyses, pas de suivi, pas de services tiers. Vos données ne quittent jamais votre contrôle."
+      }
+    },
+    "finalCta": {
+      "title": "Prêt à commencer ?",
+      "subtitle": "Configurez votre carnet chiffré en quelques secondes. Aucun compte requis.",
+      "viewOnGitHub": "Voir sur GitHub"
+    }
+  },
+  "unlock": {
+    "welcome": "Bienvenue dans Jottery",
+    "enterPassword": "Entrez votre mot de passe pour déverrouiller",
     "openLinksInNewTabDescription": "Lorsque activé, les liens vers des sites web externes dans l'aperçu Markdown s'ouvriront dans un nouvel onglet au lieu de quitter Jottery",
     "persistSession": "Conserver la session lors du rafraîchissement",
     "persistSessionDescription": "Gardez votre session active lors du rafraîchissement de la page. Le mot de passe est stocké temporairement dans le stockage de session de votre navigateur.",
