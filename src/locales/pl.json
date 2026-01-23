@@ -535,6 +535,10 @@
         "title": "🏠 Samodzielny hosting",
         "description": "Chcesz uruchomić własny serwer synchronizacji? Jottery jest open source i łatwy do samodzielnego hostingu.",
         "viewOnGitHub": "Zobacz na GitHub"
+      },
+      "syncWarning": {
+        "title": "⚠️ Synchronizacja zalecana",
+        "description": "Uruchamianie Jottery bez możliwości synchronizacji <strong>nie jest zalecane</strong>. Wyczyszczenie pamięci podręcznej przeglądarki może usunąć bazę danych. Poświęć czas na skonfigurowanie synchronizacji—system Jottery jest w pełni open source i łatwy do samodzielnego hostingu."
       }
     },
     "sessionExpiredOrInvalid": "Sesja wygasła lub jest nieprawidłowa. Wprowadź swoje hasło."

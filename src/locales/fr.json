@@ -535,6 +535,10 @@
         "title": "🏠 Auto-hébergement",
         "description": "Vous souhaitez exécuter votre propre serveur de synchronisation ? Jottery est open source et facile à auto-héberger.",
         "viewOnGitHub": "Voir sur GitHub"
+      },
+      "syncWarning": {
+        "title": "⚠️ Synchronisation recommandée",
+        "description": "L'utilisation de Jottery sans capacité de synchronisation n'est <strong>pas recommandée</strong>. Vider le cache de votre navigateur peut supprimer la base de données sous-jacente. Prenez le temps de configurer la capacité de synchronisation : le système Jottery est entièrement open source et auto-hébergeable."
       }
     },
     "sessionExpiredOrInvalid": "Session expirée ou invalide. Veuillez entrer votre mot de passe."

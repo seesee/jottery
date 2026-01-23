@@ -520,6 +520,10 @@
         "title": "🏠 Self-Hosting",
         "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
         "viewOnGitHub": "View on GitHub"
+      },
+      "syncWarning": {
+        "title": "⚠️ Sync Recommended",
+        "description": "Running Jottery without sync capability is <strong>not recommended</strong>. Clearing your browser cache can delete the underlying database. Take the time to set up sync capability—the Jottery system is fully open source and self-hostable."
       }
     }
   },

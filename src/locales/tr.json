@@ -535,6 +535,10 @@
         "title": "🏠 Kendi Barındırma",
         "description": "Kendi senkronizasyon sunucunuzu çalıştırmak ister misiniz? Jottery açık kaynaktır ve kendi kendine barındırması kolaydır.",
         "viewOnGitHub": "GitHub'da Görüntüle"
+      },
+      "syncWarning": {
+        "title": "⚠️ Senkronizasyon Önerilir",
+        "description": "Jottery'yi senkronizasyon özelliği olmadan çalıştırmak <strong>önerilmez</strong>. Tarayıcı önbelleğini temizlemek temel veritabanını silebilir. Senkronizasyon özelliğini kurmak için zaman ayırın—Jottery sistemi tamamen açık kaynaklıdır ve kendi kendine barındırılabilir."
       }
     },
     "sessionExpiredOrInvalid": "Oturum süresi doldu veya geçersiz. Lütfen şifrenizi girin."

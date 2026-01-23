@@ -535,6 +535,10 @@
         "title": "🏠 自托管",
         "description": "想要运行自己的同步服务器?Jottery 是开源的,易于自托管。",
         "viewOnGitHub": "在 GitHub 上查看"
+      },
+      "syncWarning": {
+        "title": "⚠️ 建议同步",
+        "description": "<strong>不建议</strong>在没有同步功能的情况下运行 Jottery。清除浏览器缓存可能会删除底层数据库。请花时间设置同步功能—Jottery 系统完全开源且可自托管。"
       }
     },
     "sessionExpiredOrInvalid": "会话已过期或无效。请输入密码。"
