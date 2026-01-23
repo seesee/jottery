@@ -488,6 +488,153 @@
       "enableButton": "Enable Session Persistence"
     }
   },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "A powerful, privacy-first note-taking app with end-to-end encryption, advanced search, and optional sync. Access your notes from web or terminal.",
+      "cta": "Try It Out",
+      "note": "No account required • Works offline • Self-hostable"
+    },
+    "screenshots": {
+      "mainInterface": "Main interface showing note list and editor"
+    },
+    "features": {
+      "title": "Everything You Need",
+      "encrypted": {
+        "title": "End-to-End Encrypted",
+        "description": "All your notes are encrypted locally with AES-256-GCM before storage or sync."
+      },
+      "localFirst": {
+        "title": "Local-First Storage",
+        "description": "Works completely offline. Your data stays on your device unless you choose to sync."
+      },
+      "optionalSync": {
+        "title": "Optional Sync",
+        "description": "Self-host your own sync server to access notes across devices."
+      },
+      "powerfulSearch": {
+        "title": "Powerful Search",
+        "description": "Advanced search with modifiers, date filters, word counts, and more."
+      },
+      "tagging": {
+        "title": "Smart Tagging",
+        "description": "Organize notes with tags and color categories for quick visual identification."
+      },
+      "attachments": {
+        "title": "Attachments",
+        "description": "Add files, images, and documents to your notes. All encrypted."
+      },
+      "keyboard": {
+        "title": "Keyboard Shortcuts",
+        "description": "Fully customizable keyboard shortcuts for efficient note management."
+      },
+      "categories": {
+        "title": "Color Categories",
+        "description": "Assign colors to notes and tags for visual organization."
+      }
+    },
+    "webFeatures": {
+      "title": "Web Application",
+      "subtitle": "Rich editing experience with modern web technologies",
+      "richEditor": {
+        "title": "Rich Text Editor",
+        "description": "Built on CodeMirror 6 with syntax highlighting for 20+ programming languages, markdown support, and live preview.",
+        "points": [
+          "Syntax highlighting for code snippets",
+          "Markdown rendering and preview",
+          "Find and replace",
+          "Word wrap toggle",
+          "Configurable font and theme"
+        ],
+        "screenshotDescription": "Editor with syntax highlighting and markdown preview"
+      },
+      "multiSelect": {
+        "title": "Multi-Select & Bulk Operations",
+        "description": "Select multiple notes at once and perform batch operations for efficient note management.",
+        "points": [
+          "Ctrl/Cmd+Click to toggle selection",
+          "Shift+Click for range selection",
+          "Bulk tag operations",
+          "Batch export and delete",
+          "Select all filtered notes"
+        ],
+        "screenshotDescription": "Multi-select mode with bulk operations toolbar"
+      },
+      "versions": {
+        "title": "Version History",
+        "description": "Automatic versioning keeps track of changes. View, compare, and restore previous versions of your notes.",
+        "points": [
+          "Automatic version creation",
+          "Side-by-side diff view",
+          "Restore previous versions",
+          "Version metadata tracking",
+          "Conflict resolution support"
+        ],
+        "screenshotDescription": "Version history with diff viewer"
+      },
+      "calculator": {
+        "title": "REPL Calculator",
+        "description": "Built-in calculator with persistent history. Perfect for quick calculations and conversions.",
+        "points": [
+          "Basic and advanced math operations",
+          "Variable storage",
+          "Calculation history",
+          "Unit conversions",
+          "Copy results to notes"
+        ],
+        "screenshotDescription": "REPL calculator interface"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Terminal User Interface",
+      "subtitle": "Full-featured TUI for command-line enthusiasts and SSH sessions",
+      "terminal": {
+        "title": "Fast TUI Interface",
+        "description": "Lightning-fast terminal interface built with Ratatui. Navigate your notes without leaving the terminal.",
+        "screenshotDescription": "Terminal interface showing note list and preview",
+        "code": ""
+      },
+      "cli": {
+        "title": "Powerful CLI Commands",
+        "description": "Command-line tools for quick note operations and automation.",
+        "screenshotDescription": "CLI commands in action",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "Pipe Content Directly",
+        "description": "Capture command output as notes instantly. Perfect for logging and documentation.",
+        "screenshotDescription": "Piping command output to notes",
+        "code": "echo \"Quick note\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Cross-Platform Sync",
+        "description": "Seamlessly sync notes between web and TUI clients. Same encryption, same data.",
+        "screenshotDescription": "Sync status across web and TUI",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Security & Privacy First",
+      "lead": "Your notes belong to you. Jottery is designed with privacy and security at its core.",
+      "encryption": {
+        "title": "Strong Encryption",
+        "description": "AES-256-GCM encryption with PBKDF2 key derivation. Your password is the key—without it, notes are mathematically unreadable."
+      },
+      "selfHosted": {
+        "title": "Self-Hosted",
+        "description": "Run your own sync server with complete control. The server only stores encrypted blobs it cannot decrypt."
+      },
+      "noTracking": {
+        "title": "Zero Tracking",
+        "description": "No analytics, no tracking, no third-party services. Your data never leaves your control."
+      }
+    },
+    "finalCta": {
+      "title": "Ready to Get Started?",
+      "subtitle": "Set up your encrypted notebook in seconds. No account required.",
+      "viewOnGitHub": "View on GitHub"
+    }
+  },
   "unlock": {
     "welcome": "Welcome to Jottery",
     "enterPassword": "Enter your password to unlock",

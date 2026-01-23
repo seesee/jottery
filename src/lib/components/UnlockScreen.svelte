@@ -6,6 +6,7 @@
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
+  import LandingPage from './LandingPage.svelte';
 
   let password = '';
   let confirmPassword = '';
@@ -16,6 +17,10 @@
   let showDeleteOption = false;
   let showDeleteConfirm = false;
   let passwordInput: HTMLInputElement;
+
+  // Landing page state for first-time users
+  let showLandingPage = false;
+  let showSetupForm = false;
 
   // Optional sync configuration (first-time setup)
   let showSyncConfig = false;
@@ -29,6 +34,11 @@
   (async () => {
     needsInit = !(await isInitialized());
     isInitializedStore.set(!needsInit);
+
+    // Show landing page for first-time users
+    if (needsInit) {
+      showLandingPage = true;
+    }
   })();
 
   // Auto-focus password input on mount and check for stored password
@@ -202,11 +212,27 @@
   function handleDeleteCancel() {
     showDeleteConfirm = false;
   }
+
+  function handleGetStarted() {
+    showLandingPage = false;
+    showSetupForm = true;
+    // Focus password input after a short delay to allow form to render
+    setTimeout(() => {
+      if (passwordInput) {
+        passwordInput.focus();
+      }
+    }, 100);
+  }
 </script>
 
-<div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 py-8" style="min-height: 100vh; overflow-y: auto;">
-  <div class="w-full max-w-lg mx-auto">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+{#if showLandingPage}
+  <!-- Landing Page for First-Time Users -->
+  <LandingPage onGetStarted={handleGetStarted} />
+{:else}
+  <!-- Password Setup/Unlock Form -->
+  <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 py-8" style="min-height: 100vh; overflow-y: auto;">
+    <div class="w-full max-w-lg mx-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {needsInit ? $_('unlock.welcome') : $_('app.name')}
@@ -423,7 +449,8 @@
       </div>
     </div>
   </div>
-</div>
+  </div>
+{/if}
 
 <ConfirmModal
   show={showDeleteConfirm}
