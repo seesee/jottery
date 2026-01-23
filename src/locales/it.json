@@ -39,6 +39,7 @@
     "selectNote": "Seleziona una nota dall'elenco o creane una nuova",
     "created": "Creata",
     "modified": "Modificata",
+    "version": "Version",
     "attachments": "Allegati",
     "filterByTag": "Filtra per #{tag}",
     "noNotesYet": "Nessuna nota ancora",

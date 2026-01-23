@@ -39,6 +39,7 @@
     "selectNote": "Wählen Sie eine Notiz aus der Liste oder erstellen Sie eine neue",
     "created": "Erstellt",
     "modified": "Geändert",
+    "version": "Version",
     "attachments": "Anhänge",
     "filterByTag": "Nach #{tag} filtern",
     "noNotesYet": "Noch keine Notizen",

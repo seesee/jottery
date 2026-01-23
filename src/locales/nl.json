@@ -39,6 +39,7 @@
     "selectNote": "Selecteer een notitie uit de lijst of maak een nieuwe",
     "created": "Gemaakt",
     "modified": "Gewijzigd",
+    "version": "Version",
     "attachments": "Bijlagen",
     "filterByTag": "Filter op #{tag}",
     "noNotesYet": "Nog geen notities",

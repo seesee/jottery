@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
   import type { Readable } from 'svelte/store';
 
-  export let createdAtFormatted: Readable<string> | null;
+  export let version: number | undefined = undefined;
   export let modifiedAtFormatted: Readable<string> | null;
   export let backgroundColor: string | undefined = undefined;
 </script>
@@ -13,7 +13,7 @@
   style:background-color={backgroundColor}
 >
   <div class="flex justify-between">
-    <span>{$_('note.created')}: {createdAtFormatted ? $createdAtFormatted : ''}</span>
+    <span>{$_('note.version')}: {version ?? 1}</span>
     <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>
   </div>
 </div>

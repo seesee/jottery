@@ -39,6 +39,7 @@
     "selectNote": "Listeden bir not seçin veya yeni bir tane oluşturun",
     "created": "Oluşturuldu",
     "modified": "Değiştirildi",
+    "version": "Version",
     "attachments": "Ekler",
     "filterByTag": "#{tag} etiketine göre filtrele",
     "noNotesYet": "Henüz not yok",

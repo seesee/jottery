@@ -39,6 +39,7 @@
     "selectNote": "リストからノートを選択するか、新しいノートを作成してください",
     "created": "作成日時",
     "modified": "更新日時",
+    "version": "Version",
     "attachments": "添付ファイル",
     "filterByTag": "#{tag}でフィルター",
     "noNotesYet": "まだノートがありません",

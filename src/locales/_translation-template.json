@@ -29,6 +29,7 @@
     "selectNote": "SELECT A NOTE FROM THE LIST OR CREATE A NEW ONE",
     "created": "CREATED",
     "modified": "MODIFIED",
+    "version": "Version",
     "attachments": "ATTACHMENTS",
     "filterByTag": "FILTER BY #{tag}",
     "noNotesYet": "NO NOTES YET",

@@ -39,6 +39,7 @@
     "selectNote": "Выберите заметку из списка или создайте новую",
     "created": "Создано",
     "modified": "Изменено",
+    "version": "Version",
     "attachments": "Вложения",
     "filterByTag": "Фильтр по #{tag}",
     "noNotesYet": "Пока нет заметок",

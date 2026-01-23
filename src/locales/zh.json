@@ -39,6 +39,7 @@
     "selectNote": "从列表中选择笔记或创建新笔记",
     "created": "创建时间",
     "modified": "修改时间",
+    "version": "Version",
     "attachments": "附件",
     "filterByTag": "按 #{tag} 筛选",
     "noNotesYet": "还没有笔记",

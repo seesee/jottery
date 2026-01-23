@@ -1016,7 +1016,7 @@
     <!-- Metadata Footer -->
     {#if $selectedNote}
       <EditorFooter
-        {createdAtFormatted}
+        version={$selectedNote.version}
         {modifiedAtFormatted}
         backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.3) : undefined}
       />

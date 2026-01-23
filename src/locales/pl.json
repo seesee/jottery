@@ -39,6 +39,7 @@
     "selectNote": "Wybierz notatkę z listy lub utwórz nową",
     "created": "Utworzono",
     "modified": "Zmodyfikowano",
+    "version": "Version",
     "attachments": "Załączniki",
     "filterByTag": "Filtruj według #{tag}",
     "noNotesYet": "Brak notatek",
