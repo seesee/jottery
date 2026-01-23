@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery, zengin içerik, sözdizimi vurgulama ve şifreleme ile notları yakalamak, düzenlemek ve aramak için gizlilik odaklı, kendi barındırılan bir not defteri uygulamasıdır.",
       "viewOnGithub": "GitHub'da Görüntüle",
       "license": "MIT Lisansı altında lisanslanmıştır."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "Uçtan uca şifreleme, gelişmiş arama ve isteğe bağlı senkronizasyona sahip güçlü, gizlilik odaklı not alma uygulaması. Notlarınıza web veya terminalden erişin.",
+      "cta": "Deneyin",
+      "note": "Hesap gerekmez • Çevrimdışı çalışır • Kendi sunucunuza kurabilirsiniz"
     },
-    "openLinksInNewTab": "Dış bağlantıları yeni sekmede aç",
+    "screenshots": {
+      "mainInterface": "Not listesi ve düzenleyiciyi gösteren ana arayüz"
+    },
+    "features": {
+      "title": "İhtiyacınız olan her şey",
+      "encrypted": {
+        "title": "Uçtan uca şifreli",
+        "description": "Tüm notlarınız depolama veya senkronizasyon öncesinde AES-256-GCM ile yerel olarak şifrelenir."
+      },
+      "localFirst": {
+        "title": "Önce yerel depolama",
+        "description": "Tamamen çevrimdışı çalışır. Senkronize etmeyi seçmediğiniz sürece verileriniz cihazınızda kalır."
+      },
+      "optionalSync": {
+        "title": "İsteğe bağlı senkronizasyon",
+        "description": "Notlara birden fazla cihazdan erişmek için kendi senkronizasyon sunucunuzu barındırın."
+      },
+      "powerfulSearch": {
+        "title": "Güçlü arama",
+        "description": "Değiştiriciler, tarih filtreleri, kelime sayıları ve daha fazlasıyla gelişmiş arama."
+      },
+      "tagging": {
+        "title": "Akıllı etiketleme",
+        "description": "Hızlı görsel tanımlama için notları etiketler ve renk kategorileriyle düzenleyin."
+      },
+      "attachments": {
+        "title": "Ekler",
+        "description": "Notlarınıza dosya, resim ve belge ekleyin. Tümü şifrelidir."
+      },
+      "keyboard": {
+        "title": "Klavye kısayolları",
+        "description": "Verimli not yönetimi için tamamen özelleştirilebilir klavye kısayolları."
+      },
+      "categories": {
+        "title": "Renk kategorileri",
+        "description": "Görsel organizasyon için notlara ve etiketlere renkler atayın."
+      }
+    },
+    "webFeatures": {
+      "title": "Web uygulaması",
+      "subtitle": "Modern web teknolojileriyle zengin düzenleme deneyimi",
+      "richEditor": {
+        "title": "Zengin metin düzenleyici",
+        "description": "20'den fazla programlama dili için sözdizimi vurgulama, markdown desteği ve canlı önizleme ile CodeMirror 6 üzerine inşa edilmiştir.",
+        "points": [
+          "Kod parçacıkları için sözdizimi vurgulama",
+          "Markdown oluşturma ve önizleme",
+          "Bul ve değiştir",
+          "Kelime kaydırma geçişi",
+          "Yapılandırılabilir yazı tipi ve tema"
+        ],
+        "screenshotDescription": "Sözdizimi vurgulama ve markdown önizlemeli düzenleyici"
+      },
+      "multiSelect": {
+        "title": "Çoklu seçim ve toplu işlemler",
+        "description": "Aynı anda birden fazla not seçin ve verimli not yönetimi için toplu işlemler gerçekleştirin.",
+        "points": [
+          "Ctrl/Cmd+Tıklama ile seçimi değiştir",
+          "Shift+Tıklama ile aralık seçimi",
+          "Toplu etiket işlemleri",
+          "Toplu dışa aktarma ve silme",
+          "Filtrelenmiş tüm notları seç"
+        ],
+        "screenshotDescription": "Toplu işlemler araç çubuğu ile çoklu seçim modu"
+      },
+      "versions": {
+        "title": "Sürüm geçmişi",
+        "description": "Otomatik sürümleme değişiklikleri takip eder. Notlarınızın önceki sürümlerini görüntüleyin, karşılaştırın ve geri yükleyin.",
+        "points": [
+          "Otomatik sürüm oluşturma",
+          "Yan yana fark görünümü",
+          "Önceki sürümleri geri yükle",
+          "Sürüm meta verileri takibi",
+          "Çakışma çözümleme desteği"
+        ],
+        "screenshotDescription": "Fark görüntüleyicili sürüm geçmişi"
+      },
+      "calculator": {
+        "title": "REPL hesap makinesi",
+        "description": "Kalıcı geçmişe sahip yerleşik hesap makinesi. Hızlı hesaplamalar ve dönüşümler için mükemmel.",
+        "points": [
+          "Temel ve gelişmiş matematik işlemleri",
+          "Değişken depolama",
+          "Hesaplama geçmişi",
+          "Birim dönüşümleri",
+          "Sonuçları notlara kopyala"
+        ],
+        "screenshotDescription": "REPL hesap makinesi arayüzü"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Terminal kullanıcı arayüzü",
+      "subtitle": "Komut satırı meraklıları ve SSH oturumları için tam özellikli TUI",
+      "terminal": {
+        "title": "Hızlı TUI arayüzü",
+        "description": "Ratatui ile oluşturulmuş yıldırım hızında terminal arayüzü. Terminali terk etmeden notlarınızda gezinin.",
+        "screenshotDescription": "Not listesi ve önizleme gösteren terminal arayüzü",
+        "code": ""
+      },
+      "cli": {
+        "title": "Güçlü CLI komutları",
+        "description": "Hızlı not işlemleri ve otomasyon için komut satırı araçları.",
+        "screenshotDescription": "Çalışan CLI komutları",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "İçeriği doğrudan yönlendir",
+        "description": "Komut çıktısını anında not olarak yakalayın. Günlükleme ve dokümantasyon için mükemmel.",
+        "screenshotDescription": "Komut çıktısını notlara yönlendirme",
+        "code": "echo \"Hızlı not\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Platformlar arası senkronizasyon",
+        "description": "Web ve TUI istemcileri arasında notları sorunsuzca senkronize edin. Aynı şifreleme, aynı veri.",
+        "screenshotDescription": "Web ve TUI arasında senkronizasyon durumu",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Önce güvenlik ve gizlilik",
+      "lead": "Notlarınız size aittir. Jottery, gizlilik ve güvenlik merkezli olarak tasarlanmıştır.",
+      "encryption": {
+        "title": "Güçlü şifreleme",
+        "description": "PBKDF2 anahtar türetme ile AES-256-GCM şifreleme. Şifreniz anahtardır—onsuz notlar matematiksel olarak okunamaz."
+      },
+      "selfHosted": {
+        "title": "Kendi sunucunuzda",
+        "description": "Tam kontrol ile kendi senkronizasyon sunucunuzu çalıştırın. Sunucu yalnızca şifresini çözemediği şifrelenmiş verileri saklar."
+      },
+      "noTracking": {
+        "title": "Sıfır izleme",
+        "description": "Analitik yok, izleme yok, üçüncü taraf hizmetler yok. Verileriniz asla kontrolünüzden çıkmaz."
+      }
+    },
+    "finalCta": {
+      "title": "Başlamaya hazır mısınız?",
+      "subtitle": "Şifrelenmiş not defterinizi saniyeler içinde kurun. Hesap gerekmez.",
+      "viewOnGitHub": "GitHub'da görüntüle"
+    }
+  },
+  "unlock": {
+    "welcome": "Jottery'ye hoş geldiniz",
+    "enterPassword": "Kilidi açmak için şifrenizi girin",
     "openLinksInNewTabDescription": "Etkinleştirildiğinde, Markdown önizlemesindeki harici web sitelerine bağlantılar Jottery'den ayrılmak yerine yeni bir tarayıcı sekmesinde açılır",
     "persistSession": "Sayfa yenilemesinde oturumu koru",
     "persistSessionDescription": "Sayfayı yenilerken oturumunuzu aktif tutun. Şifre, tarayıcınızın oturum deposunda geçici olarak saklanır.",
