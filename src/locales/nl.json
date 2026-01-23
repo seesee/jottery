@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery is een privacy-gerichte, zelf-gehoste kladblokapplicatie voor het vastleggen, organiseren en doorzoeken van notities met rijke inhoud, syntaxisaccentuering en versleuteling.",
       "viewOnGithub": "Bekijken op GitHub",
       "license": "Gelicentieerd onder de MIT-licentie."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "Een krachtige, privacy-gerichte notitie-app met end-to-end versleuteling, geavanceerde zoekfunctie en optionele synchronisatie. Toegang tot je notities vanaf web of terminal.",
+      "cta": "Probeer het uit",
+      "note": "Geen account vereist • Werkt offline • Zelf te hosten"
     },
-    "openLinksInNewTab": "Open externe links in nieuw tabblad",
+    "screenshots": {
+      "mainInterface": "Hoofdinterface met notitielijst en editor"
+    },
+    "features": {
+      "title": "Alles wat je nodig hebt",
+      "encrypted": {
+        "title": "End-to-end versleuteld",
+        "description": "Alle je notities worden lokaal versleuteld met AES-256-GCM voor opslag of synchronisatie."
+      },
+      "localFirst": {
+        "title": "Lokale opslag eerst",
+        "description": "Werkt volledig offline. Je gegevens blijven op je apparaat tenzij je ervoor kiest te synchroniseren."
+      },
+      "optionalSync": {
+        "title": "Optionele synchronisatie",
+        "description": "Host je eigen synchronisatieserver om notities op meerdere apparaten te openen."
+      },
+      "powerfulSearch": {
+        "title": "Krachtige zoekopdracht",
+        "description": "Geavanceerde zoekopdracht met modificatoren, datumfilters, woordaantallen en meer."
+      },
+      "tagging": {
+        "title": "Slimme tags",
+        "description": "Organiseer notities met tags en kleurcategorieën voor snelle visuele identificatie."
+      },
+      "attachments": {
+        "title": "Bijlagen",
+        "description": "Voeg bestanden, afbeeldingen en documenten toe aan je notities. Alles versleuteld."
+      },
+      "keyboard": {
+        "title": "Sneltoetsen",
+        "description": "Volledig aanpasbare sneltoetsen voor efficiënt notitiebeheer."
+      },
+      "categories": {
+        "title": "Kleurcategorieën",
+        "description": "Wijs kleuren toe aan notities en tags voor visuele organisatie."
+      }
+    },
+    "webFeatures": {
+      "title": "Webapplicatie",
+      "subtitle": "Rijke bewerkingservaring met moderne webtechnologieën",
+      "richEditor": {
+        "title": "Rijke teksteditor",
+        "description": "Gebouwd op CodeMirror 6 met syntaxisaccentuering voor meer dan 20 programmeertalen, markdown-ondersteuning en live voorvertoning.",
+        "points": [
+          "Syntaxisaccentuering voor codefragmenten",
+          "Markdown-rendering en voorvertoning",
+          "Zoeken en vervangen",
+          "Regelafbreking schakelen",
+          "Configureerbaar lettertype en thema"
+        ],
+        "screenshotDescription": "Editor met syntaxisaccentuering en markdown voorvertoning"
+      },
+      "multiSelect": {
+        "title": "Multi-selectie en bulkbewerkingen",
+        "description": "Selecteer meerdere notities tegelijk en voer batchbewerkingen uit voor efficiënt notitiebeheer.",
+        "points": [
+          "Ctrl/Cmd+Klik om selectie te schakelen",
+          "Shift+Klik voor bereikselectie",
+          "Bulk tagbewerkingen",
+          "Batch exporteren en verwijderen",
+          "Selecteer alle gefilterde notities"
+        ],
+        "screenshotDescription": "Multi-selectiemodus met werkbalk voor bulkbewerkingen"
+      },
+      "versions": {
+        "title": "Versiegeschiedenis",
+        "description": "Automatische versiebeheer houdt wijzigingen bij. Bekijk, vergelijk en herstel eerdere versies van je notities.",
+        "points": [
+          "Automatische versie-aanmaak",
+          "Naast elkaar diff-weergave",
+          "Herstel eerdere versies",
+          "Versiemetadata bijhouden",
+          "Ondersteuning voor conflictoplossing"
+        ],
+        "screenshotDescription": "Versiegeschiedenis met diff-viewer"
+      },
+      "calculator": {
+        "title": "REPL-calculator",
+        "description": "Ingebouwde calculator met permanente geschiedenis. Perfect voor snelle berekeningen en conversies.",
+        "points": [
+          "Basis en geavanceerde wiskundige bewerkingen",
+          "Variabele opslag",
+          "Berekeningsgeschiedenis",
+          "Eenheidsconversies",
+          "Kopieer resultaten naar notities"
+        ],
+        "screenshotDescription": "REPL-calculatorinterface"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Terminal gebruikersinterface",
+      "subtitle": "Volledig uitgeruste TUI voor commandoregel-enthousiastelingen en SSH-sessies",
+      "terminal": {
+        "title": "Snelle TUI-interface",
+        "description": "Bliksemsnelle terminalinterface gebouwd met Ratatui. Navigeer door je notities zonder de terminal te verlaten.",
+        "screenshotDescription": "Terminalinterface met notitielijst en voorvertoning",
+        "code": ""
+      },
+      "cli": {
+        "title": "Krachtige CLI-commando's",
+        "description": "Commandoregel-tools voor snelle notitie-operaties en automatisering.",
+        "screenshotDescription": "CLI-commando's in actie",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "Inhoud rechtstreeks doorgeven",
+        "description": "Leg command-uitvoer direct vast als notities. Perfect voor logging en documentatie.",
+        "screenshotDescription": "Command-uitvoer doorgeven naar notities",
+        "code": "echo \"Snelle notitie\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Cross-platform synchronisatie",
+        "description": "Synchroniseer notities naadloos tussen web- en TUI-clients. Dezelfde versleuteling, dezelfde gegevens.",
+        "screenshotDescription": "Synchronisatiestatus tussen web en TUI",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Beveiliging en privacy eerst",
+      "lead": "Je notities zijn van jou. Jottery is ontworpen met privacy en beveiliging als kern.",
+      "encryption": {
+        "title": "Sterke versleuteling",
+        "description": "AES-256-GCM-versleuteling met PBKDF2-sleutelafleiding. Je wachtwoord is de sleutel: zonder dat zijn notities wiskundig onleesbaar."
+      },
+      "selfHosted": {
+        "title": "Zelf gehost",
+        "description": "Draai je eigen synchronisatieserver met volledige controle. De server slaat alleen versleutelde gegevens op die hij niet kan ontsleutelen."
+      },
+      "noTracking": {
+        "title": "Geen tracking",
+        "description": "Geen analyses, geen tracking, geen diensten van derden. Je gegevens verlaten nooit je controle."
+      }
+    },
+    "finalCta": {
+      "title": "Klaar om te beginnen?",
+      "subtitle": "Stel je versleutelde notitieboek in binnen enkele seconden. Geen account vereist.",
+      "viewOnGitHub": "Bekijk op GitHub"
+    }
+  },
+  "unlock": {
+    "welcome": "Welkom bij Jottery",
+    "enterPassword": "Voer je wachtwoord in om te ontgrendelen",
     "openLinksInNewTabDescription": "Indien ingeschakeld, worden links naar externe websites in de Markdown-voorvertoning geopend in een nieuw browsertabblad in plaats van Jottery te verlaten",
     "persistSession": "Sessie behouden na paginavernieuwing",
     "persistSessionDescription": "Houd je sessie actief bij het vernieuwen van de pagina. Het wachtwoord wordt tijdelijk opgeslagen in de sessie-opslag van je browser.",

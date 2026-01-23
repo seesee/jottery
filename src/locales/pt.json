@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery é um aplicativo de bloco de notas auto-hospedado focado em privacidade para capturar, organizar e pesquisar notas com conteúdo rico, realce de sintaxe e criptografia.",
       "viewOnGithub": "Ver no GitHub",
       "license": "Licenciado sob a Licença MIT."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "Um aplicativo de notas poderoso e focado em privacidade com criptografia de ponta a ponta, pesquisa avançada e sincronização opcional. Acesse suas notas da web ou terminal.",
+      "cta": "Experimente",
+      "note": "Nenhuma conta necessária • Funciona offline • Auto-hospedável"
     },
-    "openLinksInNewTab": "Abrir links externos em nova aba",
+    "screenshots": {
+      "mainInterface": "Interface principal mostrando lista de notas e editor"
+    },
+    "features": {
+      "title": "Tudo o que você precisa",
+      "encrypted": {
+        "title": "Criptografia de ponta a ponta",
+        "description": "Todas as suas notas são criptografadas localmente com AES-256-GCM antes do armazenamento ou sincronização."
+      },
+      "localFirst": {
+        "title": "Armazenamento local primeiro",
+        "description": "Funciona completamente offline. Seus dados permanecem no seu dispositivo, a menos que você escolha sincronizar."
+      },
+      "optionalSync": {
+        "title": "Sincronização opcional",
+        "description": "Auto-hospede seu próprio servidor de sincronização para acessar notas em vários dispositivos."
+      },
+      "powerfulSearch": {
+        "title": "Pesquisa poderosa",
+        "description": "Pesquisa avançada com modificadores, filtros de data, contagem de palavras e muito mais."
+      },
+      "tagging": {
+        "title": "Etiquetagem inteligente",
+        "description": "Organize notas com tags e categorias de cores para identificação visual rápida."
+      },
+      "attachments": {
+        "title": "Anexos",
+        "description": "Adicione arquivos, imagens e documentos às suas notas. Tudo criptografado."
+      },
+      "keyboard": {
+        "title": "Atalhos de teclado",
+        "description": "Atalhos de teclado totalmente personalizáveis para gerenciamento eficiente de notas."
+      },
+      "categories": {
+        "title": "Categorias de cores",
+        "description": "Atribua cores a notas e tags para organização visual."
+      }
+    },
+    "webFeatures": {
+      "title": "Aplicação web",
+      "subtitle": "Experiência de edição rica com tecnologias web modernas",
+      "richEditor": {
+        "title": "Editor de texto rico",
+        "description": "Construído sobre CodeMirror 6 com realce de sintaxe para mais de 20 linguagens de programação, suporte markdown e visualização ao vivo.",
+        "points": [
+          "Realce de sintaxe para trechos de código",
+          "Renderização e visualização Markdown",
+          "Localizar e substituir",
+          "Alternar quebra de linha",
+          "Fonte e tema configuráveis"
+        ],
+        "screenshotDescription": "Editor com realce de sintaxe e visualização markdown"
+      },
+      "multiSelect": {
+        "title": "Multi-seleção e operações em lote",
+        "description": "Selecione várias notas de uma vez e execute operações em lote para gerenciamento eficiente de notas.",
+        "points": [
+          "Ctrl/Cmd+Clique para alternar seleção",
+          "Shift+Clique para seleção por intervalo",
+          "Operações de tags em lote",
+          "Exportação e exclusão em lote",
+          "Selecionar todas as notas filtradas"
+        ],
+        "screenshotDescription": "Modo multi-seleção com barra de ferramentas de operações em lote"
+      },
+      "versions": {
+        "title": "Histórico de versões",
+        "description": "O versionamento automático rastreia alterações. Visualize, compare e restaure versões anteriores de suas notas.",
+        "points": [
+          "Criação automática de versões",
+          "Visualização de diferenças lado a lado",
+          "Restaurar versões anteriores",
+          "Rastreamento de metadados de versão",
+          "Suporte de resolução de conflitos"
+        ],
+        "screenshotDescription": "Histórico de versões com visualizador de diferenças"
+      },
+      "calculator": {
+        "title": "Calculadora REPL",
+        "description": "Calculadora integrada com histórico persistente. Perfeita para cálculos rápidos e conversões.",
+        "points": [
+          "Operações matemáticas básicas e avançadas",
+          "Armazenamento de variáveis",
+          "Histórico de cálculos",
+          "Conversões de unidades",
+          "Copiar resultados para notas"
+        ],
+        "screenshotDescription": "Interface da calculadora REPL"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Interface de usuário de terminal",
+      "subtitle": "TUI completa para entusiastas de linha de comando e sessões SSH",
+      "terminal": {
+        "title": "Interface TUI rápida",
+        "description": "Interface de terminal ultra-rápida construída com Ratatui. Navegue pelas suas notas sem sair do terminal.",
+        "screenshotDescription": "Interface de terminal mostrando lista de notas e visualização",
+        "code": ""
+      },
+      "cli": {
+        "title": "Comandos CLI poderosos",
+        "description": "Ferramentas de linha de comando para operações rápidas de notas e automação.",
+        "screenshotDescription": "Comandos CLI em ação",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "Redirecionar conteúdo diretamente",
+        "description": "Capture a saída de comandos como notas instantaneamente. Perfeito para registro e documentação.",
+        "screenshotDescription": "Redirecionamento de saída de comando para notas",
+        "code": "echo \"Nota rápida\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Sincronização multiplataforma",
+        "description": "Sincronize notas perfeitamente entre clientes web e TUI. Mesma criptografia, mesmos dados.",
+        "screenshotDescription": "Status de sincronização entre web e TUI",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Segurança e privacidade em primeiro lugar",
+      "lead": "Suas notas pertencem a você. Jottery é projetado com privacidade e segurança em seu núcleo.",
+      "encryption": {
+        "title": "Criptografia forte",
+        "description": "Criptografia AES-256-GCM com derivação de chave PBKDF2. Sua senha é a chave: sem ela, as notas são matematicamente ilegíveis."
+      },
+      "selfHosted": {
+        "title": "Auto-hospedado",
+        "description": "Execute seu próprio servidor de sincronização com controle completo. O servidor armazena apenas dados criptografados que não pode descriptografar."
+      },
+      "noTracking": {
+        "title": "Zero rastreamento",
+        "description": "Sem análises, sem rastreamento, sem serviços de terceiros. Seus dados nunca saem do seu controle."
+      }
+    },
+    "finalCta": {
+      "title": "Pronto para começar?",
+      "subtitle": "Configure seu caderno criptografado em segundos. Nenhuma conta necessária.",
+      "viewOnGitHub": "Ver no GitHub"
+    }
+  },
+  "unlock": {
+    "welcome": "Bem-vindo ao Jottery",
+    "enterPassword": "Digite sua senha para desbloquear",
     "openLinksInNewTabDescription": "Quando ativado, links para sites externos na visualização Markdown abrirão em uma nova aba do navegador em vez de sair do Jottery",
     "persistSession": "Manter sessão após atualização da página",
     "persistSessionDescription": "Mantenha sua sessão ativa ao atualizar a página. A senha é armazenada temporariamente no armazenamento de sessão do navegador.",
