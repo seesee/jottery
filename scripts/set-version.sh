@@ -59,7 +59,7 @@ fi
 echo "✓ Server tests passed"
 echo ""
 
-# Regenerate SQLx query cache for offline Docker builds
+# Regenerate SQLx query cache for offline Docker builds (pre-version update)
 echo "→ Regenerating SQLx query cache..."
 if ! (cd server && cargo sqlx prepare); then
     echo "✗ SQLx cache regeneration failed"
@@ -129,11 +129,21 @@ else
 fi
 
 echo ""
+echo "Regenerating SQLx query cache after version update..."
+if ! (cd server && cargo sqlx prepare); then
+    echo "✗ SQLx cache regeneration failed after version update"
+    exit 1
+fi
+echo "✓ SQLx query cache regenerated with new version"
+echo ""
+
 echo "Version updated to $VERSION in:"
 echo "  - package.json (web client)"
 echo "  - tui/Cargo.toml (TUI client)"
 echo "  - server/Cargo.toml (server)"
 echo "  - admin/package.json (admin dashboard)"
+echo ""
+echo "SQLx query cache updated for Docker builds"
 echo ""
 echo "Review changes:"
 echo "  git diff"
