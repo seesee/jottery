@@ -11,48 +11,45 @@ import { join } from 'path';
 // Helper function to import demo notes via Settings UI
 async function importDemoNotes(page: any) {
   const demoNotesPath = join(process.cwd(), 'demo', 'jottery-demo-notes.json');
-  const demoNotesJson = await readFile(demoNotesPath, 'utf-8');
 
   // Open settings
   const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to Backup tab
-  const backupTab = page.locator('button, [role="tab"]').filter({ hasText: /Backup|Import|Export/i }).first();
-  if (await backupTab.isVisible().catch(() => false)) {
-    await backupTab.click();
-    await page.waitForTimeout(500);
-  }
+  // Navigate to Advanced tab
+  const advancedTab = page.locator('button, [role="tab"]').filter({ hasText: /Advanced/i }).first();
+  await advancedTab.waitFor({ state: 'visible' });
+  await advancedTab.click();
+  await page.waitForTimeout(500);
 
-  // Find import textarea or file input
-  const importTextarea = page.locator('textarea').first();
-  if (await importTextarea.isVisible().catch(() => false)) {
-    await importTextarea.fill(demoNotesJson);
-    await page.waitForTimeout(300);
+  // Find and click the Import button (which triggers file input)
+  const importButton = page.locator('button').filter({ hasText: /📥.*Import/i }).first();
+  await importButton.waitFor({ state: 'visible' });
 
-    // Click import/confirm button
-    const importButton = page.locator('button').filter({ hasText: /Import|Confirm|Load/i }).first();
-    if (await importButton.isVisible().catch(() => false)) {
-      await importButton.click();
-      await page.waitForTimeout(2000);
-    }
-  }
+  // Set up file chooser handler before clicking
+  const fileChooserPromise = page.waitForEvent('filechooser');
+  await importButton.click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(demoNotesPath);
 
-  // Close settings - try multiple methods
+  // Wait for import to complete - look for the Done button
+  const doneButton = page.locator('button').filter({ hasText: /Done|Close/i }).last();
+  await doneButton.waitFor({ state: 'visible', timeout: 15000 });
+  await doneButton.click();
+  await page.waitForTimeout(500);
+
+  // Close settings modal
   await page.keyboard.press('Escape');
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
 
-  // If modal still open, click close button
-  const closeButton = page.locator('button').filter({ hasText: /Close|✕|×/i }).first();
-  if (await closeButton.isVisible().catch(() => false)) {
-    await closeButton.click();
-    await page.waitForTimeout(300);
-  }
+  // Verify modal is closed
+  const modalCheck = page.locator('[role="dialog"]').first();
+  const isModalOpen = await modalCheck.isVisible().catch(() => false);
 
-  // Click outside modal if still there
-  const modalBackdrop = page.locator('[role="dialog"]').first();
-  if (await modalBackdrop.isVisible().catch(() => false)) {
+  if (isModalOpen) {
+    // Try one more escape
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
   }
@@ -112,8 +109,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Set light theme
     await setTheme(page, 'light');
 
-    // TODO: Import demo notes (commented out for now - needs fixing)
-    // await importDemoNotes(page);
+    // Import demo notes
+    await importDemoNotes(page);
   });
 
   test('01-light. Main Interface - Note List and Editor', async ({ page }) => {
@@ -293,8 +290,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Set dark theme
     await setTheme(page, 'dark');
 
-    // TODO: Import demo notes (commented out for now - needs fixing)
-    // await importDemoNotes(page);
+    // Import demo notes
+    await importDemoNotes(page);
   });
 
   test('01-dark. Main Interface - Note List and Editor', async ({ page }) => {
