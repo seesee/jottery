@@ -55,6 +55,36 @@ async function importDemoNotes(page: any) {
   }
 }
 
+// Helper to set tag colors directly in IndexedDB
+async function setTagColors(page: any, tagColors: Record<string, string>) {
+  await page.evaluate(async (colors: Record<string, string>) => {
+    // Open IndexedDB
+    const dbRequest = indexedDB.open('jottery');
+    await new Promise<void>((resolve, reject) => {
+      dbRequest.onsuccess = async () => {
+        const db = dbRequest.result;
+        const tx = db.transaction('settings', 'readwrite');
+        const store = tx.objectStore('settings');
+
+        // Get existing settings
+        const getRequest = store.get('user_settings');
+        getRequest.onsuccess = () => {
+          const settings = getRequest.result || {};
+          settings.tagColors = colors;
+
+          // Save updated settings
+          store.put(settings, 'user_settings');
+          tx.oncomplete = () => resolve();
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+      };
+      dbRequest.onerror = () => reject(dbRequest.error);
+    });
+  }, tagColors);
+
+  await page.waitForTimeout(500);
+}
+
 // Helper to set theme by applying document class and triggering component updates
 async function setTheme(page: any, theme: 'light' | 'dark') {
   await page.evaluate((themeValue: string) => {
@@ -112,6 +142,23 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Import demo notes
     await importDemoNotes(page);
+
+    // Set tag colors for demo, recipe, and notes tags
+    await setTagColors(page, {
+      demo: 'blue',
+      recipe: 'orange',
+      notes: 'purple',
+    });
+
+    // Force component refresh to apply tag colors (theme toggle triggers NoteList refresh)
+    const currentTheme = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    if (currentTheme) {
+      await setTheme(page, 'light');
+      await setTheme(page, 'dark');
+    } else {
+      await setTheme(page, 'dark');
+      await setTheme(page, 'light');
+    }
   });
 
   test('01-light. Main Interface - Note List and Editor', async ({ page }) => {
@@ -293,6 +340,23 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Import demo notes
     await importDemoNotes(page);
+
+    // Set tag colors for demo, recipe, and notes tags
+    await setTagColors(page, {
+      demo: 'blue',
+      recipe: 'orange',
+      notes: 'purple',
+    });
+
+    // Force component refresh to apply tag colors (theme toggle triggers NoteList refresh)
+    const currentTheme = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    if (currentTheme) {
+      await setTheme(page, 'light');
+      await setTheme(page, 'dark');
+    } else {
+      await setTheme(page, 'dark');
+      await setTheme(page, 'light');
+    }
   });
 
   test('01-dark. Main Interface - Note List and Editor', async ({ page }) => {
