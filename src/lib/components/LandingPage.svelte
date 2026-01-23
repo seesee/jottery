@@ -16,10 +16,10 @@
   ];
 
   const webFeatures = [
-    { key: 'richEditor', icon: '✏️' },
-    { key: 'multiSelect', icon: '☑️' },
-    { key: 'versions', icon: '📜' },
-    { key: 'calculator', icon: '🧮' },
+    { key: 'richEditor', icon: '✏️', screenshot: '/screenshots/02-rich-editor.png' },
+    { key: 'multiSelect', icon: '☑️', screenshot: '/screenshots/03-multi-select.png' },
+    { key: 'versions', icon: '📜', screenshot: null }, // Keep placeholder
+    { key: 'calculator', icon: '🧮', screenshot: '/screenshots/05-calculator.png' },
   ];
 
   const tuiFeatures = [
@@ -53,11 +53,10 @@
       </div>
 
       <div class="hero-screenshot">
-        <ScreenshotPlaceholder
-          width={1200}
-          height={800}
-          description={$_('landing.screenshots.mainInterface')}
-          icon="🗒️"
+        <img
+          src="/screenshots/01-main-interface.png"
+          alt={$_('landing.screenshots.mainInterface')}
+          class="hero-image"
         />
       </div>
     </div>
@@ -99,12 +98,20 @@
               </ul>
             </div>
             <div class="showcase-screenshot">
-              <ScreenshotPlaceholder
-                width={800}
-                height={600}
-                description={$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}
-                icon={feature.icon}
-              />
+              {#if feature.screenshot}
+                <img
+                  src={feature.screenshot}
+                  alt={$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}
+                  class="showcase-image"
+                />
+              {:else}
+                <ScreenshotPlaceholder
+                  width={800}
+                  height={600}
+                  description={$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}
+                  icon={feature.icon}
+                />
+              {/if}
             </div>
           </div>
         {/each}
@@ -310,6 +317,23 @@
     margin: 0 auto;
   }
 
+  .hero-image {
+    width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .hero-image:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+
+  :global(.dark) .hero-image {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  }
+
   /* Features Grid */
   .features-grid {
     padding: 4rem 0;
@@ -446,6 +470,28 @@
 
   .showcase-content {
     padding: 2rem;
+  }
+
+  .showcase-screenshot {
+    overflow: hidden;
+    border-radius: 0.75rem;
+  }
+
+  .showcase-image {
+    width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .showcase-image:hover {
+    transform: scale(1.02);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  :global(.dark) .showcase-image {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
   }
 
   .showcase-icon {
