@@ -487,8 +487,158 @@
       "aboutDescription": "Jottery to aplikacja do notatek zorientowana na prywatność, samodzielnie hostowana, do przechwytywania, organizowania i przeszukiwania notatek z bogatą treścią, podświetlaniem składni i szyfrowaniem.",
       "viewOnGithub": "Zobacz na GitHub",
       "license": "Licencjonowane na licencji MIT."
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jottery",
+      "subtitle": "Potężna, zorientowana na prywatność aplikacja do notatek z szyfrowaniem end-to-end, zaawansowanym wyszukiwaniem i opcjonalną synchronizacją. Dostęp do notatek z przeglądarki lub terminala.",
+      "cta": "Wypróbuj",
+      "note": "Bez konta • Działa offline • Samodzielnie hostowalne"
     },
-    "openLinksInNewTab": "Otwieraj zewnętrzne linki w nowej karcie",
+    "screenshots": {
+      "mainInterface": "Główny interfejs pokazujący listę notatek i edytor"
+    },
+    "features": {
+      "title": "Wszystko czego potrzebujesz",
+      "encrypted": {
+        "title": "Szyfrowanie end-to-end",
+        "description": "Wszystkie twoje notatki są szyfrowane lokalnie za pomocą AES-256-GCM przed zapisem lub synchronizacją."
+      },
+      "localFirst": {
+        "title": "Przechowywanie lokalne na pierwszym miejscu",
+        "description": "Działa całkowicie offline. Twoje dane pozostają na urządzeniu, chyba że zdecydujesz się na synchronizację."
+      },
+      "optionalSync": {
+        "title": "Opcjonalna synchronizacja",
+        "description": "Hostuj własny serwer synchronizacji, aby uzyskać dostęp do notatek na wielu urządzeniach."
+      },
+      "powerfulSearch": {
+        "title": "Potężne wyszukiwanie",
+        "description": "Zaawansowane wyszukiwanie z modyfikatorami, filtrami dat, liczeniem słów i nie tylko."
+      },
+      "tagging": {
+        "title": "Inteligentne tagowanie",
+        "description": "Organizuj notatki za pomocą tagów i kategorii kolorów dla szybkiej identyfikacji wizualnej."
+      },
+      "attachments": {
+        "title": "Załączniki",
+        "description": "Dodawaj pliki, obrazy i dokumenty do notatek. Wszystko zaszyfrowane."
+      },
+      "keyboard": {
+        "title": "Skróty klawiszowe",
+        "description": "W pełni konfigurowalne skróty klawiszowe dla efektywnego zarządzania notatkami."
+      },
+      "categories": {
+        "title": "Kategorie kolorów",
+        "description": "Przypisuj kolory do notatek i tagów dla wizualnej organizacji."
+      }
+    },
+    "webFeatures": {
+      "title": "Aplikacja webowa",
+      "subtitle": "Bogate doświadczenie edycji z nowoczesnymi technologiami web",
+      "richEditor": {
+        "title": "Rozbudowany edytor tekstu",
+        "description": "Zbudowany na CodeMirror 6 z podświetlaniem składni dla ponad 20 języków programowania, obsługą markdown i podglądem na żywo.",
+        "points": [
+          "Podświetlanie składni dla fragmentów kodu",
+          "Renderowanie i podgląd Markdown",
+          "Znajdź i zamień",
+          "Przełączanie zawijania tekstu",
+          "Konfigurowalna czcionka i motyw"
+        ],
+        "screenshotDescription": "Edytor z podświetlaniem składni i podglądem markdown"
+      },
+      "multiSelect": {
+        "title": "Wielokrotny wybór i operacje masowe",
+        "description": "Zaznaczaj wiele notatek jednocześnie i wykonuj operacje wsadowe dla efektywnego zarządzania notatkami.",
+        "points": [
+          "Ctrl/Cmd+Klik aby przełączyć wybór",
+          "Shift+Klik dla wyboru zakresu",
+          "Masowe operacje na tagach",
+          "Eksport i usuwanie wsadowe",
+          "Wybierz wszystkie przefiltrowane notatki"
+        ],
+        "screenshotDescription": "Tryb wielokrotnego wyboru z paskiem narzędzi operacji masowych"
+      },
+      "versions": {
+        "title": "Historia wersji",
+        "description": "Automatyczne wersjonowanie śledzi zmiany. Przeglądaj, porównuj i przywracaj poprzednie wersje notatek.",
+        "points": [
+          "Automatyczne tworzenie wersji",
+          "Widok różnic obok siebie",
+          "Przywracanie poprzednich wersji",
+          "Śledzenie metadanych wersji",
+          "Wsparcie rozwiązywania konfliktów"
+        ],
+        "screenshotDescription": "Historia wersji z przeglądarką różnic"
+      },
+      "calculator": {
+        "title": "Kalkulator REPL",
+        "description": "Wbudowany kalkulator z trwałą historią. Idealny do szybkich obliczeń i konwersji.",
+        "points": [
+          "Podstawowe i zaawansowane operacje matematyczne",
+          "Przechowywanie zmiennych",
+          "Historia obliczeń",
+          "Konwersje jednostek",
+          "Kopiuj wyniki do notatek"
+        ],
+        "screenshotDescription": "Interfejs kalkulatora REPL"
+      }
+    },
+    "tuiFeatures": {
+      "title": "Terminalowy interfejs użytkownika",
+      "subtitle": "Pełnofunkcyjny TUI dla entuzjastów linii poleceń i sesji SSH",
+      "terminal": {
+        "title": "Szybki interfejs TUI",
+        "description": "Błyskawiczny interfejs terminalowy zbudowany z Ratatui. Nawiguj po notatkach bez opuszczania terminala.",
+        "screenshotDescription": "Interfejs terminala pokazujący listę notatek i podgląd",
+        "code": ""
+      },
+      "cli": {
+        "title": "Potężne polecenia CLI",
+        "description": "Narzędzia wiersza poleceń dla szybkich operacji na notatkach i automatyzacji.",
+        "screenshotDescription": "Polecenia CLI w akcji",
+        "code": "jottery note\njottery list\njottery search \"query\"\njottery show <id>\njottery sync"
+      },
+      "piping": {
+        "title": "Przekierowuj zawartość bezpośrednio",
+        "description": "Przechwytuj wyniki poleceń jako notatki natychmiast. Idealne do logowania i dokumentacji.",
+        "screenshotDescription": "Przekierowywanie wyników poleceń do notatek",
+        "code": "echo \"Szybka notatka\" | jottery note\nls -la | jottery note -t system,logs\ncat error.log | jottery note -t errors"
+      },
+      "crossPlatform": {
+        "title": "Synchronizacja międzyplatformowa",
+        "description": "Bezproblemowa synchronizacja notatek między klientami web i TUI. To samo szyfrowanie, te same dane.",
+        "screenshotDescription": "Status synchronizacji między web a TUI",
+        "code": ""
+      }
+    },
+    "security": {
+      "title": "Bezpieczeństwo i prywatność na pierwszym miejscu",
+      "lead": "Twoje notatki należą do ciebie. Jottery został zaprojektowany z prywatnością i bezpieczeństwem w sercu.",
+      "encryption": {
+        "title": "Silne szyfrowanie",
+        "description": "Szyfrowanie AES-256-GCM z wyprowadzaniem klucza PBKDF2. Twoje hasło to klucz – bez niego notatki są matematycznie nieczytelne."
+      },
+      "selfHosted": {
+        "title": "Samodzielnie hostowane",
+        "description": "Uruchom własny serwer synchronizacji z pełną kontrolą. Serwer przechowuje tylko zaszyfrowane dane, których nie może odszyfrować."
+      },
+      "noTracking": {
+        "title": "Zero śledzenia",
+        "description": "Bez analiz, bez śledzenia, bez usług stron trzecich. Twoje dane nigdy nie opuszczają twojej kontroli."
+      }
+    },
+    "finalCta": {
+      "title": "Gotowy do rozpoczęcia?",
+      "subtitle": "Skonfiguruj zaszyfrowany notatnik w kilka sekund. Bez konta.",
+      "viewOnGitHub": "Zobacz na GitHub"
+    }
+  },
+  "unlock": {
+    "welcome": "Witaj w Jottery",
+    "enterPassword": "Wprowadź hasło, aby odblokować",
     "openLinksInNewTabDescription": "Po włączeniu linki do zewnętrznych stron w podglądzie Markdown będą otwierane w nowej karcie przeglądarki zamiast opuszczać Jottery",
     "persistSession": "Zachowaj sesję po odświeżeniu strony",
     "persistSessionDescription": "Utrzymuj sesję aktywną podczas odświeżania strony. Hasło jest tymczasowo przechowywane w pamięci sesji przeglądarki.",
