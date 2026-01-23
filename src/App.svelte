@@ -201,6 +201,15 @@
       const userSettings = await settingsRepository.get();
       settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
 
+      // Expose app context for E2E testing
+      if (typeof window !== 'undefined') {
+        (window as any).__appContext = {
+          settingsRepository,
+          settings,
+          DEFAULT_SETTINGS,
+        };
+      }
+
       // Initialize i18n with user's language preference
       const initialLocale = getInitialLocale(userSettings.language);
       initI18n(initialLocale);

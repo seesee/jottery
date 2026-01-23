@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Jottery - Privacy-focused, self-hosted note-taking with encryption, syntax highlighting, and powerful search" />
+    <title>Jottery - Encrypted Note-Taking</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1rem;
+      }
+
+      .container {
+        max-width: 1200px;
+        width: 100%;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 3rem;
+        color: white;
+      }
+
+      h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .tagline {
+        font-size: 1.25rem;
+        opacity: 0.95;
+        font-weight: 300;
+      }
+
+      .carousel-container {
+        position: relative;
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto 3rem;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .carousel {
+        position: relative;
+        width: 100%;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+      }
+
+      .carousel-slide {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 1s ease-in-out;
+      }
+
+      .carousel-slide.active {
+        opacity: 1;
+      }
+
+      .carousel-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .carousel-indicators {
+        position: absolute;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+        z-index: 10;
+      }
+
+      .indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .indicator.active {
+        background: rgba(255, 255, 255, 1);
+        transform: scale(1.2);
+      }
+
+      .theme-toggle {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: all 0.3s;
+        z-index: 20;
+      }
+
+      .theme-toggle:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .feature {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      .feature h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+        color: #667eea;
+      }
+
+      .feature p {
+        color: #666;
+        line-height: 1.6;
+      }
+
+      .cta {
+        text-align: center;
+        margin-top: 3rem;
+      }
+
+      .cta-button {
+        display: inline-block;
+        background: white;
+        color: #667eea;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s;
+      }
+
+      .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 2.5rem;
+        }
+
+        .tagline {
+          font-size: 1rem;
+        }
+
+        .features {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Jottery</h1>
+        <p class="tagline">Privacy-focused, encrypted note-taking with powerful features</p>
+      </header>
+
+      <div class="carousel-container">
+        <button class="theme-toggle" id="themeToggle">☀️ Light Mode</button>
+
+        <div class="carousel" id="carousel">
+          <!-- Light mode slides (default) -->
+          <div class="carousel-slide active light-mode">
+            <img src="../public/screenshots/01-main-interface-light.png" alt="Jottery Main Interface" />
+          </div>
+          <div class="carousel-slide light-mode">
+            <img src="../public/screenshots/01-main-interface-light-preview.png" alt="Jottery Preview Mode" />
+          </div>
+          <div class="carousel-slide light-mode">
+            <img src="../public/screenshots/01-main-interface-light-japan.png" alt="Jottery with Colored Notes" />
+          </div>
+
+          <!-- Dark mode slides (hidden by default) -->
+          <div class="carousel-slide dark-mode" style="display: none;">
+            <img src="../public/screenshots/01-main-interface-dark.png" alt="Jottery Main Interface - Dark Mode" />
+          </div>
+          <div class="carousel-slide dark-mode" style="display: none;">
+            <img src="../public/screenshots/01-main-interface-dark-preview.png" alt="Jottery Preview Mode - Dark Mode" />
+          </div>
+          <div class="carousel-slide dark-mode" style="display: none;">
+            <img src="../public/screenshots/01-main-interface-dark-japan.png" alt="Jottery with Colored Notes - Dark Mode" />
+          </div>
+        </div>
+
+        <div class="carousel-indicators">
+          <div class="indicator active" data-slide="0"></div>
+          <div class="indicator" data-slide="1"></div>
+          <div class="indicator" data-slide="2"></div>
+        </div>
+      </div>
+
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">🔒</div>
+          <h3>End-to-End Encryption</h3>
+          <p>AES-256-GCM encryption keeps your notes secure. Your password never leaves your device.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">🔍</div>
+          <h3>Powerful Search</h3>
+          <p>Advanced search with modifiers, date filters, and tag queries to find anything instantly.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">💻</div>
+          <h3>Syntax Highlighting</h3>
+          <p>Built-in CodeMirror editor with syntax highlighting for 20+ programming languages.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">🏷️</div>
+          <h3>Smart Tagging</h3>
+          <p>Organize notes with tags and color categories. Filter and search with ease.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">🔄</div>
+          <h3>Cross-Device Sync</h3>
+          <p>Sync your encrypted notes across all your devices with built-in conflict resolution.</p>
+        </div>
+
+        <div class="feature">
+          <div class="feature-icon">📱</div>
+          <h3>Works Everywhere</h3>
+          <p>Progressive web app works on desktop, mobile, and terminal (TUI available).</p>
+        </div>
+      </div>
+
+      <div class="cta">
+        <a href="https://github.com/seesee/jottery" class="cta-button">View on GitHub</a>
+      </div>
+    </div>
+
+    <script>
+      // Carousel functionality
+      let currentSlide = 0;
+      let isDarkMode = false;
+      let autoplayInterval;
+
+      const indicators = document.querySelectorAll('.indicator');
+      const themeToggle = document.getElementById('themeToggle');
+
+      function showSlide(index) {
+        const slides = document.querySelectorAll(`.carousel-slide.${isDarkMode ? 'dark-mode' : 'light-mode'}`);
+
+        // Hide all slides of current theme
+        slides.forEach(slide => {
+          slide.classList.remove('active');
+        });
+
+        // Show the target slide
+        slides[index].classList.add('active');
+
+        // Update indicators
+        indicators.forEach((indicator, i) => {
+          indicator.classList.toggle('active', i === index);
+        });
+
+        currentSlide = index;
+      }
+
+      function nextSlide() {
+        const slides = document.querySelectorAll(`.carousel-slide.${isDarkMode ? 'dark-mode' : 'light-mode'}`);
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+      }
+
+      function toggleTheme() {
+        isDarkMode = !isDarkMode;
+        const lightSlides = document.querySelectorAll('.carousel-slide.light-mode');
+        const darkSlides = document.querySelectorAll('.carousel-slide.dark-mode');
+
+        // Toggle visibility of slide sets
+        lightSlides.forEach(slide => {
+          slide.style.display = isDarkMode ? 'none' : 'block';
+          slide.classList.remove('active');
+        });
+
+        darkSlides.forEach(slide => {
+          slide.style.display = isDarkMode ? 'block' : 'none';
+          slide.classList.remove('active');
+        });
+
+        // Show current slide in new theme
+        showSlide(currentSlide);
+
+        // Update button text
+        themeToggle.textContent = isDarkMode ? '🌙 Dark Mode' : '☀️ Light Mode';
+      }
+
+      // Start autoplay
+      function startAutoplay() {
+        autoplayInterval = setInterval(nextSlide, 10000); // 10 seconds
+      }
+
+      function stopAutoplay() {
+        clearInterval(autoplayInterval);
+      }
+
+      // Indicator click handlers
+      indicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', () => {
+          stopAutoplay();
+          showSlide(index);
+          startAutoplay();
+        });
+      });
+
+      // Theme toggle handler
+      themeToggle.addEventListener('click', toggleTheme);
+
+      // Start autoplay on load
+      startAutoplay();
+
+      // Pause on hover
+      document.querySelector('.carousel-container').addEventListener('mouseenter', stopAutoplay);
+      document.querySelector('.carousel-container').addEventListener('mouseleave', startAutoplay);
+    </script>
+  </body>
+</html>

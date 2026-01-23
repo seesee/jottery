@@ -213,8 +213,10 @@
   // Update available tags when notes change
   $: availableTags = tagService.getAllTags($notes);
 
+  // Track current theme based on DOM class
+  let currentTheme: 'light' | 'dark' = 'light';
+
   // Compute note background color based on theme
-  $: currentTheme = resolveTheme($settings.theme);
   $: noteBackgroundColor = $selectedNote?.color ? getColorHex($selectedNote.color, currentTheme) : undefined;
 
   // Watch for note selection changes
@@ -910,7 +912,9 @@
 
     // Set up theme observer to watch for dark mode changes
     const updateTheme = () => {
-      isDarkMode = document.documentElement.classList.contains('dark');
+      const darkMode = document.documentElement.classList.contains('dark');
+      isDarkMode = darkMode;
+      currentTheme = darkMode ? 'dark' : 'light';
     };
 
     // Initial check

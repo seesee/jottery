@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { settings } from '../../stores/appStore';
   import { getColorHex, resolveTheme, hexWithOpacity } from '../../services/colorService';
@@ -44,10 +45,37 @@
   // Internal state
   let showMoreMenu = false;
 
+  // Track current theme based on DOM class
+  let currentTheme: 'light' | 'dark' = 'light';
+  let themeObserver: MutationObserver | null = null;
+
   // Color preview and background
-  $: currentTheme = resolveTheme($settings.theme);
   $: colorPreviewHex = color ? getColorHex(color, currentTheme) : undefined;
   $: toolbarBackgroundColor = color ? hexWithOpacity(getColorHex(color, currentTheme), 0.3) : undefined;
+
+  onMount(() => {
+    // Set up theme observer to watch for dark mode changes
+    const updateTheme = () => {
+      currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    };
+
+    // Initial check
+    updateTheme();
+
+    // Watch for theme changes
+    themeObserver = new MutationObserver(updateTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
+
+  onDestroy(() => {
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
+    }
+  });
 
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;

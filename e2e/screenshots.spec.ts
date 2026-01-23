@@ -1,7 +1,6 @@
 /**
  * Screenshot generation for landing page placeholders
  * Run with: npx playwright test screenshots --project=firefox
- * Note: Firefox is used instead of Chromium due to rendering issues with theme switching
  * Screenshots will be saved to: screenshots/
  */
 
@@ -56,31 +55,27 @@ async function importDemoNotes(page: any) {
   }
 }
 
-// Helper to set tag colors directly in IndexedDB
+// Helper to set tag colors directly in IndexedDB and update the settings store
 async function setTagColors(page: any, tagColors: Record<string, string>) {
   await page.evaluate(async (colors: Record<string, string>) => {
-    // Open IndexedDB
-    const dbRequest = indexedDB.open('jottery');
-    await new Promise<void>((resolve, reject) => {
-      dbRequest.onsuccess = async () => {
-        const db = dbRequest.result;
-        const tx = db.transaction('settings', 'readwrite');
-        const store = tx.objectStore('settings');
+    // Import settingsRepository and settings store from the global app context
+    // @ts-ignore - These are available in the browser context
+    const { settingsRepository, settings, DEFAULT_SETTINGS } = window.__appContext || {};
 
-        // Get existing settings
-        const getRequest = store.get('user_settings');
-        getRequest.onsuccess = () => {
-          const settings = getRequest.result || {};
-          settings.tagColors = colors;
+    if (!settingsRepository || !settings) {
+      throw new Error('App context not available - settingsRepository or settings store not found');
+    }
 
-          // Save updated settings
-          store.put(settings, 'user_settings');
-          tx.oncomplete = () => resolve();
-        };
-        getRequest.onerror = () => reject(getRequest.error);
-      };
-      dbRequest.onerror = () => reject(dbRequest.error);
-    });
+    // Update settings via the repository (which writes to IndexedDB)
+    const currentSettings = await settingsRepository.get();
+    const updatedSettings = {
+      ...currentSettings,
+      tagColors: colors,
+    };
+    await settingsRepository.update(updatedSettings);
+
+    // Update the settings store to reflect the change immediately
+    settings.set({ ...DEFAULT_SETTINGS, ...updatedSettings });
   }, tagColors);
 
   await page.waitForTimeout(500);
@@ -157,44 +152,88 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     console.log('✓ Screenshot saved: screenshots/01-main-interface-light.png');
   });
 
+  test('01a-light. Main Interface - Preview Mode', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Click on the welcome note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const firstNote = noteListItems.first();
+    await firstNote.waitFor({ state: 'visible' });
+    await firstNote.click();
+    await page.waitForTimeout(1000);
+
+    // Click Preview button
+    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    await previewButton.waitFor({ state: 'visible' });
+    await previewButton.click();
+    await page.waitForTimeout(500);
+
+    // Take screenshot
+    await page.screenshot({
+      path: 'screenshots/01-main-interface-light-preview.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/01-main-interface-light-preview.png');
+  });
+
+  test('01b-light. Main Interface - Japan Preview', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Find and click the Japan Trip note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Click Preview button
+    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    await previewButton.waitFor({ state: 'visible' });
+    await previewButton.click();
+    await page.waitForTimeout(500);
+
+    // Take screenshot
+    await page.screenshot({
+      path: 'screenshots/01-main-interface-light-japan-preview.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/01-main-interface-light-japan-preview.png');
+  });
+
+  test('01c-light. Main Interface - Japan Note', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Find and click the Japan Trip note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    await page.screenshot({
+      path: 'screenshots/01-main-interface-light-japan.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/01-main-interface-light-japan.png');
+  });
+
   test('02-light. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Create a new note with Python code
-    const newButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newButton.waitFor({ state: 'visible', timeout: 10000 });
-    await newButton.click();
+    // Find and click the Python QuickSort note from demo
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const pythonNote = noteListItems.filter({ hasText: /Python Quick Sort/i }).first();
+    await pythonNote.waitFor({ state: 'visible' });
+    await pythonNote.click();
     await page.waitForTimeout(1000);
-
-    // Type Python code
-    const editor = page.locator('.cm-content').first();
-    await editor.waitFor({ state: 'visible' });
-    await editor.click();
-    await editor.pressSequentially(`def quicksort(arr):
-    if len(arr) <= 1:
-        return arr
-
-    pivot = arr[len(arr) // 2]
-    left = [x for x in arr if x < pivot]
-    middle = [x for x in arr if x == pivot]
-    right = [x for x in arr if x > pivot]
-
-    return quicksort(left) + middle + quicksort(right)
-
-# Test it
-numbers = [64, 34, 25, 12, 22, 11, 90]
-sorted_numbers = quicksort(numbers)
-print(f"Sorted: {sorted_numbers}")`, { delay: 5 });
-
-    await page.waitForTimeout(1500);
-
-    // Set syntax to Python via the language dropdown (visible in editor toolbar)
-    const languageSelect = page.locator('select[aria-label*="language"], select[aria-label*="syntax"], select').first();
-    if (await languageSelect.isVisible().catch(() => false)) {
-      await languageSelect.selectOption('python');
-      await page.waitForTimeout(1500);
-    }
 
     await page.screenshot({
       path: 'screenshots/02-rich-editor-light.png',
@@ -300,8 +339,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       });
     });
 
-    // Reload with theme parameter and set up password
-    await page.goto('/?theme=dark');
+    // Reload and set up password
+    await page.goto('/');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -335,6 +374,12 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Wait for tag colors to apply
     await page.waitForTimeout(1000);
+
+    // Apply dark theme manually
+    await page.evaluate(() => {
+      document.documentElement.classList.add('dark');
+    });
+    await page.waitForTimeout(500); // Wait for colors to update
   });
 
   test('01-dark. Main Interface - Note List and Editor', async ({ page }) => {
@@ -356,44 +401,88 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     console.log('✓ Screenshot saved: screenshots/01-main-interface-dark.png');
   });
 
+  test('01a-dark. Main Interface - Preview Mode', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Click on the welcome note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const firstNote = noteListItems.first();
+    await firstNote.waitFor({ state: 'visible' });
+    await firstNote.click();
+    await page.waitForTimeout(1000);
+
+    // Click Preview button
+    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    await previewButton.waitFor({ state: 'visible' });
+    await previewButton.click();
+    await page.waitForTimeout(500);
+
+    // Take screenshot
+    await page.screenshot({
+      path: 'screenshots/01-main-interface-dark-preview.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark-preview.png');
+  });
+
+  test('01b-dark. Main Interface - Japan Preview', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Find and click the Japan Trip note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Click Preview button
+    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    await previewButton.waitFor({ state: 'visible' });
+    await previewButton.click();
+    await page.waitForTimeout(500);
+
+    // Take screenshot
+    await page.screenshot({
+      path: 'screenshots/01-main-interface-dark-japan-preview.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark-japan-preview.png');
+  });
+
+  test('01c-dark. Main Interface - Japan Note', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Find and click the Japan Trip note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    await page.screenshot({
+      path: 'screenshots/01-main-interface-dark-japan.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark-japan.png');
+  });
+
   test('02-dark. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Create a new note with Python code
-    const newButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newButton.waitFor({ state: 'visible', timeout: 10000 });
-    await newButton.click();
+    // Find and click the Python QuickSort note from demo
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const pythonNote = noteListItems.filter({ hasText: /Python Quick Sort/i }).first();
+    await pythonNote.waitFor({ state: 'visible' });
+    await pythonNote.click();
     await page.waitForTimeout(1000);
-
-    // Type Python code
-    const editor = page.locator('.cm-content').first();
-    await editor.waitFor({ state: 'visible' });
-    await editor.click();
-    await editor.pressSequentially(`def quicksort(arr):
-    if len(arr) <= 1:
-        return arr
-
-    pivot = arr[len(arr) // 2]
-    left = [x for x in arr if x < pivot]
-    middle = [x for x in arr if x == pivot]
-    right = [x for x in arr if x > pivot]
-
-    return quicksort(left) + middle + quicksort(right)
-
-# Test it
-numbers = [64, 34, 25, 12, 22, 11, 90]
-sorted_numbers = quicksort(numbers)
-print(f"Sorted: {sorted_numbers}")`, { delay: 5 });
-
-    await page.waitForTimeout(1500);
-
-    // Set syntax to Python via the language dropdown
-    const languageSelect = page.locator('select[aria-label*="language"], select[aria-label*="syntax"], select').first();
-    if (await languageSelect.isVisible().catch(() => false)) {
-      await languageSelect.selectOption('python');
-      await page.waitForTimeout(1500);
-    }
 
     await page.screenshot({
       path: 'screenshots/02-rich-editor-dark.png',

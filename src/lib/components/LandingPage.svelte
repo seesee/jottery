@@ -6,8 +6,47 @@
   export let onGetStarted: () => void;
 
   let isDarkMode = false;
+  let currentCarouselSlide = 0;
+  let carouselInterval: ReturnType<typeof setInterval>;
 
-  // Detect theme on mount
+  // Carousel screenshots
+  const carouselScreenshots = {
+    light: [
+      { src: '/screenshots/01-main-interface-light.png', alt: 'Main Interface' },
+      { src: '/screenshots/01-main-interface-light-preview.png', alt: 'Preview Mode' },
+      { src: '/screenshots/01-main-interface-light-japan-preview.png', alt: 'Japan Itinerary - Preview' },
+      { src: '/screenshots/01-main-interface-light-japan.png', alt: 'Japan Itinerary - Edit' },
+    ],
+    dark: [
+      { src: '/screenshots/01-main-interface-dark.png', alt: 'Main Interface - Dark' },
+      { src: '/screenshots/01-main-interface-dark-preview.png', alt: 'Preview Mode - Dark' },
+      { src: '/screenshots/01-main-interface-dark-japan-preview.png', alt: 'Japan Itinerary - Preview - Dark' },
+      { src: '/screenshots/01-main-interface-dark-japan.png', alt: 'Japan Itinerary - Edit - Dark' },
+    ],
+  };
+
+  $: currentScreenshots = isDarkMode ? carouselScreenshots.dark : carouselScreenshots.light;
+
+  function nextCarouselSlide() {
+    currentCarouselSlide = (currentCarouselSlide + 1) % 4;
+  }
+
+  function goToCarouselSlide(index: number) {
+    currentCarouselSlide = index;
+  }
+
+  function startCarousel() {
+    // Auto-advance every 10 seconds
+    carouselInterval = setInterval(nextCarouselSlide, 10000);
+  }
+
+  function stopCarousel() {
+    if (carouselInterval) {
+      clearInterval(carouselInterval);
+    }
+  }
+
+  // Detect theme on mount and start carousel
   onMount(() => {
     const updateTheme = () => {
       // Check if document has dark class
@@ -24,7 +63,13 @@
       attributeFilter: ['class'],
     });
 
-    return () => observer.disconnect();
+    // Start carousel
+    startCarousel();
+
+    return () => {
+      observer.disconnect();
+      stopCarousel();
+    };
   });
 
   const features = [
@@ -79,11 +124,6 @@
     }
     return feature.screenshotLight;
   };
-
-  // Hero screenshot (main interface)
-  $: heroScreenshot = isDarkMode
-    ? '/screenshots/01-main-interface-dark.png'
-    : '/screenshots/01-main-interface-light.png';
 </script>
 
 <div class="landing-page">
@@ -109,11 +149,37 @@
       </div>
 
       <div class="hero-screenshot">
-        <img
-          src={heroScreenshot}
-          alt={$_('landing.screenshots.mainInterface')}
-          class="hero-image"
-        />
+        <div
+          class="carousel-container"
+          on:mouseenter={stopCarousel}
+          on:mouseleave={startCarousel}
+          role="region"
+          aria-label="Screenshot carousel"
+        >
+          {#each currentScreenshots as screenshot, index}
+            <div
+              class="carousel-slide"
+              class:active={currentCarouselSlide === index}
+            >
+              <img
+                src={screenshot.src}
+                alt={screenshot.alt}
+                class="hero-image"
+              />
+            </div>
+          {/each}
+
+          <div class="carousel-indicators">
+            {#each currentScreenshots as _, index}
+              <button
+                class="indicator"
+                class:active={currentCarouselSlide === index}
+                on:click={() => goToCarouselSlide(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            {/each}
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -388,6 +454,72 @@
 
   :global(.dark) .hero-image {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Carousel */
+  .carousel-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .carousel-slide {
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  .carousel-slide.active {
+    opacity: 1;
+    position: relative;
+    pointer-events: auto;
+  }
+
+  .carousel-indicators {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.75rem;
+    z-index: 10;
+  }
+
+  .indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.3s;
+  }
+
+  .indicator:hover {
+    background: rgba(255, 255, 255, 0.8);
+    transform: scale(1.1);
+  }
+
+  .indicator.active {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.3);
+  }
+
+  :global(.dark) .indicator {
+    background: rgba(100, 116, 139, 0.6);
+    border-color: rgba(148, 163, 184, 0.9);
+  }
+
+  :global(.dark) .indicator:hover {
+    background: rgba(148, 163, 184, 0.8);
+  }
+
+  :global(.dark) .indicator.active {
+    background: rgba(148, 163, 184, 1);
   }
 
   /* Features Grid */

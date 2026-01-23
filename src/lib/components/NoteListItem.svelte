@@ -54,7 +54,8 @@
   onMount(() => {
     // Set up theme observer to watch for dark mode changes
     const updateTheme = () => {
-      currentTheme = resolveTheme($settings.theme);
+      // Check actual DOM class instead of settings to handle forced themes
+      currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     };
 
     // Initial check
@@ -352,7 +353,7 @@
                 on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
                 role="button"
                 tabindex="0"
-                class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? '' : 'bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700'}"
+                class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
                 style:background-color={tagBgColor}
                 title={$_('noteList.filterByTag', { values: { tag } })}
               >
@@ -451,7 +452,7 @@
               on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
               role="button"
               tabindex="0"
-              class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? '' : 'bg-gray-200 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-blue-800 active:bg-blue-300 dark:active:bg-blue-700'}"
+              class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
               style:background-color={tagBgColor}
               title={$_('noteList.filterByTag', { values: { tag } })}
             >

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { settings } from '../stores/appStore';
   import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
@@ -16,14 +17,40 @@
   // All available tags from existing notes (would be passed as prop in real implementation)
   export let availableTags: string[] = [];
 
-  // Color support: resolve theme (reactive dependency on settings for reactivity)
-  $: currentTheme = resolveTheme($settings.theme);
+  // Track current theme based on DOM class
+  let currentTheme: 'light' | 'dark' = 'light';
+  let themeObserver: MutationObserver | null = null;
 
-  // Helper function to get tag color
-  function getTagBackgroundColor(tag: string): string | undefined {
+  onMount(() => {
+    // Set up theme observer to watch for dark mode changes
+    const updateTheme = () => {
+      // Check actual DOM class instead of settings to handle forced themes
+      currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    };
+
+    // Initial check
+    updateTheme();
+
+    // Watch for theme changes on document element
+    themeObserver = new MutationObserver(updateTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
+
+  onDestroy(() => {
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
+    }
+  });
+
+  // Helper function to get tag color (reactive to re-run when currentTheme changes)
+  $: getTagBackgroundColor = (tag: string): string | undefined => {
     const tagColorName = getTagColor(tag);
     return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
-  }
+  };
 
   function handleInput() {
     if (inputValue.trim()) {
@@ -96,7 +123,7 @@
     {#each tags as tag, index}
       {@const tagBgColor = getTagBackgroundColor(tag)}
       <span
-        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {tagBgColor ? '' : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'}"
+        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300'}"
         style:background-color={tagBgColor}
       >
         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->

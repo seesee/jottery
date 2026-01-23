@@ -79,8 +79,7 @@
       "content": "# Team Meeting Notes - 23 Jan 2026 👥\n\n**Date**: 23 January 2026, 10:00-11:00\n**Location**: Conference Room B / Zoom\n**Attendees**: Sarah, Mike, David, Elena, James (James joined remotely)\n\n## Agenda\n\n1. Sprint review\n2. Project Alpha status\n3. Resource allocation\n4. AOB\n\n## Discussion\n\n### 1. Sprint Review\n\n**Completed**:\n- User authentication flow ✓\n- Dashboard wireframes ✓\n- Database schema v2 ✓\n- API endpoints (80% complete)\n\n**Blockers**:\n- Third-party API documentation unclear\n- Need design review for mobile views\n\n**Action Items**:\n- Mike to contact API provider by EOD\n- Elena to schedule design review with Sophie\n\n### 2. Project Alpha Status\n\nOn track for Q1 delivery. Backend API development ahead of schedule, frontend starting next week.\n\n**Concerns**:\n- Testing timeline might be tight\n- Need to finalise hosting infrastructure\n\n**Decisions**:\n- Add 1 extra week for QA\n- James to prepare test plans by Friday\n- Sarah to get quotes from hosting providers\n\n### 3. Resource Allocation\n\n- Aisha to join Project Bravo part-time (20%) from next week\n- Need to hire contractor for frontend support\n- Budget approved for contractor (max 3 months)\n\n### 4. AOB\n\n- Team lunch next Friday to celebrate milestones\n- Company all-hands meeting moved to Thursday\n- New parking permits available from reception\n\n## Action Items Summary\n\n| Action | Owner | Due Date |\n|--------|-------|----------|\n| Contact API provider | Mike | 23 Jan EOD |\n| Schedule design review | Elena | 24 Jan |\n| Prepare test plans | James | 26 Jan |\n| Hosting quotes | Sarah | 30 Jan |\n| Post contractor job ad | Sarah | 24 Jan |\n\n## Next Meeting\n\n30 January 2026, 10:00-11:00, Same location",
       "tags": ["meeting", "notes", "work", "team", "demo"],
       "attachments": [],
-      "pinned": false,
-      "color": "blue"
+      "pinned": false
     },
     {
       "id": "demo-recipe-001",
@@ -89,8 +88,7 @@
       "content": "# Homemade Sourdough Bread 🍞\n\n*A tried and tested recipe for perfect sourdough at home*\n\n## Ingredients\n\n### For the Starter (Fed the night before)\n- 50g active starter\n- 50g water\n- 50g bread flour\n\n### For the Dough\n- 500g bread flour\n- 350g water (70% hydration)\n- 100g active starter\n- 10g salt\n\n## Instructions\n\n### Day 1: Evening\n\n1. **Feed your starter** (8-12 hours before mixing)\n   - Mix 50g starter + 50g water + 50g flour\n   - Leave at room temperature overnight\n\n### Day 2: Morning\n\n2. **Autolyse** (30 minutes)\n   - Mix 500g flour + 350g water\n   - Rest for 30 minutes\n\n3. **Mix**\n   - Add 100g active starter\n   - Mix until combined\n   - Rest 30 minutes\n\n4. **Add Salt**\n   - Sprinkle 10g salt\n   - Pinch and fold to incorporate\n\n5. **Bulk Fermentation** (4-5 hours)\n   - Perform stretch and folds every 30 mins (first 2 hours)\n   - Rest until doubled in size\n\n6. **Pre-shape**\n   - Turn onto lightly floured surface\n   - Shape into round\n   - Rest 20 minutes\n\n7. **Final Shape**\n   - Shape into batard or boule\n   - Place in banneton\n\n8. **Cold Proof**\n   - Cover and refrigerate overnight (12-16 hours)\n\n### Day 3: Morning\n\n9. **Bake**\n   - Preheat oven to 250°C with Dutch oven inside\n   - Score bread\n   - Bake covered 20 minutes\n   - Uncover, reduce to 230°C, bake 25-30 minutes\n   - Cool completely before slicing\n\n## Tips\n\n- **Starter**: Should double in 4-6 hours and pass float test\n- **Water temp**: Use 30°C water in winter, room temp in summer\n- **Hydration**: Start with 70%, adjust based on flour absorption\n- **Steam**: Dutch oven provides perfect steam environment\n- **Patience**: Don't rush the fermentation!\n\n## Timeline Summary\n\n- **Day 1 Evening**: Feed starter (20:00)\n- **Day 2 Morning**: Mix dough (08:00)\n- **Day 2 Afternoon**: Shape and refrigerate (14:00)\n- **Day 3 Morning**: Bake (08:00)\n- **Ready to eat**: 09:00 🎉\n\n## Variations\n\n- **Whole wheat**: Replace 100g bread flour with whole wheat\n- **Seeds**: Add 50g mixed seeds after autolyse\n- **Herbs**: Add rosemary and sea salt on top before baking\n- **Sweet**: Add 50g honey and 50g dried fruit\n\nEnjoy your homemade sourdough! 🥖",
       "tags": ["recipe", "sourdough", "bread", "cooking", "demo"],
       "attachments": [],
-      "pinned": false,
-      "color": "pink"
+      "pinned": false
     },
     {
       "id": "demo-travel-001",
@@ -109,8 +107,7 @@
       "content": "Remember to buy milk and eggs on the way home. 🥛🥚",
       "tags": ["personal", "todo"],
       "attachments": [],
-      "pinned": false,
-      "color": "gray"
+      "pinned": false
     }
   ]
 }
