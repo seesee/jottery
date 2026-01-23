@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import type { DecryptedNote } from '../types';
   import {
@@ -43,16 +44,42 @@
   $: isSelected = $selectedNoteId === note.id;
   $: isMultiSelected = $selectedNoteIds.has(note.id);
   let isHovered = false;
+  let currentTheme: 'light' | 'dark' = 'light'; // Track theme reactively
 
-  // Color support: resolve theme and compute note/tag colors (full opacity in list)
-  $: currentTheme = resolveTheme($settings.theme);
+  // Color support: compute note/tag colors based on theme
   $: noteBackgroundColor = note.color ? getColorHex(note.color, currentTheme) : undefined;
 
-  // Helper function to get tag color
-  function getTagBackgroundColor(tag: string): string | undefined {
+  let themeObserver: MutationObserver | null = null;
+
+  onMount(() => {
+    // Set up theme observer to watch for dark mode changes
+    const updateTheme = () => {
+      currentTheme = resolveTheme($settings.theme);
+    };
+
+    // Initial check
+    updateTheme();
+
+    // Watch for theme changes on document element
+    themeObserver = new MutationObserver(updateTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
+
+  onDestroy(() => {
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
+    }
+  });
+
+  // Helper function to get tag color (uses reactive currentTheme)
+  $: getTagBackgroundColor = (tag: string): string | undefined => {
     const tagColorName = getTagColor(tag);
     return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
-  }
+  };
 
   // Swipe gesture state
   let swipeState: SwipeState = createSwipeState();
