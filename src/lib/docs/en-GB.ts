@@ -12,6 +12,8 @@ export const documentation = `# Jottery Documentation
   - [Tag Search](#tag-search)
   - [Advanced Search Modifiers](#advanced-search-modifiers)
 - [Multi-Select & Bulk Operations](#multi-select-bulk-operations)
+- [Archive Mode](#archive-mode)
+- [Colour System](#colour-system)
 - [Version History](#version-history)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Sync](#sync)
@@ -123,8 +125,11 @@ Type in the search box to find notes. The search looks at both note content and 
 | \`words:>N\` | More than N words | \`words:>100\` |
 | \`words:<N\` | Fewer than N words | \`words:<50\` |
 | \`words:N..M\` | Word count in range | \`words:50..200\` |
+| \`colour:NAME\` | Notes or tags with colour | \`colour:red\` |
+| \`colour:NAME note\` | Notes with colour | \`colour:blue note\` |
+| \`colour:NAME tag\` | Tags with colour | \`colour:green tag\` |
 
-**Combining modifiers:** \`#project has:attachment modified:>2024-01-01 words:>100\`
+**Combining modifiers:** \`#project colour:blue has:attachment modified:>2024-01-01 words:>100\`
 
 ---
 
@@ -150,6 +155,75 @@ When notes are selected, a toolbar appears at the bottom with these options:
 - **Export** - Export selected notes as JSON
 - **Combine** - Merge selected notes into one (ordered by creation date)
 - **Delete** - Move selected notes to recycle bin
+
+---
+
+## Archive Mode
+
+Archive notes to declutter your main view whilst keeping them accessible. Archived notes are hidden from the default view but remain searchable and fully functional.
+
+### Using Archive
+
+| Action | How to do it |
+|--------|--------------|
+| **Archive a note** | Click ⋮ menu → "Archive" or press \`Shift + A\` |
+| **Toggle archive view** | Click "Archive" button in header or press \`Shift + A\` again |
+| **Search archived notes** | Use archive mode or search normally (archived results shown separately) |
+| **Unarchive a note** | In archive mode, click ⋮ menu → "Unarchive" |
+
+### Archive vs Delete
+
+- **Archived notes** remain fully functional - you can edit, tag, and search them
+- **Deleted notes** go to the recycle bin and are excluded from searches
+- Archive is for notes you want to keep but don't need to see regularly
+- Delete is for notes you're considering removing permanently
+
+### Cross-Mode Search
+
+When searching with ≤10 results, Jottery shows a count of matches in the opposite mode (active/archived). Click to switch modes and see those results.
+
+---
+
+## Colour System
+
+Organise notes and tags visually with colours. Note colours affect the note list background, whilst tag colours affect tag pills.
+
+### Note Colours
+
+| Action | How to do it |
+|--------|--------------|
+| **Set note colour** | Click ⋮ menu → "Set Colour" and choose from 8 colours |
+| **Remove colour** | Select "No Colour" from the colour picker |
+| **Bulk colour** | Select multiple notes → "Set Colour" in bottom toolbar |
+
+### Tag Colours
+
+| Action | How to do it |
+|--------|--------------|
+| **Configure** | Settings → Colours → Tag Colours section |
+| **Assign colour** | Select a tag and choose a colour |
+| **Global mapping** | All notes with the same tag show the same colour |
+
+### Customising the Palette
+
+In Settings → Colours, you can customise the 8-colour palette:
+
+- Each colour has separate values for light and dark modes
+- Colours are shown as hex codes (e.g., \`#FFE5E5\`)
+- Click "Reset to Defaults" to restore the original palette
+- Changes apply immediately across all notes and tags
+
+### Colour Search
+
+Search for notes by colour:
+
+| Syntax | Description |
+|--------|-------------|
+| \`colour:red\` | Notes OR tags with red colour |
+| \`colour:red note\` | Only notes with red colour |
+| \`colour:red tag\` | Only tags with red colour |
+
+Combine with other search terms: \`#project colour:blue has:attachment\`
 
 ---
 
