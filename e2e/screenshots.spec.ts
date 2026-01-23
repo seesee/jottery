@@ -83,6 +83,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       });
     });
 
+    // Set theme in localStorage BEFORE app loads settings
+    await page.evaluate(() => {
+      localStorage.setItem('jottery_theme', JSON.stringify({ theme: 'light' }));
+    });
+
     // Reload and set up password
     await page.goto('/');
 
@@ -103,11 +108,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await passwordInputs.nth(1).fill('screenshot-test-password');
     await page.locator('button[type="submit"]').click();
 
-    // Wait for app to load
+    // Wait for app to load with correct theme
     await page.waitForTimeout(2000);
-
-    // Set light theme
-    await setTheme(page, 'light');
 
     // Import demo notes
     await importDemoNotes(page);
@@ -264,6 +266,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       });
     });
 
+    // Set theme in localStorage BEFORE app loads settings
+    await page.evaluate(() => {
+      localStorage.setItem('jottery_theme', JSON.stringify({ theme: 'dark' }));
+    });
+
     // Reload and set up password
     await page.goto('/');
 
@@ -284,11 +291,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await passwordInputs.nth(1).fill('screenshot-test-password');
     await page.locator('button[type="submit"]').click();
 
-    // Wait for app to load
+    // Wait for app to load with correct theme
     await page.waitForTimeout(2000);
-
-    // Set dark theme
-    await setTheme(page, 'dark');
 
     // Import demo notes
     await importDemoNotes(page);
