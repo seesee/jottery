@@ -55,18 +55,19 @@ async function importDemoNotes(page: any) {
   }
 }
 
-// Helper to set theme
+// Helper to set theme by applying document class and triggering component updates
 async function setTheme(page: any, theme: 'light' | 'dark') {
   await page.evaluate((themeValue: string) => {
-    localStorage.setItem('jottery_theme', JSON.stringify({ theme: themeValue }));
-    // Apply theme to document
+    // Apply theme class to document (MutationObservers will detect this)
     if (themeValue === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
   }, theme);
-  await page.waitForTimeout(500);
+
+  // Wait for theme to apply and all components to react via MutationObservers
+  await page.waitForTimeout(1500);
 }
 
 test.describe('Landing Page Screenshots - Light Mode', () => {
@@ -81,11 +82,6 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
           if (db.name) indexedDB.deleteDatabase(db.name);
         });
       });
-    });
-
-    // Set theme in localStorage BEFORE app loads settings
-    await page.evaluate(() => {
-      localStorage.setItem('jottery_theme', JSON.stringify({ theme: 'light' }));
     });
 
     // Reload and set up password
@@ -108,8 +104,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await passwordInputs.nth(1).fill('screenshot-test-password');
     await page.locator('button[type="submit"]').click();
 
-    // Wait for app to load with correct theme
+    // Wait for app to load
     await page.waitForTimeout(2000);
+
+    // Set light theme via Settings UI (saves to IndexedDB)
+    await setTheme(page, 'light');
 
     // Import demo notes
     await importDemoNotes(page);
@@ -266,11 +265,6 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       });
     });
 
-    // Set theme in localStorage BEFORE app loads settings
-    await page.evaluate(() => {
-      localStorage.setItem('jottery_theme', JSON.stringify({ theme: 'dark' }));
-    });
-
     // Reload and set up password
     await page.goto('/');
 
@@ -291,8 +285,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await passwordInputs.nth(1).fill('screenshot-test-password');
     await page.locator('button[type="submit"]').click();
 
-    // Wait for app to load with correct theme
+    // Wait for app to load
     await page.waitForTimeout(2000);
+
+    // Set dark theme via Settings UI (saves to IndexedDB)
+    await setTheme(page, 'dark');
 
     // Import demo notes
     await importDemoNotes(page);
