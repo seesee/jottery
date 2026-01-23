@@ -541,7 +541,15 @@
         "description": "L'utilisation de Jottery sans capacité de synchronisation n'est <strong>pas recommandée</strong>. Vider le cache de votre navigateur peut supprimer la base de données sous-jacente. Prenez le temps de configurer la capacité de synchronisation : le système Jottery est entièrement open source et auto-hébergeable."
       }
     },
-    "sessionExpiredOrInvalid": "Session expirée ou invalide. Veuillez entrer votre mot de passe."
+    "sessionExpiredOrInvalid": "Session expirée ou invalide. Veuillez entrer votre mot de passe.",
+    "syncConfig": {
+      "title": "Configuration de la synchronisation (Facultatif)",
+      "description": "Configurez facultativement la synchronisation maintenant. Vous pouvez également le faire plus tard dans Paramètres > Synchronisation.",
+      "endpoint": "URL du serveur de synchronisation",
+      "deviceName": "Nom de l'appareil",
+      "deviceNamePlaceholder": "Mon ordinateur portable",
+      "note": "Remarque : Vous devrez toujours vous enregistrer sur le serveur après la configuration."
+    }
   },
   "lock": {
     "title": "Verrouiller l'application",

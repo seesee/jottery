@@ -541,7 +541,15 @@
         "description": "Jottery'yi senkronizasyon özelliği olmadan çalıştırmak <strong>önerilmez</strong>. Tarayıcı önbelleğini temizlemek temel veritabanını silebilir. Senkronizasyon özelliğini kurmak için zaman ayırın—Jottery sistemi tamamen açık kaynaklıdır ve kendi kendine barındırılabilir."
       }
     },
-    "sessionExpiredOrInvalid": "Oturum süresi doldu veya geçersiz. Lütfen şifrenizi girin."
+    "sessionExpiredOrInvalid": "Oturum süresi doldu veya geçersiz. Lütfen şifrenizi girin.",
+    "syncConfig": {
+      "title": "Senkronizasyon Yapılandırması (İsteğe Bağlı)",
+      "description": "İsteğe bağlı olarak şimdi senkronizasyonu yapılandırın. Bunu daha sonra Ayarlar > Senkronizasyon bölümünde de yapabilirsiniz.",
+      "endpoint": "Senkronizasyon sunucu URL'si",
+      "deviceName": "Cihaz Adı",
+      "deviceNamePlaceholder": "Dizüstü Bilgisayarım",
+      "note": "Not: Kurulumdan sonra hala sunucuya kaydolmanız gerekecek."
+    }
   },
   "lock": {
     "title": "Uygulamayı Kilitle",

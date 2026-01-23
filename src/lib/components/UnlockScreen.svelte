@@ -17,6 +17,11 @@
   let showDeleteConfirm = false;
   let passwordInput: HTMLInputElement;
 
+  // Optional sync configuration (first-time setup)
+  let showSyncConfig = false;
+  let syncEndpoint = '';
+  let deviceName = '';
+
   // Get current notebook info for display
   const notebook = getCurrentNotebook();
 
@@ -113,6 +118,32 @@
 
       // Update store to trigger UI change
       isLocked.set(false);
+
+      // Apply optional sync configuration (first-time setup only)
+      if (needsInit && (syncEndpoint || deviceName)) {
+        try {
+          const settings = await settingsRepository.get();
+          const updates: any = {};
+
+          if (syncEndpoint) {
+            updates.syncEndpoint = syncEndpoint.trim();
+            // Enable sync feature if endpoint was provided
+            updates.syncEnabled = true;
+          }
+
+          if (deviceName) {
+            updates.deviceName = deviceName.trim();
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await settingsRepository.update(updates);
+            console.log('[UnlockScreen] Applied sync configuration during initialization');
+          }
+        } catch (err) {
+          console.error('[UnlockScreen] Failed to apply sync configuration:', err);
+          // Don't fail the whole setup if sync config fails - just log it
+        }
+      }
 
       // Store password if rememberPassword or persistSession is enabled
       try {
@@ -221,6 +252,69 @@
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               placeholder={$_('unlock.confirmPassword')}
             />
+          </div>
+
+          <!-- Optional Sync Configuration -->
+          <div class="border border-gray-300 dark:border-gray-600 rounded-md">
+            <button
+              type="button"
+              on:click={() => showSyncConfig = !showSyncConfig}
+              class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {$_('unlock.syncConfig.title')}
+              </span>
+              <svg
+                class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showSyncConfig ? 'rotate-180' : ''}"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {#if showSyncConfig}
+              <div class="px-4 pb-4 space-y-3">
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                  {$_('unlock.syncConfig.description')}
+                </p>
+
+                <div>
+                  <label for="sync-endpoint" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {$_('unlock.syncConfig.endpoint')}
+                  </label>
+                  <input
+                    id="sync-endpoint"
+                    type="url"
+                    bind:value={syncEndpoint}
+                    disabled={loading}
+                    placeholder={typeof window !== 'undefined' ? window.location.origin : 'https://example.com'}
+                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label for="device-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {$_('unlock.syncConfig.deviceName')}
+                  </label>
+                  <input
+                    id="device-name"
+                    type="text"
+                    bind:value={deviceName}
+                    disabled={loading}
+                    placeholder={$_('unlock.syncConfig.deviceNamePlaceholder')}
+                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
+                  <p class="text-xs text-blue-800 dark:text-blue-200">
+                    {$_('unlock.syncConfig.note')}
+                  </p>
+                </div>
+              </div>
+            {/if}
           </div>
 
           <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">

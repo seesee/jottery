@@ -541,7 +541,15 @@
         "description": "Executar o Jottery sem capacidade de sincronização <strong>não é recomendado</strong>. Limpar o cache do navegador pode excluir o banco de dados subjacente. Reserve um tempo para configurar a capacidade de sincronização—o sistema Jottery é totalmente de código aberto e auto-hospedável."
       }
     },
-    "sessionExpiredOrInvalid": "Sessão expirada ou inválida. Por favor, digite sua senha."
+    "sessionExpiredOrInvalid": "Sessão expirada ou inválida. Por favor, digite sua senha.",
+    "syncConfig": {
+      "title": "Configuração de sincronização (Opcional)",
+      "description": "Opcionalmente configure a sincronização agora. Você também pode fazer isso mais tarde em Configurações > Sincronização.",
+      "endpoint": "URL do servidor de sincronização",
+      "deviceName": "Nome do dispositivo",
+      "deviceNamePlaceholder": "Meu laptop",
+      "note": "Nota: Você ainda precisará se registrar no servidor após a configuração."
+    }
   },
   "lock": {
     "title": "Bloquear aplicativo",

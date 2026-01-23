@@ -541,7 +541,15 @@
         "description": "<strong>不建议</strong>在没有同步功能的情况下运行 Jottery。清除浏览器缓存可能会删除底层数据库。请花时间设置同步功能—Jottery 系统完全开源且可自托管。"
       }
     },
-    "sessionExpiredOrInvalid": "会话已过期或无效。请输入密码。"
+    "sessionExpiredOrInvalid": "会话已过期或无效。请输入密码。",
+    "syncConfig": {
+      "title": "同步配置（可选）",
+      "description": "可选地现在配置同步。您也可以稍后在设置 > 同步中执行此操作。",
+      "endpoint": "同步服务器URL",
+      "deviceName": "设备名称",
+      "deviceNamePlaceholder": "我的笔记本电脑",
+      "note": "注意：设置后您仍需向服务器注册。"
+    }
   },
   "lock": {
     "title": "锁定应用程序",

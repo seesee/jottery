@@ -541,7 +541,15 @@
         "description": "Jottery draaien zonder synchronisatiemogelijkheid wordt <strong>niet aanbevolen</strong>. Het wissen van je browsercache kan de onderliggende database verwijderen. Neem de tijd om synchronisatiemogelijkheid in te stellen—het Jottery-systeem is volledig open source en zelf te hosten."
       }
     },
-    "sessionExpiredOrInvalid": "Sessie verlopen of ongeldig. Voer je wachtwoord in."
+    "sessionExpiredOrInvalid": "Sessie verlopen of ongeldig. Voer je wachtwoord in.",
+    "syncConfig": {
+      "title": "Synchronisatieconfiguratie (Optioneel)",
+      "description": "Configureer optioneel nu synchronisatie. Je kunt dit ook later doen in Instellingen > Synchronisatie.",
+      "endpoint": "Synchronisatieserver URL",
+      "deviceName": "Apparaatnaam",
+      "deviceNamePlaceholder": "Mijn laptop",
+      "note": "Opmerking: Je moet je nog steeds bij de server registreren na de setup."
+    }
   },
   "lock": {
     "title": "Applicatie vergrendelen",

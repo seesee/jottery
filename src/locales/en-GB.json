@@ -503,6 +503,14 @@
     "deleteAndStartOver": "Delete Database & Start Over",
     "storedPasswordInvalid": "Stored password is invalid. Please re-enter your password.",
     "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password.",
+    "syncConfig": {
+      "title": "Sync Configuration (Optional)",
+      "description": "Optionally configure sync now. You can also do this later in Settings > Sync.",
+      "endpoint": "Sync Server URL",
+      "deviceName": "Device Name",
+      "deviceNamePlaceholder": "My Laptop",
+      "note": "Note: You'll still need to register with the server after setup."
+    },
     "landingPage": {
       "privateEncrypted": {
         "title": "🔒 Private & Encrypted",

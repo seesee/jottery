@@ -541,7 +541,15 @@
         "description": "Uruchamianie Jottery bez możliwości synchronizacji <strong>nie jest zalecane</strong>. Wyczyszczenie pamięci podręcznej przeglądarki może usunąć bazę danych. Poświęć czas na skonfigurowanie synchronizacji—system Jottery jest w pełni open source i łatwy do samodzielnego hostingu."
       }
     },
-    "sessionExpiredOrInvalid": "Sesja wygasła lub jest nieprawidłowa. Wprowadź swoje hasło."
+    "sessionExpiredOrInvalid": "Sesja wygasła lub jest nieprawidłowa. Wprowadź swoje hasło.",
+    "syncConfig": {
+      "title": "Konfiguracja synchronizacji (Opcjonalne)",
+      "description": "Opcjonalnie skonfiguruj synchronizację teraz. Możesz to również zrobić później w Ustawienia > Synchronizacja.",
+      "endpoint": "URL serwera synchronizacji",
+      "deviceName": "Nazwa urządzenia",
+      "deviceNamePlaceholder": "Mój laptop",
+      "note": "Uwaga: Po konfiguracji nadal musisz zarejestrować się na serwerze."
+    }
   },
   "lock": {
     "title": "Zablokuj aplikację",

@@ -541,7 +541,15 @@
         "description": "동기화 기능 없이 Jottery를 실행하는 것은 <strong>권장되지 않습니다</strong>. 브라우저 캐시를 지우면 기본 데이터베이스가 삭제될 수 있습니다. 시간을 내서 동기화 기능을 설정하세요. Jottery 시스템은 완전히 오픈 소스이며 자체 호스팅이 가능합니다."
       }
     },
-    "sessionExpiredOrInvalid": "세션이 만료되었거나 유효하지 않습니다. 비밀번호를 입력하세요."
+    "sessionExpiredOrInvalid": "세션이 만료되었거나 유효하지 않습니다. 비밀번호를 입력하세요.",
+    "syncConfig": {
+      "title": "동기화 설정 (선택 사항)",
+      "description": "선택적으로 지금 동기화를 구성하세요. 설정 > 동기화에서 나중에 할 수도 있습니다.",
+      "endpoint": "동기화 서버 URL",
+      "deviceName": "기기 이름",
+      "deviceNamePlaceholder": "내 노트북",
+      "note": "참고: 설정 후에도 서버에 등록해야 합니다."
+    }
   },
   "lock": {
     "title": "애플리케이션 잠금",

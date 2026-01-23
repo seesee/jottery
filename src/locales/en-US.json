@@ -527,7 +527,15 @@
         "description": "Running Jottery without sync capability is <strong>not recommended</strong>. Clearing your browser cache can delete the underlying database. Take the time to set up sync capability—the Jottery system is fully open source and self-hostable."
       }
     },
-    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password."
+    "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password.",
+    "syncConfig": {
+      "title": "Sync Configuration (Optional)",
+      "description": "Optionally configure sync now. You can also do this later in Settings > Sync.",
+      "endpoint": "Sync Server URL",
+      "deviceName": "Device Name",
+      "deviceNamePlaceholder": "My Laptop",
+      "note": "Note: You'll still need to register with the server after setup."
+    }
   },
   "lock": {
     "title": "Lock Application",
