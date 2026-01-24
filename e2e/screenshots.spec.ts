@@ -315,70 +315,64 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Create a new note with calc syntax
+    // Create a new note
     const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
     await newButton.click();
     await page.waitForTimeout(1000);
 
-    // Set syntax language to calc
-    const syntaxButton = page.locator('button, select').filter({ hasText: /Markdown|Syntax|Language/i }).first();
-    if (await syntaxButton.isVisible().catch(() => false)) {
-      await syntaxButton.click();
-      await page.waitForTimeout(300);
+    // Find the language dropdown and select calc
+    const languageDropdown = page.locator('select').first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('calc');
+    await page.waitForTimeout(1000);
 
-      // Look for calc option
-      const calcOption = page.locator('button, option, [role="menuitem"]').filter({ hasText: /calc/i }).first();
-      if (await calcOption.isVisible().catch(() => false)) {
-        await calcOption.click();
-        await page.waitForTimeout(500);
-      }
-    }
-
-    // Find the editor
-    const editor = page.locator('.cm-content, .CodeMirror, [contenteditable="true"]').first();
+    // Find the editor and focus it
+    const editor = page.locator('.cm-content').first();
     await editor.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
-    // Type the REPL calculator examples (no = for results, they auto-evaluate)
-    await page.keyboard.type('# Compound interest calculator');
+    // Type calculator examples (results auto-evaluate in gray)
+    await page.keyboard.type('1 + 1');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('2 + 2');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('10 * 5');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('100 / 4');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('2^8');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('sqrt(144)');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('# Compound interest');
     await page.keyboard.press('Enter');
     await page.keyboard.type('principal = 1000');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
 
     await page.keyboard.type('rate = 0.05');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
 
     await page.keyboard.type('years = 10');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
 
     await page.keyboard.type('principal * (1 + rate)^years');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('# More examples');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('sqrt(144)');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('pi * 10');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('x = 42');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('y = 10');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('x + y');
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'screenshots/05-calculator-light.png',
@@ -628,70 +622,64 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Create a new note with calc syntax
+    // Create a new note
     const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
     await newButton.click();
     await page.waitForTimeout(1000);
 
-    // Set syntax language to calc
-    const syntaxButton = page.locator('button, select').filter({ hasText: /Markdown|Syntax|Language/i }).first();
-    if (await syntaxButton.isVisible().catch(() => false)) {
-      await syntaxButton.click();
-      await page.waitForTimeout(300);
+    // Find the language dropdown and select calc
+    const languageDropdown = page.locator('select').first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('calc');
+    await page.waitForTimeout(1000);
 
-      // Look for calc option
-      const calcOption = page.locator('button, option, [role="menuitem"]').filter({ hasText: /calc/i }).first();
-      if (await calcOption.isVisible().catch(() => false)) {
-        await calcOption.click();
-        await page.waitForTimeout(500);
-      }
-    }
-
-    // Find the editor
-    const editor = page.locator('.cm-content, .CodeMirror, [contenteditable="true"]').first();
+    // Find the editor and focus it
+    const editor = page.locator('.cm-content').first();
     await editor.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
-    // Type the REPL calculator examples (no = for results, they auto-evaluate)
-    await page.keyboard.type('# Compound interest calculator');
+    // Type calculator examples (results auto-evaluate in gray)
+    await page.keyboard.type('1 + 1');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('2 + 2');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('10 * 5');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('100 / 4');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('2^8');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('sqrt(144)');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('# Compound interest');
     await page.keyboard.press('Enter');
     await page.keyboard.type('principal = 1000');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
 
     await page.keyboard.type('rate = 0.05');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
 
     await page.keyboard.type('years = 10');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
 
     await page.keyboard.type('principal * (1 + rate)^years');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('# More examples');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('sqrt(144)');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('pi * 10');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('x = 42');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('y = 10');
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-
-    await page.keyboard.type('x + y');
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: 'screenshots/05-calculator-dark.png',

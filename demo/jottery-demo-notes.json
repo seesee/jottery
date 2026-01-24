@@ -15,10 +15,11 @@
       "id": "demo-calculator-001",
       "createdAt": "2026-01-23T10:05:00Z",
       "modifiedAt": "2026-01-23T10:05:00Z",
-      "content": "# REPL Calculator Examples 🧮\n\nJottery includes a built-in REPL calculator perfect for quick calculations!\n\n## Basic Math\n```\n2 + 2 = 4\n10 * 5 = 50\n100 / 4 = 25\n2^8 = 256\nsqrt(144) = 12\n```\n\n## Variables\n```\nx = 42\ny = 10\nx + y = 52\nx * y = 420\n```\n\n## Advanced Functions\n```\nsin(pi/2) = 1\ncos(0) = 1\nlog(10) = 2.302585\nabs(-15) = 15\n```\n\n## Practical Examples\n\n**VAT Calculation (20%)**\n```\nprice = 100\nvat = price * 0.20\ntotal = price + vat  // £120\n```\n\n**Tip Calculator**\n```\nbill = 85.50\ntip = bill * 0.15  // 15% tip\ntotal = bill + tip  // £98.32\n```\n\n**Currency Conversion**\n```\ngbp = 100\nexchange_rate = 1.27\nusd = gbp * exchange_rate  // $127\n```\n\n## Access the Calculator\n\nClick the calculator icon in the toolbar or press `Ctrl+Shift+C` to open the REPL calculator.\n\nYour calculation history is preserved between sessions!",
+      "content": "# REPL Calculator Examples 🧮\n\n1 + 1\n2 + 2\n10 * 5\n100 / 4\n2^8\nsqrt(144)\n\n# Variables\nx = 42\ny = 10\nx + y\nx * y\n\n# Advanced functions\nsin(pi/2)\ncos(0)\nlog(10)\nabs(-15)\n\n# Compound interest\nprincipal = 1000\nrate = 0.05\nyears = 10\nprincipal * (1 + rate)^years\n\n# VAT calculation (20%)\nprice = 100\nvat = price * 0.20\ntotal = price + vat\n\n# Tip calculator\nbill = 85.50\ntip = bill * 0.15\ntotal = bill + tip\n\n# Currency conversion\ngbp = 100\nexchange_rate = 1.27\nusd = gbp * exchange_rate",
       "tags": ["calculator", "repl", "examples", "demo"],
       "attachments": [],
-      "pinned": false
+      "pinned": false,
+      "syntaxLanguage": "calc"
     },
     {
       "id": "demo-search-001",
