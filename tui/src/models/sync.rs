@@ -367,6 +367,8 @@ mod tests {
             version: 1,
             word_wrap: Some(true),
             syntax_language: Some("markdown".to_string()),
+            archived: false,
+            archived_at: None,
             color: Some("red".to_string()),
         };
 
@@ -395,6 +397,8 @@ mod tests {
             word_wrap: Some(true),
             syntax_language: Some("markdown".to_string()),
             color: None,
+            archived: false,
+            archived_at: None,
         };
 
         let json = serde_json::to_string(&sync_note).expect("Failed to serialize");
@@ -442,6 +446,8 @@ mod tests {
             server_syntax_language: Some("markdown".to_string()),
             server_word_wrap: Some(true),
             server_color: Some("green".to_string()),
+            server_archived: false,
+            server_archived_at: None,
             detected_at: Utc::now(),
         };
 
@@ -466,6 +472,8 @@ mod tests {
             server_syntax_language: Some("markdown".to_string()),
             server_word_wrap: Some(true),
             server_color: Some("yellow".to_string()),
+            server_archived: false,
+            server_archived_at: None,
         };
 
         let json = serde_json::to_string(&rejected).expect("Failed to serialize");
@@ -491,6 +499,8 @@ mod tests {
             word_wrap: Some(true),
             syntax_language: Some("markdown".to_string()),
             color: Some("purple".to_string()),
+            archived: false,
+            archived_at: None,
         };
 
         // Serialize and deserialize

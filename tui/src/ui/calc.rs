@@ -89,6 +89,12 @@ impl CalcEvaluator {
         // evalexpr doesn't have integer division, so this is approximate
         result = result.replace("//", "/");
 
+        // Fix log() function: mathjs's log() is natural log (like ln())
+        // evalexpr's math::log(x, base) requires 2 args, so map log() -> ln()
+        if let Ok(re) = Regex::new(r"\blog\s*\(") {
+            result = re.replace_all(&result, "ln(").to_string();
+        }
+
         // Fix power associativity: mathjs uses right-to-left, evalexpr uses left-to-right
         // Convert a^b^c to a^(b^c)
         result = Self::fix_power_associativity(&result);
@@ -99,8 +105,9 @@ impl CalcEvaluator {
 
         // Map common math functions to evalexpr's math:: namespace
         // These need the math:: prefix in evalexpr
+        // Note: "log" is NOT in this list - we handle it above by converting to "ln"
         let math_functions = [
-            "sqrt", "cbrt", "exp", "exp2", "ln", "log", "log2", "log10",
+            "sqrt", "cbrt", "exp", "exp2", "ln", "log2", "log10",
             "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
             "sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
             "abs", "hypot",
@@ -704,6 +711,30 @@ mod tests {
         let result = results[0].result.as_ref().unwrap();
         let value: f64 = result.parse().unwrap();
         assert!((value - 1.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_log_function() {
+        let mut eval = CalcEvaluator::new();
+        // log(10) should be natural log (ln) = approximately 2.302585
+        let (results, stopped, _) = eval.evaluate_document("log(10)");
+        assert!(!stopped);
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].is_error, "log(10) should not error: {:?}", results[0].result);
+        let result = results[0].result.as_ref().unwrap();
+        let value: f64 = result.parse().unwrap();
+        assert!((value - 2.302585).abs() < 0.0001, "log(10) should be ~2.302585, got {}", value);
+    }
+
+    #[test]
+    fn test_log10_function() {
+        let mut eval = CalcEvaluator::new();
+        // log10(100) should be 2
+        let (results, stopped, _) = eval.evaluate_document("log10(100)");
+        assert!(!stopped);
+        assert_eq!(results.len(), 1);
+        assert!(!results[0].is_error);
+        assert_eq!(results[0].result, Some("2".to_string()));
     }
 
     #[test]
