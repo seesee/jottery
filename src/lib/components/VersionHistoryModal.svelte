@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get } from 'svelte/store';
+  import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { versionRepository, noteRepository, cryptoService, keyManager, decryptJSON } from '../services';
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
@@ -8,7 +9,7 @@
   import { toast } from '../utils/toast.svelte';
   import { modal, createBackdropHandler } from '../actions';
   import { settings } from '../stores/appStore';
-  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
+  import { getColorHex, getTagColor } from '../services/colorService';
 
   // Helper to get formatted date synchronously (for use in templates)
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -27,14 +28,34 @@
   let showRestoreConfirm = false;
   let versionToRestore: number | null = null;
 
-  // Color support: resolve theme (reactive dependency on settings for reactivity)
-  $: currentTheme = resolveTheme($settings.theme);
+  // Theme detection using DOM class check
+  let currentTheme: 'light' | 'dark' = 'light';
+  let themeObserver: MutationObserver | null = null;
 
-  // Helper function to get tag color
-  function getTagBackgroundColor(tag: string): string | undefined {
+  onMount(() => {
+    const updateTheme = () => {
+      currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    };
+    updateTheme();
+    themeObserver = new MutationObserver(updateTheme);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
+
+  onDestroy(() => {
+    if (themeObserver) {
+      themeObserver.disconnect();
+      themeObserver = null;
+    }
+  });
+
+  // Helper function to get tag color (reactive to currentTheme)
+  $: getTagBackgroundColor = (tag: string): string | undefined => {
     const tagColorName = getTagColor(tag);
     return tagColorName ? getColorHex(tagColorName, currentTheme) : undefined;
-  }
+  };
 
   async function decryptVersion(version: NoteVersion): Promise<DecryptedNoteVersion> {
     const masterKey = keyManager.getMasterKey();
