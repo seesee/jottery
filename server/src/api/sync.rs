@@ -122,6 +122,12 @@ pub async fn push(
         estimated_size / 1024
     );
 
+    // Clean up notes that have been deleted for more than 30 days
+    // This prevents deleted notes from accumulating indefinitely
+    if let Err(e) = cleanup_old_deleted_notes(&state.pool).await {
+        tracing::warn!("Failed to cleanup old deleted notes: {}", e);
+    }
+
     let now = chrono::Utc::now().to_rfc3339();
 
     for note in push_req.notes {
@@ -826,4 +832,32 @@ pub async fn delete_note(
     );
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Delete notes that have been marked as deleted for more than 30 days
+/// This is called automatically during sync operations to prevent deleted notes
+/// from accumulating indefinitely on the server
+async fn cleanup_old_deleted_notes(pool: &sqlx::SqlitePool) -> Result<u64, sqlx::Error> {
+    // Calculate 30 days ago
+    let thirty_days_ago = chrono::Utc::now() - chrono::Duration::days(30);
+    let cutoff_date = thirty_days_ago.to_rfc3339();
+
+    // Delete notes that were marked deleted more than 30 days ago
+    let result = sqlx::query!(
+        r#"
+        DELETE FROM notes
+        WHERE deleted = 1 AND deleted_at IS NOT NULL AND deleted_at < ?
+        "#,
+        cutoff_date
+    )
+    .execute(pool)
+    .await?;
+
+    let deleted_count = result.rows_affected();
+
+    if deleted_count > 0 {
+        tracing::info!("Cleaned up {} notes that were deleted more than 30 days ago", deleted_count);
+    }
+
+    Ok(deleted_count)
 }
