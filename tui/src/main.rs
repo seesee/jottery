@@ -352,6 +352,8 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
                 tags: encrypted_tags?,
                 attachments: vec![], // Simplified: skip attachments for CLI
                 pinned: note.pinned,
+                archived: note.archived,
+                archived_at: note.archived_at,
                 deleted: note.deleted,
                 deleted_at: note.deleted_at,
                 version: note.version,

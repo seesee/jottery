@@ -103,6 +103,8 @@ pub struct SyncNote {
     pub tags: Vec<String>,            // Array of encrypted JSON strings
     pub attachments: Vec<AttachmentRef>,
     pub pinned: bool,
+    pub archived: bool,
+    pub archived_at: Option<DateTime<Utc>>,
     pub deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
     pub version: i32,
@@ -159,6 +161,8 @@ pub struct SyncRejected {
     pub server_version: i32,
     pub server_attachments: Vec<AttachmentRef>,
     pub server_pinned: bool,
+    pub server_archived: bool,
+    pub server_archived_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
@@ -175,6 +179,8 @@ pub struct ConflictData {
     pub server_version: i32,
     pub server_attachments: Vec<AttachmentRef>,
     pub server_pinned: bool,
+    pub server_archived: bool,
+    pub server_archived_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name

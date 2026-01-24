@@ -1135,6 +1135,8 @@ impl App {
                     tags: encrypted_tags?,
                     attachments: attachment_refs,
                     pinned: note.pinned,
+                    archived: note.archived,
+                    archived_at: note.archived_at,
                     deleted: note.deleted,
                     deleted_at: note.deleted_at,
                     version: note.version,
