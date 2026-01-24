@@ -12,17 +12,8 @@ Type "cd tui/target/release"
 Enter
 Sleep 500ms
 
-# Show the TUI list command with formatting
-Type "./jottery list -d demo.db -p demo123"
-Enter
-Sleep 5s
-
-# Clear
-Ctrl+L
-Sleep 500ms
-
-# Show search command
-Type "./jottery search -d demo.db -p demo123 'meeting'"
+# Show list command help first
+Type "./jottery list --help"
 Enter
 Sleep 4s
 
@@ -30,7 +21,16 @@ Sleep 4s
 Ctrl+L
 Sleep 500ms
 
-# Show a specific note
-Type "./jottery show -d demo.db -p demo123 --help"
+# Show search command help
+Type "./jottery search --help"
+Enter
+Sleep 4s
+
+# Clear
+Ctrl+L
+Sleep 500ms
+
+# Show show command help
+Type "./jottery show --help"
 Enter
 Sleep 3s
