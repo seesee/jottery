@@ -18,6 +18,8 @@ NC='\033[0m' # No Color
 # Default language (use DEMO_LANG to avoid conflict with system LANG)
 DEMO_LANG="${DEMO_LANG:-en-GB}"
 
+PATH=tui/target/release/:$PATH
+
 # Available demos/screenshots
 declare -A DEMOS
 DEMOS[web-carousel-light]="Playwright carousel screenshots (light mode)"
