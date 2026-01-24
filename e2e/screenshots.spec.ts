@@ -282,62 +282,75 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await japanNote.click();
     await page.waitForTimeout(1000);
 
-    // Create some version history by editing the note multiple times
-    await page.evaluate(async () => {
-      // @ts-ignore - Access app context
-      const { noteService, versionRepository } = window.__appContext || {};
-      if (!noteService || !versionRepository) return;
+    // Create version history by making edits and navigating away/back to trigger sync
+    const editor = page.locator('.cm-content').first();
+    const welcomeNote = noteListItems.filter({ hasText: /Welcome to Jottery/i }).first();
 
-      // Get the Japan Trip note
-      const notes = await noteService.getAllNotes();
-      const japanNote = notes.find((n: any) => n.content.includes('Japan Trip'));
-      if (!japanNote) return;
-
-      // Create 3 versions with different content
-      const versions = [
-        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera', version: japanNote.version + 1 },
-        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook', version: japanNote.version + 2 },
-        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook\n- Comfortable shoes\n- Rain jacket', version: japanNote.version + 3 },
-      ];
-
-      // Create version snapshots manually
-      for (let i = 0; i < versions.length; i++) {
-        const versionData = {
-          ...japanNote,
-          content: versions[i].content,
-          version: versions[i].version,
-          modifiedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(), // 1 min apart
-        };
-
-        await versionRepository.createVersion(versionData, {
-          syncedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(),
-          reason: 'sync',
-        });
-      }
-    });
-
+    // Edit 1: Add packing list start
+    await editor.click();
+    await page.keyboard.press('End'); // Go to end of document
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('## Packing List');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Passport');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Camera');
     await page.waitForTimeout(500);
 
-    // Open the more menu
-    const moreButton = page.locator('button').filter({ hasText: /⋮|More/i }).first();
-    if (await moreButton.isVisible().catch(() => false)) {
-      await moreButton.click();
-      await page.waitForTimeout(300);
-    }
+    // Navigate away and back to trigger sync (creates version 1)
+    await welcomeNote.click();
+    await page.waitForTimeout(1000);
+    await japanNote.click();
+    await page.waitForTimeout(1000);
 
-    // Click Version History option
-    const versionHistoryButton = page.locator('button, [role="menuitem"]').filter({ hasText: /Version History|📜/i }).first();
-    if (await versionHistoryButton.isVisible().catch(() => false)) {
-      await versionHistoryButton.click();
-      await page.waitForTimeout(1000);
-    }
+    // Edit 2: Add more items
+    await editor.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Travel adapter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Guidebook');
+    await page.waitForTimeout(500);
 
-    // Check if modal opened
+    // Navigate away and back to trigger sync (creates version 2)
+    await welcomeNote.click();
+    await page.waitForTimeout(1000);
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Edit 3: Add final items
+    await editor.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Comfortable shoes');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Rain jacket');
+    await page.waitForTimeout(500);
+
+    // Navigate away and back to trigger sync (creates version 3)
+    await welcomeNote.click();
+    await page.waitForTimeout(1000);
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Open the more menu to access version history
+    const moreButton = page.locator('button[aria-label="More actions"]').first();
+    await moreButton.waitFor({ state: 'visible', timeout: 5000 });
+    await moreButton.click();
+    await page.waitForTimeout(500);
+
+    // Click Version History option (look for 📜 emoji)
+    const versionHistoryButton = page.locator('button').filter({ hasText: /📜/ }).first();
+    await versionHistoryButton.waitFor({ state: 'visible', timeout: 5000 });
+    await versionHistoryButton.click();
+    await page.waitForTimeout(1000);
+
+    // Wait for modal to appear
     const modal = page.locator('[role="dialog"]').first();
-    const isModalVisible = await modal.isVisible().catch(() => false);
-    if (!isModalVisible) {
-      console.warn('⚠️ Version history modal not visible');
-    }
+    await modal.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
+      console.warn('⚠️ Version history modal did not appear');
+    });
 
     await page.screenshot({
       path: 'screenshots/04-version-history-light.png',
@@ -625,62 +638,75 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await japanNote.click();
     await page.waitForTimeout(1000);
 
-    // Create some version history by editing the note multiple times
-    await page.evaluate(async () => {
-      // @ts-ignore - Access app context
-      const { noteService, versionRepository } = window.__appContext || {};
-      if (!noteService || !versionRepository) return;
+    // Create version history by making edits and navigating away/back to trigger sync
+    const editor = page.locator('.cm-content').first();
+    const welcomeNote = noteListItems.filter({ hasText: /Welcome to Jottery/i }).first();
 
-      // Get the Japan Trip note
-      const notes = await noteService.getAllNotes();
-      const japanNote = notes.find((n: any) => n.content.includes('Japan Trip'));
-      if (!japanNote) return;
-
-      // Create 3 versions with different content
-      const versions = [
-        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera', version: japanNote.version + 1 },
-        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook', version: japanNote.version + 2 },
-        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook\n- Comfortable shoes\n- Rain jacket', version: japanNote.version + 3 },
-      ];
-
-      // Create version snapshots manually
-      for (let i = 0; i < versions.length; i++) {
-        const versionData = {
-          ...japanNote,
-          content: versions[i].content,
-          version: versions[i].version,
-          modifiedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(), // 1 min apart
-        };
-
-        await versionRepository.createVersion(versionData, {
-          syncedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(),
-          reason: 'sync',
-        });
-      }
-    });
-
+    // Edit 1: Add packing list start
+    await editor.click();
+    await page.keyboard.press('End'); // Go to end of document
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('## Packing List');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Passport');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Camera');
     await page.waitForTimeout(500);
 
-    // Open the more menu
-    const moreButton = page.locator('button').filter({ hasText: /⋮|More/i }).first();
-    if (await moreButton.isVisible().catch(() => false)) {
-      await moreButton.click();
-      await page.waitForTimeout(300);
-    }
+    // Navigate away and back to trigger sync (creates version 1)
+    await welcomeNote.click();
+    await page.waitForTimeout(1000);
+    await japanNote.click();
+    await page.waitForTimeout(1000);
 
-    // Click Version History option
-    const versionHistoryButton = page.locator('button, [role="menuitem"]').filter({ hasText: /Version History|📜/i }).first();
-    if (await versionHistoryButton.isVisible().catch(() => false)) {
-      await versionHistoryButton.click();
-      await page.waitForTimeout(1000);
-    }
+    // Edit 2: Add more items
+    await editor.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Travel adapter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Guidebook');
+    await page.waitForTimeout(500);
 
-    // Check if modal opened
+    // Navigate away and back to trigger sync (creates version 2)
+    await welcomeNote.click();
+    await page.waitForTimeout(1000);
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Edit 3: Add final items
+    await editor.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Comfortable shoes');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('- Rain jacket');
+    await page.waitForTimeout(500);
+
+    // Navigate away and back to trigger sync (creates version 3)
+    await welcomeNote.click();
+    await page.waitForTimeout(1000);
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Open the more menu to access version history
+    const moreButton = page.locator('button[aria-label="More actions"]').first();
+    await moreButton.waitFor({ state: 'visible', timeout: 5000 });
+    await moreButton.click();
+    await page.waitForTimeout(500);
+
+    // Click Version History option (look for 📜 emoji)
+    const versionHistoryButton = page.locator('button').filter({ hasText: /📜/ }).first();
+    await versionHistoryButton.waitFor({ state: 'visible', timeout: 5000 });
+    await versionHistoryButton.click();
+    await page.waitForTimeout(1000);
+
+    // Wait for modal to appear
     const modal = page.locator('[role="dialog"]').first();
-    const isModalVisible = await modal.isVisible().catch(() => false);
-    if (!isModalVisible) {
-      console.warn('⚠️ Version history modal not visible');
-    }
+    await modal.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
+      console.warn('⚠️ Version history modal did not appear');
+    });
 
     await page.screenshot({
       path: 'screenshots/04-version-history-dark.png',

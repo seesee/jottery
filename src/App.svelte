@@ -209,6 +209,7 @@
           DEFAULT_SETTINGS,
           noteService,
           versionRepository,
+          syncService,
         };
       }
 
