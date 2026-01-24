@@ -524,11 +524,19 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             app.debug_log(&format!("  Local attachments: {}, Remote attachments: {}", local_note.attachments.len(), note_attachments.len()));
 
             // Conflict resolution: Last-Write-Wins, but also update if attachments differ
-            let should_update = remote_note.modified_at > local_note.modified_at
-                || note_attachments.len() != local_note.attachments.len();
+            // During force sync, always update to ensure we pull latest from server
+            let should_update = if force {
+                app.debug_log("  -> Force sync mode: will update regardless of timestamps");
+                true
+            } else {
+                remote_note.modified_at > local_note.modified_at
+                    || note_attachments.len() != local_note.attachments.len()
+            };
 
             if should_update {
-                if remote_note.modified_at > local_note.modified_at {
+                if force {
+                    app.debug_log("  -> Updating note (force sync)");
+                } else if remote_note.modified_at > local_note.modified_at {
                     app.debug_log("  -> Updating note (remote is newer)");
                 } else {
                     app.debug_log("  -> Updating note (attachments differ even though timestamps match)");
