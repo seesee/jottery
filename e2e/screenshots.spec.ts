@@ -275,12 +275,48 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the Japan Trip note (which should have some history)
+    // Click on the Japan Trip note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
     await japanNote.waitFor({ state: 'visible' });
     await japanNote.click();
     await page.waitForTimeout(1000);
+
+    // Create some version history by editing the note multiple times
+    await page.evaluate(async () => {
+      // @ts-ignore - Access app context
+      const { noteService, versionRepository } = window.__appContext || {};
+      if (!noteService || !versionRepository) return;
+
+      // Get the Japan Trip note
+      const notes = await noteService.getAllNotes();
+      const japanNote = notes.find((n: any) => n.content.includes('Japan Trip'));
+      if (!japanNote) return;
+
+      // Create 3 versions with different content
+      const versions = [
+        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera', version: japanNote.version + 1 },
+        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook', version: japanNote.version + 2 },
+        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook\n- Comfortable shoes\n- Rain jacket', version: japanNote.version + 3 },
+      ];
+
+      // Create version snapshots manually
+      for (let i = 0; i < versions.length; i++) {
+        const versionData = {
+          ...japanNote,
+          content: versions[i].content,
+          version: versions[i].version,
+          modifiedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(), // 1 min apart
+        };
+
+        await versionRepository.createVersion(versionData, {
+          syncedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(),
+          reason: 'sync',
+        });
+      }
+    });
+
+    await page.waitForTimeout(500);
 
     // Open the more menu
     const moreButton = page.locator('button').filter({ hasText: /⋮|More/i }).first();
@@ -582,12 +618,48 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the Japan Trip note (which should have some history)
+    // Click on the Japan Trip note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
     await japanNote.waitFor({ state: 'visible' });
     await japanNote.click();
     await page.waitForTimeout(1000);
+
+    // Create some version history by editing the note multiple times
+    await page.evaluate(async () => {
+      // @ts-ignore - Access app context
+      const { noteService, versionRepository } = window.__appContext || {};
+      if (!noteService || !versionRepository) return;
+
+      // Get the Japan Trip note
+      const notes = await noteService.getAllNotes();
+      const japanNote = notes.find((n: any) => n.content.includes('Japan Trip'));
+      if (!japanNote) return;
+
+      // Create 3 versions with different content
+      const versions = [
+        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera', version: japanNote.version + 1 },
+        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook', version: japanNote.version + 2 },
+        { content: japanNote.content + '\n\n## Packing List\n- Passport\n- Camera\n- Travel adapter\n- Guidebook\n- Comfortable shoes\n- Rain jacket', version: japanNote.version + 3 },
+      ];
+
+      // Create version snapshots manually
+      for (let i = 0; i < versions.length; i++) {
+        const versionData = {
+          ...japanNote,
+          content: versions[i].content,
+          version: versions[i].version,
+          modifiedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(), // 1 min apart
+        };
+
+        await versionRepository.createVersion(versionData, {
+          syncedAt: new Date(Date.now() + (i + 1) * 60000).toISOString(),
+          reason: 'sync',
+        });
+      }
+    });
+
+    await page.waitForTimeout(500);
 
     // Open the more menu
     const moreButton = page.locator('button').filter({ hasText: /⋮|More/i }).first();
