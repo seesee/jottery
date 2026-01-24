@@ -450,6 +450,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 let prev = std::mem::replace(&mut app.state, AppState::Quit);
                 app.state = AppState::Help {
                     previous: Box::new(prev),
+                    scroll_offset: 0,
                 };
             }
             KeyCode::Char('s') => {

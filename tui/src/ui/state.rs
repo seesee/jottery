@@ -21,6 +21,8 @@ pub enum AppState {
     Help {
         /// Previous state to return to
         previous: Box<AppState>,
+        /// Current scroll offset
+        scroll_offset: usize,
     },
     /// Show sync credentials as text (for manual copy)
     ShowSyncCredentials {

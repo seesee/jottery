@@ -1,12 +1,14 @@
 //! Rendering for the help screen
 
 use ratatui::Frame;
+use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use rust_i18n::t;
 
 use crate::ui::app::App;
+use crate::ui::state::AppState;
 
 /// Helper struct for help screen entries with separate key bindings and descriptions
 struct HelpEntry {
@@ -27,8 +29,15 @@ impl HelpEntry {
 pub fn render_help(app: &App, frame: &mut Frame) {
     let size = frame.area();
 
+    // Get current scroll offset
+    let scroll_offset = if let AppState::Help { scroll_offset, .. } = &app.state {
+        *scroll_offset
+    } else {
+        0
+    };
+
     let block = Block::default()
-        .title(format!("{} - {}", t!("help.title"), t!("help.subtitle")))
+        .title(format!("{} - {} (↑↓/j/k to scroll, PgUp/PgDown, q/? to close)", t!("help.title"), t!("help.subtitle")))
         .borders(Borders::ALL)
         .style(Style::default().fg(app.color_scheme.accent));
 
@@ -57,6 +66,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.r_recycle_key", "help.r_recycle_desc"),
                 HelpEntry::new("help.v_versions_key", "help.v_versions_desc"),
                 HelpEntry::new("help.bracket_cycle_key", "help.bracket_cycle_desc"),
+                HelpEntry::new("help.color_cycle_key", "help.color_cycle_desc"),
                 HelpEntry::new("help.j_down_key", "help.j_down_desc"),
                 HelpEntry::new("help.k_up_key", "help.k_up_desc"),
                 HelpEntry::new("help.pageup_pagedown_key", "help.pageup_pagedown_desc"),
@@ -151,6 +161,9 @@ pub fn render_help(app: &App, frame: &mut Frame) {
         ),
     ];
 
+    // Determine if we should use 2-column layout (terminal width > 100)
+    let use_two_columns = size.width > 100;
+
     // Calculate maximum key binding width across all sections
     let max_key_width = sections
         .iter()
@@ -159,22 +172,77 @@ pub fn render_help(app: &App, frame: &mut Frame) {
         .max()
         .unwrap_or(0);
 
-    // Build help text with dynamic spacing
-    let mut help_text = Vec::new();
+    if use_two_columns {
+        // Split sections into two columns
+        let mid = (sections.len() + 1) / 2;
+        let (left_sections, right_sections) = sections.split_at(mid);
+
+        // Create horizontal layout
+        let chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(size);
+
+        // Build left column text
+        let left_text = build_column_text(left_sections, max_key_width, app, scroll_offset);
+
+        // Build right column text
+        let right_text = build_column_text(right_sections, max_key_width, app, scroll_offset);
+
+        // Render both columns
+        let left_block = Block::default()
+            .title(format!("{} - {}", t!("help.title"), t!("help.subtitle")))
+            .borders(Borders::ALL)
+            .style(Style::default().fg(app.color_scheme.accent));
+
+        let right_block = Block::default()
+            .borders(Borders::ALL)
+            .style(Style::default().fg(app.color_scheme.accent));
+
+        let left_paragraph = Paragraph::new(left_text)
+            .block(left_block)
+            .wrap(Wrap { trim: false });
+
+        let right_paragraph = Paragraph::new(right_text)
+            .block(right_block)
+            .wrap(Wrap { trim: false });
+
+        frame.render_widget(left_paragraph, chunks[0]);
+        frame.render_widget(right_paragraph, chunks[1]);
+    } else {
+        // Single column layout with scrolling
+        let help_text = build_column_text(&sections, max_key_width, app, scroll_offset);
+
+        let paragraph = Paragraph::new(help_text)
+            .block(block)
+            .wrap(Wrap { trim: false });
+
+        frame.render_widget(paragraph, size);
+    }
+}
+
+/// Build text for a column of help sections with scroll support
+fn build_column_text(
+    sections: &[(&str, Vec<HelpEntry>)],
+    max_key_width: usize,
+    app: &App,
+    scroll_offset: usize,
+) -> Vec<Line<'static>> {
+    let mut all_lines = Vec::new();
 
     for (section_title, entries) in sections {
-        // Add section header
-        help_text.push(Line::from(vec![
+        // Add section header (convert to owned string)
+        all_lines.push(Line::from(vec![
             Span::styled(
-                t!(section_title),
+                t!(*section_title).to_string(),
                 Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)
             ),
         ]));
 
-        // Add entries with dynamic spacing
+        // Add entries with dynamic spacing (already owned via format!)
         for entry in entries {
             let spacing = " ".repeat(max_key_width - entry.key_binding.len() + 2);
-            help_text.push(Line::from(format!(
+            all_lines.push(Line::from(format!(
                 "  {}{}{}",
                 entry.key_binding,
                 spacing,
@@ -182,13 +250,10 @@ pub fn render_help(app: &App, frame: &mut Frame) {
             )));
         }
 
-        // Add blank line after section
-        help_text.push(Line::from(""));
+        // Add blank line after section (convert to owned)
+        all_lines.push(Line::from("".to_string()));
     }
 
-    let paragraph = Paragraph::new(help_text)
-        .block(block)
-        .wrap(Wrap { trim: false });
-
-    frame.render_widget(paragraph, size);
+    // Apply scroll offset by skipping lines
+    all_lines.into_iter().skip(scroll_offset).collect()
 }
