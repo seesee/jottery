@@ -508,10 +508,9 @@ pub async fn pull(
     );
 
     // Get total count first (for pagination metadata)
-    // Note: We don't return permanently deleted notes (deleted=1) during sync
     let total_count: i64 = if let Some(last_sync) = &pull_req.last_sync_at {
         let count_result = sqlx::query!(
-            "SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND server_modified_at > ? AND deleted = 0",
+            "SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND server_modified_at > ?",
             client_info.user_id,
             last_sync
         )
@@ -520,7 +519,7 @@ pub async fn pull(
         count_result.count as i64
     } else {
         let count_result = sqlx::query!(
-            "SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND deleted = 0",
+            "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
             client_info.user_id
         )
         .fetch_one(&state.pool)
@@ -529,10 +528,9 @@ pub async fn pull(
     };
 
     // Get notes with pagination (LIMIT/OFFSET)
-    // Note: We don't return permanently deleted notes (deleted=1) during sync
     let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? AND deleted = 0 ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             last_sync,
             limit,
@@ -565,7 +563,7 @@ pub async fn pull(
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND deleted = 0 ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             limit,
             offset
