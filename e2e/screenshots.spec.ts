@@ -339,22 +339,45 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await editor.click();
     await page.waitForTimeout(300);
 
-    // Type the compound interest example
-    await page.keyboard.type('# Calculate compound interest');
+    // Type the REPL calculator examples (no = for results, they auto-evaluate)
+    await page.keyboard.type('# Compound interest calculator');
     await page.keyboard.press('Enter');
     await page.keyboard.type('principal = 1000');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
 
     await page.keyboard.type('rate = 0.05');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
 
     await page.keyboard.type('years = 10');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
 
     await page.keyboard.type('principal * (1 + rate)^years');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('# More examples');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('sqrt(144)');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('pi * 10');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('x = 42');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('y = 10');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('x + y');
     await page.waitForTimeout(800);
 
     await page.screenshot({
@@ -629,22 +652,45 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await editor.click();
     await page.waitForTimeout(300);
 
-    // Type the compound interest example
-    await page.keyboard.type('# Calculate compound interest');
+    // Type the REPL calculator examples (no = for results, they auto-evaluate)
+    await page.keyboard.type('# Compound interest calculator');
     await page.keyboard.press('Enter');
     await page.keyboard.type('principal = 1000');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
 
     await page.keyboard.type('rate = 0.05');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
 
     await page.keyboard.type('years = 10');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(500);
 
     await page.keyboard.type('principal * (1 + rate)^years');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('# More examples');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('sqrt(144)');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('pi * 10');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('x = 42');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('y = 10');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(500);
+
+    await page.keyboard.type('x + y');
     await page.waitForTimeout(800);
 
     await page.screenshot({
