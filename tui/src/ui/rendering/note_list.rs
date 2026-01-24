@@ -134,26 +134,26 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 preview = format!("{}{}", indicators, preview);
             }
 
-            // Get note background color if set
+            // Get note text color if set (TUI uses foreground, not background)
             let theme_name = app.settings.theme.to_string();
             let is_dark = is_dark_theme(&theme_name);
             app.debug_log(&format!("Note {} - theme_name={}, is_dark={}, color={:?}",
                 i, theme_name, is_dark, note.color));
-            let note_bg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
-            app.debug_log(&format!("Note {} - bg_color resolved: {:?}", i, note_bg_color.is_some()));
+            let note_fg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
+            app.debug_log(&format!("Note {} - fg_color resolved: {:?}", i, note_fg_color.is_some()));
 
             // Style selected notes differently in multi-select mode
             let is_selected = app.selected_note_ids.contains(&note.id);
-            let mut style = if is_selected {
+            let style = if is_selected {
+                // Selected notes use accent color
                 Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
+            } else if let Some(fg_color) = note_fg_color {
+                // Unselected notes with color use that color
+                Style::default().fg(fg_color)
             } else {
+                // Unselected notes without color use default
                 Style::default()
             };
-
-            // Apply note background color if present
-            if let Some(bg_color) = note_bg_color {
-                style = style.bg(bg_color);
-            }
 
             ListItem::new(preview).style(style)
         })
