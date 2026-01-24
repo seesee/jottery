@@ -2,7 +2,7 @@
 
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 use rust_i18n::t;
@@ -258,24 +258,24 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 Line::from(title_line),
             ];
 
-            // Add preview lines if they exist
+            // Add preview lines if they exist (use lighter gray for better readability)
             if !preview_line1.is_empty() {
                 lines.push(Line::from(Span::styled(
                     format!("  {}", preview_line1),
-                    Style::default().fg(app.color_scheme.muted)
+                    Style::default().fg(Color::Gray)
                 )));
             }
             if !preview_line2.is_empty() {
                 lines.push(Line::from(Span::styled(
                     format!("  {}", preview_line2),
-                    Style::default().fg(app.color_scheme.muted)
+                    Style::default().fg(Color::Gray)
                 )));
             }
 
-            // Add metadata line
+            // Add metadata line (slightly dimmer than preview)
             lines.push(Line::from(Span::styled(
                 format!("  {}", metadata_line),
-                Style::default().fg(app.color_scheme.muted)
+                Style::default().fg(Color::DarkGray)
             )));
 
             // Add blank separator line
