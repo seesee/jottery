@@ -78,6 +78,40 @@ fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<Stri
     }
 }
 
+/// Get the previous color in the palette, cycling through available colors backwards
+fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<String> {
+    let color_names = app.settings.get_color_palette()
+        .keys()
+        .map(|s| s.clone())
+        .collect::<Vec<String>>();
+
+    if color_names.is_empty() {
+        return None;
+    }
+
+    match current_color {
+        None => {
+            // No color set, return last color (going backwards)
+            Some(color_names[color_names.len() - 1].clone())
+        }
+        Some(current) => {
+            // Find current color in list
+            if let Some(pos) = color_names.iter().position(|c| c == current) {
+                if pos == 0 {
+                    // At first color - wrap to None
+                    None
+                } else {
+                    // Get previous color
+                    Some(color_names[pos - 1].clone())
+                }
+            } else {
+                // Current color not found, return last color
+                Some(color_names[color_names.len() - 1].clone())
+            }
+        }
+    }
+}
+
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // Debug: log which key was pressed
@@ -909,6 +943,44 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                     ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
                         // 'r' does nothing in these views
+                    }
+                }
+            }
+            KeyCode::Char('c') if !app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
+                // Cycle color/category backward for selected note (only in note list view, not in multi-select)
+                let filtered = app.filtered_notes();
+                if !filtered.is_empty() && app.selected_note < filtered.len() {
+                    let note_id = filtered[app.selected_note].id.clone();
+
+                    // Get current color before mutably borrowing
+                    let current_color = app.notes.iter()
+                        .find(|n| n.id == note_id)
+                        .and_then(|n| n.color.as_ref())
+                        .cloned();
+
+                    // Calculate new color (backward)
+                    let new_color = cycle_color_backward(current_color.as_ref(), app);
+
+                    // Update note
+                    if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
+                        note.color = new_color.clone();
+
+                        // Save to database
+                        if let (Some(db), Some(key)) = (&app.db, &app.key) {
+                            let repo = NoteRepository::new(db.connection());
+                            if let Err(e) = repo.update(note, key) {
+                                app.error = Some(format!("Failed to update note color: {}", e));
+                            }
+                        }
+                    }
+
+                    // Show status message
+                    if let Some(color) = new_color {
+                        app.sync_status = Some(format!("Color: {}", color));
+                        app.sync_status_set_at = Some(std::time::Instant::now());
+                    } else {
+                        app.sync_status = Some("Color: None".to_string());
+                        app.sync_status_set_at = Some(std::time::Instant::now());
                     }
                 }
             }

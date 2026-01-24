@@ -64,6 +64,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.d_delete_key", "help.d_delete_desc"),
                 HelpEntry::new("help.p_pin_key", "help.p_pin_desc"),
                 HelpEntry::new("help.r_recycle_key", "help.r_recycle_desc"),
+                HelpEntry::new("help.shift_a_archive_key", "help.shift_a_archive_desc"),
                 HelpEntry::new("help.v_versions_key", "help.v_versions_desc"),
                 HelpEntry::new("help.bracket_cycle_key", "help.bracket_cycle_desc"),
                 HelpEntry::new("help.color_cycle_key", "help.color_cycle_desc"),
