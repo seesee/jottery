@@ -7,30 +7,44 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Navigate to executable directory
+# Change to TUI directory
 Type "cd tui/target/release"
 Enter
+Sleep 300ms
+
+# Start jottery TUI with default database
+Type "./jottery"
+Enter
+Sleep 2s
+
+# Navigate down 2 notes
+Down
+Sleep 400ms
+Down
+Sleep 400ms
+
+# Open note in editor (vim)
+Enter
+Sleep 2s
+
+# Navigate down 2 lines in vim
+Down
+Down
 Sleep 500ms
 
-# Show list command help first
-Type "./jottery list --help"
-Enter
-Sleep 4s
+# Insert text
+Type "i"
+Sleep 200ms
+Type "hello from $EDITOR!"
+Sleep 1s
 
-# Clear
-Ctrl+L
+# Delete the text
+Escape
+Sleep 300ms
+Type "dd"
 Sleep 500ms
 
-# Show search command help
-Type "./jottery search --help"
+# Save and quit
+Type ":wq"
 Enter
-Sleep 4s
-
-# Clear
-Ctrl+L
-Sleep 500ms
-
-# Show show command help
-Type "./jottery show --help"
-Enter
-Sleep 3s
+Sleep 2s
