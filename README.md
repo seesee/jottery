@@ -548,6 +548,23 @@ Meeting recording:
 - Renaming attachments will break existing markdown links (references are by filename)
 - You can reference the same attachment multiple times in one note
 
+## Development
+
+### Regenerating Landing Page Demos
+
+All landing page screenshots and demos can be regenerated using the consolidated generation script:
+
+```bash
+./demo-generation/generate.sh
+```
+
+This will:
+- Generate 16 web screenshots (Playwright)
+- Generate 4 TUI demo GIFs (VHS)
+- Verify all files are present
+
+See [demo-generation/README.md](demo-generation/README.md) for detailed documentation on modifying and regenerating individual demos.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
