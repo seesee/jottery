@@ -1,5 +1,5 @@
 # Jottery TUI - Piping Content
-Output public/screenshots/tui-piping.gif
+Output public/screenshots/en-GB/tui-piping.gif
 
 Set FontSize 18
 Set Width 1400

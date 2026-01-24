@@ -12,16 +12,16 @@
   // Carousel screenshots
   const carouselScreenshots = {
     light: [
-      { src: '/screenshots/01-main-interface-light.png', alt: 'Main Interface' },
-      { src: '/screenshots/01-main-interface-light-preview.png', alt: 'Preview Mode' },
-      { src: '/screenshots/01-main-interface-light-japan-preview.png', alt: 'Japan Itinerary - Preview' },
-      { src: '/screenshots/01-main-interface-light-japan.png', alt: 'Japan Itinerary - Edit' },
+      { src: '/screenshots/en-GB/01-main-interface-light.png', alt: 'Main Interface' },
+      { src: '/screenshots/en-GB/01-main-interface-light-preview.png', alt: 'Preview Mode' },
+      { src: '/screenshots/en-GB/01-main-interface-light-japan-preview.png', alt: 'Japan Itinerary - Preview' },
+      { src: '/screenshots/en-GB/01-main-interface-light-japan.png', alt: 'Japan Itinerary - Edit' },
     ],
     dark: [
-      { src: '/screenshots/01-main-interface-dark.png', alt: 'Main Interface - Dark' },
-      { src: '/screenshots/01-main-interface-dark-preview.png', alt: 'Preview Mode - Dark' },
-      { src: '/screenshots/01-main-interface-dark-japan-preview.png', alt: 'Japan Itinerary - Preview - Dark' },
-      { src: '/screenshots/01-main-interface-dark-japan.png', alt: 'Japan Itinerary - Edit - Dark' },
+      { src: '/screenshots/en-GB/01-main-interface-dark.png', alt: 'Main Interface - Dark' },
+      { src: '/screenshots/en-GB/01-main-interface-dark-preview.png', alt: 'Preview Mode - Dark' },
+      { src: '/screenshots/en-GB/01-main-interface-dark-japan-preview.png', alt: 'Japan Itinerary - Preview - Dark' },
+      { src: '/screenshots/en-GB/01-main-interface-dark-japan.png', alt: 'Japan Itinerary - Edit - Dark' },
     ],
   };
 
@@ -87,34 +87,34 @@
     {
       key: 'richEditor',
       icon: '✏️',
-      screenshotLight: '/screenshots/02-rich-editor-light.png',
-      screenshotDark: '/screenshots/02-rich-editor-dark.png',
+      screenshotLight: '/screenshots/en-GB/02-rich-editor-light.png',
+      screenshotDark: '/screenshots/en-GB/02-rich-editor-dark.png',
     },
     {
       key: 'multiSelect',
       icon: '☑️',
-      screenshotLight: '/screenshots/03-multi-select-light.png',
-      screenshotDark: '/screenshots/03-multi-select-dark.png',
+      screenshotLight: '/screenshots/en-GB/03-multi-select-light.png',
+      screenshotDark: '/screenshots/en-GB/03-multi-select-dark.png',
     },
     {
       key: 'versions',
       icon: '📜',
-      screenshotLight: '/screenshots/04-version-history-light.png',
-      screenshotDark: '/screenshots/04-version-history-dark.png',
+      screenshotLight: '/screenshots/en-GB/04-version-history-light.png',
+      screenshotDark: '/screenshots/en-GB/04-version-history-dark.png',
     },
     {
       key: 'calculator',
       icon: '🧮',
-      screenshotLight: '/screenshots/05-calculator-light.png',
-      screenshotDark: '/screenshots/05-calculator-dark.png',
+      screenshotLight: '/screenshots/en-GB/05-calculator-light.png',
+      screenshotDark: '/screenshots/en-GB/05-calculator-dark.png',
     },
   ];
 
   const tuiFeatures = [
-    { key: 'terminal', icon: '💻', screenshot: '/screenshots/tui-interface.gif' },
-    { key: 'cli', icon: '⚡', screenshot: '/screenshots/tui-cli.gif' },
-    { key: 'piping', icon: '🔗', screenshot: '/screenshots/tui-piping.gif' },
-    { key: 'crossPlatform', icon: '🌐', screenshot: '/screenshots/tui-sync.gif' },
+    { key: 'terminal', icon: '💻', screenshot: '/screenshots/en-GB/tui-interface.gif' },
+    { key: 'cli', icon: '⚡', screenshot: '/screenshots/en-GB/tui-cli.gif' },
+    { key: 'piping', icon: '🔗', screenshot: '/screenshots/en-GB/tui-piping.gif' },
+    { key: 'crossPlatform', icon: '🌐', screenshot: '/screenshots/en-GB/tui-sync.gif' },
   ];
 
   // Helper to get the appropriate screenshot based on theme

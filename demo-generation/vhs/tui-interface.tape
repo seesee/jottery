@@ -1,5 +1,5 @@
 # Jottery TUI - Interactive Interface
-Output public/screenshots/tui-interface.gif
+Output public/screenshots/en-GB/tui-interface.gif
 
 Set FontSize 18
 Set Width 1400
@@ -9,6 +9,9 @@ Set Shell "bash"
 
 # Change to TUI directory
 Type "cd tui/target/release"
+Enter
+Sleep 300ms
+Type "pwd"
 Enter
 Sleep 300ms
 
@@ -34,8 +37,11 @@ Sleep 500ms
 
 # Insert text
 Type "i"
+Enter
 Sleep 200ms
 Type "hello from $EDITOR!"
+Enter
+Up
 Sleep 1s
 
 # Delete the text

@@ -1,12 +1,15 @@
 /**
  * Screenshot generation for landing page placeholders
  * Run with: npx playwright test screenshots --project=firefox
- * Screenshots will be saved to: screenshots/
+ * Screenshots will be saved to: screenshots/en-GB/
  */
 
 import { test, expect } from '@playwright/test';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+
+const LANG = process.env.LANG || 'en-GB';
+const SCREENSHOT_DIR = `screenshots/${LANG}`;
 
 // Helper function to import demo notes via Settings UI
 async function importDemoNotes(page: any) {
@@ -145,11 +148,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-light.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-light.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-light.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light.png');
   });
 
   test('01a-light. Main Interface - Preview Mode', async ({ page }) => {
@@ -171,11 +174,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-light-preview.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-light-preview.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-light-preview.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-preview.png');
   });
 
   test('01b-light. Main Interface - Japan Preview', async ({ page }) => {
@@ -197,11 +200,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-light-japan-preview.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-light-japan-preview.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-light-japan-preview.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-japan-preview.png');
   });
 
   test('01c-light. Main Interface - Japan Note', async ({ page }) => {
@@ -217,11 +220,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-light-japan.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-light-japan.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-light-japan.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-japan.png');
   });
 
   test('02-light. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
@@ -236,11 +239,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/02-rich-editor-light.png',
+      path: `${SCREENSHOT_DIR}/02-rich-editor-light.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/02-rich-editor-light.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/02-rich-editor-light.png');
   });
 
   test('03-light. Multi-Select - Bulk Operations', async ({ page }) => {
@@ -264,11 +267,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/03-multi-select-light.png',
+      path: `${SCREENSHOT_DIR}/03-multi-select-light.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/03-multi-select-light.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/03-multi-select-light.png');
   });
 
   test('04-light. Version History', async ({ page }) => {
@@ -353,11 +356,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     });
 
     await page.screenshot({
-      path: 'screenshots/04-version-history-light.png',
+      path: `${SCREENSHOT_DIR}/04-version-history-light.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/04-version-history-light.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/04-version-history-light.png');
   });
 
   test('05-light. REPL Calculator', async ({ page }) => {
@@ -424,11 +427,11 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/05-calculator-light.png',
+      path: `${SCREENSHOT_DIR}/05-calculator-light.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/05-calculator-light.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/05-calculator-light.png');
   });
 });
 
@@ -501,11 +504,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/01-main-interface-dark.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-dark.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark.png');
   });
 
   test('01a-dark. Main Interface - Preview Mode', async ({ page }) => {
@@ -527,11 +530,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-dark-preview.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-dark-preview.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark-preview.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-preview.png');
   });
 
   test('01b-dark. Main Interface - Japan Preview', async ({ page }) => {
@@ -553,11 +556,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-dark-japan-preview.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-dark-japan-preview.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark-japan-preview.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-japan-preview.png');
   });
 
   test('01c-dark. Main Interface - Japan Note', async ({ page }) => {
@@ -573,11 +576,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: 'screenshots/01-main-interface-dark-japan.png',
+      path: `${SCREENSHOT_DIR}/01-main-interface-dark-japan.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/01-main-interface-dark-japan.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-japan.png');
   });
 
   test('02-dark. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
@@ -592,11 +595,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/02-rich-editor-dark.png',
+      path: `${SCREENSHOT_DIR}/02-rich-editor-dark.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/02-rich-editor-dark.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/02-rich-editor-dark.png');
   });
 
   test('03-dark. Multi-Select - Bulk Operations', async ({ page }) => {
@@ -620,11 +623,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/03-multi-select-dark.png',
+      path: `${SCREENSHOT_DIR}/03-multi-select-dark.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/03-multi-select-dark.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/03-multi-select-dark.png');
   });
 
   test('04-dark. Version History', async ({ page }) => {
@@ -709,11 +712,11 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     });
 
     await page.screenshot({
-      path: 'screenshots/04-version-history-dark.png',
+      path: `${SCREENSHOT_DIR}/04-version-history-dark.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/04-version-history-dark.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/04-version-history-dark.png');
   });
 
   test('05-dark. REPL Calculator', async ({ page }) => {
@@ -780,10 +783,10 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     await page.screenshot({
-      path: 'screenshots/05-calculator-dark.png',
+      path: `${SCREENSHOT_DIR}/05-calculator-dark.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/05-calculator-dark.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/05-calculator-dark.png');
   });
 });

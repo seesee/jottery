@@ -1,125 +1,206 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Demo & Screenshot Generation Script
-# This script regenerates all landing page screenshots and demos
+# This script regenerates all or specific landing page screenshots and demos
 
 set -e  # Exit on error
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
-echo "🎬 Jottery Demo Generation"
-echo "=========================="
-echo ""
-
 # Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+# Default language (use DEMO_LANG to avoid conflict with system LANG)
+DEMO_LANG="${DEMO_LANG:-en-GB}"
+
+# Available demos/screenshots
+declare -A DEMOS
+DEMOS[web-carousel-light]="Playwright carousel screenshots (light mode)"
+DEMOS[web-carousel-dark]="Playwright carousel screenshots (dark mode)"
+DEMOS[web-python-light]="Playwright Python syntax screenshot (light mode)"
+DEMOS[web-python-dark]="Playwright Python syntax screenshot (dark mode)"
+DEMOS[web-multiselect-light]="Playwright multi-select screenshot (light mode)"
+DEMOS[web-multiselect-dark]="Playwright multi-select screenshot (dark mode)"
+DEMOS[web-version-history-light]="Playwright version history screenshot (light mode)"
+DEMOS[web-version-history-dark]="Playwright version history screenshot (dark mode)"
+DEMOS[web-calculator-light]="Playwright calculator screenshot (light mode)"
+DEMOS[web-calculator-dark]="Playwright calculator screenshot (dark mode)"
+DEMOS[tui-cli]="VHS TUI CLI commands demo"
+DEMOS[tui-interface]="VHS TUI interactive interface demo"
+DEMOS[tui-piping]="VHS TUI piping content demo"
+DEMOS[tui-sync]="VHS TUI sync commands demo"
+
+# Parse command line arguments
+SPECIFIC_DEMO=""
+SHOW_LIST=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --list)
+      SHOW_LIST=true
+      shift
+      ;;
+    --name)
+      SPECIFIC_DEMO="$2"
+      shift 2
+      ;;
+    --lang)
+      DEMO_LANG="$2"
+      shift 2
+      ;;
+    --help)
+      echo "Usage: $0 [OPTIONS]"
+      echo ""
+      echo "Options:"
+      echo "  --list              List all available demos"
+      echo "  --name DEMO_NAME    Generate specific demo only"
+      echo "  --lang LANGUAGE     Set language (default: en-GB)"
+      echo "  --help              Show this help message"
+      echo ""
+      echo "Examples:"
+      echo "  $0                           # Generate all demos"
+      echo "  $0 --list                    # List available demos"
+      echo "  $0 --name tui-cli            # Generate only TUI CLI demo"
+      echo "  $0 --name web-carousel-light # Generate only light carousel"
+      echo "  $0 --lang en-US              # Generate for en-US (future)"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Run '$0 --help' for usage information"
+      exit 1
+      ;;
+  esac
+done
+
+# Handle --list
+if [ "$SHOW_LIST" = true ]; then
+  echo -e "${CYAN}Available Demos:${NC}"
+  echo ""
+  for demo in "${!DEMOS[@]}"; do
+    echo -e "  ${YELLOW}$demo${NC} - ${DEMOS[$demo]}"
+  done | sort
+  echo ""
+  echo "Usage: $0 --name <demo-name>"
+  exit 0
+fi
+
+# Validate specific demo if provided
+if [ -n "$SPECIFIC_DEMO" ] && [ -z "${DEMOS[$SPECIFIC_DEMO]}" ]; then
+  echo -e "${YELLOW}Error: Unknown demo '$SPECIFIC_DEMO'${NC}"
+  echo ""
+  echo "Run '$0 --list' to see available demos"
+  exit 1
+fi
+
+echo "🎬 Jottery Demo Generation"
+echo "=========================="
+echo "Language: $DEMO_LANG"
+if [ -n "$SPECIFIC_DEMO" ]; then
+  echo "Generating: $SPECIFIC_DEMO"
+fi
+echo ""
 
 # Check dependencies
 echo -e "${BLUE}Checking dependencies...${NC}"
 command -v npm >/dev/null 2>&1 || { echo "❌ npm is required but not installed."; exit 1; }
-command -v vhs >/dev/null 2>&1 || { echo "❌ vhs is required but not installed. Run: brew install vhs"; exit 1; }
+
+if [ -z "$SPECIFIC_DEMO" ] || [[ "$SPECIFIC_DEMO" == tui-* ]]; then
+  command -v vhs >/dev/null 2>&1 || { echo "❌ vhs is required but not installed. Run: brew install vhs"; exit 1; }
+fi
 
 echo -e "${GREEN}✓ All dependencies found${NC}"
 echo ""
 
-# Step 1: Generate Web Screenshots with Playwright
-echo -e "${BLUE}Step 1: Generating web screenshots with Playwright...${NC}"
-echo "This will start the dev server and capture screenshots"
-echo ""
-
-npx playwright test --config=demo-generation/playwright.config.ts
-
-echo -e "${GREEN}✓ Web screenshots generated${NC}"
-echo ""
-
-# Step 2: Generate TUI Demos with VHS
-echo -e "${BLUE}Step 2: Generating TUI demos with VHS...${NC}"
-echo ""
-
-VHS_SCRIPTS=(
-  "demo-generation/vhs/tui-cli.tape"
-  "demo-generation/vhs/tui-piping.tape"
-  "demo-generation/vhs/tui-interface.tape"
-  "demo-generation/vhs/tui-sync.tape"
-)
-
-for script in "${VHS_SCRIPTS[@]}"; do
-  if [ -f "$script" ]; then
-    echo -e "${YELLOW}Generating: $(basename $script .tape)...${NC}"
-    vhs "$script"
+# Function to generate web screenshots
+generate_web_screenshots() {
+  local test_filter="$1"
+  echo -e "${BLUE}Generating web screenshots...${NC}"
+  if [ -n "$test_filter" ]; then
+    LANG=$DEMO_LANG npx playwright test --config=demo-generation/playwright.config.ts -g "$test_filter"
   else
-    echo -e "${YELLOW}⚠ Warning: $script not found, skipping${NC}"
+    LANG=$DEMO_LANG npx playwright test --config=demo-generation/playwright.config.ts
   fi
-done
 
-echo -e "${GREEN}✓ TUI demos generated${NC}"
-echo ""
+  # Copy from screenshots/en-GB to public/screenshots/en-GB
+  mkdir -p "public/screenshots/$DEMO_LANG"
+  cp -r screenshots/$DEMO_LANG/* "public/screenshots/$DEMO_LANG/"
+  echo -e "${GREEN}✓ Web screenshots copied to public/screenshots/$DEMO_LANG/${NC}"
+}
 
-# Step 3: Copy screenshots to public directory
-echo -e "${BLUE}Step 3: Copying screenshots to public/screenshots/...${NC}"
+# Function to generate VHS demo
+generate_vhs_demo() {
+  local demo_name="$1"
+  local tape_file="demo-generation/vhs/${demo_name}.tape"
 
-# Web screenshots are already in public/screenshots/ from Playwright tests
-# Just verify they exist
-WEB_SCREENSHOTS=(
-  "01-main-interface-light.png"
-  "01-main-interface-light-preview.png"
-  "01-main-interface-light-japan-preview.png"
-  "01-main-interface-light-japan.png"
-  "01-main-interface-dark.png"
-  "01-main-interface-dark-preview.png"
-  "01-main-interface-dark-japan-preview.png"
-  "01-main-interface-dark-japan.png"
-  "02-python-syntax-light.png"
-  "02-python-syntax-dark.png"
-  "03-multi-select-light.png"
-  "03-multi-select-dark.png"
-  "04-version-history-light.png"
-  "04-version-history-dark.png"
-  "05-calculator-light.png"
-  "05-calculator-dark.png"
-)
-
-TUI_GIFS=(
-  "tui-cli.gif"
-  "tui-piping.gif"
-  "tui-interface.gif"
-  "tui-sync.gif"
-)
-
-# Verify web screenshots
-echo "Verifying web screenshots..."
-missing=0
-for screenshot in "${WEB_SCREENSHOTS[@]}"; do
-  if [ ! -f "public/screenshots/$screenshot" ]; then
-    echo -e "${YELLOW}⚠ Missing: $screenshot${NC}"
-    ((missing++))
+  if [ ! -f "$tape_file" ]; then
+    echo -e "${YELLOW}⚠ Warning: $tape_file not found${NC}"
+    return 1
   fi
-done
 
-# Verify TUI GIFs
-echo "Verifying TUI demos..."
-for gif in "${TUI_GIFS[@]}"; do
-  if [ ! -f "public/screenshots/$gif" ]; then
-    echo -e "${YELLOW}⚠ Missing: $gif${NC}"
-    ((missing++))
-  fi
-done
+  echo -e "${YELLOW}Generating: $demo_name...${NC}"
+  vhs "$tape_file"
+  echo -e "${GREEN}✓ $demo_name generated${NC}"
+}
 
-if [ $missing -eq 0 ]; then
-  echo -e "${GREEN}✓ All screenshots and demos present${NC}"
+# Generate based on selection
+if [ -z "$SPECIFIC_DEMO" ]; then
+  # Generate all demos
+  echo -e "${BLUE}Step 1: Generating all web screenshots...${NC}"
+  generate_web_screenshots ""
+  echo ""
+
+  echo -e "${BLUE}Step 2: Generating all TUI demos...${NC}"
+  for demo in tui-cli tui-piping tui-interface tui-sync; do
+    generate_vhs_demo "$demo"
+  done
+  echo ""
+
 else
-  echo -e "${YELLOW}⚠ $missing files missing or not generated${NC}"
+  # Generate specific demo
+  case "$SPECIFIC_DEMO" in
+    web-carousel-light)
+      generate_web_screenshots "01-light"
+      ;;
+    web-carousel-dark)
+      generate_web_screenshots "01-dark"
+      ;;
+    web-python-light)
+      generate_web_screenshots "02.*light.*Python"
+      ;;
+    web-python-dark)
+      generate_web_screenshots "02.*dark.*Python"
+      ;;
+    web-multiselect-light)
+      generate_web_screenshots "03.*light.*Multi"
+      ;;
+    web-multiselect-dark)
+      generate_web_screenshots "03.*dark.*Multi"
+      ;;
+    web-version-history-light)
+      generate_web_screenshots "04.*light.*Version"
+      ;;
+    web-version-history-dark)
+      generate_web_screenshots "04.*dark.*Version"
+      ;;
+    web-calculator-light)
+      generate_web_screenshots "05.*light.*Calculator"
+      ;;
+    web-calculator-dark)
+      generate_web_screenshots "05.*dark.*Calculator"
+      ;;
+    tui-*)
+      generate_vhs_demo "$SPECIFIC_DEMO"
+      ;;
+  esac
 fi
 
 echo ""
 echo -e "${GREEN}🎉 Demo generation complete!${NC}"
 echo ""
-echo "Generated files:"
-echo "  - 16 web screenshots (light + dark mode)"
-echo "  - 4 TUI demo GIFs"
-echo ""
-echo "All files are in: public/screenshots/"
+echo "Generated files in: public/screenshots/$DEMO_LANG/"

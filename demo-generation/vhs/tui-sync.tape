@@ -1,5 +1,5 @@
 # Jottery TUI - Sync Commands
-Output public/screenshots/tui-sync.gif
+Output public/screenshots/en-GB/tui-sync.gif
 
 Set FontSize 18
 Set Width 1400

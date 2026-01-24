@@ -14,22 +14,90 @@ demo-generation/
 │   ├── tui-interface.tape   # Interactive TUI with vim
 │   ├── tui-piping.tape      # Piping examples
 │   └── tui-sync.tape        # Sync commands demo
+├── playwright.config.ts     # Playwright configuration
 └── README.md                # This file
+
+public/screenshots/
+└── en-GB/                   # Language-specific screenshots
+    ├── 01-main-interface-light.png
+    ├── 01-main-interface-light-preview.png
+    ├── ...
+    ├── tui-cli.gif
+    ├── tui-interface.gif
+    ├── tui-piping.gif
+    └── tui-sync.gif
 ```
 
 ## Quick Start
 
-From the project root, run:
+From the project root:
 
 ```bash
-chmod +x demo-generation/generate.sh
+# Generate all demos
 ./demo-generation/generate.sh
+
+# List available demos
+./demo-generation/generate.sh --list
+
+# Generate specific demo
+./demo-generation/generate.sh --name tui-cli
+
+# Get help
+./demo-generation/generate.sh --help
 ```
 
-This will:
-1. Generate all web screenshots using Playwright
-2. Generate all TUI demos using VHS
-3. Verify all files are present
+## Command Line Options
+
+```bash
+./demo-generation/generate.sh [OPTIONS]
+
+Options:
+  --list              List all available demos
+  --name DEMO_NAME    Generate specific demo only
+  --lang LANGUAGE     Set language (default: en-GB)
+  --help              Show help message
+```
+
+## Available Demos
+
+Run `./demo-generation/generate.sh --list` to see all available demos.
+
+### Web Demos (Playwright)
+- `web-carousel-light` - Carousel screenshots (light mode, 4 images)
+- `web-carousel-dark` - Carousel screenshots (dark mode, 4 images)
+- `web-python-light` - Python syntax highlighting (light mode)
+- `web-python-dark` - Python syntax highlighting (dark mode)
+- `web-multiselect-light` - Multi-select feature (light mode)
+- `web-multiselect-dark` - Multi-select feature (dark mode)
+- `web-version-history-light` - Version history (light mode)
+- `web-version-history-dark` - Version history (dark mode)
+- `web-calculator-light` - REPL calculator (light mode)
+- `web-calculator-dark` - REPL calculator (dark mode)
+
+### TUI Demos (VHS)
+- `tui-cli` - CLI commands help screen
+- `tui-interface` - Interactive TUI with vim integration
+- `tui-piping` - Piping content examples
+- `tui-sync` - Cross-platform sync commands
+
+## Examples
+
+```bash
+# Generate all demos for default language (en-GB)
+./demo-generation/generate.sh
+
+# List all available demos
+./demo-generation/generate.sh --list
+
+# Generate only the TUI CLI demo
+./demo-generation/generate.sh --name tui-cli
+
+# Generate only light mode carousel
+./demo-generation/generate.sh --name web-carousel-light
+
+# Generate for specific language (future)
+./demo-generation/generate.sh --lang en-US
+```
 
 ## Prerequisites
 
@@ -40,28 +108,23 @@ This will:
   brew install vhs
   ```
 
-## Generated Assets
+## Language Support
 
-### Web Screenshots (Playwright)
+Screenshots and demos are organized by language in `public/screenshots/LANG/`:
+- `en-GB/` - British English (default)
+- `en-US/` - American English (future)
+- `fr/` - French (future)
+- etc.
 
-- **Main Interface Carousel** (8 screenshots)
-  - Light: Welcome, Welcome preview, Japan preview, Japan edit
-  - Dark: Welcome, Welcome preview, Japan preview, Japan edit
+To generate for a specific language:
+```bash
+./demo-generation/generate.sh --lang en-US
+```
 
-- **Feature Screenshots** (8 screenshots)
-  - Python Syntax (light + dark)
-  - Multi-select (light + dark)
-  - Version History (light + dark)
-  - Calculator (light + dark)
-
-### TUI Demos (VHS)
-
-- **tui-cli.gif** - CLI commands help screen
-- **tui-piping.gif** - Piping content examples
-- **tui-interface.gif** - Interactive TUI with vim integration
-- **tui-sync.gif** - Cross-platform sync commands
-
-All generated files are saved to: `public/screenshots/`
+The language can also be set via environment variable:
+```bash
+LANG=en-US ./demo-generation/generate.sh
+```
 
 ## Modifying Demos
 
@@ -71,6 +134,12 @@ Edit `demo-generation/playwright/screenshots.spec.ts`:
 - Change which notes to screenshot
 - Update tag colors in test setup
 - Modify editor content
+
+The test file uses the `LANG` environment variable to determine output directory:
+```typescript
+const LANG = process.env.LANG || 'en-GB';
+const SCREENSHOT_DIR = `screenshots/${LANG}`;
+```
 
 ### TUI Demos
 
@@ -89,13 +158,18 @@ Down
 Ctrl+C
 ```
 
+Output path in each tape file:
+```tape
+Output public/screenshots/en-GB/tui-cli.gif
+```
+
 See [VHS documentation](https://github.com/charmbracelet/vhs) for more.
 
 ## Regenerating Individual Assets
 
 ### Just Web Screenshots
 ```bash
-npx playwright test demo-generation/playwright/screenshots.spec.ts --project=chromium
+npx playwright test --config=demo-generation/playwright.config.ts
 ```
 
 ### Just TUI Demos
@@ -106,19 +180,28 @@ vhs demo-generation/vhs/tui-piping.tape
 vhs demo-generation/vhs/tui-sync.tape
 ```
 
-### Specific Screenshot
+### Specific Screenshot by Filter
 ```bash
-npx playwright test demo-generation/playwright/screenshots.spec.ts -g "Version History"
+# Light mode carousel only
+./demo-generation/generate.sh --name web-carousel-light
+
+# Dark mode version history only
+./demo-generation/generate.sh --name web-version-history-dark
+
+# Specific TUI demo
+./demo-generation/generate.sh --name tui-interface
 ```
 
-### Specific TUI Demo
-```bash
-vhs demo-generation/vhs/tui-interface.tape
-```
+## How It Works
+
+1. **Playwright Tests**: Generate web screenshots in `screenshots/LANG/`
+2. **Copy Step**: Script copies from `screenshots/LANG/` to `public/screenshots/LANG/`
+3. **VHS Tapes**: Generate TUI GIFs directly to `public/screenshots/LANG/`
+4. **LandingPage.svelte**: References screenshots from `/screenshots/LANG/`
 
 ## CI/CD Integration
 
-The generation script can be integrated into CI/CD pipelines to ensure screenshots stay up-to-date:
+The generation script can be integrated into CI/CD pipelines:
 
 ```yaml
 # Example GitHub Actions
@@ -126,6 +209,10 @@ The generation script can be integrated into CI/CD pipelines to ensure screensho
   run: |
     npm install
     ./demo-generation/generate.sh
+
+- name: Generate specific demo
+  run: |
+    ./demo-generation/generate.sh --name web-carousel-light
 ```
 
 ## Troubleshooting
@@ -136,7 +223,7 @@ This is expected. VHS records from the project root and must navigate to the TUI
 
 ### Playwright tests fail
 
-Ensure the dev server is running or that the webServer config in `playwright.config.ts` is correct.
+Ensure the dev server config in `demo-generation/playwright.config.ts` is correct. The script automatically starts the dev server.
 
 ### TUI demos show wrong content
 
@@ -151,12 +238,16 @@ brew install vhs  # macOS
 go install github.com/charmbracelet/vhs@latest
 ```
 
+### --list shows duplicate or missing demos
+
+The list is defined in `generate.sh` in the `DEMOS` associative array. Add or remove entries there.
+
 ## Output Files
 
-All generated files go to `public/screenshots/`:
+All generated files go to `public/screenshots/LANG/`:
 
 ```
-public/screenshots/
+public/screenshots/en-GB/
 ├── 01-main-interface-light.png
 ├── 01-main-interface-light-preview.png
 ├── 01-main-interface-light-japan-preview.png
@@ -165,8 +256,8 @@ public/screenshots/
 ├── 01-main-interface-dark-preview.png
 ├── 01-main-interface-dark-japan-preview.png
 ├── 01-main-interface-dark-japan.png
-├── 02-python-syntax-light.png
-├── 02-python-syntax-dark.png
+├── 02-rich-editor-light.png
+├── 02-rich-editor-dark.png
 ├── 03-multi-select-light.png
 ├── 03-multi-select-dark.png
 ├── 04-version-history-light.png
