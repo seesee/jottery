@@ -134,7 +134,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 preview = format!("{}{}", indicators, preview);
             }
 
-            // Get note text color if set (TUI uses foreground, not background)
+            // Get note background color if set (same as web UI)
             let theme_name = app.settings.theme.to_string();
             let is_dark = is_dark_theme(&theme_name);
 
@@ -157,26 +157,28 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 }
             }
 
-            let note_fg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
-            app.debug_log(&format!("Note {} - get_note_color returned: {:?}", i, note_fg_color));
+            let note_bg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
+            app.debug_log(&format!("Note {} - get_note_color returned: {:?}", i, note_bg_color));
 
             // Style selected notes differently in multi-select mode
             let is_selected = app.selected_note_ids.contains(&note.id);
             app.debug_log(&format!("Note {} - is_selected={}", i, is_selected));
 
-            let style = if is_selected {
+            let mut style = if is_selected {
                 app.debug_log(&format!("Note {} - Using SELECTED style (accent color)", i));
                 // Selected notes use accent color
                 Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
-            } else if let Some(fg_color) = note_fg_color {
-                app.debug_log(&format!("Note {} - Using COLORED style: {:?}", i, fg_color));
-                // Unselected notes with color use that color
-                Style::default().fg(fg_color)
             } else {
-                app.debug_log(&format!("Note {} - Using DEFAULT style (no color)", i));
-                // Unselected notes without color use default
+                app.debug_log(&format!("Note {} - Using DEFAULT style", i));
+                // Unselected notes use default foreground
                 Style::default()
             };
+
+            // Apply background color if note has a color (for both selected and unselected)
+            if let Some(bg_color) = note_bg_color {
+                app.debug_log(&format!("Note {} - Applying BACKGROUND color: {:?}", i, bg_color));
+                style = style.bg(bg_color);
+            }
 
             app.debug_log(&format!("Note {} - Final style: {:?}", i, style));
 
