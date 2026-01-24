@@ -7,10 +7,12 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
+# Navigate to the executable directory
+Type "cd tui/target/release"
+Enter
+Sleep 500ms
+
 # Run the help command
-Type "./tui/target/release/jottery --help"
+Type "./jottery --help"
 Enter
 Sleep 6s
-
-# Take screenshot at the end
-Screenshot public/screenshots/06-tui-cli.png
