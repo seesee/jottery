@@ -228,6 +228,9 @@ fn parse_theme(s: &str) -> Theme {
         "light" => Theme::from_name("default-light"),
         "dark" => Theme::from_name("default-dark"),
         "auto" => Theme::from_name("default-dark"),
+        // Handle display names from web client
+        "default dark" => Theme::from_name("default-dark"),
+        "default light" => Theme::from_name("default-light"),
         // New color scheme names
         _ => Theme::from_name(s),
     }
