@@ -16,9 +16,11 @@ use crate::models::SyntaxLanguage;
 
 /// Render note list (split pane view)
 pub fn render_note_list(app: &mut App, frame: &mut Frame) {
+    app.debug_log("render_note_list() started");
     let size = frame.area();
 
     // Main layout: content + help at bottom
+    app.debug_log(&format!("Frame size: {}x{}", size.width, size.height));
     let main_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(0), Constraint::Length(1)])
@@ -39,7 +41,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let right_pane = main_chunks[1];
 
     // Left pane layout: search bar (optional), list
+    app.debug_log("Calling filtered_notes()");
     let filtered = app.filtered_notes();
+    app.debug_log(&format!("filtered_notes() returned {} notes", filtered.len()));
     let title = match app.view_mode {
         ViewMode::RecycleBin => "Recycle Bin".to_string(),
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
@@ -87,9 +91,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         .title(title)
         .borders(Borders::ALL);
 
+    app.debug_log("Building list items");
     let items: Vec<ListItem> = filtered
         .iter()
-        .map(|note| {
+        .enumerate()
+        .map(|(i, note)| {
             let first_line = note.content.lines().next().unwrap_or("");
             // Only strip markdown for markdown files
             let content = if note.syntax_language == SyntaxLanguage::Markdown {
@@ -129,7 +135,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             // Get note background color if set
             let theme_name = app.settings.theme.to_string();
             let is_dark = is_dark_theme(&theme_name);
+            app.debug_log(&format!("Note {} - theme_name={}, is_dark={}, color={:?}",
+                i, theme_name, is_dark, note.color));
             let note_bg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
+            app.debug_log(&format!("Note {} - bg_color resolved: {:?}", i, note_bg_color.is_some()));
 
             // Style selected notes differently in multi-select mode
             let is_selected = app.selected_note_ids.contains(&note.id);
@@ -264,7 +273,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 x_offset += tag_len + 1; // +1 for space separator
 
                 // Get tag color and create styled span
+                app.debug_log(&format!("Tag '{}' - looking up color", tag));
                 let tag_color = get_tag_color(tag, &app.settings, is_dark);
+                app.debug_log(&format!("Tag '{}' - color resolved: {:?}", tag, tag_color.is_some()));
                 let tag_style = if let Some(color) = tag_color {
                     Style::default().bg(color).add_modifier(Modifier::BOLD)
                 } else {

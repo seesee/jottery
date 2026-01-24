@@ -413,8 +413,13 @@ impl App {
         if let Some(db) = &self.db {
             let settings_repo = SettingsRepository::new(db.connection());
             self.settings = settings_repo.get()?;
+            self.debug_log(&format!("Unlock - Settings loaded: theme={}", self.settings.theme));
+            self.debug_log(&format!("Unlock - Theme scheme name: {}", self.settings.theme.scheme_name()));
+            self.debug_log(&format!("Unlock - Color palette present: {}", self.settings.color_palette.is_some()));
+            self.debug_log(&format!("Unlock - Tag colors present: {}", self.settings.tag_colors.is_some()));
             // Update color scheme from loaded settings
             self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
+            self.debug_log("Unlock - Color scheme updated");
         }
 
         // Store password if remember checkbox was enabled
@@ -1812,9 +1817,17 @@ impl App {
 
     /// Render the UI
     pub fn render(&mut self, frame: &mut Frame) {
+        self.debug_log(&format!("render() called, state={:?}", self.state));
         match &self.state {
-            AppState::Locked => rendering::locked::render_locked(self, frame),
-            AppState::NoteList => rendering::note_list::render_note_list(self, frame),
+            AppState::Locked => {
+                self.debug_log("Rendering locked screen");
+                rendering::locked::render_locked(self, frame)
+            },
+            AppState::NoteList => {
+                self.debug_log("Rendering note list");
+                rendering::note_list::render_note_list(self, frame);
+                self.debug_log("Note list rendered successfully");
+            },
             AppState::NoteView => rendering::note_view::render_note_view(self, frame),
             AppState::Settings { .. } => rendering::settings::render_settings(self, frame),
             AppState::Help { .. } => rendering::help::render_help(self, frame),

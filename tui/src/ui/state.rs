@@ -4,6 +4,7 @@
 //! including app states, input modes, and view modes.
 
 /// Application state
+#[derive(Debug)]
 pub enum AppState {
     /// Locked - password input screen
     Locked,

@@ -888,6 +888,8 @@ fn main() -> Result<()> {
     // Event handler
     let events = EventHandler::default();
 
+    info!("Entering main event loop");
+
     // Main loop
     while !app.should_quit() {
         // Check if we need to force a full redraw (e.g., after external editor)
@@ -900,9 +902,13 @@ fn main() -> Result<()> {
         }
 
         // Render
+        info!("About to render frame");
         tui.draw(|frame| {
+            info!("Inside draw closure, calling app.render");
             app.render(frame);
+            info!("app.render completed");
         })?;
+        info!("Frame rendered successfully");
 
         // Handle events
         match events.next()? {
