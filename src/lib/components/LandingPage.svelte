@@ -106,7 +106,7 @@
       key: 'calculator',
       icon: '🧮',
       screenshotLight: '/screenshots/05-calculator-light.png',
-      screenshotDark: null, // TODO: Generate dark version
+      screenshotDark: '/screenshots/05-calculator-dark.png',
     },
   ];
 

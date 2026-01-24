@@ -310,6 +310,60 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     console.log('✓ Screenshot saved: screenshots/04-version-history-light.png');
   });
+
+  test('05-light. REPL Calculator', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Create a new note with calc syntax
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    await newButton.click();
+    await page.waitForTimeout(1000);
+
+    // Set syntax language to calc
+    const syntaxButton = page.locator('button, select').filter({ hasText: /Markdown|Syntax|Language/i }).first();
+    if (await syntaxButton.isVisible().catch(() => false)) {
+      await syntaxButton.click();
+      await page.waitForTimeout(300);
+
+      // Look for calc option
+      const calcOption = page.locator('button, option, [role="menuitem"]').filter({ hasText: /calc/i }).first();
+      if (await calcOption.isVisible().catch(() => false)) {
+        await calcOption.click();
+        await page.waitForTimeout(500);
+      }
+    }
+
+    // Find the editor
+    const editor = page.locator('.cm-content, .CodeMirror, [contenteditable="true"]').first();
+    await editor.click();
+    await page.waitForTimeout(300);
+
+    // Type the compound interest example
+    await page.keyboard.type('# Calculate compound interest');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('principal = 1000');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('rate = 0.05');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('years = 10');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('principal * (1 + rate)^years');
+    await page.waitForTimeout(800);
+
+    await page.screenshot({
+      path: 'screenshots/05-calculator-light.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/05-calculator-light.png');
+  });
 });
 
 test.describe('Landing Page Screenshots - Dark Mode', () => {
@@ -545,5 +599,59 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     });
 
     console.log('✓ Screenshot saved: screenshots/04-version-history-dark.png');
+  });
+
+  test('05-dark. REPL Calculator', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Create a new note with calc syntax
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    await newButton.click();
+    await page.waitForTimeout(1000);
+
+    // Set syntax language to calc
+    const syntaxButton = page.locator('button, select').filter({ hasText: /Markdown|Syntax|Language/i }).first();
+    if (await syntaxButton.isVisible().catch(() => false)) {
+      await syntaxButton.click();
+      await page.waitForTimeout(300);
+
+      // Look for calc option
+      const calcOption = page.locator('button, option, [role="menuitem"]').filter({ hasText: /calc/i }).first();
+      if (await calcOption.isVisible().catch(() => false)) {
+        await calcOption.click();
+        await page.waitForTimeout(500);
+      }
+    }
+
+    // Find the editor
+    const editor = page.locator('.cm-content, .CodeMirror, [contenteditable="true"]').first();
+    await editor.click();
+    await page.waitForTimeout(300);
+
+    // Type the compound interest example
+    await page.keyboard.type('# Calculate compound interest');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('principal = 1000');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('rate = 0.05');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('years = 10');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    await page.keyboard.type('principal * (1 + rate)^years');
+    await page.waitForTimeout(800);
+
+    await page.screenshot({
+      path: 'screenshots/05-calculator-dark.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/05-calculator-dark.png');
   });
 });
