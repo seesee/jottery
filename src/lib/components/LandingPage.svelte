@@ -94,13 +94,13 @@
       key: 'multiSelect',
       icon: '☑️',
       screenshotLight: '/screenshots/03-multi-select-light.png',
-      screenshotDark: null, // TODO: Generate dark version
+      screenshotDark: '/screenshots/03-multi-select-dark.png',
     },
     {
       key: 'versions',
       icon: '📜',
-      screenshotLight: null, // Keep placeholder
-      screenshotDark: null,
+      screenshotLight: '/screenshots/04-version-history-light.png',
+      screenshotDark: '/screenshots/04-version-history-dark.png',
     },
     {
       key: 'calculator',

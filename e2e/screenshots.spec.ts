@@ -271,49 +271,44 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     console.log('✓ Screenshot saved: screenshots/03-multi-select-light.png');
   });
 
-  test('05-light. REPL Calculator', async ({ page }) => {
+  test('04-light. Version History', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Try keyboard shortcut
-    await page.keyboard.press('Control+Shift+C');
-    await page.waitForTimeout(500);
+    // Click on the Japan Trip note (which should have some history)
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
 
-    // Check if calculator opened
-    let calcVisible = await page.locator('[role="dialog"]').filter({ hasText: /Calculator|Calc/i }).isVisible().catch(() => false);
-
-    if (!calcVisible) {
-      // Try finding calculator button
-      const calcButton = page.locator('button').filter({ hasText: /Calculator|🧮|Calc/i }).first();
-      if (await calcButton.isVisible().catch(() => false)) {
-        await calcButton.click();
-        await page.waitForTimeout(500);
-      }
+    // Open the more menu
+    const moreButton = page.locator('button').filter({ hasText: /⋮|More/i }).first();
+    if (await moreButton.isVisible().catch(() => false)) {
+      await moreButton.click();
+      await page.waitForTimeout(300);
     }
 
-    // Type calculations
-    const calcInput = page.locator('input[type="text"]').last();
-    if (await calcInput.isVisible().catch(() => false)) {
-      await calcInput.click();
-      await calcInput.fill('2 + 2');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
+    // Click Version History option
+    const versionHistoryButton = page.locator('button, [role="menuitem"]').filter({ hasText: /Version History|📜/i }).first();
+    if (await versionHistoryButton.isVisible().catch(() => false)) {
+      await versionHistoryButton.click();
+      await page.waitForTimeout(1000);
+    }
 
-      await calcInput.fill('sqrt(144)');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
-
-      await calcInput.fill('pi * 10');
-      await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+    // Check if modal opened
+    const modal = page.locator('[role="dialog"]').first();
+    const isModalVisible = await modal.isVisible().catch(() => false);
+    if (!isModalVisible) {
+      console.warn('⚠️ Version history modal not visible');
     }
 
     await page.screenshot({
-      path: 'screenshots/05-calculator-light.png',
+      path: 'screenshots/04-version-history-light.png',
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: screenshots/05-calculator-light.png');
+    console.log('✓ Screenshot saved: screenshots/04-version-history-light.png');
   });
 });
 
@@ -510,5 +505,45 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     });
 
     console.log('✓ Screenshot saved: screenshots/03-multi-select-dark.png');
+  });
+
+  test('04-dark. Version History', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Click on the Japan Trip note (which should have some history)
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Open the more menu
+    const moreButton = page.locator('button').filter({ hasText: /⋮|More/i }).first();
+    if (await moreButton.isVisible().catch(() => false)) {
+      await moreButton.click();
+      await page.waitForTimeout(300);
+    }
+
+    // Click Version History option
+    const versionHistoryButton = page.locator('button, [role="menuitem"]').filter({ hasText: /Version History|📜/i }).first();
+    if (await versionHistoryButton.isVisible().catch(() => false)) {
+      await versionHistoryButton.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Check if modal opened
+    const modal = page.locator('[role="dialog"]').first();
+    const isModalVisible = await modal.isVisible().catch(() => false);
+    if (!isModalVisible) {
+      console.warn('⚠️ Version history modal not visible');
+    }
+
+    await page.screenshot({
+      path: 'screenshots/04-version-history-dark.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/04-version-history-dark.png');
   });
 });
