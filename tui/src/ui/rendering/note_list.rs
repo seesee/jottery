@@ -137,23 +137,48 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             // Get note text color if set (TUI uses foreground, not background)
             let theme_name = app.settings.theme.to_string();
             let is_dark = is_dark_theme(&theme_name);
-            app.debug_log(&format!("Note {} - theme_name={}, is_dark={}, color={:?}",
-                i, theme_name, is_dark, note.color));
+
+            // Get palette info for debugging
+            let palette = app.settings.get_color_palette();
+            app.debug_log(&format!("Note {} - id={}, theme_name={}, is_dark={}, color={:?}, palette_size={}",
+                i, &note.id[..8], theme_name, is_dark, note.color, palette.len()));
+
+            // Log detailed color resolution
+            if let Some(ref color_key) = note.color {
+                app.debug_log(&format!("Note {} - Looking up color_key='{}' in palette", i, color_key));
+                if let Some(color_def) = palette.get(color_key) {
+                    app.debug_log(&format!("Note {} - Found in palette: light={}, dark={}",
+                        i, color_def.light, color_def.dark));
+                    let hex = if is_dark { &color_def.dark } else { &color_def.light };
+                    app.debug_log(&format!("Note {} - Using hex={}", i, hex));
+                } else {
+                    app.debug_log(&format!("Note {} - Color '{}' NOT found in palette, will use ANSI fallback",
+                        i, color_key));
+                }
+            }
+
             let note_fg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
-            app.debug_log(&format!("Note {} - fg_color resolved: {:?}", i, note_fg_color.is_some()));
+            app.debug_log(&format!("Note {} - get_note_color returned: {:?}", i, note_fg_color));
 
             // Style selected notes differently in multi-select mode
             let is_selected = app.selected_note_ids.contains(&note.id);
+            app.debug_log(&format!("Note {} - is_selected={}", i, is_selected));
+
             let style = if is_selected {
+                app.debug_log(&format!("Note {} - Using SELECTED style (accent color)", i));
                 // Selected notes use accent color
                 Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
             } else if let Some(fg_color) = note_fg_color {
+                app.debug_log(&format!("Note {} - Using COLORED style: {:?}", i, fg_color));
                 // Unselected notes with color use that color
                 Style::default().fg(fg_color)
             } else {
+                app.debug_log(&format!("Note {} - Using DEFAULT style (no color)", i));
                 // Unselected notes without color use default
                 Style::default()
             };
+
+            app.debug_log(&format!("Note {} - Final style: {:?}", i, style));
 
             ListItem::new(preview).style(style)
         })

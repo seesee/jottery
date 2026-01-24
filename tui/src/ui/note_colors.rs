@@ -8,8 +8,7 @@ use crate::models::UserSettings;
 
 /// Convert a hex color string to a ratatui Color
 /// Supports formats: #RRGGBB or #RGB
-/// Note: Currently unused in favor of ANSI color mapping for better terminal compatibility
-#[allow(dead_code)]
+/// Used for true color terminals, with ANSI fallback for limited terminals
 pub fn hex_to_color(hex: &str) -> Option<Color> {
     let hex = hex.trim_start_matches('#');
 
@@ -56,12 +55,27 @@ fn color_name_to_ansi(color_name: &str) -> Option<Color> {
 /// Returns None if the note has no color or the color is invalid
 pub fn get_note_color(
     note_color: Option<&String>,
-    _settings: &UserSettings,
-    _is_dark_theme: bool,
+    settings: &UserSettings,
+    is_dark_theme: bool,
 ) -> Option<Color> {
     let color_key = note_color?;
 
-    // Map directly to ANSI colors for better terminal compatibility
+    // Try to get true color from palette first (for terminals that support it)
+    let palette = settings.get_color_palette();
+
+    if let Some(color_def) = palette.get(color_key) {
+        let hex = if is_dark_theme {
+            &color_def.dark
+        } else {
+            &color_def.light
+        };
+
+        if let Some(rgb_color) = hex_to_color(hex) {
+            return Some(rgb_color);
+        }
+    }
+
+    // Fall back to ANSI colors for better terminal compatibility
     color_name_to_ansi(color_key)
 }
 
@@ -70,11 +84,26 @@ pub fn get_note_color(
 pub fn get_tag_color(
     tag_name: &str,
     settings: &UserSettings,
-    _is_dark_theme: bool,
+    is_dark_theme: bool,
 ) -> Option<Color> {
     let color_key = settings.get_tag_color(tag_name)?;
 
-    // Map directly to ANSI colors for better terminal compatibility
+    // Try to get true color from palette first (for terminals that support it)
+    let palette = settings.get_color_palette();
+
+    if let Some(color_def) = palette.get(&color_key) {
+        let hex = if is_dark_theme {
+            &color_def.dark
+        } else {
+            &color_def.light
+        };
+
+        if let Some(rgb_color) = hex_to_color(hex) {
+            return Some(rgb_color);
+        }
+    }
+
+    // Fall back to ANSI colors
     color_name_to_ansi(&color_key)
 }
 
