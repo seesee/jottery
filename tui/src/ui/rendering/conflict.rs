@@ -115,8 +115,10 @@ fn render_conflict_header(
 ) {
     // Extract first line as title
     let title = local_content.lines().next().unwrap_or("Untitled");
-    let title_truncated = if title.len() > 50 {
-        format!("{}...", &title[..50])
+    // Use character-aware truncation to avoid panicking on multi-byte UTF-8
+    let title_truncated = if title.chars().count() > 50 {
+        let truncated: String = title.chars().take(50).collect();
+        format!("{}...", truncated)
     } else {
         title.to_string()
     };

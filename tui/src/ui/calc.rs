@@ -324,9 +324,10 @@ impl CalcEvaluator {
     /// Format an error message
     fn format_error(error: &evalexpr::EvalexprError) -> String {
         let msg = error.to_string();
-        // Truncate long errors
-        if msg.len() > 50 {
-            format!("{}...", &msg[..47])
+        // Truncate long errors (use character-aware truncation)
+        if msg.chars().count() > 50 {
+            let truncated: String = msg.chars().take(47).collect();
+            format!("{}...", truncated)
         } else {
             msg
         }

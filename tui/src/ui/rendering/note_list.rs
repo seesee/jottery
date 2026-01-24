@@ -103,8 +103,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             } else {
                 first_line.to_string()
             };
-            let mut preview = if content.len() > 30 {
-                format!("{}...", &content[..30])
+            // Use character-aware truncation to avoid panicking on multi-byte UTF-8
+            let mut preview = if content.chars().count() > 30 {
+                let truncated: String = content.chars().take(30).collect();
+                format!("{}...", truncated)
             } else {
                 content.to_string()
             };
