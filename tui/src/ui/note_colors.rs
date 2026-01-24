@@ -8,6 +8,8 @@ use crate::models::UserSettings;
 
 /// Convert a hex color string to a ratatui Color
 /// Supports formats: #RRGGBB or #RGB
+/// Note: Currently unused in favor of ANSI color mapping for better terminal compatibility
+#[allow(dead_code)]
 pub fn hex_to_color(hex: &str) -> Option<Color> {
     let hex = hex.trim_start_matches('#');
 
@@ -34,24 +36,33 @@ pub fn hex_to_color(hex: &str) -> Option<Color> {
     Some(Color::Rgb(r, g, b))
 }
 
+/// Map semantic color names to terminal ANSI colors
+/// This provides better compatibility across terminals
+fn color_name_to_ansi(color_name: &str) -> Option<Color> {
+    match color_name.to_lowercase().as_str() {
+        "red" => Some(Color::Red),
+        "orange" => Some(Color::LightRed),  // Orange -> light red
+        "yellow" => Some(Color::Yellow),
+        "green" => Some(Color::Green),
+        "blue" => Some(Color::Blue),
+        "purple" => Some(Color::Magenta),
+        "pink" => Some(Color::LightMagenta),
+        "gray" | "grey" => Some(Color::DarkGray),
+        _ => None,
+    }
+}
+
 /// Get the ratatui Color for a note's color field
 /// Returns None if the note has no color or the color is invalid
 pub fn get_note_color(
     note_color: Option<&String>,
-    settings: &UserSettings,
-    is_dark_theme: bool,
+    _settings: &UserSettings,
+    _is_dark_theme: bool,
 ) -> Option<Color> {
     let color_key = note_color?;
-    let palette = settings.get_color_palette();
-    let color_def = palette.get(color_key)?;
 
-    let hex = if is_dark_theme {
-        &color_def.dark
-    } else {
-        &color_def.light
-    };
-
-    hex_to_color(hex)
+    // Map directly to ANSI colors for better terminal compatibility
+    color_name_to_ansi(color_key)
 }
 
 /// Get the ratatui Color for a tag's color
@@ -59,19 +70,12 @@ pub fn get_note_color(
 pub fn get_tag_color(
     tag_name: &str,
     settings: &UserSettings,
-    is_dark_theme: bool,
+    _is_dark_theme: bool,
 ) -> Option<Color> {
     let color_key = settings.get_tag_color(tag_name)?;
-    let palette = settings.get_color_palette();
-    let color_def = palette.get(&color_key)?;
 
-    let hex = if is_dark_theme {
-        &color_def.dark
-    } else {
-        &color_def.light
-    };
-
-    hex_to_color(hex)
+    // Map directly to ANSI colors for better terminal compatibility
+    color_name_to_ansi(&color_key)
 }
 
 /// Check if the current theme is dark based on the theme name
@@ -137,13 +141,12 @@ mod tests {
         // Test getting a color that exists in default palette
         let color = get_note_color(Some(&"red".to_string()), &settings, true);
         assert!(color.is_some());
+        assert_eq!(color, Some(Color::Red));
 
-        // Test with light theme
+        // Test with light theme (ANSI colors are the same regardless of theme)
         let color_light = get_note_color(Some(&"red".to_string()), &settings, false);
         assert!(color_light.is_some());
-
-        // Colors should be different for light/dark themes
-        assert_ne!(color, color_light);
+        assert_eq!(color_light, Some(Color::Red));
     }
 
     #[test]
@@ -203,19 +206,34 @@ mod tests {
         let settings = crate::models::UserSettings::default();
         let palette = settings.get_color_palette();
 
-        // Test that all default color hex values are valid
-        for (color_name, color_def) in palette.iter() {
-            let light_color = hex_to_color(&color_def.light);
+        // Test that all default color names map to ANSI colors
+        for (color_name, _color_def) in palette.iter() {
+            let ansi_color = color_name_to_ansi(color_name);
             assert!(
-                light_color.is_some(),
-                "Light hex for {} should be valid", color_name
-            );
-
-            let dark_color = hex_to_color(&color_def.dark);
-            assert!(
-                dark_color.is_some(),
-                "Dark hex for {} should be valid", color_name
+                ansi_color.is_some(),
+                "Color name '{}' should map to ANSI color", color_name
             );
         }
+    }
+
+    #[test]
+    fn test_color_name_to_ansi_mapping() {
+        // Test all 8 basic colors
+        assert_eq!(color_name_to_ansi("red"), Some(Color::Red));
+        assert_eq!(color_name_to_ansi("orange"), Some(Color::LightRed));
+        assert_eq!(color_name_to_ansi("yellow"), Some(Color::Yellow));
+        assert_eq!(color_name_to_ansi("green"), Some(Color::Green));
+        assert_eq!(color_name_to_ansi("blue"), Some(Color::Blue));
+        assert_eq!(color_name_to_ansi("purple"), Some(Color::Magenta));
+        assert_eq!(color_name_to_ansi("pink"), Some(Color::LightMagenta));
+        assert_eq!(color_name_to_ansi("gray"), Some(Color::DarkGray));
+        assert_eq!(color_name_to_ansi("grey"), Some(Color::DarkGray));
+
+        // Test case insensitivity
+        assert_eq!(color_name_to_ansi("RED"), Some(Color::Red));
+        assert_eq!(color_name_to_ansi("Blue"), Some(Color::Blue));
+
+        // Test invalid color
+        assert_eq!(color_name_to_ansi("invalid"), None);
     }
 }
