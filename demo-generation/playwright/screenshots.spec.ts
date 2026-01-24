@@ -13,7 +13,7 @@ const SCREENSHOT_DIR = `screenshots/${LANG}`;
 
 // Helper function to import demo notes via Settings UI
 async function importDemoNotes(page: any) {
-  const demoNotesPath = join(process.cwd(), 'demo', 'jottery-demo-notes.json');
+  const demoNotesPath = join(process.cwd(), 'demo-generation', 'jottery-demo-notes.json');
 
   // Open settings
   const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();

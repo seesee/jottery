@@ -129,4 +129,4 @@ To generate screenshots in CI/CD:
 - Default viewport is 1920x1080 (desktop)
 - Mobile screenshot uses 375x667 (iPhone SE)
 - All screenshots use the test password: `screenshot-test-password`
-- The test suite imports demo notes from `demo/jottery-demo-notes.json`
+- The test suite imports demo notes from `demo-generation/jottery-demo-notes.json`

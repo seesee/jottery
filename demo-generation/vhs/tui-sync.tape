@@ -7,13 +7,10 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Navigate to executable directory
-Type "cd tui/target/release"
-Enter
-Sleep 500ms
-
 # Show sync help
-Type "./jottery sync --help"
+Type "# Show Jottery Sync help"
+Enter
+Type "jottery sync --help"
 Enter
 Sleep 4s
 
@@ -22,7 +19,9 @@ Ctrl+L
 Sleep 500ms
 
 # Show register-device help (shows cross-platform capabilities)
-Type "./jottery register-device --help"
+Type "# Register your client from the CLI"
+Enter
+Type "jottery register-device --help"
 Enter
 Sleep 3s
 
@@ -31,9 +30,9 @@ Ctrl+L
 Sleep 500ms
 
 # Show example of checking sync (will fail but shows command)
-Type "# Cross-platform sync example"
+Type "# Force a sync from the CLI"
 Enter
 Sleep 500ms
-Type "./jottery sync -d demo.db -p demo123"
+Type "jottery sync"
 Enter
 Sleep 3s

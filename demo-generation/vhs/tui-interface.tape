@@ -26,12 +26,15 @@ Sleep 2s
 # Navigate down 2 lines in vim
 Down
 Down
+Down
+Down
+Down
 
 # Insert text
 Type "i"
 Enter
 Sleep 200ms
-Type "hello from $EDITOR!"
+Type "- [ ] Hello from $EDITOR!"
 Enter
 Up
 Sleep 2s
@@ -39,10 +42,23 @@ Sleep 2s
 # Delete the text
 Escape
 Sleep 300ms
-Type "d2d"
+Type "d"
+Up
 Sleep 500ms
 
 # Save and quit
-Type ":wq"
+Type ":q!"
 Enter
 Sleep 2s
+
+Type "/"
+Sleep 500ms
+Type "japan"
+Sleep 500ms
+Down
+Down
+Sleep 2s
+Escape
+Type "y"
+Sleep 1s
+Type "q"

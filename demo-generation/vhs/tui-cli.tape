@@ -7,12 +7,24 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Navigate to the executable directory
-Type "cd tui/target/release"
-Enter
-Sleep 500ms
+## Navigate to the executable directory
+#Type "cd tui/target/release"
+#Enter
+#Sleep 500ms
 
 # Run the help command
-Type "./jottery --help"
+Type "jottery --help"
 Enter
-Sleep 6s
+Sleep 2s
+
+Type "jottery list"
+Enter
+Sleep 2s
+
+Type "jottery search japan"
+Enter
+Sleep 2s
+
+Type "jottery show d0e1f2a3 | less"
+Enter
+Sleep 4s

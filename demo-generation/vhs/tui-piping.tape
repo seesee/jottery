@@ -7,27 +7,35 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Navigate to executable directory
-Type "cd tui/target/release"
-Enter
-Sleep 500ms
 
 # Example 1: Echo a quick note
-Type "echo 'Quick reminder - Update documentation' | ./jottery note -d demo.db -p demo123"
+Type "echo 'Quick reminder - Update documentation' | jottery note -t reminder,demo"
 Enter
 Sleep 2s
 
-# Example 2: List directory and capture as note
-Type "ls -la | ./jottery note -d demo.db -p demo123 -t system,logs"
+# Example 2: Capture command output
+Type "date | jottery note -t timestamp,demo"
 Enter
 Sleep 2s
 
 # Example 3: Capture command output
-Type "date | ./jottery note -d demo.db -p demo123 -t timestamp"
+Type "ls -la | jottery note -t demo,directory-listing"
 Enter
 Sleep 2s
 
 # Show the created notes
-Type "./jottery list -d demo.db -p demo123"
+Type "jottery note -t demo,editor"
 Enter
-Sleep 3s
+Sleep 500ms
+Type "a"
+Type "Create a new Jottery note in $EDITOR without invoking the TUI"
+Escape
+Sleep 1s
+Type ":wq"
+Enter
+
+Sleep 1s
+
+Type "jottery list -t demo"
+Enter
+Sleep 5s
