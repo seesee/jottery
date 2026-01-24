@@ -247,28 +247,20 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Select first 3 notes using checkboxes or Ctrl+Click
-    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    // Select 3 notes using Cmd/Ctrl+Click (skip first note as it's pinned)
+    const noteListItems = page.locator('button.note-list-item');
     const noteCount = await noteListItems.count();
 
-    // Try checkboxes first
-    const checkboxes = page.locator('.note-list-item input[type="checkbox"], [role="listitem"] input[type="checkbox"]');
-    const hasCheckboxes = await checkboxes.count() > 0;
+    // Use Meta (Cmd) on Mac, Control on other platforms
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
 
-    if (hasCheckboxes) {
-      // Click first 3 checkboxes
-      for (let i = 0; i < Math.min(3, await checkboxes.count()); i++) {
-        await checkboxes.nth(i).check();
-        await page.waitForTimeout(200);
-      }
-    } else {
-      // Use Ctrl+Click
-      for (let i = 0; i < Math.min(3, noteCount); i++) {
-        await noteListItems.nth(i).click({ modifiers: ['Control'] });
-        await page.waitForTimeout(200);
-      }
+    // Click notes 1-3 (skip index 0 as Welcome note is pinned)
+    for (let i = 1; i <= Math.min(3, noteCount - 1); i++) {
+      await noteListItems.nth(i).click({ modifiers: [modifier] });
+      await page.waitForTimeout(400);
     }
 
+    // Wait for toolbar to appear and settle
     await page.waitForTimeout(1000);
 
     await page.screenshot({
@@ -490,5 +482,33 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     });
 
     console.log('✓ Screenshot saved: screenshots/02-rich-editor-dark.png');
+  });
+
+  test('03-dark. Multi-Select - Bulk Operations', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Select 3 notes using Cmd/Ctrl+Click (skip first note as it's pinned)
+    const noteListItems = page.locator('button.note-list-item');
+    const noteCount = await noteListItems.count();
+
+    // Use Meta (Cmd) on Mac, Control on other platforms
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+    // Click notes 1-3 (skip index 0 as Welcome note is pinned)
+    for (let i = 1; i <= Math.min(3, noteCount - 1); i++) {
+      await noteListItems.nth(i).click({ modifiers: [modifier] });
+      await page.waitForTimeout(400);
+    }
+
+    // Wait for toolbar to appear and settle
+    await page.waitForTimeout(1000);
+
+    await page.screenshot({
+      path: 'screenshots/03-multi-select-dark.png',
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: screenshots/03-multi-select-dark.png');
   });
 });
