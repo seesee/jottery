@@ -285,13 +285,26 @@ impl CalcEvaluator {
                 }
             }
             Err(e) => {
-                // Format error message
-                let error_msg = format!("Error: {}", Self::format_error(&e));
-                LineResult {
-                    line: line.to_string(),
-                    result: Some(error_msg),
-                    is_error: true,
-                    is_comment: false,
+                // Check if this is an undefined variable error - suppress these
+                let error_str = e.to_string();
+                if error_str.contains("Variable identifier is not bound") ||
+                   error_str.contains("identifier") && error_str.contains("not bound") {
+                    // Suppress undefined variable errors - just don't show a result
+                    LineResult {
+                        line: line.to_string(),
+                        result: None,
+                        is_error: false,
+                        is_comment: false,
+                    }
+                } else {
+                    // Format other error messages
+                    let error_msg = format!("Error: {}", Self::format_error(&e));
+                    LineResult {
+                        line: line.to_string(),
+                        result: Some(error_msg),
+                        is_error: true,
+                        is_comment: false,
+                    }
                 }
             }
         }
@@ -460,7 +473,7 @@ pub fn render_calc(text: &str) -> Text<'static> {
                 let result_style = if result.is_error {
                     Style::default().fg(Color::Red)
                 } else {
-                    Style::default().fg(Color::DarkGray)
+                    Style::default().fg(Color::Gray)
                 };
                 spans.push(Span::styled(format!("  {}", res), result_style));
             }
@@ -789,18 +802,27 @@ mod tests {
     #[test]
     fn test_error_handling() {
         let mut eval = CalcEvaluator::new();
+        // Undefined variables are now silently suppressed (no result shown)
         let (results, stopped, _) = eval.evaluate_document("undefined_var");
         assert!(!stopped);
         assert_eq!(results.len(), 1);
-        assert!(results[0].is_error);
-        assert!(results[0].result.as_ref().unwrap().starts_with("Error:"));
+        assert!(!results[0].is_error);
+        assert_eq!(results[0].result, None); // No error shown for undefined vars
+
+        // Test that other errors still show
+        let (results, stopped, _) = eval.evaluate_document("1 / 0");
+        assert!(!stopped);
+        assert_eq!(results.len(), 1);
+        // Division by zero should still work in floating point (returns Infinity)
+        assert!(!results[0].is_error);
     }
 
     #[test]
     fn test_consecutive_errors_stop() {
         let mut eval = CalcEvaluator::new();
         // Create content that will produce many consecutive errors
-        let error_lines = "undefined\n".repeat(MAX_CONSECUTIVE_ERRORS + 5);
+        // Use syntax errors instead of undefined vars (which are now suppressed)
+        let error_lines = "1 ++ 2\n".repeat(MAX_CONSECUTIVE_ERRORS + 5);
         let (results, stopped, warning) = eval.evaluate_document(&error_lines);
         assert!(stopped);
         assert!(warning.is_some());
