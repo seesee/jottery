@@ -821,6 +821,114 @@ impl App {
         notes
     }
 
+    /// Count how many notes match the current search in the opposite mode (archive/active)
+    /// Returns count of matching notes in the opposite mode
+    pub fn count_opposite_mode_matches(&self) -> usize {
+        if self.search_input.is_empty() {
+            return 0;
+        }
+
+        let query = self.search_input.to_lowercase();
+        let modifiers = Self::parse_search_modifiers(&query, &self.settings);
+        let remaining_query = Self::remove_modifiers_from_query(&query);
+        let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
+
+        self.notes
+            .iter()
+            .filter(|note| {
+                // Filter by OPPOSITE archive mode
+                if note.archived == self.archive_mode {
+                    return false;
+                }
+
+                let content_lower = note.content.to_lowercase();
+
+                // Apply same search logic as filtered_notes()
+
+                // has:attachment
+                if modifiers.has_attachment && note.attachments.is_empty() {
+                    return false;
+                }
+
+                // created:>DATE (created after)
+                if let Some(ref date) = modifiers.created_after {
+                    let note_date = note.created_at.format("%Y-%m-%d").to_string();
+                    if note_date.as_str() < date.as_str() {
+                        return false;
+                    }
+                }
+
+                // created:<DATE (created before)
+                if let Some(ref date) = modifiers.created_before {
+                    let note_date = note.created_at.format("%Y-%m-%d").to_string();
+                    if note_date.as_str() > date.as_str() {
+                        return false;
+                    }
+                }
+
+                // modified:>DATE (modified after)
+                if let Some(ref date) = modifiers.modified_after {
+                    let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+                    if note_date.as_str() < date.as_str() {
+                        return false;
+                    }
+                }
+
+                // modified:<DATE (modified before)
+                if let Some(ref date) = modifiers.modified_before {
+                    let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+                    if note_date.as_str() > date.as_str() {
+                        return false;
+                    }
+                }
+
+                // words:>N (minimum word count)
+                if let Some(min) = modifiers.word_count_min {
+                    let word_count = note.content.split_whitespace().count();
+                    if word_count < min {
+                        return false;
+                    }
+                }
+
+                // words:<N (maximum word count)
+                if let Some(max) = modifiers.word_count_max {
+                    let word_count = note.content.split_whitespace().count();
+                    if word_count > max {
+                        return false;
+                    }
+                }
+
+                // Check each remaining query part (text/tag search)
+                for part in &query_parts {
+                    if part.is_empty() {
+                        continue;
+                    }
+
+                    if part.starts_with('#') {
+                        // Tag search
+                        let tag = &part[1..];
+                        if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
+                            return false;
+                        }
+                    } else if part.starts_with('-') {
+                        // Negation
+                        let negated = &part[1..];
+                        if content_lower.contains(negated) {
+                            return false;
+                        }
+                    } else {
+                        // Regular text search
+                        if !content_lower.contains(part) {
+                            return false;
+                        }
+                    }
+                }
+
+                true
+            })
+            .count()
+    }
+
     /// Parse search modifiers from query string
     fn parse_search_modifiers(query: &str, settings: &crate::models::UserSettings) -> SearchModifiers {
         use regex::Regex;

@@ -317,7 +317,17 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let status_text = if let Some(ref status) = app.sync_status {
         status.clone()
     } else if app.search_active {
-        "Type: search | Esc: exit | ↑/↓: navigate".to_string()
+        // Show count of matching notes in opposite mode (if > 0)
+        let opposite_count = app.count_opposite_mode_matches();
+        if opposite_count > 0 {
+            let mode_name = if app.archive_mode { "active" } else { "archive" };
+            format!("Type: search | Esc: exit | ↑/↓: navigate | {} {} in {}",
+                opposite_count,
+                if opposite_count == 1 { "match" } else { "matches" },
+                mode_name)
+        } else {
+            "Type: search | Esc: exit | ↑/↓: navigate".to_string()
+        }
     } else {
         match app.view_mode {
             ViewMode::RecycleBin => {
