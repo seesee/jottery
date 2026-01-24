@@ -96,19 +96,30 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         .iter()
         .enumerate()
         .map(|(i, note)| {
-            let first_line = note.content.lines().next().unwrap_or("");
-            // Only strip markdown for markdown files
-            let content = if note.syntax_language == SyntaxLanguage::Markdown {
-                strip_markdown(first_line)
+            // Generate multi-line preview (like web UI)
+            // Line 1: Title (first non-empty line)
+            // Line 2-3: Preview (next 2 lines of content)
+            // Line 4: Date + Tags
+            // Line 5: Blank separator
+
+            let content_lines: Vec<&str> = note.content.lines()
+                .filter(|line| !line.trim().is_empty())
+                .collect();
+
+            // Extract title (first line)
+            let title_raw = content_lines.get(0).unwrap_or(&"Untitled");
+            let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
+                strip_markdown(title_raw)
             } else {
-                first_line.to_string()
+                title_raw.to_string()
             };
-            // Use character-aware truncation to avoid panicking on multi-byte UTF-8
-            let mut preview = if content.chars().count() > 30 {
-                let truncated: String = content.chars().take(30).collect();
+
+            // Truncate title to 38 chars to leave room for indicators
+            let title_truncated = if title_content.chars().count() > 38 {
+                let truncated: String = title_content.chars().take(35).collect();
                 format!("{}...", truncated)
             } else {
-                content.to_string()
+                title_content
             };
 
             // Add indicators for pinned, attachments, and multi-select
@@ -130,9 +141,69 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 indicators.push_str(&format!("📎{} ", note.attachments.len()));
             }
 
-            if !indicators.is_empty() {
-                preview = format!("{}{}", indicators, preview);
-            }
+            let title_line = if !indicators.is_empty() {
+                format!("{}{}", indicators, title_truncated)
+            } else {
+                title_truncated
+            };
+
+            // Extract preview lines (lines 2-3 from content)
+            let preview_line1 = if content_lines.len() > 1 {
+                let line = content_lines[1];
+                let stripped = if note.syntax_language == SyntaxLanguage::Markdown {
+                    strip_markdown(line)
+                } else {
+                    line.to_string()
+                };
+                if stripped.chars().count() > 38 {
+                    let truncated: String = stripped.chars().take(35).collect();
+                    format!("{}...", truncated)
+                } else {
+                    stripped
+                }
+            } else {
+                String::new()
+            };
+
+            let preview_line2 = if content_lines.len() > 2 {
+                let line = content_lines[2];
+                let stripped = if note.syntax_language == SyntaxLanguage::Markdown {
+                    strip_markdown(line)
+                } else {
+                    line.to_string()
+                };
+                if stripped.chars().count() > 38 {
+                    let truncated: String = stripped.chars().take(35).collect();
+                    format!("{}...", truncated)
+                } else {
+                    stripped
+                }
+            } else {
+                String::new()
+            };
+
+            // Format date + tags line
+            let date_str = note.modified_at.format("%d/%m/%y").to_string();
+            let tags_str = if !note.tags.is_empty() {
+                let tag_preview: String = note.tags.iter()
+                    .take(3)
+                    .map(|t| format!("#{}", t))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                if note.tags.len() > 3 {
+                    format!("{} +{}", tag_preview, note.tags.len() - 3)
+                } else {
+                    tag_preview
+                }
+            } else {
+                String::new()
+            };
+
+            let metadata_line = if !tags_str.is_empty() {
+                format!("{} • {}", date_str, tags_str)
+            } else {
+                date_str
+            };
 
             // Get note background color if set (same as web UI)
             let theme_name = app.settings.theme.to_string();
@@ -182,7 +253,36 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             app.debug_log(&format!("Note {} - Final style: {:?}", i, style));
 
-            ListItem::new(preview).style(style)
+            // Create multi-line text for this note
+            let mut lines = vec![
+                Line::from(title_line),
+            ];
+
+            // Add preview lines if they exist
+            if !preview_line1.is_empty() {
+                lines.push(Line::from(Span::styled(
+                    format!("  {}", preview_line1),
+                    Style::default().fg(app.color_scheme.muted)
+                )));
+            }
+            if !preview_line2.is_empty() {
+                lines.push(Line::from(Span::styled(
+                    format!("  {}", preview_line2),
+                    Style::default().fg(app.color_scheme.muted)
+                )));
+            }
+
+            // Add metadata line
+            lines.push(Line::from(Span::styled(
+                format!("  {}", metadata_line),
+                Style::default().fg(app.color_scheme.muted)
+            )));
+
+            // Add blank separator line
+            lines.push(Line::from(""));
+
+            let text = Text::from(lines);
+            ListItem::new(text).style(style)
         })
         .collect();
 
