@@ -255,10 +255,14 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             // Create multi-line text for this note
             let mut lines = vec![
-                Line::from(title_line),
+                // Title: Gray + Bold for emphasis
+                Line::from(Span::styled(
+                    title_line,
+                    Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD)
+                )),
             ];
 
-            // Add preview lines if they exist (use lighter gray for better readability)
+            // Add preview lines if they exist (use gray for readability)
             if !preview_line1.is_empty() {
                 lines.push(Line::from(Span::styled(
                     format!("  {}", preview_line1),
@@ -272,10 +276,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 )));
             }
 
-            // Add metadata line (slightly dimmer than preview)
+            // Add metadata line (brighter for better readability)
             lines.push(Line::from(Span::styled(
                 format!("  {}", metadata_line),
-                Style::default().fg(Color::DarkGray)
+                Style::default().fg(Color::White)
             )));
 
             // Add blank separator line
