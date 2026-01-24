@@ -545,6 +545,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 if let Some(lang_str) = &remote_note.syntax_language {
                     local_note.syntax_language = lang_str.parse().unwrap_or_default();
                 }
+                local_note.color = remote_note.color.clone();
 
                 note_repo.update(&local_note, key)?;
 
@@ -573,6 +574,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             if let Some(lang_str) = &remote_note.syntax_language {
                 new_note.syntax_language = lang_str.parse().unwrap_or_default();
             }
+            new_note.color = remote_note.color.clone();
 
             note_repo.create(&new_note, key)?;
 
@@ -801,6 +803,7 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
         if let Some(wrap) = conflict_data.server_word_wrap {
             updated_note.word_wrap = wrap;
         }
+        updated_note.color = conflict_data.server_color.clone();
 
         note_repo.update(&updated_note, key)?;
     }
@@ -841,6 +844,7 @@ pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     if let Some(wrap) = conflict_data.server_word_wrap {
         new_note.word_wrap = wrap;
     }
+    new_note.color = conflict_data.server_color.clone();
 
     let new_note_id = new_note.id.clone();
     note_repo.create(&new_note, key)?;
