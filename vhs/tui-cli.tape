@@ -1,5 +1,5 @@
-# Jottery TUI - Help Screen
-Output public/screenshots/06-tui-cli.gif
+# Jottery TUI - CLI Commands
+Output public/screenshots/tui-cli.gif
 
 Set FontSize 18
 Set Width 1400

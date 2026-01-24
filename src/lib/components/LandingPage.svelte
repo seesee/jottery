@@ -111,10 +111,10 @@
   ];
 
   const tuiFeatures = [
-    { key: 'terminal', icon: '💻' },
-    { key: 'cli', icon: '⚡' },
-    { key: 'piping', icon: '🔗' },
-    { key: 'crossPlatform', icon: '🌐' },
+    { key: 'terminal', icon: '💻', screenshot: '/screenshots/tui-interface.gif' },
+    { key: 'cli', icon: '⚡', screenshot: '/screenshots/tui-cli.gif' },
+    { key: 'piping', icon: '🔗', screenshot: '/screenshots/tui-piping.gif' },
+    { key: 'crossPlatform', icon: '🌐', screenshot: '/screenshots/tui-sync.gif' },
   ];
 
   // Helper to get the appropriate screenshot based on theme
@@ -251,12 +251,20 @@
         {#each tuiFeatures as feature}
           <div class="tui-card">
             <div class="tui-screenshot">
-              <ScreenshotPlaceholder
-                width={800}
-                height={500}
-                description={$_(`landing.tuiFeatures.${feature.key}.screenshotDescription`)}
-                icon={feature.icon}
-              />
+              {#if feature.screenshot}
+                <img
+                  src={feature.screenshot}
+                  alt={$_(`landing.tuiFeatures.${feature.key}.screenshotDescription`)}
+                  class="screenshot-image"
+                />
+              {:else}
+                <ScreenshotPlaceholder
+                  width={800}
+                  height={500}
+                  description={$_(`landing.tuiFeatures.${feature.key}.screenshotDescription`)}
+                  icon={feature.icon}
+                />
+              {/if}
             </div>
             <div class="tui-content">
               <div class="tui-icon">{feature.icon}</div>
