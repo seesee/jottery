@@ -612,17 +612,30 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             .scroll((app.preview_scroll_offset as u16, 0));
         frame.render_widget(preview, preview_area);
 
-        // Render timestamp footer with left-aligned Created and right-aligned Modified
-        let created_str = note.created_at.format("%d/%m/%Y, %H:%M:%S").to_string();
+        // Render footer with left-aligned Version + sync indicator and right-aligned Modified
         let modified_str = note.modified_at.format("%d/%m/%Y, %H:%M:%S").to_string();
 
-        let created_label = format!("Created: {}", created_str);
+        // Determine sync status: synced if synced_at exists and is >= modified_at
+        let is_synced = match &note.synced_at {
+            Some(synced) => *synced >= note.modified_at,
+            None => false,
+        };
+
+        // Sync indicator: filled green circle for synced, empty red circle for unsynced
+        let (sync_indicator, sync_color) = if is_synced {
+            ("●", Color::Green)
+        } else {
+            ("○", Color::Red)
+        };
+
+        let version_label = format!("Version: {}", note.version);
         let modified_label = format!("Modified: {}", modified_str);
 
-        // Calculate padding between left and right timestamps
+        // Calculate padding between left and right sections
         // -2 for borders, -2 for 1-space padding on each side
         let inner_width = timestamp_area.width.saturating_sub(4) as usize;
-        let total_text_len = created_label.len() + modified_label.len();
+        // version_label + space + sync_indicator (1 char) + modified_label
+        let total_text_len = version_label.len() + 1 + 1 + modified_label.len();
         let padding = if inner_width > total_text_len {
             inner_width - total_text_len
         } else {
@@ -634,7 +647,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let timestamp_line = Line::from(vec![
             Span::raw("│"),
             Span::raw(" "),  // Left padding
-            Span::styled(created_label, timestamp_style),
+            Span::styled(version_label, timestamp_style),
+            Span::raw(" "),
+            Span::styled(sync_indicator, Style::default().fg(sync_color)),
             Span::raw(" ".repeat(padding)),
             Span::styled(modified_label, timestamp_style),
             Span::raw(" "),  // Right padding
