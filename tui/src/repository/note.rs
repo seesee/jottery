@@ -34,8 +34,8 @@ impl<'a> NoteRepository<'a> {
         self.conn.execute(
             "INSERT INTO notes (
                 id, created_at, modified_at, synced_at, content, tags, attachments,
-                pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+                pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
             params![
                 &note.id,
                 note.created_at.to_rfc3339(),
@@ -47,6 +47,8 @@ impl<'a> NoteRepository<'a> {
                 note.pinned as i32,
                 note.archived as i32,
                 note.archived_at.map(|dt| dt.to_rfc3339()),
+                note.locked as i32,
+                note.locked_at.map(|dt| dt.to_rfc3339()),
                 note.deleted as i32,
                 note.deleted_at.map(|dt| dt.to_rfc3339()),
                 &note.sync_hash,
@@ -64,7 +66,7 @@ impl<'a> NoteRepository<'a> {
     pub fn get(&self, id: &str, key: &[u8; 32]) -> Result<Option<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE id = ?1"
         )?;
 
@@ -81,13 +83,15 @@ impl<'a> NoteRepository<'a> {
                     row.get::<_, i32>(7)?,         // pinned
                     row.get::<_, i32>(8)?,         // archived
                     row.get::<_, Option<String>>(9)?, // archived_at
-                    row.get::<_, i32>(10)?,        // deleted
-                    row.get::<_, Option<String>>(11)?, // deleted_at
-                    row.get::<_, Option<String>>(12)?, // sync_hash
-                    row.get::<_, i32>(13)?,        // version
-                    row.get::<_, i32>(14)?,        // word_wrap
-                    row.get::<_, String>(15)?,     // syntax_language
-                    row.get::<_, Option<String>>(16)?, // color
+                    row.get::<_, i32>(10)?,        // locked
+                    row.get::<_, Option<String>>(11)?, // locked_at
+                    row.get::<_, i32>(12)?,        // deleted
+                    row.get::<_, Option<String>>(13)?, // deleted_at
+                    row.get::<_, Option<String>>(14)?, // sync_hash
+                    row.get::<_, i32>(15)?,        // version
+                    row.get::<_, i32>(16)?,        // word_wrap
+                    row.get::<_, String>(17)?,     // syntax_language
+                    row.get::<_, Option<String>>(18)?, // color
                 ))
             })
             .optional()?;
@@ -104,6 +108,8 @@ impl<'a> NoteRepository<'a> {
                 pinned,
                 archived,
                 archived_at,
+                locked,
+                locked_at,
                 deleted,
                 deleted_at,
                 sync_hash,
@@ -133,6 +139,8 @@ impl<'a> NoteRepository<'a> {
                     pinned: pinned != 0,
                     archived: archived != 0,
                     archived_at: archived_at.map(|s| s.parse()).transpose()?,
+                    locked: locked != 0,
+                    locked_at: locked_at.map(|s| s.parse()).transpose()?,
                     deleted: deleted != 0,
                     deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
                     sync_hash,
@@ -157,9 +165,10 @@ impl<'a> NoteRepository<'a> {
         self.conn.execute(
             "UPDATE notes SET
                 modified_at = ?1, synced_at = ?2, content = ?3, tags = ?4, attachments = ?5,
-                pinned = ?6, archived = ?7, archived_at = ?8, deleted = ?9, deleted_at = ?10, sync_hash = ?11, version = ?12,
-                word_wrap = ?13, syntax_language = ?14, color = ?15
-             WHERE id = ?16",
+                pinned = ?6, archived = ?7, archived_at = ?8, locked = ?9, locked_at = ?10,
+                deleted = ?11, deleted_at = ?12, sync_hash = ?13, version = ?14,
+                word_wrap = ?15, syntax_language = ?16, color = ?17
+             WHERE id = ?18",
             params![
                 note.modified_at.to_rfc3339(),
                 note.synced_at.map(|dt| dt.to_rfc3339()),
@@ -169,6 +178,8 @@ impl<'a> NoteRepository<'a> {
                 note.pinned as i32,
                 note.archived as i32,
                 note.archived_at.map(|dt| dt.to_rfc3339()),
+                note.locked as i32,
+                note.locked_at.map(|dt| dt.to_rfc3339()),
                 note.deleted as i32,
                 note.deleted_at.map(|dt| dt.to_rfc3339()),
                 &note.sync_hash,
@@ -203,11 +214,11 @@ impl<'a> NoteRepository<'a> {
     pub fn list(&self, include_deleted: bool, key: &[u8; 32]) -> Result<Vec<Note>> {
         let query = if include_deleted {
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes ORDER BY modified_at DESC"
         } else {
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE deleted = 0 AND archived = 0 ORDER BY modified_at DESC"
         };
 
@@ -226,11 +237,13 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, Option<String>>(9)?,
                 row.get::<_, i32>(10)?,
                 row.get::<_, Option<String>>(11)?,
-                row.get::<_, Option<String>>(12)?,
-                row.get::<_, i32>(13)?,
-                row.get::<_, i32>(14)?,
-                row.get::<_, String>(15)?,
-                row.get::<_, Option<String>>(16)?,
+                row.get::<_, i32>(12)?,
+                row.get::<_, Option<String>>(13)?,
+                row.get::<_, Option<String>>(14)?,
+                row.get::<_, i32>(15)?,
+                row.get::<_, i32>(16)?,
+                row.get::<_, String>(17)?,
+                row.get::<_, Option<String>>(18)?,
             ))
         })?;
 
@@ -247,6 +260,8 @@ impl<'a> NoteRepository<'a> {
                 pinned,
                 archived,
                 archived_at,
+                locked,
+                locked_at,
                 deleted,
                 deleted_at,
                 sync_hash,
@@ -274,6 +289,8 @@ impl<'a> NoteRepository<'a> {
                 pinned: pinned != 0,
                 archived: archived != 0,
                 archived_at: archived_at.map(|s| s.parse()).transpose()?,
+                locked: locked != 0,
+                locked_at: locked_at.map(|s| s.parse()).transpose()?,
                 deleted: deleted != 0,
                 deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
                 sync_hash,
@@ -295,7 +312,7 @@ impl<'a> NoteRepository<'a> {
     ) -> Result<Vec<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE modified_at > ?1 ORDER BY modified_at DESC"
         )?;
 
@@ -313,11 +330,13 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, Option<String>>(9)?,
                 row.get::<_, i32>(10)?,
                 row.get::<_, Option<String>>(11)?,
-                row.get::<_, Option<String>>(12)?,
-                row.get::<_, i32>(13)?,
-                row.get::<_, i32>(14)?,
-                row.get::<_, String>(15)?,
-                row.get::<_, Option<String>>(16)?,
+                row.get::<_, i32>(12)?,
+                row.get::<_, Option<String>>(13)?,
+                row.get::<_, Option<String>>(14)?,
+                row.get::<_, i32>(15)?,
+                row.get::<_, i32>(16)?,
+                row.get::<_, String>(17)?,
+                row.get::<_, Option<String>>(18)?,
             ))
         })?;
 
@@ -334,6 +353,8 @@ impl<'a> NoteRepository<'a> {
                 pinned,
                 archived,
                 archived_at,
+                locked,
+                locked_at,
                 deleted,
                 deleted_at,
                 sync_hash,
@@ -361,6 +382,8 @@ impl<'a> NoteRepository<'a> {
                 pinned: pinned != 0,
                 archived: archived != 0,
                 archived_at: archived_at.map(|s| s.parse()).transpose()?,
+                locked: locked != 0,
+                locked_at: locked_at.map(|s| s.parse()).transpose()?,
                 deleted: deleted != 0,
                 deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
                 sync_hash,
@@ -389,7 +412,7 @@ impl<'a> NoteRepository<'a> {
     /// Get only deleted notes (for recycle bin)
     pub fn get_deleted(&self, key: &[u8; 32]) -> Result<Vec<Note>> {
         let query = "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE deleted = 1 ORDER BY deleted_at DESC";
 
         let mut stmt = self.conn.prepare(query)?;
@@ -407,19 +430,21 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, bool>(7)?,     // pinned
                 row.get::<_, bool>(8)?,     // archived
                 row.get::<_, Option<String>>(9)?,   // archived_at
-                row.get::<_, bool>(10)?,    // deleted
-                row.get::<_, Option<String>>(11)?,  // deleted_at
-                row.get::<_, Option<String>>(12)?,  // sync_hash
-                row.get::<_, i32>(13)?,     // version
-                row.get::<_, bool>(14)?,    // word_wrap
-                row.get::<_, String>(15)?,  // syntax_language
-                row.get::<_, Option<String>>(16)?,  // color
+                row.get::<_, bool>(10)?,    // locked
+                row.get::<_, Option<String>>(11)?,  // locked_at
+                row.get::<_, bool>(12)?,    // deleted
+                row.get::<_, Option<String>>(13)?,  // deleted_at
+                row.get::<_, Option<String>>(14)?,  // sync_hash
+                row.get::<_, i32>(15)?,     // version
+                row.get::<_, bool>(16)?,    // word_wrap
+                row.get::<_, String>(17)?,  // syntax_language
+                row.get::<_, Option<String>>(18)?,  // color
             ))
         })?;
 
         for row_result in rows {
             let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
+                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
 
             // Decrypt content and tags
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -448,6 +473,10 @@ impl<'a> NoteRepository<'a> {
                 archived_at: archived_at
                     .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
                     .map(|dt| dt.with_timezone(&Utc)),
+                locked,
+                locked_at: locked_at
+                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                    .map(|dt| dt.with_timezone(&Utc)),
                 deleted,
                 deleted_at: deleted_at
                     .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
@@ -466,7 +495,7 @@ impl<'a> NoteRepository<'a> {
     /// Get only archived notes
     pub fn get_archived(&self, key: &[u8; 32]) -> Result<Vec<Note>> {
         let query = "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
              FROM notes WHERE archived = 1 AND deleted = 0 ORDER BY archived_at DESC";
 
         let mut stmt = self.conn.prepare(query)?;
@@ -484,19 +513,21 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, bool>(7)?,     // pinned
                 row.get::<_, bool>(8)?,     // archived
                 row.get::<_, Option<String>>(9)?,   // archived_at
-                row.get::<_, bool>(10)?,    // deleted
-                row.get::<_, Option<String>>(11)?,  // deleted_at
-                row.get::<_, Option<String>>(12)?,  // sync_hash
-                row.get::<_, i32>(13)?,     // version
-                row.get::<_, bool>(14)?,    // word_wrap
-                row.get::<_, String>(15)?,  // syntax_language
-                row.get::<_, Option<String>>(16)?,  // color
+                row.get::<_, bool>(10)?,    // locked
+                row.get::<_, Option<String>>(11)?,  // locked_at
+                row.get::<_, bool>(12)?,    // deleted
+                row.get::<_, Option<String>>(13)?,  // deleted_at
+                row.get::<_, Option<String>>(14)?,  // sync_hash
+                row.get::<_, i32>(15)?,     // version
+                row.get::<_, bool>(16)?,    // word_wrap
+                row.get::<_, String>(17)?,  // syntax_language
+                row.get::<_, Option<String>>(18)?,  // color
             ))
         })?;
 
         for row_result in rows {
             let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, archived, archived_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
+                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
 
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
             let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
@@ -522,6 +553,10 @@ impl<'a> NoteRepository<'a> {
                 pinned,
                 archived,
                 archived_at: archived_at
+                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                    .map(|dt| dt.with_timezone(&Utc)),
+                locked,
+                locked_at: locked_at
                     .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
                     .map(|dt| dt.with_timezone(&Utc)),
                 deleted,

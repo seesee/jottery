@@ -25,6 +25,7 @@ class NoteService {
       createdAt?: string;
       modifiedAt?: string;
       pinned?: boolean;
+      locked?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: string;
       showPreview?: boolean;
@@ -50,6 +51,7 @@ class NoteService {
       createdAt: options?.createdAt || now,
       modifiedAt: options?.modifiedAt || now,
       pinned: options?.pinned || false,
+      locked: options?.locked || false,
       wordWrap: options?.wordWrap ?? true,
       syntaxLanguage: options?.syntaxLanguage || 'markdown',
       showPreview: options?.showPreview ?? false,

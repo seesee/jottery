@@ -105,6 +105,8 @@ pub struct SyncNote {
     pub pinned: bool,
     pub archived: bool,
     pub archived_at: Option<DateTime<Utc>>,
+    pub locked: bool,
+    pub locked_at: Option<DateTime<Utc>>,
     pub deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
     pub version: i32,
@@ -163,6 +165,8 @@ pub struct SyncRejected {
     pub server_pinned: bool,
     pub server_archived: bool,
     pub server_archived_at: Option<DateTime<Utc>>,
+    pub server_locked: bool,
+    pub server_locked_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
@@ -181,6 +185,8 @@ pub struct ConflictData {
     pub server_pinned: bool,
     pub server_archived: bool,
     pub server_archived_at: Option<DateTime<Utc>>,
+    pub server_locked: bool,
+    pub server_locked_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
@@ -369,6 +375,8 @@ mod tests {
             syntax_language: Some("markdown".to_string()),
             archived: false,
             archived_at: None,
+            locked: false,
+            locked_at: None,
             color: Some("red".to_string()),
         };
 
@@ -399,6 +407,8 @@ mod tests {
             color: None,
             archived: false,
             archived_at: None,
+            locked: false,
+            locked_at: None,
         };
 
         let json = serde_json::to_string(&sync_note).expect("Failed to serialize");
@@ -448,6 +458,8 @@ mod tests {
             server_color: Some("green".to_string()),
             server_archived: false,
             server_archived_at: None,
+            server_locked: false,
+            server_locked_at: None,
             detected_at: Utc::now(),
         };
 
@@ -474,6 +486,8 @@ mod tests {
             server_color: Some("yellow".to_string()),
             server_archived: false,
             server_archived_at: None,
+            server_locked: false,
+            server_locked_at: None,
         };
 
         let json = serde_json::to_string(&rejected).expect("Failed to serialize");
@@ -501,6 +515,8 @@ mod tests {
             color: Some("purple".to_string()),
             archived: false,
             archived_at: None,
+            locked: false,
+            locked_at: None,
         };
 
         // Serialize and deserialize

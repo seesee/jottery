@@ -35,6 +35,8 @@ pub struct ExportNote {
     pub tags: Vec<String>,
     pub pinned: bool,
     pub archived: bool,
+    #[serde(default)]
+    pub locked: bool,
     #[serde(rename = "wordWrap")]
     pub word_wrap: Option<bool>,
     #[serde(rename = "syntaxLanguage")]
@@ -52,6 +54,7 @@ impl From<&Note> for ExportNote {
             tags: note.tags.clone(),
             pinned: note.pinned,
             archived: note.archived,
+            locked: note.locked,
             word_wrap: Some(note.word_wrap),
             syntax_language: Some(note.syntax_language.to_string()),
             color: note.color.clone(),
@@ -127,6 +130,8 @@ pub fn import_notes<P: AsRef<Path>>(
                 .unwrap_or_default(),
             archived: export_note.archived,
             archived_at: None,
+            locked: export_note.locked,
+            locked_at: None,
             color: export_note.color,
         };
 

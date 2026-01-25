@@ -16,6 +16,8 @@ pub struct Note {
     pub pinned: bool,
     pub archived: bool,
     pub archived_at: Option<DateTime<Utc>>,
+    pub locked: bool,
+    pub locked_at: Option<DateTime<Utc>>,
     pub deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
     pub sync_hash: Option<String>,
@@ -147,6 +149,8 @@ impl Note {
             pinned: false,
             archived: false,
             archived_at: None,
+            locked: false,
+            locked_at: None,
             deleted: false,
             deleted_at: None,
             sync_hash: None,
@@ -182,6 +186,13 @@ impl Note {
     #[allow(dead_code)]
     pub fn toggle_pin(&mut self) {
         self.pinned = !self.pinned;
+        self.touch();
+    }
+
+    /// Toggle locked status
+    pub fn toggle_lock(&mut self) {
+        self.locked = !self.locked;
+        self.locked_at = if self.locked { Some(Utc::now()) } else { None };
         self.touch();
     }
 

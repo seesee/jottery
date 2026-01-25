@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+  "query": "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
   "describe": {
     "columns": [
       {
@@ -54,43 +54,53 @@
         "type_info": "Text"
       },
       {
-        "name": "deleted",
+        "name": "locked",
         "ordinal": 10,
         "type_info": "Integer"
       },
       {
-        "name": "deleted_at",
+        "name": "locked_at",
         "ordinal": 11,
         "type_info": "Text"
       },
       {
-        "name": "version",
+        "name": "deleted",
         "ordinal": 12,
         "type_info": "Integer"
       },
       {
-        "name": "server_version",
+        "name": "deleted_at",
         "ordinal": 13,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "word_wrap",
+        "name": "version",
         "ordinal": 14,
         "type_info": "Integer"
       },
       {
-        "name": "syntax_language",
+        "name": "server_version",
         "ordinal": 15,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "show_preview",
+        "name": "word_wrap",
         "ordinal": 16,
         "type_info": "Integer"
       },
       {
-        "name": "color",
+        "name": "syntax_language",
         "ordinal": 17,
+        "type_info": "Text"
+      },
+      {
+        "name": "show_preview",
+        "ordinal": 18,
+        "type_info": "Integer"
+      },
+      {
+        "name": "color",
+        "ordinal": 19,
         "type_info": "Text"
       }
     ],
@@ -111,6 +121,8 @@
       false,
       true,
       false,
+      true,
+      false,
       false,
       true,
       true,
@@ -118,5 +130,5 @@
       true
     ]
   },
-  "hash": "8323405b59df02a97f373278678e43b9298980b5325ebe6bbdb39b519a7b63b5"
+  "hash": "460a8da5f7f4c99ac17d1b50c88e562d9486cf28ee376239d501e1775651650f"
 }

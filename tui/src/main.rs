@@ -354,6 +354,8 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
                 pinned: note.pinned,
                 archived: note.archived,
                 archived_at: note.archived_at,
+                locked: note.locked,
+                locked_at: note.locked_at,
                 deleted: note.deleted,
                 deleted_at: note.deleted_at,
                 version: note.version,

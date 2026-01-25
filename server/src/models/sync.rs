@@ -25,6 +25,10 @@ pub struct SyncNote {
     pub archived: bool,
     #[serde(rename = "archivedAt")]
     pub archived_at: Option<String>,
+    #[serde(default)]
+    pub locked: bool,
+    #[serde(rename = "lockedAt")]
+    pub locked_at: Option<String>,
     pub deleted: bool,
     #[serde(rename = "deletedAt")]
     pub deleted_at: Option<String>,
@@ -92,6 +96,10 @@ pub struct SyncRejected {
     pub server_archived: bool,
     #[serde(rename = "serverArchivedAt")]
     pub server_archived_at: Option<String>,
+    #[serde(rename = "serverLocked")]
+    pub server_locked: bool,
+    #[serde(rename = "serverLockedAt")]
+    pub server_locked_at: Option<String>,
     #[serde(rename = "serverSyntaxLanguage")]
     pub server_syntax_language: Option<String>,
     #[serde(rename = "serverWordWrap")]

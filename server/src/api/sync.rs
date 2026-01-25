@@ -154,6 +154,7 @@ pub async fn push(
             // Convert types
             let pinned = if note.pinned { 1 } else { 0 };
             let archived = if note.archived { 1 } else { 0 };
+            let locked = if note.locked { 1 } else { 0 };
             let deleted = if note.deleted { 1 } else { 0 };
             let word_wrap = note.word_wrap.map(|w| if w { 1 } else { 0 });
             let show_preview = note.show_preview.map(|p| if p { 1 } else { 0 });
@@ -174,10 +175,10 @@ pub async fn push(
                 r#"
                 INSERT INTO notes (
                     id, user_id, client_id, created_at, modified_at, server_modified_at,
-                    content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version,
+                    content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version,
                     word_wrap, syntax_language, show_preview, color
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
@@ -186,6 +187,8 @@ pub async fn push(
                     pinned = excluded.pinned,
                     archived = excluded.archived,
                     archived_at = excluded.archived_at,
+                    locked = excluded.locked,
+                    locked_at = excluded.locked_at,
                     deleted = excluded.deleted,
                     deleted_at = excluded.deleted_at,
                     version = excluded.version,
@@ -206,6 +209,8 @@ pub async fn push(
                 pinned,
                 archived,
                 note.archived_at,
+                locked,
+                note.locked_at,
                 deleted,
                 note.deleted_at,
                 note.version,
@@ -253,7 +258,7 @@ pub async fn push(
         } else {
             // Fetch full server note data for conflict resolution
             let server_note = sqlx::query!(
-                r#"SELECT content, tags, pinned, archived, archived_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at
+                r#"SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at
                    FROM notes WHERE id = ? AND user_id = ?"#,
                 note.id,
                 client_info.user_id
@@ -295,9 +300,11 @@ pub async fn push(
                 server_tags,
                 server_version: server_note.server_version,
                 server_attachments,
-                server_pinned: server_note.pinned == 1,
+                server_pinned: server_note.pinned != 0,
                 server_archived: server_note.archived,
                 server_archived_at: server_note.archived_at,
+                server_locked: server_note.locked != 0,
+                server_locked_at: server_note.locked_at,
                 server_syntax_language: server_note.syntax_language,
                 server_word_wrap: server_note.word_wrap.map(|w| w == 1),
                 server_show_preview: server_note.show_preview.map(|p| p == 1),
@@ -536,7 +543,7 @@ pub async fn pull(
     // Get notes with pagination (LIMIT/OFFSET)
     let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             last_sync,
             limit,
@@ -557,6 +564,8 @@ pub async fn pull(
                 pinned: row.pinned,
                 archived: if row.archived { 1 } else { 0 },
                 archived_at: row.archived_at,
+                locked: row.locked,
+                locked_at: row.locked_at,
                 deleted: row.deleted,
                 deleted_at: row.deleted_at,
                 version: row.version,
@@ -569,7 +578,7 @@ pub async fn pull(
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             limit,
             offset
@@ -589,6 +598,8 @@ pub async fn pull(
                 pinned: row.pinned,
                 archived: if row.archived { 1 } else { 0 },
                 archived_at: row.archived_at,
+                locked: row.locked,
+                locked_at: row.locked_at,
                 deleted: row.deleted,
                 deleted_at: row.deleted_at,
                 version: row.version,
@@ -670,6 +681,8 @@ pub async fn pull(
             pinned: db_note.pinned != 0,
             archived: db_note.archived != 0,
             archived_at: db_note.archived_at,
+            locked: db_note.locked != 0,
+            locked_at: db_note.locked_at,
             deleted: db_note.deleted != 0,
             deleted_at: db_note.deleted_at,
             version: db_note.version,

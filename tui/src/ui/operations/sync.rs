@@ -173,6 +173,8 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 pinned: note.pinned,
                 archived: note.archived,
                 archived_at: note.archived_at,
+                locked: note.locked,
+                locked_at: note.locked_at,
                 deleted: note.deleted,
                 deleted_at: note.deleted_at,
                 version: note.version,
@@ -311,6 +313,8 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 server_pinned: rejected.server_pinned,
                 server_archived: rejected.server_archived,
                 server_archived_at: rejected.server_archived_at,
+                server_locked: rejected.server_locked,
+                server_locked_at: rejected.server_locked_at,
                 server_syntax_language: rejected.server_syntax_language.clone(),
                 server_word_wrap: rejected.server_word_wrap,
                 server_color: rejected.server_color.clone(),
@@ -552,6 +556,8 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 local_note.pinned = remote_note.pinned;
                 local_note.archived = remote_note.archived;
                 local_note.archived_at = remote_note.archived_at;
+                local_note.locked = remote_note.locked;
+                local_note.locked_at = remote_note.locked_at;
                 local_note.deleted = remote_note.deleted;
                 local_note.deleted_at = remote_note.deleted_at;
                 local_note.version = remote_note.version;
@@ -583,6 +589,8 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             new_note.pinned = remote_note.pinned;
             new_note.archived = remote_note.archived;
             new_note.archived_at = remote_note.archived_at;
+            new_note.locked = remote_note.locked;
+            new_note.locked_at = remote_note.locked_at;
             new_note.deleted = remote_note.deleted;
             new_note.deleted_at = remote_note.deleted_at;
             new_note.version = remote_note.version;
@@ -815,6 +823,8 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
         updated_note.pinned = conflict_data.server_pinned;
         updated_note.archived = conflict_data.server_archived;
         updated_note.archived_at = conflict_data.server_archived_at;
+        updated_note.locked = conflict_data.server_locked;
+        updated_note.locked_at = conflict_data.server_locked_at;
         if let Some(ref lang) = conflict_data.server_syntax_language {
             updated_note.syntax_language = lang.parse().unwrap_or_default();
         }
@@ -858,6 +868,8 @@ pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     new_note.pinned = conflict_data.server_pinned;
     new_note.archived = conflict_data.server_archived;
     new_note.archived_at = conflict_data.server_archived_at;
+    new_note.locked = conflict_data.server_locked;
+    new_note.locked_at = conflict_data.server_locked_at;
     if let Some(ref lang) = conflict_data.server_syntax_language {
         new_note.syntax_language = lang.parse().unwrap_or_default();
     }
