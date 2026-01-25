@@ -60,6 +60,24 @@
   $: colorPreviewHex = color ? getColorHex(color, currentTheme) : undefined;
   $: toolbarBackgroundColor = color ? hexWithOpacity(getColorHex(color, currentTheme), 0.3) : undefined;
 
+  // Reference to menu container for click-outside detection
+  let menuContainerRef: HTMLDivElement;
+
+  // Handle click outside to close menu
+  function handleClickOutside(event: MouseEvent) {
+    if (showMoreMenu && menuContainerRef && !menuContainerRef.contains(event.target as Node)) {
+      showMoreMenu = false;
+    }
+  }
+
+  // Handle Escape key to close menu
+  function handleKeydown(event: KeyboardEvent) {
+    if (showMoreMenu && event.key === 'Escape') {
+      showMoreMenu = false;
+      event.preventDefault();
+    }
+  }
+
   onMount(() => {
     // Set up theme observer to watch for dark mode changes
     const updateTheme = () => {
@@ -75,6 +93,10 @@
       attributes: true,
       attributeFilter: ['class'],
     });
+
+    // Add click-outside and keydown listeners for menu dismissal
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeydown);
   });
 
   onDestroy(() => {
@@ -82,6 +104,10 @@
       themeObserver.disconnect();
       themeObserver = null;
     }
+
+    // Clean up event listeners
+    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('keydown', handleKeydown);
   });
 
   function toggleMoreMenu() {
@@ -274,7 +300,7 @@
   <div class="flex-1"></div>
 
   <!-- More Menu -->
-  <div class="more-menu-container relative flex-shrink-0">
+  <div class="more-menu-container relative flex-shrink-0" bind:this={menuContainerRef}>
     <button
       on:click={toggleMoreMenu}
       class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
