@@ -62,8 +62,22 @@ export async function setupFreshEnvironment(page: Page, password: string = 'test
   await handleLandingPage(page);
 
   // Set up password using id-based locators for reliability
-  await page.locator('#password').fill(password);
-  await page.locator('#confirm').fill(password);
+  const passwordField = page.locator('#password');
+  const confirmField = page.locator('#confirm');
+
+  // Wait for password field to be ready
+  await passwordField.waitFor({ state: 'visible' });
+
+  // Clear and fill password field
+  await passwordField.clear();
+  await passwordField.fill(password);
+
+  // Confirm field only exists on setup, not unlock
+  if (await confirmField.isVisible()) {
+    await confirmField.clear();
+    await confirmField.fill(password);
+  }
+
   await page.locator('button', { hasText: /Create Password|Set Password|Unlock/i }).click();
 
   // Wait for app to load
