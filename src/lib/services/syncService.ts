@@ -210,7 +210,10 @@ class SyncService {
         // Clear refresh flag
         isSyncRefreshing.set(false);
       } else if (pushedCount > 0) {
-        console.log('[SyncService] Pushed', pushedCount, 'notes (no refresh needed)');
+        // Refresh notes store to pick up updated syncedAt timestamps
+        const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
+        notes.set(allNotes);
+        console.log('[SyncService] Pushed', pushedCount, 'notes, refreshed store');
       } else {
         console.log('[SyncService] Sync complete (no changes)');
       }
@@ -409,9 +412,10 @@ class SyncService {
           lastSyncStatus: 'synced',
         });
 
-        // Clear needsSync flag for successfully synced notes
+        // Update syncedAt and clear needsSync flag for successfully synced notes
         const note = await noteRepository.getById(accepted.id);
         if (note) {
+          note.syncedAt = accepted.syncedAt;
           note.needsSync = false;
           await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
         }
