@@ -61,11 +61,10 @@ export async function setupFreshEnvironment(page: Page, password: string = 'test
   // Handle landing page if shown
   await handleLandingPage(page);
 
-  // Set up password - fill both fields and submit
-  const passwordInputs = page.locator('input[type="password"]');
-  await passwordInputs.first().fill(password);
-  await passwordInputs.nth(1).fill(password);
-  await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
+  // Set up password using id-based locators for reliability
+  await page.locator('#password').fill(password);
+  await page.locator('#confirm').fill(password);
+  await page.locator('button', { hasText: /Create Password|Set Password|Unlock/i }).click();
 
   // Wait for app to load
   await expect(page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list')).first()).toBeVisible();
