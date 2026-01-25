@@ -40,6 +40,8 @@
     "created": "Créée",
     "modified": "Modifiée",
     "version": "Version",
+    "synced": "Synchronisé",
+    "unsynced": "Non synchronisé",
     "attachments": "Pièces jointes",
     "filterByTag": "Filtrer par #{tag}",
     "noNotesYet": "Aucune note pour le moment",
