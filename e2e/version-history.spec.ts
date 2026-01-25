@@ -102,22 +102,30 @@ test.describe('Version History', () => {
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially('Note to close');
-    await page.waitForTimeout(2000); // Wait for auto-save
+
+    // Wait for auto-save by checking note appears in list (state-based wait)
+    const noteList = page.getByRole('list');
+    await expect(noteList.getByText(/Note to close/i)).toBeVisible({ timeout: 5000 });
 
     // Edit the note
     await editor.pressSequentially(' - with more content');
-    await page.waitForTimeout(2000); // Wait for auto-save
+
+    // Wait for auto-save by checking updated content appears in list preview
+    await expect(noteList.getByText(/with more content/i)).toBeVisible({ timeout: 5000 });
 
     // Close the note by clicking the X button (close icon)
     const closeButton = page.locator('button').filter({ has: page.locator('svg path[d*="M6 18L18 6"]') });
     if (await closeButton.isVisible()) {
       await closeButton.click();
-      await page.waitForTimeout(1000); // Wait for version creation
+
+      // Wait for note list to be visible (editor closed)
+      await expect(noteList.getByText(/Note to close/i)).toBeVisible({ timeout: 5000 });
 
       // Re-select the note from the list
-      const noteList = page.getByRole('list');
       await noteList.getByText(/Note to close/i).click();
-      await page.waitForTimeout(500);
+
+      // Wait for editor to load
+      await expect(editor).toBeVisible({ timeout: 3000 });
 
       // Open version history
       const versionHistoryModal = await openVersionHistory(page);

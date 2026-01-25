@@ -13,26 +13,27 @@ test.describe('Search and Filtering Workflows', () => {
     // Create test notes with different content
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const noteList = page.getByRole('list');
 
     // Note 1: Work meeting
     await newNoteButton.click();
     await editor.click();
     await editor.pressSequentially('Meeting notes for project alpha discussion');
-    await page.waitForTimeout(3000);
+    await expect(noteList.getByText(/Meeting notes/i)).toBeVisible({ timeout: 5000 });
 
     // Note 2: Personal task
     await newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Buy groceries and walk the dog');
-    await page.waitForTimeout(3000);
+    await expect(noteList.getByText(/Buy groceries/i)).toBeVisible({ timeout: 5000 });
 
     // Note 3: Another work note
     await newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Project beta documentation review');
-    await page.waitForTimeout(3000);
+    await expect(noteList.getByText(/Project beta/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('should search notes by text content', async ({ page }) => {
@@ -42,22 +43,22 @@ test.describe('Search and Filtering Workflows', () => {
     if (await searchInput.isVisible()) {
       // Search for "project"
       await searchInput.fill('project');
-      await page.waitForTimeout(1000);
 
-      // Should see project notes (alpha and beta)
+      // Should see project notes (alpha and beta) - use state-based waits
       const noteList = page.getByRole('list').or(page.locator('[role="list"]')).first();
-      await expect(noteList.getByText(/project alpha/i)).toBeVisible();
-      await expect(noteList.getByText(/project beta/i)).toBeVisible();
 
-      // Should NOT see grocery note
-      await expect(noteList.getByText(/groceries/i)).not.toBeVisible();
+      // Wait for groceries note to disappear (indicates search is working)
+      await expect(noteList.locator('h3').getByText(/groceries/i)).not.toBeVisible({ timeout: 5000 });
+
+      // Project notes should be visible
+      await expect(noteList.locator('h3').getByText(/project alpha/i)).toBeVisible({ timeout: 3000 });
+      await expect(noteList.locator('h3').getByText(/project beta/i)).toBeVisible({ timeout: 3000 });
 
       // Clear search
       await searchInput.clear();
-      await page.waitForTimeout(1000);
 
       // All notes should be visible again
-      await expect(noteList.getByText(/groceries/i)).toBeVisible();
+      await expect(noteList.locator('h3').getByText(/groceries/i)).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -92,27 +93,26 @@ test.describe('Tag Management Workflows', () => {
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
     await editor.click();
     await editor.pressSequentially('Note about work tasks');
-    await page.waitForTimeout(2000);
+
+    // Wait for note to be saved (appears in list)
+    const noteList = page.getByRole('list');
+    await expect(noteList.getByText(/Note about work/i)).toBeVisible({ timeout: 5000 });
 
     // Find tag input - it's a text input with "Add tags..." placeholder inside .tag-input-container
     const tagInput = page.locator('.tag-input-container input[type="text"]').first();
     await expect(tagInput).toBeVisible();
 
-    // Add first tag
+    // Add first tag and wait for tag pill to appear (state-based wait)
     await tagInput.click();
     await tagInput.fill('work');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
+    await expect(page.locator('.tag-pill').filter({ hasText: '#work' })).toBeVisible({ timeout: 3000 });
 
-    // Add second tag
+    // Add second tag and wait for tag pill to appear
     await tagInput.click();
     await tagInput.fill('important');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
-
-    // Tags should be visible as tag pills with #tagname format
-    await expect(page.locator('.tag-pill').filter({ hasText: '#work' })).toBeVisible();
-    await expect(page.locator('.tag-pill').filter({ hasText: '#important' })).toBeVisible();
+    await expect(page.locator('.tag-pill').filter({ hasText: '#important' })).toBeVisible({ timeout: 3000 });
   });
 
   test('should remove tags from note', async ({ page }) => {
@@ -172,7 +172,10 @@ test.describe('Settings Workflows', () => {
 
     if (await settingsButton.isVisible()) {
       await settingsButton.click();
-      await page.waitForTimeout(1000);
+
+      // Wait for settings modal to appear (state-based wait)
+      const settingsModal = page.getByRole('dialog').or(page.locator('[class*="modal"]'));
+      await expect(settingsModal.first()).toBeVisible({ timeout: 5000 });
 
       // Look for theme toggle/select
       const themeControl = page.locator('select, button, input').filter({ hasText: /theme|dark|light/i }).first();
@@ -180,7 +183,6 @@ test.describe('Settings Workflows', () => {
       if (await themeControl.isVisible()) {
         // Try to click theme control (works for both buttons and some selects)
         await themeControl.click();
-        await page.waitForTimeout(1000);
 
         // Verify settings modal interaction worked (test passes if we got this far)
         expect(true).toBe(true);

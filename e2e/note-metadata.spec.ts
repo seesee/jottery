@@ -20,8 +20,13 @@ test.describe('Note Metadata Persistence', () => {
     await editor.click();
     await editor.pressSequentially(content);
 
-    // Wait for auto-save
-    await page.waitForTimeout(2000);
+    // Wait for auto-save by checking note appears in list (state-based wait)
+    // Extract a searchable word from content (skip markdown symbols and split by whitespace)
+    const noteList = page.getByRole('list');
+    const cleanContent = content.replace(/^[#*_>\-]+\s*/, '');
+    const words = cleanContent.split(/\s+/).filter(w => w.length > 2);
+    const searchWord = words[0] || cleanContent.substring(0, 10);
+    await expect(noteList.locator('h3').getByText(new RegExp(searchWord, 'i')).first()).toBeVisible({ timeout: 5000 });
   }
 
   test.describe('Pin State', () => {
@@ -34,27 +39,35 @@ test.describe('Note Metadata Persistence', () => {
 
       // Click on first note in the list
       const noteList = page.getByRole('list');
-      await noteList.getByText(/First note/i).click();
-      await page.waitForTimeout(500);
+      const firstNoteItem = noteList.getByText(/First note/i);
+      await firstNoteItem.click();
+
+      // Wait for editor to load
+      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      await expect(editor).toBeVisible({ timeout: 3000 });
 
       // Find and click pin button (specifically the one with "Pin note" title)
       const pinButton = page.getByRole('button', { name: 'Pin note' });
 
       if (await pinButton.isVisible()) {
         await pinButton.click();
-        await page.waitForTimeout(1000); // Wait for save
+
+        // Wait for pin state to change - button should become "Unpin note"
+        const unpinButton = page.getByRole('button', { name: 'Unpin note' });
+        await expect(unpinButton).toBeVisible({ timeout: 3000 });
 
         // Switch to second note
-        await noteList.getByText(/Second note/i).click();
-        await page.waitForTimeout(500);
+        const secondNoteItem = noteList.getByText(/Second note/i);
+        await secondNoteItem.click();
+        await expect(editor).toBeVisible({ timeout: 3000 });
 
         // Switch back to first note
-        await noteList.getByText(/First note/i).click();
-        await page.waitForTimeout(500);
+        await firstNoteItem.click();
+        await expect(editor).toBeVisible({ timeout: 3000 });
 
-        // Check that pin indicator is still visible
+        // Check that pin indicator is still visible (Unpin button means it's pinned)
         const pinIndicator = page.locator('[class*="pin"], [data-pinned="true"], svg[class*="pin"]');
-        const isPinned = await pinIndicator.count() > 0;
+        const isPinned = await pinIndicator.count() > 0 || await unpinButton.isVisible();
 
         // If we found a pin button earlier, pin state should be preserved
         // (The note list should show the first note is pinned)

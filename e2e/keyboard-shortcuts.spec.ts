@@ -39,13 +39,15 @@ test.describe('Keyboard Shortcuts', () => {
   test('should focus search with Ctrl/Cmd+K', async ({ page }) => {
     // Press Ctrl+K
     await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
 
-    // Search input should be focused
+    // Wait for search input to be focused (state-based wait using polling)
     const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    const isFocused = await searchInput.evaluate((el) => document.activeElement === el);
 
-    expect(isFocused).toBe(true);
+    // Use expect with polling to wait for focus state
+    await expect(async () => {
+      const isFocused = await searchInput.evaluate((el) => document.activeElement === el);
+      expect(isFocused).toBe(true);
+    }).toPass({ timeout: 3000 });
   });
 
   test('should open settings with Ctrl/Cmd+,', async ({ page }) => {

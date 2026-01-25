@@ -74,31 +74,31 @@ test.describe('Tags', () => {
       // Add a tag first
       await tagInput.fill('removable');
       await tagInput.press('Enter');
-      await page.waitForTimeout(500);
 
-      // Find the tag badge containing "removable"
-      const tagBadge = page.locator('[class*="tag"]').filter({ hasText: /removable/i }).first();
+      // Wait for tag to appear (state-based wait)
+      const tagBadge = page.locator('.tag-pill, [class*="tag-badge"]').filter({ hasText: /removable/i }).first();
+      await expect(tagBadge).toBeVisible({ timeout: 3000 });
 
-      if (await tagBadge.isVisible()) {
-        // Look for remove/close button - could be SVG, button, or span with × character
-        const removeButton = tagBadge.locator('button, svg, [role="button"], span').filter({
-          hasText: /×|✕|x/i
-        }).first();
+      // Look for remove/close button - could be SVG, button, or span with × character
+      const removeButton = tagBadge.locator('button, svg, [role="button"], span').filter({
+        hasText: /×|✕|x/i
+      }).first();
 
-        // Alternative: look for any clickable element that removes the tag
-        const closeIcon = tagBadge.locator('[class*="close"], [class*="remove"], [class*="delete"]').first();
+      // Alternative: look for any clickable element that removes the tag
+      const closeIcon = tagBadge.locator('[class*="close"], [class*="remove"], [class*="delete"]').first();
 
-        if (await removeButton.isVisible()) {
-          await removeButton.click();
-          await page.waitForTimeout(500);
-        } else if (await closeIcon.isVisible()) {
-          await closeIcon.click();
-          await page.waitForTimeout(500);
-        }
-
-        // Tag removal should work (verify no error)
-        expect(true).toBe(true);
+      if (await removeButton.isVisible()) {
+        await removeButton.click();
+        // Wait for tag to disappear
+        await expect(tagBadge).not.toBeVisible({ timeout: 3000 });
+      } else if (await closeIcon.isVisible()) {
+        await closeIcon.click();
+        // Wait for tag to disappear
+        await expect(tagBadge).not.toBeVisible({ timeout: 3000 });
       }
+
+      // Tag removal should work (verify no error)
+      expect(true).toBe(true);
     }
   });
 

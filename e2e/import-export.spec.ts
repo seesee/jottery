@@ -180,7 +180,17 @@ test.describe('Import/Export', () => {
 
       if (await fileInput.count() > 0) {
         await fileInput.setInputFiles(importFilePath);
-        await page.waitForTimeout(2000);
+
+        // Wait for import to complete - look for success message or note appearing
+        const noteList = page.getByRole('list');
+        const successIndicator = page.locator('text=/import.*success|imported|complete/i');
+
+        // Wait for either a success indicator or give import time to process
+        try {
+          await expect(successIndicator.first()).toBeVisible({ timeout: 3000 });
+        } catch {
+          // No success message visible - import might still be processing
+        }
 
         // Close settings
         const closeButton = page.locator('button').filter({ hasText: /close|done|×/i }).first();
@@ -188,14 +198,16 @@ test.describe('Import/Export', () => {
           await closeButton.click();
         }
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+
+        // Wait for settings modal to close
+        const modal = page.getByRole('dialog');
+        await expect(modal).not.toBeVisible({ timeout: 3000 }).catch(() => {});
 
         // Verify imported note appears in list
-        const noteList = page.getByRole('list');
-        const importedNote = noteList.getByText(/Imported note content/i);
+        const importedNote = noteList.locator('h3').getByText(/Imported note/i);
 
-        // Note should be visible
-        await expect(importedNote).toBeVisible({ timeout: 5000 });
+        // Note should be visible (wait longer as import may take time)
+        await expect(importedNote).toBeVisible({ timeout: 8000 });
       }
     } finally {
       if (fs.existsSync(importFilePath)) {

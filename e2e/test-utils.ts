@@ -80,6 +80,9 @@ export async function setupFreshEnvironment(page: Page, password: string = 'test
 
   await page.locator('button', { hasText: /Create Password|Set Password|Unlock/i }).click();
 
-  // Wait for app to load
-  await expect(page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list')).first()).toBeVisible();
+  // Wait for app to load - use longer timeout and check for new note button as additional indicator
+  const appLoaded = page.getByText(/No notes yet|Create your first note/i)
+    .or(page.getByRole('list'))
+    .or(page.locator('button').filter({ hasText: /New|^\+$/ }));
+  await expect(appLoaded.first()).toBeVisible({ timeout: 10000 });
 }

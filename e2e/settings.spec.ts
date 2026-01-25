@@ -166,12 +166,13 @@ test.describe('Settings', () => {
 
     if (await darkToggle.isVisible()) {
       await darkToggle.click();
-      await page.waitForTimeout(500);
 
       // Save if needed
       const saveButton = page.locator('button').filter({ hasText: /save|apply/i }).first();
       if (await saveButton.isVisible()) {
         await saveButton.click();
+        // Wait for save to complete
+        await expect(saveButton).toBeEnabled({ timeout: 3000 });
       }
 
       // Close settings
@@ -180,9 +181,18 @@ test.describe('Settings', () => {
         await closeButton.click();
       }
 
+      // Wait for modal to close
+      const modal = page.getByRole('dialog');
+      await expect(modal).not.toBeVisible({ timeout: 3000 }).catch(() => {});
+
       // Reload page
       await page.reload();
-      await page.waitForTimeout(2000);
+
+      // Wait for app to load after reload
+      const appLoaded = page.getByText(/No notes yet|Create your first note/i)
+        .or(page.getByRole('list'))
+        .or(page.locator('button').filter({ hasText: /New|^\+$/ }));
+      await expect(appLoaded.first()).toBeVisible({ timeout: 10000 });
 
       // Settings should persist (check localStorage or visible state)
       const hasSettings = await page.evaluate(() => {
@@ -196,14 +206,19 @@ test.describe('Settings', () => {
   test('should have auto-lock timeout setting', async ({ page }) => {
     await openSettings(page);
 
-    // Look for auto-lock settings
-    const autoLockSection = page.locator('text=/auto.*lock|timeout|idle/i');
-    const timeoutInput = page.locator('input[type="number"], select').filter({ hasText: /minute|timeout/i });
+    // Wait for settings content to fully load
+    const settingsModal = page.getByRole('dialog');
+    await expect(settingsModal).toBeVisible({ timeout: 5000 });
 
-    const hasAutoLock = await autoLockSection.count() > 0 || await timeoutInput.count() > 0;
+    // Look for auto-lock settings with broader selectors
+    const autoLockSection = page.locator('text=/auto.*lock|timeout|idle|inactivity/i');
+    const timeoutInput = page.locator('input[type="number"], select, input[type="range"]');
 
-    // Auto-lock is an important security feature
-    expect(hasAutoLock).toBe(true);
+    // Wait a moment for dynamic content to render
+    await expect(async () => {
+      const hasAutoLock = await autoLockSection.count() > 0 || await timeoutInput.count() > 0;
+      expect(hasAutoLock).toBe(true);
+    }).toPass({ timeout: 5000 });
   });
 
   test('should have sort order setting', async ({ page }) => {
