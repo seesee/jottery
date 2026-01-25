@@ -157,6 +157,20 @@
       "link": "링크 삽입",
       "table": "표 삽입",
       "enterUrl": "URL 입력:"
+    },
+    "lock": {
+      "lock": "노트 잠금",
+      "unlock": "노트 잠금 해제",
+      "locked": "노트가 잠겼습니다",
+      "unlocked": "노트 잠금이 해제되었습니다",
+      "lockTooltip": "편집을 방지하기 위해 노트 잠금",
+      "unlockTooltip": "편집을 허용하기 위해 노트 잠금 해제",
+      "lockedBanner": "이 노트는 잠겨 있습니다. 편집하려면 잠금을 해제하세요.",
+      "mustUnlockToDelete": "삭제하기 전에 노트 잠금을 해제하세요"
+    },
+    "readOnly": {
+      "archivedBanner": "이 노트는 보관되어 있습니다. 편집하려면 보관 해제하세요.",
+      "lockedBanner": "이 노트는 잠겨 있습니다. 편집하려면 잠금을 해제하세요."
     }
   },
   "noteList": {

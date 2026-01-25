@@ -399,6 +399,20 @@ class NoteService {
   }
 
   /**
+   * Lock a note (prevent editing)
+   */
+  async lockNote(id: string): Promise<void> {
+    await noteRepository.lock(id);
+  }
+
+  /**
+   * Unlock a note (allow editing)
+   */
+  async unlockNote(id: string): Promise<void> {
+    await noteRepository.unlock(id);
+  }
+
+  /**
    * Get archived notes
    */
   async getArchivedNotes(): Promise<DecryptedNote[]> {

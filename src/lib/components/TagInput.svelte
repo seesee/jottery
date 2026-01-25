@@ -7,6 +7,7 @@
   export let onChange: (tags: string[]) => void = () => {};
   export let placeholder: string = 'Add tags...';
   export let onTagClick: ((tag: string) => void) | undefined = undefined;
+  export let disabled: boolean = false;
 
   let inputValue = '';
   let suggestions: string[] = [];
@@ -140,33 +141,37 @@
         >
           #{tag}
         </span>
-        <button
-          on:click={() => removeTag(index)}
-          class="tag-remove hover:text-blue-600 dark:hover:text-blue-400"
-          title={$_('tagInput.removeTag')}
-        >
-          ×
-        </button>
+        {#if !disabled}
+          <button
+            on:click={() => removeTag(index)}
+            class="tag-remove hover:text-blue-600 dark:hover:text-blue-400"
+            title={$_('tagInput.removeTag')}
+          >
+            ×
+          </button>
+        {/if}
       </span>
     {/each}
 
     <!-- Input -->
-    <input
-      type="text"
-      bind:value={inputValue}
-      on:input={handleInput}
-      on:keydown={handleKeyDown}
-      on:blur={handleBlur}
-      {placeholder}
-      enterkeyhint="done"
-      autocapitalize="none"
-      autocomplete="off"
-      class="flex-1 min-w-[120px] outline-none bg-transparent text-sm text-gray-900 dark:text-gray-100"
-    />
+    {#if !disabled}
+      <input
+        type="text"
+        bind:value={inputValue}
+        on:input={handleInput}
+        on:keydown={handleKeyDown}
+        on:blur={handleBlur}
+        {placeholder}
+        enterkeyhint="done"
+        autocapitalize="none"
+        autocomplete="off"
+        class="flex-1 min-w-[120px] outline-none bg-transparent text-sm text-gray-900 dark:text-gray-100"
+      />
+    {/if}
   </div>
 
   <!-- Suggestions dropdown -->
-  {#if showSuggestions}
+  {#if showSuggestions && !disabled}
     <div class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
       {#each suggestions as suggestion, index}
         <button

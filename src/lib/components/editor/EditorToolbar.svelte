@@ -6,6 +6,7 @@
   // State props
   export let pinned: boolean;
   export let archived: boolean;
+  export let locked: boolean = false;
   export let language: string;
   export let showPreview: boolean;
   export let canPreview: boolean;
@@ -15,6 +16,7 @@
   export let wordWrap: boolean;
   export let color: string | undefined = undefined;
   export let availableLanguages: Array<{id: string, name: string}>;
+  export let readOnly: boolean = false;
 
   // Editor mode props
   export let editorMode: 'raw' | 'wysiwyg' = 'raw';
@@ -40,6 +42,7 @@
   export let onDelete: () => void;
   export let onClose: () => void;
   export let onBackToList: (() => void) | undefined = undefined;
+  export let onLock: (() => void) | undefined = undefined;
 
   // Keyboard shortcuts (for tooltips)
   export let copyNoteShortcut: string | null = null;
@@ -149,6 +152,11 @@
   function handleDeleteClick() {
     showMoreMenu = false;
     onDelete();
+  }
+
+  function handleLockClick() {
+    showMoreMenu = false;
+    onLock?.();
   }
 </script>
 
@@ -283,7 +291,8 @@
         <div class="py-1">
           <button
             on:click={handleUndoClick}
-            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            disabled={readOnly}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>↶</span>
             <span>{$_('editor.undo')}</span>
@@ -291,7 +300,8 @@
 
           <button
             on:click={handleRedoClick}
-            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            disabled={readOnly}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>↷</span>
             <span>{$_('editor.redo')}</span>
@@ -332,6 +342,26 @@
             <span>📦</span>
             <span>{archived ? $_('archive.unarchive') : $_('archive.archive')}</span>
           </button>
+
+          {#if onLock}
+            <button
+              on:click={handleLockClick}
+              disabled={isDraftMode || archived}
+              class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={locked ? $_('editor.lock.unlockTooltip') : $_('editor.lock.lockTooltip')}
+            >
+              {#if locked}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              {:else}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              {/if}
+              <span>{locked ? $_('editor.lock.unlock') : $_('editor.lock.lock')}</span>
+            </button>
+          {/if}
 
           <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
@@ -406,7 +436,9 @@
 
           <button
             on:click={handleDeleteClick}
-            class="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
+            disabled={locked}
+            class="w-full px-4 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            title={locked ? $_('editor.lock.mustUnlockToDelete') : undefined}
           >
             <span>🗑️</span>
             <span>{$_('editor.deleteNote')}</span>

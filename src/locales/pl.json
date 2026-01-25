@@ -157,6 +157,20 @@
       "link": "Wstaw link",
       "table": "Wstaw tabelę",
       "enterUrl": "Wprowadź URL:"
+    },
+    "lock": {
+      "lock": "Zablokuj notatkę",
+      "unlock": "Odblokuj notatkę",
+      "locked": "Notatka zablokowana",
+      "unlocked": "Notatka odblokowana",
+      "lockTooltip": "Zablokuj notatkę, aby zapobiec edycji",
+      "unlockTooltip": "Odblokuj notatkę, aby umożliwić edycję",
+      "lockedBanner": "Ta notatka jest zablokowana. Odblokuj, aby edytować.",
+      "mustUnlockToDelete": "Odblokuj notatkę przed usunięciem"
+    },
+    "readOnly": {
+      "archivedBanner": "Ta notatka jest zarchiwizowana. Przywróć z archiwum, aby edytować.",
+      "lockedBanner": "Ta notatka jest zablokowana. Odblokuj, aby edytować."
     }
   },
   "noteList": {

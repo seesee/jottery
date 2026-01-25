@@ -165,6 +165,16 @@
   // Check if preview is available for current language
   $: canPreview = language === 'markdown' || language === 'html' || language === 'xml';
 
+  // Read-only mode: note is archived or locked
+  $: isReadOnly = !!$selectedNote?.archived || !!$selectedNote?.locked;
+
+  // Banner message for read-only mode
+  $: readOnlyBanner = $selectedNote?.archived
+    ? $_('editor.readOnly.archivedBanner')
+    : $selectedNote?.locked
+      ? $_('editor.readOnly.lockedBanner')
+      : undefined;
+
   // Check if preview should use iframe (for HTML/XML with potential scripts)
   $: useIframePreview = language === 'html' || language === 'xml';
 
@@ -572,6 +582,40 @@
     } catch (error) {
       console.error('Failed to toggle archive:', error);
       toast.error(`Failed to ${$selectedNote.archived ? 'unarchive' : 'archive'} note: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async function handleLock() {
+    if (!$selectedNote) return;
+    try {
+      const noteId = $selectedNote.id;
+      const isLocked = $selectedNote.locked;
+
+      if (isLocked) {
+        // Unlock
+        await noteService.unlockNote(noteId);
+        toast.success($_('editor.lock.unlocked'));
+      } else {
+        // Lock
+        await noteService.lockNote(noteId);
+        toast.success($_('editor.lock.locked'));
+      }
+
+      // Get updated note
+      const updatedNote = await noteService.getNote(noteId);
+      if (updatedNote) {
+        // Update the note in the store
+        notes.update(allNotes =>
+          allNotes.map(n => n.id === noteId ? updatedNote : n)
+        );
+        searchService.updateNote(updatedNote);
+      }
+
+      // Trigger background sync
+      triggerBackgroundSync();
+    } catch (error) {
+      console.error('Failed to toggle lock:', error);
+      toast.error(`Failed to ${$selectedNote.locked ? 'unlock' : 'lock'} note: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -1009,6 +1053,8 @@
     <EditorToolbar
       pinned={$selectedNote?.pinned || false}
       archived={$selectedNote?.archived || false}
+      locked={$selectedNote?.locked || false}
+      readOnly={isReadOnly}
       {language}
       {showPreview}
       {canPreview}
@@ -1022,6 +1068,7 @@
       onEditorModeChange={handleEditorModeChange}
       onPin={handleTogglePin}
       onArchive={handleArchive}
+      onLock={handleLock}
       onLanguageChange={handleLanguageChange}
       onTogglePreview={handlePreviewToggle}
       onShowAttachments={handleShowAttachments}
@@ -1054,6 +1101,8 @@
       isDark={isDarkMode}
       {availableTags}
       {editorMode}
+      readOnly={isReadOnly}
+      {readOnlyBanner}
       bind:codeEditor
       onContentChange={() => handleInput()}
       onTagsChange={() => handleInput()}

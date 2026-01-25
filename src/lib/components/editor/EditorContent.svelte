@@ -14,6 +14,8 @@
   export let wordWrap: boolean;
   export let isDark: boolean;
   export let availableTags: string[];
+  export let readOnly: boolean = false;
+  export let readOnlyBanner: string | undefined = undefined;
 
   // Editor ref (for bind:this)
   export let codeEditor: any = null;
@@ -100,6 +102,16 @@
   }
 </script>
 
+<!-- Read-only banner -->
+{#if readOnly && readOnlyBanner}
+  <div class="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700 px-4 py-2 text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+    <span>{readOnlyBanner}</span>
+  </div>
+{/if}
+
 <!-- Tags Input -->
 <div class="border-b border-gray-200 dark:border-gray-700 p-2">
   <TagInput
@@ -108,6 +120,7 @@
     {availableTags}
     placeholder={$_('editor.addTags')}
     {onTagClick}
+    disabled={readOnly}
   />
 </div>
 
@@ -117,7 +130,7 @@
   {#if !showPreview}
     <!-- WYSIWYG mode (markdown only) -->
     {#if editorMode === 'wysiwyg' && language === 'markdown'}
-      <WysiwygToolbar editor={wysiwygEditor} />
+      <WysiwygToolbar editor={wysiwygEditor} disabled={readOnly} />
       <div class="flex-1 overflow-hidden">
         <WysiwygEditor
           bind:this={wysiwygEditor}
@@ -125,6 +138,7 @@
           onChange={handleContentChange}
           {isDark}
           placeholder={$_('editor.noNoteSelectedHint')}
+          readonly={readOnly}
         />
       </div>
     {:else}
@@ -138,6 +152,7 @@
           {wordWrap}
           {isDark}
           {onImagePaste}
+          readonly={readOnly}
         />
       </div>
     {/if}

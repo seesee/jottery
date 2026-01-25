@@ -157,6 +157,20 @@
       "link": "Bağlantı Ekle",
       "table": "Tablo Ekle",
       "enterUrl": "URL girin:"
+    },
+    "lock": {
+      "lock": "Notu Kilitle",
+      "unlock": "Notun Kilidini Aç",
+      "locked": "Not kilitlendi",
+      "unlocked": "Not kilidi açıldı",
+      "lockTooltip": "Düzenlemeyi önlemek için notu kilitle",
+      "unlockTooltip": "Düzenlemeye izin vermek için notun kilidini aç",
+      "lockedBanner": "Bu not kilitli. Düzenlemek için kilidi açın.",
+      "mustUnlockToDelete": "Silmeden önce notun kilidini açın"
+    },
+    "readOnly": {
+      "archivedBanner": "Bu not arşivlenmiş. Düzenlemek için arşivden çıkarın.",
+      "lockedBanner": "Bu not kilitli. Düzenlemek için kilidi açın."
     }
   },
   "noteList": {

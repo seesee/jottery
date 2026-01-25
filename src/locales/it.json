@@ -157,6 +157,20 @@
       "link": "Inserisci link",
       "table": "Inserisci tabella",
       "enterUrl": "Inserisci URL:"
+    },
+    "lock": {
+      "lock": "Blocca nota",
+      "unlock": "Sblocca nota",
+      "locked": "Nota bloccata",
+      "unlocked": "Nota sbloccata",
+      "lockTooltip": "Blocca la nota per impedire la modifica",
+      "unlockTooltip": "Sblocca la nota per consentire la modifica",
+      "lockedBanner": "Questa nota è bloccata. Sblocca per modificare.",
+      "mustUnlockToDelete": "Sblocca la nota prima di eliminarla"
+    },
+    "readOnly": {
+      "archivedBanner": "Questa nota è archiviata. Rimuovi dall'archivio per modificare.",
+      "lockedBanner": "Questa nota è bloccata. Sblocca per modificare."
     }
   },
   "noteList": {

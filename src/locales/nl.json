@@ -157,6 +157,20 @@
       "link": "Link invoegen",
       "table": "Tabel invoegen",
       "enterUrl": "Voer URL in:"
+    },
+    "lock": {
+      "lock": "Notitie vergrendelen",
+      "unlock": "Notitie ontgrendelen",
+      "locked": "Notitie vergrendeld",
+      "unlocked": "Notitie ontgrendeld",
+      "lockTooltip": "Vergrendel notitie om bewerken te voorkomen",
+      "unlockTooltip": "Ontgrendel notitie om bewerken mogelijk te maken",
+      "lockedBanner": "Deze notitie is vergrendeld. Ontgrendel om te bewerken.",
+      "mustUnlockToDelete": "Ontgrendel de notitie voor het verwijderen"
+    },
+    "readOnly": {
+      "archivedBanner": "Deze notitie is gearchiveerd. Dearchiveer om te bewerken.",
+      "lockedBanner": "Deze notitie is vergrendeld. Ontgrendel om te bewerken."
     }
   },
   "noteList": {

@@ -175,6 +175,32 @@ class IndexedDBNoteRepository implements NoteRepository {
   }
 
   /**
+   * Lock a note (prevent editing)
+   */
+  async lock(id: string): Promise<void> {
+    const note = await this.getById(id);
+    if (!note) {
+      throw new Error(`Note ${id} not found`);
+    }
+    note.locked = true;
+    note.lockedAt = new Date().toISOString();
+    await this.update(note);
+  }
+
+  /**
+   * Unlock a note (allow editing)
+   */
+  async unlock(id: string): Promise<void> {
+    const note = await this.getById(id);
+    if (!note) {
+      throw new Error(`Note ${id} not found`);
+    }
+    note.locked = false;
+    note.lockedAt = undefined;
+    await this.update(note);
+  }
+
+  /**
    * Permanently delete a note
    */
   async permanentDelete(id: string): Promise<void> {

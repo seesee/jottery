@@ -157,6 +157,20 @@
       "link": "插入链接",
       "table": "插入表格",
       "enterUrl": "输入URL："
+    },
+    "lock": {
+      "lock": "锁定笔记",
+      "unlock": "解锁笔记",
+      "locked": "笔记已锁定",
+      "unlocked": "笔记已解锁",
+      "lockTooltip": "锁定笔记以防止编辑",
+      "unlockTooltip": "解锁笔记以允许编辑",
+      "lockedBanner": "此笔记已锁定。解锁后可编辑。",
+      "mustUnlockToDelete": "删除前请先解锁笔记"
+    },
+    "readOnly": {
+      "archivedBanner": "此笔记已归档。取消归档后可编辑。",
+      "lockedBanner": "此笔记已锁定。解锁后可编辑。"
     }
   },
   "noteList": {

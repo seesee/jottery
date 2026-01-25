@@ -157,6 +157,20 @@
       "link": "Link einfügen",
       "table": "Tabelle einfügen",
       "enterUrl": "URL eingeben:"
+    },
+    "lock": {
+      "lock": "Notiz sperren",
+      "unlock": "Notiz entsperren",
+      "locked": "Notiz gesperrt",
+      "unlocked": "Notiz entsperrt",
+      "lockTooltip": "Notiz sperren, um Bearbeitung zu verhindern",
+      "unlockTooltip": "Notiz entsperren, um Bearbeitung zu ermöglichen",
+      "lockedBanner": "Diese Notiz ist gesperrt. Entsperren zum Bearbeiten.",
+      "mustUnlockToDelete": "Entsperren Sie die Notiz vor dem Löschen"
+    },
+    "readOnly": {
+      "archivedBanner": "Diese Notiz ist archiviert. Dearchivieren zum Bearbeiten.",
+      "lockedBanner": "Diese Notiz ist gesperrt. Entsperren zum Bearbeiten."
     }
   },
   "noteList": {

@@ -18,6 +18,8 @@ export interface Note {
   pinned: boolean; // Pin status
   archived: boolean; // Archive status
   archivedAt?: string; // Archive timestamp
+  locked: boolean; // Lock status (prevents editing)
+  lockedAt?: string; // Lock timestamp
   deleted: boolean; // Soft delete flag
   deletedAt?: string; // Deletion timestamp
   syncHash?: string; // Hash for conflict detection
@@ -277,6 +279,7 @@ export interface ExportNote {
   attachments: ExportAttachment[];
   pinned: boolean;
   archived: boolean;
+  locked: boolean;
   wordWrap?: boolean;
   syntaxLanguage?: string; // Any supported language ID
   showPreview?: boolean;
@@ -312,6 +315,7 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   attachments: [],
   pinned: false,
   archived: false,
+  locked: false,
   deleted: false,
   version: 0,
   wordWrap: true,

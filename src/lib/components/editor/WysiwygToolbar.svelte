@@ -3,6 +3,7 @@
 
   // Editor reference (WysiwygEditor component)
   export let editor: any = null;
+  export let disabled: boolean = false;
 
   // Toolbar state
   let isBold = false;
@@ -92,7 +93,9 @@
     editor?.insertTable(3, 3);
   }
 
-  const buttonClass = "p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300";
+  $: buttonClass = disabled
+    ? "p-1.5 rounded text-gray-400 dark:text-gray-600 cursor-not-allowed"
+    : "p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300";
   const activeClass = "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300";
 </script>
 
@@ -102,6 +105,7 @@
     <button
       type="button"
       on:click={handleBold}
+      {disabled}
       class="{buttonClass} {isBold ? activeClass : ''}"
       title={$_('editor.wysiwyg.bold')}
     >
@@ -112,6 +116,7 @@
     <button
       type="button"
       on:click={handleItalic}
+      {disabled}
       class="{buttonClass} {isItalic ? activeClass : ''}"
       title={$_('editor.wysiwyg.italic')}
     >
@@ -122,6 +127,7 @@
     <button
       type="button"
       on:click={handleStrike}
+      {disabled}
       class="{buttonClass} {isStrike ? activeClass : ''}"
       title={$_('editor.wysiwyg.strikethrough')}
     >
@@ -133,6 +139,7 @@
     <button
       type="button"
       on:click={handleCode}
+      {disabled}
       class="{buttonClass} {isCode ? activeClass : ''}"
       title={$_('editor.wysiwyg.inlineCode')}
     >
@@ -147,6 +154,7 @@
     <button
       type="button"
       on:click={() => handleHeading(1)}
+      {disabled}
       class="{buttonClass} {isHeading1 ? activeClass : ''} text-xs font-bold"
       title={$_('editor.wysiwyg.heading1')}
     >
@@ -155,6 +163,7 @@
     <button
       type="button"
       on:click={() => handleHeading(2)}
+      {disabled}
       class="{buttonClass} {isHeading2 ? activeClass : ''} text-xs font-bold"
       title={$_('editor.wysiwyg.heading2')}
     >
@@ -163,6 +172,7 @@
     <button
       type="button"
       on:click={() => handleHeading(3)}
+      {disabled}
       class="{buttonClass} {isHeading3 ? activeClass : ''} text-xs font-bold"
       title={$_('editor.wysiwyg.heading3')}
     >
@@ -175,6 +185,7 @@
     <button
       type="button"
       on:click={handleBulletList}
+      {disabled}
       class="{buttonClass} {isBulletList ? activeClass : ''}"
       title={$_('editor.wysiwyg.bulletList')}
     >
@@ -188,6 +199,7 @@
     <button
       type="button"
       on:click={handleOrderedList}
+      {disabled}
       class="{buttonClass} {isOrderedList ? activeClass : ''}"
       title={$_('editor.wysiwyg.orderedList')}
     >
@@ -201,6 +213,7 @@
     <button
       type="button"
       on:click={handleTaskList}
+      {disabled}
       class="{buttonClass} {isTaskList ? activeClass : ''}"
       title={$_('editor.wysiwyg.taskList')}
     >
@@ -219,6 +232,7 @@
     <button
       type="button"
       on:click={handleBlockquote}
+      {disabled}
       class="{buttonClass} {isBlockquote ? activeClass : ''}"
       title={$_('editor.wysiwyg.blockquote')}
     >
@@ -229,6 +243,7 @@
     <button
       type="button"
       on:click={handleCodeBlock}
+      {disabled}
       class="{buttonClass} {isCodeBlock ? activeClass : ''}"
       title={$_('editor.wysiwyg.codeBlock')}
     >
@@ -240,6 +255,7 @@
     <button
       type="button"
       on:click={handleHorizontalRule}
+      {disabled}
       class={buttonClass}
       title={$_('editor.wysiwyg.horizontalRule')}
     >
@@ -254,6 +270,7 @@
     <button
       type="button"
       on:click={handleLink}
+      {disabled}
       class={buttonClass}
       title={$_('editor.wysiwyg.link')}
     >
@@ -264,6 +281,7 @@
     <button
       type="button"
       on:click={handleTable}
+      {disabled}
       class={buttonClass}
       title={$_('editor.wysiwyg.table')}
     >

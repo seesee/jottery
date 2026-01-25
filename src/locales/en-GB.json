@@ -157,6 +157,20 @@
       "link": "Insert Link",
       "table": "Insert Table",
       "enterUrl": "Enter URL:"
+    },
+    "lock": {
+      "lock": "Lock Note",
+      "unlock": "Unlock Note",
+      "locked": "Note locked",
+      "unlocked": "Note unlocked",
+      "lockTooltip": "Lock note to prevent editing",
+      "unlockTooltip": "Unlock note to allow editing",
+      "lockedBanner": "This note is locked. Unlock to edit.",
+      "mustUnlockToDelete": "Unlock the note before deleting"
+    },
+    "readOnly": {
+      "archivedBanner": "This note is archived. Unarchive to edit.",
+      "lockedBanner": "This note is locked. Unlock to edit."
     }
   },
   "noteList": {
