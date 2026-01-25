@@ -40,21 +40,12 @@ export async function clearAllStorage(page: Page): Promise<void> {
  * Clicks "Try It Out" if the landing page is shown
  */
 export async function handleLandingPage(page: Page): Promise<void> {
-  const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-  const passwordInput = page.locator('input[type="password"]').first();
-
-  // Wait for either landing page button or password input (longer timeout for parallel runs)
-  // Use a proper race that tells us which one resolved
-  const result = await Promise.race([
-    getStartedButton.waitFor({ state: 'visible', timeout: 15000 }).then(() => 'landing' as const).catch(() => null),
-    passwordInput.waitFor({ state: 'visible', timeout: 15000 }).then(() => 'password' as const).catch(() => null)
-  ]);
-
-  // If landing page is showing, click the button
-  if (result === 'landing' || await getStartedButton.isVisible()) {
-    await getStartedButton.click();
-    // Wait for password input to appear after clicking
-    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
+  // Playwright's click() automatically waits for visibility
+  // If button doesn't exist (already past landing page), catch and continue
+  try {
+    await page.locator('button', { hasText: 'Try It Out' }).first().click({ timeout: 5000 });
+  } catch {
+    // Button not present - we're already past the landing page
   }
 }
 
@@ -62,24 +53,20 @@ export async function handleLandingPage(page: Page): Promise<void> {
  * Sets up a fresh test environment with password
  */
 export async function setupFreshEnvironment(page: Page, password: string = 'test-password-123'): Promise<void> {
-  // Clear storage
+  // Clear storage then reload to get fresh state
   await page.goto('/');
   await clearAllStorage(page);
+  await page.reload();
 
-  // Navigate fresh
-  await page.goto('/');
-
-  // Handle landing page
+  // Handle landing page if shown
   await handleLandingPage(page);
 
-  // Set up password (with longer timeout for parallel test runs)
+  // Set up password - fill both fields and submit
   const passwordInputs = page.locator('input[type="password"]');
-  await passwordInputs.first().waitFor({ state: 'visible', timeout: 15000 });
   await passwordInputs.first().fill(password);
   await passwordInputs.nth(1).fill(password);
   await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
   // Wait for app to load
-  const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
-  await expect(appVisible.first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list')).first()).toBeVisible();
 }
