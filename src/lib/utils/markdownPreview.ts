@@ -220,7 +220,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         }
       }
 
-      // Check if this is a note link
+      // Check if this is a note link (note: protocol from wiki-style conversion)
       if (href && href.startsWith('note:')) {
         const noteRef = href.substring('note:'.length);
 
@@ -241,6 +241,36 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           ${text}
+        </a>`;
+      }
+
+      // Check if this is a link: protocol note link (UUID-based)
+      // Format: [](link:UUID) or [custom text](link:UUID)
+      if (href && href.startsWith('link:')) {
+        const noteId = href.substring('link:'.length);
+
+        // Look up the note to get its title (for empty link text)
+        const foundNote = notes.find(n => n.id === noteId);
+
+        if (!foundNote) {
+          // Note not found - render as broken link
+          return `<span class="note-link-broken inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-not-allowed" title="Note not found: ${noteId}">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            ${text || 'Note not found'}
+          </span>`;
+        }
+
+        // Auto-populate title if link text is empty
+        const displayText = text || extractNoteTitle(foundNote.content);
+
+        // Valid note link - render as clickable
+        return `<a href="note:${noteId}" data-note-id="${noteId}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">
+          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          ${displayText}
         </a>`;
       }
 

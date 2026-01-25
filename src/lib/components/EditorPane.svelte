@@ -716,24 +716,9 @@
   async function handleCopyLink() {
     if (!$selectedNote) return;
 
-    // Extract title from note content (first non-empty line, stripped of markdown formatting)
-    const lines = content.split('\n');
-    let title = 'Untitled';
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed) {
-        title = trimmed
-          .replace(/^#+\s*/, '')      // Remove heading markers
-          .replace(/\*\*|__/g, '')    // Remove bold
-          .replace(/\*|_/g, '')       // Remove italic
-          .replace(/`/g, '')          // Remove code
-          .trim();
-        break;
-      }
-    }
-
-    // Format as wiki-style link
-    const link = `[[${title}]]`;
+    // Format as markdown link with UUID
+    // Format: [](link:UUID) - the title auto-populates when rendered
+    const link = `[](link:${$selectedNote.id})`;
 
     try {
       await navigator.clipboard.writeText(link);
