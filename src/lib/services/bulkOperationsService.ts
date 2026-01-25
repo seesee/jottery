@@ -246,6 +246,7 @@ export async function exportNotes(
         })),
         pinned: note.pinned,
         archived: note.archived,
+        locked: note.locked,
         wordWrap: note.wordWrap,
         syntaxLanguage: note.syntaxLanguage,
         showPreview: note.showPreview,

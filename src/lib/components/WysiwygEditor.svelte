@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { Editor } from '@tiptap/core';
   import { StarterKit } from '@tiptap/starter-kit';
   import { Link } from '@tiptap/extension-link';
@@ -25,8 +25,6 @@
   export let readonly: boolean = false;
   export let isDark: boolean = false;
   export let placeholder: string = '';
-
-  const dispatch = createEventDispatcher();
 
   let editorElement: HTMLDivElement;
   let editor: Editor | null = null;
@@ -64,7 +62,7 @@
     filter: (node) => {
       return node.nodeName === 'PRE' && node.firstChild?.nodeName === 'CODE';
     },
-    replacement: (content, node) => {
+    replacement: (_content, node) => {
       const codeNode = node.firstChild as HTMLElement;
       const language = codeNode?.className?.match(/language-(\w+)/)?.[1] || '';
       const code = codeNode?.textContent || '';
@@ -264,7 +262,7 @@
     bind:this={editorElement}
     class="h-full p-4"
     style="font-size: {fontSize}px"
-  />
+  ></div>
 </div>
 
 <style>

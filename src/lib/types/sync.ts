@@ -73,6 +73,8 @@ export interface SyncNote {
   pinned: boolean;
   archived: boolean;
   archivedAt?: string;
+  locked?: boolean;
+  lockedAt?: string;
   deleted: boolean;
   deletedAt?: string;
   version: number;

@@ -76,7 +76,7 @@ function parseWikiLinks(
   // This regex matches [[content]] where content can include | for display text
   const wikiLinkRegex = /\[\[([^\]]+)\]\]/g;
 
-  return content.replace(wikiLinkRegex, (match, innerContent) => {
+  return content.replace(wikiLinkRegex, (_match, innerContent) => {
     // Check if this link has a display text separator
     const pipeIndex = innerContent.indexOf('|');
     let noteRef: string;

@@ -190,14 +190,16 @@ class SyncService {
       // When we push, the store is already up-to-date (we saved locally before syncing)
       // Refreshing on push was causing UI lag during active editing
       if (pulledCount > 0) {
-        let currentSettings: any;
-        settings.subscribe(s => currentSettings = s)();
+        // Get current sort order from settings
+        let settingsSnapshot: { sortOrder?: string } = {};
+        settings.subscribe(s => settingsSnapshot = s)();
+        const sortOrder = (settingsSnapshot.sortOrder ?? 'recent') as 'recent' | 'oldest' | 'alpha' | 'created';
 
         // Set flag to prevent EditorPane from triggering sync during refresh
         isSyncRefreshing.set(true);
 
         // Get all notes from database (already decrypted and sorted)
-        const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
+        const allNotes = await noteService.getAllNotes(sortOrder);
 
         // Replace store with properly sorted notes from database
         notes.set(allNotes);
@@ -211,7 +213,10 @@ class SyncService {
         isSyncRefreshing.set(false);
       } else if (pushedCount > 0) {
         // Refresh notes store to pick up updated syncedAt timestamps
-        const allNotes = await noteService.getAllNotes(currentSettings.sortOrder);
+        let settingsSnapshot: { sortOrder?: string } = {};
+        settings.subscribe(s => settingsSnapshot = s)();
+        const sortOrder = (settingsSnapshot.sortOrder ?? 'recent') as 'recent' | 'oldest' | 'alpha' | 'created';
+        const allNotes = await noteService.getAllNotes(sortOrder);
         notes.set(allNotes);
         console.log('[SyncService] Pushed', pushedCount, 'notes, refreshed store');
       } else {
@@ -221,11 +226,10 @@ class SyncService {
       // Check for conflicts and notify user
       const conflictCount = await syncRepository.getConflictCount();
       if (conflictCount > 0) {
-        const { _ } = await import('svelte-i18n');
-        let getMessage: (key: string, options?: { values?: Record<string, unknown> }) => string;
-        _.subscribe(t => getMessage = t)();
-        const message = getMessage('conflict.syncNotification', { values: { count: conflictCount } });
-        toast.warning(message);
+        const message = conflictCount === 1
+          ? '1 note has a sync conflict'
+          : `${conflictCount} notes have sync conflicts`;
+        toast.info(message);
       }
 
       return { success: true };
@@ -552,6 +556,7 @@ class SyncService {
           tags: tagsForStorage,
           syncedAt: result.syncedAt,
           needsSync: false, // Pulled from server - already synced
+          locked: remoteNote.locked ?? false, // Ensure locked property exists
         };
 
         const localNote = await noteRepository.getById(remoteNote.id);

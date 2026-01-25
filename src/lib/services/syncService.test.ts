@@ -988,6 +988,7 @@ describe('syncService', () => {
         decryptedAt: Date.now(),
         pinned: false,
         archived: false,
+        locked: false,
         deleted: false,
         version: 1,
       };

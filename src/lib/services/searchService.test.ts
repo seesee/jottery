@@ -19,6 +19,7 @@ function createTestNote(overrides: Partial<DecryptedNote> = {}): DecryptedNote {
     attachments: [],
     pinned: false,
     archived: false,
+    locked: false,
     deleted: false,
     version: 0,
     wordWrap: true,
