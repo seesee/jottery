@@ -96,8 +96,9 @@ test.describe('Authentication', () => {
     await page.locator('#confirm').fill(password);
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
-    // Wait for app
-    await page.waitForTimeout(1000);
+    // Wait for app to fully load before reloading
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
 
     // Reload page
     await page.reload();
@@ -113,8 +114,7 @@ test.describe('Authentication', () => {
     await page.locator('input[type="password"]').fill(password);
     await page.locator('button').filter({ hasText: /Unlock/i }).first().click();
 
-    // Should see app
-    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    // Should see app again after unlock
     await expect(appVisible.first()).toBeVisible();
   });
 
