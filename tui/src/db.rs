@@ -94,6 +94,30 @@ impl Database {
         for (version, sql) in migrations {
             if version > current_version {
                 info!("Applying migration {}", version);
+
+                // Special handling for migration 11: check if columns already exist
+                // (from a previous incomplete migration that didn't record schema version)
+                if version == 11 {
+                    let has_locked_column: bool = self.conn
+                        .query_row(
+                            "SELECT COUNT(*) > 0 FROM pragma_table_info('notes') WHERE name = 'locked'",
+                            [],
+                            |row| row.get(0),
+                        )
+                        .unwrap_or(false);
+
+                    if has_locked_column {
+                        info!("Migration 11: locked column already exists, recording schema version only");
+                        self.conn
+                            .execute(
+                                "INSERT INTO schema_version (version, applied_at) VALUES (11, datetime('now'))",
+                                [],
+                            )
+                            .context("Failed to record migration 11 version")?;
+                        continue;
+                    }
+                }
+
                 self.conn
                     .execute_batch(sql)
                     .context(format!("Failed to apply migration {}", version))?;
