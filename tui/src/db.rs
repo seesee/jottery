@@ -87,6 +87,7 @@ impl Database {
             (8, include_str!("../migrations/008_add_pending_registration.sql")),
             (9, include_str!("../migrations/009_add_note_colors.sql")),
             (10, include_str!("../migrations/010_add_archive_support.sql")),
+            (11, include_str!("../migrations/011_add_lock_support.sql")),
         ];
 
         // Run pending migrations
