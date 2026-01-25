@@ -8,7 +8,6 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
   import { modal, createBackdropHandler } from '../actions';
-  import { settings } from '../stores/appStore';
   import { getColorHex, getTagColor } from '../services/colorService';
 
   // Helper to get formatted date synchronously (for use in templates)

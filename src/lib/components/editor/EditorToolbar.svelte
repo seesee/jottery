@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { settings } from '../../stores/appStore';
-  import { getColorHex, resolveTheme, hexWithOpacity } from '../../services/colorService';
+  import { getColorHex, hexWithOpacity } from '../../services/colorService';
 
   // State props
   export let pinned: boolean;

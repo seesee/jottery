@@ -20,7 +20,6 @@
 
   // Landing page state for first-time users
   let showLandingPage = false;
-  let showSetupForm = false;
 
   // Optional sync configuration (first-time setup)
   let showSyncConfig = false;
@@ -132,7 +131,6 @@
       // Apply optional sync configuration (first-time setup only)
       if (needsInit && (syncEndpoint || deviceName)) {
         try {
-          const settings = await settingsRepository.get();
           const updates: any = {};
 
           if (syncEndpoint) {
@@ -215,7 +213,6 @@
 
   function handleGetStarted() {
     showLandingPage = false;
-    showSetupForm = true;
     // Focus password input after a short delay to allow form to render
     setTimeout(() => {
       if (passwordInput) {

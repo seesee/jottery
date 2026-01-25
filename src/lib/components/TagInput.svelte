@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { settings } from '../stores/appStore';
-  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
+  import { getColorHex, getTagColor } from '../services/colorService';
 
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};

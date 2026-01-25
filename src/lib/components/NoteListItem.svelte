@@ -11,9 +11,8 @@
     lastSelectedIndex,
     toggleNoteSelection,
     selectRange,
-    settings,
   } from '../stores/appStore';
-  import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
+  import { getColorHex, getTagColor } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
   import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
   import {

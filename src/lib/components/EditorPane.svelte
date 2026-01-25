@@ -16,7 +16,7 @@
   import { dropzone } from '../actions';
   import { EditorFooter, EditorToolbar, EditorContent, AttachmentsPanel, NoteInfoModal, MobileAttachmentsModal } from './editor';
   import ColorPickerModal from './ColorPickerModal.svelte';
-  import { getColorHex, resolveTheme, hexWithOpacity } from '../services/colorService';
+  import { getColorHex, hexWithOpacity } from '../services/colorService';
 
   export let onBackToList: (() => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;

@@ -176,7 +176,7 @@
                 class:active={currentCarouselSlide === index}
                 on:click={() => goToCarouselSlide(index)}
                 aria-label={`Go to slide ${index + 1}`}
-              />
+              ></button>
             {/each}
           </div>
         </div>
