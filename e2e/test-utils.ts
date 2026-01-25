@@ -44,16 +44,17 @@ export async function handleLandingPage(page: Page): Promise<void> {
   const passwordInput = page.locator('input[type="password"]').first();
 
   // Wait for either landing page button or password input (longer timeout for parallel runs)
-  await Promise.race([
-    getStartedButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
-    passwordInput.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
+  // Use a proper race that tells us which one resolved
+  const result = await Promise.race([
+    getStartedButton.waitFor({ state: 'visible', timeout: 15000 }).then(() => 'landing' as const).catch(() => null),
+    passwordInput.waitFor({ state: 'visible', timeout: 15000 }).then(() => 'password' as const).catch(() => null)
   ]);
 
-  // Click Try It Out if visible
-  if (await getStartedButton.isVisible()) {
+  // If landing page is showing, click the button
+  if (result === 'landing' || await getStartedButton.isVisible()) {
     await getStartedButton.click();
-    // Wait a moment for the transition to complete
-    await page.waitForTimeout(300);
+    // Wait for password input to appear after clicking
+    await passwordInput.waitFor({ state: 'visible', timeout: 10000 });
   }
 }
 
