@@ -11,6 +11,100 @@ export interface MarkdownPreviewOptions {
   openLinksInNewTab: boolean;
   hljs?: any; // highlight.js instance (optional, for code highlighting)
   loadingText?: string;
+  notes?: Array<{ id: string; content: string }>; // For resolving note links by title
+}
+
+/**
+ * Extract title from note content (first non-empty line, stripped of markdown formatting)
+ */
+function extractNoteTitle(content: string): string {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed) {
+      // Remove markdown heading markers and formatting
+      return trimmed
+        .replace(/^#+\s*/, '')      // Remove heading markers
+        .replace(/\*\*|__/g, '')    // Remove bold
+        .replace(/\*|_/g, '')       // Remove italic
+        .replace(/`/g, '')          // Remove code
+        .trim();
+    }
+  }
+  return 'Untitled';
+}
+
+/**
+ * Find note by title or UUID
+ */
+function findNoteByTitleOrId(
+  notes: Array<{ id: string; content: string }>,
+  ref: string
+): { id: string; title: string } | undefined {
+  // Check if ref looks like a UUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
+
+  if (isUuid) {
+    const note = notes.find(n => n.id === ref);
+    if (note) {
+      return { id: note.id, title: extractNoteTitle(note.content) };
+    }
+    return undefined;
+  }
+
+  // Search by title (case-insensitive)
+  const searchTitle = ref.toLowerCase();
+  for (const note of notes) {
+    const noteTitle = extractNoteTitle(note.content);
+    if (noteTitle.toLowerCase() === searchTitle) {
+      return { id: note.id, title: noteTitle };
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Parse wiki-style links [[Note Title]] or [[uuid|Display Text]]
+ * and convert to markdown links with note: protocol
+ */
+function parseWikiLinks(
+  content: string,
+  notes: Array<{ id: string; content: string }>
+): string {
+  // Match [[...]] patterns, but not inside code blocks or inline code
+  // This regex matches [[content]] where content can include | for display text
+  const wikiLinkRegex = /\[\[([^\]]+)\]\]/g;
+
+  return content.replace(wikiLinkRegex, (match, innerContent) => {
+    // Check if this link has a display text separator
+    const pipeIndex = innerContent.indexOf('|');
+    let noteRef: string;
+    let displayText: string;
+
+    if (pipeIndex !== -1) {
+      // Format: [[uuid|Display Text]] or [[Title|Display Text]]
+      noteRef = innerContent.substring(0, pipeIndex).trim();
+      displayText = innerContent.substring(pipeIndex + 1).trim();
+    } else {
+      // Format: [[Note Title]] or [[uuid]]
+      noteRef = innerContent.trim();
+      displayText = noteRef;
+    }
+
+    // Try to find the note
+    const foundNote = findNoteByTitleOrId(notes, noteRef);
+
+    if (foundNote) {
+      // Found the note - create a link with the note's UUID
+      // Use the note's actual title if no custom display text was provided
+      const linkText = pipeIndex !== -1 ? displayText : foundNote.title;
+      return `[${linkText}](note:${foundNote.id})`;
+    } else {
+      // Note not found - render as a broken link
+      return `[${displayText}](note:not-found:${encodeURIComponent(noteRef)})`;
+    }
+  });
 }
 
 /**
@@ -77,12 +171,14 @@ function createLoadingPlaceholder(loadingText: string = 'Loading...'): string {
 }
 
 /**
- * Render markdown content to HTML with custom attachment handling
+ * Render markdown content to HTML with custom attachment and note link handling
  */
 export function renderMarkdown(content: string, options: MarkdownPreviewOptions): string {
-  const { attachments, openLinksInNewTab, hljs, loadingText = 'Loading...' } = options;
+  const { attachments, openLinksInNewTab, hljs, loadingText = 'Loading...', notes = [] } = options;
 
   try {
+    // Pre-process wiki-style links [[Note Title]] before markdown parsing
+    const processedContent = parseWikiLinks(content, notes);
     // Configure marked for better rendering
     marked.setOptions({
       breaks: true, // Convert \n to <br>
@@ -107,7 +203,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
       return `<h${depth} id="${id}">${text}</h${depth}>`;
     };
 
-    // Custom link renderer to handle attachment: URLs
+    // Custom link renderer to handle attachment: and note: URLs
     renderer.link = function(token) {
       const href = token.href;
       const text = token.text || '';
@@ -122,6 +218,30 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         } else {
           return createAttachmentPlaceholderHtml(attachmentRef, text || attachmentRef);
         }
+      }
+
+      // Check if this is a note link
+      if (href && href.startsWith('note:')) {
+        const noteRef = href.substring('note:'.length);
+
+        // Check if it's a broken link (note not found during pre-processing)
+        if (noteRef.startsWith('not-found:')) {
+          const originalRef = decodeURIComponent(noteRef.substring('not-found:'.length));
+          return `<span class="note-link-broken inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-not-allowed" title="Note not found: ${originalRef}">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            ${text}
+          </span>`;
+        }
+
+        // Valid note link - render as clickable
+        return `<a href="${href}" data-note-id="${noteRef}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">
+          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          ${text}
+        </a>`;
       }
 
       // For non-attachment links, check if we should open in new tab
@@ -203,7 +323,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
       return originalCode.call(this, token);
     };
 
-    return marked.parse(content, { renderer }) as string;
+    return marked.parse(processedContent, { renderer }) as string;
   } catch (error) {
     console.error('Markdown parsing error:', error);
     return `<p>Error rendering markdown: ${error}</p>`;

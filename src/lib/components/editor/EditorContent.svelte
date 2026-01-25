@@ -21,6 +21,7 @@
   export let onTagsChange: (newTags: string[]) => void;
   export let onTagClick: ((tag: string) => void) | undefined = undefined;
   export let onImagePaste: ((file: File) => Promise<string | null>) | undefined = undefined;
+  export let onNoteLinkClick: ((noteId: string) => void) | undefined = undefined;
 
   // Preview HTML
   export let previewHtml: string;
@@ -60,6 +61,19 @@
     const link = target.closest('a');
     if (link) {
       const href = link.getAttribute('href');
+
+      // Handle note links
+      if (href?.startsWith('note:') && onNoteLinkClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        const noteId = link.getAttribute('data-note-id');
+        if (noteId && !noteId.startsWith('not-found:')) {
+          onNoteLinkClick(noteId);
+        }
+        return;
+      }
+
+      // Handle anchor links
       if (href?.startsWith('#')) {
         e.preventDefault();
         e.stopPropagation();

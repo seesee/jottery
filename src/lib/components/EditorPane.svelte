@@ -109,6 +109,21 @@
     searchQuery.set(`#${tag}`);
   }
 
+  // Handle clicking on a note link to navigate to that note
+  function handleNoteLinkClick(noteId: string) {
+    // Save current note before navigating (trigger immediate save)
+    if (previousNoteId && hasContentChanged) {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
+      handleSave();
+    }
+
+    // Navigate to the linked note
+    selectNote(noteId);
+  }
+
   let saveTimeout: number | null = null;
   let language: string = 'plain';
   let wordWrap: boolean = true;
@@ -137,12 +152,13 @@
     loadHighlightJs();
   }
 
-  // Compute preview HTML
+  // Compute preview HTML (pass all notes for wiki-link resolution)
   $: previewHtml = showPreview ? getPreviewHtml(content, language, {
     attachments,
     openLinksInNewTab: $settings.openLinksInNewTab ?? true,
     hljs,
     loadingText: $_('editor.status.loading'),
+    notes: $notes.map(n => ({ id: n.id, content: n.content })),
   }) : '';
 
   // Check if preview is available for current language
@@ -1017,6 +1033,7 @@
       onContentChange={() => handleInput()}
       onTagsChange={() => handleInput()}
       onTagClick={handleTagClick}
+      onNoteLinkClick={handleNoteLinkClick}
       onImagePaste={handleImagePaste}
       {previewHtml}
       {useIframePreview}
