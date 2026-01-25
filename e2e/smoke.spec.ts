@@ -11,6 +11,14 @@ test.describe('Smoke Tests', () => {
     // Navigate to the app
     await page.goto('/');
 
+    // Wait for the app container to be attached (indicates Svelte started)
+    await page.waitForSelector('#app', { state: 'attached', timeout: 10000 });
+
+    // Wait for the app to render meaningful content - look for elements that only exist after JS hydration
+    // The app will show either: landing page, unlock screen, or main app
+    const appRendered = page.locator('button, input, [class*="landing"], [class*="unlock"]').first();
+    await appRendered.waitFor({ state: 'visible', timeout: 10000 });
+
     // Should see some content (not a blank page or error)
     await expect(page.locator('body')).toBeVisible();
 
