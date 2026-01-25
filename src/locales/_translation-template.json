@@ -29,7 +29,7 @@
     "selectNote": "SELECT A NOTE FROM THE LIST OR CREATE A NEW ONE",
     "created": "CREATED",
     "modified": "MODIFIED",
-    "version": "Version",
+    "version": "VERSION",
     "synced": "SYNCED",
     "unsynced": "NOT SYNCED",
     "attachments": "ATTACHMENTS",
