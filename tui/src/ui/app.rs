@@ -207,6 +207,10 @@ pub struct App {
     pub tags_line_area: Option<ratatui::layout::Rect>,
     /// Individual tag positions for click detection: (tag_name, x_start, x_end)
     pub tag_positions: Vec<(String, u16, u16)>,
+    /// Note link positions for click detection: (note_id, y_line, x_start, x_end)
+    pub note_link_positions: Vec<(String, u16, u16, u16)>,
+    /// Rendered area for preview pane (for link click detection)
+    pub preview_area: Option<ratatui::layout::Rect>,
     /// Tag completions for Tab cycling in tag input mode
     pub tag_completions: Vec<String>,
     /// Selected tag completion index
@@ -292,6 +296,8 @@ impl App {
             note_list_area: None,
             tags_line_area: None,
             tag_positions: Vec::new(),
+            note_link_positions: Vec::new(),
+            preview_area: None,
             tag_completions: Vec::new(),
             tag_completion_index: 0,
             search_tag_completions: Vec::new(),

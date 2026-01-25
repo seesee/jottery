@@ -1015,6 +1015,41 @@ fn main() -> Result<()> {
                                         app.tag_input.clear();
                                     }
                                 }
+                                continue;
+                            }
+                        }
+
+                        // Check if click is on a note link in the preview area
+                        if let Some(_preview_area) = app.preview_area {
+                            let mut found_link = None;
+                            for (note_id, link_y, link_x_start, link_x_end) in &app.note_link_positions {
+                                if y == *link_y && x >= *link_x_start && x < *link_x_end {
+                                    found_link = Some(note_id.clone());
+                                    break;
+                                }
+                            }
+
+                            if let Some(target_note_id) = found_link {
+                                // Navigate to the linked note
+                                // Find the note in the full notes list and update selection
+                                let notes = app.filtered_notes();
+                                if let Some(idx) = notes.iter().position(|n| n.id == target_note_id) {
+                                    app.selected_note = idx;
+                                    app.selected_note_id = Some(target_note_id);
+                                    app.preview_scroll_offset = 0;
+                                    app.focused_panel = FocusedPanel::NoteContent;
+                                } else {
+                                    // Note not in current filter, clear search and try again
+                                    app.search_input.clear();
+                                    app.search_active = false;
+                                    let all_notes = app.filtered_notes();
+                                    if let Some(idx) = all_notes.iter().position(|n| n.id == target_note_id) {
+                                        app.selected_note = idx;
+                                        app.selected_note_id = Some(target_note_id);
+                                        app.preview_scroll_offset = 0;
+                                        app.focused_panel = FocusedPanel::NoteContent;
+                                    }
+                                }
                             }
                         }
                     }

@@ -8,6 +8,16 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use ratatui::text::Line;
 
+/// Result of rendering markdown, includes lines and link positions
+#[derive(Debug, Default)]
+pub struct MarkdownRenderResult {
+    /// Rendered lines
+    pub lines: Vec<Line<'static>>,
+    /// Note link positions: (note_id, line_index, char_start, char_end)
+    /// line_index is relative to the rendered lines (0-based)
+    pub note_links: Vec<(String, usize, usize, usize)>,
+}
+
 /// Strip markdown formatting from text (for display in note list and filenames)
 pub fn strip_markdown(text: &str) -> String {
     let mut result = text.to_string();
@@ -143,11 +153,12 @@ pub fn strip_markdown(text: &str) -> String {
 }
 
 /// Render markdown for terminal display using pulldown-cmark parser
+/// Returns both rendered lines and positions of note links for click detection
 pub fn render_markdown_for_terminal(
     content: &str,
     syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter,
     debug_log: &Option<Arc<Mutex<File>>>
-) -> Vec<Line<'static>> {
+) -> MarkdownRenderResult {
     use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind, Options};
     use ratatui::style::{Style, Modifier, Color};
     use ratatui::text::{Line, Span};
@@ -162,7 +173,7 @@ pub fn render_markdown_for_terminal(
         }
     };
 
-    let mut lines = Vec::new();
+    let mut result = MarkdownRenderResult::default();
     let mut current_line_spans: Vec<Span<'static>> = Vec::new();
     let mut current_style = Style::default();
     let mut in_code_block = false;
@@ -177,8 +188,17 @@ pub fn render_markdown_for_terminal(
     let mut table_header_rows: Vec<Vec<String>> = Vec::new();
     let mut table_body_rows: Vec<Vec<String>> = Vec::new();
 
+    // Track current note link being processed
+    let mut current_link_url: Option<String> = None;
+    let mut current_link_start_char: usize = 0;
+
     // Style stack for nested formatting
     let mut style_stack: Vec<Style> = vec![Style::default()];
+
+    // Helper to calculate current character position in line
+    let calc_current_char_pos = |spans: &[Span]| -> usize {
+        spans.iter().map(|s| s.content.chars().count()).sum()
+    };
 
     // Enable extensions: tables, strikethrough, tasklists, footnotes
     let mut options = Options::empty();
@@ -195,12 +215,12 @@ pub fn render_markdown_for_terminal(
                     Tag::Heading { .. } => {
                         // Flush any current line before heading
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
                         // Add blank line before heading (for spacing)
-                        if !lines.is_empty() {
-                            lines.push(Line::raw(""));
+                        if !result.lines.is_empty() {
+                            result.lines.push(Line::raw(""));
                         }
 
                         // Headers in cyan + bold
@@ -224,18 +244,32 @@ pub fn render_markdown_for_terminal(
                         style_stack.push(bold_style);
                         current_style = bold_style;
                     }
-                    Tag::Link { .. } => {
-                        // Links -> blue + underlined
-                        let link_style = current_style
-                            .fg(Color::Blue)
-                            .add_modifier(Modifier::UNDERLINED);
-                        style_stack.push(link_style);
-                        current_style = link_style;
+                    Tag::Link { dest_url, .. } => {
+                        // Check if this is a note link (link:UUID format)
+                        let url = dest_url.to_string();
+                        if url.starts_with("link:") {
+                            // Note link -> yellow + underlined (distinct from regular links)
+                            let link_style = current_style
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::UNDERLINED);
+                            style_stack.push(link_style);
+                            current_style = link_style;
+                            // Track this link for position recording
+                            current_link_url = Some(url);
+                            current_link_start_char = calc_current_char_pos(&current_line_spans);
+                        } else {
+                            // Regular links -> blue + underlined
+                            let link_style = current_style
+                                .fg(Color::Blue)
+                                .add_modifier(Modifier::UNDERLINED);
+                            style_stack.push(link_style);
+                            current_style = link_style;
+                        }
                     }
                     Tag::CodeBlock(kind) => {
                         // Flush current line before code block
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
 
@@ -249,7 +283,7 @@ pub fn render_markdown_for_terminal(
                     Tag::Table(_) => {
                         // Flush current line before table
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
                         in_table = true;
@@ -277,7 +311,7 @@ pub fn render_markdown_for_terminal(
                     Tag::Item => {
                         // Flush current line before list item
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
                         in_list_item = true;
@@ -296,11 +330,29 @@ pub fn render_markdown_for_terminal(
                         }
                         // Headings end with a line break
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
                     }
-                    TagEnd::Emphasis | TagEnd::Strong | TagEnd::Link => {
+                    TagEnd::Emphasis | TagEnd::Strong => {
+                        // Pop style from stack
+                        if style_stack.len() > 1 {
+                            style_stack.pop();
+                            current_style = *style_stack.last().unwrap();
+                        }
+                    }
+                    TagEnd::Link => {
+                        // Record note link position if this was a note link
+                        if let Some(url) = current_link_url.take() {
+                            if url.starts_with("link:") {
+                                let note_id = url.strip_prefix("link:").unwrap_or("").to_string();
+                                if !note_id.is_empty() {
+                                    let end_char = calc_current_char_pos(&current_line_spans);
+                                    let line_index = result.lines.len();
+                                    result.note_links.push((note_id, line_index, current_link_start_char, end_char));
+                                }
+                            }
+                        }
                         // Pop style from stack
                         if style_stack.len() > 1 {
                             style_stack.pop();
@@ -334,13 +386,13 @@ pub fn render_markdown_for_terminal(
                                     .map(|span| Span::styled(span.content.to_string(), span.style))
                                     .collect::<Vec<_>>()
                             );
-                            lines.push(owned_line);
+                            result.lines.push(owned_line);
                         }
 
                         code_block_content.clear();
                         code_block_lang.clear();
                         // Add blank line after code block
-                        lines.push(Line::raw(""));
+                        result.lines.push(Line::raw(""));
                     }
                     TagEnd::TableCell => {
                         // Save the current cell text
@@ -407,7 +459,7 @@ pub fn render_markdown_for_terminal(
                                 let width = if i < col_widths.len() { col_widths[i] } else { 0 };
                                 row_text.push_str(&format!("{:<width$} | ", cell, width = width));
                             }
-                            lines.push(Line::styled(
+                            result.lines.push(Line::styled(
                                 row_text,
                                 Style::default().add_modifier(Modifier::BOLD)
                             ));
@@ -422,7 +474,7 @@ pub fn render_markdown_for_terminal(
                             }
                             // Remove trailing dash
                             separator.pop();
-                            lines.push(Line::styled(separator, Style::default().fg(Color::DarkGray)));
+                            result.lines.push(Line::styled(separator, Style::default().fg(Color::DarkGray)));
                         }
 
                         // Render body rows (normal)
@@ -432,18 +484,18 @@ pub fn render_markdown_for_terminal(
                                 let width = if i < col_widths.len() { col_widths[i] } else { 0 };
                                 row_text.push_str(&format!("{:<width$} | ", cell, width = width));
                             }
-                            lines.push(Line::raw(row_text));
+                            result.lines.push(Line::raw(row_text));
                         }
 
                         table_header_rows.clear();
                         table_body_rows.clear();
                         // Add blank line after table
-                        lines.push(Line::raw(""));
+                        result.lines.push(Line::raw(""));
                     }
                     TagEnd::Paragraph => {
                         // End paragraph with a line break
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
                         // Don't add extra blank lines - let block spacing handle it
@@ -452,13 +504,13 @@ pub fn render_markdown_for_terminal(
                         // End list item with line break
                         in_list_item = false;
                         if !current_line_spans.is_empty() {
-                            lines.push(Line::from(current_line_spans.clone()));
+                            result.lines.push(Line::from(current_line_spans.clone()));
                             current_line_spans.clear();
                         }
                     }
                     TagEnd::List(_) => {
                         // Add blank line after list
-                        lines.push(Line::raw(""));
+                        result.lines.push(Line::raw(""));
                     }
                     _ => {}
                 }
@@ -508,22 +560,22 @@ pub fn render_markdown_for_terminal(
             Event::HardBreak => {
                 // Hard break (two spaces + newline or <br>) - always break line
                 if !current_line_spans.is_empty() {
-                    lines.push(Line::from(current_line_spans.clone()));
+                    result.lines.push(Line::from(current_line_spans.clone()));
                     current_line_spans.clear();
                 }
             }
             Event::Rule => {
                 // Flush current line before rule
                 if !current_line_spans.is_empty() {
-                    lines.push(Line::from(current_line_spans.clone()));
+                    result.lines.push(Line::from(current_line_spans.clone()));
                     current_line_spans.clear();
                 }
                 // Horizontal rule
-                lines.push(Line::styled(
+                result.lines.push(Line::styled(
                     "─".repeat(80),
                     Style::default().fg(Color::DarkGray)
                 ));
-                lines.push(Line::raw(""));
+                result.lines.push(Line::raw(""));
             }
             Event::TaskListMarker(checked) => {
                 // Render task list checkbox
@@ -536,13 +588,13 @@ pub fn render_markdown_for_terminal(
 
     // Flush any remaining spans
     if !current_line_spans.is_empty() {
-        lines.push(Line::from(current_line_spans));
+        result.lines.push(Line::from(current_line_spans));
     }
 
     // Return empty line if no content
-    if lines.is_empty() {
-        lines.push(Line::raw(""));
+    if result.lines.is_empty() {
+        result.lines.push(Line::raw(""));
     }
 
-    lines
+    result
 }

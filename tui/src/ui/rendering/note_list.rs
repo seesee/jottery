@@ -391,6 +391,8 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     // Variables for mouse click detection (assigned inside if block, stored at end)
     let mut tags_line_area_local: Option<Rect> = None;
     let mut tag_positions_local: Vec<(String, u16, u16)> = Vec::new();
+    let mut note_link_positions_local: Vec<(String, u16, u16, u16)> = Vec::new();
+    let mut preview_area_local: Option<Rect> = None;
 
     if !filtered.is_empty() && app.selected_note < filtered.len() {
         let note = filtered[app.selected_note];
@@ -483,10 +485,36 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             Line::raw(""),  // Blank line
         ];
 
+        // Store the preview area for link click detection
+        preview_area_local = Some(preview_area);
+
+        // Calculate the starting line index for content (after metadata + blank line)
+        let content_start_line_index = lines.len();
+
         // For markdown, render it cleanly; for other types, use syntax highlighting
         if note.syntax_language == SyntaxLanguage::Markdown {
             // Render markdown with inline formatting and code block highlighting
-            lines.extend(render_markdown_for_terminal(&note.content, &app.syntax_highlighter, &app.debug_log));
+            let render_result = render_markdown_for_terminal(&note.content, &app.syntax_highlighter, &app.debug_log);
+
+            // Convert link positions from render result to screen coordinates
+            // The y coordinate is: preview_inner_y + content_start_line_index + link_line_index - scroll_offset
+            let preview_inner_x = preview_area.x + 1; // Account for border
+            let preview_inner_y = preview_area.y + 1; // Account for title bar
+            for (note_id, line_idx, char_start, char_end) in render_result.note_links {
+                // Calculate screen y position
+                let screen_y = preview_inner_y as i32 + content_start_line_index as i32 + line_idx as i32 - scroll_offset as i32;
+                // Only add if the line is visible (y >= preview_inner_y)
+                if screen_y >= preview_inner_y as i32 && screen_y < (preview_area.y + preview_area.height - 1) as i32 {
+                    note_link_positions_local.push((
+                        note_id,
+                        screen_y as u16,
+                        preview_inner_x + char_start as u16,
+                        preview_inner_x + char_end as u16,
+                    ));
+                }
+            }
+
+            lines.extend(render_result.lines);
         } else {
             // Apply syntax highlighting to code
             let highlighted_content = app.syntax_highlighter.highlight(&note.content, note.syntax_language);
@@ -1119,4 +1147,6 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     app.note_list_area = Some(note_list_inner_area);
     app.tags_line_area = tags_line_area_local;
     app.tag_positions = tag_positions_local;
+    app.note_link_positions = note_link_positions_local;
+    app.preview_area = preview_area_local;
 }
