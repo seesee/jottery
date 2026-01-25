@@ -131,6 +131,25 @@ pub async fn push(
     let now = chrono::Utc::now().to_rfc3339();
 
     for note in push_req.notes {
+        // Check if this note was hard-deleted by another device
+        // If so, skip it - the client will receive the deletion in the pull response
+        let deletion_count = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM note_deletions WHERE id = ? AND user_id = ?",
+            note.id,
+            client_info.user_id
+        )
+        .fetch_one(&state.pool)
+        .await?;
+        let was_deleted = deletion_count > 0;
+
+        if was_deleted {
+            tracing::info!(
+                "Ignoring push for note {} - was hard-deleted by another device",
+                note.id
+            );
+            continue;
+        }
+
         // Check if note exists for this user (across all their devices)
         let existing = sqlx::query!(
             "SELECT modified_at, server_version FROM notes WHERE id = ? AND user_id = ?",
@@ -760,6 +779,7 @@ pub async fn pull(
 
     // Get hard deletions that this client needs to apply
     // Query deletions since last sync (or all if no last sync)
+    let now_for_expiry = chrono::Utc::now().to_rfc3339();
     let deletions: Vec<crate::models::SyncDeletion> = if let Some(last_sync) = &pull_req.last_sync_at {
         sqlx::query!(
             r#"SELECT id, deleted_at FROM note_deletions
@@ -767,7 +787,7 @@ pub async fn pull(
                ORDER BY deleted_at"#,
             client_info.user_id,
             last_sync,
-            chrono::Utc::now().to_rfc3339()
+            now_for_expiry
         )
         .fetch_all(&state.pool)
         .await?
@@ -784,7 +804,7 @@ pub async fn pull(
                WHERE user_id = ? AND expires_at > ?
                ORDER BY deleted_at"#,
             client_info.user_id,
-            chrono::Utc::now().to_rfc3339()
+            now_for_expiry
         )
         .fetch_all(&state.pool)
         .await?
