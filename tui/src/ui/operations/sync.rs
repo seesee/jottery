@@ -575,6 +575,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 local_note.tags = decrypted_tags;
                 local_note.attachments = note_attachments.clone();
                 local_note.modified_at = remote_note.modified_at;
+                local_note.synced_at = Some(pull_response.synced_at); // Mark as synced
                 local_note.pinned = remote_note.pinned;
                 local_note.archived = remote_note.archived;
                 local_note.archived_at = remote_note.archived_at;
@@ -606,6 +607,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             new_note.id = remote_note.id.clone();
             new_note.created_at = remote_note.created_at;
             new_note.modified_at = remote_note.modified_at;
+            new_note.synced_at = Some(pull_response.synced_at); // Mark as synced
             new_note.tags = decrypted_tags;
             new_note.attachments = note_attachments;
             new_note.pinned = remote_note.pinned;
