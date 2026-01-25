@@ -620,7 +620,8 @@
     "resolved": "CONFLICT RESOLVED",
     "resolvedBoth": "CONFLICT RESOLVED - DUPLICATE NOTE CREATED",
     "noConflict": "NO CONFLICT DATA FOUND",
-    "indicator": "SYNC CONFLICT"
+    "indicator": "SYNC CONFLICT",
+    "syncNotification": "{COUNT, PLURAL, ONE {1 NOTE HAS A SYNC CONFLICT} OTHER {{COUNT} NOTES HAVE SYNC CONFLICTS}}"
   },
   "pullToRefresh": {
     "pull": "PULL DOWN TO SYNC",

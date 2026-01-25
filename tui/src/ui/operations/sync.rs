@@ -43,8 +43,26 @@ pub fn trigger_sync(app: &mut App) {
             if let Err(e) = super::notes::load_notes(app) {
                 app.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
             }
+            // Refresh conflict cache after sync
+            app.refresh_conflict_cache();
+            let conflict_count = app.conflict_note_ids.len();
+
             let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
-            app.sync_status = Some(t!("sync.complete", count = result, unit = unit).to_string());
+            let status_msg = if conflict_count > 0 {
+                let conflict_word = if conflict_count == 1 {
+                    t!("conflict.count_singular").to_string()
+                } else {
+                    t!("conflict.count_plural").to_string()
+                };
+                format!("{} ({} {})",
+                    t!("sync.complete", count = result, unit = unit),
+                    conflict_count,
+                    conflict_word
+                )
+            } else {
+                t!("sync.complete", count = result, unit = unit).to_string()
+            };
+            app.sync_status = Some(status_msg);
             app.sync_status_set_at = Some(Instant::now());
         }
         Err(e) => {
@@ -85,8 +103,26 @@ pub fn force_full_sync(app: &mut App) {
             if let Err(e) = super::notes::load_notes(app) {
                 app.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
             }
+            // Refresh conflict cache after sync
+            app.refresh_conflict_cache();
+            let conflict_count = app.conflict_note_ids.len();
+
             let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
-            app.sync_status = Some(t!("sync.force_complete", count = result, unit = unit).to_string());
+            let status_msg = if conflict_count > 0 {
+                let conflict_word = if conflict_count == 1 {
+                    t!("conflict.count_singular").to_string()
+                } else {
+                    t!("conflict.count_plural").to_string()
+                };
+                format!("{} ({} {})",
+                    t!("sync.force_complete", count = result, unit = unit),
+                    conflict_count,
+                    conflict_word
+                )
+            } else {
+                t!("sync.force_complete", count = result, unit = unit).to_string()
+            };
+            app.sync_status = Some(status_msg);
             app.sync_status_set_at = Some(Instant::now());
         }
         Err(e) => {

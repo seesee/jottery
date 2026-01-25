@@ -148,6 +148,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             if !note.attachments.is_empty() {
                 indicators.push_str(&format!("📎{} ", note.attachments.len()));
             }
+            // Conflict indicator
+            if app.conflict_note_ids.contains(&note.id) {
+                indicators.push_str("⚠ ");
+            }
 
             let title_line = if !indicators.is_empty() {
                 format!("{}{}", indicators, title_truncated)

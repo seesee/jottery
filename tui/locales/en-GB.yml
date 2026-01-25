@@ -238,6 +238,8 @@ conflict:
   resolve_failed: "Failed to resolve conflict"
   indicator: "Sync conflict detected"
   no_conflict: "This note has no sync conflict"
+  count_singular: "conflict"
+  count_plural: "conflicts"
 
 # Colour schemes
 color_scheme:

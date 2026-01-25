@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -84,6 +84,17 @@
   function handleConflictResolved() {
     // Refresh conflict list and notes
     loadConflictNotes();
+  }
+
+  // Subscribe to sync state changes to reload conflicts after sync completes
+  let wasSyncing = false;
+  $: {
+    const currentlySyncing = $isSyncing;
+    if (wasSyncing && !currentlySyncing && $settings.syncEnabled) {
+      // Sync just completed - reload conflict indicators
+      loadConflictNotes();
+    }
+    wasSyncing = currentlySyncing;
   }
 
   // Virtual scrolling state

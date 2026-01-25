@@ -985,7 +985,8 @@
     "resolved": "Conflict resolved",
     "resolvedBoth": "Conflict resolved - duplicate note created",
     "noConflict": "No conflict data found",
-    "indicator": "Sync conflict"
+    "indicator": "Sync conflict",
+    "syncNotification": "{count, plural, one {1 notatka ma konflikt synchronizacji} few {{count} notatki mają konflikty synchronizacji} other {{count} notatek ma konflikty synchronizacji}}"
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",

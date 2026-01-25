@@ -985,7 +985,8 @@
     "resolved": "충돌 해결됨",
     "resolvedBoth": "충돌 해결됨 - 복제 노트 생성됨",
     "noConflict": "충돌 데이터를 찾을 수 없습니다",
-    "indicator": "동기화 충돌"
+    "indicator": "동기화 충돌",
+    "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다"
   },
   "pullToRefresh": {
     "pull": "아래로 당겨서 동기화",

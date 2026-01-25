@@ -985,7 +985,8 @@
     "resolved": "競合が解決しました",
     "resolvedBoth": "競合が解決しました - 複製ノートが作成されました",
     "noConflict": "競合データが見つかりません",
-    "indicator": "同期の競合"
+    "indicator": "同期の競合",
+    "syncNotification": "{count}件のノートに同期の競合があります"
   },
   "pullToRefresh": {
     "pull": "下に引いて同期",

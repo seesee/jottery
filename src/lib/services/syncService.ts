@@ -215,6 +215,16 @@ class SyncService {
         console.log('[SyncService] Sync complete (no changes)');
       }
 
+      // Check for conflicts and notify user
+      const conflictCount = await syncRepository.getConflictCount();
+      if (conflictCount > 0) {
+        const { _ } = await import('svelte-i18n');
+        let getMessage: (key: string, options?: { values?: Record<string, unknown> }) => string;
+        _.subscribe(t => getMessage = t)();
+        const message = getMessage('conflict.syncNotification', { values: { count: conflictCount } });
+        toast.warning(message);
+      }
+
       return { success: true };
     } catch (error) {
       console.error('Sync failed:', error);

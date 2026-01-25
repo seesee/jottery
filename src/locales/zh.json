@@ -985,7 +985,8 @@
     "resolved": "冲突已解决",
     "resolvedBoth": "冲突已解决 - 已创建副本",
     "noConflict": "未找到冲突数据",
-    "indicator": "同步冲突"
+    "indicator": "同步冲突",
+    "syncNotification": "{count}个笔记有同步冲突"
   },
   "pullToRefresh": {
     "pull": "下拉同步",

@@ -985,7 +985,8 @@
     "resolved": "Conflict resolved",
     "resolvedBoth": "Conflict resolved - duplicate note created",
     "noConflict": "No conflict data found",
-    "indicator": "Sync conflict"
+    "indicator": "Sync conflict",
+    "syncNotification": "{count, plural, one {1 notitie heeft een synchronisatieconflict} other {{count} notities hebben synchronisatieconflicten}}"
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",

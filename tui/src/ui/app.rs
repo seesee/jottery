@@ -129,6 +129,8 @@ pub struct App {
     pub(crate) selected_note_id: Option<String>,
     /// Multi-selected note IDs
     pub selected_note_ids: HashSet<String>,
+    /// Set of note IDs with unresolved conflicts (cached for rendering)
+    pub conflict_note_ids: HashSet<String>,
     /// Whether multi-select mode is active
     pub is_multi_select_mode: bool,
     /// Last selected index for range selection
@@ -259,6 +261,7 @@ impl App {
             selected_note: 0,
             selected_note_id: None,
             selected_note_ids: HashSet::new(),
+            conflict_note_ids: HashSet::new(),
             is_multi_select_mode: false,
             last_selected_index: None,
             preview_scroll_offset: 0,
@@ -627,6 +630,17 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    /// Refresh the conflict note IDs cache from database
+    pub fn refresh_conflict_cache(&mut self) {
+        self.conflict_note_ids.clear();
+        if let Some(db) = &self.db {
+            let sync_repo = crate::repository::sync::SyncRepository::new(db.connection());
+            if let Ok(ids) = sync_repo.get_conflict_note_ids() {
+                self.conflict_note_ids = ids.into_iter().collect();
+            }
+        }
     }
 
     // Multi-select methods

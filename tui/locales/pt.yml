@@ -473,3 +473,5 @@ conflict:
   resolve_failed: Failed to resolve conflict
   indicator: Sync conflict detected
   no_conflict: This note has no sync conflict
+  count_singular: "conflito"
+  count_plural: "conflitos"
