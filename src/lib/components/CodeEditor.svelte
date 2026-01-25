@@ -67,6 +67,7 @@
   let mobileAttributesCompartment = new Compartment();
   let vimCompartment = new Compartment();
   let quickCommandsCompartment = new Compartment();
+  let editableCompartment = new Compartment();
   let measuredWidth: number = 0;
 
   // Compute font size from settings
@@ -193,7 +194,7 @@
           }
         }
       }),
-      EditorView.editable.of(!readonly),
+      editableCompartment.of(EditorView.editable.of(!readonly)),
       // Handle paste events for images
       EditorView.domEventHandlers({
         paste: (event, view) => {
@@ -323,6 +324,13 @@
             ]
           : []
       ),
+    });
+  }
+
+  // Update editable state when readonly prop changes
+  $: if (editorView && readonly !== undefined) {
+    editorView.dispatch({
+      effects: editableCompartment.reconfigure(EditorView.editable.of(!readonly)),
     });
   }
 </script>
