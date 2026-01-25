@@ -31,6 +31,7 @@
   export let onWordWrapToggle: () => void;
   export let onSetColor: () => void;
   export let onCopy: () => void;
+  export let onCopyLink: (() => void) | undefined = undefined;
   export let onExport: () => void;
   export let onPrintPdf: () => void;
   export let onDuplicate: () => void;
@@ -113,6 +114,11 @@
   function handleCopyClick() {
     showMoreMenu = false;
     onCopy();
+  }
+
+  function handleCopyLinkClick() {
+    showMoreMenu = false;
+    onCopyLink?.();
   }
 
   function handleExportClick() {
@@ -339,6 +345,16 @@
               <span class="text-xs text-gray-500 dark:text-gray-400">{copyNoteShortcut}</span>
             {/if}
           </button>
+
+          {#if onCopyLink}
+            <button
+              on:click={handleCopyLinkClick}
+              class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            >
+              <span>🔗</span>
+              <span class="flex-1">{$_('editor.copyLink')}</span>
+            </button>
+          {/if}
 
           <button
             on:click={handleExportClick}

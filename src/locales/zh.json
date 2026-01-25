@@ -90,6 +90,8 @@
     "wordWrapOn": "自动换行: 开启",
     "wordWrapOff": "自动换行: 关闭",
     "copyContent": "复制内容",
+    "copyLink": "复制笔记链接",
+    "linkCopied": "链接已复制到剪贴板",
     "exportToFile": "导出为文件",
     "printPdf": "打印 / 导出PDF",
     "printFailed": "无法打开打印窗口",

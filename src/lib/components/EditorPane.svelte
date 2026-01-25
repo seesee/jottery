@@ -713,6 +713,37 @@
     await copyToClipboard(content);
   }
 
+  async function handleCopyLink() {
+    if (!$selectedNote) return;
+
+    // Extract title from note content (first non-empty line, stripped of markdown formatting)
+    const lines = content.split('\n');
+    let title = 'Untitled';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        title = trimmed
+          .replace(/^#+\s*/, '')      // Remove heading markers
+          .replace(/\*\*|__/g, '')    // Remove bold
+          .replace(/\*|_/g, '')       // Remove italic
+          .replace(/`/g, '')          // Remove code
+          .trim();
+        break;
+      }
+    }
+
+    // Format as wiki-style link
+    const link = `[[${title}]]`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success($_('editor.linkCopied'));
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast.error('Failed to copy link to clipboard');
+    }
+  }
+
   function handleExport() {
     if (!$selectedNote) return;
 
@@ -1014,6 +1045,7 @@
       onWordWrapToggle={handleWordWrapToggle}
       onSetColor={handleSetColor}
       onCopy={handleCopy}
+      onCopyLink={handleCopyLink}
       onExport={handleExport}
       onPrintPdf={handlePrintPdf}
       onDuplicate={handleDuplicate}

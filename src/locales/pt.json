@@ -90,6 +90,8 @@
     "wordWrapOn": "Quebra de linha: Ativada",
     "wordWrapOff": "Quebra de linha: Desativada",
     "copyContent": "Copiar conteúdo",
+    "copyLink": "Copiar link para a nota",
+    "linkCopied": "Link copiado para a área de transferência",
     "exportToFile": "Exportar para arquivo",
     "printPdf": "Imprimir / Exportar PDF",
     "printFailed": "Falha ao abrir janela de impressão",

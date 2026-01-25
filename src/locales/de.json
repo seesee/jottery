@@ -90,6 +90,8 @@
     "wordWrapOn": "Zeilenumbruch: Ein",
     "wordWrapOff": "Zeilenumbruch: Aus",
     "copyContent": "Inhalt kopieren",
+    "copyLink": "Link zur Notiz kopieren",
+    "linkCopied": "Link in Zwischenablage kopiert",
     "exportToFile": "In Datei exportieren",
     "printPdf": "Drucken / PDF exportieren",
     "printFailed": "Druckfenster konnte nicht geöffnet werden",

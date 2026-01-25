@@ -90,6 +90,8 @@
     "wordWrapOn": "A capo automatico: Attivo",
     "wordWrapOff": "A capo automatico: Disattivo",
     "copyContent": "Copia contenuto",
+    "copyLink": "Copia link alla nota",
+    "linkCopied": "Link copiato negli appunti",
     "exportToFile": "Esporta in file",
     "printPdf": "Stampa / Esporta PDF",
     "printFailed": "Impossibile aprire la finestra di stampa",

@@ -90,6 +90,8 @@
     "wordWrapOn": "Word Wrap: On",
     "wordWrapOff": "Word Wrap: Off",
     "copyContent": "Copy Content",
+    "copyLink": "Copy Link to Note",
+    "linkCopied": "Link copied to clipboard",
     "exportToFile": "Export to File",
     "printPdf": "Print / Export PDF",
     "printFailed": "Failed to open print window",

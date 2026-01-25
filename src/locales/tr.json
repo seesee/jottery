@@ -90,6 +90,8 @@
     "wordWrapOn": "Satır Kaydırma: Açık",
     "wordWrapOff": "Satır Kaydırma: Kapalı",
     "copyContent": "İçeriği Kopyala",
+    "copyLink": "Not bağlantısını kopyala",
+    "linkCopied": "Bağlantı panoya kopyalandı",
     "exportToFile": "Dosyaya Aktar",
     "printPdf": "Yazdır / PDF Dışa Aktar",
     "printFailed": "Yazdırma penceresi açılamadı",

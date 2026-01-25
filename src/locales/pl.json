@@ -90,6 +90,8 @@
     "wordWrapOn": "Zawijanie wierszy: Włączone",
     "wordWrapOff": "Zawijanie wierszy: Wyłączone",
     "copyContent": "Kopiuj treść",
+    "copyLink": "Kopiuj link do notatki",
+    "linkCopied": "Link skopiowany do schowka",
     "exportToFile": "Eksportuj do pliku",
     "printPdf": "Drukuj / Eksportuj PDF",
     "printFailed": "Nie można otworzyć okna drukowania",

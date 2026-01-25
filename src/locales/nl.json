@@ -90,6 +90,8 @@
     "wordWrapOn": "Regelafbreking: Aan",
     "wordWrapOff": "Regelafbreking: Uit",
     "copyContent": "Inhoud kopiëren",
+    "copyLink": "Link naar notitie kopiëren",
+    "linkCopied": "Link gekopieerd naar klembord",
     "exportToFile": "Exporteren naar bestand",
     "printPdf": "Afdrukken / PDF exporteren",
     "printFailed": "Kon afdrukvenster niet openen",

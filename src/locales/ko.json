@@ -90,6 +90,8 @@
     "wordWrapOn": "자동 줄바꿈: 켜짐",
     "wordWrapOff": "자동 줄바꿈: 꺼짐",
     "copyContent": "내용 복사",
+    "copyLink": "노트 링크 복사",
+    "linkCopied": "링크가 클립보드에 복사되었습니다",
     "exportToFile": "파일로 내보내기",
     "printPdf": "인쇄 / PDF 내보내기",
     "printFailed": "인쇄 창을 열 수 없습니다",

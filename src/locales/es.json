@@ -90,6 +90,8 @@
     "wordWrapOn": "Ajuste de línea: Activado",
     "wordWrapOff": "Ajuste de línea: Desactivado",
     "copyContent": "Copiar contenido",
+    "copyLink": "Copiar enlace a la nota",
+    "linkCopied": "Enlace copiado al portapapeles",
     "exportToFile": "Exportar a archivo",
     "printPdf": "Imprimir / Exportar PDF",
     "printFailed": "No se pudo abrir la ventana de impresión",
