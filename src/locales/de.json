@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Powerful, local-first note management"
+    "tagline": "Persönliche Notizen für Web und Terminal"
   },
   "common": {
     "loading": "Wird geladen...",

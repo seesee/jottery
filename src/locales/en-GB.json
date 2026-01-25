@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Powerful, local-first note management"
+    "tagline": "Personal notes for web and terminal"
   },
   "common": {
     "loading": "Loading...",
@@ -315,10 +315,10 @@
       "chooseMethod": "Choose how to set up sync:",
       "importCredentials": {
         "title": "Import sync credentials",
-        "subtitle": "<strong>For additional devices:</strong> Most secure method",
-        "benefit1": "✓ Zero-knowledge encryption (server cannot decrypt your notes)",
-        "benefit2": "✓ Copy credentials from your first device",
-        "benefit3": "✓ All devices use the same encryption key",
+        "subtitle": "<strong>For additional devices:</strong> Recommended method",
+        "benefit1": "✓ Copy credentials from your first device",
+        "benefit2": "✓ All devices use the same encryption key",
+        "benefit3": "✓ Server stores only encrypted data",
         "button": "📋 Import credentials from another device"
       },
       "registerServer": {
@@ -343,7 +343,7 @@
         "connectButton": "Connect device",
         "connecting": "Connecting..."
       },
-      "privacyNote": "<strong>🔒 Privacy:</strong> All your notes are encrypted end-to-end. The server only stores encrypted data and cannot read your content.",
+      "privacyNote": "<strong>📝 Note:</strong> Your notes are encrypted before syncing. The server stores only encrypted data it cannot read.",
       "selfHostNote": "<strong>💡 Self-host?</strong> Run your own server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">see GitHub</a>",
       "back": "← Back",
       "registration": {
@@ -446,11 +446,11 @@
     "syncTab": {
       "enableSync": "Enable Sync",
       "syncDescription": "Sync your notes across devices using a self-hosted server",
-      "syncDisabled": "Sync is Disabled (Privacy Mode)",
-      "syncDisabledDescription": "Sync is opt-in and disabled by default for maximum privacy.",
-      "syncDisabledDetails": "When disabled, Jottery will not make any network requests to sync servers. All your notes remain completely local to this device.",
+      "syncDisabled": "Sync is Disabled",
+      "syncDisabledDescription": "Sync is opt-in and disabled by default.",
+      "syncDisabledDetails": "When disabled, Jottery will not make any network requests. All your notes remain local to this device.",
       "toEnableSync": "To enable sync: Toggle the switch above and configure your sync server.",
-      "privacyNote": "Privacy: Even when enabled, all notes are end-to-end encrypted. The sync server cannot read your content.",
+      "privacyNote": "Note: Your notes are encrypted before syncing. The sync server stores only encrypted data.",
       "syncEnabled": "Sync Enabled",
       "syncing": "Syncing...",
       "lastSync": "Last sync:",
@@ -492,8 +492,8 @@
         "storageUsed": "Storage Used",
         "storageQuota": "Storage Quota",
         "storageUsage": "Storage Usage",
-        "privacyTitle": "Privacy & Security",
-        "privacyDescription": "All your notes are end-to-end encrypted. The server cannot read your content.",
+        "privacyTitle": "About Your Data",
+        "privacyDescription": "Your notes are encrypted before syncing. The server stores only encrypted data.",
         "selfHostLink": "Want to self-host? See GitHub →",
         "dangerZone": "Danger Zone",
         "deleteNotesDescription": "Delete all your notes from the sync server. This action cannot be undone. Your local notes will NOT be deleted.",
@@ -525,7 +525,7 @@
       "terminalClientDescription": "Access your notes from the command line with the Jottery terminal client. The TUI provides a fast, keyboard-driven interface for managing your notes.",
       "terminalClientDownload": "Download the terminal client from the Advanced tab.",
       "aboutJottery": "About Jottery",
-      "aboutDescription": "Jottery is a privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with rich content, syntax highlighting, and encryption.",
+      "aboutDescription": "Jottery is a personal, local-first scratch pad for capturing, organising, and searching notes. Available for web and terminal, with optional sync across devices.",
       "viewOnGithub": "View on GitHub",
       "license": "Licensed under the MIT License."
     }
@@ -533,7 +533,7 @@
   "landing": {
     "hero": {
       "title": "Jottery",
-      "subtitle": "A powerful, privacy-first note-taking app with end-to-end encryption, advanced search, and optional sync. Access your notes from web or terminal.",
+      "subtitle": "A personal, local-first scratch pad for capturing, organising, and searching notes. Access from web or terminal, with optional sync across devices.",
       "cta": "Try It Out",
       "note": "No account required • Works offline • Self-hostable"
     },
@@ -543,16 +543,16 @@
     "features": {
       "title": "Everything You Need",
       "encrypted": {
-        "title": "End-to-End Encrypted",
-        "description": "All your notes are encrypted locally with AES-256-GCM before storage or sync."
+        "title": "Your Data, Your Control",
+        "description": "Notes are encrypted at rest on your device. You own your data completely."
       },
       "localFirst": {
-        "title": "Local-First Storage",
-        "description": "Works completely offline. Your data stays on your device unless you choose to sync."
+        "title": "Local-First",
+        "description": "Works completely offline. Your notes live on your device, always available."
       },
       "optionalSync": {
         "title": "Optional Sync",
-        "description": "Self-host your own sync server to access notes across devices."
+        "description": "Self-host a sync server to access notes across devices when you need to."
       },
       "powerfulSearch": {
         "title": "Powerful Search",
@@ -564,7 +564,7 @@
       },
       "attachments": {
         "title": "Attachments",
-        "description": "Add files, images, and documents to your notes. All encrypted."
+        "description": "Add files, images, and documents to your notes."
       },
       "keyboard": {
         "title": "Keyboard Shortcuts",
@@ -656,24 +656,24 @@
       }
     },
     "security": {
-      "title": "Security & Privacy First",
-      "lead": "Your notes belong to you. Jottery is designed with privacy and security at its core.",
+      "title": "How Your Data Works",
+      "lead": "Jottery keeps things simple. Your notes live on your device, and you're always in control.",
       "encryption": {
-        "title": "Strong Encryption",
-        "description": "AES-256-GCM encryption with PBKDF2 key derivation. Your password is the key—without it, notes are mathematically unreadable."
+        "title": "Encrypted at Rest",
+        "description": "Your notes are encrypted on your device using your password. This protects your data if the device is lost or compromised."
       },
       "selfHosted": {
-        "title": "Self-Hosted",
-        "description": "Run your own sync server with complete control. The server only stores encrypted blobs it cannot decrypt."
+        "title": "Self-Hostable",
+        "description": "Run your own sync server for multi-device access. The server stores encrypted data it cannot read."
       },
       "noTracking": {
-        "title": "Zero Tracking",
-        "description": "No analytics, no tracking, no third-party services. Your data never leaves your control."
+        "title": "No Third Parties",
+        "description": "No analytics, no tracking, no external services. The app works entirely on your device."
       }
     },
     "finalCta": {
       "title": "Ready to Get Started?",
-      "subtitle": "Set up your encrypted notebook in seconds. No account required.",
+      "subtitle": "Set up your personal notebook in seconds. No account required.",
       "viewOnGitHub": "View on GitHub"
     }
   },
@@ -704,25 +704,25 @@
     },
     "landingPage": {
       "privateEncrypted": {
-        "title": "🔒 Private & Encrypted",
-        "description": "Jottery is a privacy-focused note-taking app. All your notes are <strong>encrypted locally</strong> on your device using your master password. No one can read your notes without your password—not even if they access your device's storage."
+        "title": "📝 Your Personal Scratch Pad",
+        "description": "Jottery is a personal notes repository for web and terminal. Your notes are <strong>stored locally</strong> on your device and encrypted at rest using your password."
       },
       "localFirst": {
-        "title": "💾 Local-First Storage",
-        "description": "Your notes are stored directly in your browser's local database. Jottery works completely <strong>offline</strong> and doesn't require an internet connection or account to use."
+        "title": "💾 Local-First",
+        "description": "Your notes are stored directly in your browser's local database. Jottery works completely <strong>offline</strong> and doesn't require an internet connection or account."
       },
       "optionalSync": {
-        "title": "☁️ Optional Sync Server",
-        "description": "Want to sync across devices? Jottery can optionally sync with a self-hosted server. Your notes and tags are <strong>encrypted before syncing</strong>—the server only stores encrypted data it cannot read."
+        "title": "☁️ Optional Sync",
+        "description": "Want to access notes across devices? Jottery can sync with a self-hosted server. Notes are encrypted before syncing, so the server stores only data it cannot read."
       },
       "selfHosting": {
-        "title": "🏠 Self-Hosting",
+        "title": "🏠 Self-Hostable",
         "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
         "viewOnGitHub": "View on GitHub"
       },
       "syncWarning": {
-        "title": "⚠️ Sync Recommended",
-        "description": "Running Jottery without sync capability is <strong>not recommended</strong>. Clearing your browser cache can delete the underlying database. Take the time to set up sync capability—the Jottery system is fully open source and self-hostable."
+        "title": "⚠️ Set Up Sync",
+        "description": "Browser storage can be cleared unexpectedly. We recommend setting up sync to keep your notes safe across devices. Jottery is fully <strong>open source and self-hostable</strong>."
       }
     }
   },

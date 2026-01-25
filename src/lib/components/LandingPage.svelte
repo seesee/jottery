@@ -73,14 +73,14 @@
   });
 
   const features = [
-    { icon: '🔒', key: 'encrypted' },
     { icon: '💾', key: 'localFirst' },
-    { icon: '☁️', key: 'optionalSync' },
     { icon: '🔍', key: 'powerfulSearch' },
     { icon: '🏷️', key: 'tagging' },
     { icon: '📎', key: 'attachments' },
+    { icon: '☁️', key: 'optionalSync' },
     { icon: '⌨️', key: 'keyboard' },
     { icon: '🎨', key: 'categories' },
+    { icon: '🗂️', key: 'encrypted' },
   ];
 
   const webFeatures = [

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Powerful, local-first note management"
+    "tagline": "网页和终端的个人笔记"
   },
   "common": {
     "loading": "加载中...",

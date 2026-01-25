@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "JOTTERY",
-    "tagline": "PRIVACY-FOCUSED • LOCAL-FIRST • ENCRYPTED"
+    "tagline": "Personal notes for web and terminal"
   },
   "common": {
     "loading": "LOADING...",

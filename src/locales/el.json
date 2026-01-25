@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Powerful, local-first note management"
+    "tagline": "Προσωπικές σημειώσεις για web και terminal"
   },
   "common": {
     "loading": "Φόρτωση...",

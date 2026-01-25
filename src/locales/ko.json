@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Jottery",
-    "tagline": "Powerful, local-first note management"
+    "tagline": "웹과 터미널을 위한 개인 메모"
   },
   "common": {
     "loading": "로딩 중...",
