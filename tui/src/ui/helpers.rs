@@ -154,11 +154,19 @@ pub fn strip_markdown(text: &str) -> String {
 
 /// Render markdown for terminal display using pulldown-cmark parser
 /// Returns both rendered lines and positions of note links for click detection
-pub fn render_markdown_for_terminal(
+///
+/// The `note_title_lookup` parameter is an optional function that takes a note ID
+/// and returns its title (first line of content). Used for auto-populating empty
+/// link text in `[](link:UUID)` format links.
+pub fn render_markdown_for_terminal<F>(
     content: &str,
     syntax_highlighter: &crate::ui::syntax::SyntaxHighlighter,
-    debug_log: &Option<Arc<Mutex<File>>>
-) -> MarkdownRenderResult {
+    debug_log: &Option<Arc<Mutex<File>>>,
+    note_title_lookup: Option<F>,
+) -> MarkdownRenderResult
+where
+    F: Fn(&str) -> Option<String>,
+{
     use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind, Options};
     use ratatui::style::{Style, Modifier, Color};
     use ratatui::text::{Line, Span};
@@ -191,6 +199,7 @@ pub fn render_markdown_for_terminal(
     // Track current note link being processed
     let mut current_link_url: Option<String> = None;
     let mut current_link_start_char: usize = 0;
+    let mut current_link_has_text: bool = false;
 
     // Style stack for nested formatting
     let mut style_stack: Vec<Style> = vec![Style::default()];
@@ -257,6 +266,7 @@ pub fn render_markdown_for_terminal(
                             // Track this link for position recording
                             current_link_url = Some(url);
                             current_link_start_char = calc_current_char_pos(&current_line_spans);
+                            current_link_has_text = false;
                         } else {
                             // Regular links -> blue + underlined
                             let link_style = current_style
@@ -347,6 +357,16 @@ pub fn render_markdown_for_terminal(
                             if url.starts_with("link:") {
                                 let note_id = url.strip_prefix("link:").unwrap_or("").to_string();
                                 if !note_id.is_empty() {
+                                    // If no text was provided for the link, try to look up the note title
+                                    if !current_link_has_text {
+                                        let link_text = if let Some(ref lookup) = note_title_lookup {
+                                            lookup(&note_id).unwrap_or_else(|| format!("[{}...]", &note_id[..8.min(note_id.len())]))
+                                        } else {
+                                            format!("[{}...]", &note_id[..8.min(note_id.len())])
+                                        };
+                                        // Add the link text with current (link) style
+                                        current_line_spans.push(Span::styled(link_text, current_style));
+                                    }
                                     let end_char = calc_current_char_pos(&current_line_spans);
                                     let line_index = result.lines.len();
                                     result.note_links.push((note_id, line_index, current_link_start_char, end_char));
@@ -526,8 +546,16 @@ pub fn render_markdown_for_terminal(
                     list_item_started = true;
                     current_line_spans.push(Span::raw("• "));
                     current_line_spans.push(Span::styled(text.to_string(), current_style));
+                    // Track that we added text for current link
+                    if current_link_url.is_some() {
+                        current_link_has_text = true;
+                    }
                 } else {
                     current_line_spans.push(Span::styled(text.to_string(), current_style));
+                    // Track that we added text for current link
+                    if current_link_url.is_some() {
+                        current_link_has_text = true;
+                    }
                 }
             }
             Event::Code(code) => {

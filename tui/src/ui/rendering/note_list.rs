@@ -493,8 +493,21 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
         // For markdown, render it cleanly; for other types, use syntax highlighting
         if note.syntax_language == SyntaxLanguage::Markdown {
+            // Create a lookup function for note titles (used for empty link text)
+            let note_title_lookup = |note_id: &str| -> Option<String> {
+                app.notes.iter()
+                    .find(|n| n.id == note_id)
+                    .map(|n| {
+                        // Get first non-empty line as title
+                        n.content.lines()
+                            .find(|line| !line.trim().is_empty())
+                            .map(|line| strip_markdown(line))
+                            .unwrap_or_else(|| "Untitled".to_string())
+                    })
+            };
+
             // Render markdown with inline formatting and code block highlighting
-            let render_result = render_markdown_for_terminal(&note.content, &app.syntax_highlighter, &app.debug_log);
+            let render_result = render_markdown_for_terminal(&note.content, &app.syntax_highlighter, &app.debug_log, Some(note_title_lookup));
 
             // Convert link positions from render result to screen coordinates
             // The y coordinate is: preview_inner_y + content_start_line_index + link_line_index - scroll_offset
