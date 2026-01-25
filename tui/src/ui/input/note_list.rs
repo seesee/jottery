@@ -308,8 +308,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.search_active = false;
 
                         if is_locked {
-                            // View with less (read-only)
-                            if let Err(e) = operations::notes::view_note_readonly(&content) {
+                            // View with pager (read-only)
+                            if let Err(e) = operations::notes::view_note_readonly(app, &content, syntax_lang) {
                                 app.error = Some(format!("Failed to view note: {}", e));
                             }
                         } else {
@@ -658,19 +658,19 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        // Check if note is locked - use less for viewing instead
+                        // Check if note is locked - use pager for viewing instead
                         let is_locked = filtered[app.selected_note].locked;
                         let content = filtered[app.selected_note].content.clone();
+                        let syntax_lang = filtered[app.selected_note].syntax_language;
 
                         if is_locked {
-                            // View with less (read-only)
-                            if let Err(e) = operations::notes::view_note_readonly(&content) {
+                            // View with pager (read-only)
+                            if let Err(e) = operations::notes::view_note_readonly(app, &content, syntax_lang) {
                                 app.error = Some(format!("Failed to view note: {}", e));
                             }
                         } else {
                             // Clone data before modifying self
                             let note_id = filtered[app.selected_note].id.clone();
-                            let syntax_lang = filtered[app.selected_note].syntax_language;
                             let tags = filtered[app.selected_note].tags.clone();
 
                             // Set up for editing

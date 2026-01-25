@@ -207,13 +207,40 @@ pub fn empty_trash(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// View note content in read-only mode using `less`
-pub fn view_note_readonly(content: &str) -> Result<()> {
+/// View note content in read-only mode using best available pager
+///
+/// Pager preference order:
+/// 1. $PAGER environment variable (if set)
+/// 2. bat (syntax highlighting pager)
+/// 3. less
+/// 4. more (fallback)
+pub fn view_note_readonly(app: &mut App, content: &str, syntax: crate::models::SyntaxLanguage) -> Result<()> {
     use std::io::Write;
+    use crossterm::{
+        execute,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+                   Clear as TerminalClear, ClearType},
+        cursor::MoveTo,
+    };
 
-    // Create temp file
+    // Map syntax language to file extension for syntax highlighting
+    let extension = match syntax {
+        crate::models::SyntaxLanguage::Plain => "txt",
+        crate::models::SyntaxLanguage::Markdown => "md",
+        crate::models::SyntaxLanguage::Javascript => "js",
+        crate::models::SyntaxLanguage::Python => "py",
+        crate::models::SyntaxLanguage::Html => "html",
+        crate::models::SyntaxLanguage::Css => "css",
+        crate::models::SyntaxLanguage::Json => "json",
+        crate::models::SyntaxLanguage::Sql => "sql",
+        crate::models::SyntaxLanguage::Bash => "sh",
+        crate::models::SyntaxLanguage::Perl => "pl",
+        crate::models::SyntaxLanguage::Calc => "txt",
+    };
+
+    // Create temp file with appropriate extension
     let mut temp_file = tempfile::Builder::new()
-        .suffix(".txt")
+        .suffix(&format!(".{}", extension))
         .tempfile()
         .context("Failed to create temporary file")?;
 
@@ -222,39 +249,74 @@ pub fn view_note_readonly(content: &str) -> Result<()> {
         .context("Failed to write to temporary file")?;
     temp_file.flush()?;
 
-    // Get the path before we lose ownership
     let temp_path = temp_file.path().to_path_buf();
 
-    // Try to use PAGER environment variable, fall back to less, then more
-    let pager = std::env::var("PAGER").unwrap_or_else(|_| "less".to_string());
+    // Suspend TUI
+    disable_raw_mode().context("Failed to disable raw mode")?;
+    execute!(std::io::stdout(), LeaveAlternateScreen)
+        .context("Failed to leave alternate screen")?;
 
-    // Run the pager
-    let status = std::process::Command::new(&pager)
-        .arg(&temp_path)
-        .status();
+    // Determine pager to use
+    let pager_result = if let Ok(pager) = std::env::var("PAGER") {
+        // User-specified pager
+        run_pager(&pager, &temp_path, None)
+    } else if is_command_available("bat") {
+        // bat with syntax highlighting (--paging=always forces pager mode)
+        run_pager("bat", &temp_path, Some(&["--paging=always", "--style=plain"]))
+    } else if is_command_available("less") {
+        // less with raw control chars for any escape sequences
+        run_pager("less", &temp_path, Some(&["-R"]))
+    } else {
+        // Fallback to more
+        run_pager("more", &temp_path, None)
+    };
+
+    // Resume TUI
+    execute!(std::io::stdout(), EnterAlternateScreen)
+        .context("Failed to enter alternate screen")?;
+    enable_raw_mode().context("Failed to enable raw mode")?;
+
+    // Clear screen and force redraw
+    execute!(
+        std::io::stdout(),
+        TerminalClear(ClearType::All),
+        TerminalClear(ClearType::Purge),
+        MoveTo(0, 0)
+    )
+    .context("Failed to clear screen")?;
+    std::io::stdout().flush().context("Failed to flush stdout")?;
+    app.need_redraw = true;
+
+    pager_result
+}
+
+/// Check if a command is available in PATH
+fn is_command_available(cmd: &str) -> bool {
+    std::process::Command::new("which")
+        .arg(cmd)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// Run a pager with optional arguments
+fn run_pager(pager: &str, path: &std::path::Path, args: Option<&[&str]>) -> Result<()> {
+    let mut cmd = std::process::Command::new(pager);
+    if let Some(args) = args {
+        cmd.args(args);
+    }
+    cmd.arg(path);
+
+    let status = cmd.status();
 
     match status {
         Ok(exit_status) if exit_status.success() => Ok(()),
         Ok(_) => {
-            // Pager exited with non-zero, try fallback
-            let fallback_status = std::process::Command::new("more")
-                .arg(&temp_path)
-                .status()
-                .context("Failed to run fallback pager (more)")?;
-
-            if fallback_status.success() {
-                Ok(())
-            } else {
-                anyhow::bail!("Pager exited with non-zero status")
-            }
-        }
-        Err(_) => {
-            // Primary pager failed, try fallback
-            std::process::Command::new("more")
-                .arg(&temp_path)
-                .status()
-                .context("Failed to run any pager (less/more)")?;
+            // Non-zero exit is usually OK for pagers (user might quit early)
             Ok(())
+        }
+        Err(e) => {
+            anyhow::bail!("Failed to run pager '{}': {}", pager, e)
         }
     }
 }
