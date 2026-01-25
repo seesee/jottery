@@ -21,6 +21,22 @@ test.describe('Search and Filtering Workflows', () => {
 
     // Set up password
     await page.goto('/');
+
+    // Handle landing page for new users - click "Try It Out"
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.first().waitFor({ state: 'visible' });
     await passwordInputs.first().fill('test-password-123');
@@ -114,6 +130,22 @@ test.describe('Tag Management Workflows', () => {
     });
 
     await page.goto('/');
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.first().waitFor({ state: 'visible' });
     await passwordInputs.first().fill('test-password-123');
@@ -198,6 +230,22 @@ test.describe('Settings Workflows', () => {
     });
 
     await page.goto('/');
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.first().waitFor({ state: 'visible' });
     await passwordInputs.first().fill('test-password-123');
@@ -288,6 +336,22 @@ test.describe('Complete User Journey', () => {
 
     // Step 2: Set up password
     await page.goto('/');
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.first().waitFor({ state: 'visible' });
     await passwordInputs.first().fill('journey-test-password');

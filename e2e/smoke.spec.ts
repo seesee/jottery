@@ -33,6 +33,21 @@ test.describe('Smoke Tests', () => {
     // Reload to get fresh state
     await page.goto('/');
 
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     // Should show password setup screen
     const passwordInputs = page.locator('input[type="password"]');
     await expect(passwordInputs.first()).toBeVisible({ timeout: 10000 });

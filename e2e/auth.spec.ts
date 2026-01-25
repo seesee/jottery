@@ -23,6 +23,21 @@ test.describe('Authentication', () => {
   });
 
   test('should show password setup on first visit', async ({ page }) => {
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     // Should see the setup screen
     await expect(page.locator('h1, h2').filter({ hasText: /Set.*Password|Create.*Password|Welcome/i })).toBeVisible();
 
@@ -32,6 +47,21 @@ test.describe('Authentication', () => {
 
   test('should create new password and unlock app', async ({ page }) => {
     const password = 'test-password-123';
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
 
     // Wait for password inputs to be visible
     const passwordInputs = page.locator('input[type="password"]');
@@ -50,6 +80,21 @@ test.describe('Authentication', () => {
   });
 
   test('should show error on password mismatch during setup', async ({ page }) => {
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
+
     // Wait for password inputs
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.first().waitFor({ state: 'visible' });
@@ -67,6 +112,21 @@ test.describe('Authentication', () => {
 
   test('should lock and unlock app', async ({ page }) => {
     const password = 'test-password-123';
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
 
     // Setup password first
     const passwordInputs = page.locator('input[type="password"]');
@@ -98,6 +158,21 @@ test.describe('Authentication', () => {
 
   test('should remember encryption after page reload', async ({ page }) => {
     const password = 'test-password-123';
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
 
     // Setup password
     const passwordInputs = page.locator('input[type="password"]');
@@ -131,6 +206,21 @@ test.describe('Authentication', () => {
   test('should show error on wrong password', async ({ page }) => {
     const correctPassword = 'test-password-123';
     const wrongPassword = 'wrong-password';
+
+    // Handle landing page for new users - click "Try It Out" if it appears
+    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
+    const passwordInput = page.locator('input[type="password"]').first();
+
+    // Wait for either landing page button or password input
+    await Promise.race([
+      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    ]);
+
+    // Click Try It Out if visible
+    if (await getStartedButton.isVisible()) {
+      await getStartedButton.click();
+    }
 
     // Setup password
     const passwordInputs = page.locator('input[type="password"]');
