@@ -1134,6 +1134,7 @@
         version={$selectedNote.version}
         {modifiedAtFormatted}
         backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.3) : undefined}
+        isSynced={$selectedNote.syncedAt != null && $selectedNote.syncedAt >= $selectedNote.modifiedAt}
       />
     {/if}
   </div>

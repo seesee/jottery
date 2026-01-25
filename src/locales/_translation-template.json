@@ -30,6 +30,8 @@
     "created": "CREATED",
     "modified": "MODIFIED",
     "version": "Version",
+    "synced": "SYNCED",
+    "unsynced": "NOT SYNCED",
     "attachments": "ATTACHMENTS",
     "filterByTag": "FILTER BY #{tag}",
     "noNotesYet": "NO NOTES YET",

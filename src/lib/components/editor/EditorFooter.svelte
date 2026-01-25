@@ -5,6 +5,7 @@
   export let version: number | undefined = undefined;
   export let modifiedAtFormatted: Readable<string> | null;
   export let backgroundColor: string | undefined = undefined;
+  export let isSynced: boolean = false;
 </script>
 
 <!-- Metadata Footer -->
@@ -13,7 +14,15 @@
   style:background-color={backgroundColor}
 >
   <div class="flex justify-between">
-    <span>{$_('note.version')}: {version ?? 1}</span>
+    <span class="flex items-center gap-1.5">
+      <span>{$_('note.version')}: {version ?? 1}</span>
+      <span
+        class={isSynced ? 'text-green-500' : 'text-red-500'}
+        title={isSynced ? $_('note.synced') : $_('note.unsynced')}
+      >
+        {isSynced ? '●' : '○'}
+      </span>
+    </span>
     <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>
   </div>
 </div>
