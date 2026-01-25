@@ -30,10 +30,8 @@ test.describe('Mobile UI', () => {
     await page.goto('/');
     await handleLandingPage(page);
 
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible', timeout: 10000 });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
+    await page.locator('#password').fill('test-password-123');
+    await page.locator('#confirm').fill('test-password-123');
 
     // Find and click the submit button
     const submitButton = page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first();

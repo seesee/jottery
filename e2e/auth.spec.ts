@@ -29,13 +29,9 @@ test.describe('Authentication', () => {
 
     await handleLandingPage(page);
 
-    // Wait for password inputs to be visible
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-
-    // Enter password (assuming first setup has 2 fields: password + confirm)
-    await passwordInputs.first().fill(password);
-    await passwordInputs.nth(1).fill(password);
+    // Enter password
+    await page.locator('#password').fill(password);
+    await page.locator('#confirm').fill(password);
 
     // Submit
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock|Continue/i }).first().click();
@@ -48,13 +44,9 @@ test.describe('Authentication', () => {
   test('should show error on password mismatch during setup', async ({ page }) => {
     await handleLandingPage(page);
 
-    // Wait for password inputs
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-
     // Enter mismatched passwords
-    await passwordInputs.first().fill('password123');
-    await passwordInputs.nth(1).fill('different456');
+    await page.locator('#password').fill('password123');
+    await page.locator('#confirm').fill('different456');
 
     // Submit
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
@@ -68,11 +60,9 @@ test.describe('Authentication', () => {
 
     await handleLandingPage(page);
 
-    // Setup password first
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill(password);
-    await passwordInputs.nth(1).fill(password);
+    // Setup password
+    await page.locator('#password').fill(password);
+    await page.locator('#confirm').fill(password);
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
     // Wait for app to load
@@ -102,10 +92,8 @@ test.describe('Authentication', () => {
     await handleLandingPage(page);
 
     // Setup password
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill(password);
-    await passwordInputs.nth(1).fill(password);
+    await page.locator('#password').fill(password);
+    await page.locator('#confirm').fill(password);
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
     // Wait for app
@@ -137,10 +125,8 @@ test.describe('Authentication', () => {
     await handleLandingPage(page);
 
     // Setup password
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill(correctPassword);
-    await passwordInputs.nth(1).fill(correctPassword);
+    await page.locator('#password').fill(correctPassword);
+    await page.locator('#confirm').fill(correctPassword);
     await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
 
     // Wait for app to load
