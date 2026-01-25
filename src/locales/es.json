@@ -199,6 +199,19 @@
     "rememberPassword": "Recordar contraseña (Inseguro)",
     "rememberPasswordWarning": "Almacenar su contraseña en este dispositivo para omitir ingresarla en cada visita. ADVERTENCIA: Esto almacena su contraseña en texto plano en localStorage, lo cual es altamente inseguro.",
     "rememberPasswordNote": "El bloqueo automático se deshabilitará cuando esto esté habilitado. Deshabilitar esto bloqueará inmediatamente la aplicación.",
+    "openLinksInNewTab": "Abrir enlaces externos en nueva pestaña",
+    "openLinksInNewTabDescription": "Cuando está habilitado, los enlaces a sitios web externos en la vista previa de markdown se abrirán en una nueva pestaña del navegador en lugar de navegar fuera de Jottery",
+    "persistSession": "Mantener sesión al actualizar página",
+    "persistSessionDescription": "Mantén tu sesión activa al actualizar la página. La contraseña se almacena temporalmente en el almacenamiento de sesión de tu navegador.",
+    "persistSessionNote": "Más seguro que 'Recordar contraseña' - expira automáticamente y se elimina cuando cierras la pestaña.",
+    "persistSessionUnavailable": "El almacenamiento de sesión no está disponible (URL file:// o configuración de privacidad del navegador).",
+    "persistSessionDisabledByRemember": "Deshabilitado cuando 'Recordar contraseña' está habilitado.",
+    "persistSessionTimeout": "Tiempo de espera de sesión (minutos)",
+    "persistSessionTimeoutDescription": "La sesión expira después de estos minutos. Rango: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Ingresa tu contraseña para habilitar:",
+      "enableButton": "Habilitar persistencia de sesión"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Advertencia de seguridad",
       "insecureWarning": "Habilitar esta función almacenará su contraseña en texto plano en localStorage, lo cual es ALTAMENTE INSEGURO.",

@@ -199,6 +199,19 @@
     "rememberPassword": "Lembrar senha (Inseguro)",
     "rememberPasswordWarning": "Armazene sua senha neste dispositivo para não precisar digitá-la a cada visita. AVISO: Isso armazena sua senha em texto simples no localStorage, o que é altamente inseguro.",
     "rememberPasswordNote": "O bloqueio automático será desativado quando esta opção estiver ativa. Desativar esta opção bloqueará o aplicativo imediatamente.",
+    "openLinksInNewTab": "Abrir links externos em nova aba",
+    "openLinksInNewTabDescription": "Quando ativado, links para sites externos na visualização markdown serão abertos em uma nova aba do navegador em vez de navegar para fora do Jottery",
+    "persistSession": "Manter sessão após atualizar página",
+    "persistSessionDescription": "Mantenha sua sessão ativa ao atualizar a página. A senha é armazenada temporariamente no armazenamento de sessão do seu navegador.",
+    "persistSessionNote": "Mais seguro que 'Lembrar senha' - expira automaticamente e é apagada quando você fecha a aba.",
+    "persistSessionUnavailable": "O armazenamento de sessão não está disponível (URL file:// ou configurações de privacidade do navegador).",
+    "persistSessionDisabledByRemember": "Desativado quando 'Lembrar senha' está ativado.",
+    "persistSessionTimeout": "Tempo limite da sessão (minutos)",
+    "persistSessionTimeoutDescription": "A sessão expira após esta quantidade de minutos. Intervalo: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Digite sua senha para ativar:",
+      "enableButton": "Ativar persistência de sessão"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Aviso de segurança",
       "insecureWarning": "Ativar este recurso armazenará sua senha em texto simples no localStorage, o que é ALTAMENTE INSEGURO.",

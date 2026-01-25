@@ -199,6 +199,19 @@
     "rememberPassword": "パスワードを記憶する(セキュリティリスク)",
     "rememberPasswordWarning": "訪問するたびにパスワードを入力する手間を省くため、このデバイスにパスワードを保存します。警告: これによりパスワードが平文でlocalStorageに保存されるため、非常に安全性が低くなります。",
     "rememberPasswordNote": "この機能を有効にすると、自動ロックが無効になります。この機能を無効にすると、すぐにアプリケーションがロックされます。",
+    "openLinksInNewTab": "外部リンクを新しいタブで開く",
+    "openLinksInNewTabDescription": "有効にすると、マークダウンプレビュー内の外部ウェブサイトへのリンクは、Jotteryから離れる代わりに新しいブラウザタブで開きます",
+    "persistSession": "ページ更新後もセッションを維持",
+    "persistSessionDescription": "ページを更新してもセッションをアクティブに保ちます。パスワードはブラウザのセッションストレージに一時的に保存されます。",
+    "persistSessionNote": "「パスワードを記憶」より安全 - 自動的に期限切れになり、タブを閉じると削除されます。",
+    "persistSessionUnavailable": "セッションストレージは利用できません（file:// URLまたはブラウザのプライバシー設定）。",
+    "persistSessionDisabledByRemember": "「パスワードを記憶」が有効な場合は無効になります。",
+    "persistSessionTimeout": "セッションタイムアウト（分）",
+    "persistSessionTimeoutDescription": "この分数が経過するとセッションが期限切れになります。範囲: 5-480。",
+    "persistSessionModal": {
+      "confirmPassword": "有効にするにはパスワードを入力してください:",
+      "enableButton": "セッション維持を有効にする"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ セキュリティ警告",
       "insecureWarning": "この機能を有効にすると、パスワードが平文でlocalStorageに保存されるため、非常に安全性が低くなります。",

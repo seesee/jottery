@@ -199,6 +199,19 @@
     "rememberPassword": "Wachtwoord onthouden (onveilig)",
     "rememberPasswordWarning": "Bewaar uw wachtwoord op dit apparaat om het invoeren bij elk bezoek over te slaan. WAARSCHUWING: Dit slaat uw wachtwoord op in platte tekst in localStorage, wat zeer onveilig is.",
     "rememberPasswordNote": "Automatische vergrendeling wordt uitgeschakeld wanneer dit is ingeschakeld. Als u dit uitschakelt, wordt de applicatie onmiddellijk vergrendeld.",
+    "openLinksInNewTab": "Externe links in nieuw tabblad openen",
+    "openLinksInNewTabDescription": "Indien ingeschakeld, worden links naar externe websites in de markdown-voorvertoning geopend in een nieuw browsertabblad in plaats van weg te navigeren van Jottery",
+    "persistSession": "Sessie behouden na paginavernieuwing",
+    "persistSessionDescription": "Houd uw sessie actief bij het vernieuwen van de pagina. Het wachtwoord wordt tijdelijk opgeslagen in de sessieopslag van uw browser.",
+    "persistSessionNote": "Veiliger dan 'Wachtwoord onthouden' - verloopt automatisch en wordt gewist wanneer u het tabblad sluit.",
+    "persistSessionUnavailable": "Sessieopslag is niet beschikbaar (file:// URL of browser-privacyinstellingen).",
+    "persistSessionDisabledByRemember": "Uitgeschakeld wanneer 'Wachtwoord onthouden' is ingeschakeld.",
+    "persistSessionTimeout": "Sessie-timeout (minuten)",
+    "persistSessionTimeoutDescription": "Sessie verloopt na dit aantal minuten. Bereik: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Voer uw wachtwoord in om in te schakelen:",
+      "enableButton": "Sessiepersistentie inschakelen"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Beveiligingswaarschuwing",
       "insecureWarning": "Het inschakelen van deze functie zal uw wachtwoord in platte tekst opslaan in localStorage, wat ZEER ONVEILIG is.",

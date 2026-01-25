@@ -199,6 +199,19 @@
     "rememberPassword": "Mémoriser le mot de passe (Non sécurisé)",
     "rememberPasswordWarning": "Stocker votre mot de passe sur cet appareil pour éviter de le saisir à chaque visite. ATTENTION : Cela stocke votre mot de passe en texte clair dans localStorage, ce qui est très peu sécurisé.",
     "rememberPasswordNote": "Le verrouillage automatique sera désactivé lorsque cette option est activée. La désactivation de cette option verrouillera immédiatement l'application.",
+    "openLinksInNewTab": "Ouvrir les liens externes dans un nouvel onglet",
+    "openLinksInNewTabDescription": "Lorsque cette option est activée, les liens vers des sites web externes dans l'aperçu markdown s'ouvriront dans un nouvel onglet du navigateur au lieu de quitter Jottery",
+    "persistSession": "Conserver la session après actualisation",
+    "persistSessionDescription": "Gardez votre session active lors de l'actualisation de la page. Le mot de passe est stocké temporairement dans le stockage de session de votre navigateur.",
+    "persistSessionNote": "Plus sécurisé que 'Se souvenir du mot de passe' - expire automatiquement et est supprimé lorsque vous fermez l'onglet.",
+    "persistSessionUnavailable": "Le stockage de session n'est pas disponible (URL file:// ou paramètres de confidentialité du navigateur).",
+    "persistSessionDisabledByRemember": "Désactivé lorsque 'Se souvenir du mot de passe' est activé.",
+    "persistSessionTimeout": "Délai d'expiration de session (minutes)",
+    "persistSessionTimeoutDescription": "La session expire après ce nombre de minutes. Plage: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Entrez votre mot de passe pour activer:",
+      "enableButton": "Activer la persistance de session"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Avertissement de sécurité",
       "insecureWarning": "L'activation de cette fonctionnalité stockera votre mot de passe en texte clair dans localStorage, ce qui est TRÈS PEU SÉCURISÉ.",

@@ -199,6 +199,19 @@
     "rememberPassword": "Zapamiętaj hasło (niebezpieczne)",
     "rememberPasswordWarning": "Zapisz hasło na tym urządzeniu, aby pominąć jego wprowadzanie przy każdej wizycie. OSTRZEŻENIE: Przechowuje hasło w postaci zwykłego tekstu w localStorage, co jest bardzo niebezpieczne.",
     "rememberPasswordNote": "Automatyczna blokada zostanie wyłączona po włączeniu tej funkcji. Wyłączenie spowoduje natychmiastowe zablokowanie aplikacji.",
+    "openLinksInNewTab": "Otwieraj linki zewnętrzne w nowej karcie",
+    "openLinksInNewTabDescription": "Po włączeniu linki do zewnętrznych stron w podglądzie markdown będą otwierane w nowej karcie przeglądarki zamiast opuszczać Jottery",
+    "persistSession": "Zachowaj sesję po odświeżeniu strony",
+    "persistSessionDescription": "Utrzymuj aktywną sesję podczas odświeżania strony. Hasło jest tymczasowo przechowywane w magazynie sesji przeglądarki.",
+    "persistSessionNote": "Bezpieczniejsze niż 'Zapamiętaj hasło' - wygasa automatycznie i jest usuwane po zamknięciu karty.",
+    "persistSessionUnavailable": "Magazyn sesji jest niedostępny (URL file:// lub ustawienia prywatności przeglądarki).",
+    "persistSessionDisabledByRemember": "Wyłączone, gdy 'Zapamiętaj hasło' jest włączone.",
+    "persistSessionTimeout": "Limit czasu sesji (minuty)",
+    "persistSessionTimeoutDescription": "Sesja wygasa po tylu minutach. Zakres: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Wprowadź hasło, aby włączyć:",
+      "enableButton": "Włącz trwałość sesji"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Ostrzeżenie bezpieczeństwa",
       "insecureWarning": "Włączenie tej funkcji zapisze hasło w postaci zwykłego tekstu w localStorage, co jest BARDZO NIEBEZPIECZNE.",

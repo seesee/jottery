@@ -199,6 +199,19 @@
     "rememberPassword": "Şifreyi Hatırla (Güvensiz)",
     "rememberPasswordWarning": "Her ziyarette şifre girmeyi atlamak için şifrenizi bu cihazda saklayın. UYARI: Şifrenizi localStorage'da düz metin olarak saklar, bu çok güvensizdir.",
     "rememberPasswordNote": "Bu etkinleştirildiğinde otomatik kilitleme devre dışı bırakılır. Bunu devre dışı bırakmak uygulamayı hemen kilitler.",
+    "openLinksInNewTab": "Harici bağlantıları yeni sekmede aç",
+    "openLinksInNewTabDescription": "Etkinleştirildiğinde, markdown önizlemesindeki harici web sitesi bağlantıları Jottery'den ayrılmak yerine yeni bir tarayıcı sekmesinde açılır",
+    "persistSession": "Sayfa yenilemesinden sonra oturumu koru",
+    "persistSessionDescription": "Sayfayı yenilerken oturumunuzu aktif tutun. Şifre, tarayıcınızın oturum depolama alanında geçici olarak saklanır.",
+    "persistSessionNote": "'Şifreyi Hatırla'dan daha güvenli - otomatik olarak sona erer ve sekmeyi kapattığınızda silinir.",
+    "persistSessionUnavailable": "Oturum depolama alanı mevcut değil (file:// URL veya tarayıcı gizlilik ayarları).",
+    "persistSessionDisabledByRemember": "'Şifreyi Hatırla' etkinleştirildiğinde devre dışı bırakılır.",
+    "persistSessionTimeout": "Oturum zaman aşımı (dakika)",
+    "persistSessionTimeoutDescription": "Oturum bu kadar dakika sonra sona erer. Aralık: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Etkinleştirmek için şifrenizi girin:",
+      "enableButton": "Oturum kalıcılığını etkinleştir"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Güvenlik Uyarısı",
       "insecureWarning": "Bu özelliği etkinleştirmek şifrenizi localStorage'da düz metin olarak saklayacaktır, bu ÇOK GÜVENSİZDİR.",

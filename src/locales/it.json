@@ -199,6 +199,19 @@
     "rememberPassword": "Ricorda password (Non sicuro)",
     "rememberPasswordWarning": "Memorizza la password su questo dispositivo per evitare di inserirla ad ogni visita. ATTENZIONE: Questo memorizza la password in testo semplice in localStorage, il che è altamente insicuro.",
     "rememberPasswordNote": "Il blocco automatico verrà disabilitato quando questa opzione è attiva. Disabilitando questa opzione l'applicazione verrà immediatamente bloccata.",
+    "openLinksInNewTab": "Apri link esterni in nuova scheda",
+    "openLinksInNewTabDescription": "Se abilitato, i link a siti web esterni nell'anteprima markdown si apriranno in una nuova scheda del browser invece di navigare lontano da Jottery",
+    "persistSession": "Mantieni sessione dopo aggiornamento pagina",
+    "persistSessionDescription": "Mantieni la tua sessione attiva quando aggiorni la pagina. La password viene memorizzata temporaneamente nella memoria di sessione del browser.",
+    "persistSessionNote": "Più sicuro di 'Ricorda password' - scade automaticamente e viene cancellata quando chiudi la scheda.",
+    "persistSessionUnavailable": "La memoria di sessione non è disponibile (URL file:// o impostazioni privacy del browser).",
+    "persistSessionDisabledByRemember": "Disabilitato quando 'Ricorda password' è abilitato.",
+    "persistSessionTimeout": "Timeout sessione (minuti)",
+    "persistSessionTimeoutDescription": "La sessione scade dopo questo numero di minuti. Intervallo: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Inserisci la tua password per abilitare:",
+      "enableButton": "Abilita persistenza sessione"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Avviso di sicurezza",
       "insecureWarning": "L'abilitazione di questa funzione memorizzerà la password in testo semplice in localStorage, il che è ALTAMENTE INSICURO.",

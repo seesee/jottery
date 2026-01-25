@@ -199,6 +199,19 @@
     "rememberPassword": "비밀번호 기억하기 (보안 취약)",
     "rememberPasswordWarning": "이 기기에 비밀번호를 저장하여 매번 입력을 건너뛰세요. 경고: 비밀번호를 localStorage에 평문으로 저장하므로 매우 안전하지 않습니다.",
     "rememberPasswordNote": "이 기능이 활성화되면 자동 잠금이 비활성화됩니다. 이 기능을 비활성화하면 즉시 애플리케이션이 잠깁니다.",
+    "openLinksInNewTab": "외부 링크를 새 탭에서 열기",
+    "openLinksInNewTabDescription": "활성화하면 마크다운 미리보기의 외부 웹사이트 링크가 Jottery를 떠나는 대신 새 브라우저 탭에서 열립니다",
+    "persistSession": "페이지 새로고침 후 세션 유지",
+    "persistSessionDescription": "페이지를 새로고침할 때 세션을 활성 상태로 유지합니다. 비밀번호는 브라우저의 세션 저장소에 임시로 저장됩니다.",
+    "persistSessionNote": "'비밀번호 기억하기'보다 더 안전함 - 자동으로 만료되고 탭을 닫으면 삭제됩니다.",
+    "persistSessionUnavailable": "세션 저장소를 사용할 수 없습니다 (file:// URL 또는 브라우저 개인정보 설정).",
+    "persistSessionDisabledByRemember": "'비밀번호 기억하기'가 활성화되어 있으면 비활성화됩니다.",
+    "persistSessionTimeout": "세션 타임아웃 (분)",
+    "persistSessionTimeoutDescription": "이 시간(분)이 지나면 세션이 만료됩니다. 범위: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "활성화하려면 비밀번호를 입력하세요:",
+      "enableButton": "세션 유지 활성화"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ 보안 경고",
       "insecureWarning": "이 기능을 활성화하면 비밀번호가 localStorage에 평문으로 저장되어 매우 안전하지 않습니다.",

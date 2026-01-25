@@ -199,6 +199,19 @@
     "rememberPassword": "Passwort merken (Unsicher)",
     "rememberPasswordWarning": "Speichern Sie Ihr Passwort auf diesem Gerät, um die Eingabe bei jedem Besuch zu überspringen. WARNUNG: Dies speichert Ihr Passwort im Klartext in localStorage, was sehr unsicher ist.",
     "rememberPasswordNote": "Die automatische Sperre wird deaktiviert, wenn dies aktiviert ist. Das Deaktivieren dieser Funktion sperrt die Anwendung sofort.",
+    "openLinksInNewTab": "Externe Links in neuem Tab öffnen",
+    "openLinksInNewTabDescription": "Wenn aktiviert, werden Links zu externen Websites in der Markdown-Vorschau in einem neuen Browser-Tab geöffnet, anstatt von Jottery weg zu navigieren",
+    "persistSession": "Sitzung nach Seitenaktualisierung beibehalten",
+    "persistSessionDescription": "Halten Sie Ihre Sitzung aktiv, wenn Sie die Seite aktualisieren. Das Passwort wird vorübergehend im Sitzungsspeicher Ihres Browsers gespeichert.",
+    "persistSessionNote": "Sicherer als 'Passwort merken' - läuft automatisch ab und wird gelöscht, wenn Sie den Tab schließen.",
+    "persistSessionUnavailable": "Sitzungsspeicher ist nicht verfügbar (file://-URL oder Browser-Datenschutzeinstellungen).",
+    "persistSessionDisabledByRemember": "Deaktiviert, wenn 'Passwort merken' aktiviert ist.",
+    "persistSessionTimeout": "Sitzungs-Timeout (Minuten)",
+    "persistSessionTimeoutDescription": "Sitzung läuft nach dieser Anzahl von Minuten ab. Bereich: 5-480.",
+    "persistSessionModal": {
+      "confirmPassword": "Geben Sie Ihr Passwort ein, um zu aktivieren:",
+      "enableButton": "Sitzungspersistenz aktivieren"
+    },
     "rememberPasswordModal": {
       "title": "⚠️ Sicherheitswarnung",
       "insecureWarning": "Das Aktivieren dieser Funktion speichert Ihr Passwort im Klartext in localStorage, was SEHR UNSICHER ist.",
