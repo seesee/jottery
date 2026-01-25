@@ -244,6 +244,20 @@
         </p>
       </div>
 
+      {#if needsInit}
+        <!-- Back to Landing Page Button -->
+        <button
+          type="button"
+          on:click={() => showLandingPage = true}
+          class="mb-6 flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          {$_('common.back')}
+        </button>
+      {/if}
+
       <form on:submit|preventDefault={handleSubmit} class="space-y-4">
         <div>
           <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

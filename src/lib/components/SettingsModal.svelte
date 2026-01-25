@@ -64,6 +64,7 @@
   let registrationMode: 'select' | 'newUser' | 'existingUser' = 'select';
   let userEmail = '';
   let userPassword = '';
+  let userPasswordConfirm = '';
   let registeringUser = false;
   let registeringDevice = false;
   let registrationStep: 'email' | 'pending' | 'device' | 'complete' = 'email';
@@ -324,6 +325,7 @@
     registrationStep = 'email';
     userEmail = '';
     userPassword = '';
+    userPasswordConfirm = '';
     userRegistrationMessage = '';
     syncError = '';
   }
@@ -1096,6 +1098,7 @@
             bind:registrationStep
             bind:userEmail
             bind:userPassword
+            bind:userPasswordConfirm
             bind:registeringUser
             bind:registeringDevice
             bind:userRegistrationMessage

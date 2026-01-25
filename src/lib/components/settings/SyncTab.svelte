@@ -20,6 +20,7 @@
   export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
   export let userEmail: string;
   export let userPassword: string;
+  export let userPasswordConfirm: string = '';
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
   export let userRegistrationMessage: string;
@@ -123,6 +124,7 @@
         bind:registrationStep
         bind:userEmail
         bind:userPassword
+        bind:userPasswordConfirm
         bind:registeringUser
         bind:registeringDevice
         bind:userRegistrationMessage

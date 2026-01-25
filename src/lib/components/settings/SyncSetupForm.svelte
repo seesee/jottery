@@ -10,6 +10,7 @@
   export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
   export let userEmail: string;
   export let userPassword: string;
+  export let userPasswordConfirm: string = '';
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
   export let userRegistrationMessage: string;
@@ -196,6 +197,18 @@
                         placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                    </div>
+                    <div>
+                      <label for="user-password-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {$_('settings.syncSetup.registration.confirmPasswordLabel')}
+                      </label>
+                      <input
+                        id="user-password-confirm"
+                        type="password"
+                        bind:value={userPasswordConfirm}
+                        placeholder={$_('settings.syncSetup.registration.confirmPasswordPlaceholder')}
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                       <div class="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded p-2">
                         <p class="text-xs text-amber-800 dark:text-amber-200 font-medium flex items-start gap-1">
                           <span>💡</span>
@@ -208,11 +221,16 @@
                     </div>
                     <button
                       on:click={onRegisterUser}
-                      disabled={!syncEndpoint || !userEmail || !userPassword || registeringUser}
+                      disabled={!syncEndpoint || !userEmail || !userPassword || !userPasswordConfirm || userPassword !== userPasswordConfirm || registeringUser}
                       class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
                     >
                       {registeringUser ? $_('settings.syncSetup.registration.registering') : $_('settings.syncSetup.registration.registerButton')}
                     </button>
+                    {#if userPasswordConfirm && userPassword !== userPasswordConfirm}
+                      <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+                        {$_('settings.syncSetup.registration.passwordMismatch')}
+                      </p>
+                    {/if}
                   {:else if registrationStep === 'pending'}
                     <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
                       <div class="flex items-start gap-2">
