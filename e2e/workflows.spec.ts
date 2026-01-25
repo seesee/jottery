@@ -4,47 +4,11 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { setupFreshEnvironment } from './test-utils';
 
 test.describe('Search and Filtering Workflows', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear storage and set up
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    // Set up password
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out"
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
-    await page.locator('button[type="submit"]').click();
-
-    // Wait for app to load
-    await page.waitForTimeout(2000);
+    await setupFreshEnvironment(page);
 
     // Create test notes with different content
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
@@ -117,41 +81,7 @@ test.describe('Search and Filtering Workflows', () => {
 
 test.describe('Tag Management Workflows', () => {
   test.beforeEach(async ({ page }) => {
-    // Set up fresh environment
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out" if it appears
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await setupFreshEnvironment(page);
   });
 
   test('should create note with tags and filter by tag', async ({ page }) => {
@@ -218,40 +148,7 @@ test.describe('Tag Management Workflows', () => {
 
 test.describe('Settings Workflows', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out" if it appears
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await setupFreshEnvironment(page);
   });
 
   test('should open settings modal', async ({ page }) => {
@@ -322,42 +219,7 @@ test.describe('Settings Workflows', () => {
 
 test.describe('Complete User Journey', () => {
   test('full workflow: create, edit, search, delete', async ({ page }) => {
-    // Step 1: Initial setup
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    // Step 2: Set up password
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out" if it appears
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('journey-test-password');
-    await passwordInputs.nth(1).fill('journey-test-password');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await setupFreshEnvironment(page, 'journey-test-password');
 
     // Step 3: Create first note
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
@@ -431,6 +293,7 @@ test.describe('Complete User Journey', () => {
       await page.waitForTimeout(1000);
 
       // Should see password screen
+      const passwordInputs = page.locator('input[type="password"]');
       await expect(passwordInputs.first()).toBeVisible();
 
       // Step 12: Unlock again

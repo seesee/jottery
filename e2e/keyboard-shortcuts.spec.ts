@@ -4,48 +4,11 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { setupFreshEnvironment } from './test-utils';
 
 test.describe('Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before each test
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    // Reload and set up password
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out"
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
-    await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
-
-    // Wait for app to fully load - look for note list or empty state
-    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
-    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
+    await setupFreshEnvironment(page);
   });
 
   // Helper function to create a note via button click

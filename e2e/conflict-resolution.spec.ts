@@ -8,47 +8,11 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { setupFreshEnvironment } from './test-utils';
 
 test.describe('Conflict Resolution UI', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear storage and set up
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    // Set up password
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out"
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
-    await page.locator('button[type="submit"]').click();
-
-    // Wait for app to load
-    await page.waitForTimeout(2000);
+    await setupFreshEnvironment(page);
   });
 
   test('ConflictResolutionModal component should have all required buttons', async ({ page }) => {
@@ -177,25 +141,7 @@ test.describe('Conflict Resolution UI', () => {
 
 test.describe('Conflict Translation Keys', () => {
   test('should have conflict-related translation keys loaded', async ({ page }) => {
-    // Clear storage and set up
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    await page.goto('/');
-    const passwordInputs = page.locator('input[type="password"]');
-    await passwordInputs.first().waitFor({ state: 'visible' });
-    await passwordInputs.first().fill('test-password-123');
-    await passwordInputs.nth(1).fill('test-password-123');
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await setupFreshEnvironment(page);
 
     // Check that the app loaded successfully
     // Translation keys for conflicts should be loaded in the i18n bundle

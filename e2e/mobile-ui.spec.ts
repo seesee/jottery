@@ -9,6 +9,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { clearAllStorage, handleLandingPage } from './test-utils';
 
 test.describe('Mobile UI', () => {
   // Use mobile viewport for all tests in this describe block
@@ -23,33 +24,11 @@ test.describe('Mobile UI', () => {
   test.beforeEach(async ({ page }) => {
     // Clear all storage before each test
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
 
     // Reload and set up password
     await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out"
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
+    await handleLandingPage(page);
 
     const passwordInputs = page.locator('input[type="password"]');
     await passwordInputs.first().waitFor({ state: 'visible', timeout: 10000 });
@@ -61,7 +40,6 @@ test.describe('Mobile UI', () => {
     await submitButton.click();
 
     // Wait for app to fully load - on mobile might take longer
-    await page.waitForTimeout(2000);
     const appVisible = page.getByText(/No notes yet|Create your first note/i)
       .or(page.getByRole('list'))
       .or(page.locator('button').filter({ hasText: /New|^\+$/ }));

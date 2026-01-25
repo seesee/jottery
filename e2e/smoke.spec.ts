@@ -4,6 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { clearAllStorage, handleLandingPage, setupFreshEnvironment } from './test-utils';
 
 test.describe('Smoke Tests', () => {
   test('app loads without crashing', async ({ page }) => {
@@ -13,58 +14,22 @@ test.describe('Smoke Tests', () => {
     // Should see some content (not a blank page or error)
     await expect(page.locator('body')).toBeVisible();
 
-    // Should not see an error page
-    await expect(page.locator('text=/error|crash|fatal/i')).not.toBeVisible();
+    // Should not see framework error overlays or crash screens
+    // Note: Don't use generic /error/i as app content may contain the word "error" legitimately
+    await expect(page.locator('[class*="error-overlay"], [class*="crash"], [id*="error-boundary"]')).not.toBeVisible();
+
+    // Verify the app rendered something meaningful (not a white screen)
+    const hasContent = await page.locator('body').evaluate((body) => {
+      return body.textContent && body.textContent.length > 50;
+    });
+    expect(hasContent).toBe(true);
   });
 
   test('can complete basic setup and unlock flow', async ({ page }) => {
-    // Clear storage before test
-    await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
-
-    // Reload to get fresh state
-    await page.goto('/');
-
-    // Handle landing page for new users - click "Try It Out" if it appears
-    const getStartedButton = page.locator('button').filter({ hasText: /Try It Out/i }).first();
-    const passwordInput = page.locator('input[type="password"]').first();
-
-    // Wait for either landing page button or password input
-    await Promise.race([
-      getStartedButton.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
-      passwordInput.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-    ]);
-
-    // Click Try It Out if visible
-    if (await getStartedButton.isVisible()) {
-      await getStartedButton.click();
-    }
-
-    // Should show password setup screen
-    const passwordInputs = page.locator('input[type="password"]');
-    await expect(passwordInputs.first()).toBeVisible({ timeout: 10000 });
-
-    // Set up password
-    const testPassword = 'smoke-test-password';
-    await passwordInputs.first().fill(testPassword);
-    await passwordInputs.nth(1).fill(testPassword);
-
-    // Submit
-    const submitButton = page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock|Continue/i }).first();
-    await submitButton.click();
+    // Use setupFreshEnvironment which properly clears storage and handles landing page
+    await setupFreshEnvironment(page, 'smoke-test-password');
 
     // Should see the app (either empty state or note list)
-    // Be more flexible with what we're looking for
-    await page.waitForTimeout(2000); // Give app time to initialize
-
     const hasAppContent = await page.locator('body').evaluate((body) => {
       // Check if page has meaningful content (not just loading or error)
       return body.textContent && body.textContent.length > 100;
