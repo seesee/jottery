@@ -53,6 +53,15 @@ note:
   pin_failed: "固定状態の更新に失敗: %{error}"
   no_notes: ノートが見つかりません
   total: "%{count} 件のノート"
+  lock: ノートをロック
+  unlock: ノートのロックを解除
+  locked: ロック済み
+  lock_failed: "ロック状態の更新に失敗: %{error}"
+  locked_cannot_edit: ロックされたノートは編集できません
+  locked_cannot_delete: ロックされたノートは削除できません
+  locked_cannot_tag: ロックされたノートのタグは変更できません
+  info: ノート情報
+  info_title: ノート情報
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: ノートの色/カテゴリを切り替え（前進/後退）
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: アーカイブモードを切り替え（アーカイブされたノートを表示）
+  L_lock_key: L
+  L_lock_desc: 選択したノートのロックを切り替え
+  I_info_key: I
+  I_info_desc: ノート情報を表示
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

@@ -53,6 +53,15 @@ note:
   pin_failed: "更新固定状态失败: %{error}"
   no_notes: 未找到笔记
   total: "%{count} 条笔记"
+  lock: 锁定笔记
+  unlock: 解锁笔记
+  locked: 已锁定
+  lock_failed: "更新锁定状态失败: %{error}"
+  locked_cannot_edit: 无法编辑已锁定的笔记
+  locked_cannot_delete: 无法删除已锁定的笔记
+  locked_cannot_tag: 无法修改已锁定笔记的标签
+  info: 笔记信息
+  info_title: 笔记信息
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: 切换笔记颜色/分类（向前/向后）
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: 切换归档模式（查看已归档笔记）
+  L_lock_key: L
+  L_lock_desc: 切换所选笔记的锁定状态
+  I_info_key: I
+  I_info_desc: 显示笔记信息
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

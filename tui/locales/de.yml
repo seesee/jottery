@@ -53,6 +53,15 @@ note:
   pin_failed: "Fehler beim Aktualisieren des Anheftungsstatus: %{error}"
   no_notes: Keine Notizen gefunden
   total: "%{count} Notizen"
+  lock: Notiz sperren
+  unlock: Notiz entsperren
+  locked: Gesperrt
+  lock_failed: "Sperrung fehlgeschlagen: %{error}"
+  locked_cannot_edit: Gesperrte Notiz kann nicht bearbeitet werden
+  locked_cannot_delete: Gesperrte Notiz kann nicht gelöscht werden
+  locked_cannot_tag: Tags bei gesperrter Notiz können nicht geändert werden
+  info: Notiz-Info
+  info_title: Notizinformationen
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Notiz-Farbe/Kategorie wechseln (vorwärts/rückwärts)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Archivmodus umschalten (archivierte Notizen anzeigen)
+  L_lock_key: L
+  L_lock_desc: Sperre der ausgewählten Notiz umschalten
+  I_info_key: I
+  I_info_desc: Notizinformationen anzeigen
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

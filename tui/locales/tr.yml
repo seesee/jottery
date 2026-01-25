@@ -53,6 +53,15 @@ note:
   pin_failed: "Sabitleme durumu güncelleme başarısız: %{error}"
   no_notes: Not bulunamadı
   total: "%{count} not"
+  lock: Notu kilitle
+  unlock: Not kilidini aç
+  locked: Kilitli
+  lock_failed: "Kilit durumu güncelleme başarısız: %{error}"
+  locked_cannot_edit: Kilitli not düzenlenemez
+  locked_cannot_delete: Kilitli not silinemez
+  locked_cannot_tag: Kilitli notun etiketleri değiştirilemez
+  info: Not bilgisi
+  info_title: Not Bilgileri
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Not rengi/kategorisi değiştir (ileri/geri)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Arşiv modunu değiştir (arşivlenmiş notları görüntüle)
+  L_lock_key: L
+  L_lock_desc: Seçili notun kilidini değiştir
+  I_info_key: I
+  I_info_desc: Not bilgilerini göster
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

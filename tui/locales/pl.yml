@@ -53,6 +53,15 @@ note:
   pin_failed: "Aktualizacja statusu przypięcia nie powiodła się: %{error}"
   no_notes: Nie znaleziono notatek
   total: "%{count} notatek"
+  lock: Zablokuj notatkę
+  unlock: Odblokuj notatkę
+  locked: Zablokowana
+  lock_failed: "Aktualizacja stanu blokady nie powiodła się: %{error}"
+  locked_cannot_edit: Zablokowanej notatki nie można edytować
+  locked_cannot_delete: Zablokowanej notatki nie można usunąć
+  locked_cannot_tag: Tagów zablokowanej notatki nie można modyfikować
+  info: Info o notatce
+  info_title: Informacje o notatce
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Zmień kolor/kategorię notatki (do przodu/do tyłu)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Przełącz tryb archiwum (pokaż zarchiwizowane notatki)
+  L_lock_key: L
+  L_lock_desc: Przełącz blokadę wybranej notatki
+  I_info_key: I
+  I_info_desc: Pokaż informacje o notatce
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

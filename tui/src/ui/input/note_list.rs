@@ -292,39 +292,49 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.search_tag_completion_index = 0;
             }
             KeyCode::Enter => {
-                // Exit search and edit selected note directly
+                // Exit search and view/edit selected note directly
                 if !app.filtered_notes().is_empty() {
                     let filtered = app.filtered_notes();
                     if app.selected_note < filtered.len() {
-                        // Clone the data we need before modifying self
+                        // Clone all data we need before modifying self
+                        let is_locked = filtered[app.selected_note].locked;
                         let content = filtered[app.selected_note].content.clone();
                         let note_id = filtered[app.selected_note].id.clone();
                         let syntax_lang = filtered[app.selected_note].syntax_language;
                         let tags = filtered[app.selected_note].tags.clone();
 
-                        // Set up for editing
-                        app.note_input = content;
-                        app.note_syntax = syntax_lang;
-                        app.current_tags = tags;
-                        app.editing_note_id = Some(note_id.clone());
+                        // Now we can clear search state
                         app.search_input.clear();
                         app.search_active = false;
 
-                        // Open external editor immediately
-                        if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                            app.note_input = new_content;
-                            // Save the note
-                            if let Err(e) = operations::notes::save_note(app) {
-                                app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                        if is_locked {
+                            // View with less (read-only)
+                            if let Err(e) = operations::notes::view_note_readonly(&content) {
+                                app.error = Some(format!("Failed to view note: {}", e));
                             }
-                            // Reload notes to refresh the list
-                            if let Err(e) = operations::notes::load_notes(app) {
-                                app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                            }
-                        }
+                        } else {
+                            // Set up for editing
+                            app.note_input = content;
+                            app.note_syntax = syntax_lang;
+                            app.current_tags = tags;
+                            app.editing_note_id = Some(note_id.clone());
 
-                        // Clear editing state
-                        app.editing_note_id = None;
+                            // Open external editor immediately
+                            if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
+                                app.note_input = new_content;
+                                // Save the note
+                                if let Err(e) = operations::notes::save_note(app) {
+                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                                }
+                                // Reload notes to refresh the list
+                                if let Err(e) = operations::notes::load_notes(app) {
+                                    app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+                                }
+                            }
+
+                            // Clear editing state
+                            app.editing_note_id = None;
+                        }
                     }
                 }
             }
@@ -450,7 +460,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Char('q') => {
                 // 'q' closes modals/dialogs first, then returns to NoteList, then quits
                 // Never quits from input modes (search_active is already handled above)
-                if app.show_bulk_delete_confirm {
+                if app.show_note_info {
+                    app.show_note_info = false;
+                } else if app.show_bulk_delete_confirm {
                     app.show_bulk_delete_confirm = false;
                 } else if app.show_bulk_combine_confirm {
                     app.show_bulk_combine_confirm = false;
@@ -646,33 +658,43 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
-                    // Clone data before modifying self
-                    let content = filtered[app.selected_note].content.clone();
-                    let note_id = filtered[app.selected_note].id.clone();
-                    let syntax_lang = filtered[app.selected_note].syntax_language;
-                    let tags = filtered[app.selected_note].tags.clone();
+                        // Check if note is locked - use less for viewing instead
+                        let is_locked = filtered[app.selected_note].locked;
+                        let content = filtered[app.selected_note].content.clone();
 
-                    // Set up for editing
-                    app.note_input = content;
-                    app.note_syntax = syntax_lang;
-                    app.current_tags = tags;
-                    app.editing_note_id = Some(note_id.clone());
+                        if is_locked {
+                            // View with less (read-only)
+                            if let Err(e) = operations::notes::view_note_readonly(&content) {
+                                app.error = Some(format!("Failed to view note: {}", e));
+                            }
+                        } else {
+                            // Clone data before modifying self
+                            let note_id = filtered[app.selected_note].id.clone();
+                            let syntax_lang = filtered[app.selected_note].syntax_language;
+                            let tags = filtered[app.selected_note].tags.clone();
 
-                    // Open external editor immediately
-                    if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                        app.note_input = new_content;
-                        // Save the note
-                        if let Err(e) = operations::notes::save_note(app) {
-                            app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                            // Set up for editing
+                            app.note_input = content;
+                            app.note_syntax = syntax_lang;
+                            app.current_tags = tags;
+                            app.editing_note_id = Some(note_id.clone());
+
+                            // Open external editor immediately
+                            if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
+                                app.note_input = new_content;
+                                // Save the note
+                                if let Err(e) = operations::notes::save_note(app) {
+                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                                }
+                                // Reload notes to refresh the list
+                                if let Err(e) = operations::notes::load_notes(app) {
+                                    app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+                                }
+                            }
+
+                            // Clear editing state
+                            app.editing_note_id = None;
                         }
-                        // Reload notes to refresh the list
-                        if let Err(e) = operations::notes::load_notes(app) {
-                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                        }
-                    }
-
-                    // Clear editing state
-                    app.editing_note_id = None;
                     }
                 }
             }
@@ -827,19 +849,25 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
-                    let content = filtered[app.selected_note].content.clone();
-                    let note_id = filtered[app.selected_note].id.clone();
-                    let syntax_lang = filtered[app.selected_note].syntax_language;
-                    let tags = filtered[app.selected_note].tags.clone();
+                        // Check if note is locked
+                        if filtered[app.selected_note].locked {
+                            app.sync_status = Some(t!("note.locked_cannot_tag").to_string());
+                            return Ok(());
+                        }
 
-                    // Set up for tag editing
-                    app.note_input = content;
-                    app.note_syntax = syntax_lang;
-                    app.current_tags = tags;
-                    app.editing_note_id = Some(note_id);
-                    app.state = AppState::NoteView;
-                    app.input_mode = InputMode::Tag;
-                    app.tag_input.clear();
+                        let content = filtered[app.selected_note].content.clone();
+                        let note_id = filtered[app.selected_note].id.clone();
+                        let syntax_lang = filtered[app.selected_note].syntax_language;
+                        let tags = filtered[app.selected_note].tags.clone();
+
+                        // Set up for tag editing
+                        app.note_input = content;
+                        app.note_syntax = syntax_lang;
+                        app.current_tags = tags;
+                        app.editing_note_id = Some(note_id);
+                        app.state = AppState::NoteView;
+                        app.input_mode = InputMode::Tag;
+                        app.tag_input.clear();
                     }
                 }
             }
@@ -1013,6 +1041,35 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
+            KeyCode::Char('L') => {
+                // Toggle lock on selected note (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    let filtered = app.filtered_notes();
+                    if !filtered.is_empty() && app.selected_note < filtered.len() {
+                        let note_id = filtered[app.selected_note].id.clone();
+                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
+                            note.toggle_lock();
+                            // Save to database
+                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    app.error = Some(t!("note.lock_failed", error = e.to_string()).to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            KeyCode::Char('I') => {
+                // Toggle note info modal (only in note list view with a selected note)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    if app.show_note_info {
+                        app.show_note_info = false;
+                    } else if !app.filtered_notes().is_empty() {
+                        app.show_note_info = true;
+                    }
+                }
+            }
             KeyCode::Char('E') => {
                 // Empty recycle bin (only in recycle bin view)
                 if matches!(app.view_mode, ViewMode::RecycleBin) {
@@ -1022,8 +1079,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Esc => {
-                // Cancel confirmations if showing
-                if app.show_force_sync_confirm || app.show_bulk_delete_confirm || app.show_bulk_combine_confirm {
+                // Cancel confirmations/modals if showing
+                if app.show_note_info {
+                    app.show_note_info = false;
+                } else if app.show_force_sync_confirm || app.show_bulk_delete_confirm || app.show_bulk_combine_confirm {
                     app.show_force_sync_confirm = false;
                     app.show_bulk_delete_confirm = false;
                     app.show_bulk_combine_confirm = false;
@@ -1113,17 +1172,23 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
-                    // Find the actual note in the full list
-                    let note_to_delete = filtered[app.selected_note];
-                    if let Some(pos) = app.notes.iter().position(|n| n.id == note_to_delete.id) {
-                        app.selected_note = pos;
-                        operations::notes::delete_note(app)?;
-                        // Adjust selection after delete
-                        let new_count = app.filtered_notes().len();
-                        if app.selected_note >= new_count && app.selected_note > 0 {
-                            app.selected_note -= 1;
+                        // Check if note is locked
+                        if filtered[app.selected_note].locked {
+                            app.sync_status = Some(t!("note.locked_cannot_delete").to_string());
+                            return Ok(());
                         }
-                    }
+
+                        // Find the actual note in the full list
+                        let note_to_delete = filtered[app.selected_note];
+                        if let Some(pos) = app.notes.iter().position(|n| n.id == note_to_delete.id) {
+                            app.selected_note = pos;
+                            operations::notes::delete_note(app)?;
+                            // Adjust selection after delete
+                            let new_count = app.filtered_notes().len();
+                            if app.selected_note >= new_count && app.selected_note > 0 {
+                                app.selected_note -= 1;
+                            }
+                        }
                     }
                 }
             }

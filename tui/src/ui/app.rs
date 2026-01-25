@@ -201,6 +201,8 @@ pub struct App {
     pub show_bulk_delete_confirm: bool,
     /// Show bulk combine confirmation modal
     pub show_bulk_combine_confirm: bool,
+    /// Show note info modal
+    pub show_note_info: bool,
     /// Rendered area for note list (for mouse click detection)
     pub note_list_area: Option<ratatui::layout::Rect>,
     /// Rendered area for tags line in preview (for mouse click detection)
@@ -293,6 +295,7 @@ impl App {
             bulk_export_path_input: String::new(),
             show_bulk_delete_confirm: false,
             show_bulk_combine_confirm: false,
+            show_note_info: false,
             note_list_area: None,
             tags_line_area: None,
             tag_positions: Vec::new(),

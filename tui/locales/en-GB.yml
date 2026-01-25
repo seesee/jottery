@@ -62,6 +62,15 @@ note:
   pin_failed: "Failed to update pin status: %{error}"
   no_notes: "No notes found"
   total: "%{count} notes"
+  lock: "Lock note"
+  unlock: "Unlock note"
+  locked: "Locked"
+  lock_failed: "Failed to update lock status: %{error}"
+  locked_cannot_edit: "Cannot edit locked note"
+  locked_cannot_delete: "Cannot delete locked note"
+  locked_cannot_tag: "Cannot modify tags on locked note"
+  info: "Note info"
+  info_title: "Note Information"
 
 # Archive operations
 archive:
@@ -414,6 +423,10 @@ help:
   color_cycle_desc: "Cycle note colour/category (forward/backward)"
   shift_a_archive_key: "Shift+A"
   shift_a_archive_desc: "Toggle archive mode (view archived notes)"
+  L_lock_key: "L"
+  L_lock_desc: "Toggle lock on selected note"
+  I_info_key: "I"
+  I_info_desc: "Show note information"
   pageup_pagedown_key: "PgUp / PgDn"
   pageup_pagedown_desc: "Scroll preview (full page)"
   ctrl_scroll_key: "Ctrl+d/u/f/b"

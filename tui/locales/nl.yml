@@ -53,6 +53,15 @@ note:
   pin_failed: "Bijwerken vastzet-status mislukt: %{error}"
   no_notes: Geen notities gevonden
   total: "%{count} notities"
+  lock: Notitie vergrendelen
+  unlock: Notitie ontgrendelen
+  locked: Vergrendeld
+  lock_failed: "Vergrendeling bijwerken mislukt: %{error}"
+  locked_cannot_edit: Vergrendelde notitie kan niet worden bewerkt
+  locked_cannot_delete: Vergrendelde notitie kan niet worden verwijderd
+  locked_cannot_tag: Tags van vergrendelde notitie kunnen niet worden gewijzigd
+  info: Notitie-info
+  info_title: Notitie-informatie
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Wissel notitie kleur/categorie (vooruit/achteruit)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Schakel archiefmodus (bekijk gearchiveerde notities)
+  L_lock_key: L
+  L_lock_desc: Schakel vergrendeling van geselecteerde notitie
+  I_info_key: I
+  I_info_desc: Toon notitie-informatie
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

@@ -53,6 +53,15 @@ note:
   pin_failed: "Не удалось обновить статус закрепления: %{error}"
   no_notes: Заметки не найдены
   total: "%{count} заметок"
+  lock: Заблокировать заметку
+  unlock: Разблокировать заметку
+  locked: Заблокировано
+  lock_failed: "Не удалось обновить статус блокировки: %{error}"
+  locked_cannot_edit: Заблокированную заметку нельзя редактировать
+  locked_cannot_delete: Заблокированную заметку нельзя удалить
+  locked_cannot_tag: Теги заблокированной заметки нельзя изменить
+  info: Информация о заметке
+  info_title: Информация о заметке
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Переключить цвет/категорию заметки (вперёд/назад)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Переключить режим архива (просмотр архивированных заметок)
+  L_lock_key: L
+  L_lock_desc: Переключить блокировку выбранной заметки
+  I_info_key: I
+  I_info_desc: Показать информацию о заметке
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

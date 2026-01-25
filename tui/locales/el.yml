@@ -53,6 +53,15 @@ note:
   pin_failed: "Αποτυχία ενημέρωσης κατάστασης καρφιτσώματος: %{error}"
   no_notes: Δεν βρέθηκαν σημειώσεις
   total: "%{count} σημειώσεις"
+  lock: Κλείδωμα σημείωσης
+  unlock: Ξεκλείδωμα σημείωσης
+  locked: Κλειδωμένο
+  lock_failed: "Αποτυχία ενημέρωσης κατάστασης κλειδώματος: %{error}"
+  locked_cannot_edit: Δεν είναι δυνατή η επεξεργασία κλειδωμένης σημείωσης
+  locked_cannot_delete: Δεν είναι δυνατή η διαγραφή κλειδωμένης σημείωσης
+  locked_cannot_tag: Δεν είναι δυνατή η τροποποίηση ετικετών κλειδωμένης σημείωσης
+  info: Πληροφορίες σημείωσης
+  info_title: Πληροφορίες Σημείωσης
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Εναλλαγή χρώματος/κατηγορίας σημείωσης (εμπρός/πίσω)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Εναλλαγή λειτουργίας αρχείου (προβολή αρχειοθετημένων σημειώσεων)
+  L_lock_key: L
+  L_lock_desc: Εναλλαγή κλειδώματος επιλεγμένης σημείωσης
+  I_info_key: I
+  I_info_desc: Εμφάνιση πληροφοριών σημείωσης
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

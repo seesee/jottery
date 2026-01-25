@@ -53,6 +53,15 @@ note:
   pin_failed: "Falha ao atualizar status de fixação: %{error}"
   no_notes: Nenhuma nota encontrada
   total: "%{count} notas"
+  lock: Bloquear nota
+  unlock: Desbloquear nota
+  locked: Bloqueada
+  lock_failed: "Falha ao atualizar bloqueio: %{error}"
+  locked_cannot_edit: Não é possível editar nota bloqueada
+  locked_cannot_delete: Não é possível excluir nota bloqueada
+  locked_cannot_tag: Não é possível modificar tags de nota bloqueada
+  info: Info da nota
+  info_title: Informações da nota
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Alternar cor/categoria da nota (frente/trás)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Alternar modo arquivo (ver notas arquivadas)
+  L_lock_key: L
+  L_lock_desc: Alternar bloqueio da nota selecionada
+  I_info_key: I
+  I_info_desc: Mostrar informações da nota
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

@@ -207,3 +207,55 @@ pub fn empty_trash(app: &mut App) -> Result<()> {
     Ok(())
 }
 
+/// View note content in read-only mode using `less`
+pub fn view_note_readonly(content: &str) -> Result<()> {
+    use std::io::Write;
+
+    // Create temp file
+    let mut temp_file = tempfile::Builder::new()
+        .suffix(".txt")
+        .tempfile()
+        .context("Failed to create temporary file")?;
+
+    // Write content to temp file
+    temp_file.write_all(content.as_bytes())
+        .context("Failed to write to temporary file")?;
+    temp_file.flush()?;
+
+    // Get the path before we lose ownership
+    let temp_path = temp_file.path().to_path_buf();
+
+    // Try to use PAGER environment variable, fall back to less, then more
+    let pager = std::env::var("PAGER").unwrap_or_else(|_| "less".to_string());
+
+    // Run the pager
+    let status = std::process::Command::new(&pager)
+        .arg(&temp_path)
+        .status();
+
+    match status {
+        Ok(exit_status) if exit_status.success() => Ok(()),
+        Ok(_) => {
+            // Pager exited with non-zero, try fallback
+            let fallback_status = std::process::Command::new("more")
+                .arg(&temp_path)
+                .status()
+                .context("Failed to run fallback pager (more)")?;
+
+            if fallback_status.success() {
+                Ok(())
+            } else {
+                anyhow::bail!("Pager exited with non-zero status")
+            }
+        }
+        Err(_) => {
+            // Primary pager failed, try fallback
+            std::process::Command::new("more")
+                .arg(&temp_path)
+                .status()
+                .context("Failed to run any pager (less/more)")?;
+            Ok(())
+        }
+    }
+}
+

@@ -53,6 +53,15 @@ note:
   pin_failed: "Échec de la mise à jour du statut d'épinglage : %{error}"
   no_notes: Aucune note trouvée
   total: "%{count} notes"
+  lock: Verrouiller la note
+  unlock: Déverrouiller la note
+  locked: Verrouillée
+  lock_failed: "Échec du verrouillage : %{error}"
+  locked_cannot_edit: Impossible de modifier une note verrouillée
+  locked_cannot_delete: Impossible de supprimer une note verrouillée
+  locked_cannot_tag: Impossible de modifier les étiquettes d'une note verrouillée
+  info: Info de note
+  info_title: Informations sur la note
 archive:
   view: "View archive"
   title: "Archive"
@@ -370,6 +379,10 @@ help:
   color_cycle_desc: Changer la couleur/catégorie de note (avant/arrière)
   shift_a_archive_key: Shift+A
   shift_a_archive_desc: Basculer le mode archive (voir les notes archivées)
+  L_lock_key: L
+  L_lock_desc: Basculer le verrouillage de la note sélectionnée
+  I_info_key: I
+  I_info_desc: Afficher les informations de la note
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b
