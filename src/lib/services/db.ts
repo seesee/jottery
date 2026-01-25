@@ -6,7 +6,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import type { Note, UserSettings, EncryptionMetadata, NoteVersion, SavedSearch } from '../types';
 
 let DB_NAME = 'jottery'; // Default, can be changed before initialization
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 
 // Track if database was terminated unexpectedly
 let dbTerminated = false;
@@ -21,6 +21,7 @@ export const STORES = {
   SYNC_METADATA: 'sync_metadata',
   NOTE_VERSIONS: 'note_versions',
   SAVED_SEARCHES: 'saved_searches',
+  DELETIONS: 'deletions',
 } as const;
 
 export interface JotteryDB {
@@ -73,6 +74,17 @@ export interface JotteryDB {
       modifiedAt: string;
       'deleted-order': [number, number];
       needsSync: number;
+    };
+  };
+  deletions: {
+    key: string; // Note UUID that was deleted
+    value: {
+      id: string;
+      deletedAt: string;
+      synced: boolean;
+    };
+    indexes: {
+      synced: number; // 0 or 1 for filtering
     };
   };
 }
@@ -258,6 +270,19 @@ export async function initDB(): Promise<IDBPDatabase<JotteryDB>> {
 
         console.log(`[DB] Migrated ${migratedCount} notes to add archived field`);
         console.log('[DB] v8 schema updates complete');
+      }
+
+      // Version 9: Add deletions store for tracking hard-deleted notes (for sync)
+      if (oldVersion < 9) {
+        console.log('[DB] Creating v9 schema (deletions store)...');
+
+        const deletionsStore = db.createObjectStore(STORES.DELETIONS, {
+          keyPath: 'id',
+        });
+        deletionsStore.createIndex('synced', 'synced');
+
+        console.log('[DB] deletions store created successfully');
+        console.log('[DB] v9 schema updates complete');
       }
 
       console.log('[DB] Upgrade complete');

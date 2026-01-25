@@ -345,6 +345,9 @@ class SyncService {
         }
       }
 
+      // Collect pending deletions (from emptying trash) - only in first batch
+      const pendingDeletions = batchIndex === 0 ? await noteRepository.getPendingDeletions() : [];
+
       // Build push request for this batch
       const pushRequest: SyncPushRequest = {
         notes: await Promise.all(batchNotes.map(async note => {
@@ -379,6 +382,7 @@ class SyncService {
         attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
         versions: await this.collectVersionsForPush(batchNotes),
         savedSearches: savedSearchesForPush.length > 0 ? savedSearchesForPush : undefined,
+        deletions: pendingDeletions.length > 0 ? pendingDeletions : undefined,
       };
 
       // Send batch to server
@@ -435,6 +439,13 @@ class SyncService {
           await savedSearchRepository.markSynced(search.id);
         }
         console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
+      }
+
+      // Mark deletions as synced (only in first batch where they were sent)
+      if (batchIndex === 0 && pendingDeletions.length > 0) {
+        const deletionIds = pendingDeletions.map(d => d.id);
+        await noteRepository.markDeletionsSynced(deletionIds);
+        console.log(`[SyncService] Marked ${deletionIds.length} deletions as synced`);
       }
     }
 
@@ -656,13 +667,14 @@ class SyncService {
         console.log(`[SyncService] Processed ${result.savedSearches.length} saved searches from server`);
       }
 
-      // Handle deletions
+      // Handle hard deletions from server
+      // These are notes that were permanently deleted (trash emptied) on another device
       if (result.deletions) {
         for (const deletion of result.deletions) {
-          const localNote = await noteRepository.getById(deletion.id);
-          if (localNote && !localNote.deleted) {
-            // Server says deleted - soft delete locally
-            await noteRepository.softDelete(deletion.id);
+          // Apply remote deletion (hard delete without re-syncing back)
+          const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
+          if (wasDeleted) {
+            console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
           }
         }
       }

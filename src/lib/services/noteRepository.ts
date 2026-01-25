@@ -201,10 +201,91 @@ class IndexedDBNoteRepository implements NoteRepository {
   }
 
   /**
-   * Permanently delete a note
+   * Permanently delete a note (records deletion for sync)
    */
   async permanentDelete(id: string): Promise<void> {
+    const db = getDB();
+
+    // Record the deletion for sync before removing the note
+    await db.put(STORES.DELETIONS, {
+      id,
+      deletedAt: new Date().toISOString(),
+      synced: false,
+    });
+
+    // Now delete the note
     await this.delete(id);
+  }
+
+  /**
+   * Get pending deletions that need to be synced to server
+   */
+  async getPendingDeletions(): Promise<Array<{ id: string; deletedAt: string }>> {
+    const db = getDB();
+    const all = await db.getAll(STORES.DELETIONS);
+    return all
+      .filter(d => !d.synced)
+      .map(d => ({ id: d.id, deletedAt: d.deletedAt }));
+  }
+
+  /**
+   * Mark deletions as synced after successful push
+   */
+  async markDeletionsSynced(ids: string[]): Promise<void> {
+    const db = getDB();
+    const tx = db.transaction(STORES.DELETIONS, 'readwrite');
+
+    for (const id of ids) {
+      const deletion = await tx.store.get(id);
+      if (deletion) {
+        deletion.synced = true;
+        await tx.store.put(deletion);
+      }
+    }
+
+    await tx.done;
+  }
+
+  /**
+   * Apply a remote deletion (from server pull)
+   * Hard-deletes the note locally without recording it for sync
+   */
+  async applyRemoteDeletion(id: string): Promise<boolean> {
+    const db = getDB();
+
+    // Check if note exists
+    const note = await db.get(STORES.NOTES, id);
+    if (note) {
+      // Delete the note without recording in deletions store
+      await db.delete(STORES.NOTES, id);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Clean up old synced deletions (older than 30 days)
+   */
+  async cleanupOldDeletions(): Promise<number> {
+    const db = getDB();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const cutoff = thirtyDaysAgo.toISOString();
+
+    const all = await db.getAll(STORES.DELETIONS);
+    let count = 0;
+
+    const tx = db.transaction(STORES.DELETIONS, 'readwrite');
+    for (const deletion of all) {
+      if (deletion.synced && deletion.deletedAt < cutoff) {
+        await tx.store.delete(deletion.id);
+        count++;
+      }
+    }
+    await tx.done;
+
+    return count;
   }
 
   /**

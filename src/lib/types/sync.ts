@@ -58,6 +58,8 @@ export interface SyncPushRequest {
   attachments: SyncAttachment[];
   versions: SyncNoteVersion[];
   savedSearches?: SyncSavedSearch[];
+  /** Hard-deleted note IDs (from emptying trash) */
+  deletions?: SyncDeletion[];
 }
 
 // Note structure for sync (matches server expectations)

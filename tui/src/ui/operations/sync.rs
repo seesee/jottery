@@ -5,7 +5,7 @@ use rust_i18n::t;
 use std::time::Instant;
 
 use crate::{
-    models::{Attachment, Note, sync::{SyncPushRequest, SyncPullRequest, SyncNote, SyncPushResponse, SyncPullResponse, AttachmentRef, SyncAttachment, SyncNoteVersion}},
+    models::{Attachment, Note, sync::{SyncPushRequest, SyncPullRequest, SyncNote, SyncPushResponse, SyncPullResponse, AttachmentRef, SyncAttachment, SyncNoteVersion, SyncDeletion}},
     repository::{attachment::AttachmentRepository, NoteRepository, NoteVersionRepository, VersionReason, sync::SyncRepository},
 };
 
@@ -125,7 +125,8 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
     let notes_to_push = if let Some(last_sync) = last_sync {
         note_repo.get_modified_after(last_sync, key)?
     } else {
-        note_repo.list(false, key)?
+        // Include deleted notes in full sync so soft-deleted notes sync to other devices
+        note_repo.list(true, key)?
     };
 
     let mut sync_count = 0;
@@ -251,10 +252,21 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             })
         }).collect();
 
+        // Collect pending deletions (from emptying trash)
+        let pending_deletions = note_repo.get_pending_deletions()?;
+        let sync_deletions: Vec<SyncDeletion> = pending_deletions
+            .iter()
+            .map(|(id, deleted_at)| SyncDeletion {
+                id: id.clone(),
+                deleted_at: deleted_at.parse().unwrap_or_else(|_| chrono::Utc::now()),
+            })
+            .collect();
+
         let push_request = SyncPushRequest {
             notes: sync_notes,
             attachments: sync_attachments?,
             versions: sync_versions,
+            deletions: sync_deletions,
         };
 
         // Create HTTP client
@@ -324,6 +336,16 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             // Store conflict in sync metadata
             if let Err(e) = sync_repo.set_conflict(&rejected.id, &conflict_data) {
                 app.debug_log(&format!("Failed to store conflict for note {}: {}", rejected.id, e));
+            }
+        }
+
+        // Mark deletions as synced (push was successful)
+        if !pending_deletions.is_empty() {
+            let deletion_ids: Vec<String> = pending_deletions.iter().map(|(id, _)| id.clone()).collect();
+            if let Err(e) = note_repo.mark_deletions_synced(&deletion_ids) {
+                app.debug_log(&format!("Failed to mark deletions as synced: {}", e));
+            } else {
+                app.debug_log(&format!("Marked {} deletions as synced", deletion_ids.len()));
             }
         }
 
@@ -695,12 +717,22 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
         }
     }
 
-    // Handle deletions
+    // Handle hard deletions from server
+    // These are notes that were permanently deleted (trash emptied) on another device
     for deletion in pull_response.deletions {
-        if let Some(pos) = app.notes.iter().position(|n| n.id == deletion.id) {
-            note_repo.delete(&deletion.id)?;
-            app.notes.remove(pos);
+        app.debug_log(&format!("Pull - Processing deletion for note {}", deletion.id));
+
+        // Apply remote deletion (hard delete without re-syncing back)
+        if note_repo.apply_remote_deletion(&deletion.id)? {
+            app.debug_log(&format!("Pull - Hard deleted note {}", deletion.id));
+
+            // Remove from in-memory list if present
+            if let Some(pos) = app.notes.iter().position(|n| n.id == deletion.id) {
+                app.notes.remove(pos);
+            }
             sync_count += 1;
+        } else {
+            app.debug_log(&format!("Pull - Note {} not found locally (already deleted)", deletion.id));
         }
     }
 

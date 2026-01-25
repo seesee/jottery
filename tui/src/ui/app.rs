@@ -1337,6 +1337,7 @@ impl App {
                 notes: sync_notes,
                 attachments: sync_attachments?,
                 versions: sync_versions,
+                deletions: vec![], // Deletions handled in sync.rs
             };
 
             // Create HTTP client

@@ -493,6 +493,43 @@ pub async fn push(
         }
     }
 
+    // Process hard deletions (notes permanently removed from client's recycle bin)
+    for deletion in push_req.deletions {
+        // Delete the note from the notes table
+        let delete_result = sqlx::query!(
+            "DELETE FROM notes WHERE id = ? AND user_id = ?",
+            deletion.id,
+            client_info.user_id
+        )
+        .execute(&state.pool)
+        .await?;
+
+        if delete_result.rows_affected() > 0 {
+            // Record the deletion so other clients can pick it up
+            // Expires after 30 days (same as cleanup_old_deleted_notes)
+            let expires_at = (chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339();
+
+            sqlx::query!(
+                r#"
+                INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id, user_id) DO UPDATE SET
+                    deleted_at = excluded.deleted_at,
+                    synced_from_client_id = excluded.synced_from_client_id
+                "#,
+                deletion.id,
+                client_info.user_id,
+                deletion.deleted_at,
+                client_info.client_id,
+                expires_at
+            )
+            .execute(&state.pool)
+            .await?;
+
+            tracing::info!("Recorded hard deletion for note {} (user {})", deletion.id, client_info.user_id);
+        }
+    }
+
     Ok(Json(SyncPushResponse {
         accepted,
         rejected,
@@ -721,8 +758,47 @@ pub async fn pull(
         }
     }
 
-    // Get deletions
-    let deletions = Vec::new(); // Simplified for now
+    // Get hard deletions that this client needs to apply
+    // Query deletions since last sync (or all if no last sync)
+    let deletions: Vec<crate::models::SyncDeletion> = if let Some(last_sync) = &pull_req.last_sync_at {
+        sqlx::query!(
+            r#"SELECT id, deleted_at FROM note_deletions
+               WHERE user_id = ? AND deleted_at > ? AND expires_at > ?
+               ORDER BY deleted_at"#,
+            client_info.user_id,
+            last_sync,
+            chrono::Utc::now().to_rfc3339()
+        )
+        .fetch_all(&state.pool)
+        .await?
+        .into_iter()
+        .map(|row| crate::models::SyncDeletion {
+            id: row.id,
+            deleted_at: row.deleted_at,
+        })
+        .collect()
+    } else {
+        // Full sync - return all non-expired deletions
+        sqlx::query!(
+            r#"SELECT id, deleted_at FROM note_deletions
+               WHERE user_id = ? AND expires_at > ?
+               ORDER BY deleted_at"#,
+            client_info.user_id,
+            chrono::Utc::now().to_rfc3339()
+        )
+        .fetch_all(&state.pool)
+        .await?
+        .into_iter()
+        .map(|row| crate::models::SyncDeletion {
+            id: row.id,
+            deleted_at: row.deleted_at,
+        })
+        .collect()
+    };
+
+    if !deletions.is_empty() {
+        tracing::info!("Returning {} deletions to client", deletions.len());
+    }
 
     // Get versions for all notes from this client
     // Note: versions are still per-client (not shared across user's devices)

@@ -9,6 +9,17 @@ pub struct SyncPushRequest {
     #[serde(default)]
     #[serde(rename = "savedSearches")]
     pub saved_searches: Vec<super::saved_search::SyncSavedSearch>,
+    /// Hard-deleted note IDs from client (when emptying trash)
+    #[serde(default)]
+    pub deletions: Vec<SyncDeletion>,
+}
+
+/// Hard deletion record for sync
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncDeletion {
+    pub id: String,
+    pub deleted_at: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -142,13 +153,6 @@ pub struct SyncPullResponse {
     pub total_count: i64,
     #[serde(rename = "hasMore")]
     pub has_more: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SyncDeletion {
-    pub id: String,
-    #[serde(rename = "deletedAt")]
-    pub deleted_at: String,
 }
 
 #[derive(Debug, Serialize)]

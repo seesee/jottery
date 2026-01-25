@@ -90,6 +90,20 @@ pub struct SyncPushRequest {
     pub notes: Vec<SyncNote>,
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
+    /// Hard-deleted note IDs (from emptying trash)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub deletions: Vec<SyncDeletion>,
+}
+
+impl Default for SyncPushRequest {
+    fn default() -> Self {
+        Self {
+            notes: Vec::new(),
+            attachments: Vec::new(),
+            versions: Vec::new(),
+            deletions: Vec::new(),
+        }
+    }
 }
 
 /// Note structure for sync (matches server expectations)

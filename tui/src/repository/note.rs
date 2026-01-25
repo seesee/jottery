@@ -204,8 +204,17 @@ impl<'a> NoteRepository<'a> {
         Ok(())
     }
 
-    /// Hard delete a note
+    /// Hard delete a note (records deletion for sync)
     pub fn hard_delete(&self, id: &str) -> Result<()> {
+        let now = Utc::now();
+
+        // Record the deletion for sync before removing the note
+        self.conn.execute(
+            "INSERT OR REPLACE INTO note_deletions (id, deleted_at, synced) VALUES (?1, ?2, 0)",
+            params![id, now.to_rfc3339()],
+        )?;
+
+        // Now delete the note
         self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
         Ok(())
     }
@@ -594,11 +603,85 @@ impl<'a> NoteRepository<'a> {
         Ok(())
     }
 
-    /// Permanently delete all notes in recycle bin
+    /// Permanently delete all notes in recycle bin (records deletions for sync)
     pub fn empty_trash(&self) -> Result<usize> {
+        let now = Utc::now().to_rfc3339();
+
+        // First, record all deletions for sync
+        self.conn.execute(
+            "INSERT OR REPLACE INTO note_deletions (id, deleted_at, synced)
+             SELECT id, ?1, 0 FROM notes WHERE deleted = 1",
+            params![now],
+        )?;
+
+        // Then delete the notes
         let count = self
             .conn
             .execute("DELETE FROM notes WHERE deleted = 1", [])?;
+        Ok(count)
+    }
+
+    /// Get pending deletions that need to be synced to server
+    pub fn get_pending_deletions(&self) -> Result<Vec<(String, String)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, deleted_at FROM note_deletions WHERE synced = 0"
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+            ))
+        })?;
+
+        let mut deletions = Vec::new();
+        for row in rows {
+            deletions.push(row?);
+        }
+
+        Ok(deletions)
+    }
+
+    /// Mark deletions as synced after successful push
+    pub fn mark_deletions_synced(&self, ids: &[String]) -> Result<()> {
+        for id in ids {
+            self.conn.execute(
+                "UPDATE note_deletions SET synced = 1 WHERE id = ?1",
+                params![id],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Apply a remote deletion (from server pull)
+    /// This hard-deletes the note locally without recording it for sync
+    /// (since we received it from the server, it's already synced)
+    pub fn apply_remote_deletion(&self, id: &str) -> Result<bool> {
+        // Check if note exists
+        let exists: bool = self.conn.query_row(
+            "SELECT 1 FROM notes WHERE id = ?1",
+            params![id],
+            |_| Ok(true),
+        ).unwrap_or(false);
+
+        if exists {
+            // Delete the note without recording in note_deletions
+            // (the deletion came from server, no need to sync back)
+            self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
+            Ok(true)
+        } else {
+            // Note doesn't exist locally - might have been already deleted
+            Ok(false)
+        }
+    }
+
+    /// Clean up old synced deletions (older than 30 days)
+    pub fn cleanup_old_deletions(&self) -> Result<usize> {
+        let thirty_days_ago = (Utc::now() - chrono::Duration::days(30)).to_rfc3339();
+        let count = self.conn.execute(
+            "DELETE FROM note_deletions WHERE synced = 1 AND deleted_at < ?1",
+            params![thirty_days_ago],
+        )?;
         Ok(count)
     }
 }

@@ -369,6 +369,7 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
             notes: sync_notes?,
             attachments: vec![],
             versions: vec![],
+            deletions: vec![],
         };
 
         // Send push request
