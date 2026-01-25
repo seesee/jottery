@@ -16,6 +16,10 @@
   export let color: string | undefined = undefined;
   export let availableLanguages: Array<{id: string, name: string}>;
 
+  // Editor mode props
+  export let editorMode: 'raw' | 'wysiwyg' = 'raw';
+  export let onEditorModeChange: ((mode: 'raw' | 'wysiwyg') => void) | undefined = undefined;
+
   // Callback props
   export let onPin: () => void;
   export let onArchive: () => void;
@@ -192,6 +196,32 @@
       <option value={lang.id}>{lang.name}</option>
     {/each}
   </select>
+
+  <!-- Editor Mode Toggle (only for markdown, not in preview) -->
+  {#if language === 'markdown' && !showPreview && onEditorModeChange}
+    <div class="flex items-center border border-gray-300 dark:border-gray-600 rounded overflow-hidden flex-shrink-0">
+      <button
+        on:click={() => onEditorModeChange?.('raw')}
+        class="px-2 py-1.5 text-sm transition-colors {editorMode === 'raw' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}"
+        title={$_('editor.wysiwyg.rawMode')}
+      >
+        <span class="hidden tablet:inline">{$_('editor.wysiwyg.rawMode')}</span>
+        <span class="tablet:hidden">Aa</span>
+      </button>
+      <button
+        on:click={() => onEditorModeChange?.('wysiwyg')}
+        class="px-2 py-1.5 text-sm transition-colors {editorMode === 'wysiwyg' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}"
+        title={$_('editor.wysiwyg.visualMode')}
+      >
+        <span class="hidden tablet:inline">{$_('editor.wysiwyg.visualMode')}</span>
+        <span class="tablet:hidden">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  {/if}
 
   <!-- Preview/Edit Toggle (shown when contextually appropriate) -->
   {#if canPreview}

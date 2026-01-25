@@ -134,7 +134,28 @@
     "removeColor": "Remove Category",
     "selectColor": "Select a category",
     "colorSet": "Category set",
-    "colorRemoved": "Category removed"
+    "colorRemoved": "Category removed",
+    "wysiwyg": {
+      "mode": "Editor Mode",
+      "rawMode": "Raw",
+      "visualMode": "Visual",
+      "bold": "Bold",
+      "italic": "Italic",
+      "strikethrough": "Strikethrough",
+      "inlineCode": "Inline Code",
+      "heading1": "Heading 1",
+      "heading2": "Heading 2",
+      "heading3": "Heading 3",
+      "bulletList": "Bullet List",
+      "orderedList": "Numbered List",
+      "taskList": "Task List",
+      "blockquote": "Blockquote",
+      "codeBlock": "Code Block",
+      "horizontalRule": "Horizontal Rule",
+      "link": "Insert Link",
+      "table": "Insert Table",
+      "enterUrl": "Enter URL:"
+    }
   },
   "noteList": {
     "deleteNote": "Delete note",

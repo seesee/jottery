@@ -134,7 +134,28 @@
     "removeColor": "Remover Categoria",
     "selectColor": "Selecionar uma categoria",
     "colorSet": "Categoria definida",
-    "colorRemoved": "Categoria removida"
+    "colorRemoved": "Categoria removida",
+    "wysiwyg": {
+      "mode": "Modo do editor",
+      "rawMode": "Texto",
+      "visualMode": "Visual",
+      "bold": "Negrito",
+      "italic": "Itálico",
+      "strikethrough": "Riscado",
+      "inlineCode": "Código em linha",
+      "heading1": "Título 1",
+      "heading2": "Título 2",
+      "heading3": "Título 3",
+      "bulletList": "Lista com marcadores",
+      "orderedList": "Lista numerada",
+      "taskList": "Lista de tarefas",
+      "blockquote": "Citação",
+      "codeBlock": "Bloco de código",
+      "horizontalRule": "Linha horizontal",
+      "link": "Inserir link",
+      "table": "Inserir tabela",
+      "enterUrl": "Digite a URL:"
+    }
   },
   "noteList": {
     "deleteNote": "Excluir nota",

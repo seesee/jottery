@@ -134,7 +134,28 @@
     "removeColor": "カテゴリを削除",
     "selectColor": "カテゴリを選択",
     "colorSet": "カテゴリを設定しました",
-    "colorRemoved": "カテゴリを削除しました"
+    "colorRemoved": "カテゴリを削除しました",
+    "wysiwyg": {
+      "mode": "エディターモード",
+      "rawMode": "テキスト",
+      "visualMode": "ビジュアル",
+      "bold": "太字",
+      "italic": "斜体",
+      "strikethrough": "取り消し線",
+      "inlineCode": "インラインコード",
+      "heading1": "見出し1",
+      "heading2": "見出し2",
+      "heading3": "見出し3",
+      "bulletList": "箇条書き",
+      "orderedList": "番号付きリスト",
+      "taskList": "タスクリスト",
+      "blockquote": "引用",
+      "codeBlock": "コードブロック",
+      "horizontalRule": "水平線",
+      "link": "リンクを挿入",
+      "table": "テーブルを挿入",
+      "enterUrl": "URLを入力:"
+    }
   },
   "noteList": {
     "deleteNote": "ノートを削除",

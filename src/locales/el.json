@@ -134,7 +134,28 @@
     "removeColor": "Αφαίρεση Κατηγορίας",
     "selectColor": "Επιλογή κατηγορίας",
     "colorSet": "Η κατηγορία ορίστηκε",
-    "colorRemoved": "Η κατηγορία αφαιρέθηκε"
+    "colorRemoved": "Η κατηγορία αφαιρέθηκε",
+    "wysiwyg": {
+      "mode": "Λειτουργία επεξεργασίας",
+      "rawMode": "Κείμενο",
+      "visualMode": "Οπτικό",
+      "bold": "Έντονα",
+      "italic": "Πλάγια",
+      "strikethrough": "Διαγραμμένο",
+      "inlineCode": "Ενσωματωμένος κώδικας",
+      "heading1": "Επικεφαλίδα 1",
+      "heading2": "Επικεφαλίδα 2",
+      "heading3": "Επικεφαλίδα 3",
+      "bulletList": "Λίστα με κουκκίδες",
+      "orderedList": "Αριθμημένη λίστα",
+      "taskList": "Λίστα εργασιών",
+      "blockquote": "Παράθεση",
+      "codeBlock": "Μπλοκ κώδικα",
+      "horizontalRule": "Οριζόντια γραμμή",
+      "link": "Εισαγωγή συνδέσμου",
+      "table": "Εισαγωγή πίνακα",
+      "enterUrl": "Εισάγετε URL:"
+    }
   },
   "noteList": {
     "deleteNote": "Διαγραφή σημείωσης",

@@ -140,6 +140,7 @@
   let showColorPicker: boolean = false;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
+  let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
 
   // Track blob URLs for cleanup
   let blobUrls: Set<string> = new Set();
@@ -634,6 +635,10 @@
     handleSave();
   }
 
+  function handleEditorModeChange(mode: 'raw' | 'wysiwyg') {
+    editorMode = mode;
+  }
+
   async function handleFileUpload(files: FileList) {
     if (!files || files.length === 0) return;
 
@@ -997,6 +1002,8 @@
       {wordWrap}
       color={$selectedNote?.color}
       {availableLanguages}
+      {editorMode}
+      onEditorModeChange={handleEditorModeChange}
       onPin={handleTogglePin}
       onArchive={handleArchive}
       onLanguageChange={handleLanguageChange}
@@ -1029,6 +1036,7 @@
       {wordWrap}
       isDark={isDarkMode}
       {availableTags}
+      {editorMode}
       bind:codeEditor
       onContentChange={() => handleInput()}
       onTagsChange={() => handleInput()}

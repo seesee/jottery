@@ -134,7 +134,28 @@
     "removeColor": "Kategoriyi Kaldır",
     "selectColor": "Kategori seçin",
     "colorSet": "Kategori ayarlandı",
-    "colorRemoved": "Kategori kaldırıldı"
+    "colorRemoved": "Kategori kaldırıldı",
+    "wysiwyg": {
+      "mode": "Editör Modu",
+      "rawMode": "Metin",
+      "visualMode": "Görsel",
+      "bold": "Kalın",
+      "italic": "İtalik",
+      "strikethrough": "Üstü Çizili",
+      "inlineCode": "Satır İçi Kod",
+      "heading1": "Başlık 1",
+      "heading2": "Başlık 2",
+      "heading3": "Başlık 3",
+      "bulletList": "Madde İşaretli Liste",
+      "orderedList": "Numaralı Liste",
+      "taskList": "Görev Listesi",
+      "blockquote": "Alıntı",
+      "codeBlock": "Kod Bloğu",
+      "horizontalRule": "Yatay Çizgi",
+      "link": "Bağlantı Ekle",
+      "table": "Tablo Ekle",
+      "enterUrl": "URL girin:"
+    }
   },
   "noteList": {
     "deleteNote": "Notu sil",

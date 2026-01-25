@@ -134,7 +134,28 @@
     "removeColor": "Kategorie entfernen",
     "selectColor": "Kategorie auswählen",
     "colorSet": "Kategorie festgelegt",
-    "colorRemoved": "Kategorie entfernt"
+    "colorRemoved": "Kategorie entfernt",
+    "wysiwyg": {
+      "mode": "Editormodus",
+      "rawMode": "Roh",
+      "visualMode": "Visuell",
+      "bold": "Fett",
+      "italic": "Kursiv",
+      "strikethrough": "Durchgestrichen",
+      "inlineCode": "Inline-Code",
+      "heading1": "Überschrift 1",
+      "heading2": "Überschrift 2",
+      "heading3": "Überschrift 3",
+      "bulletList": "Aufzählung",
+      "orderedList": "Nummerierte Liste",
+      "taskList": "Aufgabenliste",
+      "blockquote": "Zitat",
+      "codeBlock": "Codeblock",
+      "horizontalRule": "Horizontale Linie",
+      "link": "Link einfügen",
+      "table": "Tabelle einfügen",
+      "enterUrl": "URL eingeben:"
+    }
   },
   "noteList": {
     "deleteNote": "Notiz löschen",

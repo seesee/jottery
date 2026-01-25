@@ -134,7 +134,28 @@
     "removeColor": "Categorie Verwijderen",
     "selectColor": "Selecteer een categorie",
     "colorSet": "Categorie ingesteld",
-    "colorRemoved": "Categorie verwijderd"
+    "colorRemoved": "Categorie verwijderd",
+    "wysiwyg": {
+      "mode": "Editormodus",
+      "rawMode": "Tekst",
+      "visualMode": "Visueel",
+      "bold": "Vet",
+      "italic": "Cursief",
+      "strikethrough": "Doorgestreept",
+      "inlineCode": "Inline code",
+      "heading1": "Kop 1",
+      "heading2": "Kop 2",
+      "heading3": "Kop 3",
+      "bulletList": "Opsommingslijst",
+      "orderedList": "Genummerde lijst",
+      "taskList": "Takenlijst",
+      "blockquote": "Citaat",
+      "codeBlock": "Codeblok",
+      "horizontalRule": "Horizontale lijn",
+      "link": "Link invoegen",
+      "table": "Tabel invoegen",
+      "enterUrl": "Voer URL in:"
+    }
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",

@@ -134,7 +134,28 @@
     "removeColor": "Удалить Категорию",
     "selectColor": "Выбрать категорию",
     "colorSet": "Категория установлена",
-    "colorRemoved": "Категория удалена"
+    "colorRemoved": "Категория удалена",
+    "wysiwyg": {
+      "mode": "Режим редактора",
+      "rawMode": "Текст",
+      "visualMode": "Визуальный",
+      "bold": "Жирный",
+      "italic": "Курсив",
+      "strikethrough": "Зачёркнутый",
+      "inlineCode": "Встроенный код",
+      "heading1": "Заголовок 1",
+      "heading2": "Заголовок 2",
+      "heading3": "Заголовок 3",
+      "bulletList": "Маркированный список",
+      "orderedList": "Нумерованный список",
+      "taskList": "Список задач",
+      "blockquote": "Цитата",
+      "codeBlock": "Блок кода",
+      "horizontalRule": "Горизонтальная линия",
+      "link": "Вставить ссылку",
+      "table": "Вставить таблицу",
+      "enterUrl": "Введите URL:"
+    }
   },
   "noteList": {
     "deleteNote": "Удалить заметку",

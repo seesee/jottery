@@ -134,7 +134,28 @@
     "removeColor": "移除类别",
     "selectColor": "选择类别",
     "colorSet": "已设置类别",
-    "colorRemoved": "已移除类别"
+    "colorRemoved": "已移除类别",
+    "wysiwyg": {
+      "mode": "编辑器模式",
+      "rawMode": "文本",
+      "visualMode": "可视化",
+      "bold": "粗体",
+      "italic": "斜体",
+      "strikethrough": "删除线",
+      "inlineCode": "行内代码",
+      "heading1": "标题 1",
+      "heading2": "标题 2",
+      "heading3": "标题 3",
+      "bulletList": "无序列表",
+      "orderedList": "有序列表",
+      "taskList": "任务列表",
+      "blockquote": "引用",
+      "codeBlock": "代码块",
+      "horizontalRule": "水平线",
+      "link": "插入链接",
+      "table": "插入表格",
+      "enterUrl": "输入URL："
+    }
   },
   "noteList": {
     "deleteNote": "删除笔记",

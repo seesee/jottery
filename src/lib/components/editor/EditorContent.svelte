@@ -1,6 +1,8 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import CodeEditor from '../CodeEditor.svelte';
+  import WysiwygEditor from '../WysiwygEditor.svelte';
+  import WysiwygToolbar from './WysiwygToolbar.svelte';
   import TagInput from '../TagInput.svelte';
 
   // State props
@@ -15,6 +17,12 @@
 
   // Editor ref (for bind:this)
   export let codeEditor: any = null;
+
+  // Editor mode ('raw' or 'wysiwyg')
+  export let editorMode: 'raw' | 'wysiwyg' = 'raw';
+
+  // WYSIWYG editor ref
+  let wysiwygEditor: any = null;
 
   // Callbacks
   export let onContentChange: (newContent: string) => void;
@@ -103,21 +111,36 @@
   />
 </div>
 
-<!-- Content Editor with CodeMirror OR Preview (swap, not side-by-side) -->
-<div class="flex-1 overflow-hidden bg-white dark:bg-gray-900">
+<!-- Content Editor with CodeMirror/WYSIWYG OR Preview (swap, not side-by-side) -->
+<div class="flex-1 overflow-hidden bg-white dark:bg-gray-900 flex flex-col">
   <!-- Editor - Only shown when NOT in preview mode -->
   {#if !showPreview}
-    <div class="h-full overflow-hidden">
-      <CodeEditor
-        bind:this={codeEditor}
-        value={content}
-        onChange={handleContentChange}
-        {language}
-        {wordWrap}
-        {isDark}
-        {onImagePaste}
-      />
-    </div>
+    <!-- WYSIWYG mode (markdown only) -->
+    {#if editorMode === 'wysiwyg' && language === 'markdown'}
+      <WysiwygToolbar editor={wysiwygEditor} />
+      <div class="flex-1 overflow-hidden">
+        <WysiwygEditor
+          bind:this={wysiwygEditor}
+          value={content}
+          onChange={handleContentChange}
+          {isDark}
+          placeholder={$_('editor.noNoteSelectedHint')}
+        />
+      </div>
+    {:else}
+      <!-- Raw/CodeMirror mode -->
+      <div class="h-full overflow-hidden">
+        <CodeEditor
+          bind:this={codeEditor}
+          value={content}
+          onChange={handleContentChange}
+          {language}
+          {wordWrap}
+          {isDark}
+          {onImagePaste}
+        />
+      </div>
+    {/if}
   {/if}
 
   <!-- Preview Panel - Only shown when IN preview mode -->
