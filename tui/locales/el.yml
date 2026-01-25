@@ -365,7 +365,11 @@ help:
   question_global_key: "?"
   question_global_desc: Εμφάνιση αυτής της οθόνης βοήθειας
   bracket_cycle_key: "] / ["
-  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  bracket_cycle_desc: Εναλλαγή τύπου σύνταξης (εμπρός/πίσω)
+  color_cycle_key: "C / c"
+  color_cycle_desc: Εναλλαγή χρώματος/κατηγορίας σημείωσης (εμπρός/πίσω)
+  shift_a_archive_key: Shift+A
+  shift_a_archive_desc: Εναλλαγή λειτουργίας αρχείου (προβολή αρχειοθετημένων σημειώσεων)
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

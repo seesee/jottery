@@ -365,7 +365,11 @@ help:
   question_global_key: "?"
   question_global_desc: 显示此帮助屏幕
   bracket_cycle_key: "] / ["
-  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  bracket_cycle_desc: 切换语法类型（向前/向后）
+  color_cycle_key: "C / c"
+  color_cycle_desc: 切换笔记颜色/分类（向前/向后）
+  shift_a_archive_key: Shift+A
+  shift_a_archive_desc: 切换归档模式（查看已归档笔记）
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

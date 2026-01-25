@@ -167,15 +167,17 @@ mod tests {
     fn test_get_note_color_with_default_palette() {
         let settings = crate::models::UserSettings::default();
 
-        // Test getting a color that exists in default palette
+        // Test getting a color that exists in default palette (dark theme)
+        // Default palette red dark = #5C1A1A = Rgb(92, 26, 26)
         let color = get_note_color(Some(&"red".to_string()), &settings, true);
         assert!(color.is_some());
-        assert_eq!(color, Some(Color::Red));
+        assert_eq!(color, Some(Color::Rgb(92, 26, 26)));
 
-        // Test with light theme (ANSI colors are the same regardless of theme)
+        // Test with light theme
+        // Default palette red light = #FFE5E5 = Rgb(255, 229, 229)
         let color_light = get_note_color(Some(&"red".to_string()), &settings, false);
         assert!(color_light.is_some());
-        assert_eq!(color_light, Some(Color::Red));
+        assert_eq!(color_light, Some(Color::Rgb(255, 229, 229)));
     }
 
     #[test]

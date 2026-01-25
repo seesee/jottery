@@ -365,7 +365,11 @@ help:
   question_global_key: "?"
   question_global_desc: Mostrar esta tela de ajuda
   bracket_cycle_key: "] / ["
-  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  bracket_cycle_desc: Alternar tipo de sintaxe (frente/trás)
+  color_cycle_key: "C / c"
+  color_cycle_desc: Alternar cor/categoria da nota (frente/trás)
+  shift_a_archive_key: Shift+A
+  shift_a_archive_desc: Alternar modo arquivo (ver notas arquivadas)
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b

@@ -365,7 +365,11 @@ help:
   question_global_key: "?"
   question_global_desc: Bu yardım ekranını göster
   bracket_cycle_key: "] / ["
-  bracket_cycle_desc: Cycle syntax type (forward/backward)
+  bracket_cycle_desc: Sözdizimi türünü değiştir (ileri/geri)
+  color_cycle_key: "C / c"
+  color_cycle_desc: Not rengi/kategorisi değiştir (ileri/geri)
+  shift_a_archive_key: Shift+A
+  shift_a_archive_desc: Arşiv modunu değiştir (arşivlenmiş notları görüntüle)
   pageup_pagedown_key: PgUp / PgDn
   pageup_pagedown_desc: Scroll preview (full page)
   ctrl_scroll_key: Ctrl+d/u/f/b
