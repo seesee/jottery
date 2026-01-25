@@ -20,6 +20,7 @@ export type ProgressCallback = (progress: BulkProgress) => void;
 
 /**
  * Add tags to multiple notes
+ * Skips locked notes - they cannot be modified
  */
 export async function addTagsToNotes(
   noteIds: string[],
@@ -33,7 +34,8 @@ export async function addTagsToNotes(
     const noteId = noteIds[i];
     const note = allNotes.find((n) => n.id === noteId);
 
-    if (note) {
+    // Skip locked notes - they cannot be modified
+    if (note && !note.locked) {
       // Add tags that aren't already present
       const newTags = [...new Set([...note.tags, ...tagsToAdd])];
 
@@ -72,6 +74,7 @@ export async function addTagsToNotes(
 
 /**
  * Remove tags from multiple notes
+ * Skips locked notes - they cannot be modified
  */
 export async function removeTagsFromNotes(
   noteIds: string[],
@@ -86,7 +89,8 @@ export async function removeTagsFromNotes(
     const noteId = noteIds[i];
     const note = allNotes.find((n) => n.id === noteId);
 
-    if (note) {
+    // Skip locked notes - they cannot be modified
+    if (note && !note.locked) {
       // Remove matching tags (case-insensitive)
       const newTags = note.tags.filter(
         (tag) => !tagsLower.includes(tag.toLowerCase())
@@ -127,20 +131,33 @@ export async function removeTagsFromNotes(
 
 /**
  * Delete multiple notes (soft delete - move to recycle bin)
+ * Skips locked notes - they cannot be deleted
  */
 export async function deleteNotes(
   noteIds: string[],
   onProgress?: ProgressCallback
 ): Promise<void> {
+  const allNotes = get(notes);
   const total = noteIds.length;
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
+    const note = allNotes.find((n) => n.id === noteId);
+
+    // Skip locked notes - they cannot be deleted
+    if (note?.locked) {
+      onProgress?.({
+        current: i + 1,
+        total,
+        status: 'running',
+      });
+      continue;
+    }
 
     await noteRepository.softDelete(noteId);
 
     // Update store
-    notes.update((n) => n.filter((note) => note.id !== noteId));
+    notes.update((n) => n.filter((existingNote) => existingNote.id !== noteId));
 
     onProgress?.({
       current: i + 1,
@@ -279,6 +296,7 @@ export interface CombineNotesOptions {
 
 /**
  * Set color for multiple notes
+ * Skips locked notes - they cannot be modified
  */
 export async function setColorForNotes(
   noteIds: string[],
@@ -292,7 +310,8 @@ export async function setColorForNotes(
     const noteId = noteIds[i];
     const note = allNotes.find((n) => n.id === noteId);
 
-    if (note) {
+    // Skip locked notes - they cannot be modified
+    if (note && !note.locked) {
       // Update note with new color (properly persists via noteService)
       await noteService.updateNote(noteId, { color });
 
@@ -331,6 +350,7 @@ export async function setColorForNotes(
  * - Tags: merged from all notes if mergeTags is true, otherwise only from first note
  * - Attachments are merged from all notes
  * - Original notes are soft-deleted
+ * - Locked notes are excluded from combining
  */
 export async function combineNotes(
   noteIds: string[],
@@ -338,13 +358,19 @@ export async function combineNotes(
   options?: CombineNotesOptions
 ): Promise<DecryptedNote> {
   const allNotes = get(notes);
-  const total = noteIds.length;
   const mergeTags = options?.mergeTags ?? true; // Default to merging tags
 
   // Get selected notes sorted by creation date (oldest first)
+  // Exclude locked notes - they cannot be modified/combined
   const selectedNotes = allNotes
-    .filter((n) => noteIds.includes(n.id))
+    .filter((n) => noteIds.includes(n.id) && !n.locked)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  if (selectedNotes.length < 2) {
+    throw new Error('At least 2 unlocked notes are required to combine');
+  }
+
+  const total = selectedNotes.length;
 
   // Combine content with horizontal rule separator
   const combinedContent = selectedNotes.map((n) => n.content).join('\n\n---\n\n');
@@ -369,9 +395,10 @@ export async function combineNotes(
     throw new Error('Failed to retrieve newly created combined note');
   }
 
-  // Soft-delete original notes with progress
-  for (let i = 0; i < noteIds.length; i++) {
-    const noteId = noteIds[i];
+  // Soft-delete original notes with progress (only the unlocked ones we combined)
+  const combinedNoteIds = selectedNotes.map((n) => n.id);
+  for (let i = 0; i < combinedNoteIds.length; i++) {
+    const noteId = combinedNoteIds[i];
     await noteService.deleteNote(noteId);
     searchService.removeNote(noteId);
 
@@ -384,7 +411,7 @@ export async function combineNotes(
 
   // Update store: remove deleted notes, add combined note
   notes.update((n) => {
-    const filtered = n.filter((note) => !noteIds.includes(note.id));
+    const filtered = n.filter((note) => !combinedNoteIds.includes(note.id));
     // Insert after pinned notes
     const pinnedCount = filtered.filter((note) => note.pinned).length;
     filtered.splice(pinnedCount, 0, decryptedNewNote);

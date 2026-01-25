@@ -23,6 +23,7 @@ function createState(overrides: Partial<NoteListItemVisibilityState> = {}): Note
     isSelected: false,
     isHovered: false,
     isPinned: false,
+    isLocked: false,
     forceMobileLayout: false,
     ...overrides,
   };
@@ -288,6 +289,57 @@ describe('noteListItemVisibility', () => {
       });
 
       expect(shouldShowDeleteButton(pinnedDesktopHover)).toBe(false);
+    });
+  });
+
+  describe('locked notes', () => {
+    it('should never show checkbox for locked notes regardless of state', () => {
+      const lockedSelected = createState({
+        isLocked: true,
+        isSelected: true,
+        isMultiSelectMode: true,
+      });
+
+      expect(shouldShowCheckbox(lockedSelected)).toBe(false);
+    });
+
+    it('should NOT show checkbox for locked notes in multi-select mode', () => {
+      const lockedMultiSelect = createState({
+        isLocked: true,
+        isMultiSelectMode: true,
+      });
+
+      expect(shouldShowCheckbox(lockedMultiSelect)).toBe(false);
+    });
+
+    it('should not show delete button on mobile for locked notes', () => {
+      const lockedMobile = createState({
+        isLocked: true,
+        isSelected: true,
+        forceMobileLayout: true,
+      });
+
+      expect(shouldShowDeleteButton(lockedMobile)).toBe(false);
+    });
+
+    it('should NOT show delete button for locked notes on desktop hover', () => {
+      // Locked notes are protected from accidental deletion - hide the delete button
+      const lockedDesktopHover = createState({
+        isLocked: true,
+        isHovered: true,
+        forceMobileLayout: false,
+      });
+
+      expect(shouldShowDeleteButton(lockedDesktopHover)).toBe(false);
+    });
+
+    it('locked notes behave like pinned notes for protection', () => {
+      // Both pinned and locked notes should be protected the same way
+      const lockedState = createState({ isLocked: true, isHovered: true, isSelected: true, isMultiSelectMode: true });
+      const pinnedState = createState({ isPinned: true, isHovered: true, isSelected: true, isMultiSelectMode: true });
+
+      expect(shouldShowCheckbox(lockedState)).toBe(shouldShowCheckbox(pinnedState));
+      expect(shouldShowDeleteButton(lockedState)).toBe(shouldShowDeleteButton(pinnedState));
     });
   });
 });

@@ -29,6 +29,7 @@ export interface NoteListItemVisibilityState {
   isSelected: boolean;
   isHovered: boolean;
   isPinned: boolean;
+  isLocked: boolean;
   forceMobileLayout: boolean;
 }
 
@@ -47,13 +48,13 @@ export function shouldShowMobileSelectionUI(state: NoteListItemVisibilityState):
  * Desktop: Shows when selected or in multi-select mode
  * Mobile: Only shows in multi-select mode (swipe reveals checkbox otherwise)
  *
- * The checkbox is NEVER shown for pinned notes.
+ * The checkbox is NEVER shown for pinned or locked notes.
  */
 export function shouldShowCheckbox(state: NoteListItemVisibilityState): boolean {
-  const { isMultiSelectMode, isSelected, isPinned, forceMobileLayout } = state;
+  const { isMultiSelectMode, isSelected, isPinned, isLocked, forceMobileLayout } = state;
 
-  // Never show checkbox for pinned notes
-  if (isPinned) {
+  // Never show checkbox for pinned or locked notes
+  if (isPinned || isLocked) {
     return false;
   }
 
@@ -74,16 +75,16 @@ export function shouldShowCheckbox(state: NoteListItemVisibilityState): boolean 
 /**
  * Determines whether the delete button should be visible.
  *
- * Desktop: Shows on hover (quick access without selection), but NOT for pinned notes
+ * Desktop: Shows on hover (quick access without selection), but NOT for pinned or locked notes
  * Mobile: Never shows (swipe reveals delete action)
  *
- * Pinned notes are protected from accidental deletion - the delete button is hidden.
+ * Pinned and locked notes are protected from accidental deletion - the delete button is hidden.
  */
 export function shouldShowDeleteButton(state: NoteListItemVisibilityState): boolean {
-  const { isHovered, forceMobileLayout, isPinned } = state;
+  const { isHovered, forceMobileLayout, isPinned, isLocked } = state;
 
-  // Never show delete button for pinned notes - they are protected
-  if (isPinned) {
+  // Never show delete button for pinned or locked notes - they are protected
+  if (isPinned || isLocked) {
     return false;
   }
 

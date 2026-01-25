@@ -112,6 +112,7 @@
     isSelected,
     isHovered,
     isPinned: note.pinned,
+    isLocked: note.locked,
     forceMobileLayout,
   };
 
@@ -141,14 +142,14 @@
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
-    if (ctrlOrCmd && !note.pinned) {
-      // Ctrl/Cmd+click: toggle selection (not on pinned notes)
+    if (ctrlOrCmd && !note.pinned && !note.locked) {
+      // Ctrl/Cmd+click: toggle selection (not on pinned or locked notes)
       toggleNoteSelection(note.id, index);
-    } else if (event.shiftKey && $lastSelectedIndex !== null && !note.pinned) {
-      // Shift+click: range selection (not on pinned notes)
+    } else if (event.shiftKey && $lastSelectedIndex !== null && !note.pinned && !note.locked) {
+      // Shift+click: range selection (not on pinned or locked notes)
       selectRange($lastSelectedIndex, index, filteredNotes);
-    } else if ($isMultiSelectMode && !note.pinned) {
-      // In multi-select mode, normal click toggles selection (not on pinned notes)
+    } else if ($isMultiSelectMode && !note.pinned && !note.locked) {
+      // In multi-select mode, normal click toggles selection (not on pinned or locked notes)
       toggleNoteSelection(note.id, index);
     } else {
       // Normal click: single selection AND open
@@ -163,7 +164,7 @@
 
   function handleCheckboxClick(event: MouseEvent | KeyboardEvent) {
     event.stopPropagation();
-    if (!note.pinned) {
+    if (!note.pinned && !note.locked) {
       toggleNoteSelection(note.id, index);
     }
   }
@@ -222,8 +223,8 @@
 
     // Execute action based on swipe direction
     if (result.action === 'delete') {
-      // Swipe left = delete (unless pinned)
-      if (!note.pinned && onDeleteRequest) {
+      // Swipe left = delete (unless pinned or locked)
+      if (!note.pinned && !note.locked && onDeleteRequest) {
         // Trigger stronger haptic feedback for delete action
         triggerDeleteHapticFeedback();
 
@@ -238,8 +239,8 @@
         swipeState = result.state;
       }
     } else if (result.action === 'select') {
-      // Swipe right = toggle multi-select (unless pinned)
-      if (!note.pinned) {
+      // Swipe right = toggle multi-select (unless pinned or locked)
+      if (!note.pinned && !note.locked) {
         triggerHapticFeedback();
         toggleNoteSelection(note.id, index);
       }
@@ -260,18 +261,20 @@
 <!-- Swipe container wrapper (mobile only) -->
 {#if forceMobileLayout}
   <div class="swipe-container relative overflow-hidden {isDeleting ? 'deleting' : ''}">
-    <!-- Multi-select action (left side, revealed when swiping right) -->
-    <div
-      class="swipe-action-left absolute inset-y-0 left-0 w-20 bg-blue-500 flex items-center justify-center"
-      style="opacity: {swipeState.direction === 'right' ? actionOpacity : 0}"
-    >
-      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-      </svg>
-    </div>
+    <!-- Multi-select action (left side, revealed when swiping right) - not for pinned or locked notes -->
+    {#if !note.pinned && !note.locked}
+      <div
+        class="swipe-action-left absolute inset-y-0 left-0 w-20 bg-blue-500 flex items-center justify-center"
+        style="opacity: {swipeState.direction === 'right' ? actionOpacity : 0}"
+      >
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    {/if}
 
     <!-- Delete action (right side, revealed when swiping left) -->
-    {#if !note.pinned}
+    {#if !note.pinned && !note.locked}
       <div
         class="swipe-action-right absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center"
         style="opacity: {swipeState.direction === 'left' ? actionOpacity : 0}"
