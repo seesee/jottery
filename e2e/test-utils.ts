@@ -37,20 +37,28 @@ export async function clearAllStorage(page: Page): Promise<void> {
 
 /**
  * Handles the landing page flow for new users
- * Clicks "Try It Out" if the landing page is shown
+ * Clicks "Try It Out" if the landing page is shown and ensures password form is ready
  */
 export async function handleLandingPage(page: Page): Promise<void> {
-  // Playwright's click() automatically waits for visibility
-  // If button doesn't exist (already past landing page), catch and continue
-  try {
-    await page.locator('button', { hasText: 'Try It Out' }).first().click({ timeout: 5000 });
-  } catch {
-    // Button not present - we're already past the landing page
+  const tryItOutButton = page.locator('button', { hasText: 'Try It Out' }).first();
+  const passwordField = page.locator('#password');
+
+  // Wait for page to reach a known state (either landing page or password form)
+  const landingOrPassword = tryItOutButton.or(passwordField);
+  await expect(landingOrPassword.first()).toBeVisible({ timeout: 15000 });
+
+  // Check if we're on landing page
+  const isLandingPage = await tryItOutButton.isVisible().catch(() => false);
+  if (isLandingPage) {
+    await tryItOutButton.click();
+    // Wait for password field after clicking
+    await expect(passwordField).toBeVisible({ timeout: 10000 });
   }
 }
 
 /**
  * Sets up a fresh test environment with password
+ * This is the main entry point for test setup - handles all state transitions robustly
  */
 export async function setupFreshEnvironment(page: Page, password: string = 'test-password-123'): Promise<void> {
   // Clear storage then reload to get fresh state
@@ -58,29 +66,33 @@ export async function setupFreshEnvironment(page: Page, password: string = 'test
   await clearAllStorage(page);
   await page.reload();
 
-  // Handle landing page if shown
-  await handleLandingPage(page);
-
-  // Set up password using id-based locators for reliability
+  const tryItOutButton = page.locator('button', { hasText: 'Try It Out' }).first();
   const passwordField = page.locator('#password');
   const confirmField = page.locator('#confirm');
 
-  // Wait for password field to be ready
-  await passwordField.waitFor({ state: 'visible' });
+  // Step 1: Wait for page to reach a known state (either landing page or password form)
+  const landingOrPassword = tryItOutButton.or(passwordField);
+  await expect(landingOrPassword.first()).toBeVisible({ timeout: 15000 });
 
-  // Clear and fill password field
-  await passwordField.clear();
+  // Step 2: If on landing page, click through to password form
+  const isLandingPage = await tryItOutButton.isVisible().catch(() => false);
+  if (isLandingPage) {
+    await tryItOutButton.click();
+    // Wait for password field after clicking
+    await expect(passwordField).toBeVisible({ timeout: 10000 });
+  }
+
+  // Step 3: Fill in the password form
   await passwordField.fill(password);
 
   // Confirm field only exists on setup, not unlock
   if (await confirmField.isVisible()) {
-    await confirmField.clear();
     await confirmField.fill(password);
   }
 
   await page.locator('button', { hasText: /Create Password|Set Password|Unlock/i }).click();
 
-  // Wait for app to load - use longer timeout and check for new note button as additional indicator
+  // Step 4: Wait for app to load
   const appLoaded = page.getByText(/No notes yet|Create your first note/i)
     .or(page.getByRole('list'))
     .or(page.locator('button').filter({ hasText: /New|^\+$/ }));

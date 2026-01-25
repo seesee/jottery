@@ -5,7 +5,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
-  workers: process.env.CI ? 1 : undefined,
+  // Limit workers to prevent resource contention with 3 browser projects
+  // 2 workers × 3 projects = 6 browser instances max (was unlimited locally)
+  workers: process.env.CI ? 1 : 2,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:5173',
