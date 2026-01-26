@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, deleted_at FROM note_deletions\n               WHERE user_id = ? AND deleted_at > ? AND expires_at > ?\n               ORDER BY deleted_at",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "deleted_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "0baa7aea67fffe1d6a8a6528eb64dee2bb9b9fa76e5af558d8e66daf7aa5852f"
+}
