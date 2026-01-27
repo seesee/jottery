@@ -523,6 +523,9 @@
             {:else if $searchQuery.trim()}
               <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
               <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
+            {:else if $archiveMode}
+              <p class="text-lg mb-2">{$_('archive.empty')}</p>
+              <p class="text-sm">{$_('archive.emptyDescription')}</p>
             {:else}
               <p class="text-lg mb-2">{$_('note.noNotes')}</p>
               <p class="text-sm">{$_('note.somethingWentWrong')}</p>
@@ -573,6 +576,9 @@
           {:else if $searchQuery.trim()}
             <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
             <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
+          {:else if $archiveMode}
+            <p class="text-lg mb-2">{$_('archive.empty')}</p>
+            <p class="text-sm">{$_('archive.emptyDescription')}</p>
           {:else}
             <p class="text-lg mb-2">{$_('note.noNotes')}</p>
             <p class="text-sm">{$_('note.somethingWentWrong')}</p>

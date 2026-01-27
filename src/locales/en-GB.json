@@ -696,33 +696,58 @@
     "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password.",
     "syncConfig": {
       "title": "Sync Configuration (Optional)",
-      "description": "Optionally configure sync now. You can also do this later in Settings > Sync.",
+      "description": "Set up sync to back up your notes and access them across devices.",
       "endpoint": "Sync Server URL",
       "deviceName": "Device Name",
       "deviceNamePlaceholder": "My Laptop",
       "note": "Note: You'll still need to register with the server after setup."
     },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Import from another device",
+        "subtitle": "Recommended for additional devices"
+      },
+      "existingAccount": {
+        "title": "Connect existing account",
+        "subtitle": "Already have an account? Connect this device",
+        "formTitle": "Connect to Existing Account"
+      },
+      "registerServer": {
+        "title": "Register new account",
+        "subtitle": "First device only - creates your account",
+        "formTitle": "Register New Account"
+      },
+      "import": {
+        "title": "Import Credentials",
+        "instructions": "Paste the credentials from Settings > Sync > Copy Credentials on your other device.",
+        "passwordNote": "You'll need to use the same password as your other device.",
+        "placeholder": "Paste credentials here...",
+        "button": "Import Credentials",
+        "importing": "Importing...",
+        "emptyError": "Please paste the credentials",
+        "failed": "Failed to import credentials"
+      },
+      "completeInSettings": "Complete sync setup in Settings > Sync after creating your password."
+    },
+    "credentialsImported": {
+      "title": "Credentials imported successfully!",
+      "message": "Enter the same password you use on your other device to unlock.",
+      "passwordLabel": "Password (from your other device)",
+      "passwordPlaceholder": "Enter password from other device"
+    },
     "landingPage": {
       "privateEncrypted": {
         "title": "📝 Your Personal Scratch Pad",
-        "description": "Jottery is a personal notes repository for web and terminal. Your notes are <strong>stored locally</strong> on your device and encrypted at rest using your password."
-      },
-      "localFirst": {
-        "title": "💾 Local-First",
-        "description": "Your notes are stored directly in your browser's local database. Jottery works completely <strong>offline</strong> and doesn't require an internet connection or account."
+        "description": "Jottery is a personal notes repository for web and terminal. Your notes are <strong>stored locally</strong> in your browser and encrypted at rest. Works completely <strong>offline</strong> — no account required."
       },
       "optionalSync": {
-        "title": "☁️ Optional Sync",
-        "description": "Want to access notes across devices? Jottery can sync with a self-hosted server. Notes are encrypted before syncing, so the server stores only data it cannot read."
+        "title": "☁️ Sync (Recommended)",
+        "description": "Browser storage can be cleared unexpectedly. Setting up sync keeps your notes <strong>backed up</strong> and accessible across devices. Notes are encrypted before syncing, so the server stores only data it cannot read."
       },
       "selfHosting": {
         "title": "🏠 Self-Hostable",
         "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
         "viewOnGitHub": "View on GitHub"
-      },
-      "syncWarning": {
-        "title": "⚠️ Set Up Sync",
-        "description": "Browser storage can be cleared unexpectedly. We recommend setting up sync to keep your notes safe across devices. Jottery is fully <strong>open source and self-hostable</strong>."
       }
     }
   },
