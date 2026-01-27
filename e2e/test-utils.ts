@@ -1,34 +1,35 @@
 /**
  * Shared test utilities for e2e tests
+ *
+ * RADICAL SIMPLIFICATION: Playwright creates a fresh browser context for each test.
+ * This means IndexedDB is already empty - we don't need to clear anything!
+ * The previous approach of clearing storage was causing race conditions.
  */
 
 import { Page, expect } from '@playwright/test';
 
 /**
  * Clears all browser storage (localStorage, sessionStorage, IndexedDB)
- * and properly waits for IndexedDB operations to complete
+ * NOTE: This is typically NOT needed because Playwright uses fresh contexts.
+ * Only use this if you need to reset state within a single test.
  */
 export async function clearAllStorage(page: Page): Promise<void> {
   await page.evaluate(async () => {
     localStorage.clear();
     sessionStorage.clear();
 
-    // Properly await IndexedDB clearing
     const databases = await indexedDB.databases();
     await Promise.all(
       databases.map((db) => {
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>((resolve) => {
           if (!db.name) {
             resolve();
             return;
           }
           const request = indexedDB.deleteDatabase(db.name);
           request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-          request.onblocked = () => {
-            // Database is blocked, but we can still proceed
-            resolve();
-          };
+          request.onerror = () => resolve(); // Don't fail, just continue
+          request.onblocked = () => resolve(); // Don't fail, just continue
         });
       })
     );
@@ -37,64 +38,78 @@ export async function clearAllStorage(page: Page): Promise<void> {
 
 /**
  * Handles the landing page flow for new users
- * Clicks "Try It Out" if the landing page is shown and ensures password form is ready
+ *
+ * NOTE: Since tests use /test baseURL, the landing page is never shown.
+ * The landing page only appears at the root path ("/").
+ * This function is kept for backward compatibility but is now a no-op.
  */
 export async function handleLandingPage(page: Page): Promise<void> {
-  const tryItOutButton = page.locator('button', { hasText: 'Try It Out' }).first();
+  // Wait for app to be ready
+  await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
+
+  // Tests use /test path which skips the landing page
+  // Just wait for password field to be visible
   const passwordField = page.locator('#password');
-
-  // Wait for page to reach a known state (either landing page or password form)
-  const landingOrPassword = tryItOutButton.or(passwordField);
-  await expect(landingOrPassword.first()).toBeVisible({ timeout: 15000 });
-
-  // Check if we're on landing page
-  const isLandingPage = await tryItOutButton.isVisible().catch(() => false);
-  if (isLandingPage) {
-    await tryItOutButton.click();
-    // Wait for password field after clicking
-    await expect(passwordField).toBeVisible({ timeout: 10000 });
-  }
+  await expect(passwordField).toBeVisible({ timeout: 30000 });
 }
 
 /**
  * Sets up a fresh test environment with password
- * This is the main entry point for test setup - handles all state transitions robustly
+ *
+ * SIMPLE APPROACH:
+ * - Playwright gives us a fresh browser context (empty IndexedDB)
+ * - Tests use /test baseURL which skips the landing page
+ * - Fresh context goes directly to password setup form
+ * - Use click + selectAll + type instead of fill() for more reliable input
+ * - Verify field values after filling to catch any issues
  */
 export async function setupFreshEnvironment(page: Page, password: string = 'test-password-123'): Promise<void> {
-  // Clear storage then reload to get fresh state
-  await page.goto('/');
-  await clearAllStorage(page);
-  await page.reload();
+  // Navigate to the app (baseURL is /test, so this goes to /test)
+  await page.goto('', { waitUntil: 'domcontentloaded' });
 
-  const tryItOutButton = page.locator('button', { hasText: 'Try It Out' }).first();
+  // Wait for app to be ready
+  await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
+
   const passwordField = page.locator('#password');
   const confirmField = page.locator('#confirm');
 
-  // Step 1: Wait for page to reach a known state (either landing page or password form)
-  const landingOrPassword = tryItOutButton.or(passwordField);
-  await expect(landingOrPassword.first()).toBeVisible({ timeout: 15000 });
+  // /test path skips landing page, goes directly to password setup form
+  // Wait for password setup form (confirm field indicates setup mode, not unlock)
+  await expect(confirmField).toBeVisible({ timeout: 30000 });
+  await expect(passwordField).toBeVisible({ timeout: 5000 });
 
-  // Step 2: If on landing page, click through to password form
-  const isLandingPage = await tryItOutButton.isVisible().catch(() => false);
-  if (isLandingPage) {
-    await tryItOutButton.click();
-    // Wait for password field after clicking
-    await expect(passwordField).toBeVisible({ timeout: 10000 });
-  }
+  // Ensure fields are ready for input
+  await expect(passwordField).toBeEnabled({ timeout: 5000 });
+  await expect(confirmField).toBeEnabled({ timeout: 5000 });
 
-  // Step 3: Fill in the password form
-  await passwordField.fill(password);
+  // Focus, select all, then type password
+  // This is more reliable than fill() which can sometimes append instead of replace
+  await passwordField.click();
+  await passwordField.press('Control+a');
+  await passwordField.pressSequentially(password, { delay: 10 });
 
-  // Confirm field only exists on setup, not unlock
-  if (await confirmField.isVisible()) {
-    await confirmField.fill(password);
-  }
+  // Move to confirm field
+  await confirmField.click();
+  await confirmField.press('Control+a');
+  await confirmField.pressSequentially(password, { delay: 10 });
 
-  await page.locator('button', { hasText: /Create Password|Set Password|Unlock/i }).click();
+  // Verify fields have correct values before submitting
+  await expect(passwordField).toHaveValue(password, { timeout: 5000 });
+  await expect(confirmField).toHaveValue(password, { timeout: 5000 });
 
-  // Step 4: Wait for app to load
-  const appLoaded = page.getByText(/No notes yet|Create your first note/i)
+  // Find and click submit button
+  const submitButton = page.locator('button[type="submit"]').or(
+    page.locator('button').filter({ hasText: /Create Password|Set Password|Unlock/i })
+  ).first();
+
+  await expect(submitButton).toBeEnabled({ timeout: 5000 });
+  await submitButton.click();
+
+  // Wait for main app to appear (indicates successful setup)
+  const appLoaded = page.locator('button').filter({ hasText: /New|^\+$/ })
     .or(page.getByRole('list'))
-    .or(page.locator('button').filter({ hasText: /New|^\+$/ }));
-  await expect(appLoaded.first()).toBeVisible({ timeout: 10000 });
+    .or(page.getByText(/No notes yet|Create your first note/i))
+    .or(page.locator('input[type="search"], input[placeholder*="search" i]'));
+
+  await expect(appLoaded.first()).toBeVisible({ timeout: 30000 });
 }

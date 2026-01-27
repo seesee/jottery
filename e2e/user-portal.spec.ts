@@ -327,14 +327,19 @@ test.describe('User Portal', () => {
     test('should show delete confirmation modal with DELETE input', async ({ page }) => {
       await page.goto('/user');
 
+      // Wait for page to load
+      await page.waitForLoadState('networkidle');
+
       // Navigate to settings tab if present
       const settingsTab = page.locator('button, a').filter({ hasText: /Settings/i }).first();
-      if (await settingsTab.isVisible()) {
+      if (await settingsTab.isVisible({ timeout: 3000 }).catch(() => false)) {
         await settingsTab.click();
+        await page.waitForTimeout(300);
       }
 
-      // Click delete button in the danger zone
+      // Click delete button in the danger zone - wait for it to be visible first
       const deleteButton = page.locator('button').filter({ hasText: /^Delete$/i }).first();
+      await expect(deleteButton).toBeVisible({ timeout: 10000 });
       await deleteButton.click();
 
       // Should see confirmation modal with input
@@ -345,14 +350,19 @@ test.describe('User Portal', () => {
     test('should not allow deletion without typing DELETE', async ({ page }) => {
       await page.goto('/user');
 
+      // Wait for page to load
+      await page.waitForLoadState('networkidle');
+
       // Navigate to settings tab if present
       const settingsTab = page.locator('button, a').filter({ hasText: /Settings/i }).first();
-      if (await settingsTab.isVisible()) {
+      if (await settingsTab.isVisible({ timeout: 3000 }).catch(() => false)) {
         await settingsTab.click();
+        await page.waitForTimeout(300);
       }
 
-      // Click delete button
+      // Click delete button - wait for it to be visible first
       const deleteButton = page.locator('button').filter({ hasText: /^Delete$/i }).first();
+      await expect(deleteButton).toBeVisible({ timeout: 10000 });
       await deleteButton.click();
 
       // Wait for modal

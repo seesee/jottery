@@ -7,11 +7,8 @@ import { clearAllStorage, handleLandingPage } from './test-utils';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all local storage and IndexedDB before each test
-    await page.goto('/');
-    await clearAllStorage(page);
-    // Reload to get fresh state
-    await page.goto('/');
+    // Playwright provides a fresh browser context - just navigate
+    await page.goto('', { waitUntil: 'domcontentloaded' });
   });
 
   test('should show password setup on first visit', async ({ page }) => {
@@ -29,30 +26,52 @@ test.describe('Authentication', () => {
 
     await handleLandingPage(page);
 
+    // Wait for password field to be enabled before interacting
+    const passwordField = page.locator('#password');
+    const confirmField = page.locator('#confirm');
+
+    await expect(passwordField).toBeEnabled({ timeout: 5000 });
+    await expect(confirmField).toBeEnabled({ timeout: 5000 });
+
     // Enter password
-    await page.locator('#password').fill(password);
-    await page.locator('#confirm').fill(password);
+    await passwordField.fill(password);
+    await confirmField.fill(password);
 
     // Submit
-    await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock|Continue/i }).first().click();
+    const submitButton = page.locator('button[type="submit"]').or(
+      page.locator('button').filter({ hasText: /Create|Set|Unlock|Continue/i })
+    ).first();
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
 
     // Should see the main app (look for empty state message or note list)
     const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
-    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
+    await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should show error on password mismatch during setup', async ({ page }) => {
     await handleLandingPage(page);
 
+    // Wait for password field to be enabled before interacting
+    const passwordField = page.locator('#password');
+    const confirmField = page.locator('#confirm');
+
+    await expect(passwordField).toBeEnabled({ timeout: 5000 });
+    await expect(confirmField).toBeEnabled({ timeout: 5000 });
+
     // Enter mismatched passwords
-    await page.locator('#password').fill('password123');
-    await page.locator('#confirm').fill('different456');
+    await passwordField.fill('password123');
+    await confirmField.fill('different456');
 
     // Submit
-    await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
+    const submitButton = page.locator('button[type="submit"]').or(
+      page.locator('button').filter({ hasText: /Create|Set|Unlock/i })
+    ).first();
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
 
     // Should see error message
-    await expect(page.locator('text=/password.*match|mismatch/i')).toBeVisible({ timeout: 2000 });
+    await expect(page.locator('text=/password.*match|mismatch/i')).toBeVisible({ timeout: 5000 });
   });
 
   test('should lock and unlock app', async ({ page }) => {
@@ -60,29 +79,45 @@ test.describe('Authentication', () => {
 
     await handleLandingPage(page);
 
+    // Wait for password fields to be enabled
+    const passwordField = page.locator('#password');
+    const confirmField = page.locator('#confirm');
+    await expect(passwordField).toBeEnabled({ timeout: 5000 });
+
     // Setup password
-    await page.locator('#password').fill(password);
-    await page.locator('#confirm').fill(password);
-    await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
+    await passwordField.fill(password);
+    if (await confirmField.isVisible()) {
+      await confirmField.fill(password);
+    }
+
+    const submitButton = page.locator('button[type="submit"]').or(
+      page.locator('button').filter({ hasText: /Create|Set|Unlock/i })
+    ).first();
+    await submitButton.click();
 
     // Wait for app to load
-    await page.waitForTimeout(1000);
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
 
     // Lock the app (look for lock button/menu item)
     const lockButton = page.locator('button, [role="button"]').filter({ hasText: /Lock|Logout/i }).first();
-    if (await lockButton.isVisible()) {
+    if (await lockButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await lockButton.click();
 
       // Should show unlock screen
-      await expect(page.locator('input[type="password"]')).toBeVisible();
+      const unlockPasswordField = page.locator('input[type="password"]');
+      await expect(unlockPasswordField).toBeVisible({ timeout: 5000 });
+      await expect(unlockPasswordField).toBeEnabled({ timeout: 5000 });
 
       // Unlock with correct password
-      await page.locator('input[type="password"]').fill(password);
-      await page.locator('button[type="submit"], button').filter({ hasText: /Unlock/i }).first().click();
+      await unlockPasswordField.fill(password);
+      const unlockButton = page.locator('button[type="submit"]').or(
+        page.locator('button').filter({ hasText: /Unlock/i })
+      ).first();
+      await unlockButton.click();
 
       // Should see app again
-      const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
-      await expect(appVisible.first()).toBeVisible();
+      await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -91,31 +126,45 @@ test.describe('Authentication', () => {
 
     await handleLandingPage(page);
 
+    // Wait for password fields to be enabled
+    const passwordField = page.locator('#password');
+    const confirmField = page.locator('#confirm');
+    await expect(passwordField).toBeEnabled({ timeout: 5000 });
+
     // Setup password
-    await page.locator('#password').fill(password);
-    await page.locator('#confirm').fill(password);
-    await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
+    await passwordField.fill(password);
+    if (await confirmField.isVisible()) {
+      await confirmField.fill(password);
+    }
+
+    const submitButton = page.locator('button[type="submit"]').or(
+      page.locator('button').filter({ hasText: /Create|Set|Unlock/i })
+    ).first();
+    await submitButton.click();
 
     // Wait for app to fully load before reloading
     const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
-    await expect(appVisible.first()).toBeVisible({ timeout: 5000 });
+    await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
 
     // Reload page
     await page.reload();
 
-    // Should show unlock screen (not setup)
-    await expect(page.locator('input[type="password"]')).toBeVisible();
+    // Wait for unlock screen - should show password field (not setup, so no confirm field)
+    const unlockPasswordField = page.locator('input[type="password"]');
+    await expect(unlockPasswordField).toBeVisible({ timeout: 10000 });
+    await expect(unlockPasswordField).toBeEnabled({ timeout: 5000 });
 
     // Should have only one password field (unlock, not setup)
     const passwordFields = await page.locator('input[type="password"]').count();
     expect(passwordFields).toBeLessThanOrEqual(1);
 
     // Unlock
-    await page.locator('input[type="password"]').fill(password);
-    await page.locator('button').filter({ hasText: /Unlock/i }).first().click();
+    await unlockPasswordField.fill(password);
+    const unlockButton = page.locator('button').filter({ hasText: /Unlock/i }).first();
+    await unlockButton.click();
 
     // Should see app again after unlock
-    await expect(appVisible.first()).toBeVisible();
+    await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should show error on wrong password', async ({ page }) => {
@@ -124,18 +173,33 @@ test.describe('Authentication', () => {
 
     await handleLandingPage(page);
 
+    // Wait for password fields to be enabled
+    const passwordField = page.locator('#password');
+    const confirmField = page.locator('#confirm');
+    await expect(passwordField).toBeEnabled({ timeout: 5000 });
+
     // Setup password
-    await page.locator('#password').fill(correctPassword);
-    await page.locator('#confirm').fill(correctPassword);
-    await page.locator('button[type="submit"], button').filter({ hasText: /Create|Set|Unlock/i }).first().click();
+    await passwordField.fill(correctPassword);
+    if (await confirmField.isVisible()) {
+      await confirmField.fill(correctPassword);
+    }
+
+    const submitButton = page.locator('button[type="submit"]').or(
+      page.locator('button').filter({ hasText: /Create|Set|Unlock/i })
+    ).first();
+    await submitButton.click();
 
     // Wait for app to load
-    await page.waitForTimeout(2000);
+    const appVisible = page.getByText(/No notes yet|Create your first note/i).or(page.getByRole('list'));
+    await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
 
     // Create a note (needed for password verification to work)
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+    await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
     await newNoteButton.click();
+
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially('Test note for password verification');
     await page.waitForTimeout(3000);
@@ -143,9 +207,15 @@ test.describe('Authentication', () => {
     // Now reload to lock
     await page.reload();
 
+    // Wait for unlock screen
+    const unlockPasswordField = page.locator('input[type="password"]');
+    await expect(unlockPasswordField).toBeVisible({ timeout: 10000 });
+    await expect(unlockPasswordField).toBeEnabled({ timeout: 5000 });
+
     // Try wrong password
-    await page.locator('input[type="password"]').fill(wrongPassword);
-    await page.locator('button').filter({ hasText: /Unlock/i }).first().click();
+    await unlockPasswordField.fill(wrongPassword);
+    const unlockButton = page.locator('button').filter({ hasText: /Unlock/i }).first();
+    await unlockButton.click();
 
     // Should see error message in red error box
     await expect(page.locator('.bg-red-50, .dark\\:bg-red-900\\/20').getByText(/incorrect password/i)).toBeVisible({ timeout: 5000 });

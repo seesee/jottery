@@ -9,7 +9,7 @@ import { clearAllStorage, handleLandingPage, setupFreshEnvironment } from './tes
 test.describe('Smoke Tests', () => {
   test('app loads without crashing', async ({ page }) => {
     // Navigate to the app
-    await page.goto('/');
+    await page.goto('');
 
     // Wait for the app container to be attached (indicates Svelte started)
     await page.waitForSelector('#app', { state: 'attached', timeout: 10000 });
@@ -47,7 +47,7 @@ test.describe('Smoke Tests', () => {
   });
 
   test('app reloads successfully', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('');
 
     // Wait a bit for initial load
     await page.waitForTimeout(1000);
@@ -66,7 +66,7 @@ test.describe('Smoke Tests', () => {
   });
 
   test('basic navigation elements are present', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('');
 
     // Wait for the app to be hydrated - look for the app root
     await page.waitForSelector('#app', { state: 'attached' });
@@ -85,7 +85,7 @@ test.describe('Smoke Tests', () => {
   });
 
   test('JavaScript is working (not a static HTML error)', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('');
 
     // Execute JavaScript and verify it works
     const result = await page.evaluate(() => {
@@ -105,7 +105,7 @@ test.describe('Smoke Tests', () => {
       }
     });
 
-    await page.goto('/');
+    await page.goto('');
 
     // Wait a bit for any async errors
     await page.waitForTimeout(2000);

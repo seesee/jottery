@@ -18,23 +18,32 @@ test.describe('Attachments', () => {
 
     // Create a note to work with
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+    await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
     await newNoteButton.click();
+
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
-    await expect(editor).toBeVisible();
+    await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially('Test note for attachments');
-    await page.waitForTimeout(2000);
+
+    // Wait for note to appear in list (confirms auto-save worked)
+    const noteList = page.getByRole('list');
+    await expect(noteList.locator('.note-list-item').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should show attachment button or area', async ({ page }) => {
-    // Look for attachment-related UI
+    // Look for attachment-related UI with retry to allow for rendering
     const attachmentButton = page.locator('button, [role="button"]').filter({
       hasText: /attach|upload|file|📎|📄/i
     });
     const attachmentArea = page.locator('[class*="attachment"], [class*="drop"], input[type="file"]');
+    const attachmentUI = attachmentButton.or(attachmentArea);
 
-    const hasAttachmentUI = await attachmentButton.count() > 0 || await attachmentArea.count() > 0;
-    expect(hasAttachmentUI).toBe(true);
+    // Wait for attachment UI to appear (may take time to render)
+    await expect(async () => {
+      const count = await attachmentUI.count();
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 10000 });
   });
 
   test('should accept file upload via input', async ({ page }) => {

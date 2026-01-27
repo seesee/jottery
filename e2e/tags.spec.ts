@@ -12,12 +12,17 @@ test.describe('Tags', () => {
 
     // Create a note to work with
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+    await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
     await newNoteButton.click();
+
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
-    await expect(editor).toBeVisible();
+    await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially('Test note for tags');
-    await page.waitForTimeout(2000);
+
+    // Wait for note to appear in list (confirms auto-save worked)
+    const noteList = page.getByRole('list');
+    await expect(noteList.locator('.note-list-item').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should show tag input area', async ({ page }) => {
@@ -145,38 +150,47 @@ test.describe('Tags', () => {
   test('should filter notes by tag', async ({ page }) => {
     // Look for tag input with multiple selectors
     const tagInput = page.locator('input[placeholder*="tag" i], input[class*="tag" i]').first();
+    const noteList = page.getByRole('list');
+    const noteItems = noteList.locator('.note-list-item');
 
     if (await tagInput.isVisible()) {
       // Add tag to first note
       await tagInput.fill('filterable');
       await tagInput.press('Enter');
-      await page.waitForTimeout(500);
 
-      // Create another note without the tag (use button)
+      // Wait for tag to appear
+      const tagBadge = page.locator('[class*="tag"], .tag, .tag-pill').filter({ hasText: /filterable/i });
+      await expect(tagBadge.first()).toBeVisible({ timeout: 5000 });
+
+      // Ensure first note is saved and visible in list before creating second
+      await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
+
+      // Create another note without the tag
       const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+      await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
       await newNoteButton.click();
-      await page.waitForTimeout(500);
 
       const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      await expect(editor).toBeVisible({ timeout: 5000 });
       await editor.click();
-      await editor.pressSequentially('Note without the tag');
-      await page.waitForTimeout(2000);
+      // Clear any existing content and type new content
+      await page.keyboard.press('Control+A');
+      await editor.pressSequentially('Untagged second note');
+
+      // Wait longer for auto-save (3s like in bulk-operations)
+      await page.waitForTimeout(3000);
+
+      // Both notes should now be in the list
+      await expect(noteItems.filter({ hasText: /Untagged second note/i })).toBeVisible({ timeout: 5000 });
+      await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
 
       // Search by tag
       const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
       await searchInput.fill('#filterable');
-      await page.waitForTimeout(500);
 
-      // Should only show tagged note
-      const noteList = page.getByRole('list');
-      const taggedNote = noteList.getByText(/Test note for tags/i);
-      const untaggedNote = noteList.getByText(/without the tag/i);
-
-      await expect(taggedNote).toBeVisible();
-
-      // Untagged note should not be visible
-      const untaggedVisible = await untaggedNote.isVisible();
-      expect(untaggedVisible).toBe(false);
+      // Wait for filtering - the tagged note should still be visible, untagged should be hidden
+      await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
+      await expect(noteItems.filter({ hasText: /Untagged second note/i })).not.toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -326,36 +340,48 @@ test.describe('Tags', () => {
   });
 
   test('should support bulk tag operations', async ({ page }) => {
-    // Create multiple notes (Alt+N for web app to avoid browser conflicts)
-    for (let i = 0; i < 3; i++) {
-      await page.keyboard.press('Alt+n');
-      await page.waitForTimeout(500);
+    // Create additional notes using the New button (we already have one from beforeEach)
+    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+
+    for (let i = 0; i < 2; i++) {
+      await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
+      await newNoteButton.click();
 
       const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      await expect(editor).toBeVisible({ timeout: 5000 });
       await editor.click();
       await editor.pressSequentially(`Bulk tag test note ${i + 1}`);
-      await page.waitForTimeout(1500);
+      // Wait for auto-save
+      await page.waitForTimeout(2000);
     }
 
-    // Select multiple notes
+    // Select multiple notes using the correct selector
     const noteList = page.getByRole('list');
-    const noteItems = noteList.locator('li, [role="listitem"]');
+    const noteItems = noteList.locator('.note-list-item');
 
-    if (await noteItems.count() >= 2) {
-      await noteItems.first().click({ modifiers: ['Control'] });
-      await noteItems.nth(1).click({ modifiers: ['Control'] });
-      await page.waitForTimeout(300);
+    // Wait for notes to appear in list (we should have 3 total: 1 from beforeEach + 2 created)
+    await expect(async () => {
+      const count = await noteItems.count();
+      expect(count).toBeGreaterThanOrEqual(2);
+    }).toPass({ timeout: 10000 });
 
-      // Look for bulk tag button
-      const bulkTagButton = page.locator('button').filter({ hasText: /add.*tag|tag/i });
-      const bulkToolbar = page.locator('[class*="bulk"], [class*="toolbar"]');
+    // Use Ctrl+Click (or Meta+Click on Mac) to multi-select
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await noteItems.first().click({ modifiers: [modifier] });
+    await noteItems.nth(1).click({ modifiers: [modifier] });
 
-      const hasBulkUI = await bulkTagButton.count() > 0 || await bulkToolbar.count() > 0;
+    // Wait for selection UI to appear
+    await page.waitForTimeout(300);
 
-      // Bulk operations should be available (if implemented)
-      if (hasBulkUI) {
-        expect(hasBulkUI).toBe(true);
-      }
+    // Look for bulk tag button
+    const bulkTagButton = page.locator('button').filter({ hasText: /add.*tag|tag/i });
+    const bulkToolbar = page.locator('[class*="bulk"], [class*="toolbar"]');
+
+    const hasBulkUI = await bulkTagButton.count() > 0 || await bulkToolbar.count() > 0;
+
+    // Bulk operations should be available (if implemented)
+    if (hasBulkUI) {
+      expect(hasBulkUI).toBe(true);
     }
   });
 

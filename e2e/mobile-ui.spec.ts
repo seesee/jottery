@@ -23,7 +23,7 @@ test.describe('Mobile UI', () => {
 
   test.beforeEach(async ({ page }) => {
     // Clear all storage before each test
-    await page.goto('/');
+    await page.goto('');
     await clearAllStorage(page);
 
     // Reload to get fresh state

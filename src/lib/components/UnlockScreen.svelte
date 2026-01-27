@@ -34,8 +34,9 @@
     needsInit = !(await isInitialized());
     isInitializedStore.set(!needsInit);
 
-    // Show landing page for first-time users
-    if (needsInit) {
+    // Show landing page for first-time users ONLY at root path
+    // Non-root paths (e.g., /test, /recipes) skip the landing page
+    if (needsInit && notebook.id === 'main') {
       showLandingPage = true;
     }
   })();
