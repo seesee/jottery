@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Excluir pesquisa salva \"{name}\"?",
     "noSavedSearches": "Nenhuma pesquisa salva",
     "noCurrentQuery": "Nenhuma pesquisa atual para salvar",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Pesquisar notas arquivadas..."
   },
   "editor": {
     "noNoteSelected": "Nenhuma nota selecionada",
@@ -998,31 +998,31 @@
     "syncing": "Sincronizando..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Arquivo",
+    "closeLabel": "Fechar arquivo",
+    "loading": "Carregando notas arquivadas...",
     "empty": "Sem notas arquivadas",
     "emptyDescription": "Notas que você arquivar aparecerão aqui",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Arquivada",
+    "archive": "Arquivar",
+    "unknown": "Desconhecido",
+    "untitled": "Sem título",
+    "unarchive": "Desarquivar",
+    "unarchiveTitle": "Restaurar nota para a lista ativa",
+    "unarchived": "Nota desarquivada",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} nota arquivada",
+      "multiple": "{count} notas arquivadas"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Falha ao desarquivar nota"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Arquivo",
+    "enterMode": "Mostrar notas arquivadas",
+    "exitMode": "Mostrar notas ativas",
+    "inActive": "em ativas",
+    "inArchive": "em arquivo",
+    "crossModeHintActive": "Clique para ver notas arquivadas correspondentes a esta pesquisa",
+    "crossModeHintArchive": "Clique para ver notas ativas correspondentes a esta pesquisa"
   }
 }

@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Kaydedilmiş arama \"{name}\" silinsin mi?",
     "noSavedSearches": "Kaydedilmiş arama yok",
     "noCurrentQuery": "Kaydedilecek mevcut arama yok",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Arşivlenmiş notlarda ara..."
   },
   "editor": {
     "noNoteSelected": "Not seçilmedi",
@@ -998,31 +998,31 @@
     "syncing": "Senkronize ediliyor..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Arşiv",
+    "closeLabel": "Arşivi kapat",
+    "loading": "Arşivlenmiş notlar yükleniyor...",
     "empty": "Arşivlenmiş not yok",
     "emptyDescription": "Arşivlediğiniz notlar burada görünecek",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Arşivlendi",
+    "archive": "Arşivle",
+    "unknown": "Bilinmiyor",
+    "untitled": "Başlıksız",
+    "unarchive": "Geri yükle",
+    "unarchiveTitle": "Notu aktif listeye geri yükle",
+    "unarchived": "Not geri yüklendi",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} arşivlenmiş not",
+      "multiple": "{count} arşivlenmiş not"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Not geri yüklenemedi"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Arşiv",
+    "enterMode": "Arşivlenmiş notları göster",
+    "exitMode": "Aktif notları göster",
+    "inActive": "aktif",
+    "inArchive": "arşiv",
+    "crossModeHintActive": "Bu aramaya uyan arşivlenmiş notları görmek için tıklayın",
+    "crossModeHintArchive": "Bu aramaya uyan aktif notları görmek için tıklayın"
   }
 }

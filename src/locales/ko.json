@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "저장된 검색 \"{name}\"을(를) 삭제하시겠습니까?",
     "noSavedSearches": "저장된 검색이 없습니다",
     "noCurrentQuery": "저장할 검색이 없습니다",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "보관된 노트 검색..."
   },
   "editor": {
     "noNoteSelected": "선택된 노트 없음",
@@ -998,31 +998,31 @@
     "syncing": "동기화 중..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "보관함",
+    "closeLabel": "보관함 닫기",
+    "loading": "보관된 노트 불러오는 중...",
     "empty": "보관된 노트 없음",
     "emptyDescription": "보관한 노트가 여기에 표시됩니다",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "보관됨",
+    "archive": "보관",
+    "unknown": "알 수 없음",
+    "untitled": "제목 없음",
+    "unarchive": "복원",
+    "unarchiveTitle": "노트를 활성 목록으로 복원",
+    "unarchived": "노트가 복원되었습니다",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "보관된 노트 {count}개",
+      "multiple": "보관된 노트 {count}개"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "노트 복원에 실패했습니다"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "보관함",
+    "enterMode": "보관된 노트 보기",
+    "exitMode": "활성 노트 보기",
+    "inActive": "활성",
+    "inArchive": "보관함",
+    "crossModeHintActive": "클릭하여 이 검색과 일치하는 보관된 노트 보기",
+    "crossModeHintArchive": "클릭하여 이 검색과 일치하는 활성 노트 보기"
   }
 }

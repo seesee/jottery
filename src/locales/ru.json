@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Удалить сохраненный поиск \"{name}\"?",
     "noSavedSearches": "Нет сохраненных поисков",
     "noCurrentQuery": "Нет текущего поиска для сохранения",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Поиск в архивных заметках..."
   },
   "editor": {
     "noNoteSelected": "Заметка не выбрана",
@@ -998,31 +998,31 @@
     "syncing": "Синхронизация..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Архив",
+    "closeLabel": "Закрыть архив",
+    "loading": "Загрузка архивных заметок...",
     "empty": "Нет архивных заметок",
     "emptyDescription": "Заметки, которые вы архивируете, появятся здесь",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "В архиве",
+    "archive": "Архивировать",
+    "unknown": "Неизвестно",
+    "untitled": "Без названия",
+    "unarchive": "Восстановить",
+    "unarchiveTitle": "Восстановить заметку в активный список",
+    "unarchived": "Заметка восстановлена",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} архивная заметка",
+      "multiple": "{count} архивных заметок"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Не удалось восстановить заметку"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Архив",
+    "enterMode": "Показать архивные заметки",
+    "exitMode": "Показать активные заметки",
+    "inActive": "в активных",
+    "inArchive": "в архиве",
+    "crossModeHintActive": "Нажмите, чтобы увидеть архивные заметки по этому запросу",
+    "crossModeHintArchive": "Нажмите, чтобы увидеть активные заметки по этому запросу"
   }
 }

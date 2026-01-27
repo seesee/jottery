@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Gespeicherte Suche \"{name}\" löschen?",
     "noSavedSearches": "Noch keine gespeicherten Suchen. Klicken Sie auf 'Aktuelle Suche speichern', um eine zu erstellen.",
     "noCurrentQuery": "Geben Sie zuerst eine Suchanfrage ein",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Archivierte Notizen durchsuchen..."
   },
   "editor": {
     "noNoteSelected": "Keine Notiz ausgewählt",
@@ -998,31 +998,31 @@
     "syncing": "Synchronisiere..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Archiv",
+    "closeLabel": "Archiv schließen",
+    "loading": "Archivierte Notizen werden geladen...",
     "empty": "Keine archivierten Notizen",
     "emptyDescription": "Archivierte Notizen werden hier angezeigt",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Archiviert",
+    "archive": "Archivieren",
+    "unknown": "Unbekannt",
+    "untitled": "Ohne Titel",
+    "unarchive": "Wiederherstellen",
+    "unarchiveTitle": "Notiz in aktive Liste zurücksetzen",
+    "unarchived": "Notiz wiederhergestellt",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} archivierte Notiz",
+      "multiple": "{count} archivierte Notizen"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Notiz konnte nicht wiederhergestellt werden"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Archiv",
+    "enterMode": "Archivierte Notizen anzeigen",
+    "exitMode": "Aktive Notizen anzeigen",
+    "inActive": "in aktiv",
+    "inArchive": "im Archiv",
+    "crossModeHintActive": "Klicken, um archivierte Notizen zu dieser Suche anzuzeigen",
+    "crossModeHintArchive": "Klicken, um aktive Notizen zu dieser Suche anzuzeigen"
   }
 }

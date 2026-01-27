@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "¿Eliminar búsqueda guardada \"{name}\"?",
     "noSavedSearches": "Aún no hay búsquedas guardadas. Haz clic en 'Guardar Búsqueda Actual' para crear una.",
     "noCurrentQuery": "Introduce primero una consulta de búsqueda",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Buscar notas archivadas..."
   },
   "editor": {
     "noNoteSelected": "Ninguna nota seleccionada",
@@ -998,31 +998,31 @@
     "syncing": "Sincronizando..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Archivo",
+    "closeLabel": "Cerrar archivo",
+    "loading": "Cargando notas archivadas...",
     "empty": "No hay notas archivadas",
     "emptyDescription": "Las notas archivadas aparecerán aquí",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Archivada",
+    "archive": "Archivar",
+    "unknown": "Desconocido",
+    "untitled": "Sin título",
+    "unarchive": "Desarchivar",
+    "unarchiveTitle": "Restaurar nota a la lista activa",
+    "unarchived": "Nota desarchivada",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} nota archivada",
+      "multiple": "{count} notas archivadas"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Error al desarchivar la nota"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Archivo",
+    "enterMode": "Mostrar notas archivadas",
+    "exitMode": "Mostrar notas activas",
+    "inActive": "en activas",
+    "inArchive": "en archivo",
+    "crossModeHintActive": "Clic para ver notas archivadas que coinciden con esta búsqueda",
+    "crossModeHintArchive": "Clic para ver notas activas que coinciden con esta búsqueda"
   }
 }

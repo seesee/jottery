@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "删除保存的搜索 \"{name}\"?",
     "noSavedSearches": "没有保存的搜索",
     "noCurrentQuery": "没有要保存的当前搜索",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "搜索已归档的笔记..."
   },
   "editor": {
     "noNoteSelected": "未选择笔记",
@@ -998,31 +998,31 @@
     "syncing": "同步中..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "归档",
+    "closeLabel": "关闭归档",
+    "loading": "正在加载已归档的笔记...",
     "empty": "没有已归档的笔记",
     "emptyDescription": "归档的笔记将显示在此处",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "已归档",
+    "archive": "归档",
+    "unknown": "未知",
+    "untitled": "无标题",
+    "unarchive": "取消归档",
+    "unarchiveTitle": "将笔记恢复到活动列表",
+    "unarchived": "笔记已取消归档",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} 条已归档笔记",
+      "multiple": "{count} 条已归档笔记"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "取消归档笔记失败"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "归档",
+    "enterMode": "显示已归档笔记",
+    "exitMode": "显示活动笔记",
+    "inActive": "在活动",
+    "inArchive": "在归档",
+    "crossModeHintActive": "点击查看符合此搜索的已归档笔记",
+    "crossModeHintArchive": "点击查看符合此搜索的活动笔记"
   }
 }

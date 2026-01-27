@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "保存された検索「{name}」を削除しますか？",
     "noSavedSearches": "保存された検索がありません",
     "noCurrentQuery": "保存する検索がありません",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "アーカイブ内を検索..."
   },
   "editor": {
     "noNoteSelected": "ノートが選択されていません",
@@ -998,31 +998,31 @@
     "syncing": "同期中..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "アーカイブ",
+    "closeLabel": "アーカイブを閉じる",
+    "loading": "アーカイブされたノートを読み込み中...",
     "empty": "アーカイブされたノートはありません",
     "emptyDescription": "アーカイブしたノートはここに表示されます",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "アーカイブ済み",
+    "archive": "アーカイブする",
+    "unknown": "不明",
+    "untitled": "無題",
+    "unarchive": "復元",
+    "unarchiveTitle": "ノートをアクティブリストに復元",
+    "unarchived": "ノートを復元しました",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count}件のアーカイブノート",
+      "multiple": "{count}件のアーカイブノート"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "ノートの復元に失敗しました"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "アーカイブ",
+    "enterMode": "アーカイブされたノートを表示",
+    "exitMode": "アクティブなノートを表示",
+    "inActive": "アクティブ内",
+    "inArchive": "アーカイブ内",
+    "crossModeHintActive": "クリックしてこの検索に一致するアーカイブノートを表示",
+    "crossModeHintArchive": "クリックしてこの検索に一致するアクティブノートを表示"
   }
 }

@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Opgeslagen zoekopdracht \"{name}\" verwijderen?",
     "noSavedSearches": "Geen opgeslagen zoekopdrachten",
     "noCurrentQuery": "Geen huidige zoekopdracht om op te slaan",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Zoeken in gearchiveerde notities..."
   },
   "editor": {
     "noNoteSelected": "Geen notitie geselecteerd",
@@ -998,31 +998,31 @@
     "syncing": "Synchroniseren..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Archief",
+    "closeLabel": "Archief sluiten",
+    "loading": "Gearchiveerde notities laden...",
     "empty": "Geen gearchiveerde notities",
     "emptyDescription": "Gearchiveerde notities verschijnen hier",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Gearchiveerd",
+    "archive": "Archiveren",
+    "unknown": "Onbekend",
+    "untitled": "Zonder titel",
+    "unarchive": "Herstellen",
+    "unarchiveTitle": "Notitie herstellen naar actieve lijst",
+    "unarchived": "Notitie hersteld",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} gearchiveerde notitie",
+      "multiple": "{count} gearchiveerde notities"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Kan notitie niet herstellen"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Archief",
+    "enterMode": "Gearchiveerde notities weergeven",
+    "exitMode": "Actieve notities weergeven",
+    "inActive": "in actief",
+    "inArchive": "in archief",
+    "crossModeHintActive": "Klik om gearchiveerde notities te zien die overeenkomen met deze zoekopdracht",
+    "crossModeHintArchive": "Klik om actieve notities te zien die overeenkomen met deze zoekopdracht"
   }
 }

@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Διαγραφή αποθηκευμένης αναζήτησης \"{name}\";",
     "noSavedSearches": "Δεν υπάρχουν αποθηκευμένες αναζητήσεις",
     "noCurrentQuery": "Δεν υπάρχει τρέχουσα αναζήτηση για αποθήκευση",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Αναζήτηση σε αρχειοθετημένες σημειώσεις..."
   },
   "editor": {
     "noNoteSelected": "Δεν επιλέχθηκε σημείωση",
@@ -998,31 +998,31 @@
     "syncing": "Συγχρονισμός..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Αρχείο",
+    "closeLabel": "Κλείσιμο αρχείου",
+    "loading": "Φόρτωση αρχειοθετημένων σημειώσεων...",
     "empty": "Δεν υπάρχουν αρχειοθετημένες σημειώσεις",
     "emptyDescription": "Οι σημειώσεις που αρχειοθετείτε θα εμφανιστούν εδώ",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Αρχειοθετημένη",
+    "archive": "Αρχειοθέτηση",
+    "unknown": "Άγνωστο",
+    "untitled": "Χωρίς τίτλο",
+    "unarchive": "Επαναφορά",
+    "unarchiveTitle": "Επαναφορά σημείωσης στην ενεργή λίστα",
+    "unarchived": "Η σημείωση επαναφέρθηκε",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} αρχειοθετημένη σημείωση",
+      "multiple": "{count} αρχειοθετημένες σημειώσεις"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Αποτυχία επαναφοράς σημείωσης"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Αρχείο",
+    "enterMode": "Εμφάνιση αρχειοθετημένων σημειώσεων",
+    "exitMode": "Εμφάνιση ενεργών σημειώσεων",
+    "inActive": "σε ενεργές",
+    "inArchive": "σε αρχείο",
+    "crossModeHintActive": "Κάντε κλικ για να δείτε αρχειοθετημένες σημειώσεις που ταιριάζουν με αυτήν την αναζήτηση",
+    "crossModeHintArchive": "Κάντε κλικ για να δείτε ενεργές σημειώσεις που ταιριάζουν με αυτήν την αναζήτηση"
   }
 }

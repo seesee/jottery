@@ -68,7 +68,7 @@
     "confirmDeleteSearch": "Usunąć zapisane wyszukiwanie \"{name}\"?",
     "noSavedSearches": "Brak zapisanych wyszukiwań",
     "noCurrentQuery": "Brak bieżącego wyszukiwania do zapisania",
-    "placeholderArchive": "Search archived notes..."
+    "placeholderArchive": "Szukaj w zarchiwizowanych notatkach..."
   },
   "editor": {
     "noNoteSelected": "Nie wybrano notatki",
@@ -998,31 +998,31 @@
     "syncing": "Synchronizacja..."
   },
   "archive": {
-    "title": "Archive",
-    "closeLabel": "Close archive",
-    "loading": "Loading archived notes...",
+    "title": "Archiwum",
+    "closeLabel": "Zamknij archiwum",
+    "loading": "Ładowanie zarchiwizowanych notatek...",
     "empty": "Brak zarchiwizowanych notatek",
     "emptyDescription": "Zarchiwizowane notatki pojawią się tutaj",
-    "archived": "Archived",
-    "archive": "Archive",
-    "unknown": "Unknown",
-    "untitled": "Untitled",
-    "unarchive": "Unarchive",
-    "unarchiveTitle": "Restore note to active list",
-    "unarchived": "Note unarchived",
+    "archived": "Zarchiwizowana",
+    "archive": "Archiwizuj",
+    "unknown": "Nieznany",
+    "untitled": "Bez tytułu",
+    "unarchive": "Przywróć",
+    "unarchiveTitle": "Przywróć notatkę do listy aktywnych",
+    "unarchived": "Notatka przywrócona",
     "footer": {
-      "single": "{count} archived note",
-      "multiple": "{count} archived notes"
+      "single": "{count} zarchiwizowana notatka",
+      "multiple": "{count} zarchiwizowanych notatek"
     },
     "error": {
-      "unarchive": "Failed to unarchive note"
+      "unarchive": "Nie udało się przywrócić notatki"
     },
-    "mode": "Archive",
-    "enterMode": "Show archived notes",
-    "exitMode": "Show active notes",
-    "inActive": "in active",
-    "inArchive": "in archive",
-    "crossModeHintActive": "Click to view archived notes matching this search",
-    "crossModeHintArchive": "Click to view active notes matching this search"
+    "mode": "Archiwum",
+    "enterMode": "Pokaż zarchiwizowane notatki",
+    "exitMode": "Pokaż aktywne notatki",
+    "inActive": "w aktywnych",
+    "inArchive": "w archiwum",
+    "crossModeHintActive": "Kliknij, aby zobaczyć zarchiwizowane notatki pasujące do tego wyszukiwania",
+    "crossModeHintArchive": "Kliknij, aby zobaczyć aktywne notatki pasujące do tego wyszukiwania"
   }
 }
