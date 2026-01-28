@@ -604,7 +604,8 @@ describe('NoteRepository', () => {
       });
 
       test('should return empty array when no notes need sync', async () => {
-        const notes = createTestNotes(2);
+        // Create notes that have been synced (syncedAt set, needsSync not set)
+        const notes = createTestNotes(2, { syncedAt: new Date().toISOString() });
         for (const note of notes) {
           await noteRepository.create(note);
         }
@@ -621,7 +622,9 @@ describe('NoteRepository', () => {
         note.content = 'Updated';
         await noteRepository.update(note); // Sets needsSync = true
 
+        // Simulate successful sync by clearing needsSync AND setting syncedAt
         note.needsSync = undefined;
+        note.syncedAt = new Date().toISOString();
         await noteRepository.update(note, false, true); // Clear needsSync
 
         const needsSync = await noteRepository.getNotesNeedingSync();
