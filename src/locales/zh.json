@@ -756,6 +756,39 @@
       "deviceName": "设备名称",
       "deviceNamePlaceholder": "我的笔记本电脑",
       "note": "注意：设置后您仍需向服务器注册。"
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "从其他设备导入",
+        "subtitle": "推荐用于附加设备"
+      },
+      "existingAccount": {
+        "title": "连接现有账户",
+        "subtitle": "已有账户？连接此设备",
+        "formTitle": "连接到现有账户"
+      },
+      "registerServer": {
+        "title": "注册新账户",
+        "subtitle": "仅限第一台设备 - 创建您的账户",
+        "formTitle": "注册新账户"
+      },
+      "import": {
+        "title": "导入凭据",
+        "instructions": "从其他设备的设置 > 同步 > 复制凭据粘贴凭据。",
+        "passwordNote": "您需要使用与其他设备相同的密码。",
+        "placeholder": "在此粘贴凭据...",
+        "button": "导入凭据",
+        "importing": "正在导入...",
+        "emptyError": "请粘贴凭据",
+        "failed": "导入凭据失败"
+      },
+      "completeInSettings": "创建密码后，在设置 > 同步中完成同步设置。"
+    },
+    "credentialsImported": {
+      "title": "凭据导入成功！",
+      "message": "输入您在其他设备上使用的相同密码以解锁。",
+      "passwordLabel": "密码（来自您的其他设备）",
+      "passwordPlaceholder": "输入其他设备的密码"
     }
   },
   "lock": {

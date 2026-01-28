@@ -756,6 +756,39 @@
       "deviceName": "Cihaz Adı",
       "deviceNamePlaceholder": "Dizüstü Bilgisayarım",
       "note": "Not: Kurulumdan sonra hala sunucuya kaydolmanız gerekecek."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Başka bir cihazdan içe aktar",
+        "subtitle": "Ek cihazlar için önerilir"
+      },
+      "existingAccount": {
+        "title": "Mevcut hesabı bağla",
+        "subtitle": "Zaten bir hesabınız var mı? Bu cihazı bağlayın",
+        "formTitle": "Mevcut hesaba bağlan"
+      },
+      "registerServer": {
+        "title": "Yeni hesap kaydet",
+        "subtitle": "Sadece ilk cihaz - hesabınızı oluşturur",
+        "formTitle": "Yeni hesap kaydet"
+      },
+      "import": {
+        "title": "Kimlik bilgilerini içe aktar",
+        "instructions": "Diğer cihazınızda Ayarlar > Sync > Kimlik bilgilerini kopyala'dan kimlik bilgilerini yapıştırın.",
+        "passwordNote": "Diğer cihazınızdaki aynı şifreyi kullanmanız gerekecek.",
+        "placeholder": "Kimlik bilgilerini buraya yapıştırın...",
+        "button": "Kimlik bilgilerini içe aktar",
+        "importing": "İçe aktarılıyor...",
+        "emptyError": "Lütfen kimlik bilgilerini yapıştırın",
+        "failed": "Kimlik bilgileri içe aktarılamadı"
+      },
+      "completeInSettings": "Şifrenizi oluşturduktan sonra Ayarlar > Sync'de senkronizasyon kurulumunu tamamlayın."
+    },
+    "credentialsImported": {
+      "title": "Kimlik bilgileri başarıyla içe aktarıldı!",
+      "message": "Kilidini açmak için diğer cihazınızda kullandığınız aynı şifreyi girin.",
+      "passwordLabel": "Şifre (diğer cihazınızdan)",
+      "passwordPlaceholder": "Diğer cihazdan şifreyi girin"
     }
   },
   "lock": {

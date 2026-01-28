@@ -756,6 +756,39 @@
       "deviceName": "Apparaatnaam",
       "deviceNamePlaceholder": "Mijn laptop",
       "note": "Opmerking: Je moet je nog steeds bij de server registreren na de setup."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Importeren van ander apparaat",
+        "subtitle": "Aanbevolen voor extra apparaten"
+      },
+      "existingAccount": {
+        "title": "Bestaand account verbinden",
+        "subtitle": "Heb je al een account? Verbind dit apparaat",
+        "formTitle": "Verbinden met bestaand account"
+      },
+      "registerServer": {
+        "title": "Nieuw account registreren",
+        "subtitle": "Alleen eerste apparaat - maakt je account aan",
+        "formTitle": "Nieuw account registreren"
+      },
+      "import": {
+        "title": "Inloggegevens importeren",
+        "instructions": "Plak de inloggegevens van Instellingen > Sync > Inloggegevens kopiëren op je andere apparaat.",
+        "passwordNote": "Je moet hetzelfde wachtwoord gebruiken als op je andere apparaat.",
+        "placeholder": "Plak inloggegevens hier...",
+        "button": "Inloggegevens importeren",
+        "importing": "Importeren...",
+        "emptyError": "Plak de inloggegevens",
+        "failed": "Importeren van inloggegevens mislukt"
+      },
+      "completeInSettings": "Voltooi de sync-instellingen in Instellingen > Sync na het aanmaken van je wachtwoord."
+    },
+    "credentialsImported": {
+      "title": "Inloggegevens succesvol geïmporteerd!",
+      "message": "Voer hetzelfde wachtwoord in dat je op je andere apparaat gebruikt om te ontgrendelen.",
+      "passwordLabel": "Wachtwoord (van je andere apparaat)",
+      "passwordPlaceholder": "Voer wachtwoord van ander apparaat in"
     }
   },
   "lock": {

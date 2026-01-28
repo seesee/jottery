@@ -726,6 +726,39 @@
       "deviceName": "Device Name",
       "deviceNamePlaceholder": "My Laptop",
       "note": "Note: You'll still need to register with the server after setup."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Import from another device",
+        "subtitle": "Recommended for additional devices"
+      },
+      "existingAccount": {
+        "title": "Connect existing account",
+        "subtitle": "Already have an account? Connect this device",
+        "formTitle": "Connect to Existing Account"
+      },
+      "registerServer": {
+        "title": "Register new account",
+        "subtitle": "First device only - creates your account",
+        "formTitle": "Register New Account"
+      },
+      "import": {
+        "title": "Import Credentials",
+        "instructions": "Paste the credentials from Settings > Sync > Copy Credentials on your other device.",
+        "passwordNote": "You'll need to use the same password as your other device.",
+        "placeholder": "Paste credentials here...",
+        "button": "Import Credentials",
+        "importing": "Importing...",
+        "emptyError": "Please paste the credentials",
+        "failed": "Failed to import credentials"
+      },
+      "completeInSettings": "Complete sync setup in Settings > Sync after creating your password."
+    },
+    "credentialsImported": {
+      "title": "Credentials imported successfully!",
+      "message": "Enter the same password you use on your other device to unlock.",
+      "passwordLabel": "Password (from your other device)",
+      "passwordPlaceholder": "Enter password from other device"
     }
   },
   "lock": {

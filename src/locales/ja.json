@@ -756,6 +756,39 @@
       "deviceName": "デバイス名",
       "deviceNamePlaceholder": "私のラップトップ",
       "note": "注: 設定後もサーバーへの登録が必要です。"
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "別のデバイスからインポート",
+        "subtitle": "追加デバイスに推奨"
+      },
+      "existingAccount": {
+        "title": "既存のアカウントに接続",
+        "subtitle": "すでにアカウントをお持ちですか？このデバイスを接続",
+        "formTitle": "既存のアカウントに接続"
+      },
+      "registerServer": {
+        "title": "新しいアカウントを登録",
+        "subtitle": "最初のデバイスのみ - アカウントを作成",
+        "formTitle": "新しいアカウントを登録"
+      },
+      "import": {
+        "title": "認証情報をインポート",
+        "instructions": "他のデバイスの設定 > 同期 > 認証情報をコピーから認証情報を貼り付けてください。",
+        "passwordNote": "他のデバイスと同じパスワードを使用する必要があります。",
+        "placeholder": "認証情報をここに貼り付け...",
+        "button": "認証情報をインポート",
+        "importing": "インポート中...",
+        "emptyError": "認証情報を貼り付けてください",
+        "failed": "認証情報のインポートに失敗しました"
+      },
+      "completeInSettings": "パスワード作成後、設定 > 同期で同期設定を完了してください。"
+    },
+    "credentialsImported": {
+      "title": "認証情報が正常にインポートされました！",
+      "message": "ロック解除するには、他のデバイスで使用している同じパスワードを入力してください。",
+      "passwordLabel": "パスワード（他のデバイスから）",
+      "passwordPlaceholder": "他のデバイスのパスワードを入力"
     }
   },
   "lock": {

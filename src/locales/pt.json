@@ -756,6 +756,39 @@
       "deviceName": "Nome do dispositivo",
       "deviceNamePlaceholder": "Meu laptop",
       "note": "Nota: Você ainda precisará se registrar no servidor após a configuração."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Importar de outro dispositivo",
+        "subtitle": "Recomendado para dispositivos adicionais"
+      },
+      "existingAccount": {
+        "title": "Conectar conta existente",
+        "subtitle": "Já tem uma conta? Conecte este dispositivo",
+        "formTitle": "Conectar à conta existente"
+      },
+      "registerServer": {
+        "title": "Registrar nova conta",
+        "subtitle": "Apenas primeiro dispositivo - cria sua conta",
+        "formTitle": "Registrar nova conta"
+      },
+      "import": {
+        "title": "Importar credenciais",
+        "instructions": "Cole as credenciais de Configurações > Sync > Copiar credenciais no seu outro dispositivo.",
+        "passwordNote": "Você precisará usar a mesma senha do seu outro dispositivo.",
+        "placeholder": "Cole as credenciais aqui...",
+        "button": "Importar credenciais",
+        "importing": "Importando...",
+        "emptyError": "Por favor, cole as credenciais",
+        "failed": "Falha ao importar credenciais"
+      },
+      "completeInSettings": "Complete a configuração de sincronização em Configurações > Sync após criar sua senha."
+    },
+    "credentialsImported": {
+      "title": "Credenciais importadas com sucesso!",
+      "message": "Digite a mesma senha que você usa no seu outro dispositivo para desbloquear.",
+      "passwordLabel": "Senha (do seu outro dispositivo)",
+      "passwordPlaceholder": "Digite a senha do outro dispositivo"
     }
   },
   "lock": {

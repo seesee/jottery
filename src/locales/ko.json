@@ -756,6 +756,39 @@
       "deviceName": "기기 이름",
       "deviceNamePlaceholder": "내 노트북",
       "note": "참고: 설정 후에도 서버에 등록해야 합니다."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "다른 기기에서 가져오기",
+        "subtitle": "추가 기기에 권장"
+      },
+      "existingAccount": {
+        "title": "기존 계정 연결",
+        "subtitle": "이미 계정이 있으신가요? 이 기기를 연결하세요",
+        "formTitle": "기존 계정에 연결"
+      },
+      "registerServer": {
+        "title": "새 계정 등록",
+        "subtitle": "첫 번째 기기만 - 계정을 생성합니다",
+        "formTitle": "새 계정 등록"
+      },
+      "import": {
+        "title": "자격 증명 가져오기",
+        "instructions": "다른 기기의 설정 > 동기화 > 자격 증명 복사에서 자격 증명을 붙여넣으세요.",
+        "passwordNote": "다른 기기와 동일한 비밀번호를 사용해야 합니다.",
+        "placeholder": "여기에 자격 증명 붙여넣기...",
+        "button": "자격 증명 가져오기",
+        "importing": "가져오는 중...",
+        "emptyError": "자격 증명을 붙여넣으세요",
+        "failed": "자격 증명 가져오기 실패"
+      },
+      "completeInSettings": "비밀번호 생성 후 설정 > 동기화에서 동기화 설정을 완료하세요."
+    },
+    "credentialsImported": {
+      "title": "자격 증명을 성공적으로 가져왔습니다!",
+      "message": "잠금을 해제하려면 다른 기기에서 사용하는 동일한 비밀번호를 입력하세요.",
+      "passwordLabel": "비밀번호 (다른 기기에서)",
+      "passwordPlaceholder": "다른 기기의 비밀번호 입력"
     }
   },
   "lock": {

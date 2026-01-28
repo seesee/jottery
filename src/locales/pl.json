@@ -756,6 +756,39 @@
       "deviceName": "Nazwa urządzenia",
       "deviceNamePlaceholder": "Mój laptop",
       "note": "Uwaga: Po konfiguracji nadal musisz zarejestrować się na serwerze."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Importuj z innego urządzenia",
+        "subtitle": "Zalecane dla dodatkowych urządzeń"
+      },
+      "existingAccount": {
+        "title": "Połącz istniejące konto",
+        "subtitle": "Masz już konto? Połącz to urządzenie",
+        "formTitle": "Połącz z istniejącym kontem"
+      },
+      "registerServer": {
+        "title": "Zarejestruj nowe konto",
+        "subtitle": "Tylko pierwsze urządzenie - tworzy Twoje konto",
+        "formTitle": "Zarejestruj nowe konto"
+      },
+      "import": {
+        "title": "Importuj dane logowania",
+        "instructions": "Wklej dane logowania z Ustawienia > Sync > Kopiuj dane logowania na innym urządzeniu.",
+        "passwordNote": "Musisz użyć tego samego hasła co na innym urządzeniu.",
+        "placeholder": "Wklej dane logowania tutaj...",
+        "button": "Importuj dane logowania",
+        "importing": "Importowanie...",
+        "emptyError": "Proszę wkleić dane logowania",
+        "failed": "Nie udało się zaimportować danych logowania"
+      },
+      "completeInSettings": "Dokończ konfigurację synchronizacji w Ustawienia > Sync po utworzeniu hasła."
+    },
+    "credentialsImported": {
+      "title": "Dane logowania zaimportowane pomyślnie!",
+      "message": "Wprowadź to samo hasło, którego używasz na innym urządzeniu, aby odblokować.",
+      "passwordLabel": "Hasło (z innego urządzenia)",
+      "passwordPlaceholder": "Wprowadź hasło z innego urządzenia"
     }
   },
   "lock": {

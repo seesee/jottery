@@ -756,6 +756,39 @@
       "deviceName": "Gerätename",
       "deviceNamePlaceholder": "Mein Laptop",
       "note": "Hinweis: Sie müssen sich nach der Einrichtung noch beim Server registrieren."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Von einem anderen Gerät importieren",
+        "subtitle": "Empfohlen für zusätzliche Geräte"
+      },
+      "existingAccount": {
+        "title": "Bestehendes Konto verbinden",
+        "subtitle": "Sie haben bereits ein Konto? Verbinden Sie dieses Gerät",
+        "formTitle": "Mit bestehendem Konto verbinden"
+      },
+      "registerServer": {
+        "title": "Neues Konto registrieren",
+        "subtitle": "Nur für erstes Gerät - erstellt Ihr Konto",
+        "formTitle": "Neues Konto registrieren"
+      },
+      "import": {
+        "title": "Anmeldedaten importieren",
+        "instructions": "Fügen Sie die Anmeldedaten aus Einstellungen > Sync > Anmeldedaten kopieren von Ihrem anderen Gerät ein.",
+        "passwordNote": "Sie müssen dasselbe Passwort wie auf Ihrem anderen Gerät verwenden.",
+        "placeholder": "Anmeldedaten hier einfügen...",
+        "button": "Anmeldedaten importieren",
+        "importing": "Wird importiert...",
+        "emptyError": "Bitte fügen Sie die Anmeldedaten ein",
+        "failed": "Import der Anmeldedaten fehlgeschlagen"
+      },
+      "completeInSettings": "Schließen Sie die Sync-Einrichtung unter Einstellungen > Sync ab, nachdem Sie Ihr Passwort erstellt haben."
+    },
+    "credentialsImported": {
+      "title": "Anmeldedaten erfolgreich importiert!",
+      "message": "Geben Sie dasselbe Passwort ein, das Sie auf Ihrem anderen Gerät verwenden.",
+      "passwordLabel": "Passwort (von Ihrem anderen Gerät)",
+      "passwordPlaceholder": "Passwort vom anderen Gerät eingeben"
     }
   },
   "lock": {

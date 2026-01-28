@@ -756,6 +756,39 @@
       "deviceName": "Nom de l'appareil",
       "deviceNamePlaceholder": "Mon ordinateur portable",
       "note": "Remarque : Vous devrez toujours vous enregistrer sur le serveur après la configuration."
+    },
+    "syncSetup": {
+      "importCredentials": {
+        "title": "Importer depuis un autre appareil",
+        "subtitle": "Recommandé pour les appareils supplémentaires"
+      },
+      "existingAccount": {
+        "title": "Connecter un compte existant",
+        "subtitle": "Vous avez déjà un compte ? Connectez cet appareil",
+        "formTitle": "Connecter au compte existant"
+      },
+      "registerServer": {
+        "title": "Enregistrer un nouveau compte",
+        "subtitle": "Premier appareil uniquement - crée votre compte",
+        "formTitle": "Enregistrer un nouveau compte"
+      },
+      "import": {
+        "title": "Importer les identifiants",
+        "instructions": "Collez les identifiants depuis Paramètres > Sync > Copier les identifiants sur votre autre appareil.",
+        "passwordNote": "Vous devrez utiliser le même mot de passe que sur votre autre appareil.",
+        "placeholder": "Collez les identifiants ici...",
+        "button": "Importer les identifiants",
+        "importing": "Importation...",
+        "emptyError": "Veuillez coller les identifiants",
+        "failed": "Échec de l'importation des identifiants"
+      },
+      "completeInSettings": "Terminez la configuration de la synchronisation dans Paramètres > Sync après avoir créé votre mot de passe."
+    },
+    "credentialsImported": {
+      "title": "Identifiants importés avec succès !",
+      "message": "Entrez le même mot de passe que vous utilisez sur votre autre appareil pour déverrouiller.",
+      "passwordLabel": "Mot de passe (de votre autre appareil)",
+      "passwordPlaceholder": "Entrez le mot de passe de l'autre appareil"
     }
   },
   "lock": {
