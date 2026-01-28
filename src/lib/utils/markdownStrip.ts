@@ -55,8 +55,12 @@ export function stripMarkdownSignifiers(text: string): string {
   // Remove task list markers (- [ ] or - [x])
   result = result.replace(/^[\s]*[-*+]\s+\[[ x]\]\s+/gm, '');
 
-  // Remove HTML tags
-  result = result.replace(/<[^>]+>/g, '');
+  // Remove HTML tags (loop to handle nested/fragmented tags like <scr<script>ipt>)
+  let previousResult;
+  do {
+    previousResult = result;
+    result = result.replace(/<[^>]+>/g, '');
+  } while (result !== previousResult);
 
   // Remove extra whitespace
   result = result.replace(/\s+/g, ' ');
