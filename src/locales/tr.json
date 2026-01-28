@@ -42,6 +42,7 @@
     "version": "Sürüm",
     "synced": "Senkronize edildi",
     "unsynced": "Senkronize edilmedi",
+    "neverSynced": "Hiç senkronize edilmedi",
     "attachments": "Ekler",
     "filterByTag": "#{tag} etiketine göre filtrele",
     "noNotesYet": "Henüz not yok",

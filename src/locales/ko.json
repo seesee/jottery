@@ -42,6 +42,7 @@
     "version": "버전",
     "synced": "동기화됨",
     "unsynced": "동기화 안 됨",
+    "neverSynced": "동기화된 적 없음",
     "attachments": "첨부파일",
     "filterByTag": "#{tag}로 필터링",
     "noNotesYet": "아직 노트가 없습니다",

@@ -6,6 +6,31 @@
   export let modifiedAtFormatted: Readable<string> | null;
   export let backgroundColor: string | undefined = undefined;
   export let isSynced: boolean = false;
+  export let syncEnabled: boolean = true;
+  export let neverSynced: boolean = false;
+
+  // Determine sync indicator state:
+  // - Sync enabled + synced: green filled
+  // - Sync enabled + not synced: red hollow
+  // - Sync disabled + previously synced: green filled
+  // - Sync disabled + never synced: grey hollow
+  $: syncState = isSynced ? 'synced'
+    : (!syncEnabled && neverSynced) ? 'never-synced-disabled'
+    : 'unsynced';
+
+  $: indicatorClass = {
+    'synced': 'text-green-500',
+    'unsynced': 'text-red-500',
+    'never-synced-disabled': 'text-gray-400'
+  }[syncState];
+
+  $: indicatorTitle = {
+    'synced': $_('note.synced'),
+    'unsynced': $_('note.unsynced'),
+    'never-synced-disabled': $_('note.neverSynced')
+  }[syncState];
+
+  $: indicatorSymbol = syncState === 'synced' ? '●' : '○';
 </script>
 
 <!-- Metadata Footer -->
@@ -17,10 +42,10 @@
     <span class="flex items-center gap-1.5">
       <span>{$_('note.version')}: {version ?? 1}</span>
       <span
-        class={isSynced ? 'text-green-500' : 'text-red-500'}
-        title={isSynced ? $_('note.synced') : $_('note.unsynced')}
+        class={indicatorClass}
+        title={indicatorTitle}
       >
-        {isSynced ? '●' : '○'}
+        {indicatorSymbol}
       </span>
     </span>
     <span>{$_('note.modified')}: {modifiedAtFormatted ? $modifiedAtFormatted : ''}</span>

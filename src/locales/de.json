@@ -42,6 +42,7 @@
     "version": "Version",
     "synced": "Synchronisiert",
     "unsynced": "Nicht synchronisiert",
+    "neverSynced": "Nie synchronisiert",
     "attachments": "Anhänge",
     "filterByTag": "Nach #{tag} filtern",
     "noNotesYet": "Noch keine Notizen",

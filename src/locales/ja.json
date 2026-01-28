@@ -42,6 +42,7 @@
     "version": "バージョン",
     "synced": "同期済み",
     "unsynced": "未同期",
+    "neverSynced": "未同期（同期なし）",
     "attachments": "添付ファイル",
     "filterByTag": "#{tag}でフィルター",
     "noNotesYet": "まだノートがありません",

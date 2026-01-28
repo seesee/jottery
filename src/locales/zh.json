@@ -42,6 +42,7 @@
     "version": "版本",
     "synced": "已同步",
     "unsynced": "未同步",
+    "neverSynced": "从未同步",
     "attachments": "附件",
     "filterByTag": "按 #{tag} 筛选",
     "noNotesYet": "还没有笔记",

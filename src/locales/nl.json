@@ -42,6 +42,7 @@
     "version": "Versie",
     "synced": "Gesynchroniseerd",
     "unsynced": "Niet gesynchroniseerd",
+    "neverSynced": "Nooit gesynchroniseerd",
     "attachments": "Bijlagen",
     "filterByTag": "Filter op #{tag}",
     "noNotesYet": "Nog geen notities",

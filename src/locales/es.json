@@ -42,6 +42,7 @@
     "version": "Versión",
     "synced": "Sincronizado",
     "unsynced": "No sincronizado",
+    "neverSynced": "Nunca sincronizado",
     "attachments": "Archivos adjuntos",
     "filterByTag": "Filtrar por #{tag}",
     "noNotesYet": "Aún no hay notas",

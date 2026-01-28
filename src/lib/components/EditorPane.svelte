@@ -141,6 +141,7 @@
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
   let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
+  let syncEnabled: boolean = false; // Track if sync is enabled
 
   // Track blob URLs for cleanup
   let blobUrls: Set<string> = new Set();
@@ -1007,6 +1008,11 @@
       attributes: true,
       attributeFilter: ['class'],
     });
+
+    // Fetch initial sync status
+    syncService.getSyncStatus().then(status => {
+      syncEnabled = status.isEnabled;
+    });
   });
 
   onDestroy(() => {
@@ -1135,6 +1141,8 @@
         {modifiedAtFormatted}
         backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.3) : undefined}
         isSynced={$selectedNote.syncedAt != null && $selectedNote.syncedAt >= $selectedNote.modifiedAt}
+        {syncEnabled}
+        neverSynced={$selectedNote.syncedAt == null}
       />
     {/if}
   </div>
