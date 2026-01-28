@@ -30,8 +30,6 @@
   let importCredentialsText = '';
   let importing = false;
   let credentialsImported = false;
-  let userEmail = '';
-  let userPassword = '';
 
   // Get current notebook info for display
   const notebook = getCurrentNotebook();
@@ -264,8 +262,6 @@
   function resetSyncSetupMode() {
     syncSetupMode = null;
     importCredentialsText = '';
-    userEmail = '';
-    userPassword = '';
     error = '';
   }
 
