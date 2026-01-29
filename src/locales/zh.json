@@ -1058,5 +1058,16 @@
     "inArchive": "在归档",
     "crossModeHintActive": "点击查看符合此搜索的已归档笔记",
     "crossModeHintArchive": "点击查看符合此搜索的活动笔记"
+  },
+  "outliner": {
+    "name": "大纲",
+    "emptyHint": "开始输入以添加第一个项目",
+    "newItem": "新项目",
+    "indent": "缩进",
+    "outdent": "取消缩进",
+    "collapse": "折叠",
+    "expand": "展开",
+    "moveUp": "上移",
+    "moveDown": "下移"
   }
 }

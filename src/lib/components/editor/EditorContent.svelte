@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import CodeEditor from '../CodeEditor.svelte';
   import WysiwygEditor from '../WysiwygEditor.svelte';
+  import OutlinerEditor from '../OutlinerEditor.svelte';
   import WysiwygToolbar from './WysiwygToolbar.svelte';
   import TagInput from '../TagInput.svelte';
 
@@ -138,6 +139,16 @@
           onChange={handleContentChange}
           {isDark}
           placeholder={$_('editor.noNoteSelectedHint')}
+          readonly={readOnly}
+        />
+      </div>
+    {:else if language === 'outliner'}
+      <!-- Outliner mode -->
+      <div class="h-full overflow-hidden">
+        <OutlinerEditor
+          value={content}
+          onChange={handleContentChange}
+          {isDark}
           readonly={readOnly}
         />
       </div>

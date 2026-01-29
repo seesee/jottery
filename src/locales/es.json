@@ -1058,5 +1058,16 @@
     "inArchive": "en archivo",
     "crossModeHintActive": "Clic para ver notas archivadas que coinciden con esta búsqueda",
     "crossModeHintArchive": "Clic para ver notas activas que coinciden con esta búsqueda"
+  },
+  "outliner": {
+    "name": "Esquema",
+    "emptyHint": "Empieza a escribir para añadir tu primer elemento",
+    "newItem": "Nuevo elemento",
+    "indent": "Sangría",
+    "outdent": "Quitar sangría",
+    "collapse": "Contraer",
+    "expand": "Expandir",
+    "moveUp": "Mover arriba",
+    "moveDown": "Mover abajo"
   }
 }

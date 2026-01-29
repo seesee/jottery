@@ -1058,5 +1058,16 @@
     "inArchive": "dans archives",
     "crossModeHintActive": "Cliquez pour voir les notes archivées correspondant à cette recherche",
     "crossModeHintArchive": "Cliquez pour voir les notes actives correspondant à cette recherche"
+  },
+  "outliner": {
+    "name": "Plan",
+    "emptyHint": "Commencez à taper pour ajouter votre premier élément",
+    "newItem": "Nouvel élément",
+    "indent": "Indenter",
+    "outdent": "Désindenter",
+    "collapse": "Réduire",
+    "expand": "Développer",
+    "moveUp": "Monter",
+    "moveDown": "Descendre"
   }
 }

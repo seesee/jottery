@@ -1018,5 +1018,16 @@
     "progress": "{current} of {total}",
     "selectAll": "Select all",
     "deselectAll": "Deselect all"
+  },
+  "outliner": {
+    "name": "Outliner",
+    "emptyHint": "Start typing to add your first item",
+    "newItem": "New item",
+    "indent": "Indent",
+    "outdent": "Outdent",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
   }
 }

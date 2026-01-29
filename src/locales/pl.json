@@ -1058,5 +1058,16 @@
     "inArchive": "w archiwum",
     "crossModeHintActive": "Kliknij, aby zobaczyć zarchiwizowane notatki pasujące do tego wyszukiwania",
     "crossModeHintArchive": "Kliknij, aby zobaczyć aktywne notatki pasujące do tego wyszukiwania"
+  },
+  "outliner": {
+    "name": "Konspekt",
+    "emptyHint": "Zacznij pisać, aby dodać pierwszy element",
+    "newItem": "Nowy element",
+    "indent": "Wcięcie",
+    "outdent": "Usuń wcięcie",
+    "collapse": "Zwiń",
+    "expand": "Rozwiń",
+    "moveUp": "Przesuń w górę",
+    "moveDown": "Przesuń w dół"
   }
 }

@@ -1058,5 +1058,16 @@
     "inArchive": "arşiv",
     "crossModeHintActive": "Bu aramaya uyan arşivlenmiş notları görmek için tıklayın",
     "crossModeHintArchive": "Bu aramaya uyan aktif notları görmek için tıklayın"
+  },
+  "outliner": {
+    "name": "Taslak",
+    "emptyHint": "İlk öğenizi eklemek için yazmaya başlayın",
+    "newItem": "Yeni öğe",
+    "indent": "Girinti",
+    "outdent": "Girintiyi kaldır",
+    "collapse": "Daralt",
+    "expand": "Genişlet",
+    "moveUp": "Yukarı taşı",
+    "moveDown": "Aşağı taşı"
   }
 }

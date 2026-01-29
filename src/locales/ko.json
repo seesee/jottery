@@ -1058,5 +1058,16 @@
     "inArchive": "보관함",
     "crossModeHintActive": "클릭하여 이 검색과 일치하는 보관된 노트 보기",
     "crossModeHintArchive": "클릭하여 이 검색과 일치하는 활성 노트 보기"
+  },
+  "outliner": {
+    "name": "개요",
+    "emptyHint": "첫 번째 항목을 추가하려면 입력을 시작하세요",
+    "newItem": "새 항목",
+    "indent": "들여쓰기",
+    "outdent": "내어쓰기",
+    "collapse": "접기",
+    "expand": "펼치기",
+    "moveUp": "위로 이동",
+    "moveDown": "아래로 이동"
   }
 }

@@ -396,7 +396,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   syncEnabled: false,
   rememberPassword: false,
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS,
-  enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'perl', 'markdown', 'json', 'xml', 'css', 'bash', 'sql', 'calc'], // Core languages + SQL
+  enabledSyntaxLanguages: ['javascript', 'typescript', 'python', 'perl', 'markdown', 'json', 'xml', 'css', 'bash', 'sql', 'calc', 'outliner'], // Core languages + SQL
   defaultSyntaxLanguage: 'markdown', // Default language for new notes
   openLinksInNewTab: true, // Open external links in new tab by default
   vimMode: false, // Vim keybindings disabled by default

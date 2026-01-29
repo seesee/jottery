@@ -1058,5 +1058,16 @@
     "inArchive": "in archief",
     "crossModeHintActive": "Klik om gearchiveerde notities te zien die overeenkomen met deze zoekopdracht",
     "crossModeHintArchive": "Klik om actieve notities te zien die overeenkomen met deze zoekopdracht"
+  },
+  "outliner": {
+    "name": "Overzicht",
+    "emptyHint": "Begin te typen om uw eerste item toe te voegen",
+    "newItem": "Nieuw item",
+    "indent": "Inspringen",
+    "outdent": "Uitspringen",
+    "collapse": "Inklappen",
+    "expand": "Uitklappen",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag"
   }
 }

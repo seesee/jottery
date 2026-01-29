@@ -1058,5 +1058,16 @@
     "inArchive": "in archivio",
     "crossModeHintActive": "Clicca per vedere le note archiviate corrispondenti a questa ricerca",
     "crossModeHintArchive": "Clicca per vedere le note attive corrispondenti a questa ricerca"
+  },
+  "outliner": {
+    "name": "Schema",
+    "emptyHint": "Inizia a digitare per aggiungere il tuo primo elemento",
+    "newItem": "Nuovo elemento",
+    "indent": "Rientra",
+    "outdent": "Rimuovi rientro",
+    "collapse": "Comprimi",
+    "expand": "Espandi",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù"
   }
 }

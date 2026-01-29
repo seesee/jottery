@@ -1058,5 +1058,16 @@
     "inArchive": "im Archiv",
     "crossModeHintActive": "Klicken, um archivierte Notizen zu dieser Suche anzuzeigen",
     "crossModeHintArchive": "Klicken, um aktive Notizen zu dieser Suche anzuzeigen"
+  },
+  "outliner": {
+    "name": "Gliederung",
+    "emptyHint": "Beginnen Sie zu tippen, um Ihren ersten Eintrag hinzuzufügen",
+    "newItem": "Neuer Eintrag",
+    "indent": "Einrücken",
+    "outdent": "Ausrücken",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten"
   }
 }
