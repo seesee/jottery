@@ -25,6 +25,7 @@
   let collapsedNodes: Set<string> = new Set();
   let containerElement: HTMLDivElement;
   let showToolbar = true;
+  let draggedNodeId: string | null = null; // Track dragged node at editor level
 
   // Font size from settings
   $: fontSize = getFontSize($settings.fontSize);
@@ -155,9 +156,20 @@
     // Blur tracking handled by DOM
   }
 
-  function handleDrop(event: CustomEvent<{ draggedId: string; targetId: string; position: 'before' | 'after' | 'child' }>) {
-    const { draggedId, targetId, position } = event.detail;
-    if (draggedId === targetId) return;
+  function handleDragStart(event: CustomEvent<{ id: string }>) {
+    draggedNodeId = event.detail.id;
+  }
+
+  function handleDragEnd() {
+    draggedNodeId = null;
+  }
+
+  function handleDrop(event: CustomEvent<{ targetId: string; position: 'before' | 'after' | 'child' }>) {
+    const { targetId, position } = event.detail;
+    const draggedId = draggedNodeId;
+    draggedNodeId = null;
+
+    if (!draggedId || draggedId === targetId) return;
 
     // Find the dragged node
     const draggedResult = findNodeById(nodes, draggedId);
@@ -554,6 +566,8 @@
           on:keydown={handleKeyDown}
           on:focus={handleFocus}
           on:blur={handleBlur}
+          on:dragStart={handleDragStart}
+          on:dragEnd={handleDragEnd}
           on:drop={handleDrop}
         />
       {/each}

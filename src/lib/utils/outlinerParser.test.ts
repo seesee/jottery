@@ -85,21 +85,16 @@ Item 2
     expect(result[0].children).toHaveLength(1);
   });
 
-  test('parses collapsed marker [-]', () => {
-    const text = 'Item 1 [-]';
+  test('parses collapsed marker > prefix', () => {
+    const text = '>Item 1';
     const result = parseOutliner(text);
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe('Item 1');
     expect(result[0].collapsed).toBe(true);
   });
 
-  test('parses mixed collapsed and expanded nodes', () => {
-    const text = `Item 1 [-]
-  Child 1.1
-  Child 1.2
-Item 2
-  Child 2.1 [-]
-    Grandchild`;
+  test('parses mixed collapsed and expanded nodes with > prefix', () => {
+    const text = `>Item 1\n\tChild 1.1\n\tChild 1.2\nItem 2\n\t>Child 2.1\n\t\tGrandchild`;
     const result = parseOutliner(text);
     expect(result[0].collapsed).toBe(true);
     expect(result[0].content).toBe('Item 1');
@@ -109,11 +104,28 @@ Item 2
     expect(result[1].children[0].content).toBe('Child 2.1');
   });
 
-  test('does not parse [-] in middle of content as collapsed', () => {
-    const text = 'Item [-] with marker in middle';
+  test('parses tab-indented content', () => {
+    const text = `Item 1\n\tChild 1.1\n\t\tGrandchild\n\tChild 1.2`;
     const result = parseOutliner(text);
-    expect(result[0].content).toBe('Item [-] with marker in middle');
-    expect(result[0].collapsed).toBeFalsy();
+    expect(result).toHaveLength(1);
+    expect(result[0].children).toHaveLength(2);
+    expect(result[0].children[0].children).toHaveLength(1);
+    expect(result[0].children[0].children[0].content).toBe('Grandchild');
+  });
+
+  test('backwards compat: parses old [-] suffix', () => {
+    const text = 'Item 1 [-]';
+    const result = parseOutliner(text);
+    expect(result[0].content).toBe('Item 1');
+    expect(result[0].collapsed).toBe(true);
+  });
+
+  test('backwards compat: parses space-indented content', () => {
+    const text = `Item 1\n  Child 1.1\n    Grandchild`;
+    const result = parseOutliner(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].children).toHaveLength(1);
+    expect(result[0].children[0].children).toHaveLength(1);
   });
 });
 
@@ -137,7 +149,7 @@ describe('serialiseOutliner', () => {
     expect(serialiseOutliner(nodes)).toBe('Item 1\nItem 2');
   });
 
-  test('serialises nested nodes', () => {
+  test('serialises nested nodes with tabs', () => {
     const nodes: OutlinerNode[] = [
       {
         id: '1',
@@ -148,10 +160,10 @@ describe('serialiseOutliner', () => {
         ],
       },
     ];
-    expect(serialiseOutliner(nodes)).toBe('Item 1\n  Child 1.1\n  Child 1.2');
+    expect(serialiseOutliner(nodes)).toBe('Item 1\n\tChild 1.1\n\tChild 1.2');
   });
 
-  test('serialises deeply nested nodes', () => {
+  test('serialises deeply nested nodes with tabs', () => {
     const nodes: OutlinerNode[] = [
       {
         id: '1',
@@ -167,10 +179,10 @@ describe('serialiseOutliner', () => {
         ],
       },
     ];
-    expect(serialiseOutliner(nodes)).toBe('Item 1\n  Child 1.1\n    Grandchild');
+    expect(serialiseOutliner(nodes)).toBe('Item 1\n\tChild 1.1\n\t\tGrandchild');
   });
 
-  test('serialises collapsed nodes with [-] marker', () => {
+  test('serialises collapsed nodes with > prefix', () => {
     const nodes: OutlinerNode[] = [
       {
         id: '1',
@@ -181,7 +193,7 @@ describe('serialiseOutliner', () => {
         ],
       },
     ];
-    expect(serialiseOutliner(nodes)).toBe('Item 1 [-]\n  Child 1.1');
+    expect(serialiseOutliner(nodes)).toBe('>Item 1\n\tChild 1.1');
   });
 
   test('does not add marker for non-collapsed nodes', () => {
@@ -201,30 +213,28 @@ describe('serialiseOutliner', () => {
         children: [],
       },
     ];
-    expect(serialiseOutliner(nodes)).toBe('Item 1\n  Child 1.1\nItem 2');
+    expect(serialiseOutliner(nodes)).toBe('Item 1\n\tChild 1.1\nItem 2');
   });
 
   test('round-trip preserves collapsed state', () => {
-    const original = `Item 1 [-]
-  Child 1.1
-Item 2
-  Child 2.1 [-]
-    Grandchild`;
+    const original = `>Item 1\n\tChild 1.1\nItem 2\n\t>Child 2.1\n\t\tGrandchild`;
     const parsed = parseOutliner(original);
     const serialized = serialiseOutliner(parsed);
     expect(serialized).toBe(original);
   });
 
   test('round-trip: parse then serialise produces equivalent output', () => {
-    const original = `Item 1
-  Child 1.1
-    Grandchild 1.1.1
-  Child 1.2
-Item 2
-  Child 2.1`;
+    const original = `Item 1\n\tChild 1.1\n\t\tGrandchild 1.1.1\n\tChild 1.2\nItem 2\n\tChild 2.1`;
     const parsed = parseOutliner(original);
     const serialised = serialiseOutliner(parsed);
     expect(serialised).toBe(original);
+  });
+
+  test('converts space-indented input to tab-indented output', () => {
+    const spaceInput = `Item 1\n  Child 1.1\n    Grandchild`;
+    const parsed = parseOutliner(spaceInput);
+    const serialised = serialiseOutliner(parsed);
+    expect(serialised).toBe(`Item 1\n\tChild 1.1\n\t\tGrandchild`);
   });
 });
 

@@ -16,8 +16,8 @@
     focus: { id: string };
     blur: { id: string };
     dragStart: { id: string };
-    dragEnd: { id: string };
-    drop: { draggedId: string; targetId: string; position: 'before' | 'after' | 'child' };
+    dragEnd: void;
+    drop: { targetId: string; position: 'before' | 'after' | 'child' };
   }>();
 
   let isDragging = false;
@@ -74,7 +74,8 @@
   function handleDragStart(event: DragEvent) {
     if (readonly) return;
     isDragging = true;
-    event.dataTransfer?.setData('text/plain', node.id);
+    // Set minimal data for drag visual (content doesn't matter, editor tracks ID)
+    event.dataTransfer?.setData('text/plain', 'drag');
     event.dataTransfer!.effectAllowed = 'move';
     dispatch('dragStart', { id: node.id });
   }
@@ -82,7 +83,7 @@
   function handleDragEnd() {
     isDragging = false;
     dragOverPosition = null;
-    dispatch('dragEnd', { id: node.id });
+    dispatch('dragEnd');
   }
 
   function handleDragOver(event: DragEvent) {
@@ -112,22 +113,19 @@
     if (readonly) return;
     event.preventDefault();
     event.stopPropagation();
-    const draggedId = event.dataTransfer?.getData('text/plain');
-    if (draggedId && draggedId !== node.id) {
-      // Calculate position directly in drop handler (dragOverPosition may be null due to dragleave timing)
-      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const y = event.clientY - rect.top;
-      const height = rect.height;
-      let position: 'before' | 'after' | 'child';
-      if (y < height * 0.25) {
-        position = 'before';
-      } else if (y > height * 0.75) {
-        position = 'after';
-      } else {
-        position = 'child';
-      }
-      dispatch('drop', { draggedId, targetId: node.id, position });
+    // Calculate position directly in drop handler (dragOverPosition may be null due to dragleave timing)
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    const height = rect.height;
+    let position: 'before' | 'after' | 'child';
+    if (y < height * 0.25) {
+      position = 'before';
+    } else if (y > height * 0.75) {
+      position = 'after';
+    } else {
+      position = 'child';
     }
+    dispatch('drop', { targetId: node.id, position });
     dragOverPosition = null;
   }
 
