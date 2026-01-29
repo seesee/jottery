@@ -1,3 +1,8 @@
+<script context="module" lang="ts">
+  // Module-level state for drag tracking (shared across instances, survives reactivity)
+  let currentDraggedNodeId: string | null = null;
+</script>
+
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { _ } from 'svelte-i18n';
@@ -25,7 +30,6 @@
   let collapsedNodes: Set<string> = new Set();
   let containerElement: HTMLDivElement;
   let showToolbar = true;
-  let draggedNodeId: string | null = null; // Track dragged node at editor level
 
   // Font size from settings
   $: fontSize = getFontSize($settings.fontSize);
@@ -157,17 +161,18 @@
   }
 
   function handleDragStart(event: CustomEvent<{ id: string }>) {
-    draggedNodeId = event.detail.id;
+    currentDraggedNodeId = event.detail.id;
   }
 
   function handleDragEnd() {
-    draggedNodeId = null;
+    // Reset after a short delay to ensure drop has processed
+    setTimeout(() => { currentDraggedNodeId = null; }, 100);
   }
 
   function handleDrop(event: CustomEvent<{ targetId: string; position: 'before' | 'after' | 'child' }>) {
     const { targetId, position } = event.detail;
-    const draggedId = draggedNodeId;
-    draggedNodeId = null;
+    const draggedId = currentDraggedNodeId;
+    currentDraggedNodeId = null;
 
     if (!draggedId || draggedId === targetId) return;
 
