@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import type { OutlinerNode } from '../../types/outliner';
 
   export let node: OutlinerNode;
@@ -17,13 +17,33 @@
   }>();
 
   let contentElement: HTMLElement;
+  let isUserInput = false;
 
   // Has children means we can collapse
   $: hasChildren = node.children.length > 0;
 
+  // Set initial content on mount
+  onMount(() => {
+    if (contentElement) {
+      contentElement.textContent = node.content;
+    }
+  });
+
+  // Update content from props only when it differs from DOM
+  // and not during user input (to prevent feedback loop)
+  $: if (contentElement && !isUserInput) {
+    const currentContent = contentElement.textContent || '';
+    if (currentContent !== node.content) {
+      contentElement.textContent = node.content;
+    }
+  }
+
   function handleInput(event: Event) {
     const target = event.target as HTMLElement;
+    isUserInput = true;
     dispatch('contentChange', { id: node.id, content: target.textContent || '' });
+    // Reset flag after a microtask to allow the reactive update to be skipped
+    queueMicrotask(() => { isUserInput = false; });
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -104,7 +124,7 @@
       on:keydown={handleKeyDown}
       on:focus={handleFocus}
       on:blur={handleBlur}
-    >{node.content}</div>
+    ></div>
   </div>
 
   <!-- Children -->
