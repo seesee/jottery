@@ -1028,6 +1028,9 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "moveUp": "Move up",
-    "moveDown": "Move down"
+    "moveDown": "Move down",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "level": "Level {n}"
   }
 }

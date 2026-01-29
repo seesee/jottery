@@ -111,9 +111,22 @@
   function handleDrop(event: DragEvent) {
     if (readonly) return;
     event.preventDefault();
+    event.stopPropagation();
     const draggedId = event.dataTransfer?.getData('text/plain');
-    if (draggedId && draggedId !== node.id && dragOverPosition) {
-      dispatch('drop', { draggedId, targetId: node.id, position: dragOverPosition });
+    if (draggedId && draggedId !== node.id) {
+      // Calculate position directly in drop handler (dragOverPosition may be null due to dragleave timing)
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const y = event.clientY - rect.top;
+      const height = rect.height;
+      let position: 'before' | 'after' | 'child';
+      if (y < height * 0.25) {
+        position = 'before';
+      } else if (y > height * 0.75) {
+        position = 'after';
+      } else {
+        position = 'child';
+      }
+      dispatch('drop', { draggedId, targetId: node.id, position });
     }
     dragOverPosition = null;
   }

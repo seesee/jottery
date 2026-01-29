@@ -5,9 +5,10 @@
  * - Two spaces per indent level
  * - Human-readable, works with encryption
  * - Can edit as plain text if needed
+ * - Optional [-] suffix marks collapsed nodes
  *
  * Example:
- *   Item 1
+ *   Item 1 [-]
  *     Child 1.1
  *     Child 1.2
  *       Grandchild 1.2.1
@@ -18,6 +19,7 @@ import type { OutlinerNode } from '../types/outliner';
 
 const INDENT_SIZE = 2;
 const INDENT_CHAR = ' ';
+const COLLAPSED_MARKER = ' [-]';
 
 /**
  * Generate a UUID for new nodes
@@ -60,12 +62,20 @@ export function parseOutliner(text: string): OutlinerNode[] {
       }
     }
     const level = Math.floor(indent / INDENT_SIZE);
-    const content = line.slice(indent);
+    let content = line.slice(indent);
+
+    // Check for collapsed marker
+    let collapsed = false;
+    if (content.endsWith(COLLAPSED_MARKER)) {
+      collapsed = true;
+      content = content.slice(0, -COLLAPSED_MARKER.length);
+    }
 
     const node: OutlinerNode = {
       id: generateId(),
       content,
       children: [],
+      collapsed: collapsed || undefined,
     };
 
     if (level === 0) {
@@ -106,7 +116,8 @@ export function serialiseOutliner(nodes: OutlinerNode[]): string {
 
   function serialiseNode(node: OutlinerNode, level: number): void {
     const indent = INDENT_CHAR.repeat(level * INDENT_SIZE);
-    lines.push(indent + node.content);
+    const collapsedSuffix = node.collapsed ? COLLAPSED_MARKER : '';
+    lines.push(indent + node.content + collapsedSuffix);
     for (const child of node.children) {
       serialiseNode(child, level + 1);
     }

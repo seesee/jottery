@@ -24,9 +24,23 @@
   let nodes: OutlinerNode[] = [];
   let collapsedNodes: Set<string> = new Set();
   let containerElement: HTMLDivElement;
+  let showToolbar = true;
 
   // Font size from settings
   $: fontSize = getFontSize($settings.fontSize);
+
+  // Build collapsed set from nodes tree
+  function buildCollapsedSet(nodeList: OutlinerNode[]): Set<string> {
+    const set = new Set<string>();
+    function traverse(n: OutlinerNode[]) {
+      for (const node of n) {
+        if (node.collapsed) set.add(node.id);
+        traverse(node.children);
+      }
+    }
+    traverse(nodeList);
+    return set;
+  }
 
   // Parse value on mount and when value changes externally
   onMount(() => {
@@ -35,6 +49,8 @@
     if (nodes.length === 0) {
       nodes = [createNode()];
       emitChange();
+    } else {
+      collapsedNodes = buildCollapsedSet(nodes);
     }
   });
 
@@ -45,6 +61,7 @@
       const newNodes = parseOutliner(value);
       if (newNodes.length > 0 || value.trim() === '') {
         nodes = newNodes.length > 0 ? newNodes : [createNode()];
+        collapsedNodes = buildCollapsedSet(nodes);
       }
     }
   }
@@ -68,12 +85,66 @@
 
   function handleToggleCollapse(event: CustomEvent<{ id: string }>) {
     const { id } = event.detail;
-    if (collapsedNodes.has(id)) {
-      collapsedNodes.delete(id);
-    } else {
-      collapsedNodes.add(id);
+    const found = findNodeById(nodes, id);
+    if (found) {
+      // Update node's collapsed property for persistence
+      found.node.collapsed = !found.node.collapsed;
+      if (found.node.collapsed) {
+        collapsedNodes.add(id);
+      } else {
+        collapsedNodes.delete(id);
+        found.node.collapsed = undefined; // Don't store false, just remove
+      }
+      collapsedNodes = new Set(collapsedNodes); // Trigger reactivity
+      nodes = [...nodes];
+      emitChange();
     }
-    collapsedNodes = new Set(collapsedNodes); // Trigger reactivity
+  }
+
+  // Toolbar functions
+  function expandAll() {
+    const flat = flattenNodes(nodes);
+    for (const node of flat) {
+      node.collapsed = undefined;
+    }
+    collapsedNodes = new Set();
+    nodes = [...nodes];
+    emitChange();
+  }
+
+  function collapseAll() {
+    const flat = flattenNodes(nodes);
+    const newCollapsed = new Set<string>();
+    for (const node of flat) {
+      if (node.children.length > 0) {
+        node.collapsed = true;
+        newCollapsed.add(node.id);
+      }
+    }
+    collapsedNodes = newCollapsed;
+    nodes = [...nodes];
+    emitChange();
+  }
+
+  function expandLevel(level: number) {
+    function traverse(nodeList: OutlinerNode[], currentLevel: number) {
+      for (const node of nodeList) {
+        if (node.children.length > 0) {
+          if (currentLevel < level) {
+            node.collapsed = undefined;
+            collapsedNodes.delete(node.id);
+          } else {
+            node.collapsed = true;
+            collapsedNodes.add(node.id);
+          }
+        }
+        traverse(node.children, currentLevel + 1);
+      }
+    }
+    traverse(nodes, 0);
+    collapsedNodes = new Set(collapsedNodes);
+    nodes = [...nodes];
+    emitChange();
   }
 
   function handleFocus(_event: CustomEvent<{ id: string }>) {
@@ -404,49 +475,173 @@
   }
 </script>
 
-<div
-  bind:this={containerElement}
-  class="outliner-editor"
-  class:dark={isDark}
-  style="font-size: {fontSize}px"
->
-  {#if nodes.length === 0}
-    <div class="empty-state">
-      {$_('outliner.emptyHint')}
+<div class="outliner-container" class:dark={isDark}>
+  <!-- Toolbar -->
+  {#if showToolbar && !readonly}
+    <div class="outliner-toolbar" class:dark={isDark}>
+      <button
+        type="button"
+        class="toolbar-btn"
+        on:click={expandAll}
+        title={$_('outliner.expandAll')}
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" class="icon">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+        <span>{$_('outliner.expandAll')}</span>
+      </button>
+      <button
+        type="button"
+        class="toolbar-btn"
+        on:click={collapseAll}
+        title={$_('outliner.collapseAll')}
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" class="icon">
+          <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+        </svg>
+        <span>{$_('outliner.collapseAll')}</span>
+      </button>
+      <div class="toolbar-separator"></div>
+      <button
+        type="button"
+        class="toolbar-btn"
+        on:click={() => expandLevel(1)}
+        title={$_('outliner.level', { values: { n: 1 } })}
+      >
+        L1
+      </button>
+      <button
+        type="button"
+        class="toolbar-btn"
+        on:click={() => expandLevel(2)}
+        title={$_('outliner.level', { values: { n: 2 } })}
+      >
+        L2
+      </button>
+      <button
+        type="button"
+        class="toolbar-btn"
+        on:click={() => expandLevel(3)}
+        title={$_('outliner.level', { values: { n: 3 } })}
+      >
+        L3
+      </button>
     </div>
-  {:else}
-    {#each nodes as node (node.id)}
-      <OutlinerNodeComponent
-        {node}
-        depth={0}
-        collapsed={collapsedNodes.has(node.id)}
-        {collapsedNodes}
-        {readonly}
-        {isDark}
-        on:contentChange={handleContentChange}
-        on:toggleCollapse={handleToggleCollapse}
-        on:keydown={handleKeyDown}
-        on:focus={handleFocus}
-        on:blur={handleBlur}
-        on:drop={handleDrop}
-      />
-    {/each}
   {/if}
+
+  <!-- Editor content -->
+  <div
+    bind:this={containerElement}
+    class="outliner-editor"
+    class:dark={isDark}
+    style="font-size: {fontSize}px"
+  >
+    {#if nodes.length === 0}
+      <div class="empty-state">
+        {$_('outliner.emptyHint')}
+      </div>
+    {:else}
+      {#each nodes as node (node.id)}
+        <OutlinerNodeComponent
+          {node}
+          depth={0}
+          collapsed={collapsedNodes.has(node.id)}
+          {collapsedNodes}
+          {readonly}
+          {isDark}
+          on:contentChange={handleContentChange}
+          on:toggleCollapse={handleToggleCollapse}
+          on:keydown={handleKeyDown}
+          on:focus={handleFocus}
+          on:blur={handleBlur}
+          on:drop={handleDrop}
+        />
+      {/each}
+    {/if}
+  </div>
 </div>
 
 <style>
-  .outliner-editor {
+  .outliner-container {
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    background: white;
+  }
+
+  .outliner-container.dark {
+    background: rgb(17 24 39);
+  }
+
+  .outliner-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
+  }
+
+  .outliner-toolbar.dark {
+    background: rgb(31 41 55);
+    border-bottom-color: rgb(55 65 81);
+  }
+
+  .toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .toolbar-btn:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+
+  .dark .toolbar-btn {
+    color: #9ca3af;
+  }
+
+  .dark .toolbar-btn:hover {
+    background: rgb(55 65 81);
+    color: #e5e7eb;
+  }
+
+  .toolbar-btn .icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .toolbar-separator {
+    width: 1px;
+    height: 1rem;
+    background: #d1d5db;
+    margin: 0 0.25rem;
+  }
+
+  .dark .toolbar-separator {
+    background: rgb(75 85 99);
+  }
+
+  .outliner-editor {
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 1rem;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
-    background: white;
   }
 
   .outliner-editor.dark {
-    background: rgb(17 24 39); /* gray-900 */
     color: rgb(243 244 246); /* gray-100 */
   }
 

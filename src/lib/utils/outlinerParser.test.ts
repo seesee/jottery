@@ -84,6 +84,37 @@ Item 2
     expect(result).toHaveLength(1);
     expect(result[0].children).toHaveLength(1);
   });
+
+  test('parses collapsed marker [-]', () => {
+    const text = 'Item 1 [-]';
+    const result = parseOutliner(text);
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe('Item 1');
+    expect(result[0].collapsed).toBe(true);
+  });
+
+  test('parses mixed collapsed and expanded nodes', () => {
+    const text = `Item 1 [-]
+  Child 1.1
+  Child 1.2
+Item 2
+  Child 2.1 [-]
+    Grandchild`;
+    const result = parseOutliner(text);
+    expect(result[0].collapsed).toBe(true);
+    expect(result[0].content).toBe('Item 1');
+    expect(result[0].children[0].collapsed).toBeFalsy();
+    expect(result[1].collapsed).toBeFalsy();
+    expect(result[1].children[0].collapsed).toBe(true);
+    expect(result[1].children[0].content).toBe('Child 2.1');
+  });
+
+  test('does not parse [-] in middle of content as collapsed', () => {
+    const text = 'Item [-] with marker in middle';
+    const result = parseOutliner(text);
+    expect(result[0].content).toBe('Item [-] with marker in middle');
+    expect(result[0].collapsed).toBeFalsy();
+  });
 });
 
 describe('serialiseOutliner', () => {
@@ -137,6 +168,51 @@ describe('serialiseOutliner', () => {
       },
     ];
     expect(serialiseOutliner(nodes)).toBe('Item 1\n  Child 1.1\n    Grandchild');
+  });
+
+  test('serialises collapsed nodes with [-] marker', () => {
+    const nodes: OutlinerNode[] = [
+      {
+        id: '1',
+        content: 'Item 1',
+        collapsed: true,
+        children: [
+          { id: '2', content: 'Child 1.1', children: [] },
+        ],
+      },
+    ];
+    expect(serialiseOutliner(nodes)).toBe('Item 1 [-]\n  Child 1.1');
+  });
+
+  test('does not add marker for non-collapsed nodes', () => {
+    const nodes: OutlinerNode[] = [
+      {
+        id: '1',
+        content: 'Item 1',
+        collapsed: false,
+        children: [
+          { id: '2', content: 'Child 1.1', children: [] },
+        ],
+      },
+      {
+        id: '3',
+        content: 'Item 2',
+        // collapsed is undefined
+        children: [],
+      },
+    ];
+    expect(serialiseOutliner(nodes)).toBe('Item 1\n  Child 1.1\nItem 2');
+  });
+
+  test('round-trip preserves collapsed state', () => {
+    const original = `Item 1 [-]
+  Child 1.1
+Item 2
+  Child 2.1 [-]
+    Grandchild`;
+    const parsed = parseOutliner(original);
+    const serialized = serialiseOutliner(parsed);
+    expect(serialized).toBe(original);
   });
 
   test('round-trip: parse then serialise produces equivalent output', () => {

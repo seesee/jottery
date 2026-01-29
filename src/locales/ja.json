@@ -1068,6 +1068,9 @@
     "collapse": "折りたたむ",
     "expand": "展開",
     "moveUp": "上へ移動",
-    "moveDown": "下へ移動"
+    "moveDown": "Move down",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "level": "Level {n}"
   }
 }

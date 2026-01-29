@@ -1068,6 +1068,9 @@
     "collapse": "Recolher",
     "expand": "Expandir",
     "moveUp": "Mover para cima",
-    "moveDown": "Mover para baixo"
+    "moveDown": "Move down",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "level": "Level {n}"
   }
 }

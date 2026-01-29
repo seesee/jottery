@@ -13,6 +13,8 @@ export interface OutlinerNode {
   content: string;
   /** Child nodes */
   children: OutlinerNode[];
+  /** Whether this node is collapsed (persisted as [-] marker in text) */
+  collapsed?: boolean;
 }
 
 /**
