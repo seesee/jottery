@@ -5,6 +5,7 @@
   export let node: OutlinerNode;
   export let depth: number = 0;
   export let collapsed: boolean = false;
+  export let collapsedNodes: Set<string> = new Set();
   export let readonly: boolean = false;
   export let isDark: boolean = false;
 
@@ -14,7 +15,13 @@
     keydown: { id: string; event: KeyboardEvent; element: HTMLElement };
     focus: { id: string };
     blur: { id: string };
+    dragStart: { id: string };
+    dragEnd: { id: string };
+    drop: { draggedId: string; targetId: string; position: 'before' | 'after' | 'child' };
   }>();
+
+  let isDragging = false;
+  let dragOverPosition: 'before' | 'after' | 'child' | null = null;
 
   let contentElement: HTMLElement;
   let isUserInput = false;
@@ -64,6 +71,53 @@
     }
   }
 
+  function handleDragStart(event: DragEvent) {
+    if (readonly) return;
+    isDragging = true;
+    event.dataTransfer?.setData('text/plain', node.id);
+    event.dataTransfer!.effectAllowed = 'move';
+    dispatch('dragStart', { id: node.id });
+  }
+
+  function handleDragEnd() {
+    isDragging = false;
+    dragOverPosition = null;
+    dispatch('dragEnd', { id: node.id });
+  }
+
+  function handleDragOver(event: DragEvent) {
+    if (readonly) return;
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = 'move';
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    const height = rect.height;
+
+    // Determine drop position based on mouse position
+    if (y < height * 0.25) {
+      dragOverPosition = 'before';
+    } else if (y > height * 0.75) {
+      dragOverPosition = 'after';
+    } else {
+      dragOverPosition = 'child';
+    }
+  }
+
+  function handleDragLeave() {
+    dragOverPosition = null;
+  }
+
+  function handleDrop(event: DragEvent) {
+    if (readonly) return;
+    event.preventDefault();
+    const draggedId = event.dataTransfer?.getData('text/plain');
+    if (draggedId && draggedId !== node.id && dragOverPosition) {
+      dispatch('drop', { draggedId, targetId: node.id, position: dragOverPosition });
+    }
+    dragOverPosition = null;
+  }
+
   // Forward events from children
   function handleChildEvent(eventName: string) {
     return (event: CustomEvent) => {
@@ -91,8 +145,21 @@
   }
 </script>
 
-<div class="outliner-node" data-node-id={node.id} style="--depth: {depth}">
-  <div class="node-row" class:dark={isDark}>
+<div class="outliner-node" class:dragging={isDragging} data-node-id={node.id} style="--depth: {depth}">
+  <div
+    class="node-row"
+    class:dark={isDark}
+    class:drag-over-before={dragOverPosition === 'before'}
+    class:drag-over-after={dragOverPosition === 'after'}
+    class:drag-over-child={dragOverPosition === 'child'}
+    role="listitem"
+    draggable={!readonly}
+    on:dragstart={handleDragStart}
+    on:dragend={handleDragEnd}
+    on:dragover={handleDragOver}
+    on:dragleave={handleDragLeave}
+    on:drop={handleDrop}
+  >
     <!-- Collapse/expand bullet -->
     <button
       type="button"
@@ -119,6 +186,7 @@
       class="content"
       contenteditable={!readonly}
       role="textbox"
+      tabindex="0"
       aria-multiline="false"
       on:input={handleInput}
       on:keydown={handleKeyDown}
@@ -134,7 +202,8 @@
         <svelte:self
           node={child}
           depth={depth + 1}
-          collapsed={false}
+          collapsed={collapsedNodes.has(child.id)}
+          {collapsedNodes}
           {readonly}
           {isDark}
           on:contentChange={handleChildEvent('contentChange')}
@@ -142,6 +211,9 @@
           on:keydown={handleChildEvent('keydown')}
           on:focus={handleChildEvent('focus')}
           on:blur={handleChildEvent('blur')}
+          on:dragStart={handleChildEvent('dragStart')}
+          on:dragEnd={handleChildEvent('dragEnd')}
+          on:drop={handleChildEvent('drop')}
         />
       {/each}
     </div>
@@ -238,5 +310,36 @@
 
   .children {
     /* Children container - no additional styling needed */
+  }
+
+  /* Drag and drop styles */
+  .outliner-node.dragging {
+    opacity: 0.5;
+  }
+
+  .node-row {
+    cursor: grab;
+    border-radius: 0.25rem;
+    transition: background-color 0.15s;
+  }
+
+  .node-row:active {
+    cursor: grabbing;
+  }
+
+  .node-row.drag-over-before {
+    box-shadow: inset 0 2px 0 0 #3b82f6;
+  }
+
+  .node-row.drag-over-after {
+    box-shadow: inset 0 -2px 0 0 #3b82f6;
+  }
+
+  .node-row.drag-over-child {
+    background-color: rgba(59, 130, 246, 0.15);
+  }
+
+  .node-row.dark.drag-over-child {
+    background-color: rgba(59, 130, 246, 0.25);
   }
 </style>

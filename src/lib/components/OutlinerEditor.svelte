@@ -84,6 +84,54 @@
     // Blur tracking handled by DOM
   }
 
+  function handleDrop(event: CustomEvent<{ draggedId: string; targetId: string; position: 'before' | 'after' | 'child' }>) {
+    const { draggedId, targetId, position } = event.detail;
+    if (draggedId === targetId) return;
+
+    // Find the dragged node
+    const draggedResult = findNodeById(nodes, draggedId);
+    if (!draggedResult) return;
+
+    // Check if target is a descendant of dragged (can't drop parent into child)
+    function isDescendant(parentId: string, childId: string): boolean {
+      const parentResult = findNodeById(nodes, parentId);
+      if (!parentResult) return false;
+      const flat = flattenNodes([parentResult.node]);
+      return flat.some(n => n.id === childId);
+    }
+
+    if (isDescendant(draggedId, targetId)) return;
+
+    // Remove the dragged node from its current position
+    const { node: draggedNode, parent: draggedParent, index: draggedIndex } = draggedResult;
+    draggedParent.splice(draggedIndex, 1);
+
+    // Find the target node (after removal, indices might have shifted)
+    const targetResult = findNodeById(nodes, targetId);
+    if (!targetResult) {
+      // Target not found after removal, restore and abort
+      draggedParent.splice(draggedIndex, 0, draggedNode);
+      return;
+    }
+
+    const { node: targetNode, parent: targetParent, index: targetIndex } = targetResult;
+
+    // Insert at the appropriate position
+    if (position === 'before') {
+      targetParent.splice(targetIndex, 0, draggedNode);
+    } else if (position === 'after') {
+      targetParent.splice(targetIndex + 1, 0, draggedNode);
+    } else if (position === 'child') {
+      targetNode.children.push(draggedNode);
+      // Expand the target if collapsed
+      collapsedNodes.delete(targetId);
+      collapsedNodes = new Set(collapsedNodes);
+    }
+
+    nodes = [...nodes];
+    emitChange();
+  }
+
   async function focusNode(id: string) {
     await tick();
     // Find the content element and focus it
@@ -372,6 +420,7 @@
         {node}
         depth={0}
         collapsed={collapsedNodes.has(node.id)}
+        {collapsedNodes}
         {readonly}
         {isDark}
         on:contentChange={handleContentChange}
@@ -379,6 +428,7 @@
         on:keydown={handleKeyDown}
         on:focus={handleFocus}
         on:blur={handleBlur}
+        on:drop={handleDrop}
       />
     {/each}
   {/if}
