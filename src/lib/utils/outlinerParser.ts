@@ -1,25 +1,26 @@
 /**
  * Parser and serialiser for the Outliner document format
  *
- * Content storage format: Tab-indented text with optional collapse marker
- * - Tab character for each indent level
- * - '>' prefix marks collapsed nodes
- * - Human-readable, works with encryption
- * - Can edit as plain text if needed
+ * Content storage format: Markdown-style bulleted lists
+ * - Two spaces per indent level
+ * - '-' prefix for expanded items (default)
+ * - '+' prefix for collapsed items
+ * - Human-readable, valid markdown
  *
  * Example:
- *   Item 1
- *   	Child 1.1
- *   	Child 1.2
- *   		Grandchild 1.2.1
- *   >Item 2 (collapsed)
- *   	Hidden child
+ *   - Item 1
+ *     - Child 1.1
+ *     - Child 1.2
+ *   + Item 2 (collapsed)
+ *     - Hidden child
  */
 
 import type { OutlinerNode } from '../types/outliner';
 
-const INDENT_CHAR = '\t';
-const COLLAPSED_PREFIX = '>';
+const INDENT_SIZE = 2;
+const INDENT_CHAR = ' ';
+const EXPANDED_BULLET = '- ';
+const COLLAPSED_BULLET = '+ ';
 
 /**
  * Generate a UUID for new nodes
@@ -52,36 +53,33 @@ export function parseOutliner(text: string): OutlinerNode[] {
       continue;
     }
 
-    // Calculate indent level (count leading tabs, or fall back to 2-space units for backwards compat)
-    let level = 0;
-    let charIndex = 0;
+    // Calculate indent level by counting leading spaces
+    let spaces = 0;
     for (const char of line) {
-      if (char === '\t') {
-        level++;
-        charIndex++;
-      } else if (char === ' ') {
-        // Count spaces for backwards compatibility (2 spaces = 1 level)
-        let spaces = 0;
-        for (let i = charIndex; i < line.length && line[i] === ' '; i++) {
-          spaces++;
-        }
-        level += Math.floor(spaces / 2);
-        charIndex += spaces;
-        break;
+      if (char === ' ') {
+        spaces++;
+      } else if (char === '\t') {
+        spaces += INDENT_SIZE; // Treat tab as equivalent to indent size
       } else {
         break;
       }
     }
-    let content = line.slice(charIndex);
+    const level = Math.floor(spaces / INDENT_SIZE);
+    let content = line.slice(spaces);
 
-    // Check for collapsed marker (> prefix)
+    // Check for bullet markers
     let collapsed = false;
-    if (content.startsWith(COLLAPSED_PREFIX)) {
+    if (content.startsWith(COLLAPSED_BULLET)) {
       collapsed = true;
-      content = content.slice(COLLAPSED_PREFIX.length);
+      content = content.slice(COLLAPSED_BULLET.length);
+    } else if (content.startsWith(EXPANDED_BULLET)) {
+      content = content.slice(EXPANDED_BULLET.length);
     }
-    // Also support old [-] suffix for backwards compatibility
-    if (content.endsWith(' [-]')) {
+    // Backwards compat: support old formats
+    else if (content.startsWith('>')) {
+      collapsed = true;
+      content = content.slice(1);
+    } else if (content.endsWith(' [-]')) {
       collapsed = true;
       content = content.slice(0, -4);
     }
@@ -130,9 +128,9 @@ export function serialiseOutliner(nodes: OutlinerNode[]): string {
   const lines: string[] = [];
 
   function serialiseNode(node: OutlinerNode, level: number): void {
-    const indent = INDENT_CHAR.repeat(level);
-    const collapsedPrefix = node.collapsed ? COLLAPSED_PREFIX : '';
-    lines.push(indent + collapsedPrefix + node.content);
+    const indent = INDENT_CHAR.repeat(level * INDENT_SIZE);
+    const bullet = node.collapsed ? COLLAPSED_BULLET : EXPANDED_BULLET;
+    lines.push(indent + bullet + node.content);
     for (const child of node.children) {
       serialiseNode(child, level + 1);
     }

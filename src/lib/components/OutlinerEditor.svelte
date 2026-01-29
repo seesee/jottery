@@ -162,9 +162,11 @@
 
   function handleDragStart(event: CustomEvent<{ id: string }>) {
     currentDraggedNodeId = event.detail.id;
+    console.log('[Outliner] dragStart:', event.detail.id);
   }
 
   function handleDragEnd() {
+    console.log('[Outliner] dragEnd, current:', currentDraggedNodeId);
     // Reset after a short delay to ensure drop has processed
     setTimeout(() => { currentDraggedNodeId = null; }, 100);
   }
@@ -172,9 +174,13 @@
   function handleDrop(event: CustomEvent<{ targetId: string; position: 'before' | 'after' | 'child' }>) {
     const { targetId, position } = event.detail;
     const draggedId = currentDraggedNodeId;
+    console.log('[Outliner] handleDrop called:', { draggedId, targetId, position });
     currentDraggedNodeId = null;
 
-    if (!draggedId || draggedId === targetId) return;
+    if (!draggedId || draggedId === targetId) {
+      console.log('[Outliner] drop aborted: draggedId=' + draggedId + ', targetId=' + targetId);
+      return;
+    }
 
     // Find the dragged node
     const draggedResult = findNodeById(nodes, draggedId);
@@ -215,6 +221,8 @@
       collapsedNodes.delete(targetId);
       collapsedNodes = new Set(collapsedNodes);
     }
+
+    console.log('[Outliner] drop completed, new structure:', serialiseOutliner(nodes));
 
     nodes = [...nodes];
     emitChange();
