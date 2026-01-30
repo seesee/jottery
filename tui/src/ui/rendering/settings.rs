@@ -107,6 +107,19 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         } else {
             format!("{} ({})", t!("common.no"), t!("settings.press_enter_toggle"))
         }),
+    ];
+
+    // Add security warning when remember password is enabled
+    if app.settings.remember_password {
+        settings_text.push(Line::from(vec![
+            Span::styled(
+                format!("    ⚠  {}", t!("password.remember_warning")),
+                Style::default().fg(app.color_scheme.warning)
+            ),
+        ]));
+    }
+
+    settings_text.extend(vec![
         Line::from(""),
         Line::from(""),
         Line::from(vec![
@@ -117,7 +130,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         Line::from(format!("  • {}", t!("settings.instructions_text"))),
         Line::from(format!("  • {}", t!("settings.instructions_toggle"))),
         Line::from(format!("  • {}", t!("settings.instructions_remember"))),
-    ];
+    ]);
 
     // Add sync-related instructions based on sync state
     let sync_configured = app.settings.sync_endpoint.is_some();

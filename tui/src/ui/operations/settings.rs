@@ -272,15 +272,31 @@ pub fn paste_sync_credentials(app: &mut App) -> Result<()> {
         app.debug_log("Paste credentials - Salt saved successfully");
     }
 
-    // Save sync metadata with PLAINTEXT API key temporarily
-    // It will be encrypted on next unlock with the new salt
+    // Save sync metadata
     let sync_repo = SyncRepository::new(db.connection());
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
 
-    // Store API key as plaintext temporarily (will be encrypted on next unlock)
-    // We use a special marker to indicate it needs encryption
-    app.debug_log("Paste credentials - Storing API key (will encrypt on next unlock)");
-    metadata.api_key = Some(format!("PLAINTEXT:{}", creds.api_key));
+    // If salt was synced, we need to store plaintext and encrypt on next unlock
+    // because the key will be re-derived with the new salt.
+    // Otherwise, encrypt immediately with the current session key if available.
+    let api_key_to_store = if creds.salt.is_some() {
+        // Salt changed - must wait for next unlock to encrypt with new key
+        app.debug_log("Paste credentials - Storing API key (will encrypt on next unlock with new salt)");
+        format!("PLAINTEXT:{}", creds.api_key)
+    } else if let Some(ref key) = app.key {
+        // No salt change and we have a session key - encrypt immediately
+        app.debug_log("Paste credentials - Encrypting API key immediately");
+        let encrypted = app.crypto.encrypt_text(&creds.api_key, key)
+            .context("Failed to encrypt API key")?;
+        serde_json::to_string(&encrypted)
+            .context("Failed to serialize encrypted API key")?
+    } else {
+        // No session key available (shouldn't happen in normal flow)
+        app.debug_log("Paste credentials - No session key, storing plaintext temporarily");
+        format!("PLAINTEXT:{}", creds.api_key)
+    };
+
+    metadata.api_key = Some(api_key_to_store);
     metadata.client_id = Some(creds.client_id);
     metadata.sync_endpoint = creds.endpoint.clone();
     metadata.sync_enabled = true;
@@ -513,13 +529,31 @@ pub fn process_credentials_input(app: &mut App, input: &str) -> Result<()> {
         app.debug_log("Process credentials - Salt saved successfully");
     }
 
-    // Save sync metadata with PLAINTEXT API key temporarily
+    // Save sync metadata
     let sync_repo = SyncRepository::new(db.connection());
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
 
-    // Store API key as plaintext temporarily (will be encrypted on next unlock)
-    app.debug_log("Process credentials - Storing API key (will encrypt on next unlock)");
-    metadata.api_key = Some(format!("PLAINTEXT:{}", creds.api_key));
+    // If salt was synced, we need to store plaintext and encrypt on next unlock
+    // because the key will be re-derived with the new salt.
+    // Otherwise, encrypt immediately with the current session key if available.
+    let api_key_to_store = if creds.salt.is_some() {
+        // Salt changed - must wait for next unlock to encrypt with new key
+        app.debug_log("Process credentials - Storing API key (will encrypt on next unlock with new salt)");
+        format!("PLAINTEXT:{}", creds.api_key)
+    } else if let Some(ref key) = app.key {
+        // No salt change and we have a session key - encrypt immediately
+        app.debug_log("Process credentials - Encrypting API key immediately");
+        let encrypted = app.crypto.encrypt_text(&creds.api_key, key)
+            .context("Failed to encrypt API key")?;
+        serde_json::to_string(&encrypted)
+            .context("Failed to serialize encrypted API key")?
+    } else {
+        // No session key available (shouldn't happen in normal flow)
+        app.debug_log("Process credentials - No session key, storing plaintext temporarily");
+        format!("PLAINTEXT:{}", creds.api_key)
+    };
+
+    metadata.api_key = Some(api_key_to_store);
     metadata.client_id = Some(creds.client_id);
     metadata.sync_endpoint = creds.endpoint.clone();
     metadata.sync_enabled = true;
