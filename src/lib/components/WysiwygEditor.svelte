@@ -41,7 +41,22 @@
     emDelimiter: '*',
     strongDelimiter: '**',
   });
+
+  // Use GFM plugin for tables, strikethrough, etc.
   turndownService.use(gfm);
+
+  // Custom rule to preserve note links (link:uuid format)
+  turndownService.addRule('noteLink', {
+    filter: (node) => {
+      return node.nodeName === 'A' &&
+             (node as HTMLAnchorElement).getAttribute('href')?.startsWith('link:');
+    },
+    replacement: (content, node) => {
+      const href = (node as HTMLAnchorElement).getAttribute('href') || '';
+      const text = content || '';
+      return `[${text}](${href})`;
+    }
+  });
 
   // Custom rule for task lists
   turndownService.addRule('taskListItem', {
@@ -70,8 +85,88 @@
     }
   });
 
+  // Custom rule for tables to ensure markdown format (override any issues with gfm plugin)
+  turndownService.addRule('table', {
+    filter: 'table',
+    replacement: (_content, node) => {
+      const table = node as HTMLTableElement;
+      const rows: string[][] = [];
+      const headerRow: string[] = [];
+      let hasHeader = false;
+
+      // Process thead
+      const thead = table.querySelector('thead');
+      if (thead) {
+        const headerCells = thead.querySelectorAll('th, td');
+        headerCells.forEach(cell => {
+          headerRow.push(cell.textContent?.trim() || '');
+        });
+        if (headerRow.length > 0) {
+          hasHeader = true;
+          rows.push(headerRow);
+        }
+      }
+
+      // Process tbody
+      const tbody = table.querySelector('tbody') || table;
+      const bodyRows = tbody.querySelectorAll('tr');
+      bodyRows.forEach((tr, index) => {
+        // Skip if this is in thead
+        if (tr.parentNode === thead) return;
+
+        const cells = tr.querySelectorAll('th, td');
+        const rowData: string[] = [];
+        cells.forEach(cell => {
+          rowData.push(cell.textContent?.trim() || '');
+        });
+
+        // If no header and this is first row with th elements, treat as header
+        if (!hasHeader && index === 0 && tr.querySelector('th')) {
+          hasHeader = true;
+          rows.unshift(rowData);
+        } else if (rowData.length > 0) {
+          rows.push(rowData);
+        }
+      });
+
+      if (rows.length === 0) return '';
+
+      // Determine column count
+      const colCount = Math.max(...rows.map(r => r.length));
+
+      // Build markdown table
+      let result = '\n';
+
+      // Header row (or first row if no explicit header)
+      const header = rows[0] || [];
+      result += '| ' + header.map(cell => cell || ' ').concat(Array(colCount - header.length).fill(' ')).join(' | ') + ' |\n';
+
+      // Separator row
+      result += '| ' + Array(colCount).fill('---').join(' | ') + ' |\n';
+
+      // Data rows
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        result += '| ' + row.map(cell => cell || ' ').concat(Array(colCount - row.length).fill(' ')).join(' | ') + ' |\n';
+      }
+
+      return result + '\n';
+    }
+  });
+
   // Compute font size from settings
   $: fontSize = getFontSize($settings.fontSize);
+
+  // Configure marked to allow note links (link: protocol)
+  marked.use({
+    renderer: {
+      link(href: string, title: string | null | undefined, text: string) {
+        // Preserve note links with link: protocol
+        const titleAttr = title ? ` title="${title}"` : '';
+        return `<a href="${href}"${titleAttr}>${text}</a>`;
+      }
+    }
+  });
 
   // Convert markdown to HTML for Tiptap
   function markdownToHtml(md: string): string {
