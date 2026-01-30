@@ -1083,6 +1083,7 @@
         isSynced={$selectedNote.syncedAt != null && $selectedNote.syncedAt >= $selectedNote.modifiedAt}
         {syncEnabled}
         neverSynced={$selectedNote.syncedAt == null}
+        onShowVersionHistory={handleShowVersionHistory}
       />
     {/if}
   </div>

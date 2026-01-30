@@ -8,6 +8,7 @@
   export let isSynced: boolean = false;
   export let syncEnabled: boolean = true;
   export let neverSynced: boolean = false;
+  export let onShowVersionHistory: (() => void) | undefined = undefined;
 
   // Determine sync indicator state:
   // - Sync enabled + synced: green filled
@@ -40,7 +41,18 @@
 >
   <div class="flex justify-between">
     <span class="flex items-center gap-1.5">
-      <span>{$_('note.version')}: {version ?? 1}</span>
+      {#if onShowVersionHistory}
+        <button
+          type="button"
+          on:click={onShowVersionHistory}
+          class="hover:text-blue-500 dark:hover:text-blue-400 hover:underline cursor-pointer"
+          title={$_('versionHistory.title')}
+        >
+          {$_('note.version')}: v{version ?? 1}
+        </button>
+      {:else}
+        <span>{$_('note.version')}: v{version ?? 1}</span>
+      {/if}
       <span
         class={indicatorClass}
         title={indicatorTitle}
