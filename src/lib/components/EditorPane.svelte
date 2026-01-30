@@ -1106,6 +1106,7 @@
     {createdAtFormatted}
     {modifiedAtFormatted}
     onClose={() => showInfoModal = false}
+    onShowVersionHistory={handleShowVersionHistory}
   />
 {/if}
 

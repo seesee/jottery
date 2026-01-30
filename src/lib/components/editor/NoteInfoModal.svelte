@@ -20,6 +20,7 @@
 
   // Callbacks
   export let onClose: () => void;
+  export let onShowVersionHistory: (() => void) | undefined = undefined;
 </script>
 
 <!-- Info Modal -->
@@ -91,7 +92,17 @@
 
         <div>
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('versionHistory.version')}</div>
-          <div class="font-medium text-gray-900 dark:text-gray-100">v{noteVersion}</div>
+          {#if onShowVersionHistory}
+            <button
+              on:click={() => { onClose(); onShowVersionHistory?.(); }}
+              class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer"
+              title={$_('versionHistory.title')}
+            >
+              v{noteVersion}
+            </button>
+          {:else}
+            <div class="font-medium text-gray-900 dark:text-gray-100">v{noteVersion}</div>
+          {/if}
         </div>
 
         <div>
