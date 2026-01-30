@@ -478,14 +478,14 @@
           </div>
         {:else}
           <!-- Desktop: Side-by-side layout -->
-          <div class="flex w-full h-full">
+          <div class="flex w-full h-full min-h-0">
             <!-- Note List Sidebar -->
-            <div class="w-80 h-full border-r border-gray-200 dark:border-gray-700">
+            <div class="w-80 h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden">
               <NoteList {loadingNotes} {loadingProgress} />
             </div>
 
             <!-- Editor -->
-            <div class="flex-1 h-full">
+            <div class="flex-1 h-full min-h-0 overflow-hidden">
               <EditorPane />
             </div>
           </div>
