@@ -207,6 +207,8 @@
           HTMLAttributes: {
             class: 'text-blue-600 dark:text-blue-400 underline',
           },
+          // Allow note links with link: protocol
+          validate: (href) => /^(https?:\/\/|mailto:|tel:|link:)/.test(href),
         }),
         Image.configure({
           HTMLAttributes: {
