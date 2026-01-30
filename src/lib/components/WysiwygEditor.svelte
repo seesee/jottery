@@ -158,9 +158,10 @@
   $: fontSize = getFontSize($settings.fontSize);
 
   // Configure marked to allow note links (link: protocol)
+  // In marked v17+, renderer functions receive a token object
   marked.use({
     renderer: {
-      link(href: string, title: string | null | undefined, text: string) {
+      link({ href, title, text }: { href: string; title: string | null; text: string }) {
         // Preserve note links with link: protocol
         const titleAttr = title ? ` title="${title}"` : '';
         return `<a href="${href}"${titleAttr}>${text}</a>`;
