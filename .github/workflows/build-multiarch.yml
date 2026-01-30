@@ -131,6 +131,54 @@ jobs:
           name: windows-tui
           path: releases-versioned/*
 
+  web-app:
+    name: Build Web App (Offline Bundle)
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Create offline ZIP bundle
+        run: |
+          cd dist
+          zip -r ../jottery-web-${VERSION}-offline.zip \
+            index.html \
+            favicon.ico \
+            favicon.svg \
+            favicon-16x16.png \
+            favicon-32x32.png \
+            apple-touch-icon.png \
+            android-chrome-192x192.png \
+            android-chrome-512x512.png \
+            site.webmanifest \
+            pdf.worker.min.mjs \
+            version.json \
+            screenshots/ \
+            -x "*.DS_Store"
+          cd ..
+          mkdir -p web-release
+          mv jottery-web-${VERSION}-offline.zip web-release/
+
+      - name: Upload web app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-app
+          path: web-release/*
+
   collect-tui:
     name: Collect All TUI Binaries
     needs: [linux-tui, macos-tui, windows-tui]
@@ -225,7 +273,7 @@ jobs:
 
   make-release:
     name: Publish GitHub Release
-    needs: [collect-tui, docker-build]
+    needs: [collect-tui, docker-build, web-app]
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ github.ref_name }}
@@ -256,5 +304,6 @@ jobs:
           files: |
             release-assets/tui-release-zip/*
             release-assets/all-tui/*
+            release-assets/web-app/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
