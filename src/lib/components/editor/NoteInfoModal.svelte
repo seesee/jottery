@@ -94,8 +94,9 @@
           <div class="text-gray-600 dark:text-gray-400 mb-2">{$_('versionHistory.version')}</div>
           {#if onShowVersionHistory}
             <button
-              on:click={() => { onClose(); onShowVersionHistory?.(); }}
-              class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer"
+              type="button"
+              on:click={() => { onShowVersionHistory?.(); onClose(); }}
+              class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer text-left"
               title={$_('versionHistory.title')}
             >
               v{noteVersion}

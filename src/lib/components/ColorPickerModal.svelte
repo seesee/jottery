@@ -34,6 +34,7 @@
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={handleBackdropClick}
+    on:keydown={(e) => e.key === 'Escape' && onClose()}
     role="dialog"
     aria-modal="true"
     tabindex="-1"
