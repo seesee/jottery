@@ -13,6 +13,13 @@
   import { searchService } from '../services/searchService';
   import { isMobileTouchDevice } from '../utils/device';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
+  import {
+    VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT,
+    VIRTUAL_SCROLL_OVERSCAN,
+    VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS,
+    CONFLICT_CHECK_BATCH_SIZE,
+    SEARCH_MAX_RESULTS_FOR_CROSS_MODE_HINT,
+  } from '../constants';
 
   export let onNoteSelect: (() => void) | undefined = undefined;
   export let loadingNotes: boolean = false;
@@ -56,10 +63,9 @@
     const allNotes = await noteRepository.getAllActive();
     const conflicts = new Set<string>();
 
-    // Process in batches of 50 to avoid overwhelming the browser
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < allNotes.length; i += BATCH_SIZE) {
-      const batch = allNotes.slice(i, i + BATCH_SIZE);
+    // Process in batches to avoid overwhelming the browser
+    for (let i = 0; i < allNotes.length; i += CONFLICT_CHECK_BATCH_SIZE) {
+      const batch = allNotes.slice(i, i + CONFLICT_CHECK_BATCH_SIZE);
       const results = await Promise.all(
         batch.map(async (note) => {
           const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
@@ -98,8 +104,6 @@
   }
 
   // Virtual scrolling state
-  const ESTIMATED_ITEM_HEIGHT = 80; // Initial estimated height per note item in pixels
-  const OVERSCAN = 15; // Number of items to render outside viewport for smooth scrolling
   let viewportHeight = 0;
   let scrollTop = 0;
   let startIndex = 0;
@@ -110,7 +114,6 @@
 
   // Cross-mode match indicator
   let crossModeMatchCount = 0;
-  const MAX_RESULTS_FOR_HINT = 10; // Only show hint when there are 10 or fewer results
 
   // Calculate cross-mode matches when search query or archive mode changes
   $: if ($searchQuery && $searchQuery.trim()) {
@@ -123,7 +126,7 @@
   }
 
   // Show cross-mode hint only when searching with few results
-  $: showCrossModeHint = crossModeMatchCount > 0 && $searchQuery.trim() !== '' && $filteredNotes.length <= MAX_RESULTS_FOR_HINT;
+  $: showCrossModeHint = crossModeMatchCount > 0 && $searchQuery.trim() !== '' && $filteredNotes.length <= SEARCH_MAX_RESULTS_FOR_CROSS_MODE_HINT;
 
   // Height cache: stores measured heights for each note ID
   let heightCache = new Map<string, number>();
@@ -137,9 +140,9 @@
 
   // Get height for a note (measured or estimated)
   function getItemHeight(index: number): number {
-    if (index < 0 || index >= $filteredNotes.length) return ESTIMATED_ITEM_HEIGHT;
+    if (index < 0 || index >= $filteredNotes.length) return VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT;
     const noteId = $filteredNotes[index].id;
-    return heightCache.get(noteId) || ESTIMATED_ITEM_HEIGHT;
+    return heightCache.get(noteId) || VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT;
   }
 
   // Rebuild prefix sums array (called when heights change or notes change)
@@ -197,9 +200,6 @@
     prefixSumsValid = false;
   }
 
-  // Minimum items to render to prevent empty/broken states
-  const MIN_VISIBLE_ITEMS = 30;
-
   // Calculate visible range based on scroll position
   function updateVisibleRange() {
     if (!scrollContainer) return;
@@ -211,15 +211,15 @@
     // Use a sensible default to prevent rendering too few items
     const effectiveViewportHeight = viewportHeight > 0 ? viewportHeight : 800;
 
-    // Find start index based on scroll position (subtract OVERSCAN for buffer above)
-    startIndex = Math.max(0, findIndexAtPosition(scrollTop) - OVERSCAN);
+    // Find start index based on scroll position (subtract VIRTUAL_SCROLL_OVERSCAN for buffer above)
+    startIndex = Math.max(0, findIndexAtPosition(scrollTop) - VIRTUAL_SCROLL_OVERSCAN);
 
-    // Find end index based on scroll position + viewport height (add OVERSCAN for buffer below)
+    // Find end index based on scroll position + viewport height (add VIRTUAL_SCROLL_OVERSCAN for buffer below)
     const endPosition = scrollTop + effectiveViewportHeight;
-    let calculatedEndIndex = Math.min($filteredNotes.length, findIndexAtPosition(endPosition) + 1 + OVERSCAN);
+    let calculatedEndIndex = Math.min($filteredNotes.length, findIndexAtPosition(endPosition) + 1 + VIRTUAL_SCROLL_OVERSCAN);
 
-    // Ensure we always render at least MIN_VISIBLE_ITEMS (or all notes if fewer)
-    const minEndIndex = Math.min(startIndex + MIN_VISIBLE_ITEMS, $filteredNotes.length);
+    // Ensure we always render at least VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS (or all notes if fewer)
+    const minEndIndex = Math.min(startIndex + VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS, $filteredNotes.length);
     endIndex = Math.max(calculatedEndIndex, minEndIndex);
 
     visibleNotes = $filteredNotes.slice(startIndex, endIndex);
@@ -285,8 +285,8 @@
       noteListScrollPosition.set(scrollContainer.scrollTop);
 
       // Detect corrupted state during scroll: if we have many notes but very few visible
-      const expectedMinVisible = Math.min($filteredNotes.length, MIN_VISIBLE_ITEMS);
-      if ($filteredNotes.length > MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
+      const expectedMinVisible = Math.min($filteredNotes.length, VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS);
+      if ($filteredNotes.length > VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
         console.warn('[NoteList] Detected corrupted virtual scroll state during scroll, forcing full render');
         forceFullRender();
       }
@@ -408,8 +408,8 @@
           updateVisibleRange();
 
           // Detect corrupted state: if we have many notes but very few visible, force full render
-          const expectedMinVisible = Math.min($filteredNotes.length, MIN_VISIBLE_ITEMS);
-          if ($filteredNotes.length > MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
+          const expectedMinVisible = Math.min($filteredNotes.length, VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS);
+          if ($filteredNotes.length > VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
             console.warn('[NoteList] Detected corrupted virtual scroll state, forcing full render');
             forceFullRender();
           }

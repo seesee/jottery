@@ -13,6 +13,7 @@ import { syncRepository } from './syncRepository';
 import { noteService } from './noteService';
 import { cryptoService, encryptStringArray } from './crypto';
 import { keyManager } from './keyManager';
+import { ApplicationLockedError, NotFoundError } from '../errors';
 
 export type ConflictResolution = 'keep-mine' | 'keep-server' | 'keep-both' | 'merge';
 
@@ -72,7 +73,7 @@ export async function getConflicts(): Promise<string[]> {
 export async function getConflictInfo(noteId: string): Promise<ConflictInfo | null> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   const localNote = await noteRepository.getById(noteId);
@@ -119,7 +120,7 @@ export async function getConflictInfo(noteId: string): Promise<ConflictInfo | nu
 export async function resolveKeepMine(noteId: string): Promise<void> {
   const note = await noteRepository.getById(noteId);
   if (!note) {
-    throw new Error(`Note ${noteId} not found`);
+    throw new NotFoundError('Note', noteId);
   }
 
   // Update note with current timestamp to ensure it wins on next push
@@ -146,18 +147,18 @@ export async function resolveKeepMine(noteId: string): Promise<void> {
 export async function resolveKeepServer(noteId: string): Promise<void> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   const syncMeta = await syncRepository.getNoteSyncMetadata(noteId);
   if (!syncMeta?.conflictData) {
-    throw new Error(`No conflict data for note ${noteId}`);
+    throw new NotFoundError('ConflictData', noteId);
   }
 
   const conflict = syncMeta.conflictData;
   const existingNote = await noteRepository.getById(noteId);
   if (!existingNote) {
-    throw new Error(`Note ${noteId} not found`);
+    throw new NotFoundError('Note', noteId);
   }
 
   // Update note with server data
@@ -191,12 +192,12 @@ export async function resolveKeepServer(noteId: string): Promise<void> {
 export async function resolveKeepBoth(noteId: string): Promise<string> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   const syncMeta = await syncRepository.getNoteSyncMetadata(noteId);
   if (!syncMeta?.conflictData) {
-    throw new Error(`No conflict data for note ${noteId}`);
+    throw new NotFoundError('ConflictData', noteId);
   }
 
   const conflict = syncMeta.conflictData;
@@ -256,12 +257,12 @@ export async function resolveMerge(
 ): Promise<void> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   const note = await noteRepository.getById(noteId);
   if (!note) {
-    throw new Error(`Note ${noteId} not found`);
+    throw new NotFoundError('Note', noteId);
   }
 
   // Encrypt merged content

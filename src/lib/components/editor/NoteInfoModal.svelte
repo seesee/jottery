@@ -27,7 +27,7 @@
   <div
     class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
     on:click={onClose}
-    on:keydown={(e) => e.key === 'Enter' && onClose()}
+    on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClose())}
     role="button"
     tabindex="-1"
     aria-label="Close modal"

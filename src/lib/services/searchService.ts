@@ -4,7 +4,7 @@
  */
 
 import FlexSearch from 'flexsearch';
-import type { DecryptedNote, SearchQuery, SortOrder } from '../types';
+import type { DecryptedNote, SearchQuery, SortOrder, FlexSearchEnrichedResult, FlexSearchResultItem } from '../types';
 import { getTagColor, getColorKeyByDisplayName } from './colorService';
 
 // Create FlexSearch index
@@ -78,6 +78,192 @@ const MODIFIER_PATTERNS = {
   categorySimple: /\bcategory:([\w\s-]+)\b/gi,
 };
 
+// ============================================================================
+// Modifier Parsing Helpers
+// ============================================================================
+
+/** Parse has:attachment modifier */
+function parseHasAttachmentModifier(
+  query: string,
+  modifiers: Partial<SearchQuery>
+): string {
+  if (MODIFIER_PATTERNS.hasAttachment.test(query)) {
+    modifiers.hasAttachment = true;
+    return query.replace(MODIFIER_PATTERNS.hasAttachment, '');
+  }
+  return query;
+}
+
+/** Parse archived modifier (archived, archived:true, archived:false) */
+function parseArchivedModifier(
+  query: string,
+  modifiers: Partial<SearchQuery>
+): string {
+  const explicitMatch = query.match(/\barchived?:(true|false|yes|no|1|0)\b/i);
+  if (explicitMatch) {
+    const value = explicitMatch[1].toLowerCase();
+    modifiers.archived = value === 'true' || value === 'yes' || value === '1';
+    return query.replace(/\barchived?:(true|false|yes|no|1|0)\b/gi, '');
+  }
+
+  if (/\barchived?\b/i.test(query)) {
+    modifiers.archived = true;
+    return query.replace(/\barchived?\b/gi, '');
+  }
+
+  return query;
+}
+
+/** Parse date range or comparison modifiers (created: or modified:) */
+function parseDateModifier(
+  query: string,
+  modifiers: Partial<SearchQuery>,
+  field: 'created' | 'modified'
+): string {
+  const afterKey = field === 'created' ? 'createdAfter' : 'modifiedAfter';
+  const beforeKey = field === 'created' ? 'createdBefore' : 'modifiedBefore';
+
+  // Check range first (START..END)
+  const rangePattern = new RegExp(`\\b${field}:(\\d{4}-\\d{2}-\\d{2})\\.\\.(\\d{4}-\\d{2}-\\d{2})\\b`);
+  const rangeMatch = query.match(rangePattern);
+  if (rangeMatch) {
+    modifiers[afterKey] = rangeMatch[1];
+    modifiers[beforeKey] = rangeMatch[2];
+    return query.replace(rangePattern, '');
+  }
+
+  // Check >DATE (after)
+  const afterPattern = new RegExp(`\\b${field}:>(\\d{4}-\\d{2}-\\d{2})\\b`);
+  const afterMatch = query.match(afterPattern);
+  if (afterMatch) {
+    modifiers[afterKey] = afterMatch[1];
+    query = query.replace(afterPattern, '');
+  }
+
+  // Check <DATE (before)
+  const beforePattern = new RegExp(`\\b${field}:<(\\d{4}-\\d{2}-\\d{2})\\b`);
+  const beforeMatch = query.match(beforePattern);
+  if (beforeMatch) {
+    modifiers[beforeKey] = beforeMatch[1];
+    query = query.replace(beforePattern, '');
+  }
+
+  return query;
+}
+
+/** Parse word count modifier (words:>N, words:<N, words:MIN..MAX) */
+function parseWordCountModifier(
+  query: string,
+  modifiers: Partial<SearchQuery>
+): string {
+  // Check range first (MIN..MAX)
+  const rangeMatch = query.match(/\bwords:(\d+)\.\.(\d+)\b/);
+  if (rangeMatch) {
+    modifiers.wordCountMin = parseInt(rangeMatch[1], 10);
+    modifiers.wordCountMax = parseInt(rangeMatch[2], 10);
+    return query.replace(/\bwords:\d+\.\.\d+\b/, '');
+  }
+
+  // Check >N (minimum)
+  const minMatch = query.match(/\bwords:>(\d+)\b/);
+  if (minMatch) {
+    modifiers.wordCountMin = parseInt(minMatch[1], 10);
+    query = query.replace(/\bwords:>\d+\b/, '');
+  }
+
+  // Check <N (maximum)
+  const maxMatch = query.match(/\bwords:<(\d+)\b/);
+  if (maxMatch) {
+    modifiers.wordCountMax = parseInt(maxMatch[1], 10);
+    query = query.replace(/\bwords:<\d+\b/, '');
+  }
+
+  return query;
+}
+
+/** Parse color modifier (color:red, color:red note, color:red tag) */
+function parseColorModifier(
+  query: string,
+  modifiers: Partial<SearchQuery>
+): string {
+  // color:X note (note color only)
+  const noteMatches = [...query.matchAll(/\bcolou?r:([a-z0-9#]+)\s+note\b/gi)];
+  if (noteMatches.length > 0) {
+    modifiers.colors = noteMatches.map(m => m[1].toLowerCase());
+    modifiers.colorTarget = 'note';
+    return query.replace(/\bcolou?r:[a-z0-9#]+\s+note\b/gi, '');
+  }
+
+  // color:X tag (tag color only)
+  const tagMatches = [...query.matchAll(/\bcolou?r:([a-z0-9#]+)\s+tag\b/gi)];
+  if (tagMatches.length > 0) {
+    modifiers.colors = tagMatches.map(m => m[1].toLowerCase());
+    modifiers.colorTarget = 'tag';
+    return query.replace(/\bcolou?r:[a-z0-9#]+\s+tag\b/gi, '');
+  }
+
+  // color:X (both notes and tags)
+  if (!modifiers.colorTarget) {
+    const simpleMatches = [...query.matchAll(/\bcolou?r:([a-z0-9#]+)\b/gi)];
+    if (simpleMatches.length > 0) {
+      modifiers.colors = simpleMatches.map(m => m[1].toLowerCase());
+      modifiers.colorTarget = 'both';
+      return query.replace(/\bcolou?r:[a-z0-9#]+\b/gi, '');
+    }
+  }
+
+  return query;
+}
+
+/** Parse category modifier (uses display names instead of color keys) */
+function parseCategoryModifier(
+  query: string,
+  modifiers: Partial<SearchQuery>
+): string {
+  // category:X note
+  const noteMatches = [...query.matchAll(/\bcategory:([\w\s-]+)\s+note\b/gi)];
+  if (noteMatches.length > 0) {
+    const colorKeys = noteMatches
+      .map(m => getColorKeyByDisplayName(m[1].trim()))
+      .filter(Boolean) as string[];
+    if (colorKeys.length > 0) {
+      modifiers.colors = colorKeys;
+      modifiers.colorTarget = 'note';
+    }
+    return query.replace(/\bcategory:[\w\s-]+\s+note\b/gi, '');
+  }
+
+  // category:X tag
+  const tagMatches = [...query.matchAll(/\bcategory:([\w\s-]+)\s+tag\b/gi)];
+  if (tagMatches.length > 0) {
+    const colorKeys = tagMatches
+      .map(m => getColorKeyByDisplayName(m[1].trim()))
+      .filter(Boolean) as string[];
+    if (colorKeys.length > 0) {
+      modifiers.colors = colorKeys;
+      modifiers.colorTarget = 'tag';
+    }
+    return query.replace(/\bcategory:[\w\s-]+\s+tag\b/gi, '');
+  }
+
+  // category:X (both)
+  if (!modifiers.colorTarget) {
+    const simpleMatches = [...query.matchAll(/\bcategory:([\w\s-]+)\b/gi)];
+    if (simpleMatches.length > 0) {
+      const colorKeys = simpleMatches
+        .map(m => getColorKeyByDisplayName(m[1].trim()))
+        .filter(Boolean) as string[];
+      if (colorKeys.length > 0) {
+        modifiers.colors = colorKeys;
+        modifiers.colorTarget = 'both';
+      }
+      return query.replace(/\bcategory:[\w\s-]+\b/gi, '');
+    }
+  }
+
+  return query;
+}
+
 /**
  * Parse advanced search modifiers from query string
  * Returns the modifiers and the remaining query with modifiers removed
@@ -86,161 +272,13 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
   const modifiers: Partial<SearchQuery> = {};
   let remaining = query;
 
-  // has:attachment
-  if (MODIFIER_PATTERNS.hasAttachment.test(remaining)) {
-    modifiers.hasAttachment = true;
-    remaining = remaining.replace(MODIFIER_PATTERNS.hasAttachment, '');
-  }
-
-  // archive:true or archive:false (explicit value)
-  const archivedMatch = remaining.match(/\barchived?:(true|false|yes|no|1|0)\b/i);
-  if (archivedMatch) {
-    const value = archivedMatch[1].toLowerCase();
-    modifiers.archived = value === 'true' || value === 'yes' || value === '1';
-    remaining = remaining.replace(/\barchived?:(true|false|yes|no|1|0)\b/gi, '');
-  }
-  // archive (shorthand for archive:true)
-  else if (/\barchived?\b/i.test(remaining)) {
-    modifiers.archived = true;
-    remaining = remaining.replace(/\barchived?\b/gi, '');
-  }
-
-  // created:START..END (range - check first before single comparisons)
-  const createdRangeMatch = remaining.match(/\bcreated:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})\b/);
-  if (createdRangeMatch) {
-    modifiers.createdAfter = createdRangeMatch[1];
-    modifiers.createdBefore = createdRangeMatch[2];
-    remaining = remaining.replace(/\bcreated:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}\b/, '');
-  } else {
-    // created:>DATE
-    const createdAfterMatch = remaining.match(/\bcreated:>(\d{4}-\d{2}-\d{2})\b/);
-    if (createdAfterMatch) {
-      modifiers.createdAfter = createdAfterMatch[1];
-      remaining = remaining.replace(/\bcreated:>\d{4}-\d{2}-\d{2}\b/, '');
-    }
-
-    // created:<DATE
-    const createdBeforeMatch = remaining.match(/\bcreated:<(\d{4}-\d{2}-\d{2})\b/);
-    if (createdBeforeMatch) {
-      modifiers.createdBefore = createdBeforeMatch[1];
-      remaining = remaining.replace(/\bcreated:<\d{4}-\d{2}-\d{2}\b/, '');
-    }
-  }
-
-  // modified:START..END (range - check first before single comparisons)
-  const modifiedRangeMatch = remaining.match(/\bmodified:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})\b/);
-  if (modifiedRangeMatch) {
-    modifiers.modifiedAfter = modifiedRangeMatch[1];
-    modifiers.modifiedBefore = modifiedRangeMatch[2];
-    remaining = remaining.replace(/\bmodified:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}\b/, '');
-  } else {
-    // modified:>DATE
-    const modifiedAfterMatch = remaining.match(/\bmodified:>(\d{4}-\d{2}-\d{2})\b/);
-    if (modifiedAfterMatch) {
-      modifiers.modifiedAfter = modifiedAfterMatch[1];
-      remaining = remaining.replace(/\bmodified:>\d{4}-\d{2}-\d{2}\b/, '');
-    }
-
-    // modified:<DATE
-    const modifiedBeforeMatch = remaining.match(/\bmodified:<(\d{4}-\d{2}-\d{2})\b/);
-    if (modifiedBeforeMatch) {
-      modifiers.modifiedBefore = modifiedBeforeMatch[1];
-      remaining = remaining.replace(/\bmodified:<\d{4}-\d{2}-\d{2}\b/, '');
-    }
-  }
-
-  // words:MIN..MAX (range - check first before single comparisons)
-  const wordsRangeMatch = remaining.match(/\bwords:(\d+)\.\.(\d+)\b/);
-  if (wordsRangeMatch) {
-    modifiers.wordCountMin = parseInt(wordsRangeMatch[1], 10);
-    modifiers.wordCountMax = parseInt(wordsRangeMatch[2], 10);
-    remaining = remaining.replace(/\bwords:\d+\.\.\d+\b/, '');
-  } else {
-    // words:>N
-    const wordsMinMatch = remaining.match(/\bwords:>(\d+)\b/);
-    if (wordsMinMatch) {
-      modifiers.wordCountMin = parseInt(wordsMinMatch[1], 10);
-      remaining = remaining.replace(/\bwords:>\d+\b/, '');
-    }
-
-    // words:<N
-    const wordsMaxMatch = remaining.match(/\bwords:<(\d+)\b/);
-    if (wordsMaxMatch) {
-      modifiers.wordCountMax = parseInt(wordsMaxMatch[1], 10);
-      remaining = remaining.replace(/\bwords:<\d+\b/, '');
-    }
-  }
-
-  // color:red note (notes with red color)
-  const colorNoteMatches = [...remaining.matchAll(/\bcolou?r:([a-z0-9#]+)\s+note\b/gi)];
-  if (colorNoteMatches.length > 0) {
-    modifiers.colors = colorNoteMatches.map(m => m[1].toLowerCase());
-    modifiers.colorTarget = 'note';
-    remaining = remaining.replace(/\bcolou?r:[a-z0-9#]+\s+note\b/gi, '');
-  }
-
-  // color:red tag (notes with red-colored tags)
-  const colorTagMatches = [...remaining.matchAll(/\bcolou?r:([a-z0-9#]+)\s+tag\b/gi)];
-  if (colorTagMatches.length > 0) {
-    modifiers.colors = colorTagMatches.map(m => m[1].toLowerCase());
-    modifiers.colorTarget = 'tag';
-    remaining = remaining.replace(/\bcolou?r:[a-z0-9#]+\s+tag\b/gi, '');
-  }
-
-  // color:red (both notes and tags) - only if not already set by qualifiers
-  if (!modifiers.colorTarget) {
-    const colorSimpleMatches = [...remaining.matchAll(/\bcolou?r:([a-z0-9#]+)\b/gi)];
-    if (colorSimpleMatches.length > 0) {
-      modifiers.colors = colorSimpleMatches.map(m => m[1].toLowerCase());
-      modifiers.colorTarget = 'both';
-      remaining = remaining.replace(/\bcolou?r:[a-z0-9#]+\b/gi, '');
-    }
-  }
-
-  // category:important note (notes with category named "important")
-  // Category uses display names instead of color keys
-  const categoryNoteMatches = [...remaining.matchAll(/\bcategory:([\w\s-]+)\s+note\b/gi)];
-  if (categoryNoteMatches.length > 0) {
-    const colorKeys = categoryNoteMatches
-      .map(m => getColorKeyByDisplayName(m[1].trim()))
-      .filter(Boolean) as string[];
-
-    if (colorKeys.length > 0) {
-      modifiers.colors = colorKeys;
-      modifiers.colorTarget = 'note';
-    }
-    remaining = remaining.replace(/\bcategory:[\w\s-]+\s+note\b/gi, '');
-  }
-
-  // category:important tag (notes with tags in category named "important")
-  const categoryTagMatches = [...remaining.matchAll(/\bcategory:([\w\s-]+)\s+tag\b/gi)];
-  if (categoryTagMatches.length > 0) {
-    const colorKeys = categoryTagMatches
-      .map(m => getColorKeyByDisplayName(m[1].trim()))
-      .filter(Boolean) as string[];
-
-    if (colorKeys.length > 0) {
-      modifiers.colors = colorKeys;
-      modifiers.colorTarget = 'tag';
-    }
-    remaining = remaining.replace(/\bcategory:[\w\s-]+\s+tag\b/gi, '');
-  }
-
-  // category:important (both notes and tags) - only if not already set by qualifiers
-  if (!modifiers.colorTarget) {
-    const categorySimpleMatches = [...remaining.matchAll(/\bcategory:([\w\s-]+)\b/gi)];
-    if (categorySimpleMatches.length > 0) {
-      const colorKeys = categorySimpleMatches
-        .map(m => getColorKeyByDisplayName(m[1].trim()))
-        .filter(Boolean) as string[];
-
-      if (colorKeys.length > 0) {
-        modifiers.colors = colorKeys;
-        modifiers.colorTarget = 'both';
-      }
-      remaining = remaining.replace(/\bcategory:[\w\s-]+\b/gi, '');
-    }
-  }
+  remaining = parseHasAttachmentModifier(remaining, modifiers);
+  remaining = parseArchivedModifier(remaining, modifiers);
+  remaining = parseDateModifier(remaining, modifiers, 'created');
+  remaining = parseDateModifier(remaining, modifiers, 'modified');
+  remaining = parseWordCountModifier(remaining, modifiers);
+  remaining = parseColorModifier(remaining, modifiers);
+  remaining = parseCategoryModifier(remaining, modifiers);
 
   // Clean up extra whitespace
   remaining = remaining.replace(/\s+/g, ' ').trim();
@@ -423,26 +461,182 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
   return [...pinned, ...unpinned];
 }
 
-/**
- * Search notes using FlexSearch and structured query
- */
-export async function searchNotes(
-  query: string,
-  allNotes: DecryptedNote[],
-  sortOrder: SortOrder = 'recent',
-  archiveMode: boolean = false
+// ============================================================================
+// Search Filter Helpers
+// ============================================================================
+
+/** Perform full-text search using FlexSearch */
+async function filterByFullText(
+  notes: DecryptedNote[],
+  searchText: string
 ): Promise<DecryptedNote[]> {
-  // First extract advanced modifiers from query
-  const { modifiers, remainingQuery } = parseAdvancedModifiers(query);
+  const searchResults = await index.searchAsync(searchText, {
+    limit: 1000,
+    enrich: true,
+  });
 
-  // Parse remaining query for text/tags
-  const parsed = parseSearchQuery(remainingQuery);
+  const matchingIds = new Set<string>();
+  if (Array.isArray(searchResults)) {
+    (searchResults as unknown as FlexSearchEnrichedResult[]).forEach((result) => {
+      if (result.result) {
+        result.result.forEach((item: string | FlexSearchResultItem) => {
+          const id = typeof item === 'string' ? item : item.id;
+          if (id) {
+            matchingIds.add(id);
+          }
+        });
+      }
+    });
+  }
 
-  // Merge modifiers into parsed query
-  Object.assign(parsed, modifiers);
+  return notes.filter((note) => matchingIds.has(note.id));
+}
 
-  // If query is empty (no text, tags, or modifiers), return all notes
-  const hasModifiers =
+/** Filter notes by required tags (AND logic) */
+function filterByRequiredTags(
+  notes: DecryptedNote[],
+  tags: string[]
+): DecryptedNote[] {
+  return notes.filter((note) =>
+    tags.every((tag) =>
+      note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
+    )
+  );
+}
+
+/** Filter notes by optional tags (OR logic) */
+function filterByOptionalTags(
+  notes: DecryptedNote[],
+  tags: string[]
+): DecryptedNote[] {
+  return notes.filter((note) =>
+    tags.some((tag) =>
+      note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
+    )
+  );
+}
+
+/** Filter out notes containing excluded text */
+function filterByExcludedText(
+  notes: DecryptedNote[],
+  excludeTerms: string[]
+): DecryptedNote[] {
+  return notes.filter((note) =>
+    excludeTerms.every((term) => !note.content.toLowerCase().includes(term.toLowerCase()))
+  );
+}
+
+/** Filter out notes with excluded tags */
+function filterByExcludedTags(
+  notes: DecryptedNote[],
+  excludeTags: string[]
+): DecryptedNote[] {
+  return notes.filter((note) =>
+    excludeTags.every((tag) =>
+      !note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
+    )
+  );
+}
+
+/** Filter notes by date constraints */
+function filterByDateConstraints(
+  notes: DecryptedNote[],
+  parsed: SearchQuery
+): DecryptedNote[] {
+  let results = notes;
+
+  if (parsed.createdAfter) {
+    results = results.filter((note) => compareDates(note.createdAt, parsed.createdAfter!, 'after'));
+  }
+  if (parsed.createdBefore) {
+    results = results.filter((note) => compareDates(note.createdAt, parsed.createdBefore!, 'before'));
+  }
+  if (parsed.modifiedAfter) {
+    results = results.filter((note) => compareDates(note.modifiedAt, parsed.modifiedAfter!, 'after'));
+  }
+  if (parsed.modifiedBefore) {
+    results = results.filter((note) => compareDates(note.modifiedAt, parsed.modifiedBefore!, 'before'));
+  }
+
+  return results;
+}
+
+/** Filter notes by word count constraints */
+function filterByWordCount(
+  notes: DecryptedNote[],
+  minWords?: number,
+  maxWords?: number
+): DecryptedNote[] {
+  let results = notes;
+
+  if (minWords !== undefined) {
+    results = results.filter((note) => countWords(note.content) >= minWords);
+  }
+  if (maxWords !== undefined) {
+    results = results.filter((note) => countWords(note.content) <= maxWords);
+  }
+
+  return results;
+}
+
+/** Check if a note matches color criteria */
+function noteMatchesColor(
+  note: DecryptedNote,
+  colors: string[],
+  target: 'note' | 'tag' | 'both'
+): boolean {
+  const noteHasColor = colors.some(
+    color => note.color?.toLowerCase() === color.toLowerCase()
+  );
+
+  let tagHasColor = false;
+  if (target === 'tag' || target === 'both') {
+    tagHasColor = note.tags.some(tag => {
+      const tagColor = getTagColor(tag);
+      return tagColor && colors.some(
+        color => tagColor.toLowerCase() === color.toLowerCase()
+      );
+    });
+  }
+
+  if (target === 'note') return noteHasColor;
+  if (target === 'tag') return tagHasColor;
+  return noteHasColor || tagHasColor;
+}
+
+/** Filter notes by color */
+function filterByColor(
+  notes: DecryptedNote[],
+  colors: string[],
+  target: 'note' | 'tag' | 'both'
+): DecryptedNote[] {
+  return notes.filter((note) => noteMatchesColor(note, colors, target));
+}
+
+/** Filter out notes with excluded colors */
+function filterByExcludedColors(
+  notes: DecryptedNote[],
+  excludeColors: string[]
+): DecryptedNote[] {
+  return notes.filter((note) => {
+    const noteColorExcluded = excludeColors.some(
+      color => note.color?.toLowerCase() === color.toLowerCase()
+    );
+
+    const tagColorExcluded = note.tags.some(tag => {
+      const tagColor = getTagColor(tag);
+      return tagColor && excludeColors.some(
+        color => tagColor.toLowerCase() === color.toLowerCase()
+      );
+    });
+
+    return !noteColorExcluded && !tagColorExcluded;
+  });
+}
+
+/** Check if the parsed query has any modifiers set */
+function hasSearchModifiers(parsed: SearchQuery): boolean {
+  return !!(
     parsed.hasAttachment ||
     parsed.archived !== undefined ||
     parsed.createdAfter ||
@@ -452,173 +646,83 @@ export async function searchNotes(
     parsed.wordCountMin !== undefined ||
     parsed.wordCountMax !== undefined ||
     parsed.colors?.length ||
-    parsed.excludeColors?.length;
+    parsed.excludeColors?.length
+  );
+}
 
-  if (
+/** Check if the parsed query is empty (no search criteria) */
+function isEmptyQuery(parsed: SearchQuery): boolean {
+  return (
     !parsed.text &&
     (!parsed.tags || parsed.tags.length === 0) &&
     (!parsed.orTags || parsed.orTags.length === 0) &&
     (!parsed.excludeText || parsed.excludeText.length === 0) &&
     (!parsed.excludeTags || parsed.excludeTags.length === 0) &&
-    !hasModifiers
-  ) {
-    // No query: return notes based on archive mode
+    !hasSearchModifiers(parsed)
+  );
+}
+
+/**
+ * Search notes using FlexSearch and structured query
+ */
+export async function searchNotes(
+  query: string,
+  allNotes: DecryptedNote[],
+  sortOrder: SortOrder = 'recent',
+  archiveMode: boolean = false
+): Promise<DecryptedNote[]> {
+  // Parse query into structured form
+  const { modifiers, remainingQuery } = parseAdvancedModifiers(query);
+  const parsed = parseSearchQuery(remainingQuery);
+  Object.assign(parsed, modifiers);
+
+  // Empty query: return all notes filtered by archive mode
+  if (isEmptyQuery(parsed)) {
     const filteredNotes = allNotes.filter((note) => note.archived === archiveMode);
     return sortNotes(filteredNotes, sortOrder);
   }
 
   let results = [...allNotes];
 
-  // Full-text search using FlexSearch
+  // Apply text and tag filters
   if (parsed.text) {
-    const searchResults = await index.searchAsync(parsed.text, {
-      limit: 1000,
-      enrich: true,
-    });
-
-    const matchingIds = new Set<string>();
-    if (Array.isArray(searchResults)) {
-      searchResults.forEach((result: any) => {
-        if (result.result) {
-          result.result.forEach((item: any) => {
-            // FlexSearch with enrich: true returns objects with id property
-            const id = typeof item === 'string' ? item : item.id;
-            if (id) {
-              matchingIds.add(id);
-            }
-          });
-        }
-      });
-    }
-
-    results = results.filter((note) => matchingIds.has(note.id));
+    results = await filterByFullText(results, parsed.text);
   }
-
-  // Filter by tags (AND logic)
   if (parsed.tags && parsed.tags.length > 0) {
-    results = results.filter((note) =>
-      parsed.tags!.every((tag) =>
-        note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
-      )
-    );
+    results = filterByRequiredTags(results, parsed.tags);
   }
-
-  // Filter by tags (OR logic)
   if (parsed.orTags && parsed.orTags.length > 0) {
-    results = results.filter((note) =>
-      parsed.orTags!.some((tag) =>
-        note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
-      )
-    );
+    results = filterByOptionalTags(results, parsed.orTags);
   }
-
-  // Exclude text
   if (parsed.excludeText && parsed.excludeText.length > 0) {
-    results = results.filter((note) =>
-      parsed.excludeText!.every(
-        (term) => !note.content.toLowerCase().includes(term.toLowerCase())
-      )
-    );
+    results = filterByExcludedText(results, parsed.excludeText);
   }
-
-  // Exclude tags
   if (parsed.excludeTags && parsed.excludeTags.length > 0) {
-    results = results.filter((note) =>
-      parsed.excludeTags!.every(
-        (tag) => !note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
-      )
-    );
+    results = filterByExcludedTags(results, parsed.excludeTags);
   }
 
-  // Advanced modifier filters
-
-  // has:attachment
+  // Apply modifier filters
   if (parsed.hasAttachment) {
     results = results.filter((note) => note.attachments && note.attachments.length > 0);
   }
 
-  // archive: or archive:true/false
-  // Default behavior: filter based on archiveMode unless explicitly overridden
+  // Archive filter (explicit modifier overrides archiveMode)
   if (parsed.archived !== undefined) {
-    // Explicit archive modifier overrides archiveMode
     results = results.filter((note) => note.archived === parsed.archived);
   } else {
-    // No archive modifier: filter based on archiveMode
     results = results.filter((note) => note.archived === archiveMode);
   }
 
-  // created:>DATE (created after)
-  if (parsed.createdAfter) {
-    results = results.filter((note) => compareDates(note.createdAt, parsed.createdAfter!, 'after'));
-  }
+  // Date and word count filters
+  results = filterByDateConstraints(results, parsed);
+  results = filterByWordCount(results, parsed.wordCountMin, parsed.wordCountMax);
 
-  // created:<DATE (created before)
-  if (parsed.createdBefore) {
-    results = results.filter((note) => compareDates(note.createdAt, parsed.createdBefore!, 'before'));
-  }
-
-  // modified:>DATE (modified after)
-  if (parsed.modifiedAfter) {
-    results = results.filter((note) => compareDates(note.modifiedAt, parsed.modifiedAfter!, 'after'));
-  }
-
-  // modified:<DATE (modified before)
-  if (parsed.modifiedBefore) {
-    results = results.filter((note) => compareDates(note.modifiedAt, parsed.modifiedBefore!, 'before'));
-  }
-
-  // words:>N (minimum word count)
-  if (parsed.wordCountMin !== undefined) {
-    results = results.filter((note) => countWords(note.content) >= parsed.wordCountMin!);
-  }
-
-  // words:<N (maximum word count)
-  if (parsed.wordCountMax !== undefined) {
-    results = results.filter((note) => countWords(note.content) <= parsed.wordCountMax!);
-  }
-
-  // Color filter
+  // Color filters
   if (parsed.colors && parsed.colors.length > 0) {
-    const target = parsed.colorTarget || 'both';
-
-    results = results.filter((note) => {
-      const noteHasColor = parsed.colors!.some(
-        color => note.color?.toLowerCase() === color.toLowerCase()
-      );
-
-      let tagHasColor = false;
-      if (target === 'tag' || target === 'both') {
-        // Check if any of the note's tags have matching color
-        tagHasColor = note.tags.some(tag => {
-          const tagColor = getTagColor(tag);
-          return tagColor && parsed.colors!.some(
-            color => tagColor.toLowerCase() === color.toLowerCase()
-          );
-        });
-      }
-
-      if (target === 'note') return noteHasColor;
-      if (target === 'tag') return tagHasColor;
-      return noteHasColor || tagHasColor;  // 'both'
-    });
+    results = filterByColor(results, parsed.colors, parsed.colorTarget || 'both');
   }
-
-  // Exclude colors
   if (parsed.excludeColors && parsed.excludeColors.length > 0) {
-    results = results.filter((note) => {
-      const noteColorExcluded = parsed.excludeColors!.some(
-        color => note.color?.toLowerCase() === color.toLowerCase()
-      );
-
-      const tagColorExcluded = note.tags.some(tag => {
-        const tagColor = getTagColor(tag);
-        return tagColor && parsed.excludeColors!.some(
-          color => tagColor.toLowerCase() === color.toLowerCase()
-        );
-      });
-
-      return !noteColorExcluded && !tagColorExcluded;
-    });
+    results = filterByExcludedColors(results, parsed.excludeColors);
   }
 
   return sortNotes(results, sortOrder);

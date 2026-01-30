@@ -194,3 +194,22 @@ export function removeActivityListeners(): void {
 
   keyManager.stopAutoLock();
 }
+
+// Re-export from centralized errors for backwards compatibility
+export { ApplicationLockedError } from '../errors';
+import { ApplicationLockedError } from '../errors';
+
+/**
+ * Get the master key or throw if application is locked
+ * Use this helper to avoid repeating the null check pattern
+ *
+ * @throws {ApplicationLockedError} If application is locked
+ * @returns The master key (guaranteed non-null)
+ */
+export function requireMasterKey(): CryptoKey {
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new ApplicationLockedError();
+  }
+  return masterKey.key;
+}

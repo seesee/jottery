@@ -4,7 +4,7 @@
 
 // Crypto services
 export { cryptoService, encryptJSON, decryptJSON, encryptStringArray, decryptStringArray } from './crypto';
-export { keyManager, setupActivityListeners, removeActivityListeners } from './keyManager';
+export { keyManager, setupActivityListeners, removeActivityListeners, requireMasterKey, ApplicationLockedError } from './keyManager';
 export { passwordStorageService } from './passwordStorageService';
 export { sessionStorageService } from './sessionStorageService';
 

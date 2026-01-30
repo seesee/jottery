@@ -117,6 +117,7 @@ export interface UserSettings {
   timezone: string; // IANA timezone (e.g., 'UTC', 'America/New_York', 'local' for browser timezone)
   syncEnabled: boolean;
   syncEndpoint?: string;
+  deviceName?: string; // Registered device name (for sync)
   rememberPassword: boolean; // DANGER: Store password in localStorage (insecure)
   keyboardShortcuts?: KeyboardShortcuts; // Custom keyboard shortcuts
   enabledSyntaxLanguages?: string[]; // Enabled syntax highlighting languages (defaults to core languages)

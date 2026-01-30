@@ -236,6 +236,7 @@ pub fn view_note_readonly(app: &mut App, content: &str, syntax: crate::models::S
         crate::models::SyntaxLanguage::Bash => "sh",
         crate::models::SyntaxLanguage::Perl => "pl",
         crate::models::SyntaxLanguage::Calc => "txt",
+        crate::models::SyntaxLanguage::Outliner => "md", // Markdown-compatible format
     };
 
     // Create temp file with appropriate extension

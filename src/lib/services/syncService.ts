@@ -9,6 +9,9 @@ import type {
   Note,
   SyncNoteVersion,
   SyncSavedSearch,
+  SyncNote,
+  SyncRejected,
+  SyncAccepted,
 } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
@@ -27,6 +30,7 @@ import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncPro
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { isDBAvailable, wasDBTerminated } from './db';
+import { SYNC_PUSH_BATCH_SIZE, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
 import {
   normalizeEndpoint,
   registerDevice as registerDeviceApi,
@@ -283,6 +287,169 @@ class SyncService {
     }
   }
 
+  // ===========================================================================
+  // Push Helper Methods
+  // ===========================================================================
+
+  /** Collect attachment blobs for a batch of notes */
+  private async collectAttachmentsForBatch(batchNotes: Note[]): Promise<Map<string, string>> {
+    const attachmentMap = new Map<string, string>();
+    for (const note of batchNotes) {
+      for (const attachment of note.attachments) {
+        if (!attachmentMap.has(attachment.id)) {
+          const blob = await attachmentRepository.getBlob(attachment.data);
+          if (blob) {
+            const base64 = arrayBufferToBase64(blob);
+            attachmentMap.set(attachment.id, base64);
+          }
+        }
+      }
+    }
+    return attachmentMap;
+  }
+
+  /** Collect saved searches that need syncing */
+  private async collectSavedSearchesForPush(): Promise<SyncSavedSearch[]> {
+    const savedSearches = await savedSearchRepository.getAllNeedingSync();
+    return savedSearches.map(search => ({
+      id: search.id,
+      name: search.name,
+      query: search.query,
+      order: search.order,
+      createdAt: search.createdAt,
+      modifiedAt: search.modifiedAt,
+      deleted: search.deleted,
+      deletedAt: search.deletedAt,
+      version: search.version,
+    }));
+  }
+
+  /** Process notes accepted by server during push */
+  private async processAcceptedNotes(accepted: SyncAccepted[]): Promise<void> {
+    for (const item of accepted) {
+      const syncedAt = item.syncedAt ?? new Date().toISOString();
+      const serverVersion = item.serverVersion ?? 1;
+
+      await syncRepository.updateNoteSyncMetadata(item.id, {
+        noteId: item.id,
+        syncedAt,
+        serverVersion,
+        lastSyncStatus: 'synced',
+      });
+
+      const note = await noteRepository.getById(item.id);
+      if (note) {
+        note.syncedAt = syncedAt;
+        note.needsSync = false;
+        await noteRepository.update(note, false, true);
+      }
+    }
+  }
+
+  /** Process notes rejected by server during push (conflicts) */
+  private async processRejectedNotes(rejected: SyncRejected[]): Promise<void> {
+    for (const item of rejected) {
+      console.warn(`[SyncService] Note ${item.id} rejected: ${item.reason}`);
+      await storeConflict(item.id, {
+        serverContent: item.serverContent,
+        serverTags: item.serverTags,
+        serverModifiedAt: item.serverModifiedAt,
+        serverVersion: item.serverVersion,
+        serverAttachments: item.serverAttachments,
+        serverPinned: item.serverPinned,
+        serverSyntaxLanguage: item.serverSyntaxLanguage,
+        serverWordWrap: item.serverWordWrap,
+      });
+
+      // Clear needsSync flag to prevent infinite retry loop
+      const note = await noteRepository.getById(item.id);
+      if (note) {
+        note.needsSync = false;
+        await noteRepository.update(note, false, true);
+      }
+    }
+  }
+
+  /** Convert a note to sync format */
+  private async convertNoteToSyncFormat(note: Note, masterKey: CryptoKey) {
+    const syncTags = await storageToSync(note.tags, masterKey);
+    return {
+      id: note.id,
+      createdAt: note.createdAt,
+      modifiedAt: note.modifiedAt,
+      content: note.content,
+      tags: syncTags,
+      attachments: note.attachments.map(a => ({
+        id: a.id,
+        filename: a.filename,
+        mimeType: a.mimeType,
+        size: a.size,
+        data: a.data,
+      })),
+      pinned: note.pinned,
+      archived: note.archived,
+      archivedAt: note.archivedAt,
+      deleted: note.deleted,
+      deletedAt: note.deletedAt,
+      version: note.version,
+      wordWrap: note.wordWrap,
+      syntaxLanguage: note.syntaxLanguage,
+      showPreview: note.showPreview,
+      color: note.color,
+    };
+  }
+
+  /** Process a single batch of notes for pushing */
+  private async processPushBatch(
+    batchNotes: Note[],
+    batchIndex: number,
+    totalBatches: number,
+    endpoint: string,
+    apiKey: string,
+    masterKey: CryptoKey
+  ): Promise<{ accepted: number; rejected: number }> {
+    if (totalBatches > 1) {
+      console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
+    }
+
+    // Collect attachments and build request
+    const attachmentMap = await this.collectAttachmentsForBatch(batchNotes);
+    const savedSearchesForPush = batchIndex === 0 ? await this.collectSavedSearchesForPush() : [];
+    const pendingDeletions = batchIndex === 0 ? await noteRepository.getPendingDeletions() : [];
+
+    const pushRequest: SyncPushRequest = {
+      notes: await Promise.all(batchNotes.map(note => this.convertNoteToSyncFormat(note, masterKey))),
+      attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
+      versions: await this.collectVersionsForPush(batchNotes),
+      savedSearches: savedSearchesForPush.length > 0 ? savedSearchesForPush : undefined,
+      deletions: pendingDeletions.length > 0 ? pendingDeletions : undefined,
+    };
+
+    // Send to server and process results
+    const result = await pushToServer(endpoint, apiKey, pushRequest);
+    await this.processAcceptedNotes(result.accepted);
+    await this.processRejectedNotes(result.rejected);
+
+    // Update progress
+    syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
+
+    // Mark saved searches and deletions as synced (only in first batch)
+    if (batchIndex === 0) {
+      if (savedSearchesForPush.length > 0) {
+        for (const search of savedSearchesForPush) {
+          await savedSearchRepository.markSynced(search.id);
+        }
+        console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
+      }
+      if (pendingDeletions.length > 0) {
+        await noteRepository.markDeletionsSynced(pendingDeletions.map(d => d.id));
+        console.log(`[SyncService] Marked ${pendingDeletions.length} deletions as synced`);
+      }
+    }
+
+    return { accepted: result.accepted.length, rejected: result.rejected.length };
+  }
+
   /**
    * Push local changes to server (in batches to avoid memory limits)
    * @returns Number of notes accepted by server
@@ -290,190 +457,222 @@ class SyncService {
   private async push(endpoint: string, apiKey: string, forceAll = false): Promise<number> {
     endpoint = normalizeEndpoint(endpoint);
 
-    let modifiedNotes: Note[];
-    if (forceAll) {
-      // Force push ALL notes, regardless of timestamps
-      modifiedNotes = await noteRepository.getAll();
-    } else {
-      // Only push notes that need syncing (flagged with needsSync)
-      modifiedNotes = await noteRepository.getNotesNeedingSync();
-    }
+    const modifiedNotes = forceAll
+      ? await noteRepository.getAll()
+      : await noteRepository.getNotesNeedingSync();
 
     if (modifiedNotes.length === 0) {
-      return 0; // Nothing to push
+      return 0;
     }
 
-    // Get master key for tag encryption conversion
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
     }
 
-    // Update progress with push count (pull will add to this later)
     syncProgress.update(p => ({ ...p, total: p.total + modifiedNotes.length }));
 
-    // Push in batches to avoid JSON.stringify memory limits
-    const BATCH_SIZE = 100;
-    const totalBatches = Math.ceil(modifiedNotes.length / BATCH_SIZE);
+    const totalBatches = Math.ceil(modifiedNotes.length / SYNC_PUSH_BATCH_SIZE);
     let totalAccepted = 0;
     let totalRejected = 0;
 
     console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${totalBatches} batch${totalBatches > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
 
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-      const start = batchIndex * BATCH_SIZE;
-      const end = Math.min(start + BATCH_SIZE, modifiedNotes.length);
-      const batchNotes = modifiedNotes.slice(start, end);
+      const start = batchIndex * SYNC_PUSH_BATCH_SIZE;
+      const batchNotes = modifiedNotes.slice(start, start + SYNC_PUSH_BATCH_SIZE);
 
-      if (totalBatches > 1) {
-        console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
-      }
-
-      // Collect attachments for this batch only
-      const attachmentMap = new Map<string, string>();
-      for (const note of batchNotes) {
-        for (const attachment of note.attachments) {
-          if (!attachmentMap.has(attachment.id)) {
-            const blob = await attachmentRepository.getBlob(attachment.data);
-            if (blob) {
-              const base64 = arrayBufferToBase64(blob);
-              attachmentMap.set(attachment.id, base64);
-            }
-          }
-        }
-      }
-
-      // Collect saved searches for push (only in first batch to avoid duplication)
-      const savedSearchesForPush: SyncSavedSearch[] = [];
-      if (batchIndex === 0) {
-        const savedSearches = await savedSearchRepository.getAllNeedingSync();
-        for (const search of savedSearches) {
-          savedSearchesForPush.push({
-            id: search.id,
-            name: search.name,
-            query: search.query,
-            order: search.order,
-            createdAt: search.createdAt,
-            modifiedAt: search.modifiedAt,
-            deleted: search.deleted,
-            deletedAt: search.deletedAt,
-            version: search.version,
-          });
-        }
-      }
-
-      // Collect pending deletions (from emptying trash) - only in first batch
-      const pendingDeletions = batchIndex === 0 ? await noteRepository.getPendingDeletions() : [];
-
-      // Build push request for this batch
-      const pushRequest: SyncPushRequest = {
-        notes: await Promise.all(batchNotes.map(async note => {
-          // Convert tags from storage format to sync format
-          const syncTags = await storageToSync(note.tags, masterKey.key);
-
-          return {
-            id: note.id,
-            createdAt: note.createdAt,
-            modifiedAt: note.modifiedAt,
-            content: note.content,
-            tags: syncTags,
-            attachments: note.attachments.map(a => ({
-              id: a.id,
-              filename: a.filename,
-              mimeType: a.mimeType,
-              size: a.size,
-              data: a.data,
-            })),
-            pinned: note.pinned,
-            archived: note.archived,
-            archivedAt: note.archivedAt,
-            deleted: note.deleted,
-            deletedAt: note.deletedAt,
-            version: note.version,
-            wordWrap: note.wordWrap,
-            syntaxLanguage: note.syntaxLanguage,
-            showPreview: note.showPreview,
-            color: note.color,
-          };
-        })),
-        attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
-        versions: await this.collectVersionsForPush(batchNotes),
-        savedSearches: savedSearchesForPush.length > 0 ? savedSearchesForPush : undefined,
-        deletions: pendingDeletions.length > 0 ? pendingDeletions : undefined,
-      };
-
-      // Send batch to server
-      const result = await pushToServer(endpoint, apiKey, pushRequest);
-      totalAccepted += result.accepted.length;
-      totalRejected += result.rejected.length;
-
-      // Update sync metadata for accepted notes
-      for (const accepted of result.accepted) {
-        await syncRepository.updateNoteSyncMetadata(accepted.id, {
-          noteId: accepted.id,
-          syncedAt: accepted.syncedAt,
-          serverVersion: accepted.serverVersion,
-          lastSyncStatus: 'synced',
-        });
-
-        // Update syncedAt and clear needsSync flag for successfully synced notes
-        const note = await noteRepository.getById(accepted.id);
-        if (note) {
-          note.syncedAt = accepted.syncedAt;
-          note.needsSync = false;
-          await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
-        }
-      }
-
-      // Handle rejected notes (conflicts) - store server data for resolution
-      for (const rejected of result.rejected) {
-        console.warn(`[SyncService] Note ${rejected.id} rejected: ${rejected.reason}`);
-        await storeConflict(rejected.id, {
-          serverContent: rejected.serverContent,
-          serverTags: rejected.serverTags,
-          serverModifiedAt: rejected.serverModifiedAt,
-          serverVersion: rejected.serverVersion,
-          serverAttachments: rejected.serverAttachments,
-          serverPinned: rejected.serverPinned,
-          serverSyntaxLanguage: rejected.serverSyntaxLanguage,
-          serverWordWrap: rejected.serverWordWrap,
-        });
-
-        // Clear needsSync flag to prevent infinite retry loop
-        // User must resolve conflict before note can sync again
-        const note = await noteRepository.getById(rejected.id);
-        if (note) {
-          note.needsSync = false;
-          await noteRepository.update(note, false, true); // Don't update modifiedAt, don't re-set needsSync
-        }
-      }
-
-      // Update progress after each batch
-      syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
-
-      // Mark saved searches as synced (only in first batch where they were sent)
-      if (batchIndex === 0 && savedSearchesForPush.length > 0) {
-        for (const search of savedSearchesForPush) {
-          await savedSearchRepository.markSynced(search.id);
-        }
-        console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
-      }
-
-      // Mark deletions as synced (only in first batch where they were sent)
-      if (batchIndex === 0 && pendingDeletions.length > 0) {
-        const deletionIds = pendingDeletions.map(d => d.id);
-        await noteRepository.markDeletionsSynced(deletionIds);
-        console.log(`[SyncService] Marked ${deletionIds.length} deletions as synced`);
-      }
+      const { accepted, rejected } = await this.processPushBatch(
+        batchNotes, batchIndex, totalBatches, endpoint, apiKey, masterKey.key
+      );
+      totalAccepted += accepted;
+      totalRejected += rejected;
     }
 
     console.log(`[SyncService] Push complete: ${totalAccepted} accepted, ${totalRejected} rejected`);
-
-    await syncRepository.updateMetadata({
-      lastPushAt: new Date().toISOString(),
-    });
+    await syncRepository.updateMetadata({ lastPushAt: new Date().toISOString() });
 
     return totalAccepted;
+  }
+
+  // ===========================================================================
+  // Pull Helper Methods
+  // ===========================================================================
+
+  /** Collect all known attachment IDs from local notes */
+  private getKnownAttachmentIds(allNotes: Note[]): string[] {
+    const ids: string[] = [];
+    for (const note of allNotes) {
+      for (const attachment of note.attachments) {
+        if (!ids.includes(attachment.id)) {
+          ids.push(attachment.id);
+        }
+      }
+    }
+    return ids;
+  }
+
+  /** Process a single remote note during pull (handles conflicts) */
+  private async processRemoteNote(
+    remoteNote: SyncNote,
+    masterKey: CryptoKey,
+    syncedAt: string
+  ): Promise<boolean> {
+    const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey);
+    const noteForStorage: Note = {
+      id: remoteNote.id,
+      createdAt: remoteNote.createdAt,
+      modifiedAt: remoteNote.modifiedAt,
+      content: remoteNote.content,
+      tags: tagsForStorage,
+      attachments: remoteNote.attachments,
+      pinned: remoteNote.pinned,
+      archived: remoteNote.archived,
+      archivedAt: remoteNote.archivedAt,
+      locked: remoteNote.locked ?? false,
+      lockedAt: remoteNote.lockedAt,
+      deleted: remoteNote.deleted,
+      deletedAt: remoteNote.deletedAt,
+      version: remoteNote.version,
+      wordWrap: remoteNote.wordWrap,
+      syntaxLanguage: remoteNote.syntaxLanguage,
+      showPreview: remoteNote.showPreview,
+      color: remoteNote.color,
+      syncedAt,
+      needsSync: false,
+    };
+
+    const localNote = await noteRepository.getById(remoteNote.id);
+
+    if (!localNote) {
+      // New note from server
+      await noteRepository.create(noteForStorage);
+      await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
+        noteId: remoteNote.id,
+        syncedAt,
+        serverVersion: remoteNote.version,
+        lastSyncStatus: 'synced',
+      });
+      return true;
+    }
+
+    // Check for conflict
+    if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+      console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}`);
+      await storeConflict(remoteNote.id, {
+        serverContent: remoteNote.content,
+        serverTags: remoteNote.tags,
+        serverModifiedAt: remoteNote.modifiedAt,
+        serverVersion: remoteNote.version,
+        serverAttachments: remoteNote.attachments,
+        serverPinned: remoteNote.pinned,
+        serverSyntaxLanguage: remoteNote.syntaxLanguage,
+        serverWordWrap: remoteNote.wordWrap,
+      });
+      return false;
+    }
+
+    if (remoteNote.modifiedAt > localNote.modifiedAt) {
+      // Server is newer, safe to update
+      await noteRepository.update(noteForStorage, false, true);
+      await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
+        noteId: remoteNote.id,
+        syncedAt,
+        serverVersion: remoteNote.version,
+        lastSyncStatus: 'synced',
+      });
+      return true;
+    }
+
+    return false; // Local is newer or equal
+  }
+
+  /** Download attachments from server */
+  private async downloadAttachments(attachments: Array<{ id: string; data: string }>): Promise<void> {
+    for (const attachment of attachments) {
+      try {
+        const blob = base64ToArrayBuffer(attachment.data);
+        await attachmentRepository.storeBlob(attachment.id, blob);
+      } catch (error) {
+        console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
+      }
+    }
+  }
+
+  /** Merge note versions from server */
+  private async mergeVersionsFromServer(versions: SyncNoteVersion[]): Promise<void> {
+    for (const serverVersion of versions) {
+      const existingVersion = await versionRepository.getVersion(
+        serverVersion.noteId,
+        serverVersion.version
+      );
+
+      if (!existingVersion) {
+        await versionRepository.createVersion(
+          {
+            id: serverVersion.noteId,
+            content: serverVersion.content,
+            tags: serverVersion.tags,
+            attachments: serverVersion.attachments,
+            version: serverVersion.version,
+            syntaxLanguage: serverVersion.syntaxLanguage,
+            wordWrap: serverVersion.wordWrap,
+            showPreview: serverVersion.showPreview,
+            createdAt: serverVersion.createdAt,
+            modifiedAt: serverVersion.createdAt,
+            pinned: false,
+            deleted: false,
+            syncedAt: serverVersion.syncedAt,
+          } as Note,
+          {
+            syncedAt: serverVersion.syncedAt,
+            reason: serverVersion.reason as 'sync' | 'manual-sync',
+          }
+        );
+      }
+    }
+  }
+
+  /** Process saved searches from server */
+  private async processSavedSearchesFromServer(
+    savedSearches: SyncSavedSearch[],
+    syncedAt: string
+  ): Promise<void> {
+    if (savedSearches.length === 0) return;
+
+    const { getDB, STORES } = await import('./db');
+    const db = getDB();
+
+    for (const remoteSearch of savedSearches) {
+      const localSearch = await savedSearchRepository.getById(remoteSearch.id);
+
+      if (!localSearch || remoteSearch.modifiedAt > localSearch.modifiedAt) {
+        await db.put(STORES.SAVED_SEARCHES, {
+          id: remoteSearch.id,
+          name: remoteSearch.name,
+          query: remoteSearch.query,
+          order: remoteSearch.order,
+          createdAt: remoteSearch.createdAt,
+          modifiedAt: remoteSearch.modifiedAt,
+          syncedAt,
+          deleted: remoteSearch.deleted,
+          deletedAt: remoteSearch.deletedAt,
+          version: remoteSearch.version,
+          needsSync: false,
+        });
+      }
+    }
+    console.log(`[SyncService] Processed ${savedSearches.length} saved searches from server`);
+  }
+
+  /** Process hard deletions from server */
+  private async processRemoteDeletions(deletions: Array<{ id: string }>): Promise<void> {
+    for (const deletion of deletions) {
+      const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
+      if (wasDeleted) {
+        console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
+      }
+    }
   }
 
   /**
@@ -483,30 +682,13 @@ class SyncService {
   private async pull(endpoint: string, apiKey: string): Promise<number> {
     endpoint = normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
-    const lastSyncAt = metadata?.lastSyncAt;
-
-    // Get all known note IDs and attachment IDs
     const allNotes = await noteRepository.getAll();
-    const knownIds = allNotes.map(n => n.id);
 
-    // Collect all known attachment IDs from local notes
-    const knownAttachmentIds: string[] = [];
-    for (const note of allNotes) {
-      for (const attachment of note.attachments) {
-        if (!knownAttachmentIds.includes(attachment.id)) {
-          knownAttachmentIds.push(attachment.id);
-        }
-      }
-    }
-
-    // Get master key for tag conversion (needed for processing)
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
     }
 
-    // Pull in pages to avoid memory limits with large datasets
-    const PULL_BATCH_SIZE = 100;
     let offset = 0;
     let hasMore = true;
     let totalNotes = 0;
@@ -516,14 +698,15 @@ class SyncService {
 
     while (hasMore) {
       const pullRequest: SyncPullRequest = {
-        lastSyncAt,
-        knownNoteIds: knownIds,
-        knownAttachmentIds,
-        limit: PULL_BATCH_SIZE,
+        lastSyncAt: metadata?.lastSyncAt,
+        knownNoteIds: allNotes.map(n => n.id),
+        knownAttachmentIds: this.getKnownAttachmentIds(allNotes),
+        limit: SYNC_PULL_BATCH_SIZE,
         offset,
       };
 
       const result = await pullFromServer(endpoint, apiKey, pullRequest);
+      const syncedAt = result.syncedAt ?? new Date().toISOString();
 
       // Update pagination state
       hasMore = result.hasMore ?? false;
@@ -531,182 +714,50 @@ class SyncService {
       totalCount = result.totalCount ?? result.notes.length;
       offset += result.notes.length;
 
-      // On first response, add pull count to progress total
       if (previousTotalCount === 0 && totalCount > 0) {
         syncProgress.update(p => ({ ...p, total: p.total + totalCount }));
       }
 
-      // Track totals (totalNotes counts only actual changes - new notes or remote-newer updates)
       totalAttachments += result.attachments.length;
       totalDeletions += result.deletions?.length || 0;
 
-      if (totalCount > PULL_BATCH_SIZE) {
-        const page = Math.floor((offset - result.notes.length) / PULL_BATCH_SIZE) + 1;
-        const totalPages = Math.ceil(totalCount / PULL_BATCH_SIZE);
-        console.log(`[SyncService] Pulling page ${page}/${totalPages} (${result.notes.length} notes)`);
+      if (totalCount > SYNC_PULL_BATCH_SIZE) {
+        const page = Math.floor((offset - result.notes.length) / SYNC_PULL_BATCH_SIZE) + 1;
+        console.log(`[SyncService] Pulling page ${page}/${Math.ceil(totalCount / SYNC_PULL_BATCH_SIZE)} (${result.notes.length} notes)`);
       }
 
-      // Apply remote changes with Last-Write-Wins conflict resolution
+      // Process notes with incremental progress updates
+      let processedInBatch = 0;
       for (const remoteNote of result.notes) {
-        // Convert tags from sync format to storage format
-        const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey.key);
+        const wasChanged = await this.processRemoteNote(remoteNote, masterKey.key, syncedAt);
+        if (wasChanged) totalNotes++;
+        processedInBatch++;
 
-        const noteForStorage = {
-          ...remoteNote,
-          tags: tagsForStorage,
-          syncedAt: result.syncedAt,
-          needsSync: false, // Pulled from server - already synced
-          locked: remoteNote.locked ?? false, // Ensure locked property exists
-        };
-
-        const localNote = await noteRepository.getById(remoteNote.id);
-
-        if (!localNote) {
-          // New note from server - create locally
-          await noteRepository.create(noteForStorage);
-          totalNotes++; // Count as actual change
-
-          // Update sync metadata for new note
-          await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
-            noteId: remoteNote.id,
-            syncedAt: result.syncedAt,
-            serverVersion: remoteNote.version,
-            lastSyncStatus: 'synced',
-          });
-        } else {
-          // Check for conflict: server is newer AND local has unsaved changes
-          if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
-            // Conflict detected - local note has unsaved changes and server has a newer version
-            console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}: local has unsaved changes, server is newer`);
-
-            // Store conflict data
-            await storeConflict(remoteNote.id, {
-              serverContent: remoteNote.content,
-              serverTags: remoteNote.tags,
-              serverModifiedAt: remoteNote.modifiedAt,
-              serverVersion: remoteNote.version,
-              serverAttachments: remoteNote.attachments,
-              serverPinned: remoteNote.pinned,
-              serverSyntaxLanguage: remoteNote.syntaxLanguage,
-              serverWordWrap: remoteNote.wordWrap,
-            });
-            // Don't update the local note - keep it for conflict resolution
-          } else if (remoteNote.modifiedAt > localNote.modifiedAt) {
-            // Server version is newer and local has no unsaved changes - safe to update
-            // Preserve server's modifiedAt (false), skip needsSync flag (true) since this came from server
-            await noteRepository.update(noteForStorage, false, true);
-            totalNotes++; // Count as actual change
-
-            // Update sync metadata
-            await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
-              noteId: remoteNote.id,
-              syncedAt: result.syncedAt,
-              serverVersion: remoteNote.version,
-              lastSyncStatus: 'synced',
-            });
-          }
-          // Local version is newer or equal - keep local (already pushed or will be pushed)
-          // NOT counted as a change - no need to refresh the store
+        // Update progress every 10 notes to avoid too many store updates
+        if (processedInBatch % 10 === 0) {
+          syncProgress.update(p => ({ ...p, completed: p.completed + 10 }));
         }
       }
 
-      // Download attachments
-      for (const attachment of result.attachments) {
-        try {
-          const blob = base64ToArrayBuffer(attachment.data);
-          await attachmentRepository.storeBlob(attachment.id, blob);
-        } catch (error) {
-          console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
-        }
+      // Update remaining progress (notes not covered by the modulo 10 updates)
+      const remaining = processedInBatch % 10;
+      if (remaining > 0) {
+        syncProgress.update(p => ({ ...p, completed: p.completed + remaining }));
       }
 
-      // Merge versions from server
-      for (const serverVersion of result.versions) {
-        // Check if we already have this version locally
-        const existingVersion = await versionRepository.getVersion(
-          serverVersion.noteId,
-          serverVersion.version
-        );
-
-        if (!existingVersion) {
-          // New version from server - store it locally
-          await versionRepository.createVersion(
-            {
-              id: serverVersion.noteId,
-              content: serverVersion.content,
-              tags: serverVersion.tags,
-              attachments: serverVersion.attachments,
-              version: serverVersion.version,
-              syntaxLanguage: serverVersion.syntaxLanguage,
-              wordWrap: serverVersion.wordWrap,
-              showPreview: serverVersion.showPreview,
-              // These fields won't be used since we're directly storing the version
-              createdAt: serverVersion.createdAt,
-              modifiedAt: serverVersion.createdAt,
-              pinned: false,
-              deleted: false,
-              syncedAt: serverVersion.syncedAt,
-            } as Note,
-            {
-              syncedAt: serverVersion.syncedAt,
-              reason: serverVersion.reason as 'sync' | 'manual-sync',
-            }
-          );
-        }
+      // Process other data
+      await this.downloadAttachments(result.attachments);
+      await this.mergeVersionsFromServer(result.versions);
+      if (result.savedSearches) {
+        await this.processSavedSearchesFromServer(result.savedSearches, syncedAt);
       }
-
-      // Process saved searches from server (Last-Write-Wins)
-      if (result.savedSearches && result.savedSearches.length > 0) {
-        const { getDB, STORES } = await import('./db');
-        const db = getDB();
-
-        for (const remoteSearch of result.savedSearches) {
-          const localSearch = await savedSearchRepository.getById(remoteSearch.id);
-
-          if (!localSearch || remoteSearch.modifiedAt > localSearch.modifiedAt) {
-            // New search from server OR server version is newer - store/update locally
-            const searchForStorage = {
-              id: remoteSearch.id,
-              name: remoteSearch.name,
-              query: remoteSearch.query,
-              order: remoteSearch.order,
-              createdAt: remoteSearch.createdAt,
-              modifiedAt: remoteSearch.modifiedAt,
-              syncedAt: result.syncedAt,
-              deleted: remoteSearch.deleted,
-              deletedAt: remoteSearch.deletedAt,
-              version: remoteSearch.version,
-              needsSync: false, // Came from server - already synced
-            };
-
-            await db.put(STORES.SAVED_SEARCHES, searchForStorage);
-          }
-          // Local version is newer or equal - keep local
-        }
-        console.log(`[SyncService] Processed ${result.savedSearches.length} saved searches from server`);
-      }
-
-      // Handle hard deletions from server
-      // These are notes that were permanently deleted (trash emptied) on another device
       if (result.deletions) {
-        for (const deletion of result.deletions) {
-          // Apply remote deletion (hard delete without re-syncing back)
-          const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
-          if (wasDeleted) {
-            console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
-          }
-        }
+        await this.processRemoteDeletions(result.deletions);
       }
-
-      // Update progress after each batch
-      syncProgress.update(p => ({ ...p, completed: p.completed + result.notes.length }));
     }
 
     console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);
-
-    await syncRepository.updateMetadata({
-      lastPullAt: new Date().toISOString(),
-    });
+    await syncRepository.updateMetadata({ lastPullAt: new Date().toISOString() });
 
     return totalNotes;
   }
@@ -733,7 +784,7 @@ class SyncService {
   /**
    * Enable automatic periodic sync
    */
-  enableAutoSync(intervalMinutes: number = 5): void {
+  enableAutoSync(intervalMinutes: number = SYNC_AUTO_INTERVAL_MINUTES): void {
     this.disableAutoSync(); // Clear any existing timer
     console.log(`[SyncService] Auto-sync enabled (${intervalMinutes}m interval)`);
     this.autoSyncTimer = window.setInterval(

@@ -39,7 +39,7 @@
   on:click={openFileDialog}
   role="button"
   tabindex="0"
-  on:keydown={(e) => e.key === 'Enter' && openFileDialog()}
+  on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openFileDialog())}
 >
   <input
     type="file"

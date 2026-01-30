@@ -89,9 +89,15 @@
   function handleDragOver(event: DragEvent) {
     if (readonly) return;
     event.preventDefault();
+    event.stopPropagation();
     event.dataTransfer!.dropEffect = 'move';
 
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    // Get the node-row element (might be currentTarget or its parent)
+    const target = event.currentTarget as HTMLElement;
+    const nodeRow = target.classList.contains('node-row') ? target : target.closest('.node-row') as HTMLElement;
+    if (!nodeRow) return;
+
+    const rect = nodeRow.getBoundingClientRect();
     const y = event.clientY - rect.top;
     const height = rect.height;
 
@@ -105,7 +111,8 @@
     }
   }
 
-  function handleDragLeave() {
+  function handleDragLeave(event: DragEvent) {
+    event.stopPropagation();
     dragOverPosition = null;
   }
 
@@ -113,8 +120,14 @@
     if (readonly) return;
     event.preventDefault();
     event.stopPropagation();
+
+    // Get the node-row element (might be currentTarget or its parent)
+    const target = event.currentTarget as HTMLElement;
+    const nodeRow = target.classList.contains('node-row') ? target : target.closest('.node-row') as HTMLElement;
+    if (!nodeRow) return;
+
     // Calculate position directly in drop handler (dragOverPosition may be null due to dragleave timing)
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const rect = nodeRow.getBoundingClientRect();
     const y = event.clientY - rect.top;
     const height = rect.height;
     let position: 'before' | 'after' | 'child';
@@ -203,6 +216,9 @@
       on:keydown={handleKeyDown}
       on:focus={handleFocus}
       on:blur={handleBlur}
+      on:dragover={handleDragOver}
+      on:dragleave={handleDragLeave}
+      on:drop={handleDrop}
     ></div>
   </div>
 

@@ -6,8 +6,8 @@
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
   import { toast } from '../utils/toast.svelte';
-  import { notes, settings } from '../stores/appStore';
-  import { searchService } from '../services/searchService';
+  import { settings } from '../stores/appStore';
+  import { addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
 
   // Helper to get formatted date synchronously (for use in templates)
@@ -48,19 +48,10 @@
     try {
       await noteService.restoreNote(noteId);
 
-      // Fetch the restored note and add it to the notes store
+      // Fetch the restored note and add it to the notes store and search index
       const restoredNote = await noteService.getNote(noteId);
       if (restoredNote) {
-        notes.update(allNotes => {
-          // Insert after pinned notes
-          const pinnedCount = allNotes.filter(n => n.pinned).length;
-          const newNotes = [...allNotes];
-          newNotes.splice(pinnedCount, 0, restoredNote);
-          return newNotes;
-        });
-
-        // Add to search index
-        searchService.updateNote(restoredNote);
+        addNoteToStoreAndSearch(restoredNote);
       }
 
       // Reload deleted notes list

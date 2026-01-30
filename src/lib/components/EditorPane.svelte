@@ -2,10 +2,12 @@
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate } from '../stores/appStore';
-  import { noteService, tagService, searchService, attachmentService, syncService, versionRepository, noteRepository } from '../services';
+  import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
+  import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository } from '../services';
+  import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
-  import type { Attachment } from '../types';
+  import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import { getPreviewHtml } from '../utils/markdownPreview';
@@ -31,29 +33,24 @@
   let attachments: Attachment[] = [];
   let isEditing = false;
 
-  // Wrapper to handle closing note and returning to list on mobile
-  // IMPORTANT: Navigate IMMEDIATELY for instant feedback, then save in background.
-  // JavaScript promises continue to run even after component unmounts, so saves will complete.
+  /**
+   * Handle closing the editor and returning to the note list.
+   * IMPORTANT: Navigation happens IMMEDIATELY for instant feedback.
+   * Save operations run in the background and complete even after component unmounts.
+   */
   function handleClose() {
     // Exit draft mode if active
     if ($isDraftMode) {
       exitDraftMode();
     }
 
-    // Capture values before navigating (component may unmount after navigation)
+    // Determine if we need to save, and capture state BEFORE any navigation
     const shouldSave = previousNoteId && hasContentChanged && !$isDraftMode;
-    const noteIdToSave = previousNoteId;
-    const contentToSave = content;
-    const tagsToSave = [...tags];
-    const attachmentsToSave = [...attachments];
-    const languageToSave = language;
-    const wordWrapToSave = wordWrap;
-    const showPreviewToSave = showPreview;
+    const saveData = shouldSave && previousNoteId ? captureNoteState(previousNoteId) : null;
 
     // Set content-only update flag so NoteList doesn't trigger full search
     // Only do this on mobile where we're navigating back to the list
-    // On desktop, we want the full search to run so sorting is correct
-    if (shouldSave && onBackToList) {
+    if (saveData && onBackToList) {
       isContentOnlyUpdate.set(true);
     }
 
@@ -66,41 +63,9 @@
     }
 
     // Fire off save operations in background (don't await)
-    // These will complete even after component unmounts
-    if (shouldSave && noteIdToSave) {
-      (async () => {
-        try {
-          // Save current changes to IndexedDB
-          await noteService.updateNote(noteIdToSave, {
-            content: contentToSave,
-            tags: tagsToSave,
-            attachments: attachmentsToSave,
-            syntaxLanguage: languageToSave,
-            wordWrap: wordWrapToSave,
-            showPreview: showPreviewToSave,
-          });
-
-          // Update the global notes store (store is global, so this works even after unmount)
-          const updatedNote = await noteService.getNote(noteIdToSave);
-          if (updatedNote) {
-            notes.update(allNotes => {
-              const index = allNotes.findIndex(n => n.id === updatedNote.id);
-              if (index !== -1) {
-                allNotes[index] = updatedNote;
-              }
-              return allNotes;
-            });
-          }
-
-          // Create version snapshot
-          await createVersionSnapshot(noteIdToSave);
-
-          // Trigger sync
-          triggerBackgroundSync();
-        } catch (error) {
-          console.error('[EditorPane] Error during background save:', error);
-        }
-      })();
+    // saveData was captured BEFORE navigation, so it contains correct values
+    if (saveData) {
+      saveNoteInBackground(saveData);
     }
   }
 
@@ -133,7 +98,7 @@
   let previousNoteId: string | null = null;
   let isDraggingFile: boolean = false;
   let isAttachmentsExpanded: boolean = false;
-  let codeEditor: any = null; // Reference to CodeEditor component
+  let codeEditor: CodeEditorRef | null = null; // Reference to CodeEditor component
   let showInfoModal: boolean = false;
   let showVersionHistory: boolean = false;
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
@@ -200,7 +165,7 @@
   $: modifiedAtFormatted = $selectedNote ? formatDateTime($selectedNote.modifiedAt) : null;
 
   // Lazy-loaded highlight.js for syntax highlighting
-  let hljs: any = null;
+  let hljs: HighlightJsInstance | null = null;
   let loadingHighlightJs = false;
   let highlightJsLoaded = false;
 
@@ -274,47 +239,10 @@
 
         // Only save and create version if content was actually modified
         if (hasContentChanged) {
-          // CRITICAL: Capture values in consts to prevent async closure bug
-          // By the time the async function executes, these variables may have been reassigned
-          const noteIdToSave = previousNoteId;
-          const contentToSave = content;
-          const tagsToSave = [...tags];
-          const attachmentsToSave = [...attachments];
-          const languageToSave = language;
-          const wordWrapToSave = wordWrap;
-          const showPreviewToSave = showPreview;
-
-          // Perform save and version creation asynchronously
-          (async () => {
-            try {
-              // Save current changes - use captured consts
-              await noteService.updateNote(noteIdToSave, {
-                content: contentToSave,
-                tags: tagsToSave,
-                attachments: attachmentsToSave,
-                syntaxLanguage: languageToSave,
-                wordWrap: wordWrapToSave,
-                showPreview: showPreviewToSave,
-              });
-
-              // Update the store with saved data so switching back shows correct values
-              const updatedNote = await noteService.getNote(noteIdToSave);
-              if (updatedNote) {
-                notes.update(allNotes => {
-                  const index = allNotes.findIndex(n => n.id === updatedNote.id);
-                  if (index !== -1) {
-                    allNotes[index] = updatedNote;
-                  }
-                  return allNotes;
-                });
-              }
-
-              // Create version snapshot
-              await createVersionSnapshot(noteIdToSave);
-            } catch (error) {
-              console.error('[EditorPane] Error saving/versioning before switch:', error);
-            }
-          })();
+          // Capture state BEFORE switching notes (prevents async closure bugs)
+          const saveData = captureNoteState(previousNoteId);
+          // Save in background (no sync trigger - will sync after switch)
+          saveNoteInBackground(saveData, { triggerSync: false });
         }
       } else if (saveTimeout) {
         // Just clear the timeout if in draft mode
@@ -361,42 +289,10 @@
 
       // Only save and create version if content was actually modified
       if (hasContentChanged) {
-        // Capture previousNoteId before it gets reset
-        const noteIdToSave = previousNoteId;
-
-        // Perform the save, then create version
-        (async () => {
-          try {
-            // Save current changes immediately
-            await noteService.updateNote(noteIdToSave, {
-              content,
-              tags: tags,
-              attachments: attachments,
-              syntaxLanguage: language,
-              wordWrap,
-              showPreview,
-            });
-
-            // Update the store with saved data
-            const updatedNote = await noteService.getNote(noteIdToSave);
-            if (updatedNote) {
-              notes.update(allNotes => {
-                const index = allNotes.findIndex(n => n.id === updatedNote.id);
-                if (index !== -1) {
-                  allNotes[index] = updatedNote;
-                }
-                return allNotes;
-              });
-            }
-
-            // Create version snapshot
-            await createVersionSnapshot(noteIdToSave);
-
-            await triggerBackgroundSync();
-          } catch (error) {
-            console.error('[EditorPane] Error during close save:', error);
-          }
-        })();
+        // Capture ALL state before it gets reset (prevents async closure bugs)
+        const saveData = captureNoteState(previousNoteId);
+        // Save in background with sync trigger
+        saveNoteInBackground(saveData);
       } else {
         // Still trigger sync even if we didn't save
         triggerBackgroundSync();
@@ -420,6 +316,91 @@
    */
   function triggerBackgroundSync() {
     syncService.triggerBackgroundSync();
+  }
+
+  /**
+   * Data structure for saving a note in the background.
+   * All values must be captured BEFORE calling saveNoteInBackground() to avoid
+   * async closure bugs where component state changes between capture and execution.
+   */
+  interface NoteSaveData {
+    noteId: string;
+    content: string;
+    tags: string[];
+    attachments: Attachment[];
+    syntaxLanguage: string;
+    wordWrap: boolean;
+    showPreview: boolean;
+  }
+
+  /**
+   * Save a note in the background without blocking the UI.
+   *
+   * IMPORTANT: This function uses explicit parameters to avoid async closure bugs.
+   * All values are passed in rather than captured from component scope, ensuring
+   * the save uses the exact state at the time of the call, not when the async
+   * operation eventually executes.
+   *
+   * @param data - All note data captured at call time (not from component scope)
+   * @param options - Additional options for the save operation
+   */
+  function saveNoteInBackground(
+    data: NoteSaveData,
+    options: { createVersion?: boolean; triggerSync?: boolean } = {}
+  ): void {
+    const { createVersion = true, triggerSync = true } = options;
+
+    // Fire-and-forget async operation
+    (async () => {
+      try {
+        // Save note to IndexedDB
+        await noteService.updateNote(data.noteId, {
+          content: data.content,
+          tags: data.tags,
+          attachments: data.attachments,
+          syntaxLanguage: data.syntaxLanguage,
+          wordWrap: data.wordWrap,
+          showPreview: data.showPreview,
+        });
+
+        // Update the global notes store
+        const updatedNote = await noteService.getNote(data.noteId);
+        if (updatedNote) {
+          updateNoteInStore(updatedNote);
+        }
+
+        // Create version snapshot if requested
+        if (createVersion) {
+          await createVersionSnapshot(data.noteId);
+        }
+
+        // Trigger sync if requested
+        if (triggerSync) {
+          triggerBackgroundSync();
+        }
+      } catch (error) {
+        console.error('[EditorPane] Error during background save:', error);
+      }
+    })();
+  }
+
+  /**
+   * Capture current editor state for background save.
+   * Call this BEFORE any state changes to ensure correct values are saved.
+   *
+   * @param noteId - The ID of the note to save
+   * @returns Captured note data ready for saveNoteInBackground()
+   */
+  function captureNoteState(noteId: string): NoteSaveData {
+    return {
+      noteId,
+      content,
+      tags: [...tags],
+      attachments: [...attachments],
+      syntaxLanguage: language,
+      wordWrap,
+      showPreview,
+    };
   }
 
   /**
@@ -478,19 +459,8 @@
       // Get just the updated note (much faster than reloading all notes)
       const updatedNote = await noteService.getNote($selectedNote.id);
       if (updatedNote) {
-        // Update only this note in the store
-        // This will trigger the reactive block in App.svelte which runs performSearch()
-        // to maintain proper sort order based on modifiedAt
-        notes.update(allNotes => {
-          const index = allNotes.findIndex(n => n.id === updatedNote.id);
-          if (index !== -1) {
-            allNotes[index] = updatedNote;
-          }
-          return allNotes;
-        });
-
-        // Update only this note in search index (incremental update)
-        searchService.updateNote(updatedNote);
+        // Update note in store and search index (incremental update)
+        updateNoteInStoreAndSearch(updatedNote);
       }
 
       // Trigger background sync after saving
@@ -516,7 +486,7 @@
     // Auto-save after 1 second of no typing
     if ($selectedNote) {
       if (saveTimeout) clearTimeout(saveTimeout);
-      saveTimeout = window.setTimeout(handleSave, 1000);
+      saveTimeout = window.setTimeout(handleSave, EDITOR_AUTOSAVE_DELAY_MS);
     }
   }
 
@@ -528,14 +498,7 @@
       // Get just the updated note (incremental update)
       const updatedNote = await noteService.getNote($selectedNote.id);
       if (updatedNote) {
-        notes.update(allNotes => {
-          const index = allNotes.findIndex(n => n.id === updatedNote.id);
-          if (index !== -1) {
-            allNotes[index] = updatedNote;
-          }
-          return allNotes;
-        });
-        searchService.updateNote(updatedNote);
+        updateNoteInStoreAndSearch(updatedNote);
       }
 
       // Trigger background sync so pin state syncs to other devices
@@ -566,11 +529,7 @@
       // Get updated note
       const updatedNote = await noteService.getNote(noteId);
       if (updatedNote) {
-        // Update the note in the store (don't remove it)
-        notes.update(allNotes =>
-          allNotes.map(n => n.id === noteId ? updatedNote : n)
-        );
-        searchService.updateNote(updatedNote);
+        updateNoteInStoreAndSearch(updatedNote);
 
         if (isArchived) {
           // Unarchived: select the note
@@ -605,11 +564,7 @@
       // Get updated note
       const updatedNote = await noteService.getNote(noteId);
       if (updatedNote) {
-        // Update the note in the store
-        notes.update(allNotes =>
-          allNotes.map(n => n.id === noteId ? updatedNote : n)
-        );
-        searchService.updateNote(updatedNote);
+        updateNoteInStoreAndSearch(updatedNote);
       }
 
       // Trigger background sync
@@ -630,11 +585,8 @@
       await noteService.deleteNote(noteId);
       handleClose(); // Clear selection and return to list on mobile
 
-      // Remove note from store (incremental update)
-      notes.update(allNotes => allNotes.filter(n => n.id !== noteId));
-
-      // Remove from search index
-      searchService.removeNote(noteId);
+      // Remove note from store and search index
+      removeNoteFromStoreAndSearch(noteId);
 
     } catch (error) {
       console.error('[EditorPane] Failed to delete note:', error);
@@ -813,17 +765,8 @@
         throw new Error('Failed to retrieve duplicated note');
       }
 
-      // Add to notes store
-      notes.update(allNotes => {
-        // Insert after pinned notes (new note is unpinned)
-        const pinnedCount = allNotes.filter(n => n.pinned).length;
-        const newNotes = [...allNotes];
-        newNotes.splice(pinnedCount, 0, decryptedNote);
-        return newNotes;
-      });
-
-      // Update search index
-      searchService.updateNote(decryptedNote);
+      // Add to notes store and search index
+      addNoteToStoreAndSearch(decryptedNote);
 
       // Select the new note
       selectNote(decryptedNote.id);
@@ -863,16 +806,7 @@
       // Update the global notes store
       const updatedNote = await noteService.getNote($selectedNote.id);
       if (updatedNote) {
-        notes.update(allNotes => {
-          const index = allNotes.findIndex(n => n.id === updatedNote.id);
-          if (index !== -1) {
-            allNotes[index] = updatedNote;
-          }
-          return allNotes;
-        });
-
-        // Update searchService index
-        searchService.updateNote(updatedNote);
+        updateNoteInStoreAndSearch(updatedNote);
 
         // Also update selectedNote in the store
         selectNote($selectedNote.id);
@@ -933,7 +867,7 @@
   }
 
   // Keyboard shortcut handler
-  function matchesShortcut(event: KeyboardEvent, shortcut: any): boolean {
+  function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut | undefined): boolean {
     if (!shortcut || !shortcut.key) return false;
 
     const hasCtrl = event.metaKey || event.ctrlKey;
@@ -1016,6 +950,12 @@
   });
 
   onDestroy(() => {
+    // Clear any pending save timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
     window.removeEventListener('keydown', handleEditorKeydown);
 
     // Disconnect theme observer
@@ -1217,15 +1157,8 @@
       wordWrap = updatedNote.wordWrap ?? true;
       showPreview = updatedNote.showPreview ?? false;
 
-      // Update note in store (incremental update)
-      notes.update(allNotes => {
-        const index = allNotes.findIndex(n => n.id === updatedNote.id);
-        if (index !== -1) {
-          allNotes[index] = updatedNote;
-        }
-        return allNotes;
-      });
-      searchService.updateNote(updatedNote);
+      // Update note in store and search index
+      updateNoteInStoreAndSearch(updatedNote);
     }
   }}
 />

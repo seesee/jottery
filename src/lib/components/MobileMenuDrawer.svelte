@@ -41,7 +41,7 @@
   <div
     class="{forceMobileLayout ? '' : 'tablet:hidden'} fixed inset-0 bg-black z-40 transition-opacity duration-300 {menuClosing ? 'opacity-0' : 'opacity-50'}"
     on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Enter' && handleBackdropClick()}
+    on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleBackdropClick())}
     role="button"
     tabindex="-1"
     aria-label="Close menu"
@@ -97,7 +97,8 @@
 
         <button
           on:click={() => handleItemClick(onLock)}
-          class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left {rememberPasswordEnabled ? 'opacity-50' : 'active:bg-gray-100 dark:active:bg-gray-700'} rounded-md transition-colors"
+          disabled={rememberPasswordEnabled}
+          class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left {rememberPasswordEnabled ? 'opacity-50 cursor-not-allowed' : 'active:bg-gray-100 dark:active:bg-gray-700'} rounded-md transition-colors"
         >
           <span class="text-xl">{rememberPasswordEnabled ? '🔓' : '🔒'}</span>
           <span class="flex-1 text-sm font-medium">{$_('common.lock')}</span>

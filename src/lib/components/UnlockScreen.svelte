@@ -8,6 +8,7 @@
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
+  import type { UserSettings } from '../types';
 
   let password = '';
   let confirmPassword = '';
@@ -137,7 +138,7 @@
       // Apply optional sync configuration (first-time setup only)
       if (needsInit && (syncEndpoint || deviceName)) {
         try {
-          const updates: any = {};
+          const updates: Partial<UserSettings> = {};
 
           if (syncEndpoint) {
             updates.syncEndpoint = syncEndpoint.trim();

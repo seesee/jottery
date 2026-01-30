@@ -1,16 +1,17 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { onMount, onDestroy } from 'svelte';
+  import type { PdfJsLib, PdfDocument } from '../types';
 
   export let pdfUrl: string;
 
   let canvasContainer: HTMLDivElement;
   let currentPage = 1;
   let totalPages = 0;
-  let pdfDoc: any = null;
+  let pdfDoc: PdfDocument | null = null;
   let rendering = false;
   let scale = 1.0;
-  let pdfjsLib: any = null;
+  let pdfjsLib: PdfJsLib | null = null;
   let loadingLibrary = true;
 
   async function loadPdf() {
@@ -18,7 +19,8 @@
       // Lazy load PDF.js library (only when needed)
       if (!pdfjsLib) {
         loadingLibrary = true;
-        pdfjsLib = await import('pdfjs-dist');
+        // Cast through unknown to use our minimal interface
+        pdfjsLib = await import('pdfjs-dist') as unknown as PdfJsLib;
 
         // Set worker source to local file (bundled in public directory to avoid CSP issues)
         pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -28,7 +30,7 @@
       // Load the PDF document
       const loadingTask = pdfjsLib.getDocument(pdfUrl);
       pdfDoc = await loadingTask.promise;
-      totalPages = pdfDoc.numPages;
+      totalPages = pdfDoc!.numPages;
 
       // Render first page
       await renderPage(1);

@@ -12,8 +12,7 @@ import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
-
-const DEFAULT_ITERATIONS = 100000;
+import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 
 /**
  * Check if the application has been initialized
@@ -37,7 +36,7 @@ export async function initialize(password: string): Promise<void> {
   // Store encryption metadata
   const metadata: EncryptionMetadata = {
     salt: arrayBufferToBase64(salt),
-    iterations: DEFAULT_ITERATIONS,
+    iterations: CRYPTO_PBKDF2_ITERATIONS,
     createdAt: new Date().toISOString(),
     algorithm: 'AES-256-GCM',
   };

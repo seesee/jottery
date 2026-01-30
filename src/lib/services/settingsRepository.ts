@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS } from '../types';
 import { getDB, STORES } from './db';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
+import { ApplicationLockedError } from '../errors';
 
 const SETTINGS_KEY = 'user-settings';
 
@@ -18,7 +19,7 @@ async function encryptColorPalette(palette?: ColorPalette): Promise<ColorPalette
 
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   const encrypted: ColorPalette = {};

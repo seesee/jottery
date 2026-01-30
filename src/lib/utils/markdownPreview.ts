@@ -4,12 +4,12 @@
  */
 
 import { marked } from 'marked';
-import type { Attachment } from '../types';
+import type { Attachment, HighlightJsInstance } from '../types';
 
 export interface MarkdownPreviewOptions {
   attachments: Attachment[];
   openLinksInNewTab: boolean;
-  hljs?: any; // highlight.js instance (optional, for code highlighting)
+  hljs?: HighlightJsInstance | null; // highlight.js instance (optional, for code highlighting)
   loadingText?: string;
   notes?: Array<{ id: string; content: string }>; // For resolving note links by title
 }

@@ -9,6 +9,7 @@ import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { cryptoService, encryptStringArray, decryptStringArray } from './crypto';
 import { keyManager } from './keyManager';
+import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
 
 /**
  * Note service class
@@ -35,7 +36,7 @@ class NoteService {
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked. Please unlock to create notes.');
+      throw new ApplicationLockedError();
     }
 
     const now = new Date().toISOString();
@@ -70,7 +71,7 @@ class NoteService {
   async getNote(id: string): Promise<DecryptedNote | null> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked. Please unlock to view notes.');
+      throw new ApplicationLockedError();
     }
 
     const note = await noteRepository.getById(id);
@@ -87,7 +88,7 @@ class NoteService {
   async getAllNotes(sortOrder: SortOrder = 'recent'): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked. Please unlock to view notes.');
+      throw new ApplicationLockedError();
     }
 
     const notes = await noteRepository.getAllActive();
@@ -113,7 +114,7 @@ class NoteService {
   ): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked. Please unlock to view notes.');
+      throw new ApplicationLockedError();
     }
 
     // Get all non-deleted notes (includes archived for filtering)
@@ -219,7 +220,7 @@ class NoteService {
   async getPinnedNotes(): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked.');
+      throw new ApplicationLockedError();
     }
 
     const notes = await noteRepository.getPinned();
@@ -246,12 +247,12 @@ class NoteService {
   ): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked.');
+      throw new ApplicationLockedError();
     }
 
     const note = await noteRepository.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
 
     // Track if actual content changed (not just UI state)
@@ -363,7 +364,7 @@ class NoteService {
   async togglePin(id: string): Promise<Note> {
     const note = await noteRepository.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
 
     note.pinned = !note.pinned;
@@ -420,7 +421,7 @@ class NoteService {
   async getArchivedNotes(): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked.');
+      throw new ApplicationLockedError();
     }
 
     const notes = await noteRepository.getArchived();
@@ -436,13 +437,13 @@ class NoteService {
   async duplicateNote(id: string): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked.');
+      throw new ApplicationLockedError();
     }
 
     // Get the original note (decrypted)
     const original = await this.getNote(id);
     if (!original) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
 
     // Create a new note with the same content and settings
@@ -479,7 +480,7 @@ class NoteService {
   async getDeletedNotes(): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked.');
+      throw new ApplicationLockedError();
     }
 
     const notes = await noteRepository.getDeleted();
@@ -619,7 +620,7 @@ class NoteService {
         decryptedAt: Date.now(),
       };
     } catch (error) {
-      throw new Error(`Failed to decrypt note ${note.id}: ${error}`);
+      throw new CryptoError('decrypt', `note ${note.id}`, error instanceof Error ? error : undefined);
     }
   }
 

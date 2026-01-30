@@ -248,7 +248,7 @@
                 <!-- View mode -->
                 <div class="flex items-start gap-3">
                   <!-- Drag handle -->
-                  <div class="text-gray-400 dark:text-gray-500 mt-1 cursor-move">
+                  <div class="text-gray-400 dark:text-gray-500 mt-1 cursor-move" aria-hidden="true">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
                     </svg>

@@ -39,7 +39,7 @@ impl SyntaxHighlighter {
         }
     }
 
-    /// Highlight text with syntax highlighting or render markdown/calc
+    /// Highlight text with syntax highlighting or render markdown/calc/outliner
     pub fn highlight<'a>(&self, text: &'a str, language: SyntaxLanguage) -> Text<'a> {
         // Special handling for markdown - render it instead of highlighting
         if language == SyntaxLanguage::Markdown {
@@ -49,6 +49,11 @@ impl SyntaxHighlighter {
         // Special handling for calc - evaluate and render with results
         if language == SyntaxLanguage::Calc {
             return calc::render_calc(text);
+        }
+
+        // Special handling for outliner - render as tree structure
+        if language == SyntaxLanguage::Outliner {
+            return self.render_outliner(text);
         }
 
         // Map our SyntaxLanguage enum to syntect syntax names
@@ -64,6 +69,7 @@ impl SyntaxHighlighter {
             SyntaxLanguage::Bash => "Bash",
             SyntaxLanguage::Perl => "Perl",
             SyntaxLanguage::Calc => "Plain Text", // Won't reach here due to above check
+            SyntaxLanguage::Outliner => "Plain Text", // Won't reach here due to above check
         };
 
         // Try to find the syntax definition
@@ -289,6 +295,74 @@ impl SyntaxHighlighter {
         // Flush any remaining line
         if !current_line.is_empty() {
             lines.push(Line::from(current_line));
+        }
+
+        Text::from(lines)
+    }
+
+    /// Render outliner content as a tree structure
+    fn render_outliner<'a>(&self, text: &'a str) -> Text<'a> {
+        let mut lines: Vec<Line> = Vec::new();
+
+        for line in text.lines() {
+            // Skip empty lines
+            if line.trim().is_empty() {
+                lines.push(Line::raw(""));
+                continue;
+            }
+
+            // Count leading spaces to determine indent level
+            let spaces = line.len() - line.trim_start().len();
+            let level = spaces / 2; // 2 spaces per indent level
+            let content = line.trim_start();
+
+            // Determine bullet style and content based on prefix
+            let (bullet_char, is_collapsed, text_content) = if content.starts_with("+ ") {
+                ("▸", true, &content[2..]) // Collapsed: right-pointing triangle
+            } else if content.starts_with("- ") {
+                ("•", false, &content[2..]) // Expanded: bullet
+            } else if content.starts_with('>') {
+                // Backwards compat: old collapsed format
+                ("▸", true, &content[1..])
+            } else {
+                // No bullet prefix, just show content
+                ("•", false, content)
+            };
+
+            // Build the line with proper indentation and styling
+            let mut spans: Vec<Span> = Vec::new();
+
+            // Add indentation (tree lines could be added here for fancier display)
+            if level > 0 {
+                let indent = "  ".repeat(level);
+                spans.push(Span::styled(indent, Style::default().fg(Color::DarkGray)));
+            }
+
+            // Add bullet with colour based on collapsed state
+            let bullet_style = if is_collapsed {
+                Style::default().fg(Color::Yellow) // Collapsed items in yellow
+            } else {
+                Style::default().fg(Color::Cyan) // Expanded items in cyan
+            };
+            spans.push(Span::styled(format!("{} ", bullet_char), bullet_style));
+
+            // Add content text
+            let content_style = if is_collapsed {
+                Style::default().fg(Color::Gray) // Collapsed content slightly dimmed
+            } else {
+                Style::default()
+            };
+            spans.push(Span::styled(text_content.to_string(), content_style));
+
+            lines.push(Line::from(spans));
+        }
+
+        // If empty, show a hint
+        if lines.is_empty() {
+            lines.push(Line::styled(
+                "(empty outliner)",
+                Style::default().fg(Color::DarkGray),
+            ));
         }
 
         Text::from(lines)

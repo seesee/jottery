@@ -7,6 +7,7 @@ import { getDB, STORES } from './db';
 import { v4 as uuidv4 } from 'uuid';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
+import { ApplicationLockedError, NotFoundError } from '../errors';
 
 /**
  * Create a new saved search
@@ -17,7 +18,7 @@ export async function create(name: string, query: string): Promise<SavedSearch> 
 
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   // Get max order
@@ -56,7 +57,7 @@ export async function create(name: string, query: string): Promise<SavedSearch> 
 async function decryptSavedSearch(savedSearch: SavedSearch): Promise<SavedSearch> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   try {
@@ -132,11 +133,11 @@ export async function getById(id: string): Promise<SavedSearch | undefined> {
 export async function update(id: string, updates: Partial<SavedSearch>): Promise<SavedSearch> {
   const db = getDB();
   const existing = await db.get(STORES.SAVED_SEARCHES, id); // Get encrypted version from DB
-  if (!existing) throw new Error('SavedSearch not found');
+  if (!existing) throw new NotFoundError('SavedSearch');
 
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
-    throw new Error('Application is locked');
+    throw new ApplicationLockedError();
   }
 
   // Encrypt updated fields if provided

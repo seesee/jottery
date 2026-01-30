@@ -3,7 +3,7 @@
  */
 
 import { openDB, type IDBPDatabase } from 'idb';
-import type { Note, UserSettings, EncryptionMetadata, NoteVersion, SavedSearch } from '../types';
+import type { Note, UserSettings, EncryptionMetadata, NoteVersion, SavedSearch, SyncMetadata, NoteSyncMetadata } from '../types';
 
 let DB_NAME = 'jottery'; // Default, can be changed before initialization
 const DB_VERSION = 9;
@@ -54,7 +54,7 @@ export interface JotteryDB {
   };
   sync_metadata: {
     key: string; // 'metadata' or 'note:<uuid>'
-    value: any; // SyncMetadata | NoteSyncMetadata (will be defined in types/sync.ts)
+    value: SyncMetadata | NoteSyncMetadata;
   };
   note_versions: {
     key: string; // versionKey

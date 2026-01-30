@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { settings } from '../stores/appStore';
   import { getColorHex, getColorNames, getColorDisplayName, resolveTheme } from '../services/colorService';
+  import { modal } from '../actions';
 
   export let show = false;
   export let currentColor: string | undefined = undefined;
@@ -26,28 +27,21 @@
       onClose();
     }
   }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      onClose();
-    }
-  }
 </script>
-
-<svelte:window on:keydown={handleKeydown} />
 
 {#if show}
   <!-- Modal backdrop -->
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={handleBackdropClick}
-    role="presentation"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    use:modal={{ onEscape: onClose }}
   >
     <!-- Modal content -->
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
-      role="dialog"
-      aria-modal="true"
       aria-labelledby="color-picker-title"
     >
       <h2 id="color-picker-title" class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">

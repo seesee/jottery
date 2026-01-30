@@ -3,6 +3,7 @@
   import { isLocked, isLocking, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
   import { lock, noteService, searchService, syncService, syncRepository } from '../services';
   import { _ } from 'svelte-i18n';
+  import type { KeyboardShortcut } from '../types';
 
   export let onNewNote: () => void;
   export let onOpenSettings: () => void;
@@ -35,7 +36,7 @@
     isLocking.set(false);
   }
 
-  function matchesShortcut(event: KeyboardEvent, shortcut: any): boolean {
+  function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut | undefined): boolean {
     // Null check - shortcut might be undefined
     if (!shortcut || !shortcut.key) return false;
 

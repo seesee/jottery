@@ -1027,6 +1027,7 @@
     role="dialog"
     aria-modal="true"
     tabindex="-1"
+    use:modal={{ onEscape: onClose }}
   >
     <div class="bg-white dark:bg-gray-800 w-full h-full tablet:h-auto tablet:max-w-2xl tablet:rounded-lg shadow-xl tablet:max-h-[90vh] flex flex-col">
       <!-- Header -->

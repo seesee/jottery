@@ -71,3 +71,19 @@ export type {
   AuthRegisterResponse,
   ConflictData,
 } from './sync';
+
+// Editor types (component refs and third-party library interfaces)
+export type {
+  CodeEditorRef,
+  WysiwygEditorRef,
+  HighlightJsInstance,
+  PdfJsLib,
+  PdfDocument,
+  PdfPage,
+  PdfViewport,
+  FlexSearchResultItem,
+  FlexSearchEnrichedResult,
+  CalcEvaluationResult,
+  CalcValue,
+  LandingFeature,
+} from './editor';

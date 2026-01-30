@@ -25,9 +25,12 @@
   }
 </script>
 
-<div class="fixed top-4 right-4 z-50 space-y-2">
+<div class="fixed top-4 right-4 z-50 space-y-2" aria-live="polite" aria-atomic="false">
   {#each toast.items as item (item.id)}
-    <div class="animate-slide-in border rounded-lg shadow-lg p-4 max-w-sm {getToastClasses(item.type)}">
+    <div
+      class="animate-slide-in border rounded-lg shadow-lg p-4 max-w-sm {getToastClasses(item.type)}"
+      role={item.type === 'error' ? 'alert' : 'status'}
+    >
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-2">
           <span class="text-lg font-bold">{getIcon(item.type)}</span>

@@ -10,12 +10,12 @@ import type {
   DecryptionParams,
 } from '../types';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
+import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 
 const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
 const IV_LENGTH = 12; // 96 bits recommended for GCM
 const SALT_LENGTH = 32; // 256 bits
-const DEFAULT_ITERATIONS = 100000; // PBKDF2 iterations
 
 /**
  * Convert string to ArrayBuffer
@@ -52,7 +52,7 @@ class WebCryptoService implements CryptoService {
       {
         name: 'PBKDF2',
         salt: salt as BufferSource,
-        iterations: iterations || DEFAULT_ITERATIONS,
+        iterations: iterations || CRYPTO_PBKDF2_ITERATIONS,
         hash: 'SHA-256',
       },
       passwordKey,

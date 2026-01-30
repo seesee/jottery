@@ -5,6 +5,7 @@
   import OutlinerEditor from '../OutlinerEditor.svelte';
   import WysiwygToolbar from './WysiwygToolbar.svelte';
   import TagInput from '../TagInput.svelte';
+  import type { CodeEditorRef, WysiwygEditorRef } from '../../types';
 
   // State props
   export let showPreview: boolean;
@@ -19,13 +20,13 @@
   export let readOnlyBanner: string | undefined = undefined;
 
   // Editor ref (for bind:this)
-  export let codeEditor: any = null;
+  export let codeEditor: CodeEditorRef | null = null;
 
   // Editor mode ('raw' or 'wysiwyg')
   export let editorMode: 'raw' | 'wysiwyg' = 'raw';
 
-  // WYSIWYG editor ref
-  let wysiwygEditor: any = null;
+  // WYSIWYG editor ref (WysiwygEditor component)
+  let wysiwygEditor: WysiwygEditorRef | null = null;
 
   // Callbacks
   export let onContentChange: (newContent: string) => void;

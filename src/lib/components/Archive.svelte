@@ -5,8 +5,8 @@
   import type { DecryptedNote } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import { toast } from '../utils/toast.svelte';
-  import { notes, settings } from '../stores/appStore';
-  import { searchService } from '../services/searchService';
+  import { settings } from '../stores/appStore';
+  import { addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
 
   // Helper to get formatted date synchronously (for use in templates)
@@ -44,19 +44,10 @@
     try {
       await noteService.unarchiveNote(noteId);
 
-      // Fetch the unarchived note and add it to the notes store
+      // Fetch the unarchived note and add it to the notes store and search index
       const unarchivedNote = await noteService.getNote(noteId);
       if (unarchivedNote) {
-        notes.update(allNotes => {
-          // Insert after pinned notes
-          const pinnedCount = allNotes.filter(n => n.pinned).length;
-          const newNotes = [...allNotes];
-          newNotes.splice(pinnedCount, 0, unarchivedNote);
-          return newNotes;
-        });
-
-        // Add to search index
-        searchService.updateNote(unarchivedNote);
+        addNoteToStoreAndSearch(unarchivedNote);
       }
 
       // Reload archived notes list

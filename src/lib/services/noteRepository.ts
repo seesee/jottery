@@ -5,6 +5,7 @@
 import type { NoteRepository } from '../types';
 import type { Note } from '../types';
 import { getDB, STORES } from './db';
+import { NotFoundError } from '../errors';
 
 class IndexedDBNoteRepository implements NoteRepository {
   /**
@@ -126,7 +127,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     const note = await this.getById(id);
     if (!note) {
       console.error('[noteRepository] Note not found:', id);
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     console.log('[noteRepository] Note found, marking as deleted');
     note.deleted = true;
@@ -141,7 +142,7 @@ class IndexedDBNoteRepository implements NoteRepository {
   async restore(id: string): Promise<void> {
     const note = await this.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     note.deleted = false;
     note.deletedAt = undefined;
@@ -154,7 +155,7 @@ class IndexedDBNoteRepository implements NoteRepository {
   async archive(id: string): Promise<void> {
     const note = await this.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     note.archived = true;
     note.archivedAt = new Date().toISOString();
@@ -167,7 +168,7 @@ class IndexedDBNoteRepository implements NoteRepository {
   async unarchive(id: string): Promise<void> {
     const note = await this.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     note.archived = false;
     note.archivedAt = undefined;
@@ -180,7 +181,7 @@ class IndexedDBNoteRepository implements NoteRepository {
   async lock(id: string): Promise<void> {
     const note = await this.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     note.locked = true;
     note.lockedAt = new Date().toISOString();
@@ -193,7 +194,7 @@ class IndexedDBNoteRepository implements NoteRepository {
   async unlock(id: string): Promise<void> {
     const note = await this.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     note.locked = false;
     note.lockedAt = undefined;
@@ -294,7 +295,7 @@ class IndexedDBNoteRepository implements NoteRepository {
   async touch(id: string): Promise<void> {
     const note = await this.getById(id);
     if (!note) {
-      throw new Error(`Note ${id} not found`);
+      throw new NotFoundError('Note', id);
     }
     await this.update(note);
   }

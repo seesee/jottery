@@ -7,6 +7,7 @@ import type { Attachment } from '../types';
 import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { attachmentRepository } from './attachmentRepository';
+import { ApplicationLockedError, NotFoundError, ValidationError } from '../errors';
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -122,15 +123,16 @@ class AttachmentService {
   async addAttachment(file: File): Promise<Attachment> {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      throw new Error(
-        `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      throw new ValidationError(
+        `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+        'file'
       );
     }
 
     // Get encryption key
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked. Unlock to add attachments.');
+      throw new ApplicationLockedError();
     }
 
     // Generate attachment ID
@@ -198,13 +200,13 @@ class AttachmentService {
   async getAttachmentData(attachment: Attachment): Promise<Blob> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
-      throw new Error('Application is locked. Unlock to view attachments.');
+      throw new ApplicationLockedError();
     }
 
     // Retrieve encrypted data
     const dataBlob = await attachmentRepository.getBlob(attachment.data);
     if (!dataBlob) {
-      throw new Error('Attachment data not found');
+      throw new NotFoundError('Attachment', attachment.data);
     }
 
     // Parse encrypted data

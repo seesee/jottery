@@ -252,7 +252,7 @@ describe('conflictService', () => {
       const note = createTestNote({ id: 'note-1' });
       await noteRepository.create(note);
 
-      await expect(resolveKeepServer('note-1')).rejects.toThrow('No conflict data');
+      await expect(resolveKeepServer('note-1')).rejects.toThrow('not found');
     });
 
     it('should throw if application is locked', async () => {
@@ -331,7 +331,7 @@ describe('conflictService', () => {
       const note = createTestNote({ id: 'note-1' });
       await noteRepository.create(note);
 
-      await expect(resolveKeepBoth('note-1')).rejects.toThrow('No conflict data');
+      await expect(resolveKeepBoth('note-1')).rejects.toThrow('not found');
     });
   });
 

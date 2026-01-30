@@ -1,17 +1,16 @@
 import { ViewPlugin, Decoration, EditorView, WidgetType } from '@codemirror/view';
 import type { ViewUpdate, DecorationSet } from '@codemirror/view';
-import { Text } from '@codemirror/state';
+import { Text, Range } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting, LanguageSupport } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { StreamLanguage } from '@codemirror/language';
 import * as math from 'mathjs';
+import { CALC_MAX_LINES, CALC_MAX_TOTAL_ERRORS } from '../constants';
 
 const RESULT_PREFIX = '  ';
 
 // Limits to prevent performance issues with large/non-calc documents
-const MAX_CALC_LINES = 500;
 const MAX_CONSECUTIVE_ERRORS = 10;
-const MAX_TOTAL_ERRORS = 50;
 
 // Math.js built-in functions and constants
 const BUILTIN_FUNCTIONS = new Set([
@@ -199,7 +198,7 @@ class CalcEvaluator {
 				result: this.formatResult(result),
 				isError: false
 			};
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				lineNumber: parsedLine.lineNumber,
 				result: this.formatError(error),
@@ -208,7 +207,7 @@ class CalcEvaluator {
 		}
 	}
 
-	formatResult(value: any): string {
+	formatResult(value: math.MathType): string {
 		// Handle different types
 		if (typeof value === 'number') {
 			// Limit decimal places
@@ -221,8 +220,8 @@ class CalcEvaluator {
 		return math.format(value, { precision: 14 });
 	}
 
-	formatError(error: any): string {
-		const message = error.message || String(error);
+	formatError(error: unknown): string {
+		const message = error instanceof Error ? error.message : String(error);
 		// Truncate long errors
 		return `Error: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`;
 	}
@@ -271,7 +270,7 @@ class WarningWidget extends WidgetType {
 // Decoration Builder: Create inline result widgets and error line markers
 class DecorationBuilder {
 	buildDecorations(results: EvaluationResult[], doc: Text, warning?: string): DecorationSet {
-		const decorations: any[] = [];
+		const decorations: Range<Decoration>[] = [];
 
 		// Add warning widget at the start of line 1 if present
 		if (warning && doc.lines >= 1) {
@@ -341,8 +340,8 @@ const calcPlugin = ViewPlugin.fromClass(
 			const totalLines = doc.lines;
 
 			// Check if document is too long for calc mode
-			if (totalLines > MAX_CALC_LINES) {
-				const warning = `Document too long for calc mode (${totalLines} lines, max ${MAX_CALC_LINES}). Try a shorter document or switch to a different syntax mode.`;
+			if (totalLines > CALC_MAX_LINES) {
+				const warning = `Document too long for calc mode (${totalLines} lines, max ${CALC_MAX_LINES}). Try a shorter document or switch to a different syntax mode.`;
 				return this.builder.buildDecorations([], doc, warning);
 			}
 
@@ -371,8 +370,8 @@ const calcPlugin = ViewPlugin.fromClass(
 					}
 
 					// Check total error limit
-					if (totalErrors >= MAX_TOTAL_ERRORS) {
-						warning = `Stopped after ${MAX_TOTAL_ERRORS} total errors. Consider switching to a different syntax mode for this content.`;
+					if (totalErrors >= CALC_MAX_TOTAL_ERRORS) {
+						warning = `Stopped after ${CALC_MAX_TOTAL_ERRORS} total errors. Consider switching to a different syntax mode for this content.`;
 						break;
 					}
 				} else if (!parsedLine.isComment && result.result !== null) {

@@ -6,6 +6,7 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import ColorPickerModal from './ColorPickerModal.svelte';
   import { get } from 'svelte/store';
+  import { modal } from '../actions';
 
   // Modal states
   let showAddTagsModal = false;
@@ -209,13 +210,6 @@
     }
   }
 
-  function handleModalKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      showAddTagsModal = false;
-      showRemoveTagsModal = false;
-    }
-  }
-
   function handleSelectAll() {
     selectAllFiltered(get(filteredNotes));
   }
@@ -340,10 +334,10 @@
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={handleModalBackdrop}
-    on:keydown={handleModalKeydown}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: () => showAddTagsModal = false }}
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
       <div class="border-b border-gray-200 dark:border-gray-700 p-4">
@@ -388,10 +382,10 @@
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={handleModalBackdrop}
-    on:keydown={handleModalKeydown}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: () => showRemoveTagsModal = false }}
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
       <div class="border-b border-gray-200 dark:border-gray-700 p-4">
@@ -444,10 +438,10 @@
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={(e) => e.target === e.currentTarget && (showCombineConfirm = false)}
-    on:keydown={(e) => e.key === 'Escape' && (showCombineConfirm = false)}
     role="dialog"
     aria-modal="true"
-    tabindex="0"
+    tabindex="-1"
+    use:modal={{ onEscape: () => showCombineConfirm = false }}
   >
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
       <!-- Header -->

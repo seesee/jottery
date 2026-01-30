@@ -3,6 +3,14 @@
   import { onMount } from 'svelte';
   import ScreenshotPlaceholder from './ScreenshotPlaceholder.svelte';
 
+  /** Feature with light/dark screenshots */
+  interface WebFeature {
+    key: string;
+    icon: string;
+    screenshotLight: string;
+    screenshotDark: string;
+  }
+
   export let onGetStarted: () => void;
 
   let isDarkMode = false;
@@ -118,7 +126,7 @@
   ];
 
   // Helper to get the appropriate screenshot based on theme
-  $: getScreenshot = (feature: any) => {
+  $: getScreenshot = (feature: WebFeature) => {
     if (isDarkMode && feature.screenshotDark) {
       return feature.screenshotDark;
     }

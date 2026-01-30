@@ -231,7 +231,7 @@ describe('NoteRepository', () => {
 
       test('should throw error for non-existent note', async () => {
         await expect(noteRepository.softDelete('non-existent')).rejects.toThrow(
-          'Note non-existent not found'
+          `Note 'non-existent' not found`
         );
       });
 
@@ -261,7 +261,7 @@ describe('NoteRepository', () => {
 
       test('should throw error for non-existent note', async () => {
         await expect(noteRepository.restore('non-existent')).rejects.toThrow(
-          'Note non-existent not found'
+          `Note 'non-existent' not found`
         );
       });
     });
@@ -309,7 +309,7 @@ describe('NoteRepository', () => {
 
       test('should throw error for non-existent note', async () => {
         await expect(noteRepository.archive('non-existent')).rejects.toThrow(
-          'Note non-existent not found'
+          `Note 'non-existent' not found`
         );
       });
 
@@ -339,7 +339,7 @@ describe('NoteRepository', () => {
 
       test('should throw error for non-existent note', async () => {
         await expect(noteRepository.unarchive('non-existent')).rejects.toThrow(
-          'Note non-existent not found'
+          `Note 'non-existent' not found`
         );
       });
     });
@@ -678,7 +678,7 @@ describe('NoteRepository', () => {
 
       test('should throw error for non-existent note', async () => {
         await expect(noteRepository.touch('non-existent')).rejects.toThrow(
-          'Note non-existent not found'
+          `Note 'non-existent' not found`
         );
       });
     });
