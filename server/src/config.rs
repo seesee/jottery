@@ -20,6 +20,13 @@ pub struct Config {
     // User settings
     pub default_storage_quota_mb: i32,
     pub default_max_upload_size_mb: i32,
+
+    // Password policy
+    // Options: "none" (length only), "basic" (2 of 4 classes), "standard" (3 of 4), "strong" (all 4)
+    pub password_complexity: String,
+
+    // Security headers
+    pub enable_hsts: bool, // Strict-Transport-Security (only enable for HTTPS deployments)
 }
 
 impl Config {
@@ -83,6 +90,17 @@ impl Config {
                 .unwrap_or_else(|_| "5".to_string())
                 .parse()
                 .unwrap_or(5),
+
+            // Password complexity: none, basic, standard (default), strong
+            password_complexity: env::var("PASSWORD_COMPLEXITY")
+                .unwrap_or_else(|_| "standard".to_string())
+                .to_lowercase(),
+
+            // HSTS: Enable only for HTTPS deployments (default: false for dev compatibility)
+            enable_hsts: env::var("ENABLE_HSTS")
+                .unwrap_or_else(|_| "false".to_string())
+                .to_lowercase()
+                == "true",
         })
     }
 }

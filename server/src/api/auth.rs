@@ -11,7 +11,7 @@ use crate::{
         LoginRequest, LoginResponse, RegisterDeviceRequest, RegisterDeviceResponse,
         RegisterUserRequest, RegisterUserResponse, UserInfo,
     },
-    utils::password::{hash_password_with_params, verify_password},
+    utils::password::{hash_password_with_params, validate_password_strength, verify_password},
     AppState,
 };
 
@@ -31,12 +31,10 @@ pub async fn register_user(
         ));
     }
 
-    // Validate password strength (min 12 characters)
-    if req.password.len() < 12 {
-        tracing::warn!("Password too short for: {}", req.email);
-        return Err(crate::error::AppError::BadRequest(
-            "Password must be at least 12 characters".to_string(),
-        ));
+    // Validate password strength based on configured complexity
+    if let Err(msg) = validate_password_strength(&req.password, &state.config.password_complexity) {
+        tracing::warn!("Password validation failed for {}: {}", req.email, msg);
+        return Err(crate::error::AppError::BadRequest(msg));
     }
 
     // Check if email already exists

@@ -51,6 +51,8 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+        password_complexity: "none".to_string(),
+        enable_hsts: false,
     };
 
     let app_state = Arc::new(jottery_server::AppState {
@@ -138,6 +140,8 @@ async fn test_user_registration_duplicate_email() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+        password_complexity: "none".to_string(),
+        enable_hsts: false,
     };
 
     let app_state = Arc::new(jottery_server::AppState {

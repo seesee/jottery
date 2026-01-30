@@ -21,6 +21,69 @@ impl std::fmt::Display for PasswordError {
 
 impl std::error::Error for PasswordError {}
 
+/// Validate password strength based on complexity level
+///
+/// # Complexity Levels
+/// - "none": Only minimum length (12 characters)
+/// - "basic": Length + at least 2 of 4 character classes
+/// - "standard": Length + at least 3 of 4 character classes (default)
+/// - "strong": Length + all 4 character classes
+///
+/// Character classes: uppercase, lowercase, digit, special
+pub fn validate_password_strength(password: &str, complexity: &str) -> Result<(), String> {
+    const MIN_LENGTH: usize = 12;
+
+    // Always check minimum length
+    if password.len() < MIN_LENGTH {
+        return Err(format!(
+            "Password must be at least {} characters",
+            MIN_LENGTH
+        ));
+    }
+
+    // If complexity is "none", only length matters
+    if complexity == "none" {
+        return Ok(());
+    }
+
+    // Count character classes present
+    let has_uppercase = password.chars().any(|c| c.is_ascii_uppercase());
+    let has_lowercase = password.chars().any(|c| c.is_ascii_lowercase());
+    let has_digit = password.chars().any(|c| c.is_ascii_digit());
+    let has_special = password.chars().any(|c| !c.is_alphanumeric());
+
+    let class_count = [has_uppercase, has_lowercase, has_digit, has_special]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+    let required_classes = match complexity {
+        "basic" => 2,
+        "strong" => 4,
+        _ => 3, // "standard" is default
+    };
+
+    if class_count < required_classes {
+        let classes_needed: Vec<&str> = [
+            (!has_uppercase).then_some("uppercase letter"),
+            (!has_lowercase).then_some("lowercase letter"),
+            (!has_digit).then_some("number"),
+            (!has_special).then_some("special character"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        return Err(format!(
+            "Password requires at least {} of 4 character types. Missing: {}",
+            required_classes,
+            classes_needed.join(", ")
+        ));
+    }
+
+    Ok(())
+}
+
 /// Hash a password using Argon2id with custom parameters
 ///
 /// # Parameters
@@ -140,5 +203,37 @@ mod tests {
     fn test_verify_invalid_hash() {
         let result = verify_password("password", "invalid_hash_format");
         assert!(result.is_err(), "Should error on invalid hash format");
+    }
+
+    #[test]
+    fn test_password_strength_none() {
+        // "none" only checks length
+        assert!(validate_password_strength("aaaaaaaaaaaa", "none").is_ok());
+        assert!(validate_password_strength("short", "none").is_err());
+    }
+
+    #[test]
+    fn test_password_strength_basic() {
+        // "basic" needs 2 of 4 classes
+        assert!(validate_password_strength("aaaaaaaaaaaA", "basic").is_ok()); // lower + upper
+        assert!(validate_password_strength("aaaaaaaaaaaa", "basic").is_err()); // only lower
+        assert!(validate_password_strength("aaaaaaaaaaa1", "basic").is_ok()); // lower + digit
+    }
+
+    #[test]
+    fn test_password_strength_standard() {
+        // "standard" needs 3 of 4 classes
+        assert!(validate_password_strength("aaaaaaaaAA1", "standard").is_err()); // too short
+        assert!(validate_password_strength("aaaaaaaaaAA1", "standard").is_ok()); // lower + upper + digit
+        assert!(validate_password_strength("aaaaaaaaaaaa", "standard").is_err()); // only lower
+        assert!(validate_password_strength("aaaaaaaaaa!A", "standard").is_ok()); // lower + upper + special
+    }
+
+    #[test]
+    fn test_password_strength_strong() {
+        // "strong" needs all 4 classes
+        assert!(validate_password_strength("aaaaaaAA11!!", "strong").is_ok()); // all 4
+        assert!(validate_password_strength("aaaaaaaaaAA1", "strong").is_err()); // missing special
+        assert!(validate_password_strength("aaaaaaaaaa!1", "strong").is_err()); // missing upper
     }
 }

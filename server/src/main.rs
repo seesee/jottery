@@ -12,6 +12,8 @@ use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
+use tower_http::set_header::SetResponseHeaderLayer;
+use axum::http::HeaderValue;
 
 mod api;
 mod config;
@@ -209,7 +211,31 @@ async fn main() {
         // Add middleware
         .layer(DefaultBodyLimit::max(config.max_payload_size))
         .layer(CompressionLayer::new())
-        .layer(build_cors_layer(&config));
+        .layer(build_cors_layer(&config))
+        // Security headers
+        .layer(SetResponseHeaderLayer::if_not_present(
+            axum::http::header::X_FRAME_OPTIONS,
+            HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            axum::http::header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::if_not_present(
+            axum::http::header::REFERRER_POLICY,
+            HeaderValue::from_static("strict-origin-when-cross-origin"),
+        ));
+
+    // Conditionally add HSTS header (only for HTTPS deployments)
+    let app = if config.enable_hsts {
+        tracing::info!("HSTS enabled: Strict-Transport-Security header will be sent");
+        app.layer(SetResponseHeaderLayer::if_not_present(
+            axum::http::header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+        ))
+    } else {
+        app
+    };
 
     // Start server
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));

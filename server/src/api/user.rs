@@ -10,7 +10,7 @@ use crate::{
     db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{CreateSessionParams, Session},
-    utils::password::{hash_password_with_params, verify_password},
+    utils::password::{hash_password_with_params, validate_password_strength, verify_password},
     AppState,
 };
 
@@ -330,11 +330,10 @@ pub async fn change_password(
         return Err(AppError::Unauthorized);
     }
 
-    // Validate new password strength
-    if req.new_password.len() < 12 {
-        return Err(AppError::BadRequest(
-            "New password must be at least 12 characters".to_string(),
-        ));
+    // Validate new password strength based on configured complexity
+    if let Err(msg) = validate_password_strength(&req.new_password, &state.config.password_complexity) {
+        tracing::warn!("Password change validation failed for user {}: {}", user_id, msg);
+        return Err(AppError::BadRequest(msg));
     }
 
     // Hash new password with configured Argon2 parameters
