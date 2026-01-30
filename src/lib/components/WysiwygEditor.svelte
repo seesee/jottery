@@ -215,6 +215,7 @@
             class: 'text-blue-600 dark:text-blue-400 underline',
           },
           // Allow note links with link: protocol
+          protocols: ['http', 'https', 'mailto', 'tel', 'link'],
           validate: (href) => /^(https?:\/\/|mailto:|tel:|link:)/.test(href),
         }),
         Image.configure({
