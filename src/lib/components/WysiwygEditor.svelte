@@ -53,8 +53,9 @@
     },
     replacement: (content, node) => {
       const href = (node as HTMLAnchorElement).getAttribute('href') || '';
-      // Restore empty link if placeholder was used
-      const text = (content === EMPTY_LINK_PLACEHOLDER) ? '' : (content || '');
+      // Restore empty link if placeholder was used (trim to handle any whitespace)
+      const trimmedContent = content?.trim() || '';
+      const text = (trimmedContent === EMPTY_LINK_PLACEHOLDER) ? '' : trimmedContent;
       return `[${text}](${href})`;
     }
   });
