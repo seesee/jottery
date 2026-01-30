@@ -171,7 +171,29 @@ Press `s` to open the settings panel:
 - **Sync Enabled** - Enable/disable server sync
 - **Sync Endpoint** - Server URL for sync
 - **Auto-sync Interval** - Minutes between auto-sync (default: 5)
-- **Remember Password** - Auto-unlock on startup (stores encrypted password)
+- **Remember Password** - Auto-unlock on startup (see [Password Storage](#password-storage) below)
+
+### Password Storage
+
+The "Remember Password" feature stores your database password locally for auto-unlock. The storage method depends on your platform:
+
+| Platform | Storage Method | Security Level |
+|----------|---------------|----------------|
+| **Windows** | Credential Manager | ✅ Secure |
+| **Linux** | Secret Service (GNOME Keyring/KDE Wallet) | ✅ Secure |
+| **macOS (signed app)** | Keychain | ✅ Secure |
+| **macOS (unsigned/dev build)** | File-based obfuscation | ⚠️ Obfuscated only |
+
+**macOS Note:** The Keychain requires a properly code-signed binary to maintain access across app rebuilds. Development builds use ad-hoc signatures which change on each compile, breaking Keychain access. For development builds, the app falls back to file-based storage with obfuscation (not cryptographically secure).
+
+To enable Keychain support on macOS during development, sign the binary with your Apple Developer certificate:
+```bash
+# Find your signing identity
+security find-identity -v -p codesigning
+
+# Sign the binary
+codesign -s "Apple Development: your@email.com (XXXXXXXXXX)" target/debug/jottery
+```
 
 ### Sync Setup
 
