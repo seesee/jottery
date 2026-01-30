@@ -74,11 +74,16 @@
     if (link) {
       const href = link.getAttribute('href');
 
-      // Handle note links
-      if (href?.startsWith('note:') && onNoteLinkClick) {
+      // Handle note links (both note: and link: protocols)
+      if ((href?.startsWith('note:') || href?.startsWith('link:')) && onNoteLinkClick) {
         e.preventDefault();
         e.stopPropagation();
-        const noteId = link.getAttribute('data-note-id');
+        // Try data-note-id first, then extract from href
+        let noteId = link.getAttribute('data-note-id');
+        if (!noteId && href) {
+          // Extract ID from href (note:uuid or link:uuid)
+          noteId = href.replace(/^(note:|link:)/, '');
+        }
         if (noteId && !noteId.startsWith('not-found:')) {
           onNoteLinkClick(noteId);
         }
