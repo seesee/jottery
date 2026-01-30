@@ -149,7 +149,7 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
     console.log('[ImportHandler] Sync metadata found:', {
       hasClientId: !!metadata.clientId,
       hasEndpoint: !!metadata.syncEndpoint,
-      apiKeyPrefix: metadata.apiKey.substring(0, 20) + '...',
+      hasApiKey: !!metadata.apiKey,
       syncEnabled: metadata.syncEnabled,
     });
 
@@ -159,7 +159,6 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
 
       // Extract plaintext API key
       const plaintextApiKey = metadata.apiKey.substring(7); // Remove "IMPORT:" prefix
-      console.log('[ImportHandler] Plaintext API key length:', plaintextApiKey.length);
 
       console.log('[ImportHandler] Encrypting API key with master key...');
       const encryptedApiKey = await cryptoService.encryptText(plaintextApiKey, masterKey);
