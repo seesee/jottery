@@ -62,6 +62,10 @@ export function stripMarkdownSignifiers(text: string): string {
     result = result.replace(/<[^>]+>/g, '');
   } while (result !== previousResult);
 
+  // Remove any remaining angle brackets that could form incomplete tags
+  // This catches attempts to bypass sanitization with unclosed tags like "<script"
+  result = result.replace(/</g, '').replace(/>/g, '');
+
   // Remove extra whitespace
   result = result.replace(/\s+/g, ' ');
 
