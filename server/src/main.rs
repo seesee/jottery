@@ -7,6 +7,8 @@ use axum::{
 use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
@@ -40,17 +42,24 @@ fn build_cors_layer(config: &Config) -> CorsLayer {
         ]);
 
     if let Some(ref origins) = config.cors_allowed_origins {
-        // Use specific origins from configuration
-        tracing::info!("CORS: Allowing specific origins: {:?}", origins);
-        let allowed_origins: Vec<_> = origins
-            .iter()
-            .filter_map(|origin| origin.parse().ok())
-            .collect();
-        cors = cors.allow_origin(allowed_origins);
+        if origins.iter().any(|o| o == "*") {
+            // Explicit wildcard allows any origin
+            tracing::warn!("CORS: Allowing any origin (wildcard configured)");
+            cors = cors.allow_origin(Any);
+        } else {
+            // Use specific origins from configuration
+            tracing::info!("CORS: Allowing specific origins: {:?}", origins);
+            let allowed_origins: Vec<_> = origins
+                .iter()
+                .filter_map(|origin| origin.parse().ok())
+                .collect();
+            cors = cors.allow_origin(allowed_origins);
+        }
     } else {
-        // Default to any origin
-        tracing::warn!("CORS: Allowing any origin (set CORS_ALLOWED_ORIGINS for production)");
-        cors = cors.allow_origin(Any);
+        // Default to same-origin only (no cross-origin requests)
+        // This is secure by default - set CORS_ALLOWED_ORIGINS for cross-origin access
+        tracing::info!("CORS: Same-origin only (set CORS_ALLOWED_ORIGINS to allow cross-origin requests)");
+        // Don't set allow_origin - this effectively blocks cross-origin requests
     }
 
     cors
@@ -148,15 +157,44 @@ async fn main() {
     tracing::info!("Serving admin dashboard from: {}", admin_dir.display());
     tracing::info!("Serving user portal from: {}", admin_dir.display());
 
+    // Rate limiter for auth endpoints: 10 requests per minute per IP
+    let auth_rate_limiter = GovernorConfigBuilder::default()
+        .per_second(1)  // Refill rate
+        .burst_size(10) // Max burst (10 attempts then wait)
+        .finish()
+        .expect("Failed to build auth rate limiter config");
+
+    // Rate limiter for registration: 5 requests per hour per IP
+    let registration_rate_limiter = GovernorConfigBuilder::default()
+        .period(Duration::from_secs(720)) // 12 minutes per token
+        .burst_size(5) // Max 5 registrations then wait
+        .finish()
+        .expect("Failed to build registration rate limiter config");
+
+    // Auth routes with rate limiting
+    let auth_routes = Router::new()
+        .route("/api/v1/auth/login", post(api::auth::login))
+        .route("/api/v1/user/login", post(api::user::login))
+        .layer(GovernorLayer {
+            config: Arc::new(auth_rate_limiter),
+        });
+
+    // Registration routes with stricter rate limiting
+    let registration_routes = Router::new()
+        .route("/api/v1/auth/register-user", post(api::auth::register_user))
+        .route("/api/v1/auth/register-device", post(api::auth::register_device))
+        .layer(GovernorLayer {
+            config: Arc::new(registration_rate_limiter),
+        });
+
     // Build main router
     let app = Router::new()
         // Health check (no auth required)
         .route("/health", get(health_check))
-        // Auth routes (no auth required)
-        .route("/api/v1/auth/register-user", post(api::auth::register_user))
-        .route("/api/v1/auth/register-device", post(api::auth::register_device))
-        .route("/api/v1/auth/login", post(api::auth::login))
-        .route("/api/v1/user/login", post(api::user::login))
+        // Rate-limited auth and registration routes
+        .merge(auth_routes)
+        .merge(registration_routes)
+        // Status check (no rate limiting needed - it's read-only)
         .route("/api/v1/user/status", get(api::user::check_status))
         // Merge protected routes
         .merge(sync_routes)
