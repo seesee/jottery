@@ -234,10 +234,16 @@
         </button>
       {:else if $isSyncing && $settings.syncEnabled}
         <!-- Sync indicator in back button space -->
-        <div class="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
+        <div
+          class="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-blue-600 dark:text-blue-400"
+          title={$_('sync.syncing')}
+          role="status"
+          aria-live="polite"
+          aria-label={showSyncPercentage ? $_('sync.syncProgress', { values: { percentage: syncPercentage } }) : $_('sync.syncing')}
+        >
           {#if showSyncPercentage}
             <!-- Percentage indicator for >= 5 items -->
-            <div class="relative w-6 h-6">
+            <div class="relative w-6 h-6" aria-hidden="true">
               <svg class="w-6 h-6 transform -rotate-90" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"></circle>
                 <circle
@@ -255,7 +261,7 @@
             </div>
           {:else}
             <!-- Spinner for < 5 items -->
-            <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -286,10 +292,16 @@
     <div class="flex items-center gap-2">
       <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
       {#if !forceMobileLayout && $isSyncing && $settings.syncEnabled}
-        <div class="flex items-center gap-1 text-blue-600 dark:text-blue-400" title={$_('sync.syncing')}>
+        <div
+          class="flex items-center gap-1 text-blue-600 dark:text-blue-400"
+          title={$_('sync.syncing')}
+          role="status"
+          aria-live="polite"
+          aria-label={showSyncPercentage ? $_('sync.syncProgress', { values: { percentage: syncPercentage } }) : $_('sync.syncing')}
+        >
           {#if showSyncPercentage}
             <!-- Percentage indicator for >= 5 items -->
-            <div class="relative w-4 h-4">
+            <div class="relative w-4 h-4" aria-hidden="true">
               <svg class="w-4 h-4 transform -rotate-90" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"></circle>
                 <circle
@@ -304,14 +316,14 @@
                 ></circle>
               </svg>
             </div>
-            <span class="text-xs">{syncPercentage}%</span>
+            <span class="text-xs" aria-hidden="true">{syncPercentage}%</span>
           {:else}
             <!-- Spinner for < 5 items -->
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span class="text-xs">{$_('sync.syncing')}</span>
+            <span class="text-xs" aria-hidden="true">{$_('sync.syncing')}</span>
           {/if}
         </div>
       {/if}
@@ -330,6 +342,12 @@
             on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={showTagSuggestions}
+            aria-haspopup="listbox"
+            aria-controls={showTagSuggestions ? 'tag-suggestions-desktop' : undefined}
+            aria-activedescendant={showTagSuggestions && selectedSuggestionIndex >= 0 ? `tag-suggestion-desktop-${selectedSuggestionIndex}` : undefined}
             class="w-full px-3 py-1.5 pr-8 border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
@@ -348,14 +366,24 @@
           {/if}
           <!-- Tag suggestions dropdown -->
           {#if showTagSuggestions}
-            <div class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            <div
+              id="tag-suggestions-desktop"
+              role="listbox"
+              aria-label={$_('search.tagSuggestions')}
+              class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto"
+            >
               {#each tagSuggestions as suggestion, index}
-                <button
+                <div
+                  id="tag-suggestion-desktop-{index}"
+                  role="option"
+                  aria-selected={index === selectedSuggestionIndex}
                   on:click={() => selectTagSuggestion(suggestion)}
-                  class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+                  on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectTagSuggestion(suggestion)}
+                  tabindex="-1"
+                  class="w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
                 >
                   #{suggestion}
-                </button>
+                </div>
               {/each}
             </div>
           {/if}
@@ -370,8 +398,14 @@
           </svg>
         </button>
         {#if $searchResultCount.isSearching}
-          <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap" title={$_('search.resultCount')}>
-            {$searchResultCount.matches}/{$searchResultCount.total}
+          <span
+            class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap"
+            title={$_('search.resultCount')}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span class="sr-only">{$_('search.resultsFound', { values: { matches: $searchResultCount.matches, total: $searchResultCount.total } })}</span>
+            <span aria-hidden="true">{$searchResultCount.matches}/{$searchResultCount.total}</span>
           </span>
         {/if}
       </div>
@@ -390,6 +424,12 @@
             on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={showTagSuggestions}
+            aria-haspopup="listbox"
+            aria-controls={showTagSuggestions ? 'tag-suggestions-mobile' : undefined}
+            aria-activedescendant={showTagSuggestions && selectedSuggestionIndex >= 0 ? `tag-suggestion-mobile-${selectedSuggestionIndex}` : undefined}
             class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-24' : 'pr-12'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
@@ -400,8 +440,13 @@
           {:else}
             <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {#if $searchResultCount.isSearching}
-                <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap">
-                  {$searchResultCount.matches}/{$searchResultCount.total}
+                <span
+                  class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  <span class="sr-only">{$_('search.resultsFound', { values: { matches: $searchResultCount.matches, total: $searchResultCount.total } })}</span>
+                  <span aria-hidden="true">{$searchResultCount.matches}/{$searchResultCount.total}</span>
                 </span>
               {/if}
               <button
@@ -427,14 +472,24 @@
           {/if}
           <!-- Tag suggestions dropdown (mobile) -->
           {#if showTagSuggestions}
-            <div class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            <div
+              id="tag-suggestions-mobile"
+              role="listbox"
+              aria-label={$_('search.tagSuggestions')}
+              class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto"
+            >
               {#each tagSuggestions as suggestion, index}
-                <button
+                <div
+                  id="tag-suggestion-mobile-{index}"
+                  role="option"
+                  aria-selected={index === selectedSuggestionIndex}
                   on:click={() => selectTagSuggestion(suggestion)}
-                  class="w-full text-left px-3 py-3 min-h-11 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+                  on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectTagSuggestion(suggestion)}
+                  tabindex="-1"
+                  class="w-full text-left px-3 py-3 min-h-11 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
                 >
                   #{suggestion}
-                </button>
+                </div>
               {/each}
             </div>
           {/if}

@@ -162,11 +162,9 @@
 
   function handleDragStart(event: CustomEvent<{ id: string }>) {
     currentDraggedNodeId = event.detail.id;
-    console.log('[Outliner] dragStart:', event.detail.id);
   }
 
   function handleDragEnd() {
-    console.log('[Outliner] dragEnd, current:', currentDraggedNodeId);
     // Reset after a short delay to ensure drop has processed
     setTimeout(() => { currentDraggedNodeId = null; }, 100);
   }
@@ -174,11 +172,9 @@
   function handleDrop(event: CustomEvent<{ targetId: string; position: 'before' | 'after' | 'child' }>) {
     const { targetId, position } = event.detail;
     const draggedId = currentDraggedNodeId;
-    console.log('[Outliner] handleDrop called:', { draggedId, targetId, position });
     currentDraggedNodeId = null;
 
     if (!draggedId || draggedId === targetId) {
-      console.log('[Outliner] drop aborted: draggedId=' + draggedId + ', targetId=' + targetId);
       return;
     }
 
@@ -221,8 +217,6 @@
       collapsedNodes.delete(targetId);
       collapsedNodes = new Set(collapsedNodes);
     }
-
-    console.log('[Outliner] drop completed, new structure:', serialiseOutliner(nodes));
 
     nodes = [...nodes];
     emitChange();
@@ -462,6 +456,24 @@
         nodes = [...nodes];
         emitChange();
         focusNode(id);
+      }
+      return;
+    }
+
+    // Ctrl/Cmd + . - Toggle collapse/expand
+    if (keyEvent.key === '.' && (keyEvent.ctrlKey || keyEvent.metaKey)) {
+      keyEvent.preventDefault();
+      if (node.children.length > 0) {
+        node.collapsed = !node.collapsed;
+        if (node.collapsed) {
+          collapsedNodes.add(id);
+        } else {
+          collapsedNodes.delete(id);
+          node.collapsed = undefined;
+        }
+        collapsedNodes = new Set(collapsedNodes);
+        nodes = [...nodes];
+        emitChange();
       }
       return;
     }

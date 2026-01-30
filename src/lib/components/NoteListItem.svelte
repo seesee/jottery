@@ -301,7 +301,7 @@
           {#if showCheckbox}
             <span
               on:click|stopPropagation={handleCheckboxClick}
-              on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
+              on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleCheckboxClick(e))}
               role="checkbox"
               aria-checked={isMultiSelected}
               tabindex="0"
@@ -328,7 +328,7 @@
           {#if hasConflict}
             <span
               on:click|stopPropagation={() => onConflictClick && onConflictClick(note)}
-              on:keydown|stopPropagation={(e) => e.key === 'Enter' && onConflictClick && onConflictClick(note)}
+              on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onConflictClick && onConflictClick(note))}
               role="button"
               tabindex="0"
               class="text-amber-500 flex-shrink-0 cursor-pointer hover:text-amber-600"
@@ -359,7 +359,7 @@
               {@const tagBgColor = getTagBackgroundColor(tag)}
               <span
                 on:click={(e) => handleTagClick(e, tag)}
-                on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
+                on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleTagClick(e, tag))}
                 role="button"
                 tabindex="0"
                 class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
@@ -370,7 +370,7 @@
               </span>
             {/each}
             {#if note.tags.length > 2}
-              <span class="text-gray-400 flex-shrink-0">+{note.tags.length - 2}</span>
+              <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{note.tags.length - 2}</span>
             {/if}
           </div>
         {/if}
@@ -392,7 +392,7 @@
         {#if showCheckbox}
           <span
             on:click|stopPropagation={handleCheckboxClick}
-            on:keydown={(e) => e.key === 'Enter' && handleCheckboxClick(e)}
+            on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleCheckboxClick(e))}
             role="checkbox"
             aria-checked={isMultiSelected}
             tabindex="0"
@@ -419,7 +419,7 @@
         {#if hasConflict}
           <span
             on:click|stopPropagation={() => onConflictClick && onConflictClick(note)}
-            on:keydown|stopPropagation={(e) => e.key === 'Enter' && onConflictClick && onConflictClick(note)}
+            on:keydown|stopPropagation={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onConflictClick && onConflictClick(note))}
             role="button"
             tabindex="0"
             class="text-amber-500 flex-shrink-0 cursor-pointer hover:text-amber-600"
@@ -440,7 +440,7 @@
           on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleDeleteClick(e)}
           role="button"
           tabindex="0"
-          class="delete-button absolute top-2 right-2 p-0.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+          class="delete-button absolute top-2 right-2 p-0.5 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors cursor-pointer"
           title={$_('noteList.deleteNote')}
           aria-label={$_('noteList.deleteNote')}
         >
@@ -465,7 +465,7 @@
             {@const tagBgColor = getTagBackgroundColor(tag)}
             <span
               on:click={(e) => handleTagClick(e, tag)}
-              on:keydown={(e) => e.key === 'Enter' && handleTagClick(e, tag)}
+              on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleTagClick(e, tag))}
               role="button"
               tabindex="0"
               class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
@@ -476,7 +476,7 @@
             </span>
           {/each}
           {#if note.tags.length > 2}
-            <span class="text-gray-400 flex-shrink-0">+{note.tags.length - 2}</span>
+            <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{note.tags.length - 2}</span>
           {/if}
         </div>
       {/if}

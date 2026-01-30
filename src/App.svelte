@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode } from './lib/stores/appStore';
+  import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
   import { locale, _ } from 'svelte-i18n';
@@ -89,15 +90,8 @@
           throw new Error('Failed to retrieve newly created note');
         }
 
-        // Add decrypted note to store (incremental update)
-        notes.update(allNotes => {
-          // New notes are unpinned by default, so insert after pinned notes
-          const pinnedCount = allNotes.filter(n => n.pinned).length;
-          const newNotes = [...allNotes];
-          newNotes.splice(pinnedCount, 0, decryptedNote);
-          return newNotes;
-        });
-        searchService.updateNote(decryptedNote);
+        // Add decrypted note to store and search index
+        addNoteToStoreAndSearch(decryptedNote);
         selectNote(decryptedNote.id);
 
         // Trigger background sync for new note
@@ -438,6 +432,14 @@
   <!-- Update banner (appears at top when new version available) -->
   <UpdateBanner />
 
+  <!-- Skip link for keyboard accessibility -->
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none"
+  >
+    {$_('a11y.skipToContent')}
+  </a>
+
   <div class="h-screen w-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
     <div class="flex h-full flex-col">
       <Header
@@ -451,7 +453,7 @@
         {loadingProgress}
       />
 
-      <main class="flex-1 overflow-hidden flex">
+      <main id="main-content" class="flex-1 overflow-hidden flex" tabindex="-1">
         {#if useMobileLayout}
           <!-- Mobile: Keep both components mounted, toggle visibility with CSS -->
           <!-- This preserves NoteList state (scroll position, height cache) across navigation -->

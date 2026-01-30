@@ -165,6 +165,12 @@
         enterkeyhint="done"
         autocapitalize="none"
         autocomplete="off"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={showSuggestions}
+        aria-haspopup="listbox"
+        aria-controls={showSuggestions ? 'tag-input-suggestions' : undefined}
+        aria-activedescendant={showSuggestions && selectedSuggestionIndex >= 0 ? `tag-input-suggestion-${selectedSuggestionIndex}` : undefined}
         class="flex-1 min-w-[120px] outline-none bg-transparent text-sm text-gray-900 dark:text-gray-100"
       />
     {/if}
@@ -172,14 +178,24 @@
 
   <!-- Suggestions dropdown -->
   {#if showSuggestions && !disabled}
-    <div class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+    <div
+      id="tag-input-suggestions"
+      role="listbox"
+      aria-label="Tag suggestions"
+      class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto"
+    >
       {#each suggestions as suggestion, index}
-        <button
+        <div
+          id="tag-input-suggestion-{index}"
+          role="option"
+          aria-selected={index === selectedSuggestionIndex}
           on:click={() => addTag(suggestion)}
-          class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+          on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && addTag(suggestion)}
+          tabindex="-1"
+          class="w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 {index === selectedSuggestionIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}"
         >
           #{suggestion}
-        </button>
+        </div>
       {/each}
     </div>
   {/if}
