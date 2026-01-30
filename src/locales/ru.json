@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Личные заметки для веба и терминала"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Загрузка...",
     "save": "Сохранить",
@@ -58,6 +61,8 @@
     "placeholder": "Поиск заметок...",
     "clear": "Очистить поиск",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Сохраненные Поиски",
     "newSavedSearch": "Сохранить Текущий Поиск",
     "editSearch": "Редактировать",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Добро пожаловать в Jottery",
     "enterPassword": "Введите пароль для разблокировки",
-    "openLinksInNewTabDescription": "При включении ссылки на внешние сайты в предпросмотре Markdown будут открываться в новой вкладке браузера вместо перехода из Jottery",
-    "persistSession": "Сохранять сессию после обновления страницы",
-    "persistSessionDescription": "Сохраняйте сессию активной при обновлении страницы. Пароль временно хранится в сессионном хранилище браузера.",
-    "persistSessionNote": "Безопаснее, чем 'Запомнить пароль' - автоматически истекает и удаляется при закрытии вкладки.",
-    "persistSessionUnavailable": "Сессионное хранилище недоступно (URL file:// или настройки конфиденциальности браузера).",
-    "persistSessionDisabledByRemember": "Отключено, когда включено 'Запомнить пароль'.",
-    "persistSessionTimeout": "Тайм-аут сессии (минуты)",
-    "persistSessionTimeoutDescription": "Сессия истекает через указанное количество минут. Диапазон: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Введите пароль для включения:",
-      "enableButton": "Включить сохранение сессии"
-    }
-  },
-  "unlock": {
-    "welcome": "Добро пожаловать в Jottery",
-    "enterPassword": "Введите пароль для разблокировки",
     "setupPassword": "Установите мастер-пароль",
     "password": "Пароль",
     "confirmPassword": "Подтвердите пароль",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Синхронизация..."
+    "syncing": "Синхронизация...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Архив",

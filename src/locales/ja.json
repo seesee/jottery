@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "ウェブとターミナルのための個人メモ"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "読み込み中...",
     "save": "保存",
@@ -58,6 +61,8 @@
     "placeholder": "ノートを検索...",
     "clear": "検索をクリア",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "保存された検索",
     "newSavedSearch": "現在の検索を保存",
     "editSearch": "編集",
@@ -696,22 +701,6 @@
   },
   "unlock": {
     "welcome": "Jotteryへようこそ",
-    "enterPassword": "ロック解除するにはパスワードを入力してください",
-    "openLinksInNewTabDescription": "有効にすると、Markdownプレビュー内の外部ウェブサイトへのリンクは、Jotteryから離れることなく新しいブラウザタブで開きます",
-    "persistSession": "ページ更新後もセッションを維持",
-    "persistSessionDescription": "ページを更新してもセッションを維持します。パスワードはブラウザのセッションストレージに一時的に保存されます。",
-    "persistSessionNote": "「パスワードを記憶」より安全です - 自動的に期限切れになり、タブを閉じると消去されます。",
-    "persistSessionUnavailable": "セッションストレージが利用できません（file:// URLまたはブラウザのプライバシー設定）。",
-    "persistSessionDisabledByRemember": "「パスワードを記憶」が有効な場合は無効になります。",
-    "persistSessionTimeout": "セッションタイムアウト（分）",
-    "persistSessionTimeoutDescription": "この分数後にセッションが期限切れになります。範囲：5-480。",
-    "persistSessionModal": {
-      "confirmPassword": "有効にするにはパスワードを入力してください：",
-      "enableButton": "セッション維持を有効化"
-    }
-  },
-  "unlock": {
-    "welcome": "Jotteryへようこそ",
     "enterPassword": "パスワードを入力してロック解除してください",
     "setupPassword": "マスターパスワードを設定",
     "password": "パスワード",
@@ -1029,7 +1018,8 @@
     "region": "引いて更新"
   },
   "sync": {
-    "syncing": "同期中..."
+    "syncing": "同期中...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "アーカイブ",

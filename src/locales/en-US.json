@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Personal notes for web and terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",
@@ -58,6 +61,8 @@
     "placeholder": "Search notes...",
     "clear": "Clear search",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Saved Searches",
     "newSavedSearch": "Save Current Search",
     "editSearch": "Edit",
@@ -1027,7 +1032,8 @@
     "archive": "Archive"
   },
   "sync": {
-    "syncing": "Syncing..."
+    "syncing": "Syncing...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "outliner": {
     "name": "Outliner",

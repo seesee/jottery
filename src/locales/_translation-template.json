@@ -3,6 +3,9 @@
     "name": "JOTTERY",
     "tagline": "Personal notes for web and terminal"
   },
+  "a11y": {
+    "skipToContent": "SKIP TO MAIN CONTENT"
+  },
   "common": {
     "loading": "LOADING...",
     "save": "SAVE",
@@ -43,7 +46,10 @@
   },
   "search": {
     "placeholder": "SEARCH NOTES...",
-    "clear": "CLEAR SEARCH"
+    "clear": "CLEAR SEARCH",
+    "resultCount": "SEARCH RESULTS: MATCHES / TOTAL",
+    "resultsFound": "{MATCHES} OF {TOTAL} NOTES MATCH",
+    "tagSuggestions": "TAG SUGGESTIONS"
   },
   "editor": {
     "noNoteSelected": "NO NOTE SELECTED",
@@ -628,5 +634,9 @@
     "release": "RELEASE TO SYNC",
     "syncing": "SYNCING...",
     "region": "PULL TO REFRESH"
+  },
+  "sync": {
+    "syncing": "SYNCING...",
+    "syncProgress": "SYNCING: {PERCENTAGE}% COMPLETE"
   }
 }

@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Προσωπικές σημειώσεις για web και terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Φόρτωση...",
     "save": "Αποθήκευση",
@@ -58,6 +61,8 @@
     "placeholder": "Αναζήτηση σημειώσεων...",
     "clear": "Εκκαθάριση αναζήτησης",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Αποθηκευμένες Αναζητήσεις",
     "newSavedSearch": "Αποθήκευση Τρέχουσας Αναζήτησης",
     "editSearch": "Επεξεργασία",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Καλώς ήρθατε στο Jottery",
     "enterPassword": "Εισαγάγετε τον κωδικό πρόσβασής σας για ξεκλείδωμα",
-    "openLinksInNewTabDescription": "Όταν είναι ενεργοποιημένο, οι σύνδεσμοι προς εξωτερικές ιστοσελίδες στην προεπισκόπηση Markdown θα ανοίγουν σε νέα καρτέλα αντί να φεύγετε από το Jottery",
-    "persistSession": "Διατήρηση συνεδρίας μετά την ανανέωση σελίδας",
-    "persistSessionDescription": "Διατηρήστε τη συνεδρία σας ενεργή κατά την ανανέωση της σελίδας. Ο κωδικός πρόσβασης αποθηκεύεται προσωρινά στην αποθήκευση συνεδρίας του προγράμματος περιήγησής σας.",
-    "persistSessionNote": "Πιο ασφαλές από την 'Απομνημόνευση κωδικού πρόσβασης' - λήγει αυτόματα και διαγράφεται όταν κλείσετε την καρτέλα.",
-    "persistSessionUnavailable": "Η αποθήκευση συνεδρίας δεν είναι διαθέσιμη (URL file:// ή ρυθμίσεις απορρήτου προγράμματος περιήγησης).",
-    "persistSessionDisabledByRemember": "Απενεργοποιημένο όταν είναι ενεργοποιημένη η 'Απομνημόνευση κωδικού πρόσβασης'.",
-    "persistSessionTimeout": "Χρονικό όριο συνεδρίας (λεπτά)",
-    "persistSessionTimeoutDescription": "Η συνεδρία λήγει μετά από αυτά τα λεπτά. Εύρος: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Εισαγάγετε τον κωδικό πρόσβασής σας για ενεργοποίηση:",
-      "enableButton": "Ενεργοποίηση διατήρησης συνεδρίας"
-    }
-  },
-  "unlock": {
-    "welcome": "Καλώς ήρθατε στο Jottery",
-    "enterPassword": "Εισαγάγετε τον κωδικό πρόσβασής σας για ξεκλείδωμα",
     "setupPassword": "Ρυθμίστε τον κύριο κωδικό πρόσβασής σας",
     "password": "Κωδικός πρόσβασης",
     "confirmPassword": "Επιβεβαίωση κωδικού πρόσβασης",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Συγχρονισμός..."
+    "syncing": "Συγχρονισμός...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Αρχείο",

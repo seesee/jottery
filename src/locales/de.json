@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Persönliche Notizen für Web und Terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Wird geladen...",
     "save": "Speichern",
@@ -58,6 +61,8 @@
     "placeholder": "Notizen durchsuchen...",
     "clear": "Suche löschen",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Gespeicherte Suchen",
     "newSavedSearch": "Aktuelle Suche speichern",
     "editSearch": "Bearbeiten",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Willkommen bei Jottery",
     "enterPassword": "Geben Sie Ihr Passwort zum Entsperren ein",
-    "openLinksInNewTabDescription": "Wenn aktiviert, werden Links zu externen Websites in der Markdown-Vorschau in einem neuen Browser-Tab geöffnet, anstatt von Jottery wegzunavigieren",
-    "persistSession": "Sitzung über Seitenaktualisierung beibehalten",
-    "persistSessionDescription": "Halten Sie Ihre Sitzung aktiv, wenn Sie die Seite aktualisieren. Das Passwort wird vorübergehend im Sitzungsspeicher Ihres Browsers gespeichert.",
-    "persistSessionNote": "Sicherer als 'Passwort merken' - läuft automatisch ab und wird gelöscht, wenn Sie den Tab schließen.",
-    "persistSessionUnavailable": "Sitzungsspeicher ist nicht verfügbar (file:// URL oder Browser-Datenschutzeinstellungen).",
-    "persistSessionDisabledByRemember": "Deaktiviert, wenn 'Passwort merken' aktiviert ist.",
-    "persistSessionTimeout": "Sitzungs-Timeout (Minuten)",
-    "persistSessionTimeoutDescription": "Sitzung läuft nach dieser Anzahl von Minuten ab. Bereich: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Geben Sie Ihr Passwort ein, um zu aktivieren:",
-      "enableButton": "Sitzungspersistenz aktivieren"
-    }
-  },
-  "unlock": {
-    "welcome": "Willkommen bei Jottery",
-    "enterPassword": "Geben Sie Ihr Passwort zum Entsperren ein",
     "setupPassword": "Richten Sie Ihr Master-Passwort ein",
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Synchronisiere..."
+    "syncing": "Synchronisiere...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Archiv",

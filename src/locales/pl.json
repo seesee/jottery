@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Osobiste notatki dla web i terminala"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Ładowanie...",
     "save": "Zapisz",
@@ -58,6 +61,8 @@
     "placeholder": "Szukaj notatek...",
     "clear": "Wyczyść wyszukiwanie",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Zapisane Wyszukiwania",
     "newSavedSearch": "Zapisz Bieżące Wyszukiwanie",
     "editSearch": "Edytuj",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Witaj w Jottery",
     "enterPassword": "Wprowadź hasło, aby odblokować",
-    "openLinksInNewTabDescription": "Po włączeniu linki do zewnętrznych stron w podglądzie Markdown będą otwierane w nowej karcie przeglądarki zamiast opuszczać Jottery",
-    "persistSession": "Zachowaj sesję po odświeżeniu strony",
-    "persistSessionDescription": "Utrzymuj sesję aktywną podczas odświeżania strony. Hasło jest tymczasowo przechowywane w pamięci sesji przeglądarki.",
-    "persistSessionNote": "Bezpieczniejsze niż 'Zapamiętaj hasło' - wygasa automatycznie i jest usuwane po zamknięciu karty.",
-    "persistSessionUnavailable": "Pamięć sesji nie jest dostępna (URL file:// lub ustawienia prywatności przeglądarki).",
-    "persistSessionDisabledByRemember": "Wyłączone, gdy 'Zapamiętaj hasło' jest włączone.",
-    "persistSessionTimeout": "Limit czasu sesji (minuty)",
-    "persistSessionTimeoutDescription": "Sesja wygasa po tej liczbie minut. Zakres: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Wprowadź hasło, aby włączyć:",
-      "enableButton": "Włącz zachowanie sesji"
-    }
-  },
-  "unlock": {
-    "welcome": "Witaj w Jottery",
-    "enterPassword": "Wprowadź hasło, aby odblokować",
     "setupPassword": "Ustaw główne hasło",
     "password": "Hasło",
     "confirmPassword": "Potwierdź hasło",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Synchronizacja..."
+    "syncing": "Synchronizacja...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Archiwum",

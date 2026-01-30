@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Persoonlijke notities voor web en terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Laden...",
     "save": "Opslaan",
@@ -58,6 +61,8 @@
     "placeholder": "Notities zoeken...",
     "clear": "Zoekopdracht wissen",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Opgeslagen Zoekopdrachten",
     "newSavedSearch": "Huidige Zoekopdracht Opslaan",
     "editSearch": "Bewerken",
@@ -696,22 +701,6 @@
   },
   "unlock": {
     "welcome": "Welkom bij Jottery",
-    "enterPassword": "Voer je wachtwoord in om te ontgrendelen",
-    "openLinksInNewTabDescription": "Indien ingeschakeld, worden links naar externe websites in de Markdown-voorvertoning geopend in een nieuw browsertabblad in plaats van Jottery te verlaten",
-    "persistSession": "Sessie behouden na paginavernieuwing",
-    "persistSessionDescription": "Houd je sessie actief bij het vernieuwen van de pagina. Het wachtwoord wordt tijdelijk opgeslagen in de sessie-opslag van je browser.",
-    "persistSessionNote": "Veiliger dan 'Wachtwoord onthouden' - verloopt automatisch en wordt gewist bij het sluiten van het tabblad.",
-    "persistSessionUnavailable": "Sessie-opslag is niet beschikbaar (file:// URL of browser-privacyinstellingen).",
-    "persistSessionDisabledByRemember": "Uitgeschakeld wanneer 'Wachtwoord onthouden' is ingeschakeld.",
-    "persistSessionTimeout": "Sessietime-out (minuten)",
-    "persistSessionTimeoutDescription": "Sessie verloopt na dit aantal minuten. Bereik: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Voer je wachtwoord in om in te schakelen:",
-      "enableButton": "Sessiepersistentie inschakelen"
-    }
-  },
-  "unlock": {
-    "welcome": "Welkom bij Jottery",
     "enterPassword": "Voer uw wachtwoord in om te ontgrendelen",
     "setupPassword": "Stel uw hoofdwachtwoord in",
     "password": "Wachtwoord",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Synchroniseren..."
+    "syncing": "Synchroniseren...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Archief",

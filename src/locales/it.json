@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Note personali per web e terminale"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Caricamento...",
     "save": "Salva",
@@ -58,6 +61,8 @@
     "placeholder": "Cerca note...",
     "clear": "Cancella ricerca",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Ricerche Salvate",
     "newSavedSearch": "Salva Ricerca Corrente",
     "editSearch": "Modifica",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Benvenuto in Jottery",
     "enterPassword": "Inserisci la password per sbloccare",
-    "openLinksInNewTabDescription": "Se abilitato, i link a siti web esterni nell'anteprima Markdown si apriranno in una nuova scheda del browser invece di uscire da Jottery",
-    "persistSession": "Mantieni sessione dopo aggiornamento pagina",
-    "persistSessionDescription": "Mantieni la sessione attiva quando aggiorni la pagina. La password viene memorizzata temporaneamente nella memoria di sessione del browser.",
-    "persistSessionNote": "Più sicuro di 'Ricorda password' - scade automaticamente e si cancella quando chiudi la scheda.",
-    "persistSessionUnavailable": "L'archiviazione di sessione non è disponibile (URL file:// o impostazioni privacy del browser).",
-    "persistSessionDisabledByRemember": "Disabilitato quando 'Ricorda password' è attivo.",
-    "persistSessionTimeout": "Timeout sessione (minuti)",
-    "persistSessionTimeoutDescription": "La sessione scade dopo questi minuti. Intervallo: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Inserisci la password per abilitare:",
-      "enableButton": "Abilita persistenza sessione"
-    }
-  },
-  "unlock": {
-    "welcome": "Benvenuto in Jottery",
-    "enterPassword": "Inserisci la password per sbloccare",
     "setupPassword": "Configura la password principale",
     "password": "Password",
     "confirmPassword": "Conferma password",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Sincronizzazione..."
+    "syncing": "Sincronizzazione...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Archivio",

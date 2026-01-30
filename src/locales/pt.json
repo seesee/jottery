@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Notas pessoais para web e terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Carregando...",
     "save": "Salvar",
@@ -58,6 +61,8 @@
     "placeholder": "Pesquisar notas...",
     "clear": "Limpar pesquisa",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Pesquisas Salvas",
     "newSavedSearch": "Salvar Pesquisa Atual",
     "editSearch": "Editar",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Bem-vindo ao Jottery",
     "enterPassword": "Digite sua senha para desbloquear",
-    "openLinksInNewTabDescription": "Quando ativado, links para sites externos na visualização Markdown abrirão em uma nova aba do navegador em vez de sair do Jottery",
-    "persistSession": "Manter sessão após atualização da página",
-    "persistSessionDescription": "Mantenha sua sessão ativa ao atualizar a página. A senha é armazenada temporariamente no armazenamento de sessão do navegador.",
-    "persistSessionNote": "Mais seguro que 'Lembrar senha' - expira automaticamente e é apagado ao fechar a aba.",
-    "persistSessionUnavailable": "O armazenamento de sessão não está disponível (URL file:// ou configurações de privacidade do navegador).",
-    "persistSessionDisabledByRemember": "Desativado quando 'Lembrar senha' está ativado.",
-    "persistSessionTimeout": "Tempo limite da sessão (minutos)",
-    "persistSessionTimeoutDescription": "A sessão expira após estes minutos. Intervalo: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Digite sua senha para ativar:",
-      "enableButton": "Ativar persistência de sessão"
-    }
-  },
-  "unlock": {
-    "welcome": "Bem-vindo ao Jottery",
-    "enterPassword": "Digite sua senha para desbloquear",
     "setupPassword": "Configure sua senha mestra",
     "password": "Senha",
     "confirmPassword": "Confirmar senha",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Sincronizando..."
+    "syncing": "Sincronizando...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Arquivo",

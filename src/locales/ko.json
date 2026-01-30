@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "웹과 터미널을 위한 개인 메모"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "로딩 중...",
     "save": "저장",
@@ -58,6 +61,8 @@
     "placeholder": "노트 검색...",
     "clear": "검색 지우기",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "저장된 검색",
     "newSavedSearch": "현재 검색 저장",
     "editSearch": "편집",
@@ -696,22 +701,6 @@
   },
   "unlock": {
     "welcome": "Jottery에 오신 것을 환영합니다",
-    "enterPassword": "잠금 해제하려면 비밀번호를 입력하세요",
-    "openLinksInNewTabDescription": "활성화하면 Markdown 미리보기의 외부 웹사이트 링크가 Jottery를 떠나지 않고 새 브라우저 탭에서 열립니다",
-    "persistSession": "페이지 새로고침 후 세션 유지",
-    "persistSessionDescription": "페이지를 새로고침해도 세션을 유지합니다. 비밀번호는 브라우저의 세션 저장소에 임시로 저장됩니다.",
-    "persistSessionNote": "'비밀번호 기억'보다 안전합니다 - 자동으로 만료되고 탭을 닫으면 삭제됩니다.",
-    "persistSessionUnavailable": "세션 저장소를 사용할 수 없습니다 (file:// URL 또는 브라우저 개인정보 설정).",
-    "persistSessionDisabledByRemember": "'비밀번호 기억'이 활성화되면 비활성화됩니다.",
-    "persistSessionTimeout": "세션 시간 제한 (분)",
-    "persistSessionTimeoutDescription": "이 시간(분) 후 세션이 만료됩니다. 범위: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "활성화하려면 비밀번호를 입력하세요:",
-      "enableButton": "세션 유지 활성화"
-    }
-  },
-  "unlock": {
-    "welcome": "Jottery에 오신 것을 환영합니다",
     "enterPassword": "잠금 해제를 위해 비밀번호를 입력하세요",
     "setupPassword": "마스터 비밀번호 설정",
     "password": "비밀번호",
@@ -1029,7 +1018,8 @@
     "region": "당겨서 새로고침"
   },
   "sync": {
-    "syncing": "동기화 중..."
+    "syncing": "동기화 중...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "보관함",

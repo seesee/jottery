@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Notas personales para web y terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Cargando...",
     "save": "Guardar",
@@ -58,6 +61,8 @@
     "placeholder": "Buscar notas...",
     "clear": "Limpiar búsqueda",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Búsquedas Guardadas",
     "newSavedSearch": "Guardar Búsqueda Actual",
     "editSearch": "Editar",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Bienvenido a Jottery",
     "enterPassword": "Ingrese su contraseña para desbloquear",
-    "openLinksInNewTabDescription": "Cuando está habilitado, los enlaces a sitios web externos en la vista previa de Markdown se abrirán en una nueva pestaña del navegador en lugar de salir de Jottery",
-    "persistSession": "Persistir sesión al actualizar la página",
-    "persistSessionDescription": "Mantén tu sesión activa al actualizar la página. La contraseña se almacena temporalmente en el almacenamiento de sesión de tu navegador.",
-    "persistSessionNote": "Más seguro que 'Recordar contraseña' - expira automáticamente y se borra al cerrar la pestaña.",
-    "persistSessionUnavailable": "El almacenamiento de sesión no está disponible (URL file:// o configuración de privacidad del navegador).",
-    "persistSessionDisabledByRemember": "Deshabilitado cuando 'Recordar contraseña' está activado.",
-    "persistSessionTimeout": "Tiempo de espera de sesión (minutos)",
-    "persistSessionTimeoutDescription": "La sesión expira después de estos minutos. Rango: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Introduce tu contraseña para habilitar:",
-      "enableButton": "Habilitar persistencia de sesión"
-    }
-  },
-  "unlock": {
-    "welcome": "Bienvenido a Jottery",
-    "enterPassword": "Ingrese su contraseña para desbloquear",
     "setupPassword": "Configure su contraseña maestra",
     "password": "Contraseña",
     "confirmPassword": "Confirmar contraseña",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Sincronizando..."
+    "syncing": "Sincronizando...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Archivo",

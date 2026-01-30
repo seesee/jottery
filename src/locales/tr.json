@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Web ve terminal için kişisel notlar"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Yükleniyor...",
     "save": "Kaydet",
@@ -58,6 +61,8 @@
     "placeholder": "Notlarda ara...",
     "clear": "Aramayı temizle",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Kaydedilmiş Aramalar",
     "newSavedSearch": "Mevcut Aramayı Kaydet",
     "editSearch": "Düzenle",
@@ -695,22 +700,6 @@
     }
   },
   "unlock": {
-    "welcome": "Jottery'ye hoş geldiniz",
-    "enterPassword": "Kilidi açmak için şifrenizi girin",
-    "openLinksInNewTabDescription": "Etkinleştirildiğinde, Markdown önizlemesindeki harici web sitelerine bağlantılar Jottery'den ayrılmak yerine yeni bir tarayıcı sekmesinde açılır",
-    "persistSession": "Sayfa yenilemesinde oturumu koru",
-    "persistSessionDescription": "Sayfayı yenilerken oturumunuzu aktif tutun. Şifre, tarayıcınızın oturum deposunda geçici olarak saklanır.",
-    "persistSessionNote": "'Şifreyi hatırla'dan daha güvenli - otomatik olarak sona erer ve sekmeyi kapattığınızda silinir.",
-    "persistSessionUnavailable": "Oturum deposu kullanılamıyor (file:// URL veya tarayıcı gizlilik ayarları).",
-    "persistSessionDisabledByRemember": "'Şifreyi hatırla' etkinleştirildiğinde devre dışı bırakılır.",
-    "persistSessionTimeout": "Oturum zaman aşımı (dakika)",
-    "persistSessionTimeoutDescription": "Oturum bu dakika sonra sona erer. Aralık: 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Etkinleştirmek için şifrenizi girin:",
-      "enableButton": "Oturum kalıcılığını etkinleştir"
-    }
-  },
-  "unlock": {
     "welcome": "Jottery'ye Hoş Geldiniz",
     "enterPassword": "Kilidi açmak için şifrenizi girin",
     "setupPassword": "Ana şifrenizi ayarlayın",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Senkronize ediliyor..."
+    "syncing": "Senkronize ediliyor...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Arşiv",

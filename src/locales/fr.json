@@ -3,6 +3,9 @@
     "name": "Jottery",
     "tagline": "Notes personnelles pour web et terminal"
   },
+  "a11y": {
+    "skipToContent": "Skip to main content"
+  },
   "common": {
     "loading": "Chargement...",
     "save": "Enregistrer",
@@ -58,6 +61,8 @@
     "placeholder": "Rechercher des notes...",
     "clear": "Effacer la recherche",
     "resultCount": "Search results: matches / total",
+    "resultsFound": "{matches} of {total} notes match",
+    "tagSuggestions": "Tag suggestions",
     "savedSearches": "Recherches Enregistrées",
     "newSavedSearch": "Enregistrer la Recherche Actuelle",
     "editSearch": "Modifier",
@@ -697,22 +702,6 @@
   "unlock": {
     "welcome": "Bienvenue dans Jottery",
     "enterPassword": "Entrez votre mot de passe pour déverrouiller",
-    "openLinksInNewTabDescription": "Lorsque activé, les liens vers des sites web externes dans l'aperçu Markdown s'ouvriront dans un nouvel onglet au lieu de quitter Jottery",
-    "persistSession": "Conserver la session lors du rafraîchissement",
-    "persistSessionDescription": "Gardez votre session active lors du rafraîchissement de la page. Le mot de passe est stocké temporairement dans le stockage de session de votre navigateur.",
-    "persistSessionNote": "Plus sécurisé que 'Mémoriser le mot de passe' - expire automatiquement et s'efface à la fermeture de l'onglet.",
-    "persistSessionUnavailable": "Le stockage de session n'est pas disponible (URL file:// ou paramètres de confidentialité du navigateur).",
-    "persistSessionDisabledByRemember": "Désactivé lorsque 'Mémoriser le mot de passe' est activé.",
-    "persistSessionTimeout": "Délai d'expiration de session (minutes)",
-    "persistSessionTimeoutDescription": "La session expire après ce nombre de minutes. Plage : 5-480.",
-    "persistSessionModal": {
-      "confirmPassword": "Entrez votre mot de passe pour activer :",
-      "enableButton": "Activer la persistance de session"
-    }
-  },
-  "unlock": {
-    "welcome": "Bienvenue dans Jottery",
-    "enterPassword": "Entrez votre mot de passe pour déverrouiller",
     "setupPassword": "Configurez votre mot de passe principal",
     "password": "Mot de passe",
     "confirmPassword": "Confirmer le mot de passe",
@@ -1029,7 +1018,8 @@
     "region": "Pull to refresh"
   },
   "sync": {
-    "syncing": "Synchronisation..."
+    "syncing": "Synchronisation...",
+    "syncProgress": "Syncing: {percentage}% complete"
   },
   "archive": {
     "title": "Archives",
