@@ -266,9 +266,23 @@ If you prefer to run the components manually, you can follow these steps:
     cargo run
     ```
 
-## TUI Client Downloads
+## Downloads
 
-You can download pre-compiled binaries for the TUI client for Linux, macOS, and Windows from the "Releases" section of the web application.
+### Web Application (Offline Bundle)
+
+Download the standalone web application for local use:
+
+| Version | File | Notes |
+|---------|------|-------|
+| 0.9.21 | [jottery-web-0.9.21-offline.zip](releases/jottery-web-0.9.21-offline.zip) | Single HTML file + assets |
+
+**Usage:** Extract and open `index.html` in any modern browser. All data is stored locally in IndexedDB.
+
+⚠️ **Note:** When opened directly from the filesystem (`file://` protocol), server sync is unavailable due to browser security restrictions. For sync functionality, serve via a local web server (e.g., `python -m http.server 8000`).
+
+### TUI Client
+
+Pre-compiled binaries for the TUI client (Linux, macOS, Windows) are available from the "Releases" section of the web application.
 
 ## Import/Export Format
 
