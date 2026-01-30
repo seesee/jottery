@@ -53,7 +53,8 @@
     },
     replacement: (content, node) => {
       const href = (node as HTMLAnchorElement).getAttribute('href') || '';
-      const text = content || '';
+      // Restore empty link if placeholder was used
+      const text = (content === EMPTY_LINK_PLACEHOLDER) ? '' : (content || '');
       return `[${text}](${href})`;
     }
   });
@@ -157,6 +158,9 @@
   // Compute font size from settings
   $: fontSize = getFontSize($settings.fontSize);
 
+  // Placeholder for empty note links (Tiptap strips empty anchors)
+  const EMPTY_LINK_PLACEHOLDER = '🔗';
+
   // Configure marked to allow note links (link: protocol)
   // In marked v17+, renderer functions receive a token object
   marked.use({
@@ -164,7 +168,9 @@
       link({ href, title, text }: { href: string; title: string | null; text: string }) {
         // Preserve note links with link: protocol
         const titleAttr = title ? ` title="${title}"` : '';
-        return `<a href="${href}"${titleAttr}>${text}</a>`;
+        // Add placeholder for empty note links so Tiptap doesn't strip them
+        const displayText = (!text && href.startsWith('link:')) ? EMPTY_LINK_PLACEHOLDER : text;
+        return `<a href="${href}"${titleAttr}>${displayText}</a>`;
       }
     }
   });
