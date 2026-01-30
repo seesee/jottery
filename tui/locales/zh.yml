@@ -21,16 +21,21 @@ password:
   mismatch_error: 密码不匹配
   unlock_failed: "解锁失败: %{error}"
   change_success: 密码修改成功
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: 记住密码
+  remember_toggle: 记住密码 (Ctrl+R 切换)
+  remember_enabled: "密码已保存用于自动解锁。警告：任何能访问此设备的人都可以访问！"
+  remember_keychain_enabled: 密码已安全存储在系统钥匙串中。
+  remember_disabled: 密码存储已禁用。下次启动时将提示输入。
+  remember_warning: "警告：任何能物理访问此设备的人都可以访问密码！"
+  remember_keychain_warning: 密码将安全存储在系统钥匙串中。
+  remember_keychain_info: 密码已安全存储在系统钥匙串中
+  storage_keychain: 系统钥匙串
+  storage_file: 文件（混淆）
+  incorrect: 密码错误，请重试。
+  verification_failed: "密码验证失败: %{error}"
+  enter_to_enable: "输入密码以启用自动解锁："
+  create_title: 创建密码
+  unlock_title: 解锁
 menu:
   notes: 笔记
   new_note: 新建笔记

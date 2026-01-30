@@ -3,6 +3,7 @@ mod crypto;
 mod db;
 mod export;
 mod models;
+mod password_storage;
 mod repository;
 mod ui;
 
@@ -194,45 +195,21 @@ fn prompt_password() -> Result<String> {
     Ok(password)
 }
 
-/// Try to load stored password from remember file
+/// Try to load stored password using the password storage backend
+///
+/// For CLI usage, we use file-based storage directly since keychain may not be
+/// accessible from non-interactive contexts (cron jobs, scripts, etc.)
 fn try_load_stored_password(db_path: &PathBuf) -> Result<Option<String>> {
     let config_dir = db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-    let remember_file = config_dir.join(".jottery_remember");
 
-    if !remember_file.exists() {
-        return Ok(None);
+    // Use file storage for CLI (keychain may not be accessible in headless mode)
+    let storage = password_storage::create_file_storage(config_dir);
+
+    match storage.retrieve() {
+        password_storage::RetrieveResult::Found(password) => Ok(Some(password)),
+        password_storage::RetrieveResult::NotFound => Ok(None),
+        password_storage::RetrieveResult::Error(e) => Err(e),
     }
-
-    let encrypted_password = std::fs::read_to_string(&remember_file)
-        .context("Failed to read stored password file")?;
-
-    if encrypted_password.trim().is_empty() {
-        return Ok(None);
-    }
-
-    // Decrypt using device-specific constant key (same as TUI)
-    use crypto::EncryptedData;
-    let crypto = CryptoService::new();
-
-    // Get device key (must match the one in app.rs)
-    let device_key = get_device_key();
-
-    let encrypted_data: EncryptedData = serde_json::from_str(&encrypted_password)
-        .context("Failed to parse stored password")?;
-    let password = crypto.decrypt_text(&encrypted_data, &device_key)
-        .context("Failed to decrypt stored password")?;
-
-    Ok(Some(password))
-}
-
-/// Get device-specific encryption key for stored password
-/// Must match the implementation in ui/app.rs
-fn get_device_key() -> [u8; 32] {
-    // Must exactly match the constant in ui/app.rs
-    let constant = b"jottery-tui-device-key-v1.0.0---";
-    let mut key = [0u8; 32];
-    key.copy_from_slice(&constant[..32]);
-    key
 }
 
 /// Get or prompt for password, checking stored password first

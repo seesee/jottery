@@ -21,16 +21,21 @@ password:
   mismatch_error: Le password non corrispondono
   unlock_failed: "Sblocco fallito: %{error}"
   change_success: Password modificata con successo
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Ricorda password
+  remember_toggle: Ricorda password (Ctrl+R per attivare/disattivare)
+  remember_enabled: "Password salvata per lo sblocco automatico. ATTENZIONE: Accessibile a chiunque abbia accesso al dispositivo!"
+  remember_keychain_enabled: Password salvata in modo sicuro nel portachiavi di sistema.
+  remember_disabled: Memorizzazione password disattivata. Verrà richiesta al prossimo avvio.
+  remember_warning: "ATTENZIONE: La password sarà accessibile a chiunque abbia accesso fisico a questo dispositivo!"
+  remember_keychain_warning: La password verrà salvata in modo sicuro nel portachiavi di sistema.
+  remember_keychain_info: Password salvata in modo sicuro nel portachiavi di sistema
+  storage_keychain: Portachiavi di sistema
+  storage_file: File (offuscato)
+  incorrect: Password errata. Riprova.
+  verification_failed: "Verifica password fallita: %{error}"
+  enter_to_enable: "Inserisci la password per attivare lo sblocco automatico:"
+  create_title: Crea password
+  unlock_title: Sblocca
 menu:
   notes: Note
   new_note: Nuova nota

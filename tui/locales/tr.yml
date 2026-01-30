@@ -21,16 +21,21 @@ password:
   mismatch_error: Şifreler eşleşmiyor
   unlock_failed: "Kilidi açma başarısız: %{error}"
   change_success: Şifre başarıyla değiştirildi
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Şifreyi hatırla
+  remember_toggle: Şifreyi hatırla (Ctrl+R ile değiştir)
+  remember_enabled: "Şifre otomatik kilit açma için kaydedildi. UYARI: Cihaza erişimi olan herkes tarafından erişilebilir!"
+  remember_keychain_enabled: Şifre sistem anahtar zincirinde güvenli şekilde kaydedildi.
+  remember_disabled: Şifre depolama devre dışı. Bir sonraki başlangıçta istenecek.
+  remember_warning: "UYARI: Şifre bu cihaza fiziksel erişimi olan herkes tarafından erişilebilir olacak!"
+  remember_keychain_warning: Şifre sistem anahtar zincirinde güvenli şekilde saklanacak.
+  remember_keychain_info: Şifre sistem anahtar zincirinde güvenli şekilde kaydedildi
+  storage_keychain: Sistem Anahtar Zinciri
+  storage_file: Dosya (gizlenmiş)
+  incorrect: Yanlış şifre. Tekrar deneyin.
+  verification_failed: "Şifre doğrulama başarısız: %{error}"
+  enter_to_enable: "Otomatik kilit açmayı etkinleştirmek için şifrenizi girin:"
+  create_title: Şifre Oluştur
+  unlock_title: Kilidi Aç
 menu:
   notes: Notlar
   new_note: Yeni not

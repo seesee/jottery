@@ -143,7 +143,13 @@ pub fn unlock(app: &mut App) -> Result<()> {
         if let Err(e) = store_password_for_autounlock(app, &password_to_store) {
             app.error = Some(format!("Failed to store password: {}", e));
         } else {
-            app.sync_status = Some(t!("password.remember_enabled").to_string());
+            // Show different message based on storage backend type
+            let msg = if app.password_storage.backend_type().is_secure() {
+                t!("password.remember_keychain_enabled")
+            } else {
+                t!("password.remember_enabled")
+            };
+            app.sync_status = Some(msg.to_string());
             app.sync_status_set_at = Some(Instant::now());
         }
     }
@@ -159,31 +165,17 @@ pub fn unlock(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Get device-specific encryption key for storing password
-/// WARNING: This is not cryptographically secure, just obfuscation
-pub fn get_device_key(_app: &App) -> [u8; 32] {
-    // Use a constant key derived from app name and version
-    // Anyone with access to the code can decrypt this
-    // The security warning makes this clear to users
-    let constant = b"jottery-tui-device-key-v1.0.0---";
-    let mut key = [0u8; 32];
-    key.copy_from_slice(&constant[..32]);
-    key
-}
-
 /// Enable/disable remember password feature
 /// When enabling, encrypts and stores the current password
 #[allow(dead_code)]
 pub fn toggle_remember_password(app: &mut App) -> Result<()> {
     if app.settings.remember_password {
-        // Disable: clear stored password
+        // Disable: clear stored password using the storage backend
         app.settings.remember_password = false;
         app.settings.stored_password = None;
 
-        // Delete remember file
-        let config_dir = app.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-        let remember_file = config_dir.join(".jottery_remember");
-        let _ = std::fs::remove_file(&remember_file);
+        // Delete stored password
+        let _ = app.password_storage.delete();
 
         // Save settings
         if let Some(db) = &app.db {
@@ -203,20 +195,17 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
 
 /// Store password for auto-unlock (call after successful unlock when user confirms)
 pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()> {
-    // Encrypt password with device key
-    let device_key = get_device_key(app);
-    let encrypted = app.crypto.encrypt_text(password, &device_key)?;
-    let encrypted_json = serde_json::to_string(&encrypted)?;
+    // Store password using the storage backend (keychain or file)
+    app.password_storage.store(password)?;
 
-    // Save to remember file
-    let config_dir = app.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-    let remember_file = config_dir.join(".jottery_remember");
-    std::fs::write(&remember_file, &encrypted_json)
-        .context("Failed to write password storage file")?;
+    app.debug_log(&format!(
+        "Password stored using {} backend",
+        if app.password_storage.backend_type().is_secure() { "keychain" } else { "file" }
+    ));
 
-    // Update settings
+    // Update settings (note: we no longer store encrypted password in settings)
     app.settings.remember_password = true;
-    app.settings.stored_password = Some(encrypted_json);
+    app.settings.stored_password = None; // No longer needed in settings
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
@@ -228,10 +217,8 @@ pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()
 
 /// Forget stored password (disable auto-unlock)
 pub fn forget_stored_password(app: &mut App) -> Result<()> {
-    // Delete remember file
-    let config_dir = app.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-    let remember_file = config_dir.join(".jottery_remember");
-    let _ = std::fs::remove_file(&remember_file);
+    // Delete stored password using the storage backend
+    let _ = app.password_storage.delete();
 
     // Update settings
     app.settings.remember_password = false;

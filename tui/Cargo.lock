@@ -1453,6 +1453,7 @@ dependencies = [
  "evalexpr",
  "hex",
  "hostname",
+ "keyring",
  "native-tls",
  "openssl",
  "openssl-sys",
@@ -1498,6 +1499,16 @@ dependencies = [
  "hashbrown 0.16.1",
  "portable-atomic",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "keyring"
+version = "3.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eebcc3aff044e5944a8fbaf69eb277d11986064cba30c468730e8b9909fb551c"
+dependencies = [
+ "log",
+ "zeroize",
 ]
 
 [[package]]

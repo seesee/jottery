@@ -21,16 +21,21 @@ password:
   mismatch_error: Passwörter stimmen nicht überein
   unlock_failed: "Entsperren fehlgeschlagen: %{error}"
   change_success: Passwort erfolgreich geändert
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Passwort merken
+  remember_toggle: Passwort merken (Strg+R zum Umschalten)
+  remember_enabled: "Passwort für Auto-Unlock gespeichert. WARNUNG: Für jeden mit Gerätezugriff zugänglich!"
+  remember_keychain_enabled: Passwort sicher im System-Schlüsselbund gespeichert.
+  remember_disabled: Passwortspeicherung deaktiviert. Beim nächsten Start wird nachgefragt.
+  remember_warning: "WARNUNG: Das Passwort ist für jeden mit physischem Zugang zu diesem Gerät zugänglich!"
+  remember_keychain_warning: Das Passwort wird sicher im System-Schlüsselbund gespeichert.
+  remember_keychain_info: Passwort sicher im System-Schlüsselbund gespeichert
+  storage_keychain: System-Schlüsselbund
+  storage_file: Datei (verschleiert)
+  incorrect: Falsches Passwort. Erneut versuchen.
+  verification_failed: "Passwortüberprüfung fehlgeschlagen: %{error}"
+  enter_to_enable: "Geben Sie Ihr Passwort ein, um Auto-Unlock zu aktivieren:"
+  create_title: Passwort erstellen
+  unlock_title: Entsperren
 menu:
   notes: Notizen
   new_note: Neue Notiz

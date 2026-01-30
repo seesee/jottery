@@ -6,6 +6,7 @@ use ratatui::style::Style;
 use ratatui::widgets::{Block, Borders, Paragraph};
 use rust_i18n::t;
 
+use crate::password_storage::StorageBackendType;
 use crate::ui::app::App;
 
 /// Render the locked screen with password input
@@ -125,18 +126,27 @@ pub fn render_locked(app: &App, frame: &mut Frame) {
             .alignment(Alignment::Center);
         frame.render_widget(checkbox, chunks[1]);
 
-        // Help text with security warning
-        let help_text = if app.remember_password_checkbox {
-            t!("password.remember_warning")
+        // Help text with security warning based on storage backend
+        let (help_text, help_style) = if app.remember_password_checkbox {
+            // Show different warning based on storage backend
+            match app.password_storage.backend_type() {
+                StorageBackendType::Keychain => (
+                    t!("password.remember_keychain_warning"),
+                    Style::default().fg(app.color_scheme.success),
+                ),
+                StorageBackendType::File => (
+                    t!("password.remember_warning"),
+                    Style::default().fg(app.color_scheme.error),
+                ),
+            }
         } else {
-            t!("help.enter_unlock")
+            (
+                t!("help.enter_unlock"),
+                Style::default().fg(app.color_scheme.muted),
+            )
         };
         let help = Paragraph::new(help_text)
-            .style(if app.remember_password_checkbox {
-                Style::default().fg(app.color_scheme.error)
-            } else {
-                Style::default().fg(app.color_scheme.muted)
-            })
+            .style(help_style)
             .alignment(Alignment::Center);
         frame.render_widget(help, chunks[2]);
 

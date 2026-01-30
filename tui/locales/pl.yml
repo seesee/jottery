@@ -21,16 +21,21 @@ password:
   mismatch_error: Hasła nie pasują
   unlock_failed: "Odblokowanie nie powiodło się: %{error}"
   change_success: Hasło zmienione pomyślnie
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Zapamiętaj hasło
+  remember_toggle: Zapamiętaj hasło (Ctrl+R aby przełączyć)
+  remember_enabled: "Hasło zapisane do automatycznego odblokowywania. OSTRZEŻENIE: Dostępne dla każdego z dostępem do urządzenia!"
+  remember_keychain_enabled: Hasło bezpiecznie zapisane w pęku kluczy systemu.
+  remember_disabled: Przechowywanie hasła wyłączone. Zostaniesz poproszony przy następnym uruchomieniu.
+  remember_warning: "OSTRZEŻENIE: Hasło będzie dostępne dla każdego z fizycznym dostępem do tego urządzenia!"
+  remember_keychain_warning: Hasło zostanie bezpiecznie zapisane w pęku kluczy systemu.
+  remember_keychain_info: Hasło bezpiecznie zapisane w pęku kluczy systemu
+  storage_keychain: Pęk kluczy systemu
+  storage_file: Plik (zaciemniony)
+  incorrect: Nieprawidłowe hasło. Spróbuj ponownie.
+  verification_failed: "Weryfikacja hasła nie powiodła się: %{error}"
+  enter_to_enable: "Wprowadź hasło, aby włączyć automatyczne odblokowywanie:"
+  create_title: Utwórz hasło
+  unlock_title: Odblokuj
 menu:
   notes: Notatki
   new_note: Nowa notatka

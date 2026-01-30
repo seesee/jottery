@@ -21,16 +21,21 @@ password:
   mismatch_error: Οι κωδικοί δεν ταιριάζουν
   unlock_failed: "Αποτυχία ξεκλειδώματος: %{error}"
   change_success: Ο κωδικός άλλαξε επιτυχώς
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Απομνημόνευση κωδικού
+  remember_toggle: Απομνημόνευση κωδικού (Ctrl+R για εναλλαγή)
+  remember_enabled: "Ο κωδικός αποθηκεύτηκε για αυτόματο ξεκλείδωμα. ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Προσβάσιμος σε οποιονδήποτε έχει πρόσβαση στη συσκευή!"
+  remember_keychain_enabled: Ο κωδικός αποθηκεύτηκε με ασφάλεια στο κλειδοθήκη συστήματος.
+  remember_disabled: Η αποθήκευση κωδικού απενεργοποιήθηκε. Θα ζητηθεί στην επόμενη εκκίνηση.
+  remember_warning: "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Ο κωδικός θα είναι προσβάσιμος σε οποιονδήποτε έχει φυσική πρόσβαση σε αυτή τη συσκευή!"
+  remember_keychain_warning: Ο κωδικός θα αποθηκευτεί με ασφάλεια στο κλειδοθήκη συστήματος.
+  remember_keychain_info: Ο κωδικός αποθηκεύτηκε με ασφάλεια στο κλειδοθήκη συστήματος
+  storage_keychain: Κλειδοθήκη συστήματος
+  storage_file: Αρχείο (συσκοτισμένο)
+  incorrect: Λάθος κωδικός. Δοκιμάστε ξανά.
+  verification_failed: "Αποτυχία επαλήθευσης κωδικού: %{error}"
+  enter_to_enable: "Εισάγετε τον κωδικό σας για να ενεργοποιήσετε το αυτόματο ξεκλείδωμα:"
+  create_title: Δημιουργία κωδικού
+  unlock_title: Ξεκλείδωμα
 menu:
   notes: Σημειώσεις
   new_note: Νέα σημείωση

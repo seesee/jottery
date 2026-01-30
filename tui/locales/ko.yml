@@ -21,16 +21,21 @@ password:
   mismatch_error: 비밀번호가 일치하지 않습니다
   unlock_failed: "잠금 해제 실패: %{error}"
   change_success: 비밀번호가 성공적으로 변경되었습니다
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: 비밀번호 기억
+  remember_toggle: 비밀번호 기억 (Ctrl+R로 전환)
+  remember_enabled: "자동 잠금 해제를 위해 비밀번호가 저장되었습니다. 경고: 기기에 접근할 수 있는 모든 사람이 접근 가능합니다!"
+  remember_keychain_enabled: 비밀번호가 시스템 키체인에 안전하게 저장되었습니다.
+  remember_disabled: 비밀번호 저장이 비활성화되었습니다. 다음 시작 시 입력하라는 메시지가 표시됩니다.
+  remember_warning: "경고: 비밀번호는 이 기기에 물리적으로 접근할 수 있는 모든 사람이 접근할 수 있습니다!"
+  remember_keychain_warning: 비밀번호가 시스템 키체인에 안전하게 저장됩니다.
+  remember_keychain_info: 비밀번호가 시스템 키체인에 안전하게 저장됨
+  storage_keychain: 시스템 키체인
+  storage_file: 파일 (난독화)
+  incorrect: 잘못된 비밀번호입니다. 다시 시도하세요.
+  verification_failed: "비밀번호 확인 실패: %{error}"
+  enter_to_enable: "자동 잠금 해제를 활성화하려면 비밀번호를 입력하세요:"
+  create_title: 비밀번호 만들기
+  unlock_title: 잠금 해제
 menu:
   notes: 노트
   new_note: 새 노트

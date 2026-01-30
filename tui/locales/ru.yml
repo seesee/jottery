@@ -21,16 +21,21 @@ password:
   mismatch_error: Пароли не совпадают
   unlock_failed: "Не удалось разблокировать: %{error}"
   change_success: Пароль успешно изменён
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Запомнить пароль
+  remember_toggle: Запомнить пароль (Ctrl+R для переключения)
+  remember_enabled: "Пароль сохранён для автоматической разблокировки. ПРЕДУПРЕЖДЕНИЕ: Доступен любому с доступом к устройству!"
+  remember_keychain_enabled: Пароль надёжно сохранён в системной связке ключей.
+  remember_disabled: Хранение пароля отключено. Вам будет предложено ввести его при следующем запуске.
+  remember_warning: "ПРЕДУПРЕЖДЕНИЕ: Пароль будет доступен любому с физическим доступом к этому устройству!"
+  remember_keychain_warning: Пароль будет надёжно сохранён в системной связке ключей.
+  remember_keychain_info: Пароль надёжно сохранён в системной связке ключей
+  storage_keychain: Системная связка ключей
+  storage_file: Файл (обфусцированный)
+  incorrect: Неверный пароль. Попробуйте ещё раз.
+  verification_failed: "Проверка пароля не удалась: %{error}"
+  enter_to_enable: "Введите пароль для включения автоматической разблокировки:"
+  create_title: Создать пароль
+  unlock_title: Разблокировать
 menu:
   notes: Заметки
   new_note: Новая заметка

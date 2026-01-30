@@ -6,6 +6,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use rust_i18n::t;
 
+use crate::password_storage::StorageBackendType;
 use crate::ui::app::App;
 use crate::ui::state::InputMode;
 
@@ -103,19 +104,31 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         ]),
         Line::from(""),
         field_line(7, format!("{}:     ", t!("password.remember")), if app.settings.remember_password {
-            format!("{} ({})", t!("common.yes"), t!("settings.press_enter_toggle"))
+            // Show storage backend type when enabled
+            let backend_label = match app.password_storage.backend_type() {
+                StorageBackendType::Keychain => t!("password.storage_keychain"),
+                StorageBackendType::File => t!("password.storage_file"),
+            };
+            format!("{} - {} ({})", t!("common.yes"), backend_label, t!("settings.press_enter_toggle"))
         } else {
             format!("{} ({})", t!("common.no"), t!("settings.press_enter_toggle"))
         }),
     ];
 
-    // Add security warning when remember password is enabled
+    // Add security warning when remember password is enabled (different based on backend)
     if app.settings.remember_password {
-        settings_text.push(Line::from(vec![
-            Span::styled(
-                format!("    ⚠  {}", t!("password.remember_warning")),
-                Style::default().fg(app.color_scheme.warning)
+        let (warning_text, warning_style) = match app.password_storage.backend_type() {
+            StorageBackendType::Keychain => (
+                format!("    ✓  {}", t!("password.remember_keychain_info")),
+                Style::default().fg(app.color_scheme.success),
             ),
+            StorageBackendType::File => (
+                format!("    ⚠  {}", t!("password.remember_warning")),
+                Style::default().fg(app.color_scheme.warning),
+            ),
+        };
+        settings_text.push(Line::from(vec![
+            Span::styled(warning_text, warning_style),
         ]));
     }
 

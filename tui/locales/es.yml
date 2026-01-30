@@ -21,16 +21,21 @@ password:
   mismatch_error: Las contraseñas no coinciden
   unlock_failed: "Error al desbloquear: %{error}"
   change_success: Contraseña cambiada con éxito
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Recordar contraseña
+  remember_toggle: Recordar contraseña (Ctrl+R para alternar)
+  remember_enabled: "Contraseña almacenada para desbloqueo automático. ADVERTENCIA: ¡Accesible para cualquiera con acceso al dispositivo!"
+  remember_keychain_enabled: Contraseña almacenada de forma segura en el llavero del sistema.
+  remember_disabled: Almacenamiento de contraseña desactivado. Se le pedirá en el próximo inicio.
+  remember_warning: "ADVERTENCIA: ¡La contraseña será accesible para cualquiera con acceso físico a este dispositivo!"
+  remember_keychain_warning: La contraseña se almacenará de forma segura en el llavero del sistema.
+  remember_keychain_info: Contraseña almacenada de forma segura en el llavero del sistema
+  storage_keychain: Llavero del sistema
+  storage_file: Archivo (ofuscado)
+  incorrect: Contraseña incorrecta. Inténtelo de nuevo.
+  verification_failed: "Verificación de contraseña fallida: %{error}"
+  enter_to_enable: "Introduzca su contraseña para activar el desbloqueo automático:"
+  create_title: Crear contraseña
+  unlock_title: Desbloquear
 menu:
   notes: Notas
   new_note: Nueva nota

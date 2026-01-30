@@ -11,9 +11,10 @@ name = "jottery"
 path = "src/main.rs"
 
 [features]
-default = ["sqlite"]
+default = ["sqlite", "keychain"]
 sqlite = ["rusqlite/bundled"]              # normal SQLite
 sqlcipher = ["rusqlite/sqlcipher", "native-tls", "openssl", "openssl-sys"]
+keychain = ["keyring"]                     # OS keychain for secure password storage
 
 [dependencies]
 # TUI Framework
@@ -73,6 +74,9 @@ rpassword = "7.3"
 
 # Config management
 dirs = "5.0"
+
+# OS keychain for secure password storage (optional)
+keyring = { version = "3", optional = true }
 
 # Hostname detection
 hostname = "0.4"

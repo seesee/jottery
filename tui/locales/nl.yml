@@ -21,16 +21,21 @@ password:
   mismatch_error: Wachtwoorden komen niet overeen
   unlock_failed: "Ontgrendelen mislukt: %{error}"
   change_success: Wachtwoord succesvol gewijzigd
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: Wachtwoord onthouden
+  remember_toggle: Wachtwoord onthouden (Ctrl+R om te wisselen)
+  remember_enabled: "Wachtwoord opgeslagen voor automatisch ontgrendelen. WAARSCHUWING: Toegankelijk voor iedereen met toegang tot dit apparaat!"
+  remember_keychain_enabled: Wachtwoord veilig opgeslagen in systeemsleutelhanger.
+  remember_disabled: Wachtwoordopslag uitgeschakeld. U wordt gevraagd bij de volgende start.
+  remember_warning: "WAARSCHUWING: Het wachtwoord is toegankelijk voor iedereen met fysieke toegang tot dit apparaat!"
+  remember_keychain_warning: Het wachtwoord wordt veilig opgeslagen in de systeemsleutelhanger.
+  remember_keychain_info: Wachtwoord veilig opgeslagen in systeemsleutelhanger
+  storage_keychain: Systeemsleutelhanger
+  storage_file: Bestand (verduisterd)
+  incorrect: Onjuist wachtwoord. Probeer opnieuw.
+  verification_failed: "Wachtwoordverificatie mislukt: %{error}"
+  enter_to_enable: "Voer uw wachtwoord in om automatisch ontgrendelen te activeren:"
+  create_title: Wachtwoord aanmaken
+  unlock_title: Ontgrendelen
 menu:
   notes: Notities
   new_note: Nieuwe notitie

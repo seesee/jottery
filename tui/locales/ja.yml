@@ -21,16 +21,21 @@ password:
   mismatch_error: パスワードが一致しません
   unlock_failed: "ロック解除に失敗: %{error}"
   change_success: パスワードを正常に変更しました
-  remember: Remember password
-  remember_toggle: Remember password (Ctrl+R to toggle)
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
-  remember_disabled: Password storage disabled. You will be prompted on next start.
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
-  incorrect: Incorrect password. Try again.
-  verification_failed: "Password verification failed: %{error}"
-  enter_to_enable: "Enter your password to enable auto-unlock:"
-  create_title: Create Password
-  unlock_title: Unlock
+  remember: パスワードを記憶
+  remember_toggle: パスワードを記憶 (Ctrl+Rで切り替え)
+  remember_enabled: "自動ロック解除用にパスワードを保存しました。警告: デバイスにアクセスできる人なら誰でもアクセス可能です!"
+  remember_keychain_enabled: パスワードがシステムキーチェーンに安全に保存されました。
+  remember_disabled: パスワード保存が無効です。次回起動時に入力を求められます。
+  remember_warning: "警告: パスワードはこのデバイスに物理的にアクセスできる人なら誰でもアクセス可能になります!"
+  remember_keychain_warning: パスワードはシステムキーチェーンに安全に保存されます。
+  remember_keychain_info: パスワードがシステムキーチェーンに安全に保存されています
+  storage_keychain: システムキーチェーン
+  storage_file: ファイル (難読化)
+  incorrect: パスワードが正しくありません。再試行してください。
+  verification_failed: "パスワード検証に失敗: %{error}"
+  enter_to_enable: "自動ロック解除を有効にするにはパスワードを入力してください:"
+  create_title: パスワードを作成
+  unlock_title: ロック解除
 menu:
   notes: ノート
   new_note: 新しいノート

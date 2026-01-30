@@ -39,6 +39,7 @@ use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
     models::{Attachment, Note, UserSettings, sync::{SyncCredentials, ConflictData}},
+    password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
     repository::{attachment::AttachmentRepository, EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
 };
 
@@ -223,6 +224,8 @@ pub struct App {
     pub search_tag_completions: Vec<String>,
     /// Selected search tag completion index
     pub search_tag_completion_index: usize,
+    /// Password storage backend (keychain or file-based fallback)
+    pub(crate) password_storage: Box<dyn PasswordStorage>,
 }
 
 
@@ -230,6 +233,11 @@ impl App {
     /// Create a new app
     pub fn new(db_path: PathBuf, debug_log: Option<Arc<Mutex<File>>>) -> Result<Self> {
         let is_new_database = !db_path.exists();
+
+        // Initialise password storage with migration from file to keychain if available
+        let config_dir = db_path.parent()
+            .ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+        let password_storage = password_storage::create_storage(config_dir, true);
 
         Ok(Self {
             view_mode: ViewMode::NoteList,
@@ -308,6 +316,7 @@ impl App {
             tag_completion_index: 0,
             search_tag_completions: Vec::new(),
             search_tag_completion_index: 0,
+            password_storage,
         })
     }
 
@@ -441,7 +450,13 @@ impl App {
             if let Err(e) = self.store_password_for_autounlock(&password_to_store) {
                 self.error = Some(format!("Failed to store password: {}", e));
             } else {
-                self.sync_status = Some(t!("password.remember_enabled").to_string());
+                // Show different message based on storage backend type
+                let msg = if self.password_storage.backend_type().is_secure() {
+                    t!("password.remember_keychain_enabled")
+                } else {
+                    t!("password.remember_enabled")
+                };
+                self.sync_status = Some(msg.to_string());
                 self.sync_status_set_at = Some(Instant::now());
             }
         }
@@ -460,41 +475,37 @@ impl App {
     /// Attempt to auto-unlock using stored password
     /// Returns Ok(true) if successfully unlocked, Ok(false) if no stored password, Err on failure
     pub fn try_auto_unlock(&mut self) -> Result<bool> {
-        // First, we need to read settings with a dummy password just to check if remember_password is enabled
-        // This is a chicken-and-egg problem: we need the password to read settings, but settings contain the password!
-        // Solution: Use a constant "bootstrap" password to encrypt the stored_password field specifically
+        let backend_name = if self.password_storage.backend_type().is_secure() {
+            "keychain"
+        } else {
+            "file"
+        };
+        self.debug_log(&format!("Auto-unlock: using {} storage backend", backend_name));
 
-        // For now, try to open database with empty password to see if it exists
+        // New database can't be auto-unlocked
         if !self.db_path.exists() {
-            return Ok(false); // New database, can't auto-unlock
-        }
-
-        // Try to open with a known constant to read settings (this will fail but we'll handle it)
-        // Actually, this won't work with SQLCipher. We need a different approach.
-        // The password must be stored in a separate unencrypted file.
-
-        // Check for stored password in a separate config file
-        let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-        let remember_file = config_dir.join(".jottery_remember");
-
-        if !remember_file.exists() {
-            return Ok(false); // No stored password
-        }
-
-        // Read and decrypt stored password
-        let encrypted_password = std::fs::read_to_string(&remember_file)
-            .context("Failed to read stored password file")?;
-
-        if encrypted_password.trim().is_empty() {
+            self.debug_log("Auto-unlock: database does not exist yet");
             return Ok(false);
         }
 
-        // Decrypt using device-specific constant key
-        let device_key = self.get_device_key();
-        let encrypted_data: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_password)
-            .context("Failed to parse stored password")?;
-        let password = self.crypto.decrypt_text(&encrypted_data, &device_key)
-            .context("Failed to decrypt stored password")?;
+        // Try to retrieve stored password using the password storage backend
+        self.debug_log("Auto-unlock: attempting to retrieve stored password");
+        let password = match self.password_storage.retrieve() {
+            RetrieveResult::Found(pwd) => {
+                self.debug_log(&format!("Auto-unlock: found password ({} chars)", pwd.len()));
+                pwd
+            }
+            RetrieveResult::NotFound => {
+                self.debug_log("Auto-unlock: no stored password found");
+                return Ok(false);
+            }
+            RetrieveResult::Error(e) => {
+                self.debug_log(&format!("Auto-unlock: error retrieving password: {}", e));
+                return Ok(false);
+            }
+        };
+
+        self.debug_log("Auto-unlock: attempting to unlock with stored password");
 
         // Try to unlock with this password
         self.password_input = password;
@@ -505,23 +516,17 @@ impl App {
             }
             Err(e) => {
                 self.password_input.clear();
-                // Delete invalid stored password file
-                let _ = std::fs::remove_file(&remember_file);
+                // Delete invalid stored password
+                let _ = self.password_storage.delete();
                 Err(e).context("Auto-unlock failed")
             }
         }
     }
 
-    /// Get device-specific encryption key for storing password
-    /// WARNING: This is not cryptographically secure, just obfuscation
-    fn get_device_key(&self) -> [u8; 32] {
-        // Use a constant key derived from app name and version
-        // Anyone with access to the code can decrypt this
-        // The security warning makes this clear to users
-        let constant = b"jottery-tui-device-key-v1.0.0---";
-        let mut key = [0u8; 32];
-        key.copy_from_slice(&constant[..32]);
-        key
+    /// Get the current password storage backend type
+    #[allow(dead_code)]
+    pub fn password_storage_type(&self) -> StorageBackendType {
+        self.password_storage.backend_type()
     }
 
     /// Enable/disable remember password feature
@@ -529,14 +534,12 @@ impl App {
     #[allow(dead_code)]
     pub fn toggle_remember_password(&mut self) -> Result<()> {
         if self.settings.remember_password {
-            // Disable: clear stored password
+            // Disable: clear stored password using the storage backend
             self.settings.remember_password = false;
             self.settings.stored_password = None;
 
-            // Delete remember file
-            let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-            let remember_file = config_dir.join(".jottery_remember");
-            let _ = std::fs::remove_file(&remember_file);
+            // Delete stored password
+            let _ = self.password_storage.delete();
 
             // Save settings
             if let Some(db) = &self.db {
@@ -556,20 +559,17 @@ impl App {
 
     /// Store password for auto-unlock (call after successful unlock when user confirms)
     pub fn store_password_for_autounlock(&mut self, password: &str) -> Result<()> {
-        // Encrypt password with device key
-        let device_key = self.get_device_key();
-        let encrypted = self.crypto.encrypt_text(password, &device_key)?;
-        let encrypted_json = serde_json::to_string(&encrypted)?;
+        // Store password using the storage backend (keychain or file)
+        self.password_storage.store(password)?;
 
-        // Save to remember file
-        let config_dir = self.db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
-        let remember_file = config_dir.join(".jottery_remember");
-        std::fs::write(&remember_file, &encrypted_json)
-            .context("Failed to write password storage file")?;
+        self.debug_log(&format!(
+            "Password stored using {} backend",
+            if self.password_storage.backend_type().is_secure() { "keychain" } else { "file" }
+        ));
 
-        // Update settings
+        // Update settings (note: we no longer store encrypted password in settings)
         self.settings.remember_password = true;
-        self.settings.stored_password = Some(encrypted_json);
+        self.settings.stored_password = None; // No longer needed in settings
 
         if let Some(db) = &self.db {
             let settings_repo = SettingsRepository::new(db.connection());
