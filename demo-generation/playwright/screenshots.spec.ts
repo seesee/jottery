@@ -791,6 +791,62 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
   });
 });
 
+// Helper function to import demo notes on mobile (via hamburger menu)
+async function importDemoNotesMobile(page: any) {
+  const demoNotesPath = join(process.cwd(), 'demo-generation', 'jottery-demo-notes.json');
+
+  // On mobile, settings is behind the hamburger menu
+  const hamburgerMenu = page.locator('button[aria-label="Menu"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
+  const isHamburgerVisible = await hamburgerMenu.isVisible().catch(() => false);
+
+  if (isHamburgerVisible) {
+    await hamburgerMenu.click();
+    await page.waitForTimeout(500);
+  }
+
+  // Now find and click Settings
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsButton.click();
+  await page.waitForTimeout(500);
+
+  // Navigate to Advanced tab
+  const advancedTab = page.locator('button, [role="tab"]').filter({ hasText: /Advanced/i }).first();
+  await advancedTab.waitFor({ state: 'visible' });
+  await advancedTab.click();
+  await page.waitForTimeout(500);
+
+  // Find and click the Import button (which triggers file input)
+  const importButton = page.locator('button').filter({ hasText: /📥.*Import/i }).first();
+  await importButton.waitFor({ state: 'visible' });
+
+  // Set up file chooser handler before clicking
+  const fileChooserPromise = page.waitForEvent('filechooser');
+  await importButton.click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles(demoNotesPath);
+
+  // Wait for import to complete - look for the Done button
+  const doneButton = page.locator('button').filter({ hasText: /Done|Close/i }).last();
+  await doneButton.waitFor({ state: 'visible', timeout: 15000 });
+  await doneButton.click();
+  await page.waitForTimeout(500);
+
+  // Close settings modal
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+
+  // Verify modal is closed
+  const modalCheck = page.locator('[role="dialog"]').first();
+  const isModalOpen = await modalCheck.isVisible().catch(() => false);
+
+  if (isModalOpen) {
+    // Try one more escape
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
+}
+
 test.describe('Landing Page Screenshots - Mobile', () => {
   // iPhone 12 viewport
   const MOBILE_VIEWPORT = { width: 390, height: 844 };
@@ -834,8 +890,8 @@ test.describe('Landing Page Screenshots - Mobile', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Import demo notes
-    await importDemoNotes(page);
+    // Import demo notes (mobile version - handles hamburger menu)
+    await importDemoNotesMobile(page);
 
     // Set tag colors for demo, recipe, and notes tags
     await setTagColors(page, {
@@ -885,8 +941,29 @@ test.describe('Landing Page Screenshots - Mobile', () => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    // Create a new note - on mobile this is a "+" icon button
+    // Try multiple selectors for the new note button
+    const newButtonSelectors = [
+      'button[aria-label="New note"]',
+      'button[aria-label="Add note"]',
+      'button:has-text("+")',
+      'button.new-note-button',
+    ];
+
+    let newButton = null;
+    for (const selector of newButtonSelectors) {
+      const btn = page.locator(selector).first();
+      if (await btn.isVisible().catch(() => false)) {
+        newButton = btn;
+        break;
+      }
+    }
+
+    // Fallback: find blue button with + or the text version
+    if (!newButton) {
+      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New/i }).first();
+    }
+
     await newButton.click();
     await page.waitForTimeout(1000);
 
