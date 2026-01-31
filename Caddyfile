@@ -16,8 +16,10 @@
 		file_server
 	}
 
-	# Web UI (default)
-	root * /app/dist
-	try_files {path} /index.html
-	file_server
+	# Web UI (default) - wrapped in handle for mutual exclusivity with handle_path
+	handle {
+		root * /app/dist
+		try_files {path} /index.html
+		file_server
+	}
 }
