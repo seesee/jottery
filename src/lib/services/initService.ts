@@ -26,26 +26,32 @@ export async function isInitialized(): Promise<boolean> {
  * Initialize the application with a password (first-time setup)
  */
 export async function initialize(password: string): Promise<void> {
-  const initialized = await isInitialized();
-  if (initialized) {
-    throw new Error('Application is already initialized');
+  // Check if encryption metadata already exists (from imported credentials)
+  const existingMetadata = await encryptionRepository.getMetadata();
+
+  if (existingMetadata) {
+    // Metadata exists from credential import - use existing salt
+    // Just need to unlock with the imported salt
+    console.log('[Initialize] Using existing encryption metadata from credential import');
+    await unlock(password);
+  } else {
+    // Fresh installation - generate new salt
+    console.log('[Initialize] Fresh installation - generating new encryption metadata');
+
+    const salt = cryptoService.generateSalt();
+
+    const metadata: EncryptionMetadata = {
+      salt: arrayBufferToBase64(salt),
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      createdAt: new Date().toISOString(),
+      algorithm: 'AES-256-GCM',
+    };
+
+    await encryptionRepository.setMetadata(metadata);
+
+    // Derive master key and unlock
+    await unlock(password);
   }
-
-  // Generate salt for key derivation
-  const salt = cryptoService.generateSalt();
-
-  // Store encryption metadata
-  const metadata: EncryptionMetadata = {
-    salt: arrayBufferToBase64(salt),
-    iterations: CRYPTO_PBKDF2_ITERATIONS,
-    createdAt: new Date().toISOString(),
-    algorithm: 'AES-256-GCM',
-  };
-
-  await encryptionRepository.setMetadata(metadata);
-
-  // Derive master key and unlock
-  await unlock(password);
 
   // Ensure default settings are saved
   const settingsExist = await settingsRepository.exists();
