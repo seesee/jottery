@@ -736,7 +736,13 @@
         "button": "Import Credentials",
         "importing": "Importing...",
         "emptyError": "Please paste the credentials",
-        "failed": "Failed to import credentials"
+        "deviceNameRequired": "Please enter a device name",
+        "failed": "Failed to import credentials",
+        "deviceName": {
+          "label": "Device name",
+          "placeholder": "My Laptop",
+          "help": "A name to identify this device in your account"
+        }
       },
       "completeInSettings": "Complete sync setup in Settings > Sync after creating your password."
     },
