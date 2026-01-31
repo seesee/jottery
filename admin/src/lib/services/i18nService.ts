@@ -56,15 +56,48 @@ export async function initI18n(locale?: string): Promise<void> {
 
 /**
  * Get the locale code from settings or default
+ * If userLocale is 'auto' or not set, detect from browser
  */
 export function getInitialLocale(userLocale?: string): string {
-  if (userLocale && AVAILABLE_LOCALES.some(l => l.code === userLocale)) {
+  // If user explicitly selected a locale (not 'auto'), use it
+  if (userLocale && userLocale !== 'auto' && AVAILABLE_LOCALES.some(l => l.code === userLocale)) {
     return userLocale;
   }
 
+  // Auto-detect from browser
   const browserLocale = getLocaleFromNavigator();
   if (browserLocale && AVAILABLE_LOCALES.some(l => l.code === browserLocale)) {
     return browserLocale;
+  }
+
+  // Try to match just the language part (e.g., 'en' from 'en-AU')
+  if (browserLocale) {
+    const langPart = browserLocale.split('-')[0];
+    const matchingLocale = AVAILABLE_LOCALES.find(l => l.code.startsWith(langPart + '-') || l.code === langPart);
+    if (matchingLocale) {
+      return matchingLocale.code;
+    }
+  }
+
+  return DEFAULT_LOCALE;
+}
+
+/**
+ * Get the detected browser locale (for display purposes)
+ */
+export function getDetectedBrowserLocale(): string {
+  const browserLocale = getLocaleFromNavigator();
+  if (browserLocale && AVAILABLE_LOCALES.some(l => l.code === browserLocale)) {
+    return browserLocale;
+  }
+
+  // Try to match just the language part
+  if (browserLocale) {
+    const langPart = browserLocale.split('-')[0];
+    const matchingLocale = AVAILABLE_LOCALES.find(l => l.code.startsWith(langPart + '-') || l.code === langPart);
+    if (matchingLocale) {
+      return matchingLocale.code;
+    }
   }
 
   return DEFAULT_LOCALE;
