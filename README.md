@@ -31,6 +31,131 @@ Most note-taking apps are either too heavy (designed for long-form documents) or
 *   **Keyboard Shortcuts**: Fully customisable keyboard shortcuts for common actions.
 *   **Many handy features**: Export notes, preview HTML, document info, basic versioning, and markdown documents in-editor.
 
+## Getting Started
+
+### With Docker
+
+The easiest way to get started is with Docker. Pre-built multi-architecture images (amd64, arm64) are available.
+
+#### Using Pre-built Image (Recommended)
+
+1.  **Pull and run the image:**
+
+    ```bash
+    docker run -d \
+      --name jottery \
+      -p 8088:8088 \
+      -v jottery-data:/app/data \
+      ghcr.io/seesee/jottery:latest
+    ```
+
+    The web interface will be available at `http://localhost:8088`. The admin dashboard is at `http://localhost:8088/admin`.
+
+#### Using Docker Compose
+
+1.  **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/seesee/jottery.git
+    cd jottery
+    ```
+
+2.  **Run with Docker Compose:**
+
+    ```bash
+    docker-compose up -d
+    ```
+
+    The web interface will be available at `http://localhost:8088`.
+
+#### Building from Source
+
+If you prefer to build the image yourself:
+
+```bash
+git clone https://github.com/seesee/jottery.git
+cd jottery
+docker build -t jottery .
+docker run -d --name jottery -p 8088:8088 -v jottery-data:/app/data jottery
+```
+
+#### Environment Variables
+
+You can configure the server using environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DEFAULT_ADMIN_EMAIL` | `admin@localhost` | Default admin account email |
+| `DEFAULT_ADMIN_PASSWORD` | `changeme` | Default admin account password |
+| `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
+| `PORT` | `3030` | Internal server port |
+| `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
+| `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
+| `MAX_PAYLOAD_SIZE` | `5242880` | Max upload size in bytes (5MB) |
+| `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins |
+
+Example with custom admin credentials:
+
+```bash
+docker run -d \
+  --name jottery \
+  -p 8088:8088 \
+  -v jottery-data:/app/data \
+  -e DEFAULT_ADMIN_EMAIL=admin@example.com \
+  -e DEFAULT_ADMIN_PASSWORD=your-secure-password \
+  ghcr.io/seesee/jottery:latest
+```
+
+### First-Time Setup
+
+1.  **Access the admin dashboard:**
+
+    Navigate to `http://localhost:8088/admin` and login with the default credentials:
+    - Email: `admin@localhost`
+    - Password: `changeme`
+
+    ⚠️ **IMPORTANT:** Change the default admin password immediately, or set custom credentials via environment variables before first run.
+
+2.  **Create your first user account:**
+
+    - Register a new user account via the web UI at `http://localhost:8088`
+    - Login to the admin dashboard and approve the new user
+    - The approved user can now register devices and start syncing notes
+
+### Manual Installation
+
+If you prefer to run the components manually, you can follow these steps:
+
+1.  **Clone the repository:**
+
+    ```bash
+    git clone https://github.com/seesee/jottery.git
+    cd jottery
+    ```
+
+2.  **Web Client:**
+
+    ```bash
+    npm install
+    npm run dev
+    ```
+
+3.  **Sync Server:**
+
+    ```bash
+    cd server
+    cargo run
+    ```
+
+4.  **TUI Client:**
+
+    You can download a pre-compiled binary for your platform from the releases section in the web app, or build it from source:
+
+    ```bash
+    cd tui
+    cargo run
+    ```
+
 ## Screenshots
 
 ### Web Client
@@ -182,131 +307,6 @@ For detailed information about Jottery's security architecture, deployment best 
 *   **Language**: Rust
 *   **Database**: SQLite
 *   **Async Runtime**: Tokio
-
-## Getting Started
-
-### With Docker
-
-The easiest way to get started is with Docker. Pre-built multi-architecture images (amd64, arm64) are available.
-
-#### Using Pre-built Image (Recommended)
-
-1.  **Pull and run the image:**
-
-    ```bash
-    docker run -d \
-      --name jottery \
-      -p 8088:8088 \
-      -v jottery-data:/app/data \
-      ghcr.io/seesee/jottery:latest
-    ```
-
-    The web interface will be available at `http://localhost:8088`. The admin dashboard is at `http://localhost:8088/admin`.
-
-#### Using Docker Compose
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/seesee/jottery.git
-    cd jottery
-    ```
-
-2.  **Run with Docker Compose:**
-
-    ```bash
-    docker-compose up -d
-    ```
-
-    The web interface will be available at `http://localhost:8088`.
-
-#### Building from Source
-
-If you prefer to build the image yourself:
-
-```bash
-git clone https://github.com/seesee/jottery.git
-cd jottery
-docker build -t jottery .
-docker run -d --name jottery -p 8088:8088 -v jottery-data:/app/data jottery
-```
-
-#### Environment Variables
-
-You can configure the server using environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DEFAULT_ADMIN_EMAIL` | `admin@localhost` | Default admin account email |
-| `DEFAULT_ADMIN_PASSWORD` | `changeme` | Default admin account password |
-| `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
-| `PORT` | `3030` | Internal server port |
-| `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
-| `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
-| `MAX_PAYLOAD_SIZE` | `5242880` | Max upload size in bytes (5MB) |
-| `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins |
-
-Example with custom admin credentials:
-
-```bash
-docker run -d \
-  --name jottery \
-  -p 8088:8088 \
-  -v jottery-data:/app/data \
-  -e DEFAULT_ADMIN_EMAIL=admin@example.com \
-  -e DEFAULT_ADMIN_PASSWORD=your-secure-password \
-  ghcr.io/seesee/jottery:latest
-```
-
-### First-Time Setup
-
-1.  **Access the admin dashboard:**
-
-    Navigate to `http://localhost:8088/admin` and login with the default credentials:
-    - Email: `admin@localhost`
-    - Password: `changeme`
-
-    ⚠️ **IMPORTANT:** Change the default admin password immediately, or set custom credentials via environment variables before first run.
-
-2.  **Create your first user account:**
-
-    - Register a new user account via the web UI at `http://localhost:8088`
-    - Login to the admin dashboard and approve the new user
-    - The approved user can now register devices and start syncing notes
-
-### Manual Installation
-
-If you prefer to run the components manually, you can follow these steps:
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/seesee/jottery.git
-    cd jottery
-    ```
-
-2.  **Web Client:**
-
-    ```bash
-    npm install
-    npm run dev
-    ```
-
-3.  **Sync Server:**
-
-    ```bash
-    cd server
-    cargo run
-    ```
-
-4.  **TUI Client:**
-
-    You can download a pre-compiled binary for your platform from the releases section in the web app, or build it from source:
-
-    ```bash
-    cd tui
-    cargo run
-    ```
 
 ## Downloads
 
