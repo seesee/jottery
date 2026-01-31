@@ -126,10 +126,15 @@
   ];
 
   const mobileScreenshots = [
-    { key: 'list', screenshot: '/screenshots/en-GB/06-mobile-list.png' },
-    { key: 'japan', screenshot: '/screenshots/en-GB/07-mobile-japan.png' },
-    { key: 'calculator', screenshot: '/screenshots/en-GB/08-mobile-calculator.png' },
+    { key: 'list', screenshotLight: '/screenshots/en-GB/06-mobile-list-light.png', screenshotDark: '/screenshots/en-GB/06-mobile-list-dark.png' },
+    { key: 'japan', screenshotLight: '/screenshots/en-GB/07-mobile-japan-light.png', screenshotDark: '/screenshots/en-GB/07-mobile-japan-dark.png' },
+    { key: 'calculator', screenshotLight: '/screenshots/en-GB/08-mobile-calculator-light.png', screenshotDark: '/screenshots/en-GB/08-mobile-calculator-dark.png' },
   ];
+
+  // Helper to get the appropriate mobile screenshot based on theme
+  $: getMobileScreenshot = (item: { screenshotLight: string; screenshotDark: string }) => {
+    return isDarkMode ? item.screenshotDark : item.screenshotLight;
+  };
 
   // Helper to get the appropriate screenshot based on theme
   $: getScreenshot = (feature: WebFeature) => {
@@ -305,7 +310,7 @@
           <div class="mobile-card">
             <div class="mobile-screenshot">
               <img
-                src={item.screenshot}
+                src={getMobileScreenshot(item)}
                 alt={$_(`landing.mobileFeatures.${item.key}.alt`)}
                 class="mobile-image"
               />

@@ -32,9 +32,12 @@ DEMOS[web-version-history-light]="Playwright version history screenshot (light m
 DEMOS[web-version-history-dark]="Playwright version history screenshot (dark mode)"
 DEMOS[web-calculator-light]="Playwright calculator screenshot (light mode)"
 DEMOS[web-calculator-dark]="Playwright calculator screenshot (dark mode)"
-DEMOS[web-mobile-list]="Playwright mobile list view screenshot"
-DEMOS[web-mobile-japan]="Playwright mobile Japan note screenshot"
-DEMOS[web-mobile-calculator]="Playwright mobile calculator screenshot"
+DEMOS[web-mobile-list-light]="Playwright mobile list view screenshot (light mode)"
+DEMOS[web-mobile-list-dark]="Playwright mobile list view screenshot (dark mode)"
+DEMOS[web-mobile-japan-light]="Playwright mobile Japan note screenshot (light mode)"
+DEMOS[web-mobile-japan-dark]="Playwright mobile Japan note screenshot (dark mode)"
+DEMOS[web-mobile-calculator-light]="Playwright mobile calculator screenshot (light mode)"
+DEMOS[web-mobile-calculator-dark]="Playwright mobile calculator screenshot (dark mode)"
 DEMOS[tui-cli]="VHS TUI CLI commands demo"
 DEMOS[tui-interface]="VHS TUI interactive interface demo"
 DEMOS[tui-piping]="VHS TUI piping content demo"
@@ -199,14 +202,23 @@ else
     web-calculator-dark)
       generate_web_screenshots "05.*dark.*Calculator"
       ;;
-    web-mobile-list)
-      generate_web_screenshots "06-mobile.*List"
+    web-mobile-list-light)
+      generate_web_screenshots "06-mobile-light.*List"
       ;;
-    web-mobile-japan)
-      generate_web_screenshots "07-mobile.*Japan"
+    web-mobile-list-dark)
+      generate_web_screenshots "06-mobile-dark.*List"
       ;;
-    web-mobile-calculator)
-      generate_web_screenshots "08-mobile.*Calculator"
+    web-mobile-japan-light)
+      generate_web_screenshots "07-mobile-light.*Japan"
+      ;;
+    web-mobile-japan-dark)
+      generate_web_screenshots "07-mobile-dark.*Japan"
+      ;;
+    web-mobile-calculator-light)
+      generate_web_screenshots "08-mobile-light.*Calculator"
+      ;;
+    web-mobile-calculator-dark)
+      generate_web_screenshots "08-mobile-dark.*Calculator"
       ;;
     tui-*)
       generate_vhs_demo "$SPECIFIC_DEMO"

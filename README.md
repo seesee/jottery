@@ -196,14 +196,14 @@ If you prefer to run the components manually, you can follow these steps:
 
 Jottery works great on mobile devices too.
 
-**Note List**
-![Mobile List](public/screenshots/en-GB/06-mobile-list.png)
+**Note List (Dark)**
+![Mobile List](public/screenshots/en-GB/06-mobile-list-dark.png)
 
-**Japan Itinerary**
-![Mobile Japan](public/screenshots/en-GB/07-mobile-japan.png)
+**Japan Itinerary (Dark)**
+![Mobile Japan](public/screenshots/en-GB/07-mobile-japan-dark.png)
 
-**Calculator**
-![Mobile Calculator](public/screenshots/en-GB/08-mobile-calculator.png)
+**Calculator (Dark)**
+![Mobile Calculator](public/screenshots/en-GB/08-mobile-calculator-dark.png)
 
 ## Caveats
 *   **Sync**: The sync mechanism is quite robust but very basic. Updates are sent periodically and the last version to be received "wins". To mitigate against accidental deletions, the previous version is also stored.
