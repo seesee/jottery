@@ -1211,3 +1211,487 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/08-mobile-calculator-dark.png');
   });
 });
+
+test.describe('Landing Page Screenshots - Outliner Light', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clear all storage before test
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      indexedDB.databases().then((dbs) => {
+        dbs.forEach((db) => {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        });
+      });
+    });
+
+    // Reload with theme parameter and set up password
+    await page.goto('/?theme=light');
+
+    // Wait for landing page, then click "Try It Out"
+    await page.waitForTimeout(1000);
+    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const isTryItVisible = await tryItButton.isVisible().catch(() => false);
+
+    if (isTryItVisible) {
+      await tryItButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Set up password
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.first().waitFor({ state: 'visible' });
+    await passwordInputs.first().fill('screenshot-test-password');
+    await passwordInputs.nth(1).fill('screenshot-test-password');
+    await page.locator('button[type="submit"]').click();
+
+    // Wait for app to load
+    await page.waitForTimeout(2000);
+  });
+
+  test('09-light. Outliner Mode', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Create a new note
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    await newButton.click();
+    await page.waitForTimeout(1000);
+
+    // Find the language dropdown and select outliner
+    const languageDropdown = page.locator('select').first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('outliner');
+    await page.waitForTimeout(1500);
+
+    // Outliner mode uses contenteditable divs, not CodeMirror
+    // Find the first outliner node content area and click it
+    const outlinerContent = page.locator('[contenteditable="true"].content, .outliner-node .content[contenteditable]').first();
+    await outlinerContent.waitFor({ state: 'visible', timeout: 10000 });
+    await outlinerContent.click();
+    await page.waitForTimeout(500);
+
+    // Type the first item and create hierarchy using Tab for indentation and Enter for new items
+    await page.keyboard.type('Project Roadmap');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Phase 1: Foundation');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab'); // Indent to create child
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Set up project structure');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Configure build tools');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Write initial tests');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab'); // Unindent
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Phase 2: Core Features');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('User authentication');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Login/logout');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Password reset');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Data synchronisation');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Real-time updates');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Conflict resolution');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Shift+Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Phase 3: Polish');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('UI/UX improvements');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Performance optimisation');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Documentation');
+    await page.waitForTimeout(1000);
+
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/09-outliner-light.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/09-outliner-light.png');
+  });
+});
+
+test.describe('Landing Page Screenshots - Outliner Dark', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clear all storage before test
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      indexedDB.databases().then((dbs) => {
+        dbs.forEach((db) => {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        });
+      });
+    });
+
+    // Reload and set up password
+    await page.goto('/');
+
+    // Wait for landing page, then click "Try It Out"
+    await page.waitForTimeout(1000);
+    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const isTryItVisible = await tryItButton.isVisible().catch(() => false);
+
+    if (isTryItVisible) {
+      await tryItButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Set up password
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.first().waitFor({ state: 'visible' });
+    await passwordInputs.first().fill('screenshot-test-password');
+    await passwordInputs.nth(1).fill('screenshot-test-password');
+    await page.locator('button[type="submit"]').click();
+
+    // Wait for app to load
+    await page.waitForTimeout(2000);
+
+    // Apply dark theme
+    await page.evaluate(() => {
+      document.documentElement.classList.add('dark');
+    });
+    await page.waitForTimeout(500);
+  });
+
+  test('09-dark. Outliner Mode', async ({ page }) => {
+    // Wait for theme to fully apply
+    await page.waitForTimeout(1000);
+
+    // Create a new note
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    await newButton.click();
+    await page.waitForTimeout(1000);
+
+    // Find the language dropdown and select outliner
+    const languageDropdown = page.locator('select').first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('outliner');
+    await page.waitForTimeout(1500);
+
+    // Outliner mode uses contenteditable divs, not CodeMirror
+    // Find the first outliner node content area and click it
+    const outlinerContent = page.locator('[contenteditable="true"].content, .outliner-node .content[contenteditable]').first();
+    await outlinerContent.waitFor({ state: 'visible', timeout: 10000 });
+    await outlinerContent.click();
+    await page.waitForTimeout(500);
+
+    // Type the first item and create hierarchy using Tab for indentation and Enter for new items
+    await page.keyboard.type('Project Roadmap');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Phase 1: Foundation');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab'); // Indent to create child
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Set up project structure');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Configure build tools');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Write initial tests');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab'); // Unindent
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Phase 2: Core Features');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('User authentication');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Login/logout');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Password reset');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Data synchronisation');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Real-time updates');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Conflict resolution');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Shift+Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Phase 3: Polish');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('UI/UX improvements');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Performance optimisation');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('Documentation');
+    await page.waitForTimeout(1000);
+
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/09-outliner-dark.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/09-outliner-dark.png');
+  });
+});
+
+test.describe('Landing Page Screenshots - Greek UI Light', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clear all storage before test
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      indexedDB.databases().then((dbs) => {
+        dbs.forEach((db) => {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        });
+      });
+    });
+
+    // Reload with theme parameter and set up password
+    await page.goto('/?theme=light');
+
+    // Wait for landing page, then click "Try It Out"
+    await page.waitForTimeout(1000);
+    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const isTryItVisible = await tryItButton.isVisible().catch(() => false);
+
+    if (isTryItVisible) {
+      await tryItButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Set up password
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.first().waitFor({ state: 'visible' });
+    await passwordInputs.first().fill('screenshot-test-password');
+    await passwordInputs.nth(1).fill('screenshot-test-password');
+    await page.locator('button[type="submit"]').click();
+
+    // Wait for app to load
+    await page.waitForTimeout(2000);
+
+    // Import demo notes
+    await importDemoNotes(page);
+
+    // Set tag colors
+    await setTagColors(page, {
+      demo: 'blue',
+      recipe: 'orange',
+      notes: 'purple',
+    });
+
+    await page.waitForTimeout(1000);
+
+    // Change language to Greek via settings
+    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+    await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+    await settingsButton.click();
+    await page.waitForTimeout(500);
+
+    // Navigate to General tab where language dropdown is (within the modal)
+    const modal = page.locator('[role="dialog"]').first();
+    const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+    await generalTab.waitFor({ state: 'visible' });
+    await generalTab.click();
+    await page.waitForTimeout(500);
+
+    // Find the language dropdown and select Greek
+    const languageDropdown = modal.locator('select').filter({ has: page.locator('option[value="el"]') }).first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('el');
+    await page.waitForTimeout(1000);
+
+    // Close settings modal
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  });
+
+  test('10-light. Greek UI - Multi-lingual', async ({ page }) => {
+    // Wait for locale to fully apply
+    await page.waitForTimeout(1000);
+
+    // Click on the welcome note (should be pinned at top)
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const firstNote = noteListItems.first();
+    await firstNote.waitFor({ state: 'visible' });
+    await firstNote.click();
+    await page.waitForTimeout(1000);
+
+    // Take screenshot showing Greek UI elements
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/10-greek-ui-light.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/10-greek-ui-light.png');
+  });
+});
+
+test.describe('Landing Page Screenshots - Greek UI Dark', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clear all storage before test
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      indexedDB.databases().then((dbs) => {
+        dbs.forEach((db) => {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        });
+      });
+    });
+
+    // Reload and set up password
+    await page.goto('/');
+
+    // Wait for landing page, then click "Try It Out"
+    await page.waitForTimeout(1000);
+    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const isTryItVisible = await tryItButton.isVisible().catch(() => false);
+
+    if (isTryItVisible) {
+      await tryItButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Set up password
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.first().waitFor({ state: 'visible' });
+    await passwordInputs.first().fill('screenshot-test-password');
+    await passwordInputs.nth(1).fill('screenshot-test-password');
+    await page.locator('button[type="submit"]').click();
+
+    // Wait for app to load
+    await page.waitForTimeout(2000);
+
+    // Import demo notes
+    await importDemoNotes(page);
+
+    // Set tag colors
+    await setTagColors(page, {
+      demo: 'blue',
+      recipe: 'orange',
+      notes: 'purple',
+    });
+
+    await page.waitForTimeout(1000);
+
+    // Change language to Greek via settings
+    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+    await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+    await settingsButton.click();
+    await page.waitForTimeout(500);
+
+    // Navigate to General tab where language dropdown is (within the modal)
+    const modal = page.locator('[role="dialog"]').first();
+    const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+    await generalTab.waitFor({ state: 'visible' });
+    await generalTab.click();
+    await page.waitForTimeout(500);
+
+    // Find the language dropdown and select Greek
+    const languageDropdown = modal.locator('select').filter({ has: page.locator('option[value="el"]') }).first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('el');
+    await page.waitForTimeout(1000);
+
+    // Close settings modal
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // Apply dark theme
+    await page.evaluate(() => {
+      document.documentElement.classList.add('dark');
+    });
+    await page.waitForTimeout(500);
+  });
+
+  test('10-dark. Greek UI - Multi-lingual', async ({ page }) => {
+    // Wait for locale to fully apply
+    await page.waitForTimeout(1000);
+
+    // Click on the welcome note (should be pinned at top)
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const firstNote = noteListItems.first();
+    await firstNote.waitFor({ state: 'visible' });
+    await firstNote.click();
+    await page.waitForTimeout(1000);
+
+    // Take screenshot showing Greek UI elements
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/10-greek-ui-dark.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/10-greek-ui-dark.png');
+  });
+});

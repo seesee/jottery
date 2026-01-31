@@ -647,6 +647,30 @@
           "Copia risultati nelle note"
         ],
         "screenshotDescription": "Interfaccia calcolatrice REPL"
+      },
+      "outliner": {
+        "title": "Modalità Schema",
+        "description": "Organizza le tue idee con schemi gerarchici. Perfetto per la pianificazione di progetti, appunti di riunioni e brainstorming.",
+        "points": [
+          "Punti elenco gerarchici",
+          "Sezioni comprimibili",
+          "Ristrutturazione facile",
+          "Navigazione da tastiera",
+          "Esporta in markdown"
+        ],
+        "screenshotDescription": "Modalità schema con struttura gerarchica"
+      },
+      "multilingual": {
+        "title": "Interfaccia multilingue",
+        "description": "Usa Jottery nella tua lingua preferita. L'interfaccia è disponibile in 15 lingue e continua a crescere.",
+        "points": [
+          "15 lingue supportate",
+          "Rilevamento automatico",
+          "Cambio lingua facile",
+          "Traduzioni della comunità",
+          "Localizzazione completa dell'UI"
+        ],
+        "screenshotDescription": "Interfaccia in greco"
       }
     },
     "tuiFeatures": {

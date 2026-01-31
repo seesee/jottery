@@ -647,6 +647,30 @@
           "Ergebnisse in Notizen kopieren"
         ],
         "screenshotDescription": "REPL-Rechner-Oberfläche"
+      },
+      "outliner": {
+        "title": "Gliederungsmodus",
+        "description": "Organisieren Sie Ihre Gedanken mit hierarchischen Gliederungen. Perfekt für Projektplanung, Besprechungsnotizen und Brainstorming.",
+        "points": [
+          "Hierarchische Aufzählungspunkte",
+          "Zusammenklappbare Abschnitte",
+          "Einfache Umstrukturierung",
+          "Tastaturnavigation",
+          "Export nach Markdown"
+        ],
+        "screenshotDescription": "Gliederungsmodus mit hierarchischer Struktur"
+      },
+      "multilingual": {
+        "title": "Mehrsprachige Oberfläche",
+        "description": "Verwenden Sie Jottery in Ihrer bevorzugten Sprache. Die Oberfläche ist in 15 Sprachen verfügbar und wächst weiter.",
+        "points": [
+          "15 Sprachen unterstützt",
+          "Automatische Erkennung",
+          "Einfacher Sprachwechsel",
+          "Community-Übersetzungen",
+          "Vollständige UI-Lokalisierung"
+        ],
+        "screenshotDescription": "Griechische Sprachoberfläche"
       }
     },
     "tuiFeatures": {

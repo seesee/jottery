@@ -647,6 +647,30 @@
           "Copiar resultados a notas"
         ],
         "screenshotDescription": "Interfaz de calculadora REPL"
+      },
+      "outliner": {
+        "title": "Modo Esquema",
+        "description": "Organiza tus ideas con esquemas jerárquicos. Perfecto para planificar proyectos, notas de reuniones y lluvia de ideas.",
+        "points": [
+          "Viñetas jerárquicas",
+          "Secciones plegables",
+          "Reestructuración fácil",
+          "Navegación por teclado",
+          "Exportar a markdown"
+        ],
+        "screenshotDescription": "Modo esquema con estructura jerárquica"
+      },
+      "multilingual": {
+        "title": "Interfaz multilingüe",
+        "description": "Usa Jottery en tu idioma preferido. La interfaz está disponible en 15 idiomas y sigue creciendo.",
+        "points": [
+          "15 idiomas soportados",
+          "Detección automática",
+          "Cambio de idioma fácil",
+          "Traducciones comunitarias",
+          "Localización completa de la UI"
+        ],
+        "screenshotDescription": "Interfaz en griego"
       }
     },
     "tuiFeatures": {

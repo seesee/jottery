@@ -647,6 +647,30 @@
           "Sonuçları notlara kopyala"
         ],
         "screenshotDescription": "REPL hesap makinesi arayüzü"
+      },
+      "outliner": {
+        "title": "Anahat Modu",
+        "description": "Düşüncelerinizi hiyerarşik anahatlarla düzenleyin. Proje planlama, toplantı notları ve beyin fırtınası için mükemmel.",
+        "points": [
+          "Hiyerarşik madde işaretleri",
+          "Daraltılabilir bölümler",
+          "Kolay yeniden yapılandırma",
+          "Klavye navigasyonu",
+          "Markdown'a dışa aktar"
+        ],
+        "screenshotDescription": "Hiyerarşik yapılı anahat modu"
+      },
+      "multilingual": {
+        "title": "Çok Dilli Arayüz",
+        "description": "Jottery'yi tercih ettiğiniz dilde kullanın. Arayüz 15 dilde mevcuttur ve büyümeye devam ediyor.",
+        "points": [
+          "15 dil destekleniyor",
+          "Otomatik algılama",
+          "Kolay dil değiştirme",
+          "Topluluk çevirileri",
+          "Tam UI yerelleştirmesi"
+        ],
+        "screenshotDescription": "Yunanca dil arayüzü"
       }
     },
     "tuiFeatures": {

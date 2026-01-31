@@ -647,6 +647,30 @@
           "Kopieer resultaten naar notities"
         ],
         "screenshotDescription": "REPL-calculatorinterface"
+      },
+      "outliner": {
+        "title": "Overzichtsmodus",
+        "description": "Organiseer je gedachten met hiërarchische overzichten. Perfect voor projectplanning, vergadernotities en brainstormen.",
+        "points": [
+          "Hiërarchische opsommingstekens",
+          "Inklapbare secties",
+          "Eenvoudig herstructureren",
+          "Toetsenbordnavigatie",
+          "Exporteren naar markdown"
+        ],
+        "screenshotDescription": "Overzichtsmodus met hiërarchische structuur"
+      },
+      "multilingual": {
+        "title": "Meertalige interface",
+        "description": "Gebruik Jottery in je voorkeurstaal. De interface is beschikbaar in 15 talen en groeit nog steeds.",
+        "points": [
+          "15 talen ondersteund",
+          "Automatische detectie",
+          "Eenvoudig taal wisselen",
+          "Community-vertalingen",
+          "Volledige UI-lokalisatie"
+        ],
+        "screenshotDescription": "Griekse taalinterface"
       }
     },
     "tuiFeatures": {

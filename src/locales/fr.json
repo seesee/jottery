@@ -647,6 +647,30 @@
           "Copier les résultats dans les notes"
         ],
         "screenshotDescription": "Interface de calculatrice REPL"
+      },
+      "outliner": {
+        "title": "Mode Plan",
+        "description": "Organisez vos idées avec des plans hiérarchiques. Parfait pour la planification de projets, les notes de réunion et le brainstorming.",
+        "points": [
+          "Points de puce hiérarchiques",
+          "Sections repliables",
+          "Restructuration facile",
+          "Navigation au clavier",
+          "Export en markdown"
+        ],
+        "screenshotDescription": "Mode plan avec structure hiérarchique"
+      },
+      "multilingual": {
+        "title": "Interface multilingue",
+        "description": "Utilisez Jottery dans votre langue préférée. L'interface est disponible en 15 langues et continue de croître.",
+        "points": [
+          "15 langues supportées",
+          "Détection automatique",
+          "Changement de langue facile",
+          "Traductions communautaires",
+          "Localisation complète de l'interface"
+        ],
+        "screenshotDescription": "Interface en grec"
       }
     },
     "tuiFeatures": {

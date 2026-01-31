@@ -647,6 +647,30 @@
           "결과를 노트에 복사"
         ],
         "screenshotDescription": "REPL 계산기 인터페이스"
+      },
+      "outliner": {
+        "title": "개요 모드",
+        "description": "계층적 개요로 생각을 정리하세요. 프로젝트 계획, 회의 노트, 브레인스토밍에 완벽합니다.",
+        "points": [
+          "계층적 글머리 기호",
+          "접을 수 있는 섹션",
+          "쉬운 재구성",
+          "키보드 탐색",
+          "마크다운으로 내보내기"
+        ],
+        "screenshotDescription": "계층 구조를 가진 개요 모드"
+      },
+      "multilingual": {
+        "title": "다국어 인터페이스",
+        "description": "선호하는 언어로 Jottery를 사용하세요. 인터페이스는 15개 언어로 제공되며 계속 늘어나고 있습니다.",
+        "points": [
+          "15개 언어 지원",
+          "자동 감지",
+          "쉬운 언어 전환",
+          "커뮤니티 번역",
+          "완전한 UI 현지화"
+        ],
+        "screenshotDescription": "그리스어 인터페이스"
       }
     },
     "tuiFeatures": {

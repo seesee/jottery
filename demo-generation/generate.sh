@@ -38,6 +38,10 @@ DEMOS[web-mobile-japan-light]="Playwright mobile Japan note screenshot (light mo
 DEMOS[web-mobile-japan-dark]="Playwright mobile Japan note screenshot (dark mode)"
 DEMOS[web-mobile-calculator-light]="Playwright mobile calculator screenshot (light mode)"
 DEMOS[web-mobile-calculator-dark]="Playwright mobile calculator screenshot (dark mode)"
+DEMOS[web-outliner-light]="Playwright outliner mode screenshot (light mode)"
+DEMOS[web-outliner-dark]="Playwright outliner mode screenshot (dark mode)"
+DEMOS[web-greek-ui-light]="Playwright Greek UI screenshot (light mode)"
+DEMOS[web-greek-ui-dark]="Playwright Greek UI screenshot (dark mode)"
 DEMOS[tui-cli]="VHS TUI CLI commands demo"
 DEMOS[tui-interface]="VHS TUI interactive interface demo"
 DEMOS[tui-piping]="VHS TUI piping content demo"
@@ -219,6 +223,18 @@ else
       ;;
     web-mobile-calculator-dark)
       generate_web_screenshots "08-mobile-dark.*Calculator"
+      ;;
+    web-outliner-light)
+      generate_web_screenshots "09-light.*Outliner"
+      ;;
+    web-outliner-dark)
+      generate_web_screenshots "09-dark.*Outliner"
+      ;;
+    web-greek-ui-light)
+      generate_web_screenshots "10-light.*Greek"
+      ;;
+    web-greek-ui-dark)
+      generate_web_screenshots "10-dark.*Greek"
       ;;
     tui-*)
       generate_vhs_demo "$SPECIFIC_DEMO"

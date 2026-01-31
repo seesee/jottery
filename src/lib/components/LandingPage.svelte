@@ -116,6 +116,18 @@
       screenshotLight: '/screenshots/en-GB/05-calculator-light.png',
       screenshotDark: '/screenshots/en-GB/05-calculator-dark.png',
     },
+    {
+      key: 'outliner',
+      icon: '📋',
+      screenshotLight: '/screenshots/en-GB/09-outliner-light.png',
+      screenshotDark: '/screenshots/en-GB/09-outliner-dark.png',
+    },
+    {
+      key: 'multilingual',
+      icon: '🌍',
+      screenshotLight: '/screenshots/en-GB/10-greek-ui-light.png',
+      screenshotDark: '/screenshots/en-GB/10-greek-ui-dark.png',
+    },
   ];
 
   const tuiFeatures = [

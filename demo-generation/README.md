@@ -79,6 +79,10 @@ Run `./demo-generation/generate.sh --list` to see all available demos.
 - `web-mobile-japan-dark` - Mobile Japan itinerary note (dark mode)
 - `web-mobile-calculator-light` - Mobile calculator note (light mode)
 - `web-mobile-calculator-dark` - Mobile calculator note (dark mode)
+- `web-outliner-light` - Outliner mode (light mode)
+- `web-outliner-dark` - Outliner mode (dark mode)
+- `web-greek-ui-light` - Greek multi-lingual UI (light mode)
+- `web-greek-ui-dark` - Greek multi-lingual UI (dark mode)
 
 ### TUI Demos (VHS)
 - `tui-cli` - CLI commands help screen
@@ -276,6 +280,10 @@ public/screenshots/en-GB/
 ├── 07-mobile-japan-dark.png
 ├── 08-mobile-calculator-light.png
 ├── 08-mobile-calculator-dark.png
+├── 09-outliner-light.png
+├── 09-outliner-dark.png
+├── 10-greek-ui-light.png
+├── 10-greek-ui-dark.png
 ├── tui-cli.gif
 ├── tui-piping.gif
 ├── tui-interface.gif

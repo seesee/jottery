@@ -647,6 +647,30 @@
           "将结果复制到笔记"
         ],
         "screenshotDescription": "REPL 计算器界面"
+      },
+      "outliner": {
+        "title": "大纲模式",
+        "description": "用层级大纲组织您的想法。非常适合项目规划、会议笔记和头脑风暴。",
+        "points": [
+          "层级项目符号",
+          "可折叠的部分",
+          "轻松重组",
+          "键盘导航",
+          "导出为 Markdown"
+        ],
+        "screenshotDescription": "带有层级结构的大纲模式"
+      },
+      "multilingual": {
+        "title": "多语言界面",
+        "description": "用您喜欢的语言使用 Jottery。界面支持 15 种语言，并持续增加中。",
+        "points": [
+          "支持 15 种语言",
+          "自动检测",
+          "轻松切换语言",
+          "社区翻译",
+          "完整的 UI 本地化"
+        ],
+        "screenshotDescription": "希腊语界面"
       }
     },
     "tuiFeatures": {

@@ -647,6 +647,30 @@
           "Kopiuj wyniki do notatek"
         ],
         "screenshotDescription": "Interfejs kalkulatora REPL"
+      },
+      "outliner": {
+        "title": "Tryb konspektu",
+        "description": "Organizuj swoje myśli za pomocą hierarchicznych konspektów. Idealny do planowania projektów, notatek ze spotkań i burzy mózgów.",
+        "points": [
+          "Hierarchiczne punktory",
+          "Zwijane sekcje",
+          "Łatwa restrukturyzacja",
+          "Nawigacja klawiaturą",
+          "Eksport do markdown"
+        ],
+        "screenshotDescription": "Tryb konspektu ze strukturą hierarchiczną"
+      },
+      "multilingual": {
+        "title": "Wielojęzyczny interfejs",
+        "description": "Używaj Jottery w preferowanym języku. Interfejs jest dostępny w 15 językach i ciągle się rozwija.",
+        "points": [
+          "15 języków obsługiwanych",
+          "Automatyczne wykrywanie",
+          "Łatwa zmiana języka",
+          "Tłumaczenia społeczności",
+          "Pełna lokalizacja UI"
+        ],
+        "screenshotDescription": "Interfejs w języku greckim"
       }
     },
     "tuiFeatures": {

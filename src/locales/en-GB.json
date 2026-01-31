@@ -636,6 +636,30 @@
           "Copy results to notes"
         ],
         "screenshotDescription": "REPL calculator interface"
+      },
+      "outliner": {
+        "title": "Outliner Mode",
+        "description": "Organise your thoughts with hierarchical outlines. Perfect for planning projects, meeting notes, and brainstorming.",
+        "points": [
+          "Hierarchical bullet points",
+          "Collapsible sections",
+          "Easy restructuring",
+          "Keyboard navigation",
+          "Export to markdown"
+        ],
+        "screenshotDescription": "Outliner mode with hierarchical structure"
+      },
+      "multilingual": {
+        "title": "Multi-lingual Interface",
+        "description": "Use Jottery in your preferred language. The interface is available in 15 languages and growing.",
+        "points": [
+          "15 languages supported",
+          "Automatic detection",
+          "Easy language switching",
+          "Community translations",
+          "Full UI localisation"
+        ],
+        "screenshotDescription": "Greek language interface"
       }
     },
     "tuiFeatures": {
