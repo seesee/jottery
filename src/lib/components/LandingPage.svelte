@@ -16,6 +16,23 @@
   let isDarkMode = false;
   let currentCarouselSlide = 0;
   let carouselInterval: ReturnType<typeof setInterval>;
+  let lightboxImage: { src: string; alt: string } | null = null;
+
+  function openLightbox(src: string, alt: string) {
+    lightboxImage = { src, alt };
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightboxImage = null;
+    document.body.style.overflow = '';
+  }
+
+  function handleLightboxKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      closeLightbox();
+    }
+  }
 
   // Carousel screenshots
   const carouselScreenshots = {
@@ -192,11 +209,18 @@
               class="carousel-slide"
               class:active={currentCarouselSlide === index}
             >
-              <img
-                src={screenshot.src}
-                alt={screenshot.alt}
-                class="hero-image"
-              />
+              <button
+                type="button"
+                class="screenshot-button"
+                on:click={() => openLightbox(screenshot.src, screenshot.alt)}
+                aria-label="View full size: {screenshot.alt}"
+              >
+                <img
+                  src={screenshot.src}
+                  alt={screenshot.alt}
+                  class="hero-image"
+                />
+              </button>
             </div>
           {/each}
 
@@ -252,11 +276,18 @@
             </div>
             <div class="showcase-screenshot">
               {#if getScreenshot(feature)}
-                <img
-                  src={getScreenshot(feature)}
-                  alt={$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}
-                  class="showcase-image"
-                />
+                <button
+                  type="button"
+                  class="screenshot-button"
+                  on:click={() => openLightbox(getScreenshot(feature), $_(`landing.webFeatures.${feature.key}.screenshotDescription`))}
+                  aria-label="View full size: {$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}"
+                >
+                  <img
+                    src={getScreenshot(feature)}
+                    alt={$_(`landing.webFeatures.${feature.key}.screenshotDescription`)}
+                    class="showcase-image"
+                  />
+                </button>
               {:else}
                 <ScreenshotPlaceholder
                   width={800}
@@ -283,11 +314,18 @@
           <div class="tui-card">
             <div class="tui-screenshot">
               {#if feature.screenshot}
-                <img
-                  src={feature.screenshot}
-                  alt={$_(`landing.tuiFeatures.${feature.key}.screenshotDescription`)}
-                  class="screenshot-image"
-                />
+                <button
+                  type="button"
+                  class="screenshot-button"
+                  on:click={() => openLightbox(feature.screenshot, $_(`landing.tuiFeatures.${feature.key}.screenshotDescription`))}
+                  aria-label="View full size: {$_(`landing.tuiFeatures.${feature.key}.screenshotDescription`)}"
+                >
+                  <img
+                    src={feature.screenshot}
+                    alt={$_(`landing.tuiFeatures.${feature.key}.screenshotDescription`)}
+                    class="screenshot-image"
+                  />
+                </button>
               {:else}
                 <ScreenshotPlaceholder
                   width={800}
@@ -321,11 +359,18 @@
         {#each mobileScreenshots as item}
           <div class="mobile-card">
             <div class="mobile-screenshot">
-              <img
-                src={getMobileScreenshot(item)}
-                alt={$_(`landing.mobileFeatures.${item.key}.alt`)}
-                class="mobile-image"
-              />
+              <button
+                type="button"
+                class="screenshot-button"
+                on:click={() => openLightbox(getMobileScreenshot(item), $_(`landing.mobileFeatures.${item.key}.alt`))}
+                aria-label="View full size: {$_(`landing.mobileFeatures.${item.key}.alt`)}"
+              >
+                <img
+                  src={getMobileScreenshot(item)}
+                  alt={$_(`landing.mobileFeatures.${item.key}.alt`)}
+                  class="mobile-image"
+                />
+              </button>
             </div>
             <div class="mobile-caption">
               {$_(`landing.mobileFeatures.${item.key}.caption`)}
@@ -390,6 +435,39 @@
       </div>
     </div>
   </section>
+
+  <!-- Lightbox Modal -->
+  {#if lightboxImage}
+    <div
+      class="lightbox-overlay"
+      on:click={closeLightbox}
+      on:keydown={handleLightboxKeydown}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Full size image view"
+      tabindex="-1"
+    >
+      <button
+        type="button"
+        class="lightbox-close"
+        on:click={closeLightbox}
+        aria-label="Close lightbox"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="lightbox-content" on:click|stopPropagation>
+        <img
+          src={lightboxImage.src}
+          alt={lightboxImage.alt}
+          class="lightbox-image"
+        />
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -835,6 +913,12 @@
     width: 100%;
   }
 
+  .screenshot-image {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
   .tui-content {
     padding: 2rem;
   }
@@ -1058,5 +1142,107 @@
 
   .cta-link:hover {
     opacity: 0.8;
+  }
+
+  /* Screenshot Button */
+  .screenshot-button {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    cursor: zoom-in;
+    transition: transform 0.2s;
+  }
+
+  .screenshot-button:hover {
+    transform: scale(1.01);
+  }
+
+  .screenshot-button:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 4px;
+    border-radius: 0.5rem;
+  }
+
+  /* Lightbox */
+  .lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    cursor: zoom-out;
+    animation: lightbox-fade-in 0.2s ease-out;
+  }
+
+  @keyframes lightbox-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    z-index: 10001;
+  }
+
+  .lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+  }
+
+  .lightbox-close:focus {
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
+
+  .lightbox-content {
+    max-width: 95vw;
+    max-height: 95vh;
+    cursor: default;
+    animation: lightbox-zoom-in 0.2s ease-out;
+  }
+
+  @keyframes lightbox-zoom-in {
+    from {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .lightbox-image {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 </style>
