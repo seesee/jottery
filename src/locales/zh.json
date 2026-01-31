@@ -677,6 +677,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "移动端友好",
+      "subtitle": "通过响应式移动界面随时随地访问您的笔记",
+      "list": {
+        "alt": "移动端笔记列表视图",
+        "caption": "笔记列表"
+      },
+      "japan": {
+        "alt": "显示日本行程的移动端笔记视图",
+        "caption": "笔记视图"
+      },
+      "calculator": {
+        "alt": "移动端计算器笔记",
+        "caption": "计算器"
+      }
+    },
     "security": {
       "title": "安全和隐私优先",
       "lead": "您的笔记属于您。Jottery 在设计时将隐私和安全放在核心位置。",

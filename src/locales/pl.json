@@ -677,6 +677,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "Przyjazny dla urządzeń mobilnych",
+      "subtitle": "Dostęp do notatek w podróży dzięki responsywnemu interfejsowi mobilnemu",
+      "list": {
+        "alt": "Mobilny widok listy notatek",
+        "caption": "Lista notatek"
+      },
+      "japan": {
+        "alt": "Mobilny widok notatki z trasą po Japonii",
+        "caption": "Widok notatki"
+      },
+      "calculator": {
+        "alt": "Mobilna notatka kalkulatora",
+        "caption": "Kalkulator"
+      }
+    },
     "security": {
       "title": "Bezpieczeństwo i prywatność na pierwszym miejscu",
       "lead": "Twoje notatki należą do ciebie. Jottery został zaprojektowany z prywatnością i bezpieczeństwem w sercu.",

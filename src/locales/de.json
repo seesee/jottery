@@ -677,6 +677,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "Mobilfreundlich",
+      "subtitle": "Greifen Sie unterwegs auf Ihre Notizen mit einer responsiven mobilen Oberfläche zu",
+      "list": {
+        "alt": "Mobile Notizlistenansicht",
+        "caption": "Notizliste"
+      },
+      "japan": {
+        "alt": "Mobile Notizansicht mit Japan-Reiseroute",
+        "caption": "Notizansicht"
+      },
+      "calculator": {
+        "alt": "Mobile Taschenrechner-Notiz",
+        "caption": "Rechner"
+      }
+    },
     "security": {
       "title": "Sicherheit & Datenschutz zuerst",
       "lead": "Ihre Notizen gehören Ihnen. Jottery ist mit Datenschutz und Sicherheit im Kern konzipiert.",

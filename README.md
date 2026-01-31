@@ -192,6 +192,19 @@ If you prefer to run the components manually, you can follow these steps:
 **Sync Operations**
 ![TUI Sync](public/screenshots/en-GB/tui-sync.gif)
 
+### Mobile
+
+Jottery works great on mobile devices too.
+
+**Note List**
+![Mobile List](public/screenshots/en-GB/06-mobile-list.png)
+
+**Japan Itinerary**
+![Mobile Japan](public/screenshots/en-GB/07-mobile-japan.png)
+
+**Calculator**
+![Mobile Calculator](public/screenshots/en-GB/08-mobile-calculator.png)
+
 ## Caveats
 *   **Sync**: The sync mechanism is quite robust but very basic. Updates are sent periodically and the last version to be received "wins". To mitigate against accidental deletions, the previous version is also stored.
 *   **Security**: Use a strong password -- all data blobs (notes, tags, attachments) are encrypted using it. If you forget your password, there is no recovery process. You will lose all your notes and will need to start over. Because it's handy for development purposes, there is a mechanism to store the password in both web and tui app (this is NOT synced) so you don't need to constantly input your password -- but if you use this, your notes are basically plain text to anyone with access to your device/db files. I suggest using a password manager.

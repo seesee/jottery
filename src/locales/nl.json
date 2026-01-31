@@ -677,6 +677,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "Mobiel vriendelijk",
+      "subtitle": "Toegang tot je notities onderweg met een responsieve mobiele interface",
+      "list": {
+        "alt": "Mobiele notitielijstweergave",
+        "caption": "Notitielijst"
+      },
+      "japan": {
+        "alt": "Mobiele notitieweergave met Japan-reisroute",
+        "caption": "Notitieweergave"
+      },
+      "calculator": {
+        "alt": "Mobiele rekenmachinenotitie",
+        "caption": "Rekenmachine"
+      }
+    },
     "security": {
       "title": "Beveiliging en privacy eerst",
       "lead": "Je notities zijn van jou. Jottery is ontworpen met privacy en beveiliging als kern.",

@@ -73,6 +73,9 @@ Run `./demo-generation/generate.sh --list` to see all available demos.
 - `web-version-history-dark` - Version history (dark mode)
 - `web-calculator-light` - REPL calculator (light mode)
 - `web-calculator-dark` - REPL calculator (dark mode)
+- `web-mobile-list` - Mobile note list view
+- `web-mobile-japan` - Mobile Japan itinerary note
+- `web-mobile-calculator` - Mobile calculator note
 
 ### TUI Demos (VHS)
 - `tui-cli` - CLI commands help screen
@@ -264,6 +267,9 @@ public/screenshots/en-GB/
 ├── 04-version-history-dark.png
 ├── 05-calculator-light.png
 ├── 05-calculator-dark.png
+├── 06-mobile-list.png
+├── 07-mobile-japan.png
+├── 08-mobile-calculator.png
 ├── tui-cli.gif
 ├── tui-piping.gif
 ├── tui-interface.gif

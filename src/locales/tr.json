@@ -677,6 +677,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "Mobil uyumlu",
+      "subtitle": "Duyarlı mobil arayüzle notlarınıza hareket halindeyken erişin",
+      "list": {
+        "alt": "Mobil not listesi görünümü",
+        "caption": "Not listesi"
+      },
+      "japan": {
+        "alt": "Japonya güzergahını gösteren mobil not görünümü",
+        "caption": "Not görünümü"
+      },
+      "calculator": {
+        "alt": "Mobil hesap makinesi notu",
+        "caption": "Hesap makinesi"
+      }
+    },
     "security": {
       "title": "Önce güvenlik ve gizlilik",
       "lead": "Notlarınız size aittir. Jottery, gizlilik ve güvenlik merkezli olarak tasarlanmıştır.",

@@ -125,6 +125,12 @@
     { key: 'crossPlatform', icon: '🌐', screenshot: '/screenshots/en-GB/tui-sync.gif' },
   ];
 
+  const mobileScreenshots = [
+    { key: 'list', screenshot: '/screenshots/en-GB/06-mobile-list.png' },
+    { key: 'japan', screenshot: '/screenshots/en-GB/07-mobile-japan.png' },
+    { key: 'calculator', screenshot: '/screenshots/en-GB/08-mobile-calculator.png' },
+  ];
+
   // Helper to get the appropriate screenshot based on theme
   $: getScreenshot = (feature: WebFeature) => {
     if (isDarkMode && feature.screenshotDark) {
@@ -281,6 +287,31 @@
               {#if $_(`landing.tuiFeatures.${feature.key}.code`)}
                 <pre class="tui-code"><code>{$_(`landing.tuiFeatures.${feature.key}.code`)}</code></pre>
               {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </section>
+
+  <!-- Mobile Features -->
+  <section class="mobile-features">
+    <div class="container">
+      <h2 class="section-title">{$_('landing.mobileFeatures.title')}</h2>
+      <p class="section-subtitle">{$_('landing.mobileFeatures.subtitle')}</p>
+
+      <div class="mobile-grid">
+        {#each mobileScreenshots as item}
+          <div class="mobile-card">
+            <div class="mobile-screenshot">
+              <img
+                src={item.screenshot}
+                alt={$_(`landing.mobileFeatures.${item.key}.alt`)}
+                class="mobile-image"
+              />
+            </div>
+            <div class="mobile-caption">
+              {$_(`landing.mobileFeatures.${item.key}.caption`)}
             </div>
           </div>
         {/each}
@@ -829,6 +860,55 @@
 
   :global(.dark) .tui-code {
     background: #0f172a;
+  }
+
+  /* Mobile Features */
+  .mobile-features {
+    padding: 4rem 0;
+  }
+
+  .mobile-grid {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-card {
+    flex: 0 0 auto;
+    max-width: 280px;
+    text-align: center;
+  }
+
+  .mobile-screenshot {
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+    background: #1e293b;
+    padding: 0.5rem;
+  }
+
+  :global(.dark) .mobile-screenshot {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  }
+
+  .mobile-image {
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    display: block;
+  }
+
+  .mobile-caption {
+    margin-top: 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #475569;
+  }
+
+  :global(.dark) .mobile-caption {
+    color: #94a3b8;
   }
 
   /* Security Section */

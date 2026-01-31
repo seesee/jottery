@@ -677,6 +677,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "Compatible con móviles",
+      "subtitle": "Accede a tus notas sobre la marcha con una interfaz móvil responsive",
+      "list": {
+        "alt": "Vista de lista de notas en móvil",
+        "caption": "Lista de notas"
+      },
+      "japan": {
+        "alt": "Vista de nota móvil mostrando itinerario de Japón",
+        "caption": "Vista de nota"
+      },
+      "calculator": {
+        "alt": "Nota de calculadora en móvil",
+        "caption": "Calculadora"
+      }
+    },
     "security": {
       "title": "Seguridad y privacidad primero",
       "lead": "Tus notas te pertenecen. Jottery está diseñado con privacidad y seguridad en su núcleo.",

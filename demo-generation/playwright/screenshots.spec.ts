@@ -790,3 +790,162 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/05-calculator-dark.png');
   });
 });
+
+test.describe('Landing Page Screenshots - Mobile', () => {
+  // iPhone 12 viewport
+  const MOBILE_VIEWPORT = { width: 390, height: 844 };
+
+  test.beforeEach(async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize(MOBILE_VIEWPORT);
+
+    // Clear all storage before test
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+      indexedDB.databases().then((dbs) => {
+        dbs.forEach((db) => {
+          if (db.name) indexedDB.deleteDatabase(db.name);
+        });
+      });
+    });
+
+    // Reload and set up password
+    await page.goto('/');
+
+    // Wait for landing page, then click "Try It Out"
+    await page.waitForTimeout(1000);
+    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const isTryItVisible = await tryItButton.isVisible().catch(() => false);
+
+    if (isTryItVisible) {
+      await tryItButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Set up password
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.first().waitFor({ state: 'visible' });
+    await passwordInputs.first().fill('screenshot-test-password');
+    await passwordInputs.nth(1).fill('screenshot-test-password');
+    await page.locator('button[type="submit"]').click();
+
+    // Wait for app to load
+    await page.waitForTimeout(2000);
+
+    // Import demo notes
+    await importDemoNotes(page);
+
+    // Set tag colors for demo, recipe, and notes tags
+    await setTagColors(page, {
+      demo: 'blue',
+      recipe: 'orange',
+      notes: 'purple',
+    });
+
+    // Wait for tag colors to apply
+    await page.waitForTimeout(1000);
+  });
+
+  test('06-mobile. Note List View', async ({ page }) => {
+    // Wait for app to settle
+    await page.waitForTimeout(1000);
+
+    // Take screenshot of the note list (mobile shows list by default)
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/06-mobile-list.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/06-mobile-list.png');
+  });
+
+  test('07-mobile. Japan Itinerary Note', async ({ page }) => {
+    // Wait for app to settle
+    await page.waitForTimeout(1000);
+
+    // Find and click the Japan Trip note
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
+    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
+    await japanNote.waitFor({ state: 'visible' });
+    await japanNote.click();
+    await page.waitForTimeout(1000);
+
+    // Take screenshot of the note view
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/07-mobile-japan.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-japan.png');
+  });
+
+  test('08-mobile. Calculator Note', async ({ page }) => {
+    // Wait for app to settle
+    await page.waitForTimeout(1000);
+
+    // Create a new note
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    await newButton.click();
+    await page.waitForTimeout(1000);
+
+    // Find the language dropdown and select calc
+    const languageDropdown = page.locator('select').first();
+    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+    await languageDropdown.selectOption('calc');
+    await page.waitForTimeout(1000);
+
+    // Find the editor and focus it
+    const editor = page.locator('.cm-content').first();
+    await editor.click();
+    await page.waitForTimeout(500);
+
+    // Type calculator examples
+    await page.keyboard.type('1 + 1');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('2 + 2');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('10 * 5');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('100 / 4');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('2^8');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('sqrt(144)');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('# Budget calc');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('income = 5000');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('rent = 1500');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+
+    await page.keyboard.type('income - rent');
+    await page.waitForTimeout(1000);
+
+    // Take screenshot
+    await page.screenshot({
+      path: `${SCREENSHOT_DIR}/08-mobile-calculator.png`,
+      fullPage: false,
+    });
+
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/08-mobile-calculator.png');
+  });
+});

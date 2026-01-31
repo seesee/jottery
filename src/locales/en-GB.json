@@ -666,6 +666,22 @@
         "code": ""
       }
     },
+    "mobileFeatures": {
+      "title": "Mobile Friendly",
+      "subtitle": "Access your notes on the go with a responsive mobile interface",
+      "list": {
+        "alt": "Mobile note list view",
+        "caption": "Note List"
+      },
+      "japan": {
+        "alt": "Mobile note view showing Japan itinerary",
+        "caption": "Note View"
+      },
+      "calculator": {
+        "alt": "Mobile calculator note",
+        "caption": "Calculator"
+      }
+    },
     "security": {
       "title": "How Your Data Works",
       "lead": "Jottery keeps things simple. Your notes live on your device, and you're always in control.",
