@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Максимальный размер на запрос синхронизации (включая вложения)",
       "settingsSaved": "Настройки пользователя сохранены",
       "settingsSaveFailed": "Не удалось сохранить настройки: {error}",
-      "settingsSaveFailedGeneric": "Не удалось сохранить настройки"
+      "settingsSaveFailedGeneric": "Не удалось сохранить настройки",
+      "viewDetails": "Нажмите для просмотра деталей",
+      "passwordReset": "Сброс пароля",
+      "resetPassword": "Сбросить пароль",
+      "newPassword": "Новый пароль",
+      "newPasswordPlaceholder": "Введите новый пароль",
+      "confirmPassword": "Подтвердите пароль",
+      "confirmPasswordPlaceholder": "Подтвердите новый пароль",
+      "passwordRequirement": "Минимум 12 символов",
+      "passwordTooShort": "Пароль должен содержать не менее 12 символов",
+      "passwordMismatch": "Пароли не совпадают",
+      "passwordResetSuccess": "Пароль для {email} успешно сброшен",
+      "passwordResetFailed": "Не удалось сбросить пароль: {error}",
+      "passwordResetFailedGeneric": "Не удалось сбросить пароль",
+      "passwordResetHelp": "Сбросьте пароль пользователя, если он его забыл.",
+      "passwordResetWarning": "Это изменит только пароль для входа в аккаунт. Это не повлияет на шифрование заметок. Если пользователь забыл пароль шифрования, его заметки невозможно восстановить."
     },
     "filters": {
       "all": "Все",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Настройки",
+    "language": {
+      "title": "Язык",
+      "description": "Выберите предпочитаемый язык для интерфейса администратора.",
+      "label": "Язык отображения"
+    },
     "changePassword": {
       "title": "Изменить пароль",
       "description": "Обновите пароль администратора. Пароль должен содержать не менее 12 символов.",

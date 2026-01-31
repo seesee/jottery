@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Maksymalny rozmiar na żądanie synchronizacji (zawiera załączniki)",
       "settingsSaved": "Ustawienia użytkownika zostały zapisane",
       "settingsSaveFailed": "Nie udało się zapisać ustawień: {error}",
-      "settingsSaveFailedGeneric": "Nie udało się zapisać ustawień"
+      "settingsSaveFailedGeneric": "Nie udało się zapisać ustawień",
+      "viewDetails": "Kliknij, aby zobaczyć szczegóły",
+      "passwordReset": "Resetowanie hasła",
+      "resetPassword": "Resetuj hasło",
+      "newPassword": "Nowe hasło",
+      "newPasswordPlaceholder": "Wprowadź nowe hasło",
+      "confirmPassword": "Potwierdź hasło",
+      "confirmPasswordPlaceholder": "Potwierdź nowe hasło",
+      "passwordRequirement": "Minimum 12 znaków",
+      "passwordTooShort": "Hasło musi mieć co najmniej 12 znaków",
+      "passwordMismatch": "Hasła nie są zgodne",
+      "passwordResetSuccess": "Hasło dla {email} zostało pomyślnie zresetowane",
+      "passwordResetFailed": "Nie udało się zresetować hasła: {error}",
+      "passwordResetFailedGeneric": "Nie udało się zresetować hasła",
+      "passwordResetHelp": "Zresetuj hasło użytkownika, jeśli je zapomniał.",
+      "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane."
     },
     "filters": {
       "all": "Wszyscy",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Ustawienia",
+    "language": {
+      "title": "Język",
+      "description": "Wybierz preferowany język interfejsu administratora.",
+      "label": "Język wyświetlania"
+    },
     "changePassword": {
       "title": "Zmień hasło",
       "description": "Zaktualizuj hasło administratora. Hasło musi mieć co najmniej 12 znaków.",

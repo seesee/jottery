@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "每次同步请求的最大大小（包括附件）",
       "settingsSaved": "用户设置已成功保存",
       "settingsSaveFailed": "保存设置失败: {error}",
-      "settingsSaveFailedGeneric": "保存设置失败"
+      "settingsSaveFailedGeneric": "保存设置失败",
+      "viewDetails": "点击查看详情",
+      "passwordReset": "重置密码",
+      "resetPassword": "重置密码",
+      "newPassword": "新密码",
+      "newPasswordPlaceholder": "输入新密码",
+      "confirmPassword": "确认密码",
+      "confirmPasswordPlaceholder": "确认新密码",
+      "passwordRequirement": "最少12个字符",
+      "passwordTooShort": "密码必须至少包含12个字符",
+      "passwordMismatch": "密码不匹配",
+      "passwordResetSuccess": "{email}的密码已成功重置",
+      "passwordResetFailed": "重置密码失败：{error}",
+      "passwordResetFailedGeneric": "重置密码失败",
+      "passwordResetHelp": "如果用户忘记了密码，请为其重置。",
+      "passwordResetWarning": "这只会更改账户登录密码，不会影响笔记加密。如果用户忘记了加密密码，其笔记将无法恢复。"
     },
     "filters": {
       "all": "全部",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "设置",
+    "language": {
+      "title": "语言",
+      "description": "选择管理界面的首选语言。",
+      "label": "显示语言"
+    },
     "changePassword": {
       "title": "更改密码",
       "description": "更新您的管理员密码。密码必须至少包含12个字符。",

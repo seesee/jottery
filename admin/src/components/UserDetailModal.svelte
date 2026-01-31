@@ -388,6 +388,9 @@
 
           {#if showPasswordReset}
             <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+              <div class="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded text-sm">
+                {$_('users.detail.passwordResetWarning')}
+              </div>
               <div>
                 <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">
                   {$_('users.detail.newPassword')}

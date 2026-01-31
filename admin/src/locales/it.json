@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Dimensione massima per richiesta di sincronizzazione (include allegati)",
       "settingsSaved": "Impostazioni utente salvate con successo",
       "settingsSaveFailed": "Impossibile salvare le impostazioni: {error}",
-      "settingsSaveFailedGeneric": "Impossibile salvare le impostazioni"
+      "settingsSaveFailedGeneric": "Impossibile salvare le impostazioni",
+      "viewDetails": "Clicca per vedere i dettagli",
+      "passwordReset": "Reimposta password",
+      "resetPassword": "Reimposta password",
+      "newPassword": "Nuova password",
+      "newPasswordPlaceholder": "Inserisci nuova password",
+      "confirmPassword": "Conferma password",
+      "confirmPasswordPlaceholder": "Conferma nuova password",
+      "passwordRequirement": "Minimo 12 caratteri",
+      "passwordTooShort": "La password deve avere almeno 12 caratteri",
+      "passwordMismatch": "Le password non corrispondono",
+      "passwordResetSuccess": "Password di {email} reimpostata con successo",
+      "passwordResetFailed": "Impossibile reimpostare la password: {error}",
+      "passwordResetFailedGeneric": "Impossibile reimpostare la password",
+      "passwordResetHelp": "Reimposta la password dell'utente se l'ha dimenticata.",
+      "passwordResetWarning": "Questo cambia solo la password di accesso. Non influisce sulla crittografia delle note. Se l'utente ha dimenticato la password di crittografia, le sue note non possono essere recuperate."
     },
     "filters": {
       "all": "Tutti",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Impostazioni",
+    "language": {
+      "title": "Lingua",
+      "description": "Seleziona la tua lingua preferita per l'interfaccia di amministrazione.",
+      "label": "Lingua di visualizzazione"
+    },
     "changePassword": {
       "title": "Cambia password",
       "description": "Aggiorna la tua password amministratore. La password deve essere di almeno 12 caratteri.",

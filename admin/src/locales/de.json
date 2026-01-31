@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Maximale Größe pro Sync-Anfrage (inkl. Anhänge)",
       "settingsSaved": "Benutzereinstellungen erfolgreich gespeichert",
       "settingsSaveFailed": "Fehler beim Speichern der Einstellungen: {error}",
-      "settingsSaveFailedGeneric": "Fehler beim Speichern der Einstellungen"
+      "settingsSaveFailedGeneric": "Fehler beim Speichern der Einstellungen",
+      "viewDetails": "Klicken, um Details anzuzeigen",
+      "passwordReset": "Passwort zurücksetzen",
+      "resetPassword": "Passwort zurücksetzen",
+      "newPassword": "Neues Passwort",
+      "newPasswordPlaceholder": "Neues Passwort eingeben",
+      "confirmPassword": "Passwort bestätigen",
+      "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
+      "passwordRequirement": "Mindestens 12 Zeichen",
+      "passwordTooShort": "Passwort muss mindestens 12 Zeichen lang sein",
+      "passwordMismatch": "Passwörter stimmen nicht überein",
+      "passwordResetSuccess": "Passwort für {email} wurde erfolgreich zurückgesetzt",
+      "passwordResetFailed": "Fehler beim Zurücksetzen des Passworts: {error}",
+      "passwordResetFailedGeneric": "Fehler beim Zurücksetzen des Passworts",
+      "passwordResetHelp": "Setzen Sie das Passwort des Benutzers zurück, wenn er es vergessen hat.",
+      "passwordResetWarning": "Dies ändert nur das Anmeldepasswort. Die Notizen-Verschlüsselung bleibt unberührt. Wenn der Benutzer sein Verschlüsselungspasswort vergessen hat, können seine Notizen nicht wiederhergestellt werden."
     },
     "filters": {
       "all": "Alle",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "language": {
+      "title": "Sprache",
+      "description": "Wählen Sie Ihre bevorzugte Sprache für die Admin-Oberfläche.",
+      "label": "Anzeigesprache"
+    },
     "changePassword": {
       "title": "Passwort ändern",
       "description": "Aktualisieren Sie Ihr Admin-Passwort. Das Passwort muss mindestens 12 Zeichen lang sein.",

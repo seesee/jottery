@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "同期リクエストあたりの最大サイズ（添付ファイルを含む）",
       "settingsSaved": "ユーザー設定が正常に保存されました",
       "settingsSaveFailed": "設定の保存に失敗しました: {error}",
-      "settingsSaveFailedGeneric": "設定の保存に失敗しました"
+      "settingsSaveFailedGeneric": "設定の保存に失敗しました",
+      "viewDetails": "クリックして詳細を表示",
+      "passwordReset": "パスワードリセット",
+      "resetPassword": "パスワードをリセット",
+      "newPassword": "新しいパスワード",
+      "newPasswordPlaceholder": "新しいパスワードを入力",
+      "confirmPassword": "パスワードの確認",
+      "confirmPasswordPlaceholder": "新しいパスワードを確認",
+      "passwordRequirement": "最低12文字",
+      "passwordTooShort": "パスワードは12文字以上である必要があります",
+      "passwordMismatch": "パスワードが一致しません",
+      "passwordResetSuccess": "{email}のパスワードが正常にリセットされました",
+      "passwordResetFailed": "パスワードのリセットに失敗しました: {error}",
+      "passwordResetFailedGeneric": "パスワードのリセットに失敗しました",
+      "passwordResetHelp": "ユーザーがパスワードを忘れた場合にリセットします。",
+      "passwordResetWarning": "これはアカウントのログインパスワードのみを変更します。ノートの暗号化には影響しません。ユーザーが暗号化パスワードを忘れた場合、ノートは復元できません。"
     },
     "filters": {
       "all": "すべて",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "設定",
+    "language": {
+      "title": "言語",
+      "description": "管理画面の表示言語を選択してください。",
+      "label": "表示言語"
+    },
     "changePassword": {
       "title": "パスワードの変更",
       "description": "管理者パスワードを更新してください。パスワードは12文字以上である必要があります。",

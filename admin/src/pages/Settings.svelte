@@ -1,13 +1,25 @@
 <script lang="ts">
   import { api } from '../lib/api';
   import { toast } from '../lib/toast.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
+  import { AVAILABLE_LOCALES } from '../lib/services/i18nService';
 
   let currentPassword = $state('');
   let newPassword = $state('');
   let confirmPassword = $state('');
   let changingPassword = $state(false);
   let passwordError = $state('');
+
+  // Language setting - stored in localStorage
+  const LANGUAGE_STORAGE_KEY = 'admin_language';
+  let selectedLanguage = $state(localStorage.getItem(LANGUAGE_STORAGE_KEY) || $locale || 'en-GB');
+
+  function handleLanguageChange(event: Event) {
+    const newLocale = (event.target as HTMLSelectElement).value;
+    selectedLanguage = newLocale;
+    locale.set(newLocale);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, newLocale);
+  }
 
   async function handleChangePassword() {
     // Validate inputs
@@ -54,6 +66,30 @@
 
 <div class="space-y-6">
   <h1 class="text-3xl font-bold text-gray-900">{$_('settings.title')}</h1>
+
+  <!-- Language Setting Card -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-4">{$_('settings.language.title')}</h2>
+    <p class="text-sm text-gray-600 mb-6">
+      {$_('settings.language.description')}
+    </p>
+
+    <div class="max-w-xs">
+      <label for="language" class="block text-sm font-medium text-gray-700 mb-1">
+        {$_('settings.language.label')}
+      </label>
+      <select
+        id="language"
+        value={selectedLanguage}
+        onchange={handleLanguageChange}
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      >
+        {#each AVAILABLE_LOCALES as loc}
+          <option value={loc.code}>{loc.name}</option>
+        {/each}
+      </select>
+    </div>
+  </div>
 
   <!-- Change Password Card -->
   <div class="bg-white rounded-lg shadow p-6">

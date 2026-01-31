@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Tamanho máximo por solicitação de sincronização (inclui anexos)",
       "settingsSaved": "Configurações do usuário salvas com sucesso",
       "settingsSaveFailed": "Falha ao salvar configurações: {error}",
-      "settingsSaveFailedGeneric": "Falha ao salvar configurações"
+      "settingsSaveFailedGeneric": "Falha ao salvar configurações",
+      "viewDetails": "Clique para ver detalhes",
+      "passwordReset": "Redefinir senha",
+      "resetPassword": "Redefinir senha",
+      "newPassword": "Nova senha",
+      "newPasswordPlaceholder": "Digite a nova senha",
+      "confirmPassword": "Confirmar senha",
+      "confirmPasswordPlaceholder": "Confirme a nova senha",
+      "passwordRequirement": "Mínimo 12 caracteres",
+      "passwordTooShort": "A senha deve ter pelo menos 12 caracteres",
+      "passwordMismatch": "As senhas não coincidem",
+      "passwordResetSuccess": "Senha de {email} redefinida com sucesso",
+      "passwordResetFailed": "Falha ao redefinir senha: {error}",
+      "passwordResetFailedGeneric": "Falha ao redefinir senha",
+      "passwordResetHelp": "Redefina a senha do usuário se ele a esqueceu.",
+      "passwordResetWarning": "Isso só altera a senha de login. Não afeta a criptografia das notas. Se o usuário esqueceu sua senha de criptografia, suas notas não podem ser recuperadas."
     },
     "filters": {
       "all": "Todos",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Configurações",
+    "language": {
+      "title": "Idioma",
+      "description": "Selecione o seu idioma preferido para a interface de administração.",
+      "label": "Idioma de exibição"
+    },
     "changePassword": {
       "title": "Alterar senha",
       "description": "Atualize a sua senha de administrador. A senha deve ter pelo menos 12 caracteres.",

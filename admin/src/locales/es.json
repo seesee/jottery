@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Tamaño máximo por solicitud de sincronización (incluye adjuntos)",
       "settingsSaved": "Configuración de usuario guardada correctamente",
       "settingsSaveFailed": "Error al guardar la configuración: {error}",
-      "settingsSaveFailedGeneric": "Error al guardar la configuración"
+      "settingsSaveFailedGeneric": "Error al guardar la configuración",
+      "viewDetails": "Haga clic para ver detalles",
+      "passwordReset": "Restablecer contraseña",
+      "resetPassword": "Restablecer contraseña",
+      "newPassword": "Nueva contraseña",
+      "newPasswordPlaceholder": "Ingrese nueva contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "confirmPasswordPlaceholder": "Confirme nueva contraseña",
+      "passwordRequirement": "Mínimo 12 caracteres",
+      "passwordTooShort": "La contraseña debe tener al menos 12 caracteres",
+      "passwordMismatch": "Las contraseñas no coinciden",
+      "passwordResetSuccess": "Contraseña de {email} restablecida exitosamente",
+      "passwordResetFailed": "Error al restablecer contraseña: {error}",
+      "passwordResetFailedGeneric": "Error al restablecer contraseña",
+      "passwordResetHelp": "Restablezca la contraseña del usuario si la ha olvidado.",
+      "passwordResetWarning": "Esto solo cambia la contraseña de inicio de sesión. No afecta el cifrado de notas. Si el usuario olvidó su contraseña de cifrado, sus notas no pueden recuperarse."
     },
     "filters": {
       "all": "Todos",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Configuración",
+    "language": {
+      "title": "Idioma",
+      "description": "Seleccione su idioma preferido para la interfaz de administración.",
+      "label": "Idioma de visualización"
+    },
     "changePassword": {
       "title": "Cambiar contraseña",
       "description": "Actualiza tu contraseña de administrador. La contraseña debe tener al menos 12 caracteres.",

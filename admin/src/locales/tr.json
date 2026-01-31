@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Senkronizasyon isteği başına maksimum boyut (ekler dahil)",
       "settingsSaved": "Kullanıcı ayarları başarıyla kaydedildi",
       "settingsSaveFailed": "Ayarlar kaydedilemedi: {error}",
-      "settingsSaveFailedGeneric": "Ayarlar kaydedilemedi"
+      "settingsSaveFailedGeneric": "Ayarlar kaydedilemedi",
+      "viewDetails": "Ayrıntıları görmek için tıklayın",
+      "passwordReset": "Parola Sıfırlama",
+      "resetPassword": "Parolayı Sıfırla",
+      "newPassword": "Yeni Parola",
+      "newPasswordPlaceholder": "Yeni parolayı girin",
+      "confirmPassword": "Parolayı Onayla",
+      "confirmPasswordPlaceholder": "Yeni parolayı onaylayın",
+      "passwordRequirement": "En az 12 karakter",
+      "passwordTooShort": "Parola en az 12 karakter uzunluğunda olmalıdır",
+      "passwordMismatch": "Parolalar eşleşmiyor",
+      "passwordResetSuccess": "{email} için parola başarıyla sıfırlandı",
+      "passwordResetFailed": "Parola sıfırlanamadı: {error}",
+      "passwordResetFailedGeneric": "Parola sıfırlanamadı",
+      "passwordResetHelp": "Kullanıcı parolasını unutmuşsa sıfırlayın.",
+      "passwordResetWarning": "Bu sadece hesap giriş parolasını değiştirir. Not şifrelemesini etkilemez. Kullanıcı şifreleme parolasını unutmuşsa, notları kurtarılamaz."
     },
     "filters": {
       "all": "Tümü",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Ayarlar",
+    "language": {
+      "title": "Dil",
+      "description": "Yönetici arayüzü için tercih ettiğiniz dili seçin.",
+      "label": "Görüntüleme Dili"
+    },
     "changePassword": {
       "title": "Parola değiştir",
       "description": "Yönetici parolanızı güncelleyin. Parola en az 12 karakter uzunluğunda olmalıdır.",

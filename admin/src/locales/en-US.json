@@ -115,7 +115,22 @@
       "maxUploadSizeHelp": "Maximum size per sync request (includes attachments)",
       "settingsSaved": "User settings saved successfully",
       "settingsSaveFailed": "Failed to save settings: {error}",
-      "settingsSaveFailedGeneric": "Failed to save settings"
+      "settingsSaveFailedGeneric": "Failed to save settings",
+      "viewDetails": "Click to view details",
+      "passwordReset": "Password Reset",
+      "resetPassword": "Reset Password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "passwordRequirement": "Minimum 12 characters",
+      "passwordTooShort": "Password must be at least 12 characters",
+      "passwordMismatch": "Passwords do not match",
+      "passwordResetSuccess": "Password for {email} has been reset successfully",
+      "passwordResetFailed": "Failed to reset password: {error}",
+      "passwordResetFailedGeneric": "Failed to reset password",
+      "passwordResetHelp": "Reset the user's password if they have forgotten it.",
+      "passwordResetWarning": "This only changes the account login password. It does not affect note encryption. If the user has forgotten their encryption password, their notes cannot be recovered."
     },
     "filters": {
       "all": "All",
@@ -175,6 +190,11 @@
   },
   "settings": {
     "title": "Settings",
+    "language": {
+      "title": "Language",
+      "description": "Select your preferred language for the admin interface.",
+      "label": "Display Language"
+    },
     "changePassword": {
       "title": "Change Password",
       "description": "Update your admin password. Password must be at least 12 characters long.",
