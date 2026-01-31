@@ -50,6 +50,65 @@ class SyncService {
   private sseReconnectAttempts = 0;
   private maxSseReconnectAttempts = 5;
   private sseReconnectDelay = 1000; // Start with 1 second
+  private savedAutoSyncInterval?: number; // Saved interval when SSE suspends periodic sync
+  private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
+  private networkListenersAttached = false;
+
+  /**
+   * Check if the browser reports being online
+   */
+  private isOnline(): boolean {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  }
+
+  /**
+   * Handle network coming back online
+   */
+  private handleOnline = (): void => {
+    console.log('[SyncService] Network online detected');
+
+    // If SSE had failed over to periodic sync, try to reconnect SSE
+    if (this.sseFailedOver) {
+      console.log('[SyncService] Attempting to restore SSE connection after network recovery');
+      this.sseReconnectAttempts = 0;
+      this.sseReconnectDelay = 1000;
+      this.sseFailedOver = false;
+      this.connectToSyncEvents();
+    }
+
+    // Trigger a sync now that we're back online
+    this.syncNow();
+  };
+
+  /**
+   * Handle network going offline
+   */
+  private handleOffline = (): void => {
+    console.log('[SyncService] Network offline detected');
+    // No action needed - sync attempts will fail gracefully
+  };
+
+  /**
+   * Attach network status event listeners
+   */
+  private attachNetworkListeners(): void {
+    if (this.networkListenersAttached || typeof window === 'undefined') return;
+
+    window.addEventListener('online', this.handleOnline);
+    window.addEventListener('offline', this.handleOffline);
+    this.networkListenersAttached = true;
+  }
+
+  /**
+   * Detach network status event listeners
+   */
+  private detachNetworkListeners(): void {
+    if (!this.networkListenersAttached || typeof window === 'undefined') return;
+
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
+    this.networkListenersAttached = false;
+  }
 
   /**
    * Register a new client with the server
@@ -141,6 +200,12 @@ class SyncService {
     settings.subscribe(s => currentSettings = s)();
     if (!currentSettings?.syncEnabled) {
       return { success: false, error: 'Sync is disabled' };
+    }
+
+    // Check network availability before attempting sync
+    if (!this.isOnline()) {
+      console.log('[SyncService] Skipping sync - network offline');
+      return { success: false, error: 'Network offline' };
     }
 
     // Check if database is available before attempting sync
@@ -832,11 +897,39 @@ class SyncService {
    */
   enableAutoSync(intervalMinutes: number = SYNC_AUTO_INTERVAL_MINUTES): void {
     this.disableAutoSync(); // Clear any existing timer
+    this.savedAutoSyncInterval = intervalMinutes; // Save for later restoration
     console.log(`[SyncService] Auto-sync enabled (${intervalMinutes}m interval)`);
     this.autoSyncTimer = window.setInterval(
       () => this.syncNow(),
       intervalMinutes * 60 * 1000
     );
+    // Attach network listeners to handle online/offline transitions
+    this.attachNetworkListeners();
+  }
+
+  /**
+   * Suspend periodic sync (when SSE is active)
+   * Unlike disableAutoSync, this preserves the interval for later restoration
+   */
+  private suspendPeriodicSync(): void {
+    if (this.autoSyncTimer) {
+      console.log('[SyncService] Suspending periodic sync (SSE active)');
+      clearInterval(this.autoSyncTimer);
+      this.autoSyncTimer = undefined;
+    }
+  }
+
+  /**
+   * Restore periodic sync (when SSE fails)
+   */
+  private restorePeriodicSync(): void {
+    if (this.savedAutoSyncInterval && !this.autoSyncTimer) {
+      console.log(`[SyncService] Restoring periodic sync (${this.savedAutoSyncInterval}m interval)`);
+      this.autoSyncTimer = window.setInterval(
+        () => this.syncNow(),
+        this.savedAutoSyncInterval * 60 * 1000
+      );
+    }
   }
 
   /**
@@ -847,8 +940,12 @@ class SyncService {
       clearInterval(this.autoSyncTimer);
       this.autoSyncTimer = undefined;
     }
+    this.savedAutoSyncInterval = undefined;
+    this.sseFailedOver = false;
     // Also cancel any pending debounced background sync
     this.cancelPendingBackgroundSync();
+    // Detach network listeners
+    this.detachNetworkListeners();
   }
 
   /**
@@ -865,6 +962,15 @@ class SyncService {
   async connectToSyncEvents(): Promise<void> {
     // Don't reconnect if already connected
     if (this.eventSource) {
+      return;
+    }
+
+    // Check network availability first
+    if (!this.isOnline()) {
+      console.log('[SyncService] Skipping SSE connection - network offline');
+      // Fall back to periodic sync
+      this.sseFailedOver = true;
+      this.restorePeriodicSync();
       return;
     }
 
@@ -896,6 +1002,9 @@ class SyncService {
         console.log('[SyncService] SSE connection established');
         this.sseReconnectAttempts = 0;
         this.sseReconnectDelay = 1000;
+        this.sseFailedOver = false;
+        // Suspend periodic sync while SSE is active
+        this.suspendPeriodicSync();
       };
 
       // Handle sync notification from server
@@ -928,14 +1037,20 @@ class SyncService {
             // Exponential backoff with max of 30 seconds
             this.sseReconnectDelay = Math.min(this.sseReconnectDelay * 2, 30000);
           } else {
-            console.warn('[SyncService] SSE max reconnect attempts reached, falling back to periodic sync only');
+            console.warn('[SyncService] SSE max reconnect attempts reached, falling back to periodic sync');
             this.eventSource?.close();
             this.eventSource = null;
+            // Mark as failed over and restore periodic sync
+            this.sseFailedOver = true;
+            this.restorePeriodicSync();
           }
         }
       };
     } catch (error) {
       console.error('[SyncService] Failed to connect to SSE:', error);
+      // Fall back to periodic sync on any error
+      this.sseFailedOver = true;
+      this.restorePeriodicSync();
     }
   }
 
