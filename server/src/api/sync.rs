@@ -835,17 +835,15 @@ pub async fn pull(
         tracing::info!("Returning {} deletions to client", deletions.len());
     }
 
-    // Get versions for all notes from this client
-    // Note: versions are still per-client (not shared across user's devices)
-    // This is intentional as versions track device-specific history
+    // Get versions for all notes belonging to this user (shared across devices)
     let epoch = "1970-01-01T00:00:00Z".to_string();
     let last_sync_filter = pull_req.last_sync_at.as_ref().unwrap_or(&epoch);
     let db_versions = sqlx::query!(
         "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason
          FROM note_versions
-         WHERE client_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
+         WHERE user_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
          ORDER BY note_id, version",
-        client_info.client_id,
+        client_info.user_id,
         last_sync_filter,
         last_sync_filter
     )
