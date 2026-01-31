@@ -31,6 +31,9 @@ openssl-sys = { version = "0.9", optional = true }
 # HTTP client for sync
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
 
+# HTTP client for SSE (simpler streaming support)
+ureq = { version = "2.10", features = ["tls"] }
+
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

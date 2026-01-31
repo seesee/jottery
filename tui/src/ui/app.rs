@@ -226,6 +226,8 @@ pub struct App {
     pub search_tag_completion_index: usize,
     /// Password storage backend (keychain or file-based fallback)
     pub(crate) password_storage: Box<dyn PasswordStorage>,
+    /// SSE handle for real-time sync notifications (when connected)
+    pub(crate) sse_handle: Option<crate::sse::SseHandle>,
 }
 
 
@@ -317,6 +319,7 @@ impl App {
             search_tag_completions: Vec::new(),
             search_tag_completion_index: 0,
             password_storage,
+            sse_handle: None,
         })
     }
 
@@ -1798,6 +1801,118 @@ impl App {
             // Update last auto-sync time
             self.last_auto_sync = Some(now);
         }
+
+        // Check for SSE messages (real-time sync notifications)
+        self.check_sse_messages();
+    }
+
+    /// Start SSE connection if sync is enabled
+    pub fn start_sse_if_enabled(&mut self) {
+        // Only start if sync is enabled and we have an endpoint
+        if !self.settings.sync_enabled {
+            return;
+        }
+
+        let endpoint = match &self.settings.sync_endpoint {
+            Some(ep) => ep.clone(),
+            None => return,
+        };
+
+        // Get the API key (need to decrypt it)
+        let db = match &self.db {
+            Some(db) => db,
+            None => return,
+        };
+
+        let key = match &self.key {
+            Some(k) => k,
+            None => return,
+        };
+
+        let sync_repo = SyncRepository::new(db.connection());
+        let metadata = match sync_repo.get_metadata() {
+            Ok(Some(m)) => m,
+            _ => return,
+        };
+
+        let encrypted_api_key = match &metadata.api_key {
+            Some(k) => k,
+            None => return,
+        };
+
+        // Decrypt the API key
+        let encrypted: crate::crypto::EncryptedData = match serde_json::from_str(encrypted_api_key) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+
+        let api_key = match self.crypto.decrypt_text(&encrypted, key) {
+            Ok(k) => k,
+            Err(_) => return,
+        };
+
+        // Stop existing SSE connection if any
+        self.stop_sse();
+
+        // Start new SSE connection
+        self.debug_log(&format!("SSE: Starting connection to {}", endpoint));
+        let config = crate::sse::SseConfig {
+            endpoint,
+            api_key,
+        };
+
+        self.sse_handle = Some(crate::sse::start_sse_thread(config));
+    }
+
+    /// Stop SSE connection
+    pub fn stop_sse(&mut self) {
+        if let Some(mut handle) = self.sse_handle.take() {
+            self.debug_log("SSE: Stopping connection");
+            handle.stop();
+        }
+    }
+
+    /// Check for SSE messages and handle them
+    fn check_sse_messages(&mut self) {
+        // Collect all pending messages first to avoid borrow issues
+        let messages: Vec<crate::sse::SseMessage> = {
+            match &self.sse_handle {
+                Some(h) => {
+                    let mut msgs = Vec::new();
+                    while let Some(msg) = h.try_recv() {
+                        msgs.push(msg);
+                    }
+                    msgs
+                }
+                None => return,
+            }
+        };
+
+        // Now process the collected messages
+        let mut should_sync = false;
+        for msg in messages {
+            match msg {
+                crate::sse::SseMessage::SyncNotification => {
+                    self.debug_log("SSE: Received sync notification, triggering sync");
+                    should_sync = true;
+                }
+                crate::sse::SseMessage::Connected => {
+                    self.debug_log("SSE: Connected to server");
+                }
+                crate::sse::SseMessage::Disconnected => {
+                    self.debug_log("SSE: Disconnected from server (will reconnect)");
+                }
+                crate::sse::SseMessage::Failed(err) => {
+                    self.debug_log(&format!("SSE: Connection failed: {}", err));
+                    // Don't restart here - the SSE thread handles retries
+                }
+            }
+        }
+
+        // Trigger sync if we received a notification
+        if should_sync {
+            self.trigger_sync();
+        }
     }
 
     /// Save settings to database
@@ -1895,6 +2010,9 @@ impl App {
         // This ensures the user knows the salt was changed and re-enters their password
         if creds.salt.is_some() {
             self.debug_log("Paste credentials - Locking database to force re-unlock with new salt");
+
+            // Stop SSE connection before locking
+            self.stop_sse();
 
             // Automatically lock the database
             self.key = None;

@@ -5,6 +5,7 @@ mod export;
 mod models;
 mod password_storage;
 mod repository;
+mod sse;
 mod ui;
 
 // Initialize rust-i18n with fallback to en-GB

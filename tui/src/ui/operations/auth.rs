@@ -239,6 +239,9 @@ pub fn unlock(app: &mut App) -> Result<()> {
     app.remember_password_checkbox = false;  // Reset checkbox
     app.state = AppState::NoteList;
 
+    // Start SSE connection for real-time sync notifications
+    app.start_sse_if_enabled();
+
     Ok(())
 }
 

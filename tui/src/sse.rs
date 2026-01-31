@@ -1,0 +1,214 @@
+//! Server-Sent Events (SSE) client for real-time sync notifications
+//!
+//! Runs in a background thread and sends notifications through a channel
+//! when other devices sync changes.
+
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::Arc;
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
+
+use tracing::{debug, error, info, warn};
+
+/// Message sent from SSE thread to main thread
+#[derive(Debug, Clone)]
+pub enum SseMessage {
+    /// Server notified that another device synced - trigger a pull
+    SyncNotification,
+    /// SSE connection established
+    Connected,
+    /// SSE connection lost (will auto-reconnect)
+    Disconnected,
+    /// SSE connection failed after max retries
+    Failed(String),
+}
+
+/// Handle to control the SSE background thread
+pub struct SseHandle {
+    /// Channel to receive messages from SSE thread
+    pub receiver: Receiver<SseMessage>,
+    /// Flag to signal the thread to stop
+    stop_flag: Arc<AtomicBool>,
+    /// Thread handle for cleanup
+    thread_handle: Option<JoinHandle<()>>,
+}
+
+impl SseHandle {
+    /// Check for pending messages without blocking
+    pub fn try_recv(&self) -> Option<SseMessage> {
+        self.receiver.try_recv().ok()
+    }
+
+    /// Stop the SSE thread
+    pub fn stop(&mut self) {
+        debug!("Stopping SSE thread");
+        self.stop_flag.store(true, Ordering::SeqCst);
+
+        // Wait for thread to finish (with timeout)
+        if let Some(handle) = self.thread_handle.take() {
+            // Give the thread a moment to notice the stop flag
+            thread::sleep(Duration::from_millis(100));
+
+            // We can't really force-kill the thread, but the stop flag
+            // will cause it to exit on next iteration
+            let _ = handle.join();
+        }
+    }
+
+    /// Check if the SSE thread is still running
+    pub fn is_running(&self) -> bool {
+        self.thread_handle.as_ref().map_or(false, |h| !h.is_finished())
+    }
+}
+
+impl Drop for SseHandle {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+/// Configuration for SSE connection
+pub struct SseConfig {
+    pub endpoint: String,
+    pub api_key: String,
+}
+
+/// Start the SSE background thread
+pub fn start_sse_thread(config: SseConfig) -> SseHandle {
+    let (sender, receiver) = mpsc::channel();
+    let stop_flag = Arc::new(AtomicBool::new(false));
+    let stop_flag_clone = stop_flag.clone();
+
+    let thread_handle = thread::spawn(move || {
+        sse_thread_main(config, sender, stop_flag_clone);
+    });
+
+    SseHandle {
+        receiver,
+        stop_flag,
+        thread_handle: Some(thread_handle),
+    }
+}
+
+/// Main function for the SSE background thread
+fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc<AtomicBool>) {
+    let mut reconnect_delay = Duration::from_secs(1);
+    let max_reconnect_delay = Duration::from_secs(30);
+    let mut consecutive_failures = 0;
+    let max_failures = 10;
+
+    info!("SSE thread started for endpoint: {}", config.endpoint);
+
+    while !stop_flag.load(Ordering::SeqCst) {
+        match connect_and_listen(&config, &sender, &stop_flag) {
+            Ok(()) => {
+                // Clean exit (stop flag set)
+                debug!("SSE connection closed cleanly");
+                break;
+            }
+            Err(e) => {
+                consecutive_failures += 1;
+                warn!(
+                    "SSE connection error (attempt {}/{}): {}",
+                    consecutive_failures, max_failures, e
+                );
+
+                let _ = sender.send(SseMessage::Disconnected);
+
+                if consecutive_failures >= max_failures {
+                    error!("SSE max reconnect attempts reached, giving up");
+                    let _ = sender.send(SseMessage::Failed(format!(
+                        "Failed after {} attempts: {}",
+                        max_failures, e
+                    )));
+                    break;
+                }
+
+                // Wait before reconnecting (with stop flag checks)
+                let wait_until = std::time::Instant::now() + reconnect_delay;
+                while std::time::Instant::now() < wait_until {
+                    if stop_flag.load(Ordering::SeqCst) {
+                        debug!("SSE thread stopping during reconnect wait");
+                        return;
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                }
+
+                // Exponential backoff
+                reconnect_delay = (reconnect_delay * 2).min(max_reconnect_delay);
+            }
+        }
+
+        // Reset on successful connection
+        if consecutive_failures > 0 {
+            consecutive_failures = 0;
+            reconnect_delay = Duration::from_secs(1);
+        }
+    }
+
+    info!("SSE thread exiting");
+}
+
+/// Connect to SSE endpoint and listen for events
+fn connect_and_listen(
+    config: &SseConfig,
+    sender: &Sender<SseMessage>,
+    stop_flag: &Arc<AtomicBool>,
+) -> Result<(), String> {
+    use std::io::{BufRead, BufReader};
+
+    let url = format!(
+        "{}/api/v1/sync/events?api_key={}",
+        config.endpoint.trim_end_matches('/'),
+        config.api_key
+    );
+
+    debug!("Connecting to SSE endpoint: {}", config.endpoint);
+
+    // Use ureq for simpler streaming (reqwest::blocking has issues with SSE)
+    let response = ureq::get(&url)
+        .timeout(Duration::from_secs(60)) // Initial connection timeout
+        .call()
+        .map_err(|e| format!("Failed to connect: {}", e))?;
+
+    if response.status() != 200 {
+        return Err(format!("HTTP {}: {}", response.status(), response.status_text()));
+    }
+
+    info!("SSE connection established");
+    let _ = sender.send(SseMessage::Connected);
+
+    // Read the streaming response line by line
+    let reader = BufReader::new(response.into_reader());
+    let mut current_event = String::new();
+
+    for line in reader.lines() {
+        // Check stop flag periodically
+        if stop_flag.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        let line = line.map_err(|e| format!("Read error: {}", e))?;
+
+        // SSE format: lines starting with "event:", "data:", or empty line (end of event)
+        if line.is_empty() {
+            // End of event - process it
+            if current_event == "sync" {
+                debug!("Received sync notification from server");
+                let _ = sender.send(SseMessage::SyncNotification);
+            }
+            current_event.clear();
+        } else if let Some(event_type) = line.strip_prefix("event:") {
+            current_event = event_type.trim().to_string();
+        } else if line.starts_with("data:") {
+            // We don't need the data for sync events, just the event type
+        } else if line.starts_with(":") {
+            // Comment/heartbeat - ignore
+            debug!("SSE heartbeat received");
+        }
+    }
+
+    // Stream ended unexpectedly
+    Err("SSE stream ended".to_string())
+}

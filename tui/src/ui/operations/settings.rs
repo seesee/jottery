@@ -313,6 +313,9 @@ pub fn paste_sync_credentials(app: &mut App) -> Result<()> {
     if creds.salt.is_some() {
         app.debug_log("Paste credentials - Locking database to force re-unlock with new salt");
 
+        // Stop SSE connection before locking
+        app.stop_sse();
+
         // Automatically lock the database
         app.key = None;
         app.notes.clear();
@@ -486,6 +489,9 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
 
         app.debug_log("Process credentials - Encrypted payload stored for deferred decryption");
 
+        // Stop SSE connection before locking
+        app.stop_sse();
+
         // Lock and force re-unlock to derive correct key from new salt
         app.key = None;
         app.notes.clear();
@@ -549,6 +555,9 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
     // Lock and force re-unlock with the new salt
     app.debug_log("Process credentials - Locking database to force re-unlock with new salt");
 
+    // Stop SSE connection before locking
+    app.stop_sse();
+
     app.key = None;
     app.notes.clear();
     app.selected_note = 0;
@@ -568,6 +577,9 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
 /// Clears all sync credentials and metadata, but preserves local notes
 pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
     app.debug_log("Disconnect - Starting disconnect from sync server");
+
+    // Stop SSE connection since we're disabling sync
+    app.stop_sse();
 
     // Get database
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
