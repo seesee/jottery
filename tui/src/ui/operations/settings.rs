@@ -586,6 +586,130 @@ pub fn process_credentials_input(app: &mut App, input: &str) -> Result<()> {
     Ok(())
 }
 
+/// Process credentials input with a specified device name
+/// This stores the device name for use during the clone-device call on unlock
+pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, device_name: &str) -> Result<()> {
+    use base64::Engine;
+
+    let input = input.trim();
+
+    // Get database
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
+    if input.starts_with("jottery:v1:") {
+        let payload = &input["jottery:v1:".len()..];
+        let dot_index = payload.find('.')
+            .ok_or_else(|| anyhow::anyhow!("Invalid encrypted credentials format"))?;
+
+        let salt_b64 = &payload[..dot_index];
+        let encrypted_payload = &payload[dot_index + 1..];
+
+        app.debug_log("Process credentials - Encrypted format detected");
+        app.debug_log(&format!("Process credentials - Salt (base64): {}", salt_b64));
+        app.debug_log(&format!("Process credentials - Device name: {}", device_name));
+
+        // Decode and validate salt
+        let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
+            .context("Invalid base64 salt in encrypted credentials")?;
+
+        if salt.len() < 32 {
+            anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes)", salt.len());
+        }
+
+        // Update encryption metadata with the extracted salt
+        let encryption_repo = EncryptionRepository::new(db.connection());
+        encryption_repo.save(&salt, 100_000)?;
+        app.debug_log("Process credentials - Salt saved successfully");
+
+        // Store encrypted payload with marker for deferred decryption AND device name
+        let sync_repo = SyncRepository::new(db.connection());
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+        metadata.api_key = Some(format!("ENCRYPTED:{}", encrypted_payload));
+        metadata.sync_enabled = false; // Will be enabled after successful clone-device
+        metadata.pending_device_name = Some(device_name.to_string());
+        sync_repo.update_metadata(&metadata)?;
+
+        app.debug_log("Process credentials - Encrypted payload stored for deferred decryption");
+
+        // Lock and force re-unlock to derive correct key from new salt
+        app.key = None;
+        app.notes.clear();
+        app.selected_note = 0;
+        app.password_input.clear();
+        app.password_confirm.clear();
+        app.password_confirm_focused = false;
+        app.input_mode = InputMode::Normal;
+        app.state = AppState::Locked;
+
+        app.error = Some(t!("sync.encrypted_import").to_string());
+        return Ok(());
+    }
+
+    // Legacy unencrypted format: base64(JSON)
+    let creds = SyncCredentials::from_base64(input)
+        .context("Invalid sync credentials format")?;
+
+    app.debug_log(&format!("Process credentials - Legacy format - endpoint: {}", creds.endpoint));
+    app.debug_log(&format!("Process credentials - client_id: {}", creds.client_id));
+    app.debug_log(&format!("Process credentials - has salt: {}", creds.salt.is_some()));
+    app.debug_log(&format!("Process credentials - Device name: {}", device_name));
+
+    // If web app salt is provided, update it first
+    if let Some(salt_b64) = &creds.salt {
+        let encryption_repo = EncryptionRepository::new(db.connection());
+
+        // Decode the base64 salt from web app
+        let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
+            .context("Invalid base64 salt from sync credentials")?;
+
+        app.debug_log(&format!("Process credentials - Salt (base64): {}", salt_b64));
+        app.debug_log(&format!("Process credentials - Salt (hex): {}", hex::encode(&salt)));
+        app.debug_log(&format!("Process credentials - Salt length: {} bytes", salt.len()));
+
+        // Validate salt length
+        if salt.len() < 32 {
+            anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes)", salt.len());
+        }
+
+        // Update encryption metadata with web app's salt AND iteration count
+        app.debug_log("Process credentials - Saving salt with 100,000 iterations");
+        encryption_repo.save(&salt, 100_000)?;
+        app.debug_log("Process credentials - Salt saved successfully");
+    }
+
+    // Save sync metadata with PLAINTEXT marker for clone-device on unlock
+    let sync_repo = SyncRepository::new(db.connection());
+    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    metadata.api_key = Some(format!("PLAINTEXT:{}", creds.api_key));
+    metadata.sync_endpoint = creds.endpoint.clone();
+    metadata.sync_enabled = false; // Will be enabled after successful clone-device
+    metadata.pending_device_name = Some(device_name.to_string());
+    sync_repo.update_metadata(&metadata)?;
+
+    // Update settings
+    app.settings.sync_endpoint = Some(creds.endpoint);
+    app.settings.sync_enabled = false; // Will be enabled after clone-device
+    save_settings(app)?;
+
+    // Lock and force re-unlock with the new salt
+    app.debug_log("Process credentials - Locking database to force re-unlock with new salt");
+
+    app.key = None;
+    app.notes.clear();
+    app.selected_note = 0;
+    app.password_input.clear();
+    app.password_confirm.clear();
+    app.password_confirm_focused = false;
+    app.input_mode = InputMode::Normal;
+    app.state = AppState::Locked;
+
+    // Show message about what happened
+    app.error = Some(t!("sync.salt_sync").to_string());
+
+    Ok(())
+}
+
 /// Disconnect from sync server
 /// Clears all sync credentials and metadata, but preserves local notes
 pub fn disconnect_from_sync(app: &mut App) -> Result<()> {

@@ -387,6 +387,18 @@ pub fn render_register_input_device_name(app: &App, frame: &mut Frame) {
     );
 }
 
+/// Render import device name input (for sync blob import)
+pub fn render_import_device_name(app: &App, frame: &mut Frame) {
+    render_registration_input_modal(
+        app,
+        frame,
+        &t!("sync.import_device_title"),
+        &t!("sync.import_enter_device_name"),
+        &app.credential_input,
+        false,
+    );
+}
+
 /// Helper to render a registration input modal
 fn render_registration_input_modal(
     app: &App,

@@ -54,6 +54,7 @@
   let syncError = '';
   let deviceName = 'My Device';
   let importCredentialsText = '';
+  let importDeviceName = 'My Device';
   let importing = false;
   let importProgress = { current: 0, total: 0 };
   let importResult: { imported: number; skipped: number; errors: string[]; attachments: number; tags: number } | null = null;
@@ -497,11 +498,16 @@
       return;
     }
 
+    if (!importDeviceName.trim()) {
+      syncError = 'Please enter a device name';
+      return;
+    }
+
     importing = true;
     syncError = '';
 
     try {
-      const result = await parseAndStoreImportedCredentials(importCredentialsText);
+      const result = await parseAndStoreImportedCredentials(importCredentialsText, importDeviceName.trim());
 
       if (!result.success) {
         syncError = result.error || 'Failed to import credentials';
@@ -1104,6 +1110,7 @@
             bind:registeringDevice
             bind:userRegistrationMessage
             bind:importCredentialsText
+            bind:importDeviceName
             bind:importing
             bind:showAccountManagement
             bind:accountEmail

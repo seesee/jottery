@@ -50,25 +50,68 @@ pub fn unlock(app: &mut App) -> Result<()> {
     app.key = Some(key);
     app.db = Some(db);
 
-    // Check if API key needs encryption (from paste credentials flow)
+    // Check if API key needs encryption/clone-device (from paste credentials flow)
     if let Some(db) = &app.db {
         let sync_repo = SyncRepository::new(db.connection());
 
         if let Ok(Some(mut metadata)) = sync_repo.get_metadata() {
             if let Some(api_key_str) = &metadata.api_key {
+                // Get device name if pending
+                let device_name = metadata.pending_device_name.clone()
+                    .unwrap_or_else(|| hostname::get()
+                        .map(|h| h.to_string_lossy().to_string())
+                        .unwrap_or_else(|_| "Jottery TUI".to_string()));
+
                 // Check if API key is plaintext (prefixed with "PLAINTEXT:")
                 if let Some(plaintext_key) = api_key_str.strip_prefix("PLAINTEXT:") {
-                    app.debug_log("Unlock - Detected plaintext API key, encrypting with new key");
+                    app.debug_log("Unlock - Detected plaintext API key from import");
 
-                    // Encrypt API key with the newly derived key
-                    let encrypted = app.crypto.encrypt_text(plaintext_key, &key)?;
-                    let encrypted_api_key = serde_json::to_string(&encrypted)?;
+                    // If there's a pending device name, call clone-device to register as new device
+                    if metadata.pending_device_name.is_some() {
+                        app.debug_log(&format!("Unlock - Calling clone-device with device name: {}", device_name));
 
-                    // Update metadata with encrypted API key
-                    metadata.api_key = Some(encrypted_api_key);
-                    sync_repo.update_metadata(&metadata)?;
+                        let endpoint = &metadata.sync_endpoint;
+                        if endpoint.is_empty() {
+                            app.debug_log("Unlock - ERROR: No endpoint for clone-device");
+                            return Err(anyhow::anyhow!("No sync endpoint configured for clone-device"));
+                        }
 
-                    app.debug_log("Unlock - API key encrypted and saved");
+                        // Call clone-device endpoint
+                        let client = crate::api::AuthClient::new(endpoint.clone());
+                        let clone_result = client.clone_device(plaintext_key, &device_name, "tui")
+                            .map_err(|e| anyhow::anyhow!("Clone device failed: {}", e))?;
+
+                        app.debug_log(&format!("Unlock - Clone-device successful, new client_id: {}", clone_result.client_id));
+
+                        // Encrypt the NEW API key
+                        let encrypted = app.crypto.encrypt_text(&clone_result.api_key, &key)?;
+                        let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+                        // Update metadata with NEW credentials
+                        metadata.api_key = Some(encrypted_api_key);
+                        metadata.client_id = Some(clone_result.client_id);
+                        metadata.sync_enabled = true;
+                        metadata.pending_device_name = None; // Clear pending name
+                        sync_repo.update_metadata(&metadata)?;
+
+                        // Update app settings
+                        app.settings.sync_enabled = true;
+                        let settings_repo = SettingsRepository::new(db.connection());
+                        settings_repo.update(&app.settings)?;
+
+                        app.debug_log("Unlock - Registered as new device, sync enabled");
+                    } else {
+                        // Legacy flow (no device name) - encrypt directly
+                        app.debug_log("Unlock - Encrypting API key with new key (legacy import)");
+
+                        let encrypted = app.crypto.encrypt_text(plaintext_key, &key)?;
+                        let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+                        metadata.api_key = Some(encrypted_api_key);
+                        sync_repo.update_metadata(&metadata)?;
+
+                        app.debug_log("Unlock - API key encrypted and saved");
+                    }
                 }
                 // Check if credentials are encrypted (prefixed with "ENCRYPTED:")
                 else if let Some(encrypted_payload) = api_key_str.strip_prefix("ENCRYPTED:") {
@@ -95,31 +138,65 @@ pub fn unlock(app: &mut App) -> Result<()> {
 
                     let endpoint = creds["endpoint"].as_str()
                         .ok_or_else(|| anyhow::anyhow!("Missing endpoint in decrypted credentials"))?;
-                    let client_id = creds["clientId"].as_str()
-                        .ok_or_else(|| anyhow::anyhow!("Missing clientId in decrypted credentials"))?;
                     let api_key = creds["apiKey"].as_str()
                         .ok_or_else(|| anyhow::anyhow!("Missing apiKey in decrypted credentials"))?;
 
                     app.debug_log("Unlock - Credentials decrypted successfully");
 
-                    // Re-encrypt the API key for storage
-                    let encrypted = app.crypto.encrypt_text(api_key, &key)?;
-                    let encrypted_api_key = serde_json::to_string(&encrypted)?;
+                    // If there's a pending device name, call clone-device to register as new device
+                    if metadata.pending_device_name.is_some() {
+                        app.debug_log(&format!("Unlock - Calling clone-device with device name: {}", device_name));
 
-                    // Update metadata with decrypted values
-                    metadata.client_id = Some(client_id.to_string());
-                    metadata.sync_endpoint = endpoint.to_string();
-                    metadata.api_key = Some(encrypted_api_key);
-                    metadata.sync_enabled = true;
-                    sync_repo.update_metadata(&metadata)?;
+                        // Call clone-device endpoint
+                        let client = crate::api::AuthClient::new(endpoint.to_string());
+                        let clone_result = client.clone_device(api_key, &device_name, "tui")
+                            .map_err(|e| anyhow::anyhow!("Clone device failed: {}", e))?;
 
-                    // Update app settings and save to database
-                    app.settings.sync_endpoint = Some(endpoint.to_string());
-                    app.settings.sync_enabled = true;
-                    let settings_repo = SettingsRepository::new(db.connection());
-                    settings_repo.update(&app.settings)?;
+                        app.debug_log(&format!("Unlock - Clone-device successful, new client_id: {}", clone_result.client_id));
 
-                    app.debug_log("Unlock - Encrypted credentials processed, sync enabled");
+                        // Encrypt the NEW API key
+                        let encrypted = app.crypto.encrypt_text(&clone_result.api_key, &key)?;
+                        let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+                        // Update metadata with NEW credentials
+                        metadata.client_id = Some(clone_result.client_id);
+                        metadata.sync_endpoint = endpoint.to_string();
+                        metadata.api_key = Some(encrypted_api_key);
+                        metadata.sync_enabled = true;
+                        metadata.pending_device_name = None; // Clear pending name
+                        sync_repo.update_metadata(&metadata)?;
+
+                        // Update app settings and save to database
+                        app.settings.sync_endpoint = Some(endpoint.to_string());
+                        app.settings.sync_enabled = true;
+                        let settings_repo = SettingsRepository::new(db.connection());
+                        settings_repo.update(&app.settings)?;
+
+                        app.debug_log("Unlock - Registered as new device, sync enabled");
+                    } else {
+                        // Legacy flow - use credentials directly (old behaviour for backwards compat)
+                        let client_id = creds["clientId"].as_str()
+                            .ok_or_else(|| anyhow::anyhow!("Missing clientId in decrypted credentials"))?;
+
+                        // Re-encrypt the API key for storage
+                        let encrypted = app.crypto.encrypt_text(api_key, &key)?;
+                        let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+                        // Update metadata with decrypted values
+                        metadata.client_id = Some(client_id.to_string());
+                        metadata.sync_endpoint = endpoint.to_string();
+                        metadata.api_key = Some(encrypted_api_key);
+                        metadata.sync_enabled = true;
+                        sync_repo.update_metadata(&metadata)?;
+
+                        // Update app settings and save to database
+                        app.settings.sync_endpoint = Some(endpoint.to_string());
+                        app.settings.sync_enabled = true;
+                        let settings_repo = SettingsRepository::new(db.connection());
+                        settings_repo.update(&app.settings)?;
+
+                        app.debug_log("Unlock - Encrypted credentials processed (legacy), sync enabled");
+                    }
                 }
             }
         }

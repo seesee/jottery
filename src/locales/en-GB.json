@@ -390,6 +390,11 @@
         "warningTitle": "⚠️ IMPORTANT: You must use the SAME password on all devices!",
         "warningText": "If you use a different password, notes will not decrypt.",
         "placeholder": "Paste base64 credentials here...",
+        "deviceName": {
+          "label": "Device name",
+          "placeholder": "My Laptop",
+          "help": "A name to identify this device in your account"
+        },
         "button": "📥 Import and lock",
         "importing": "Importing..."
       },

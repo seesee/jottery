@@ -347,6 +347,7 @@ impl App {
             AppState::NoteView => input::note_view::handle_note_view_key(self, key)?,
             AppState::ShowSyncCredentials { .. } => input::credentials::handle_show_credentials_key(self, key)?,
             AppState::InputSyncCredentials { .. } => input::credentials::handle_input_credentials_key(self, key)?,
+            AppState::ImportInputDeviceName { .. } => input::credentials::handle_import_device_name_key(self, key)?,
             AppState::InputEmailForStatus { .. } => input::credentials::handle_input_email_for_status_key(self, key)?,
             AppState::ShowRegistrationStatus { .. } => input::credentials::handle_show_registration_status_key(self, key)?,
             AppState::RegisterInputEndpoint { .. } => input::credentials::handle_register_input_endpoint_key(self, key)?,
@@ -1987,6 +1988,7 @@ impl App {
                 rendering::credentials::render_show_credentials(self, frame, credentials)
             }
             AppState::InputSyncCredentials { .. } => rendering::credentials::render_input_credentials(self, frame),
+            AppState::ImportInputDeviceName { .. } => rendering::credentials::render_import_device_name(self, frame),
             AppState::InputEmailForStatus { .. } => rendering::credentials::render_input_email_for_status(self, frame),
             AppState::ShowRegistrationStatus { status_message, .. } => {
                 rendering::credentials::render_registration_status(self, frame, status_message)

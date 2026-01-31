@@ -771,6 +771,7 @@ fn main() -> Result<()> {
                 sync_endpoint: server.clone(),
                 auto_sync_interval: Some(1),
                 pending_registration_email: None,
+                pending_device_name: None,
             };
 
             sync_repo.update_metadata(&sync_metadata)?;

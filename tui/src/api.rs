@@ -41,6 +41,18 @@ pub struct RegisterDeviceResponse {
     pub device_name: String,
 }
 
+/// Clone device request (for importing credentials)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloneDeviceRequest {
+    pub api_key: String,
+    pub device_name: String,
+    pub device_type: String,
+}
+
+/// Clone device response (same as RegisterDeviceResponse)
+pub type CloneDeviceResponse = RegisterDeviceResponse;
+
 /// User status check response
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -151,6 +163,51 @@ impl AuthClient {
             .context("Failed to reach server")?;
 
         Ok(response.status().is_success())
+    }
+
+    /// Clone a device using an existing API key
+    /// Creates a new device entry for the same user with a new client ID and API key
+    /// Used when importing sync credentials on a new device
+    pub fn clone_device(
+        &self,
+        api_key: &str,
+        device_name: &str,
+        device_type: &str,
+    ) -> Result<CloneDeviceResponse> {
+        let url = format!("{}/api/v1/auth/clone-device", self.base_url);
+
+        let request = CloneDeviceRequest {
+            api_key: api_key.to_string(),
+            device_name: device_name.to_string(),
+            device_type: device_type.to_string(),
+        };
+
+        let response = self.client
+            .post(&url)
+            .json(&request)
+            .send()
+            .context("Failed to send clone device request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+
+            // Provide user-friendly error messages
+            let error_msg = if status == 403 {
+                "Your account is pending admin approval or has been deactivated. Please contact the administrator."
+            } else if status == 401 {
+                "Invalid API key or device is inactive."
+            } else {
+                &error_body
+            };
+
+            anyhow::bail!("Device cloning failed: {}", error_msg);
+        }
+
+        let result: CloneDeviceResponse = response.json()
+            .context("Failed to parse clone device response")?;
+
+        Ok(result)
     }
 
     /// Check user approval status (no auth required)

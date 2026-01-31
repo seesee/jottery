@@ -17,6 +17,7 @@
 
   // Import credentials
   export let importCredentialsText: string;
+  export let importDeviceName: string;
   export let importing: boolean;
 
   // Error handling
@@ -381,9 +382,27 @@
                     rows="4"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
                   ></textarea>
+
+                  <!-- Device name for this device -->
+                  <div>
+                    <label for="import-device-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {$_('settings.syncSetup.import.deviceName.label')}
+                    </label>
+                    <input
+                      id="import-device-name"
+                      type="text"
+                      bind:value={importDeviceName}
+                      placeholder={$_('settings.syncSetup.import.deviceName.placeholder')}
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {$_('settings.syncSetup.import.deviceName.help')}
+                    </p>
+                  </div>
+
                   <button
                     on:click={onImportCredentials}
-                    disabled={!importCredentialsText.trim() || importing}
+                    disabled={!importCredentialsText.trim() || !importDeviceName.trim() || importing}
                     class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
                   >
                     {importing ? $_('settings.syncSetup.import.importing') : $_('settings.syncSetup.import.button')}

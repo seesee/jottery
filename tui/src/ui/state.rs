@@ -33,6 +33,11 @@ pub enum AppState {
     InputSyncCredentials {
         previous: Box<AppState>,
     },
+    /// Input device name for imported credentials
+    ImportInputDeviceName {
+        credentials: String,
+        previous: Box<AppState>,
+    },
     /// Input email for registration status check
     InputEmailForStatus {
         previous: Box<AppState>,

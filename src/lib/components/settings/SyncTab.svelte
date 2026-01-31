@@ -27,6 +27,7 @@
 
   // Import credentials
   export let importCredentialsText: string;
+  export let importDeviceName: string;
   export let importing: boolean;
 
   // Account management
@@ -129,6 +130,7 @@
         bind:registeringDevice
         bind:userRegistrationMessage
         bind:importCredentialsText
+        bind:importDeviceName
         bind:importing
         bind:syncError
         {onRegisterUser}

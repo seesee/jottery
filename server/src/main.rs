@@ -178,7 +178,8 @@ async fn main() {
     // Registration routes (rate limiting disabled - requires proxy-aware key extractor)
     let registration_routes = Router::new()
         .route("/api/v1/auth/register-user", post(api::auth::register_user))
-        .route("/api/v1/auth/register-device", post(api::auth::register_device));
+        .route("/api/v1/auth/register-device", post(api::auth::register_device))
+        .route("/api/v1/auth/clone-device", post(api::auth::clone_device));
 
     // Build main router
     let app = Router::new()

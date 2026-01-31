@@ -14,6 +14,7 @@ export interface SyncMetadata {
   syncEnabled: boolean;
   syncEndpoint: string;
   autoSyncInterval?: number;      // Minutes (0 = disabled, default: 5)
+  pendingDeviceName?: string;     // Device name for pending clone-device call (during import)
 }
 
 // Per-note sync tracking

@@ -17,6 +17,8 @@ pub struct SyncMetadata {
     pub sync_endpoint: String,
     pub auto_sync_interval: Option<i32>, // Minutes (0 = disabled, default: 1)
     pub pending_registration_email: Option<String>, // Email of pending registration awaiting approval
+    #[serde(default)]
+    pub pending_device_name: Option<String>, // Device name for pending clone-device call (during import)
 }
 
 impl Default for SyncMetadata {
@@ -32,6 +34,7 @@ impl Default for SyncMetadata {
             sync_endpoint: String::new(),
             auto_sync_interval: Some(1),
             pending_registration_email: None,
+            pending_device_name: None,
         }
     }
 }

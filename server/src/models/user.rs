@@ -59,6 +59,24 @@ pub struct RegisterDeviceResponse {
     pub device_name: String,
 }
 
+/// Clone device request (using existing API key to register a new device)
+/// Used when importing sync credentials on a new device
+#[derive(Debug, Deserialize)]
+pub struct CloneDeviceRequest {
+    /// Existing valid API key from another device
+    #[serde(rename = "apiKey")]
+    pub api_key: String,
+    /// Name for the new device
+    #[serde(rename = "deviceName")]
+    pub device_name: String,
+    /// Type of device (web, tui, etc.)
+    #[serde(rename = "deviceType")]
+    pub device_type: String,
+}
+
+/// Clone device response (same as register device response)
+pub type CloneDeviceResponse = RegisterDeviceResponse;
+
 /// Admin login request
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {

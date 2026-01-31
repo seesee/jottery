@@ -11,6 +11,7 @@ import { syncRepository } from './syncRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
+import { authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 
@@ -129,7 +130,7 @@ export async function unlock(password: string): Promise<void> {
 
 /**
  * Handle imported credentials after successful unlock
- * Detects IMPORT: marker, encrypts plaintext API key, enables sync
+ * Detects IMPORT: or ENCRYPTED: marker, calls clone-device to register as new device
  */
 async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
   try {
@@ -150,8 +151,12 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
       hasClientId: !!metadata.clientId,
       hasEndpoint: !!metadata.syncEndpoint,
       hasApiKey: !!metadata.apiKey,
+      hasPendingDeviceName: !!metadata.pendingDeviceName,
       syncEnabled: metadata.syncEnabled,
     });
+
+    // Get device name (default to 'Imported Device' if not set)
+    const deviceName = metadata.pendingDeviceName || 'Imported Device';
 
     // Check for IMPORT: marker (plaintext API key from legacy unencrypted import)
     if (metadata.apiKey.startsWith('IMPORT:')) {
@@ -159,25 +164,37 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
 
       // Extract plaintext API key
       const plaintextApiKey = metadata.apiKey.substring(7); // Remove "IMPORT:" prefix
+      const endpoint = metadata.syncEndpoint;
 
-      console.log('[ImportHandler] Encrypting API key with master key...');
-      const encryptedApiKey = await cryptoService.encryptText(plaintextApiKey, masterKey);
-      console.log('[ImportHandler] ✓ API key encrypted');
+      if (!endpoint) {
+        throw new Error('No sync endpoint found for imported credentials');
+      }
 
-      console.log('[ImportHandler] Updating sync metadata...');
+      // Call clone-device to register as a NEW device
+      console.log('[ImportHandler] Calling clone-device to register new device...');
+      const cloneResult = await authService.cloneDevice(endpoint, plaintextApiKey, deviceName);
+      console.log('[ImportHandler] ✓ Clone-device successful, got new clientId:', cloneResult.clientId);
+
+      // Encrypt the NEW API key
+      const encryptedApiKey = await cryptoService.encryptText(cloneResult.apiKey, masterKey);
+      console.log('[ImportHandler] ✓ New API key encrypted');
+
+      // Update sync metadata with NEW credentials
       await syncRepository.updateMetadata({
+        clientId: cloneResult.clientId,
+        userId: cloneResult.userId,
         apiKey: JSON.stringify(encryptedApiKey),
         syncEnabled: true,
+        pendingDeviceName: undefined, // Clear the pending name
       });
-      console.log('[ImportHandler] ✓ Sync metadata updated (syncEnabled: true)');
+      console.log('[ImportHandler] ✓ Sync metadata updated with new device credentials');
 
-      console.log('[ImportHandler] Updating settings repository...');
       await settingsRepository.update({
         syncEnabled: true,
       });
       console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
 
-      console.log('[ImportHandler] ✓✓✓ Import credentials processed successfully! Sync is now enabled.');
+      console.log('[ImportHandler] ✓✓✓ Import credentials processed successfully! Registered as new device.');
     }
     // Check for ENCRYPTED: marker (encrypted credentials from v1 format import)
     else if (metadata.apiKey.startsWith('ENCRYPTED:')) {
@@ -197,22 +214,29 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
         console.log('[ImportHandler] ✓ Credentials decrypted successfully');
 
         // Validate decrypted credentials
-        if (!credentials.endpoint || !credentials.clientId || !credentials.apiKey) {
+        if (!credentials.endpoint || !credentials.apiKey) {
           throw new Error('Invalid decrypted credentials - missing required fields');
         }
 
-        // Re-encrypt the API key for storage
-        const encryptedApiKey = await cryptoService.encryptText(credentials.apiKey, masterKey);
-        console.log('[ImportHandler] ✓ API key re-encrypted');
+        // Call clone-device to register as a NEW device
+        console.log('[ImportHandler] Calling clone-device to register new device...');
+        const cloneResult = await authService.cloneDevice(credentials.endpoint, credentials.apiKey, deviceName);
+        console.log('[ImportHandler] ✓ Clone-device successful, got new clientId:', cloneResult.clientId);
 
-        // Update sync metadata with decrypted values
+        // Encrypt the NEW API key
+        const encryptedApiKey = await cryptoService.encryptText(cloneResult.apiKey, masterKey);
+        console.log('[ImportHandler] ✓ New API key encrypted');
+
+        // Update sync metadata with NEW credentials
         await syncRepository.updateMetadata({
-          clientId: credentials.clientId,
+          clientId: cloneResult.clientId,
+          userId: cloneResult.userId,
           syncEndpoint: credentials.endpoint,
           apiKey: JSON.stringify(encryptedApiKey),
           syncEnabled: true,
+          pendingDeviceName: undefined, // Clear the pending name
         });
-        console.log('[ImportHandler] ✓ Sync metadata updated with decrypted credentials');
+        console.log('[ImportHandler] ✓ Sync metadata updated with new device credentials');
 
         await settingsRepository.update({
           syncEndpoint: credentials.endpoint,
@@ -220,14 +244,21 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
         });
         console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
 
-        console.log('[ImportHandler] ✓✓✓ Encrypted credentials processed successfully! Sync is now enabled.');
+        console.log('[ImportHandler] ✓✓✓ Encrypted credentials processed successfully! Registered as new device.');
       } catch (decryptError) {
-        console.error('[ImportHandler] Failed to decrypt credentials - wrong password?', decryptError);
+        console.error('[ImportHandler] Failed to process credentials:', decryptError);
         // Clear the invalid encrypted data so user can try again
         await syncRepository.updateMetadata({
           apiKey: '',
           syncEnabled: false,
+          pendingDeviceName: undefined,
         });
+
+        // Provide more specific error message
+        const errorMessage = decryptError instanceof Error ? decryptError.message : String(decryptError);
+        if (errorMessage.includes('clone') || errorMessage.includes('401') || errorMessage.includes('403')) {
+          throw new Error(`Failed to register device: ${errorMessage}`);
+        }
         throw new Error('Failed to decrypt sync credentials. Please ensure you are using the same password as the source device.');
       }
     } else {

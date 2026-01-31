@@ -89,6 +89,7 @@ impl Database {
             (10, include_str!("../migrations/010_add_archive_support.sql")),
             (11, include_str!("../migrations/011_add_lock_support.sql")),
             (12, include_str!("../migrations/012_add_deletions_tracking.sql")),
+            (13, include_str!("../migrations/013_add_pending_device_name.sql")),
         ];
 
         // Run pending migrations

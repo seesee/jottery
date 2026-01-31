@@ -31,6 +31,15 @@ export interface RegisterDeviceResponse {
   deviceName: string;
 }
 
+// Clone device types (for importing credentials)
+export interface CloneDeviceRequest {
+  apiKey: string;
+  deviceName: string;
+  deviceType: string;
+}
+
+export type CloneDeviceResponse = RegisterDeviceResponse;
+
 class AuthService {
   /**
    * Normalize endpoint URL by removing trailing slash
@@ -135,6 +144,52 @@ class AuthService {
     }
 
     const result: RegisterDeviceResponse = await response.json();
+    return result;
+  }
+
+  /**
+   * Clone a device using an existing API key
+   * Creates a new device entry for the same user with a new client ID and API key
+   * Used when importing sync credentials on a new device
+   */
+  async cloneDevice(
+    endpoint: string,
+    apiKey: string,
+    deviceName: string
+  ): Promise<CloneDeviceResponse> {
+    endpoint = this.normalizeEndpoint(endpoint);
+    const url = `${endpoint}/api/v1/auth/clone-device`;
+
+    const request: CloneDeviceRequest = {
+      apiKey,
+      deviceName,
+      deviceType: 'web',
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const status = response.status;
+      const errorText = await response.text();
+
+      if (status === 403) {
+        throw new Error(
+          'Your account is pending admin approval or has been deactivated. Please contact the administrator.'
+        );
+      } else if (status === 401) {
+        throw new Error('Invalid API key or device is inactive.');
+      } else {
+        throw new Error(`Device cloning failed: ${errorText}`);
+      }
+    }
+
+    const result: CloneDeviceResponse = await response.json();
     return result;
   }
 }

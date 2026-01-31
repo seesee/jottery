@@ -103,8 +103,11 @@ export async function exportCredentials(useLegacyFormat: boolean = false): Promi
  * The actual decryption happens when the user unlocks the app with their password.
  *
  * Returns information about the import but does NOT enable sync yet.
+ *
+ * @param input - The credentials string to parse
+ * @param deviceName - Name for this device (used when cloning credentials to create new device)
  */
-export async function parseAndStoreImportedCredentials(input: string): Promise<ImportResult> {
+export async function parseAndStoreImportedCredentials(input: string, deviceName: string = 'Imported Device'): Promise<ImportResult> {
   try {
     const trimmedInput = input.trim();
 
@@ -114,9 +117,9 @@ export async function parseAndStoreImportedCredentials(input: string): Promise<I
 
     // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
     if (trimmedInput.startsWith('jottery:v1:')) {
-      return await handleEncryptedFormat(trimmedInput);
+      return await handleEncryptedFormat(trimmedInput, deviceName);
     } else {
-      return await handleLegacyFormat(trimmedInput);
+      return await handleLegacyFormat(trimmedInput, deviceName);
     }
   } catch (error) {
     console.error('Failed to import credentials:', error);
@@ -131,7 +134,7 @@ export async function parseAndStoreImportedCredentials(input: string): Promise<I
 /**
  * Handle encrypted credentials format
  */
-async function handleEncryptedFormat(input: string): Promise<ImportResult> {
+async function handleEncryptedFormat(input: string, deviceName: string): Promise<ImportResult> {
   const payload = input.substring('jottery:v1:'.length);
   const dotIndex = payload.indexOf('.');
 
@@ -154,6 +157,8 @@ async function handleEncryptedFormat(input: string): Promise<ImportResult> {
     syncEnabled: false,
     // Store encrypted payload with marker - will be decrypted on unlock
     apiKey: `ENCRYPTED:${encryptedPayload}`,
+    // Store pending device name for clone-device call
+    pendingDeviceName: deviceName,
   });
 
   return { success: true, isEncrypted: true, salt };
@@ -162,7 +167,7 @@ async function handleEncryptedFormat(input: string): Promise<ImportResult> {
 /**
  * Handle legacy (unencrypted) credentials format
  */
-async function handleLegacyFormat(input: string): Promise<ImportResult> {
+async function handleLegacyFormat(input: string, deviceName: string): Promise<ImportResult> {
   let credentials: LegacyCredentials;
 
   try {
@@ -190,11 +195,13 @@ async function handleLegacyFormat(input: string): Promise<ImportResult> {
   });
 
   // Store sync metadata with IMPORT marker for processing on unlock
+  // Note: We store the endpoint temporarily but will get new credentials from clone-device
   await syncRepository.updateMetadata({
-    clientId: credentials.clientId,
     syncEndpoint: credentials.endpoint,
     syncEnabled: false,
     apiKey: `IMPORT:${credentials.apiKey}`,
+    // Store pending device name for clone-device call
+    pendingDeviceName: deviceName,
   });
 
   return { success: true, isEncrypted: false, salt: credentials.salt };

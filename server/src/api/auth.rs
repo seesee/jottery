@@ -8,8 +8,9 @@ use crate::{
     db::{SessionRepository, UserRepository},
     error::AppResult,
     models::{
-        LoginRequest, LoginResponse, RegisterDeviceRequest, RegisterDeviceResponse,
-        RegisterUserRequest, RegisterUserResponse, UserInfo,
+        CloneDeviceRequest, CloneDeviceResponse, LoginRequest, LoginResponse,
+        RegisterDeviceRequest, RegisterDeviceResponse, RegisterUserRequest,
+        RegisterUserResponse, UserInfo,
     },
     utils::password::{hash_password_with_params, validate_password_strength, verify_password},
     AppState,
@@ -165,6 +166,132 @@ pub async fn register_device(
     );
 
     let response = RegisterDeviceResponse {
+        client_id,
+        api_key,
+        user_id: user.id,
+        device_name: req.device_name,
+    };
+
+    Ok((StatusCode::CREATED, Json(response)))
+}
+
+/// Clone/register a new device using an existing valid API key
+/// Used when importing sync credentials on a new device
+/// Creates a new device for the same user with a new client ID and API key
+pub async fn clone_device(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CloneDeviceRequest>,
+) -> AppResult<(StatusCode, Json<CloneDeviceResponse>)> {
+    tracing::info!(
+        "Clone device request: device_name={}, device_type={}",
+        req.device_name,
+        req.device_type
+    );
+
+    // Validate device name is not empty
+    if req.device_name.trim().is_empty() {
+        return Err(crate::error::AppError::BadRequest(
+            "Device name cannot be empty".to_string(),
+        ));
+    }
+
+    // Hash the provided API key to look up the source device
+    let mut hasher = Sha256::new();
+    hasher.update(req.api_key.as_bytes());
+    let hashed_key = format!("{:x}", hasher.finalize());
+
+    // Find the client by API key
+    let source_client = sqlx::query!(
+        "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
+        hashed_key
+    )
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let source_client = match source_client {
+        Some(c) if c.is_active == Some(1) => c,
+        Some(_) => {
+            tracing::warn!("Clone device failed: source device is inactive");
+            return Err(crate::error::AppError::Unauthorized);
+        }
+        None => {
+            tracing::warn!("Clone device failed: invalid API key");
+            return Err(crate::error::AppError::Unauthorized);
+        }
+    };
+
+    // Get the user and verify they're still active and approved
+    let user = sqlx::query!(
+        "SELECT id, email, approved, is_active FROM users WHERE id = ?",
+        source_client.user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let user = match user {
+        Some(u) => u,
+        None => {
+            tracing::warn!("Clone device failed: user not found");
+            return Err(crate::error::AppError::Unauthorized);
+        }
+    };
+
+    // Check if user is approved
+    if user.approved != 1 {
+        tracing::warn!(
+            "Clone device failed: user not approved: {}",
+            user.email
+        );
+        return Err(crate::error::AppError::Forbidden(
+            "Account pending admin approval".to_string(),
+        ));
+    }
+
+    // Check if user is active
+    if user.is_active != 1 {
+        tracing::warn!("Clone device failed: user deactivated: {}", user.email);
+        return Err(crate::error::AppError::Forbidden(
+            "Account deactivated".to_string(),
+        ));
+    }
+
+    // Generate new client ID and API key for the new device
+    let client_id = Uuid::new_v4().to_string();
+    let api_key = generate_api_key();
+
+    // Hash new API key for storage
+    let mut hasher = Sha256::new();
+    hasher.update(api_key.as_bytes());
+    let new_hashed_key = format!("{:x}", hasher.finalize());
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    // Insert the new device
+    sqlx::query!(
+        r#"
+        INSERT INTO clients (id, user_id, api_key, device_name, device_type, created_at, last_seen_at, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        "#,
+        client_id,
+        user.id,
+        new_hashed_key,
+        req.device_name,
+        req.device_type,
+        now,
+        now
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!(
+        "Device cloned successfully: new_client_id={}, user_id={}, device={}, from_client={}",
+        client_id,
+        user.id,
+        req.device_name,
+        source_client.id
+    );
+
+    let response = CloneDeviceResponse {
         client_id,
         api_key,
         user_id: user.id,
