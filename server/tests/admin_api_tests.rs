@@ -18,6 +18,7 @@ use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use sha2::Digest;
 use sqlx::SqlitePool;
+use tokio::sync::broadcast;
 use std::sync::Arc;
 use tower::{Service, ServiceExt};
 
@@ -56,8 +57,10 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 

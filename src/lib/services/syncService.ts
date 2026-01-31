@@ -46,6 +46,10 @@ class SyncService {
   private isSyncing = false;
   private autoSyncTimer?: number;
   private backgroundSyncTimer?: number;
+  private eventSource: EventSource | null = null;
+  private sseReconnectAttempts = 0;
+  private maxSseReconnectAttempts = 5;
+  private sseReconnectDelay = 1000; // Start with 1 second
 
   /**
    * Register a new client with the server
@@ -855,12 +859,116 @@ class SyncService {
   }
 
   /**
+   * Connect to SSE endpoint for real-time sync notifications
+   * When another device syncs, the server sends a notification to trigger an immediate pull
+   */
+  async connectToSyncEvents(): Promise<void> {
+    // Don't reconnect if already connected
+    if (this.eventSource) {
+      return;
+    }
+
+    try {
+      const metadata = await syncRepository.getMetadata();
+      if (!metadata?.syncEnabled || !metadata?.apiKey || !metadata?.syncEndpoint) {
+        return;
+      }
+
+      // Decrypt API key
+      const masterKey = keyManager.getMasterKey();
+      if (!masterKey) {
+        return; // App is locked
+      }
+
+      const apiKeyEncrypted = JSON.parse(metadata.apiKey);
+      const apiKey = await cryptoService.decryptText(apiKeyEncrypted, masterKey.key);
+
+      // Build SSE URL with API key as query parameter
+      // EventSource doesn't support custom headers, so we use query params
+      const endpoint = normalizeEndpoint(metadata.syncEndpoint);
+      const sseUrl = `${endpoint}/api/v1/sync/events?api_key=${encodeURIComponent(apiKey)}`;
+
+      console.log('[SyncService] Connecting to SSE for real-time sync notifications');
+      this.eventSource = new EventSource(sseUrl);
+
+      // Reset reconnect state on successful connection
+      this.eventSource.onopen = () => {
+        console.log('[SyncService] SSE connection established');
+        this.sseReconnectAttempts = 0;
+        this.sseReconnectDelay = 1000;
+      };
+
+      // Handle sync notification from server
+      this.eventSource.addEventListener('sync', () => {
+        console.log('[SyncService] Received sync notification from server, triggering sync');
+        // Trigger immediate sync to pull changes from other devices
+        this.syncNow();
+      });
+
+      // Handle connection errors
+      this.eventSource.onerror = (event) => {
+        console.warn('[SyncService] SSE connection error:', event);
+
+        // EventSource automatically reconnects, but we want to limit attempts
+        // and use exponential backoff
+        if (this.eventSource?.readyState === EventSource.CLOSED) {
+          this.sseReconnectAttempts++;
+
+          if (this.sseReconnectAttempts <= this.maxSseReconnectAttempts) {
+            console.log(`[SyncService] SSE reconnect attempt ${this.sseReconnectAttempts}/${this.maxSseReconnectAttempts} in ${this.sseReconnectDelay}ms`);
+
+            // Close the failed connection and try again with backoff
+            this.eventSource?.close();
+            this.eventSource = null;
+
+            setTimeout(() => {
+              this.connectToSyncEvents();
+            }, this.sseReconnectDelay);
+
+            // Exponential backoff with max of 30 seconds
+            this.sseReconnectDelay = Math.min(this.sseReconnectDelay * 2, 30000);
+          } else {
+            console.warn('[SyncService] SSE max reconnect attempts reached, falling back to periodic sync only');
+            this.eventSource?.close();
+            this.eventSource = null;
+          }
+        }
+      };
+    } catch (error) {
+      console.error('[SyncService] Failed to connect to SSE:', error);
+    }
+  }
+
+  /**
+   * Disconnect from SSE endpoint
+   * Called when locking the app or disabling sync
+   */
+  disconnectFromSyncEvents(): void {
+    if (this.eventSource) {
+      console.log('[SyncService] Disconnecting from SSE');
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    // Reset reconnect state
+    this.sseReconnectAttempts = 0;
+    this.sseReconnectDelay = 1000;
+  }
+
+  /**
+   * Check if SSE is connected
+   */
+  isSseConnected(): boolean {
+    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
+  }
+
+  /**
    * Disconnect from sync server
    * Clears all sync credentials and metadata, but preserves local notes
    */
   async disconnect(): Promise<void> {
-    // Disable auto-sync first
+    // Disable auto-sync and SSE first
     this.disableAutoSync();
+    this.disconnectFromSyncEvents();
 
     // Delete recovery note (non-blocking)
     deleteSyncRecoveryNote().catch(err =>

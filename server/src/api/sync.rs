@@ -549,6 +549,21 @@ pub async fn push(
         }
     }
 
+    // Broadcast sync notification to other connected devices of this user
+    // This triggers real-time sync via SSE for any other connected clients
+    if !accepted.is_empty() {
+        use crate::api::sse::SyncNotification;
+        let _ = state.sync_broadcast.send(SyncNotification {
+            user_id: client_info.user_id.clone(),
+            source_client_id: client_info.client_id.clone(),
+        });
+        tracing::debug!(
+            "Broadcast sync notification for user {} (from client {})",
+            client_info.user_id,
+            client_info.client_id
+        );
+    }
+
     Ok(Json(SyncPushResponse {
         accepted,
         rejected,

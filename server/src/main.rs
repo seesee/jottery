@@ -4,9 +4,9 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
-use sqlx::SqlitePool;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
@@ -20,12 +20,14 @@ mod error;
 mod models;
 mod utils;
 
+use crate::api::sse::{SyncBroadcast, SyncNotification};
 use crate::config::Config;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub pool: SqlitePool,
+    pub pool: sqlx::SqlitePool,
     pub config: Config,
+    pub sync_broadcast: SyncBroadcast,
 }
 
 /// Build CORS layer based on configuration
@@ -96,10 +98,15 @@ async fn main() {
 
     tracing::info!("Database migrations complete");
 
+    // Create broadcast channel for SSE sync notifications
+    // Capacity of 100 is sufficient - notifications are small and ephemeral
+    let (sync_broadcast, _) = broadcast::channel::<SyncNotification>(100);
+
     // Build application state
     let app_state = Arc::new(AppState {
         pool,
         config: config.clone(),
+        sync_broadcast,
     });
 
     // Build protected sync routes with API key auth middleware
@@ -112,6 +119,11 @@ async fn main() {
             app_state.clone(),
             api::middleware::auth_middleware,
         ));
+
+    // SSE route for real-time sync notifications
+    // Uses query param auth because EventSource doesn't support headers
+    let sse_routes = Router::new()
+        .route("/api/v1/sync/events", get(api::sse::sync_events));
 
     // Build protected user routes with session auth middleware (for account management)
     let user_routes = Router::new()
@@ -179,6 +191,7 @@ async fn main() {
         .route("/api/v1/user/status", get(api::user::check_status))
         // Merge protected routes
         .merge(sync_routes)
+        .merge(sse_routes)
         .merge(user_routes)
         .merge(admin_routes)
         // Serve admin dashboard and user portal (same SPA, different paths)

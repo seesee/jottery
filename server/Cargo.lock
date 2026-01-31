@@ -1237,6 +1237,7 @@ dependencies = [
  "clap",
  "comfy-table",
  "dotenvy",
+ "futures",
  "hex",
  "http-body-util",
  "rand",
@@ -1247,6 +1248,7 @@ dependencies = [
  "sqlx",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-stream",
  "tower",
  "tower-http",
  "tower_governor",
@@ -2534,6 +2536,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

@@ -16,6 +16,7 @@ use http_body_util::BodyExt;
 use serde_json::{json, Value};
 use sha2::Digest;
 use sqlx::SqlitePool;
+use tokio::sync::broadcast;
 use std::sync::Arc;
 use tower::ServiceExt;
 
@@ -105,8 +106,10 @@ async fn test_malformed_json_sync_push() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -158,8 +161,10 @@ async fn test_malformed_json_user_login() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -205,8 +210,10 @@ async fn test_sync_push_missing_notes_field() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -264,8 +271,10 @@ async fn test_sync_push_note_missing_required_fields() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -331,8 +340,10 @@ async fn test_register_user_missing_email() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -382,8 +393,10 @@ async fn test_login_missing_password() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -435,8 +448,10 @@ async fn test_sync_push_wrong_data_type() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -495,8 +510,10 @@ async fn test_sync_push_version_wrong_type() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -573,8 +590,10 @@ async fn test_register_device_wrong_type() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -629,8 +648,10 @@ async fn test_get_user_invalid_uuid() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -717,8 +738,10 @@ async fn test_empty_string_fields() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -771,8 +794,10 @@ async fn test_extremely_large_note_content() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -851,8 +876,10 @@ async fn test_many_tags() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -934,8 +961,10 @@ async fn test_special_characters_in_content() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -1017,8 +1046,10 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 
@@ -1159,8 +1190,10 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         enable_hsts: false,
     };
 
+    let (sync_broadcast, _) = broadcast::channel(100);
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
+        sync_broadcast,
         config,
     });
 

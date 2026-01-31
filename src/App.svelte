@@ -270,6 +270,7 @@
   $: if ($isLocked && initialized) {
     stopAutoLock();
     syncService.disableAutoSync();
+    syncService.disconnectFromSyncEvents();
     // Only sync on lock if we were previously unlocked (not on app start)
     if (wasUnlocked) {
       syncOnLock();
@@ -369,6 +370,10 @@
       if (syncMetadata?.syncEnabled) {
         const interval = syncMetadata.autoSyncInterval || 5;
         syncService.enableAutoSync(interval);
+
+        // Connect to SSE for real-time sync notifications
+        // This runs in background - errors are handled internally
+        syncService.connectToSyncEvents();
 
         // Trigger sync on unlock to get latest changes
         syncService.syncNow();

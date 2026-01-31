@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod auth;
+pub mod sse;
 pub mod sync;
 pub mod user;
 
