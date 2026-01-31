@@ -31,6 +31,42 @@ Most note-taking apps are either too heavy (designed for long-form documents) or
 *   **Keyboard Shortcuts**: Fully customisable keyboard shortcuts for common actions.
 *   **Many handy features**: Export notes, preview HTML, document info, basic versioning, and markdown documents in-editor.
 
+## Screenshots
+
+### Web Client
+
+**Main Interface (Dark Theme)**
+![Main Interface - Dark](public/screenshots/en-GB/01-main-interface-dark.png)
+
+**Main Interface (Light Theme)**
+![Main Interface - Light](public/screenshots/en-GB/01-main-interface-light.png)
+
+**Rich Editor with Syntax Highlighting**
+![Rich Editor](public/screenshots/en-GB/02-rich-editor-dark.png)
+
+**Multi-Select and Bulk Operations**
+![Multi-Select](public/screenshots/en-GB/03-multi-select-dark.png)
+
+**Version History**
+![Version History](public/screenshots/en-GB/04-version-history-dark.png)
+
+**Built-in Calculator**
+![Calculator](public/screenshots/en-GB/05-calculator-dark.png)
+
+### TUI Client
+
+**Terminal Interface**
+![TUI Interface](public/screenshots/en-GB/tui-interface.gif)
+
+**CLI Commands**
+![TUI CLI](public/screenshots/en-GB/tui-cli.gif)
+
+**Piping Content**
+![TUI Piping](public/screenshots/en-GB/tui-piping.gif)
+
+**Sync Operations**
+![TUI Sync](public/screenshots/en-GB/tui-sync.gif)
+
 ## Caveats
 *   **Sync**: The sync mechanism is quite robust but very basic. Updates are sent periodically and the last version to be received "wins". To mitigate against accidental deletions, the previous version is also stored.
 *   **Security**: Use a strong password -- all data blobs (notes, tags, attachments) are encrypted using it. If you forget your password, there is no recovery process. You will lose all your notes and will need to start over. Because it's handy for development purposes, there is a mechanism to store the password in both web and tui app (this is NOT synced) so you don't need to constantly input your password -- but if you use this, your notes are basically plain text to anyone with access to your device/db files. I suggest using a password manager.
@@ -115,6 +151,10 @@ Access the web-based admin dashboard at `http://your-server:3030/admin`
 - Manage device registrations
 - View audit logs of sync operations
 - Monitor server statistics
+
+### Security
+
+For detailed information about Jottery's security architecture, deployment best practices, and threat model, see [SECURITY.md](SECURITY.md).
 
 ## Technology Stack
 
