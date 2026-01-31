@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "Настройки",
+      "language": {
+        "title": "Язык",
+        "description": "Выберите предпочитаемый язык интерфейса.",
+        "label": "Язык отображения"
+      },
       "changePassword": "Изменить пароль",
       "currentPassword": "Текущий пароль",
       "newPassword": "Новый пароль",

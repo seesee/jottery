@@ -3,7 +3,19 @@
   import { userAuth } from '../../lib/userAuth.svelte';
   import { toast } from '../../lib/toast.svelte';
   import ConfirmModal from '../../components/ConfirmModal.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
+  import { AVAILABLE_LOCALES } from '../../lib/services/i18nService';
+
+  // Language setting - stored in localStorage (shared with admin)
+  const LANGUAGE_STORAGE_KEY = 'admin_language';
+  let selectedLanguage = $state(localStorage.getItem(LANGUAGE_STORAGE_KEY) || $locale || 'en-GB');
+
+  function handleLanguageChange(event: Event) {
+    const newLocale = (event.target as HTMLSelectElement).value;
+    selectedLanguage = newLocale;
+    locale.set(newLocale);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, newLocale);
+  }
 
   // Password change state
   let currentPassword = $state('');
@@ -94,6 +106,30 @@
 
 <div class="space-y-8">
   <h2 class="text-2xl font-bold text-gray-900">{$_('userPortal.settings.title')}</h2>
+
+  <!-- Language Section -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">{$_('userPortal.settings.language.title')}</h3>
+    <p class="text-sm text-gray-600 mb-4">
+      {$_('userPortal.settings.language.description')}
+    </p>
+
+    <div class="max-w-xs">
+      <label for="language" class="block text-sm font-medium text-gray-700 mb-1">
+        {$_('userPortal.settings.language.label')}
+      </label>
+      <select
+        id="language"
+        value={selectedLanguage}
+        onchange={handleLanguageChange}
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      >
+        {#each AVAILABLE_LOCALES as loc}
+          <option value={loc.code}>{loc.name}</option>
+        {/each}
+      </select>
+    </div>
+  </div>
 
   <!-- Change Password Section -->
   <div class="bg-white rounded-lg shadow p-6">

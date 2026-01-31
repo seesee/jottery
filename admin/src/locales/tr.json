@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "Ayarlar",
+      "language": {
+        "title": "Dil",
+        "description": "Arayüz için tercih ettiğiniz dili seçin.",
+        "label": "Görüntüleme Dili"
+      },
       "changePassword": "Parolayı değiştir",
       "currentPassword": "Mevcut parola",
       "newPassword": "Yeni parola",

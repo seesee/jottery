@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "設定",
+      "language": {
+        "title": "言語",
+        "description": "インターフェースの言語を選択してください。",
+        "label": "表示言語"
+      },
       "changePassword": "パスワードを変更",
       "currentPassword": "現在のパスワード",
       "newPassword": "新しいパスワード",

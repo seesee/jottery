@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "Einstellungen",
+      "language": {
+        "title": "Sprache",
+        "description": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche.",
+        "label": "Anzeigesprache"
+      },
       "changePassword": "Passwort ändern",
       "currentPassword": "Aktuelles Passwort",
       "newPassword": "Neues Passwort",

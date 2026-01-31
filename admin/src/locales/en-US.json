@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "Settings",
+      "language": {
+        "title": "Language",
+        "description": "Select your preferred language for the interface.",
+        "label": "Display Language"
+      },
       "changePassword": "Change Password",
       "currentPassword": "Current Password",
       "newPassword": "New Password",

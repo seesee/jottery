@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "Impostazioni",
+      "language": {
+        "title": "Lingua",
+        "description": "Seleziona la lingua preferita per l'interfaccia.",
+        "label": "Lingua di visualizzazione"
+      },
       "changePassword": "Cambia password",
       "currentPassword": "Password attuale",
       "newPassword": "Nuova password",

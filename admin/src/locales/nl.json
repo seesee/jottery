@@ -277,6 +277,11 @@
     },
     "settings": {
       "title": "Instellingen",
+      "language": {
+        "title": "Taal",
+        "description": "Selecteer uw voorkeurstaal voor de interface.",
+        "label": "Weergavetaal"
+      },
       "changePassword": "Wachtwoord wijzigen",
       "currentPassword": "Huidig wachtwoord",
       "newPassword": "Nieuw wachtwoord",
