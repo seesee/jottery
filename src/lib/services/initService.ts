@@ -260,9 +260,19 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
           pendingDeviceName: undefined,
         });
 
-        // Provide more specific error message
+        // Provide more specific error message based on where the error occurred
         const errorMessage = decryptError instanceof Error ? decryptError.message : String(decryptError);
-        if (errorMessage.includes('clone') || errorMessage.includes('401') || errorMessage.includes('403')) {
+
+        // Check if this is a device registration/API error (not a decryption error)
+        const isApiError = errorMessage.includes('Invalid API key') ||
+                          errorMessage.includes('device') ||
+                          errorMessage.includes('cloning') ||
+                          errorMessage.includes('admin approval') ||
+                          errorMessage.includes('deactivated') ||
+                          errorMessage.includes('401') ||
+                          errorMessage.includes('403');
+
+        if (isApiError) {
           throw new Error(`Failed to register device: ${errorMessage}`);
         }
         throw new Error('Failed to decrypt sync credentials. Please ensure you are using the same password as the source device.');

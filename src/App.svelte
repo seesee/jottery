@@ -261,6 +261,8 @@
   // Watch lock status and load notes when unlocked
   $: if (!$isLocked && initialized) {
     wasUnlocked = true;
+    // Reload settings from IndexedDB (may have been updated during unlock, e.g., credential import)
+    refreshSettings();
     loadNotes();
     // Start auto-sync if enabled
     startAutoSync();
@@ -297,6 +299,19 @@
     } else {
       // Remember password disabled - enable auto-lock
       startAutoLock($settings.autoLockTimeout);
+    }
+  }
+
+  /**
+   * Refresh settings from IndexedDB
+   * Called after unlock to pick up any changes made during credential import
+   */
+  async function refreshSettings() {
+    try {
+      const userSettings = await settingsRepository.get();
+      settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
+    } catch (error) {
+      console.error('Failed to refresh settings:', error);
     }
   }
 
