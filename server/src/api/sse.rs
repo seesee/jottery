@@ -51,6 +51,12 @@ pub async fn sync_events(
     hasher.update(auth.api_key.as_bytes());
     let hashed_key = format!("{:x}", hasher.finalize());
 
+    tracing::debug!(
+        "SSE auth attempt: api_key_len={}, hashed_key={}",
+        auth.api_key.len(),
+        &hashed_key[..16] // First 16 chars for debugging
+    );
+
     // Look up client in database
     let client = sqlx::query!(
         "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
@@ -65,8 +71,19 @@ pub async fn sync_events(
 
     let client = match client {
         Some(c) if c.is_active == Some(1) => c,
-        _ => {
-            tracing::warn!("SSE connection attempt with invalid or inactive API key");
+        Some(c) => {
+            tracing::warn!(
+                "SSE connection attempt with inactive API key: client_id={}, is_active={:?}",
+                c.id,
+                c.is_active
+            );
+            return Err(axum::http::StatusCode::UNAUTHORIZED);
+        }
+        None => {
+            tracing::warn!(
+                "SSE connection attempt with unknown API key: hashed_prefix={}",
+                &hashed_key[..16]
+            );
             return Err(axum::http::StatusCode::UNAUTHORIZED);
         }
     };

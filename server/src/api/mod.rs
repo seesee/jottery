@@ -49,6 +49,12 @@ pub mod middleware {
         hasher.update(api_key.as_bytes());
         let hashed_key = format!("{:x}", hasher.finalize());
 
+        tracing::debug!(
+            "API auth attempt: api_key_len={}, hashed_key={}",
+            api_key.len(),
+            &hashed_key[..16] // First 16 chars for debugging
+        );
+
         // Look up client in database (including user_id for access control)
         let result = sqlx::query!(
             "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
