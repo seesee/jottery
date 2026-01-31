@@ -853,11 +853,21 @@ pub async fn pull(
     // Convert to SyncNoteVersion
     let mut versions_response = Vec::new();
     for db_version in db_versions {
-        // Deserialize tags
-        let tags: Vec<String> = serde_json::from_str(&db_version.tags).unwrap_or_default();
+        // Deserialize tags (log warning if corrupted)
+        let tags: Vec<String> = serde_json::from_str(&db_version.tags)
+            .inspect_err(|e| tracing::warn!(
+                "Failed to parse tags for version {} of note {}: {}",
+                db_version.version_key, db_version.note_id, e
+            ))
+            .unwrap_or_default();
 
-        // Deserialize attachments
-        let attachments: Vec<crate::models::AttachmentRef> = serde_json::from_str(&db_version.attachments).unwrap_or_default();
+        // Deserialize attachments (log warning if corrupted)
+        let attachments: Vec<crate::models::AttachmentRef> = serde_json::from_str(&db_version.attachments)
+            .inspect_err(|e| tracing::warn!(
+                "Failed to parse attachments for version {} of note {}: {}",
+                db_version.version_key, db_version.note_id, e
+            ))
+            .unwrap_or_default();
 
         versions_response.push(crate::models::SyncNoteVersion {
             version_key: db_version.version_key,

@@ -1,14 +1,17 @@
 #![allow(dead_code)]
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const KEY_LENGTH: usize = 32;
 
 /// Master key stored in memory
 /// Never persisted to disk
-#[derive(Clone)]
+/// Implements ZeroizeOnDrop to clear key from memory when dropped
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct MasterKey {
     key: [u8; KEY_LENGTH],
+    #[zeroize(skip)]
     derived_at: Instant,
 }
 
@@ -86,12 +89,12 @@ impl KeyManager {
     }
 
     /// Clear the master key (on lock)
-    /// Overwrites the key with zeros before dropping
+    /// The key is automatically zeroized when dropped (via ZeroizeOnDrop)
     pub fn clear_master_key(&self) {
         let mut inner = self.inner.lock().unwrap();
         if let Some(ref mut key) = inner.master_key {
-            // Overwrite key with zeros for security
-            key.key = [0u8; KEY_LENGTH];
+            // Explicitly zeroize before dropping for defense in depth
+            key.zeroize();
         }
         inner.master_key = None;
     }

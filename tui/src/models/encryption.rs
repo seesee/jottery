@@ -8,7 +8,7 @@ use base64::{Engine as _, engine::general_purpose};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptionMetadata {
     pub salt: String,        // Base64-encoded salt for PBKDF2
-    pub iterations: i32,     // PBKDF2 iterations (minimum 100,000, default 256,000)
+    pub iterations: i32,     // PBKDF2 iterations (minimum 100,000, default 600,000)
     pub created_at: DateTime<Utc>,
     pub algorithm: EncryptionAlgorithm,
 }
@@ -32,11 +32,11 @@ impl std::fmt::Display for EncryptionAlgorithm {
 }
 
 impl EncryptionMetadata {
-    /// Create new encryption metadata with default iterations
+    /// Create new encryption metadata with default iterations (600,000 - OWASP 2023)
     pub fn new(salt: String) -> Self {
         Self {
             salt,
-            iterations: 256_000, // Match web app and SQLCipher
+            iterations: 600_000, // OWASP 2023 recommendation
             created_at: Utc::now(),
             algorithm: EncryptionAlgorithm::Aes256Gcm,
         }
@@ -135,7 +135,7 @@ mod tests {
         let salt = general_purpose::STANDARD.encode(b"test_salt_16byte");
         let metadata = EncryptionMetadata::new(salt.clone());
         assert_eq!(metadata.salt, salt);
-        assert_eq!(metadata.iterations, 256_000);
+        assert_eq!(metadata.iterations, 600_000);
         assert_eq!(metadata.algorithm, EncryptionAlgorithm::Aes256Gcm);
     }
 

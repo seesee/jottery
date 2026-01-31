@@ -16,7 +16,10 @@ use crate::models::encryption::EncryptedData;
 const KEY_LENGTH: usize = 32; // 256 bits
 const NONCE_LENGTH: usize = 12; // 96 bits for GCM
 const SALT_LENGTH: usize = 32; // 256 bits
-const DEFAULT_ITERATIONS: u32 = 100_000; // Match web app
+/// Default PBKDF2 iterations for new databases (OWASP 2023 recommendation: 600,000+)
+pub const DEFAULT_ITERATIONS: u32 = 600_000;
+/// Minimum iterations accepted (for backwards compatibility with existing databases)
+const MIN_ITERATIONS: u32 = 100_000;
 
 type NonceType = [u8; NONCE_LENGTH];
 
@@ -34,7 +37,7 @@ impl CryptoService {
     /// # Arguments
     /// * `password` - User password
     /// * `salt` - Random salt (32 bytes)
-    /// * `iterations` - PBKDF2 iterations (default: 100,000)
+    /// * `iterations` - PBKDF2 iterations (minimum 100,000 for backwards compatibility)
     pub fn derive_key(
         &self,
         password: &str,
@@ -45,7 +48,8 @@ impl CryptoService {
             anyhow::bail!("Salt must be at least {} bytes", SALT_LENGTH);
         }
 
-        let iterations = if iterations < 100_000 {
+        // Enforce minimum iterations for security, but accept 100k for existing databases
+        let iterations = if iterations < MIN_ITERATIONS {
             DEFAULT_ITERATIONS
         } else {
             iterations

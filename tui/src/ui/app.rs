@@ -26,6 +26,7 @@ use crossterm::{
 };
 use rust_i18n::t;
 use ratatui::Frame;
+use zeroize::Zeroize;
 use std::{
     collections::HashSet,
     fs::File,
@@ -396,11 +397,10 @@ impl App {
             .crypto
             .derive_key(&self.password_input, &salt, iterations)?;
 
-        // Debug logging for troubleshooting
+        // Debug logging for troubleshooting (key bytes intentionally excluded for security)
         self.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(&salt)));
         self.debug_log(&format!("Unlock - Salt length: {} bytes", salt.len()));
         self.debug_log(&format!("Unlock - Iterations: {}", iterations));
-        self.debug_log(&format!("Unlock - Key (first 8 bytes): {}", hex::encode(&key[0..8])));
 
         self.key_manager.set_master_key(key);
         self.key = Some(key);
@@ -465,9 +465,9 @@ impl App {
             }
         }
 
-        // Clear password fields and reset flags
-        self.password_input.clear();
-        self.password_confirm.clear();
+        // Zeroize password fields for security and reset flags
+        self.password_input.zeroize();
+        self.password_confirm.zeroize();
         self.is_new_database = false;  // Database now exists
         self.password_confirm_focused = false;  // Reset focus
         self.remember_password_checkbox = false;  // Reset checkbox
@@ -519,7 +519,7 @@ impl App {
                 Ok(true)
             }
             Err(e) => {
-                self.password_input.clear();
+                self.password_input.zeroize();
                 // Delete invalid stored password
                 let _ = self.password_storage.delete();
                 Err(e).context("Auto-unlock failed")
@@ -1967,8 +1967,8 @@ impl App {
             }
 
             // Update encryption metadata with web app's salt AND iteration count
-            self.debug_log("Paste credentials - Saving salt with 100,000 iterations");
-            encryption_repo.save(&salt, 100_000)?;
+            self.debug_log(&format!("Paste credentials - Saving salt with {} iterations", crate::crypto::DEFAULT_ITERATIONS));
+            encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
             self.debug_log("Paste credentials - Salt saved successfully");
         }
 
@@ -2020,8 +2020,8 @@ impl App {
             self.key = None;
             self.notes.clear();
             self.selected_note = 0;
-            self.password_input.clear();
-            self.password_confirm.clear();
+            self.password_input.zeroize();
+            self.password_confirm.zeroize();
             self.input_mode = InputMode::Normal;
             self.state = AppState::Locked;
 

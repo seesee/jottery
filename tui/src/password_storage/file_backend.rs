@@ -6,6 +6,7 @@
 //! This backend is used as a fallback when OS keychain is unavailable.
 
 use anyhow::{Context, Result};
+use std::io::Write;
 use std::path::PathBuf;
 
 use super::{PasswordStorage, RetrieveResult, StorageBackendType};
@@ -54,10 +55,28 @@ impl PasswordStorage for FileStorage {
         let encrypted = crypto.encrypt_text(password, &key)?;
         let encrypted_json = serde_json::to_string(&encrypted)?;
 
-        // Write to file
+        // Write to file with restrictive permissions (owner read/write only)
         let remember_file = self.remember_file_path();
-        std::fs::write(&remember_file, &encrypted_json)
-            .context("Failed to write password storage file")?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut file = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600) // Owner read/write only
+                .open(&remember_file)
+                .context("Failed to create password storage file")?;
+            file.write_all(encrypted_json.as_bytes())
+                .context("Failed to write password storage file")?;
+        }
+
+        #[cfg(not(unix))]
+        {
+            std::fs::write(&remember_file, &encrypted_json)
+                .context("Failed to write password storage file")?;
+        }
 
         Ok(())
     }

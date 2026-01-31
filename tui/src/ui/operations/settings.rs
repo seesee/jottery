@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use std::time::Instant;
+use zeroize::Zeroize;
 
 use crate::{
     models::sync::SyncCredentials,
@@ -267,8 +268,8 @@ pub fn paste_sync_credentials(app: &mut App) -> Result<()> {
         }
 
         // Update encryption metadata with web app's salt AND iteration count
-        app.debug_log("Paste credentials - Saving salt with 100,000 iterations");
-        encryption_repo.save(&salt, 100_000)?;
+        app.debug_log(&format!("Paste credentials - Saving salt with {} iterations", crate::crypto::DEFAULT_ITERATIONS));
+        encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
         app.debug_log("Paste credentials - Salt saved successfully");
     }
 
@@ -320,8 +321,8 @@ pub fn paste_sync_credentials(app: &mut App) -> Result<()> {
         app.key = None;
         app.notes.clear();
         app.selected_note = 0;
-        app.password_input.clear();
-        app.password_confirm.clear();
+        app.password_input.zeroize();
+        app.password_confirm.zeroize();
         app.input_mode = InputMode::Normal;
         app.state = AppState::Locked;
 
@@ -476,7 +477,7 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
 
         // Update encryption metadata with the extracted salt
         let encryption_repo = EncryptionRepository::new(db.connection());
-        encryption_repo.save(&salt, 100_000)?;
+        encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
         app.debug_log("Process credentials - Salt saved successfully");
 
         // Store encrypted payload with marker for deferred decryption AND device name
@@ -496,8 +497,8 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
         app.key = None;
         app.notes.clear();
         app.selected_note = 0;
-        app.password_input.clear();
-        app.password_confirm.clear();
+        app.password_input.zeroize();
+        app.password_confirm.zeroize();
         app.password_confirm_focused = false;
         app.input_mode = InputMode::Normal;
         app.state = AppState::Locked;
@@ -533,8 +534,8 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
         }
 
         // Update encryption metadata with web app's salt AND iteration count
-        app.debug_log("Process credentials - Saving salt with 100,000 iterations");
-        encryption_repo.save(&salt, 100_000)?;
+        app.debug_log(&format!("Process credentials - Saving salt with {} iterations", crate::crypto::DEFAULT_ITERATIONS));
+        encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
         app.debug_log("Process credentials - Salt saved successfully");
     }
 
@@ -561,8 +562,8 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
     app.key = None;
     app.notes.clear();
     app.selected_note = 0;
-    app.password_input.clear();
-    app.password_confirm.clear();
+    app.password_input.zeroize();
+    app.password_confirm.zeroize();
     app.password_confirm_focused = false;
     app.input_mode = InputMode::Normal;
     app.state = AppState::Locked;

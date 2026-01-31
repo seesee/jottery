@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use std::time::Instant;
+use zeroize::Zeroize;
 
 use crate::{
     db::Database,
@@ -40,11 +41,10 @@ pub fn unlock(app: &mut App) -> Result<()> {
         .crypto
         .derive_key(&app.password_input, &salt, iterations)?;
 
-    // Debug logging for troubleshooting
+    // Debug logging for troubleshooting (key bytes intentionally excluded for security)
     app.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(&salt)));
     app.debug_log(&format!("Unlock - Salt length: {} bytes", salt.len()));
     app.debug_log(&format!("Unlock - Iterations: {}", iterations));
-    app.debug_log(&format!("Unlock - Key (first 8 bytes): {}", hex::encode(&key[0..8])));
 
     app.key_manager.set_master_key(key);
     app.key = Some(key);
@@ -232,8 +232,8 @@ pub fn unlock(app: &mut App) -> Result<()> {
     }
 
     // Clear password fields and reset flags
-    app.password_input.clear();
-    app.password_confirm.clear();
+    app.password_input.zeroize();
+    app.password_confirm.zeroize();
     app.is_new_database = false;  // Database now exists
     app.password_confirm_focused = false;  // Reset focus
     app.remember_password_checkbox = false;  // Reset checkbox

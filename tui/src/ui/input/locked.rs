@@ -3,6 +3,7 @@
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
+use zeroize::Zeroize;
 
 use crate::ui::app::App;
 use crate::ui::operations;
@@ -44,8 +45,8 @@ pub fn handle_locked_key(app: &mut App, key: KeyEvent) -> Result<()> {
             if let Err(e) = operations::auth::unlock(app) {
                 app.error =
                     Some(t!("password.unlock_failed", error = e.to_string()).to_string());
-                app.password_input.clear();
-                app.password_confirm.clear();
+                app.password_input.zeroize();
+                app.password_confirm.zeroize();
             }
         }
         KeyCode::Char(c) => {

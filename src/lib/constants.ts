@@ -74,9 +74,10 @@ export const SYNC_PROGRESS_THRESHOLD = 5;
 /**
  * PBKDF2 iteration count for key derivation.
  * Higher values = more secure but slower unlock.
- * 100,000 is OWASP recommended minimum as of 2023.
+ * OWASP recommends 600,000+ iterations for PBKDF2-SHA256 (2023).
+ * Existing databases retain their stored iteration count for compatibility.
  */
-export const CRYPTO_PBKDF2_ITERATIONS = 100000;
+export const CRYPTO_PBKDF2_ITERATIONS = 600000;
 
 // =============================================================================
 // Security Constants
