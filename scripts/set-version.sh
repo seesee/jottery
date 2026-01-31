@@ -1,18 +1,35 @@
 #!/bin/bash
 
 # Script to set version across all components
-# Usage: ./scripts/set-version.sh <version>
+# Usage: ./scripts/set-version.sh <version> [--skip-e2e]
 # Example: ./scripts/set-version.sh 0.5.0
+# Example: ./scripts/set-version.sh 0.5.0 --skip-e2e
 
 set -e
 
-if [ -z "$1" ]; then
-    echo "Usage: $0 <version>"
+SKIP_E2E=false
+VERSION=""
+
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --skip-e2e)
+            SKIP_E2E=true
+            ;;
+        *)
+            if [ -z "$VERSION" ]; then
+                VERSION="$arg"
+            fi
+            ;;
+    esac
+done
+
+if [ -z "$VERSION" ]; then
+    echo "Usage: $0 <version> [--skip-e2e]"
     echo "Example: $0 0.5.0"
+    echo "Example: $0 0.5.0 --skip-e2e"
     exit 1
 fi
-
-VERSION="$1"
 
 # Validate version format (x.y.z)
 if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -87,13 +104,18 @@ echo "✓ Admin dashboard type check passed"
 echo ""
 
 # Run web client E2E tests (slow - run last)
-echo "→ Running E2E tests (this may take 10-15 minutes)..."
-if ! npm run test:e2e; then
-    echo "✗ E2E tests failed"
-    exit 1
+if [ "$SKIP_E2E" = true ]; then
+    echo "→ Skipping E2E tests (--skip-e2e flag set)"
+    echo ""
+else
+    echo "→ Running E2E tests (this may take 10-15 minutes)..."
+    if ! npm run test:e2e; then
+        echo "✗ E2E tests failed"
+        exit 1
+    fi
+    echo "✓ E2E tests passed"
+    echo ""
 fi
-echo "✓ E2E tests passed"
-echo ""
 
 echo "All tests passed! Setting version to $VERSION across all components..."
 echo ""
