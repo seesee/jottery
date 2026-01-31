@@ -1,25 +1,11 @@
 :8088 {
-	# API proxy to jottery-server
+	# Proxy API, admin, and user routes to jottery-server
 	reverse_proxy /api/* localhost:3030
+	reverse_proxy /admin/* localhost:3030
+	reverse_proxy /user/* localhost:3030
 
-	# Admin dashboard - strip prefix and serve static files
-	handle_path /admin/* {
-		root * /app/admin/dist
-		try_files {path} /index.html
-		file_server
-	}
-
-	# User portal - strip prefix and serve static files
-	handle_path /user/* {
-		root * /app/admin/dist
-		try_files {path} /index.html
-		file_server
-	}
-
-	# Web UI (default) - wrapped in handle for mutual exclusivity with handle_path
-	handle {
-		root * /app/dist
-		try_files {path} /index.html
-		file_server
-	}
+	# Web UI (default)
+	root * /app/dist
+	try_files {path} /index.html
+	file_server
 }
