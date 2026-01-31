@@ -12,8 +12,8 @@ const LANG = process.env.LANG || 'en-GB';
 const SCREENSHOT_DIR = `screenshots/${LANG}`;
 
 // Helper function to import demo notes via Settings UI
-async function importDemoNotes(page: any) {
-  const demoNotesPath = join(process.cwd(), 'demo-generation', 'jottery-demo-notes.json');
+async function importDemoNotes(page: any, demoFile: string = 'jottery-demo-notes.json') {
+  const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
 
   // Open settings
   const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
@@ -792,8 +792,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 });
 
 // Helper function to import demo notes on mobile (via hamburger menu)
-async function importDemoNotesMobile(page: any) {
-  const demoNotesPath = join(process.cwd(), 'demo-generation', 'jottery-demo-notes.json');
+async function importDemoNotesMobile(page: any, demoFile: string = 'jottery-demo-notes.json') {
+  const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
 
   // On mobile, settings is behind the hamburger menu
   const hamburgerMenu = page.locator('button[aria-label="Menu"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
@@ -1539,14 +1539,16 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Import demo notes
-    await importDemoNotes(page);
+    // Import Greek demo notes
+    await importDemoNotes(page, 'jottery-demo-notes-el.json');
 
-    // Set tag colors
+    // Set tag colors for Greek tags
     await setTagColors(page, {
-      demo: 'blue',
-      recipe: 'orange',
-      notes: 'purple',
+      'καλωσόρισμα': 'blue',
+      'επίδειξη': 'purple',
+      'συνταγή': 'orange',
+      'ταξίδι': 'green',
+      'αγορές': 'red',
     });
 
     await page.waitForTimeout(1000);
@@ -1574,14 +1576,16 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
     await saveButton.waitFor({ state: 'visible' });
     await saveButton.click();
-    await page.waitForTimeout(1500); // Wait for language to apply
+
+    // Wait for toast to disappear (toast displays for ~3 seconds)
+    await page.waitForTimeout(4000);
   });
 
   test('10-light. Greek UI - Multi-lingual', async ({ page }) => {
     // Wait for locale to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the welcome note (should be pinned at top)
+    // Click on the welcome note (should be pinned at top - titled "Καλώς ήρθατε στο Jottery!")
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const firstNote = noteListItems.first();
     await firstNote.waitFor({ state: 'visible' });
@@ -1635,14 +1639,16 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Import demo notes
-    await importDemoNotes(page);
+    // Import Greek demo notes
+    await importDemoNotes(page, 'jottery-demo-notes-el.json');
 
-    // Set tag colors
+    // Set tag colors for Greek tags
     await setTagColors(page, {
-      demo: 'blue',
-      recipe: 'orange',
-      notes: 'purple',
+      'καλωσόρισμα': 'blue',
+      'επίδειξη': 'purple',
+      'συνταγή': 'orange',
+      'ταξίδι': 'green',
+      'αγορές': 'red',
     });
 
     await page.waitForTimeout(1000);
@@ -1670,7 +1676,9 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
     await saveButton.waitFor({ state: 'visible' });
     await saveButton.click();
-    await page.waitForTimeout(1500); // Wait for language to apply
+
+    // Wait for toast to disappear (toast displays for ~3 seconds)
+    await page.waitForTimeout(4000);
 
     // Apply dark theme
     await page.evaluate(() => {
@@ -1683,7 +1691,7 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     // Wait for locale to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the welcome note (should be pinned at top)
+    // Click on the welcome note (should be pinned at top - titled "Καλώς ήρθατε στο Jottery!")
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
     const firstNote = noteListItems.first();
     await firstNote.waitFor({ state: 'visible' });

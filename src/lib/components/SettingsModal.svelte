@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
@@ -711,6 +711,8 @@
         tagColors,
       }));
 
+      // Wait for Svelte to process reactive updates (e.g., locale change) before showing toast
+      await tick();
       toast.success($_('settings.settingsSaved'));
       onClose();
     } catch (error) {
