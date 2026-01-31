@@ -149,6 +149,7 @@ async fn main() {
         .route("/api/v1/admin/users/:id", delete(api::admin::users::delete_user))
         .route("/api/v1/admin/users/:id/devices", get(api::admin::users::list_user_devices))
         .route("/api/v1/admin/users/:id/settings", patch(api::admin::users::update_user_settings))
+        .route("/api/v1/admin/users/:id/reset-password", post(api::admin::users::reset_user_password))
         .route("/api/v1/admin/devices/:id", delete(api::admin::users::revoke_device).patch(api::admin::users::rename_device))
         .route("/api/v1/admin/stats", get(api::admin::stats::get_stats))
         .route("/api/v1/admin/audit", get(api::admin::stats::get_audit_log))

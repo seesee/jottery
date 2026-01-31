@@ -25,6 +25,12 @@
   let settingsForm = $state({ storageQuotaMb: 0, maxUploadSizeMb: 0 });
   let savingSettings = $state(false);
 
+  // Password reset
+  let showPasswordReset = $state(false);
+  let newPassword = $state('');
+  let confirmPassword = $state('');
+  let resettingPassword = $state(false);
+
   // Svelte action to focus element on mount (avoids a11y autofocus warning)
   function focusOnMount(node: HTMLElement) {
     node.focus();
@@ -114,6 +120,38 @@
       }
     } finally {
       savingSettings = false;
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!user) return;
+
+    // Validate
+    if (newPassword.length < 12) {
+      toast.error($_('users.detail.passwordTooShort'));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error($_('users.detail.passwordMismatch'));
+      return;
+    }
+
+    resettingPassword = true;
+    try {
+      await api.resetUserPassword(user.id, newPassword);
+      toast.success($_('users.detail.passwordResetSuccess', { values: { email: user.email } }));
+      showPasswordReset = false;
+      newPassword = '';
+      confirmPassword = '';
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error($_('users.detail.passwordResetFailed', { values: { error: err.message } }));
+      } else {
+        toast.error($_('users.detail.passwordResetFailedGeneric'));
+      }
+    } finally {
+      resettingPassword = false;
     }
   }
 
@@ -331,6 +369,69 @@
                 <p class="text-2xl font-semibold text-gray-900">{user.maxUploadSizeMb} MB</p>
               </div>
             </div>
+          {/if}
+        </div>
+
+        <!-- Password Reset Section -->
+        <div class="mb-8">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">{$_('users.detail.passwordReset')}</h3>
+            {#if !showPasswordReset}
+              <button
+                onclick={() => showPasswordReset = true}
+                class="text-sm text-blue-600 hover:text-blue-800"
+              >
+                {$_('users.detail.resetPassword')}
+              </button>
+            {/if}
+          </div>
+
+          {#if showPasswordReset}
+            <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+              <div>
+                <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                  {$_('users.detail.newPassword')}
+                </label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  bind:value={newPassword}
+                  placeholder={$_('users.detail.newPasswordPlaceholder')}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p class="mt-1 text-xs text-gray-500">{$_('users.detail.passwordRequirement')}</p>
+              </div>
+              <div>
+                <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                  {$_('users.detail.confirmPassword')}
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  bind:value={confirmPassword}
+                  placeholder={$_('users.detail.confirmPasswordPlaceholder')}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div class="flex space-x-2 pt-2">
+                <button
+                  onclick={handleResetPassword}
+                  disabled={resettingPassword || !newPassword || !confirmPassword}
+                  class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resettingPassword ? $_('common.saving') : $_('users.detail.resetPassword')}
+                </button>
+                <button
+                  onclick={() => { showPasswordReset = false; newPassword = ''; confirmPassword = ''; }}
+                  disabled={resettingPassword}
+                  class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                >
+                  {$_('common.cancel')}
+                </button>
+              </div>
+            </div>
+          {:else}
+            <p class="text-sm text-gray-500">{$_('users.detail.passwordResetHelp')}</p>
           {/if}
         </div>
 

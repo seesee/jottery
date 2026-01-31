@@ -536,6 +536,61 @@ pub async fn change_password(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Reset a user's password (admin action)
+/// POST /api/v1/admin/users/:id/reset-password
+#[derive(Debug, serde::Deserialize)]
+pub struct ResetPasswordRequest {
+    pub new_password: String,
+}
+
+pub async fn reset_user_password(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<String>,
+    Json(req): Json<ResetPasswordRequest>,
+) -> AppResult<StatusCode> {
+    use crate::utils::password::hash_password_with_params;
+
+    // Check user exists
+    let _user = sqlx::query!(
+        "SELECT id FROM users WHERE id = ?",
+        user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?
+    .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
+
+    // Validate new password strength
+    if req.new_password.len() < 12 {
+        return Err(crate::error::AppError::BadRequest(
+            "New password must be at least 12 characters".to_string(),
+        ));
+    }
+
+    // Hash new password with configured Argon2 parameters
+    let new_password_hash = hash_password_with_params(
+        &req.new_password,
+        state.config.argon2_m_cost,
+        state.config.argon2_t_cost,
+        state.config.argon2_p_cost,
+    )
+    .map_err(|e| {
+        tracing::error!("Password hashing failed: {}", e);
+        crate::error::AppError::InternalServerError
+    })?;
+
+    // Update password
+    sqlx::query!(
+        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        new_password_hash,
+        user_id
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("Admin reset password for user: {}", user_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Update user settings (storage quota, max upload size)
 /// PATCH /api/v1/admin/users/:id/settings
 #[derive(Debug, serde::Deserialize)]

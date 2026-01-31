@@ -213,6 +213,12 @@ class ApiClient {
     return this.request('PATCH', `/api/v1/admin/users/${id}/settings`, settings);
   }
 
+  async resetUserPassword(id: string, newPassword: string): Promise<void> {
+    return this.request('POST', `/api/v1/admin/users/${id}/reset-password`, {
+      new_password: newPassword,
+    });
+  }
+
   // Admin - Stats
   async getStats(): Promise<StatsResponse> {
     return this.request('GET', '/api/v1/admin/stats');
