@@ -1570,9 +1570,11 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     await languageDropdown.selectOption('el');
     await page.waitForTimeout(1000);
 
-    // Close settings modal
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    // Save settings to apply the language change
+    const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+    await saveButton.waitFor({ state: 'visible' });
+    await saveButton.click();
+    await page.waitForTimeout(1500); // Wait for language to apply
   });
 
   test('10-light. Greek UI - Multi-lingual', async ({ page }) => {
@@ -1664,9 +1666,11 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     await languageDropdown.selectOption('el');
     await page.waitForTimeout(1000);
 
-    // Close settings modal
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    // Save settings to apply the language change
+    const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+    await saveButton.waitFor({ state: 'visible' });
+    await saveButton.click();
+    await page.waitForTimeout(1500); // Wait for language to apply
 
     // Apply dark theme
     await page.evaluate(() => {
