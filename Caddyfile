@@ -1,22 +1,23 @@
 :8088 {
-    root * /app/dist
-    file_server
+	# API proxy to jottery-server
+	reverse_proxy /api/* localhost:3030
 
-    # Proxy API requests to backend server
-    reverse_proxy /api* localhost:3030
+	# Admin dashboard - strip prefix and serve static files
+	handle_path /admin/* {
+		root * /app/admin/dist
+		try_files {path} /index.html
+		file_server
+	}
 
-    # Proxy admin dashboard to backend server
-    reverse_proxy /admin* localhost:3030
+	# User portal - strip prefix and serve static files
+	handle_path /user/* {
+		root * /app/admin/dist
+		try_files {path} /index.html
+		file_server
+	}
 
-    # Proxy user portal to backend server
-    reverse_proxy /user* localhost:3030
-
-    # SPA fallback: rewrite non-static, non-API, non-admin, non-user requests to index.html
-    @notStatic {
-        not path /api*
-        not path /admin*
-        not path /user*
-        not file
-    }
-    rewrite @notStatic /index.html
+	# Web UI (default)
+	root * /app/dist
+	try_files {path} /index.html
+	file_server
 }

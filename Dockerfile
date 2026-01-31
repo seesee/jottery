@@ -98,42 +98,10 @@ RUN mkdir -p /app/data
 VOLUME ["/app/data"]
 
 # -----------------------------
-# Embedded Caddyfile (no external mounts needed)
+# Caddyfile
 # -----------------------------
 RUN mkdir -p /etc/caddy
-
-COPY <<'EOF' /etc/caddy/Caddyfile
-:8088 {
-    # API proxy to jottery-server (must be before admin/user to avoid conflicts)
-    reverse_proxy /api/* localhost:3030
-
-    # Admin dashboard
-    handle_path /admin* {
-        root * /app/admin/dist
-        try_files {path} /index.html
-        file_server
-    }
-
-    # User portal (same SPA as admin, different path)
-    handle_path /user* {
-        root * /app/admin/dist
-        try_files {path} /index.html
-        file_server
-    }
-
-    # Web UI (default)
-    root * /app/dist
-    file_server
-
-    @notStatic {
-        not path /api*
-        not path /admin*
-        not path /user*
-        not file
-    }
-    rewrite @notStatic /index.html
-}
-EOF
+COPY Caddyfile /etc/caddy/Caddyfile
 
 # -----------------------------
 # Runtime environment
