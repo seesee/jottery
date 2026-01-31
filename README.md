@@ -144,6 +144,8 @@ Access the web-based admin dashboard at `http://your-server:3030/admin`
 - Email: `admin@localhost`
 - Password: `changeme`
 
+When using Docker, set custom admin credentials via environment variables (`DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD`) before first run. See [Environment Variables](#environment-variables) for details.
+
 **Admin Features:**
 - Approve/reject user registrations
 - View user statistics (notes, devices, storage)
