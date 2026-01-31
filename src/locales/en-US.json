@@ -899,7 +899,10 @@
   },
   "releases": {
     "title": "Releases",
-    "description": "Download the Jottery TUI for your platform."
+    "description": "Download the Jottery TUI for your platform.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "Drop files here",

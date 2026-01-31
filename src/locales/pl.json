@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "Wydania",
-    "description": "Pobierz Jottery TUI dla swojej platformy."
+    "description": "Pobierz Jottery TUI dla swojej platformy.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "Upuść pliki tutaj",

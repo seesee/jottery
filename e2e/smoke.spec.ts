@@ -114,7 +114,9 @@ test.describe('Smoke Tests', () => {
     const criticalErrors = errors.filter(error => {
       // Ignore certain types of errors that might be expected
       return !error.includes('favicon') &&
-             !error.includes('Failed to load resource');
+             !error.includes('Failed to load resource') &&
+             // WebKit warns about frame-ancestors in meta CSP (only valid in headers)
+             !error.includes('frame-ancestors');
     });
 
     // Should have no critical errors

@@ -39,9 +39,13 @@ import {
   getServerStatus,
 } from './syncClient';
 
+// Debounce delay for background sync (30 seconds of inactivity)
+const BACKGROUND_SYNC_DEBOUNCE_MS = 30000;
+
 class SyncService {
   private isSyncing = false;
   private autoSyncTimer?: number;
+  private backgroundSyncTimer?: number;
 
   /**
    * Register a new client with the server
@@ -254,10 +258,13 @@ class SyncService {
   }
 
   /**
-   * Trigger background sync without blocking
+   * Trigger background sync with debouncing
    * Safe to call from anywhere - checks all preconditions
+   *
+   * @param flush - If true, triggers immediate sync (use when navigating away, locking, etc.)
+   *                If false (default), debounces for 30 seconds of inactivity
    */
-  async triggerBackgroundSync(): Promise<void> {
+  async triggerBackgroundSync(flush = false): Promise<void> {
     // Skip if sync is disabled in settings
     let currentSettings: { syncEnabled?: boolean } | undefined;
     settings.subscribe(s => currentSettings = s)();
@@ -272,6 +279,41 @@ class SyncService {
       return;
     }
 
+    // Clear any existing debounce timer
+    if (this.backgroundSyncTimer) {
+      clearTimeout(this.backgroundSyncTimer);
+      this.backgroundSyncTimer = undefined;
+    }
+
+    // If flush is requested, sync immediately
+    if (flush) {
+      await this.executeBackgroundSync();
+      return;
+    }
+
+    // Otherwise, debounce: wait for 30 seconds of inactivity before syncing
+    this.backgroundSyncTimer = window.setTimeout(() => {
+      this.backgroundSyncTimer = undefined;
+      this.executeBackgroundSync();
+    }, BACKGROUND_SYNC_DEBOUNCE_MS);
+  }
+
+  /**
+   * Cancel any pending background sync
+   * Called when disabling sync or during cleanup
+   */
+  cancelPendingBackgroundSync(): void {
+    if (this.backgroundSyncTimer) {
+      clearTimeout(this.backgroundSyncTimer);
+      this.backgroundSyncTimer = undefined;
+    }
+  }
+
+  /**
+   * Execute the actual background sync
+   * Internal method - use triggerBackgroundSync() instead
+   */
+  private async executeBackgroundSync(): Promise<void> {
     try {
       const metadata = await syncRepository.getMetadata();
       if (metadata?.apiKey) {
@@ -801,6 +843,8 @@ class SyncService {
       clearInterval(this.autoSyncTimer);
       this.autoSyncTimer = undefined;
     }
+    // Also cancel any pending debounced background sync
+    this.cancelPendingBackgroundSync();
   }
 
   /**

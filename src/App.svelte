@@ -453,7 +453,7 @@
         {loadingProgress}
       />
 
-      <main id="main-content" class="flex-1 overflow-hidden flex" tabindex="-1">
+      <main id="main-content" class="flex-1 min-h-0 overflow-hidden flex" tabindex="-1">
         {#if useMobileLayout}
           <!-- Mobile: Keep both components mounted, toggle visibility with CSS -->
           <!-- This preserves NoteList state (scroll position, height cache) across navigation -->

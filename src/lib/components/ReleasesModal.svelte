@@ -5,14 +5,23 @@
   export let onClose: () => void = () => {};
 
   const githubRepo = 'https://github.com/seesee/jottery';
-  const releases = [
+
+  // TUI client downloads
+  const tuiReleases = [
     { name: 'Linux (x64)', url: `${githubRepo}/releases/latest/download/jottery-linux-x64` },
     { name: 'Linux (arm64)', url: `${githubRepo}/releases/latest/download/jottery-linux-arm64` },
     { name: 'Linux (armv7)', url: `${githubRepo}/releases/latest/download/jottery-linux-armv7` },
     { name: 'macOS', url: `${githubRepo}/releases/latest/download/jottery-macos` },
     { name: 'Windows', url: `${githubRepo}/releases/latest/download/jottery-windows.exe` },
-    { name: 'TUI Package (zip)', url: `${githubRepo}/releases/latest/download/jottery-tui.zip` },
+    { name: 'All platforms (zip)', url: `${githubRepo}/releases/latest/download/jottery-tui.zip` },
   ];
+
+  // Standalone web app download
+  const webAppRelease = {
+    name: 'Standalone HTML (zip)',
+    url: `${githubRepo}/releases/latest/download/jottery-web.zip`,
+    note: 'releases.webAppNote'
+  };
 </script>
 
 {#if show}
@@ -25,14 +34,15 @@
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">{$_('releases.title')}</h2>
       <p class="mb-4 text-gray-700 dark:text-gray-300">{$_('releases.description')}</p>
 
-      <div class="mb-6">
-        <h3 class="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Download TUI Client:</h3>
-        <ul class="space-y-2">
-          {#each releases as release}
+      <!-- TUI Client Downloads -->
+      <div class="mb-4">
+        <h3 class="text-sm font-semibold mb-2 text-gray-900 dark:text-white">{$_('releases.tuiClient')}</h3>
+        <ul class="space-y-1.5">
+          {#each tuiReleases as release}
             <li>
               <a
                 href={release.url}
-                class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2"
+                class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 text-sm"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -42,6 +52,23 @@
             </li>
           {/each}
         </ul>
+      </div>
+
+      <!-- Standalone Web App Download -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold mb-2 text-gray-900 dark:text-white">{$_('releases.standaloneWebApp')}</h3>
+        <a
+          href={webAppRelease.url}
+          class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-2 text-sm"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span>↓</span>
+          {webAppRelease.name}
+        </a>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {$_('releases.webAppNote')}
+        </p>
       </div>
 
       <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">

@@ -288,10 +288,20 @@ jobs:
 
       - name: Create non-versioned copies for /latest/ downloads
         run: |
+          # TUI binaries
           cd release-assets/all-tui
           for f in *-${VERSION}*; do
             # Create non-versioned copy by removing version suffix
             base=$(echo "$f" | sed "s/-${VERSION}//")
+            cp "$f" "$base"
+          done
+          ls -la
+
+          # Web app
+          cd ../web-app
+          for f in *-${VERSION}*; do
+            # Create non-versioned copy (jottery-web-v1.0.0-offline.zip -> jottery-web.zip)
+            base=$(echo "$f" | sed "s/-${VERSION}-offline//")
             cp "$f" "$base"
           done
           ls -la

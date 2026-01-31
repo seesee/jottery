@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "Sürümler",
-    "description": "Platformunuz için Jottery TUI'yi indirin."
+    "description": "Platformunuz için Jottery TUI'yi indirin.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "Dosyaları buraya bırakın",

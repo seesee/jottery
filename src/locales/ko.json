@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "릴리스",
-    "description": "플랫폼에 맞는 Jottery TUI를 다운로드하세요."
+    "description": "플랫폼에 맞는 Jottery TUI를 다운로드하세요.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "파일을 여기에 놓으세요",

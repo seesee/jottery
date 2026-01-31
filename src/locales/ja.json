@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "リリース",
-    "description": "お使いのプラットフォーム用のJottery TUIをダウンロードしてください。"
+    "description": "お使いのプラットフォーム用のJottery TUIをダウンロードしてください。",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "ここにファイルをドロップ",

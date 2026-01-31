@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "Εκδόσεις",
-    "description": "Κάντε λήψη του Jottery TUI για την πλατφόρμα σας."
+    "description": "Κάντε λήψη του Jottery TUI για την πλατφόρμα σας.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "Αποθέστε αρχεία εδώ",

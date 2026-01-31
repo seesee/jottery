@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "Versions",
-    "description": "Téléchargez le TUI Jottery pour votre plateforme."
+    "description": "Téléchargez le TUI Jottery pour votre plateforme.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "Déposez des fichiers ici",

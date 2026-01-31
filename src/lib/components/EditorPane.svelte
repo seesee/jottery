@@ -267,9 +267,9 @@
         }
       }, 10);
 
-      // Trigger sync when switching notes (version snapshot will be created on close)
+      // Trigger sync when switching notes (flush immediately since navigating away)
       if (previousNoteId) {
-        triggerBackgroundSync();
+        triggerBackgroundSync(true);
       }
       } else {
         // Same note reloaded (from sync), not resetting state
@@ -291,11 +291,11 @@
       if (hasContentChanged) {
         // Capture ALL state before it gets reset (prevents async closure bugs)
         const saveData = captureNoteState(previousNoteId);
-        // Save in background with sync trigger
-        saveNoteInBackground(saveData);
+        // Save in background with sync trigger (flush since navigating away)
+        saveNoteInBackground(saveData, { createVersion: true, triggerSync: true, flushSync: true });
       } else {
-        // Still trigger sync even if we didn't save
-        triggerBackgroundSync();
+        // Still trigger sync even if we didn't save (flush since navigating away)
+        triggerBackgroundSync(true);
       }
     }
     previousNoteId = null;
@@ -313,9 +313,10 @@
 
   /**
    * Trigger background sync without blocking UI
+   * @param flush - If true, syncs immediately (for navigation/closing). Default: debounces for 30s.
    */
-  function triggerBackgroundSync() {
-    syncService.triggerBackgroundSync();
+  function triggerBackgroundSync(flush = false) {
+    syncService.triggerBackgroundSync(flush);
   }
 
   /**
@@ -346,9 +347,9 @@
    */
   function saveNoteInBackground(
     data: NoteSaveData,
-    options: { createVersion?: boolean; triggerSync?: boolean } = {}
+    options: { createVersion?: boolean; triggerSync?: boolean; flushSync?: boolean } = {}
   ): void {
-    const { createVersion = true, triggerSync = true } = options;
+    const { createVersion = true, triggerSync = true, flushSync = false } = options;
 
     // Fire-and-forget async operation
     (async () => {
@@ -374,9 +375,9 @@
           await createVersionSnapshot(data.noteId);
         }
 
-        // Trigger sync if requested
+        // Trigger sync if requested (flush for navigation, debounce for content changes)
         if (triggerSync) {
-          triggerBackgroundSync();
+          triggerBackgroundSync(flushSync);
         }
       } catch (error) {
         console.error('[EditorPane] Error during background save:', error);

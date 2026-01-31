@@ -49,7 +49,7 @@
   turndownService.addRule('noteLink', {
     filter: (node) => {
       return node.nodeName === 'A' &&
-             (node as HTMLAnchorElement).getAttribute('href')?.startsWith('link:');
+             ((node as HTMLAnchorElement).getAttribute('href')?.startsWith('link:') ?? false);
     },
     replacement: (content, node) => {
       const href = (node as HTMLAnchorElement).getAttribute('href') || '';
@@ -166,7 +166,7 @@
   // In marked v17+, renderer functions receive a token object
   marked.use({
     renderer: {
-      link({ href, title, text }: { href: string; title: string | null; text: string }) {
+      link({ href, title, text }: { href: string; title?: string | null; text: string }) {
         // Preserve note links with link: protocol
         const titleAttr = title ? ` title="${title}"` : '';
         // Add placeholder for empty note links so Tiptap doesn't strip them

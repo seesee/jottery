@@ -885,7 +885,10 @@
   },
   "releases": {
     "title": "发行版",
-    "description": "下载适合您平台的 Jottery TUI。"
+    "description": "下载适合您平台的 Jottery TUI。",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "将文件拖到此处",

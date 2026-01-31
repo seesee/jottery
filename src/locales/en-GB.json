@@ -888,8 +888,11 @@
     "ctrl": "Ctrl"
   },
   "releases": {
-    "title": "Releases",
-    "description": "Download the Jottery TUI for your platform."
+    "title": "Downloads",
+    "description": "Download Jottery for your platform.",
+    "tuiClient": "TUI Client",
+    "standaloneWebApp": "Standalone Web App",
+    "webAppNote": "Run locally from filesystem (sync disabled)"
   },
   "fileUpload": {
     "dropHere": "Drop files here",
