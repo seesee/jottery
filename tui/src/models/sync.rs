@@ -252,6 +252,7 @@ pub struct SyncNoteVersion {
     pub attachments: Vec<AttachmentRef>,
     pub syntax_language: Option<String>,
     pub word_wrap: Option<bool>,
+    pub show_preview: Option<bool>, // Whether to show preview in version history
     pub color: Option<String>,     // Semantic color name (unencrypted)
     pub reason: String,            // 'sync' or 'manual-sync'
 }
@@ -449,6 +450,7 @@ mod tests {
             attachments: vec![],
             syntax_language: Some("markdown".to_string()),
             word_wrap: Some(true),
+            show_preview: Some(true),
             color: Some("blue".to_string()),
             reason: "sync".to_string(),
         };

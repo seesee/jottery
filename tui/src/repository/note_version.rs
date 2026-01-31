@@ -20,6 +20,7 @@ pub struct NoteVersion {
     pub attachments: Vec<Attachment>,
     pub syntax_language: Option<SyntaxLanguage>,
     pub word_wrap: Option<bool>,
+    pub show_preview: Option<bool>, // Whether to show preview in version history
     pub color: Option<String>,  // Semantic color name
     pub reason: VersionReason,
 }
@@ -97,8 +98,8 @@ impl<'a> NoteVersionRepository<'a> {
         self.conn.execute(
             "INSERT INTO note_versions (
                 version_key, note_id, version, created_at, synced_at, content, tags,
-                attachments, syntax_language, word_wrap, color, reason
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                attachments, syntax_language, word_wrap, show_preview, color, reason
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             params![
                 &version_key,
                 &note.id,
@@ -110,6 +111,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 note.syntax_language.to_string(),
                 note.word_wrap as i32,
+                1i32, // show_preview defaults to true
                 note.color.as_ref(),
                 reason.to_string(),
             ],
@@ -123,7 +125,7 @@ impl<'a> NoteVersionRepository<'a> {
     pub fn get_versions_for_note(&self, note_id: &str, key: &[u8; 32]) -> Result<Vec<NoteVersion>> {
         let mut stmt = self.conn.prepare(
             "SELECT version_key, note_id, version, created_at, synced_at, content, tags,
-                    attachments, syntax_language, word_wrap, color, reason
+                    attachments, syntax_language, word_wrap, show_preview, color, reason
              FROM note_versions
              WHERE note_id = ?1
              ORDER BY version DESC"
@@ -141,8 +143,9 @@ impl<'a> NoteVersionRepository<'a> {
                 row.get::<_, String>(7)?,   // attachments
                 row.get::<_, String>(8)?,   // syntax_language
                 row.get::<_, i32>(9)?,      // word_wrap
-                row.get::<_, Option<String>>(10)?, // color
-                row.get::<_, String>(11)?,  // reason
+                row.get::<_, Option<i32>>(10)?, // show_preview
+                row.get::<_, Option<String>>(11)?, // color
+                row.get::<_, String>(12)?,  // reason
             ))
         })?;
 
@@ -159,6 +162,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 syntax_language,
                 word_wrap,
+                show_preview,
                 color,
                 reason,
             ) = version_data?;
@@ -184,6 +188,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments,
                 syntax_language: Some(syntax_language.parse().unwrap_or_default()),
                 word_wrap: Some(word_wrap != 0),
+                show_preview: show_preview.map(|v| v != 0),
                 color,
                 reason: reason.parse().unwrap_or(VersionReason::Sync),
             });
@@ -198,7 +203,7 @@ impl<'a> NoteVersionRepository<'a> {
 
         let mut stmt = self.conn.prepare(
             "SELECT version_key, note_id, version, created_at, synced_at, content, tags,
-                    attachments, syntax_language, word_wrap, color, reason
+                    attachments, syntax_language, word_wrap, show_preview, color, reason
              FROM note_versions
              WHERE version_key = ?1"
         )?;
@@ -215,8 +220,9 @@ impl<'a> NoteVersionRepository<'a> {
                 row.get::<_, String>(7)?,   // attachments
                 row.get::<_, String>(8)?,   // syntax_language
                 row.get::<_, i32>(9)?,      // word_wrap
-                row.get::<_, Option<String>>(10)?, // color
-                row.get::<_, String>(11)?,  // reason
+                row.get::<_, Option<i32>>(10)?, // show_preview
+                row.get::<_, Option<String>>(11)?, // color
+                row.get::<_, String>(12)?,  // reason
             ))
         });
 
@@ -238,6 +244,7 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 syntax_language,
                 word_wrap,
+                show_preview,
                 color,
                 reason,
             )) => {
@@ -262,6 +269,7 @@ impl<'a> NoteVersionRepository<'a> {
                     attachments,
                     syntax_language: Some(syntax_language.parse().unwrap_or_default()),
                     word_wrap: Some(word_wrap != 0),
+                    show_preview: show_preview.map(|v| v != 0),
                     color,
                     reason: reason.parse().unwrap_or(VersionReason::Sync),
                 }))
@@ -336,11 +344,13 @@ impl<'a> NoteVersionRepository<'a> {
 
         let word_wrap_int = version.word_wrap.unwrap_or(true) as i32;
 
+        let show_preview_int = version.show_preview.map(|v| v as i32);
+
         self.conn.execute(
             "INSERT INTO note_versions (
                 version_key, note_id, version, created_at, synced_at, content, tags,
-                attachments, syntax_language, word_wrap, reason
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                attachments, syntax_language, word_wrap, show_preview, color, reason
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
             ON CONFLICT(version_key) DO NOTHING",
             params![
                 &version.version_key,
@@ -353,6 +363,8 @@ impl<'a> NoteVersionRepository<'a> {
                 attachments_json,
                 syntax_language_str,
                 word_wrap_int,
+                show_preview_int,
+                version.color.as_ref(),
                 version.reason.to_string(),
             ],
         )?;

@@ -90,6 +90,7 @@ impl Database {
             (11, include_str!("../migrations/011_add_lock_support.sql")),
             (12, include_str!("../migrations/012_add_deletions_tracking.sql")),
             (13, include_str!("../migrations/013_add_pending_device_name.sql")),
+            (14, include_str!("../migrations/014_add_version_show_preview.sql")),
         ];
 
         // Run pending migrations
@@ -228,7 +229,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory("test_password").unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 12);
+        assert_eq!(db.schema_version().unwrap(), 14);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -256,13 +257,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 12);
+            assert_eq!(db.schema_version().unwrap(), 14);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 12);
+            assert_eq!(db.schema_version().unwrap(), 14);
         }
     }
 }

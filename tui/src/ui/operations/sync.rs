@@ -264,6 +264,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     attachments: attachment_refs,
                     syntax_language: version.syntax_language.as_ref().map(|s| s.to_string()),
                     word_wrap: version.word_wrap,
+                    show_preview: version.show_preview,
                     color: version.color.clone(),
                     reason: version.reason.to_string(),
                 });
@@ -742,6 +743,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     .as_ref()
                     .and_then(|s| s.parse().ok()),
                 word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
+                show_preview: server_version.show_preview,
                 color: server_version.color.clone(),
                 reason,
             };
