@@ -480,10 +480,34 @@ export async function restoreBackup(
 
 /**
  * Download a backup as a file
+ *
+ * Uses chunked JSON generation to avoid string length limits on large backups.
  */
 export function downloadBackup(backup: BackupData): void {
-  const json = JSON.stringify(backup);
-  const blob = new Blob([json], { type: 'application/json' });
+  // Build JSON in chunks to avoid string length limits
+  const chunks: string[] = [];
+
+  // Opening structure (everything except the data array contents)
+  chunks.push('{"version":');
+  chunks.push(JSON.stringify(backup.version));
+  chunks.push(',"type":');
+  chunks.push(JSON.stringify(backup.type));
+  chunks.push(',"createdAt":');
+  chunks.push(JSON.stringify(backup.createdAt));
+  chunks.push(',"encryption":');
+  chunks.push(JSON.stringify(backup.encryption));
+  chunks.push(',"data":[');
+
+  // Add each JWE record individually
+  for (let i = 0; i < backup.data.length; i++) {
+    if (i > 0) chunks.push(',');
+    chunks.push(JSON.stringify(backup.data[i]));
+  }
+
+  // Close the structure
+  chunks.push(']}');
+
+  const blob = new Blob(chunks, { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
   // Generate filename with date
