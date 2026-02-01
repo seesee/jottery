@@ -567,22 +567,7 @@ fn highlight_expression(line: &str) -> Vec<Span<'static>> {
                 Style::default().fg(Color::White),
             ));
         }
-        // Whitespace
-        else if c.is_whitespace() {
-            if !current_word.is_empty() {
-                spans.push(create_word_span(&current_word, &builtin_functions, &constants));
-                current_word.clear();
-            }
-            if !current_number.is_empty() {
-                spans.push(Span::styled(
-                    current_number.clone(),
-                    Style::default().fg(Color::LightGreen),
-                ));
-                current_number.clear();
-            }
-            spans.push(Span::raw(c.to_string()));
-        }
-        // Other characters
+        // Whitespace and other characters
         else {
             if !current_word.is_empty() {
                 spans.push(create_word_span(&current_word, &builtin_functions, &constants));

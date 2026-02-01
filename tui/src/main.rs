@@ -15,7 +15,7 @@ rust_i18n::i18n!("locales", fallback = "en-GB");
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
 use std::io::{self, Read, Write};
@@ -225,7 +225,7 @@ fn prompt_password() -> Result<String> {
 ///
 /// For CLI usage, we use file-based storage directly since keychain may not be
 /// accessible from non-interactive contexts (cron jobs, scripts, etc.)
-fn try_load_stored_password(db_path: &PathBuf) -> Result<Option<String>> {
+fn try_load_stored_password(db_path: &Path) -> Result<Option<String>> {
     let config_dir = db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
 
     // Use file storage for CLI (keychain may not be accessible in headless mode)
@@ -239,7 +239,7 @@ fn try_load_stored_password(db_path: &PathBuf) -> Result<Option<String>> {
 }
 
 /// Get or prompt for password, checking stored password first
-fn get_password(password_opt: Option<String>, db_path: &PathBuf) -> Result<String> {
+fn get_password(password_opt: Option<String>, db_path: &Path) -> Result<String> {
     match password_opt {
         Some(pwd) => Ok(pwd),
         None => {

@@ -72,10 +72,10 @@ pub fn detect_mime_type(path: &std::path::Path) -> String {
 
 /// Expand ~ to home directory in file path
 pub fn expand_tilde(path: &str) -> Result<PathBuf> {
-    if path.starts_with("~/") {
+    if let Some(rest) = path.strip_prefix("~/") {
         let home = env::var("HOME")
             .context("HOME environment variable not set")?;
-        Ok(PathBuf::from(home).join(&path[2..]))
+        Ok(PathBuf::from(home).join(rest))
     } else {
         Ok(PathBuf::from(path))
     }
@@ -150,7 +150,7 @@ pub fn get_path_completions(partial: &str) -> Vec<String> {
                     let parent_str = dir.to_string_lossy();
                     let relative = parent_str.strip_prefix(&home).unwrap_or(&parent_str);
                     format!("~{}/{}{}", relative, name, if is_dir { "/" } else { "" })
-                } else if dir == std::path::PathBuf::from(".") {
+                } else if dir.as_os_str() == "." {
                     format!("{}{}", name, if is_dir { "/" } else { "" })
                 } else {
                     format!("{}/{}{}", dir.display(), name, if is_dir { "/" } else { "" })

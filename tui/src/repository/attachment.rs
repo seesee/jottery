@@ -4,6 +4,9 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::crypto::{CryptoService, EncryptedData};
 
+/// Attachment data: (filename, mime_type, size, data)
+pub type AttachmentData = (String, String, i64, Vec<u8>);
+
 /// Repository for attachment operations
 pub struct AttachmentRepository<'a> {
     conn: &'a Connection,
@@ -49,7 +52,7 @@ impl<'a> AttachmentRepository<'a> {
     }
 
     /// Get an attachment (decrypted)
-    pub fn get(&self, id: &str, key: &[u8; 32]) -> Result<Option<(String, String, i64, Vec<u8>)>> {
+    pub fn get(&self, id: &str, key: &[u8; 32]) -> Result<Option<AttachmentData>> {
         let result = self.conn
             .query_row(
                 "SELECT filename, mime_type, size, data FROM attachments WHERE id = ?1",

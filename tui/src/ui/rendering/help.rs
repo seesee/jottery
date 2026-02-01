@@ -177,7 +177,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
 
     if use_two_columns {
         // Split sections into two columns
-        let mid = (sections.len() + 1) / 2;
+        let mid = sections.len().div_ceil(2);
         let (left_sections, right_sections) = sections.split_at(mid);
 
         // Create horizontal layout

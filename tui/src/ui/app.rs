@@ -808,12 +808,12 @@ impl App {
                     // Color filtering
                     if !modifiers.colors.is_empty() {
                         let note_has_color = modifiers.colors.iter().any(|color_key| {
-                            note.color.as_ref().map_or(false, |c| c.to_lowercase() == color_key.to_lowercase())
+                            note.color.as_ref().is_some_and(|c| c.to_lowercase() == color_key.to_lowercase())
                         });
 
                         let tag_has_color = note.tags.iter().any(|tag| {
                             let tag_color = self.settings.get_tag_color(tag);
-                            tag_color.map_or(false, |tc| {
+                            tag_color.is_some_and(|tc| {
                                 modifiers.colors.iter().any(|color_key| tc.to_lowercase() == color_key.to_lowercase())
                             })
                         });
@@ -937,15 +937,13 @@ impl App {
                         continue;
                     }
 
-                    if part.starts_with('#') {
+                    if let Some(tag) = part.strip_prefix('#') {
                         // Tag search
-                        let tag = &part[1..];
                         if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
                             return false;
                         }
-                    } else if part.starts_with('-') {
+                    } else if let Some(negated) = part.strip_prefix('-') {
                         // Negation
-                        let negated = &part[1..];
                         if content_lower.contains(negated) {
                             return false;
                         }

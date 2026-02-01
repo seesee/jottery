@@ -223,6 +223,7 @@ fn render_conflict_header(
 }
 
 /// Render a content pane (local or server version)
+#[allow(clippy::too_many_arguments)]
 fn render_content_pane(
     frame: &mut Frame,
     area: Rect,

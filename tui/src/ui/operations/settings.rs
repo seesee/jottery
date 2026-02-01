@@ -455,8 +455,7 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
     // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
-    if input.starts_with("jottery:v1:") {
-        let payload = &input["jottery:v1:".len()..];
+    if let Some(payload) = input.strip_prefix("jottery:v1:") {
         let dot_index = payload.find('.')
             .ok_or_else(|| anyhow::anyhow!("Invalid encrypted credentials format"))?;
 

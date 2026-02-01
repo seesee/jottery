@@ -49,10 +49,8 @@ pub fn render_locked(app: &App, frame: &mut Frame) {
 
     frame.render_widget(block, size);
 
-    // Password field
-    let password_style = if app.is_new_database && !app.password_confirm_focused {
-        Style::default().fg(app.color_scheme.accent)
-    } else if !app.is_new_database {
+    // Password field - accent color unless confirming password on new database
+    let password_style = if !(app.is_new_database && app.password_confirm_focused) {
         Style::default().fg(app.color_scheme.accent)
     } else {
         Style::default()
