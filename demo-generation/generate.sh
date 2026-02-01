@@ -246,3 +246,10 @@ echo ""
 echo -e "${GREEN}🎉 Demo generation complete!${NC}"
 echo ""
 echo "Generated files in: public/screenshots/$DEMO_LANG/"
+
+# Clean up intermediate screenshots directory
+if [ -d "screenshots" ]; then
+  echo -e "${BLUE}Cleaning up intermediate screenshots...${NC}"
+  rm -rf screenshots
+  echo -e "${GREEN}✓ Intermediate files removed${NC}"
+fi

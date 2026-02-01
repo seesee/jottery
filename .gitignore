@@ -19,6 +19,9 @@ playwright-report/
 coverage/
 scripts/test-history.db
 
+# Demo generation intermediates
+screenshots/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
