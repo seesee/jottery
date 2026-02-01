@@ -85,6 +85,55 @@ describe('conflictService', () => {
       const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
       expect(syncMeta?.errorMessage).toContain('manual resolution required');
     });
+
+    it('should store hash chain fields when provided', async () => {
+      const note = createTestNote({ id: 'note-hash' });
+      await noteRepository.create(note);
+
+      await storeConflict(note.id, {
+        serverContent: 'encrypted-content',
+        serverTags: ['tag1'],
+        serverModifiedAt: new Date().toISOString(),
+        serverVersion: 2,
+        serverAttachments: [],
+        serverPinned: false,
+        // Hash chain fields
+        serverContentHash: 'hash-abc123',
+        serverParentHash: 'hash-parent',
+        serverHashChain: ['hash-abc123', 'hash-parent', 'hash-grandparent'],
+      });
+
+      const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
+      expect(syncMeta?.conflictData?.serverContentHash).toBe('hash-abc123');
+      expect(syncMeta?.conflictData?.serverParentHash).toBe('hash-parent');
+      expect(syncMeta?.conflictData?.serverHashChain).toEqual(['hash-abc123', 'hash-parent', 'hash-grandparent']);
+    });
+
+    it('should store ancestor data for 3-way merge when provided', async () => {
+      const note = createTestNote({ id: 'note-ancestor' });
+      await noteRepository.create(note);
+
+      // Create encrypted ancestor content
+      const ancestorContent = 'Original content before divergence';
+      const encryptedAncestor = await cryptoService.encryptText(ancestorContent, masterKey);
+
+      await storeConflict(note.id, {
+        serverContent: 'encrypted-server-content',
+        serverTags: [],
+        serverModifiedAt: new Date().toISOString(),
+        serverVersion: 2,
+        serverAttachments: [],
+        serverPinned: false,
+        // Ancestor data
+        ancestorHash: 'hash-common-ancestor',
+        ancestorContent: JSON.stringify(encryptedAncestor),
+        ancestorTags: [],
+      });
+
+      const syncMeta = await syncRepository.getNoteSyncMetadata(note.id);
+      expect(syncMeta?.conflictData?.ancestorHash).toBe('hash-common-ancestor');
+      expect(syncMeta?.conflictData?.ancestorContent).toBe(JSON.stringify(encryptedAncestor));
+    });
   });
 
   describe('getConflicts', () => {
@@ -169,6 +218,69 @@ describe('conflictService', () => {
       vi.spyOn(keyManager, 'getMasterKey').mockReturnValue(null);
 
       await expect(getConflictInfo('note-1')).rejects.toThrow('Application is locked');
+    });
+
+    it('should return hash chain fields in conflict info', async () => {
+      const note = createTestNote({ id: 'note-hash-info' });
+      await noteRepository.create(note);
+
+      const conflictData = await createTestConflictData('note-hash-info');
+      // Add hash chain fields
+      conflictData.serverContentHash = 'hash-server';
+      conflictData.serverParentHash = 'hash-server-parent';
+
+      await syncRepository.updateNoteSyncMetadata('note-hash-info', {
+        noteId: 'note-hash-info',
+        lastSyncStatus: 'conflict',
+        conflictData,
+      });
+
+      const info = await getConflictInfo('note-hash-info');
+      expect(info?.serverContentHash).toBe('hash-server');
+      expect(info?.serverParentHash).toBe('hash-server-parent');
+    });
+
+    it('should return decrypted ancestor content when available', async () => {
+      const note = createTestNote({ id: 'note-ancestor-info' });
+      await noteRepository.create(note);
+
+      // Create encrypted ancestor content
+      const ancestorContent = 'Common ancestor content';
+      const encryptedAncestor = await cryptoService.encryptText(ancestorContent, masterKey);
+
+      const conflictData = await createTestConflictData('note-ancestor-info');
+      conflictData.ancestorHash = 'hash-common';
+      conflictData.ancestorContent = JSON.stringify(encryptedAncestor);
+      conflictData.ancestorTags = [];
+
+      await syncRepository.updateNoteSyncMetadata('note-ancestor-info', {
+        noteId: 'note-ancestor-info',
+        lastSyncStatus: 'conflict',
+        conflictData,
+      });
+
+      const info = await getConflictInfo('note-ancestor-info');
+      expect(info?.ancestorHash).toBe('hash-common');
+      expect(info?.ancestorContent).toBe('Common ancestor content');
+    });
+
+    it('should handle missing ancestor data gracefully', async () => {
+      const note = createTestNote({ id: 'note-no-ancestor' });
+      await noteRepository.create(note);
+
+      const conflictData = await createTestConflictData('note-no-ancestor');
+      // No ancestor data set
+
+      await syncRepository.updateNoteSyncMetadata('note-no-ancestor', {
+        noteId: 'note-no-ancestor',
+        lastSyncStatus: 'conflict',
+        conflictData,
+      });
+
+      const info = await getConflictInfo('note-no-ancestor');
+      expect(info?.ancestorHash).toBeUndefined();
+      expect(info?.ancestorContent).toBeUndefined();
+      expect(info?.ancestorTags).toBeUndefined();
     });
   });
 

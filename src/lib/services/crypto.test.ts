@@ -4,7 +4,8 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest';
-import { cryptoService, encryptJSON, decryptJSON, encryptStringArray, decryptStringArray } from './crypto';
+import { cryptoService, encryptJSON, decryptJSON, encryptStringArray, decryptStringArray, updateHashChain, findCommonAncestor, MAX_HASH_CHAIN_LENGTH } from './crypto';
+import type { Note } from '../types/models';
 
 describe('WebCryptoService', () => {
   describe('Key Derivation', () => {
@@ -452,6 +453,277 @@ describe('WebCryptoService', () => {
       // Different iterations should produce different keys
       await expect(cryptoService.decryptText(encrypted1, key2)).rejects.toThrow();
       await expect(cryptoService.decryptText(encrypted2, key1)).rejects.toThrow();
+    });
+  });
+
+  describe('Content Hash Computation (for sync conflict detection)', () => {
+    test('should produce consistent hash for same note content', async () => {
+      const note: Partial<Note> = {
+        content: 'Test content',
+        tags: ['tag1', 'tag2'],
+        attachments: [],
+        pinned: false,
+        archived: false,
+        locked: false,
+        syntaxLanguage: 'markdown',
+        wordWrap: true,
+        showPreview: false,
+        color: undefined,
+      };
+
+      const hash1 = await cryptoService.computeContentHash(note);
+      const hash2 = await cryptoService.computeContentHash(note);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    test('should produce different hash when content changes', async () => {
+      const note1: Partial<Note> = {
+        content: 'Content A',
+        tags: [],
+        attachments: [],
+        pinned: false,
+      };
+
+      const note2: Partial<Note> = {
+        content: 'Content B',
+        tags: [],
+        attachments: [],
+        pinned: false,
+      };
+
+      const hash1 = await cryptoService.computeContentHash(note1);
+      const hash2 = await cryptoService.computeContentHash(note2);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    test('should produce different hash when tags change', async () => {
+      const note1: Partial<Note> = {
+        content: 'Same content',
+        tags: ['tag1'],
+        attachments: [],
+        pinned: false,
+      };
+
+      const note2: Partial<Note> = {
+        content: 'Same content',
+        tags: ['tag2'],
+        attachments: [],
+        pinned: false,
+      };
+
+      const hash1 = await cryptoService.computeContentHash(note1);
+      const hash2 = await cryptoService.computeContentHash(note2);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    test('should produce different hash when pinned status changes', async () => {
+      const note1: Partial<Note> = {
+        content: 'Same content',
+        tags: [],
+        attachments: [],
+        pinned: false,
+      };
+
+      const note2: Partial<Note> = {
+        content: 'Same content',
+        tags: [],
+        attachments: [],
+        pinned: true,
+      };
+
+      const hash1 = await cryptoService.computeContentHash(note1);
+      const hash2 = await cryptoService.computeContentHash(note2);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    test('should produce different hash when attachments change', async () => {
+      const note1: Partial<Note> = {
+        content: 'Same content',
+        tags: [],
+        attachments: [],
+        pinned: false,
+      };
+
+      const note2: Partial<Note> = {
+        content: 'Same content',
+        tags: [],
+        attachments: [{ id: 'att-1', filename: 'file.txt', mimeType: 'text/plain', size: 100, data: 'ref' }],
+        pinned: false,
+      };
+
+      const hash1 = await cryptoService.computeContentHash(note1);
+      const hash2 = await cryptoService.computeContentHash(note2);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    test('should produce same hash regardless of attachment order', async () => {
+      const note1: Partial<Note> = {
+        content: 'Content',
+        tags: [],
+        attachments: [
+          { id: 'att-a', filename: 'a.txt', mimeType: 'text/plain', size: 10, data: 'ref-a' },
+          { id: 'att-b', filename: 'b.txt', mimeType: 'text/plain', size: 20, data: 'ref-b' },
+        ],
+        pinned: false,
+      };
+
+      const note2: Partial<Note> = {
+        content: 'Content',
+        tags: [],
+        attachments: [
+          { id: 'att-b', filename: 'b.txt', mimeType: 'text/plain', size: 20, data: 'ref-b' },
+          { id: 'att-a', filename: 'a.txt', mimeType: 'text/plain', size: 10, data: 'ref-a' },
+        ],
+        pinned: false,
+      };
+
+      const hash1 = await cryptoService.computeContentHash(note1);
+      const hash2 = await cryptoService.computeContentHash(note2);
+
+      // Attachments are sorted by ID, so order shouldn't matter
+      expect(hash1).toBe(hash2);
+    });
+
+    test('should handle empty/undefined fields gracefully', async () => {
+      const note: Partial<Note> = {};
+
+      const hash = await cryptoService.computeContentHash(note);
+
+      expect(hash).toBeDefined();
+      expect(hash.length).toBe(44); // Base64-encoded SHA-256
+    });
+
+    test('should produce hash of expected length', async () => {
+      const note: Partial<Note> = {
+        content: 'Test',
+        tags: ['tag'],
+        attachments: [],
+        pinned: true,
+      };
+
+      const hash = await cryptoService.computeContentHash(note);
+
+      // SHA-256 produces 32 bytes (256 bits), Base64 encoding makes it 44 characters
+      expect(hash.length).toBe(44);
+    });
+  });
+
+  describe('Hash Chain Management', () => {
+    describe('updateHashChain', () => {
+      test('should prepend current hash to empty chain', () => {
+        const currentHash = 'hash-abc';
+        const parentChain: string[] = [];
+
+        const newChain = updateHashChain(currentHash, parentChain);
+
+        expect(newChain).toEqual(['hash-abc']);
+      });
+
+      test('should prepend current hash to existing chain', () => {
+        const currentHash = 'hash-new';
+        const parentChain = ['hash-old1', 'hash-old2'];
+
+        const newChain = updateHashChain(currentHash, parentChain);
+
+        expect(newChain).toEqual(['hash-new', 'hash-old1', 'hash-old2']);
+      });
+
+      test('should trim chain to MAX_HASH_CHAIN_LENGTH', () => {
+        const currentHash = 'hash-new';
+        // Create a chain longer than max
+        const parentChain = Array.from({ length: MAX_HASH_CHAIN_LENGTH + 10 }, (_, i) => `hash-${i}`);
+
+        const newChain = updateHashChain(currentHash, parentChain);
+
+        expect(newChain.length).toBe(MAX_HASH_CHAIN_LENGTH);
+        expect(newChain[0]).toBe('hash-new');
+        // Last elements should be trimmed
+        expect(newChain[MAX_HASH_CHAIN_LENGTH - 1]).toBe(`hash-${MAX_HASH_CHAIN_LENGTH - 2}`);
+      });
+
+      test('should handle undefined parent chain', () => {
+        const currentHash = 'hash-abc';
+
+        const newChain = updateHashChain(currentHash);
+
+        expect(newChain).toEqual(['hash-abc']);
+      });
+
+      test('should preserve chain order (newest first)', () => {
+        let chain: string[] = [];
+        chain = updateHashChain('hash-1', chain);
+        chain = updateHashChain('hash-2', chain);
+        chain = updateHashChain('hash-3', chain);
+
+        expect(chain).toEqual(['hash-3', 'hash-2', 'hash-1']);
+      });
+    });
+
+    describe('findCommonAncestor', () => {
+      test('should find common ancestor when present', () => {
+        const chainA = ['hash-a3', 'hash-a2', 'hash-common', 'hash-old'];
+        const chainB = ['hash-b3', 'hash-b2', 'hash-common', 'hash-old'];
+
+        const ancestor = findCommonAncestor(chainA, chainB);
+
+        expect(ancestor).toBe('hash-common');
+      });
+
+      test('should return first common hash (most recent common ancestor)', () => {
+        const chainA = ['hash-a', 'hash-common1', 'hash-common2'];
+        const chainB = ['hash-b', 'hash-common1', 'hash-common2'];
+
+        const ancestor = findCommonAncestor(chainA, chainB);
+
+        expect(ancestor).toBe('hash-common1');
+      });
+
+      test('should return null when no common ancestor exists', () => {
+        const chainA = ['hash-a1', 'hash-a2', 'hash-a3'];
+        const chainB = ['hash-b1', 'hash-b2', 'hash-b3'];
+
+        const ancestor = findCommonAncestor(chainA, chainB);
+
+        expect(ancestor).toBeNull();
+      });
+
+      test('should handle empty chains', () => {
+        expect(findCommonAncestor([], ['hash-1', 'hash-2'])).toBeNull();
+        expect(findCommonAncestor(['hash-1', 'hash-2'], [])).toBeNull();
+        expect(findCommonAncestor([], [])).toBeNull();
+      });
+
+      test('should find ancestor when chains have same first element', () => {
+        const chainA = ['hash-same', 'hash-a'];
+        const chainB = ['hash-same', 'hash-b'];
+
+        const ancestor = findCommonAncestor(chainA, chainB);
+
+        expect(ancestor).toBe('hash-same');
+      });
+
+      test('should work with single-element chains', () => {
+        const chainA = ['hash-common'];
+        const chainB = ['hash-common'];
+
+        const ancestor = findCommonAncestor(chainA, chainB);
+
+        expect(ancestor).toBe('hash-common');
+      });
+
+      test('should handle asymmetric chain lengths', () => {
+        const chainA = ['hash-a5', 'hash-a4', 'hash-a3', 'hash-common'];
+        const chainB = ['hash-b', 'hash-common'];
+
+        const ancestor = findCommonAncestor(chainA, chainB);
+
+        expect(ancestor).toBe('hash-common');
+      });
     });
   });
 });
