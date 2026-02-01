@@ -758,3 +758,435 @@ impl<'a> NoteRepository<'a> {
         Ok(count)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+    use crate::models::SyntaxLanguage;
+
+    fn setup_test_db() -> (Database, [u8; 32]) {
+        let db = Database::in_memory("test_password").unwrap();
+        let crypto = CryptoService::new();
+        let salt = crypto.generate_salt();
+        let key = crypto.derive_key("test_password", &salt, 100_000).unwrap();
+        (db, key)
+    }
+
+    // ===== CRUD Operations =====
+
+    #[test]
+    fn test_create_note() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test content".to_string());
+        let result = repo.create(&note, &key);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_note() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test content".to_string());
+        repo.create(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap();
+        assert!(retrieved.is_some());
+
+        let retrieved = retrieved.unwrap();
+        assert_eq!(retrieved.id, note.id);
+        assert_eq!(retrieved.content, "Test content");
+    }
+
+    #[test]
+    fn test_get_nonexistent_note() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let retrieved = repo.get("nonexistent-id", &key).unwrap();
+        assert!(retrieved.is_none());
+    }
+
+    #[test]
+    fn test_update_note() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Original content".to_string());
+        repo.create(&note, &key).unwrap();
+
+        note.content = "Updated content".to_string();
+        repo.update(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert_eq!(retrieved.content, "Updated content");
+    }
+
+    #[test]
+    fn test_delete_note_soft() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        repo.delete(&note.id).unwrap();
+
+        // Note should still exist but be marked deleted
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(retrieved.deleted);
+        assert!(retrieved.deleted_at.is_some());
+    }
+
+    #[test]
+    fn test_restore_note_via_update() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        repo.delete(&note.id).unwrap();
+
+        // Restore by updating with deleted=false
+        note.deleted = false;
+        note.deleted_at = None;
+        repo.update(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(!retrieved.deleted);
+        assert!(retrieved.deleted_at.is_none());
+    }
+
+    #[test]
+    fn test_hard_delete() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        repo.hard_delete(&note.id).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap();
+        assert!(retrieved.is_none());
+    }
+
+    // ===== List Operations =====
+
+    #[test]
+    fn test_list_excludes_deleted() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+
+        repo.create(&note1, &key).unwrap();
+        repo.create(&note2, &key).unwrap();
+        repo.delete(&note2.id).unwrap();
+
+        let notes = repo.list(false, &key).unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].id, note1.id);
+    }
+
+    #[test]
+    fn test_list_includes_deleted() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+
+        repo.create(&note1, &key).unwrap();
+        repo.create(&note2, &key).unwrap();
+        repo.delete(&note2.id).unwrap();
+
+        let notes = repo.list(true, &key).unwrap();
+        assert_eq!(notes.len(), 2);
+    }
+
+    #[test]
+    fn test_get_deleted_notes() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+
+        repo.create(&note1, &key).unwrap();
+        repo.create(&note2, &key).unwrap();
+        repo.delete(&note2.id).unwrap();
+
+        let deleted = repo.get_deleted(&key).unwrap();
+        assert_eq!(deleted.len(), 1);
+        assert_eq!(deleted[0].id, note2.id);
+    }
+
+    // ===== Pin Operations (via update) =====
+
+    #[test]
+    fn test_pin_via_update() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        assert!(!repo.get(&note.id, &key).unwrap().unwrap().pinned);
+
+        // Pin via update
+        note.pinned = true;
+        repo.update(&note, &key).unwrap();
+        assert!(repo.get(&note.id, &key).unwrap().unwrap().pinned);
+
+        // Unpin via update
+        note.pinned = false;
+        repo.update(&note, &key).unwrap();
+        assert!(!repo.get(&note.id, &key).unwrap().unwrap().pinned);
+    }
+
+    // ===== Archive Operations =====
+
+    #[test]
+    fn test_archive_unarchive() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        assert!(!repo.get(&note.id, &key).unwrap().unwrap().archived);
+
+        repo.archive(&note.id).unwrap();
+        let archived = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(archived.archived);
+        assert!(archived.archived_at.is_some());
+
+        repo.unarchive(&note.id).unwrap();
+        let unarchived = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(!unarchived.archived);
+        assert!(unarchived.archived_at.is_none());
+    }
+
+    #[test]
+    fn test_get_archived() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+
+        repo.create(&note1, &key).unwrap();
+        repo.create(&note2, &key).unwrap();
+        repo.archive(&note2.id).unwrap();
+
+        let archived = repo.get_archived(&key).unwrap();
+        assert_eq!(archived.len(), 1);
+        assert_eq!(archived[0].id, note2.id);
+    }
+
+    // ===== Note with Tags =====
+
+    #[test]
+    fn test_note_with_tags() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Test".to_string());
+        note.tags = vec!["work".to_string(), "important".to_string()];
+        repo.create(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert_eq!(retrieved.tags.len(), 2);
+        assert!(retrieved.tags.contains(&"work".to_string()));
+        assert!(retrieved.tags.contains(&"important".to_string()));
+    }
+
+    // ===== Syntax Language =====
+
+    #[test]
+    fn test_note_with_syntax_language() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("let x = 1;".to_string());
+        note.syntax_language = SyntaxLanguage::Javascript;
+        repo.create(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert_eq!(retrieved.syntax_language, SyntaxLanguage::Javascript);
+    }
+
+    // ===== Counting =====
+
+    #[test]
+    fn test_count_notes() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        assert_eq!(repo.count(false).unwrap(), 0);
+
+        repo.create(&Note::new("1".to_string()), &key).unwrap();
+        repo.create(&Note::new("2".to_string()), &key).unwrap();
+
+        assert_eq!(repo.count(false).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_count_excludes_deleted() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+        repo.delete(&note.id).unwrap();
+
+        assert_eq!(repo.count(false).unwrap(), 0);
+        assert_eq!(repo.count(true).unwrap(), 1);
+    }
+
+    // ===== Modified After (for sync) =====
+
+    #[test]
+    fn test_get_modified_after() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let before = Utc::now();
+
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        // Notes created after 'before' should be returned
+        let modified = repo.get_modified_after(before, &key).unwrap();
+        assert_eq!(modified.len(), 1);
+
+        // Notes created before 'now' (in future) should not be returned
+        let far_future = Utc::now() + chrono::Duration::hours(1);
+        let modified = repo.get_modified_after(far_future, &key).unwrap();
+        assert_eq!(modified.len(), 0);
+    }
+
+    // ===== Empty Trash =====
+
+    #[test]
+    fn test_empty_trash() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note1 = Note::new("Note 1".to_string());
+        let note2 = Note::new("Note 2".to_string());
+        let note3 = Note::new("Note 3".to_string());
+
+        repo.create(&note1, &key).unwrap();
+        repo.create(&note2, &key).unwrap();
+        repo.create(&note3, &key).unwrap();
+
+        repo.delete(&note1.id).unwrap();
+        repo.delete(&note2.id).unwrap();
+
+        // Empty trash should remove deleted notes and return count
+        let deleted_count = repo.empty_trash().unwrap();
+        assert_eq!(deleted_count, 2);
+
+        // Deleted notes should be gone
+        assert!(repo.get(&note1.id, &key).unwrap().is_none());
+        assert!(repo.get(&note2.id, &key).unwrap().is_none());
+
+        // Non-deleted note should remain
+        assert!(repo.get(&note3.id, &key).unwrap().is_some());
+    }
+
+    // ===== Note Color =====
+
+    #[test]
+    fn test_note_with_color() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Test".to_string());
+        note.color = Some("red".to_string());
+        repo.create(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert_eq!(retrieved.color, Some("red".to_string()));
+    }
+
+    // ===== Word Wrap =====
+
+    #[test]
+    fn test_note_word_wrap() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Test".to_string());
+        note.word_wrap = false;
+        repo.create(&note, &key).unwrap();
+
+        let retrieved = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(!retrieved.word_wrap);
+    }
+
+    // ===== Sync Operations =====
+
+    #[test]
+    fn test_apply_remote_deletion() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+
+        // Apply remote deletion
+        let deleted = repo.apply_remote_deletion(&note.id).unwrap();
+        assert!(deleted);
+
+        // Note should be completely gone
+        assert!(repo.get(&note.id, &key).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_apply_remote_deletion_nonexistent() {
+        let (db, _key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        // Should return false for nonexistent note
+        let deleted = repo.apply_remote_deletion("nonexistent").unwrap();
+        assert!(!deleted);
+    }
+
+    // ===== Locked Notes (via update) =====
+
+    #[test]
+    fn test_lock_unlock_note_via_update() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Secret".to_string());
+        repo.create(&note, &key).unwrap();
+
+        // Lock the note via update
+        note.locked = true;
+        note.locked_at = Some(Utc::now());
+        repo.update(&note, &key).unwrap();
+
+        let locked = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(locked.locked);
+        assert!(locked.locked_at.is_some());
+
+        // Unlock the note via update
+        note.locked = false;
+        note.locked_at = None;
+        repo.update(&note, &key).unwrap();
+
+        let unlocked = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(!unlocked.locked);
+        assert!(unlocked.locked_at.is_none());
+    }
+}

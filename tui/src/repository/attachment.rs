@@ -114,3 +114,166 @@ impl<'a> AttachmentRepository<'a> {
         Ok(size)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+
+    fn setup_test_db() -> (Database, [u8; 32]) {
+        let db = Database::in_memory("test_password").unwrap();
+        let crypto = CryptoService::new();
+        let salt = crypto.generate_salt();
+        let key = crypto.derive_key("test_password", &salt, 100_000).unwrap();
+        (db, key)
+    }
+
+    #[test]
+    fn test_store_and_get_attachment() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let id = "test-attachment-id";
+        let filename = "test_file.txt";
+        let mime_type = "text/plain";
+        let data = b"Hello, World!";
+
+        // Store attachment
+        repo.store(id, filename, mime_type, data.len() as i64, data, &key).unwrap();
+
+        // Retrieve attachment
+        let result = repo.get(id, &key).unwrap();
+        assert!(result.is_some());
+
+        let (retrieved_filename, retrieved_mime, retrieved_size, retrieved_data) = result.unwrap();
+        assert_eq!(retrieved_filename, filename);
+        assert_eq!(retrieved_mime, mime_type);
+        assert_eq!(retrieved_size, data.len() as i64);
+        assert_eq!(retrieved_data, data);
+    }
+
+    #[test]
+    fn test_get_nonexistent_attachment() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let result = repo.get("nonexistent", &key).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_delete_attachment() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let id = "test-id";
+        repo.store(id, "file.txt", "text/plain", 5, b"hello", &key).unwrap();
+
+        // Verify it exists
+        assert!(repo.get(id, &key).unwrap().is_some());
+
+        // Delete it
+        repo.delete(id).unwrap();
+
+        // Verify it's gone
+        assert!(repo.get(id, &key).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_get_size() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let id = "test-id";
+        let data = b"test data with some length";
+
+        repo.store(id, "file.txt", "text/plain", data.len() as i64, data, &key).unwrap();
+
+        let size = repo.get_size(id).unwrap();
+        assert_eq!(size, Some(data.len() as i64));
+    }
+
+    #[test]
+    fn test_get_size_nonexistent() {
+        let (db, _key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let size = repo.get_size("nonexistent").unwrap();
+        assert_eq!(size, None);
+    }
+
+    #[test]
+    fn test_count() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        assert_eq!(repo.count().unwrap(), 0);
+
+        repo.store("id1", "file1.txt", "text/plain", 5, b"hello", &key).unwrap();
+        assert_eq!(repo.count().unwrap(), 1);
+
+        repo.store("id2", "file2.txt", "text/plain", 5, b"world", &key).unwrap();
+        assert_eq!(repo.count().unwrap(), 2);
+
+        repo.delete("id1").unwrap();
+        assert_eq!(repo.count().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_total_size() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        assert_eq!(repo.total_size().unwrap(), 0);
+
+        repo.store("id1", "file1.txt", "text/plain", 100, b"a", &key).unwrap();
+        repo.store("id2", "file2.txt", "text/plain", 200, b"b", &key).unwrap();
+
+        assert_eq!(repo.total_size().unwrap(), 300);
+    }
+
+    #[test]
+    fn test_store_binary_data() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        // Test with binary data (not valid UTF-8)
+        let binary_data: Vec<u8> = (0..=255).collect();
+        let id = "binary-attachment";
+
+        repo.store(id, "binary.bin", "application/octet-stream", binary_data.len() as i64, &binary_data, &key).unwrap();
+
+        let (_, _, _, retrieved) = repo.get(id, &key).unwrap().unwrap();
+        assert_eq!(retrieved, binary_data);
+    }
+
+    #[test]
+    fn test_store_replaces_existing() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let id = "same-id";
+
+        repo.store(id, "original.txt", "text/plain", 8, b"original", &key).unwrap();
+        repo.store(id, "updated.txt", "text/plain", 7, b"updated", &key).unwrap();
+
+        let (filename, _, _, data) = repo.get(id, &key).unwrap().unwrap();
+        assert_eq!(filename, "updated.txt");
+        assert_eq!(data, b"updated");
+
+        // Should still be only one attachment
+        assert_eq!(repo.count().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_filename_with_special_chars() {
+        let (db, key) = setup_test_db();
+        let repo = AttachmentRepository::new(db.connection());
+
+        let filename = "file with spaces & special chars!@#$%.txt";
+        repo.store("id", filename, "text/plain", 4, b"test", &key).unwrap();
+
+        let (retrieved_filename, _, _, _) = repo.get("id", &key).unwrap().unwrap();
+        assert_eq!(retrieved_filename, filename);
+    }
+}

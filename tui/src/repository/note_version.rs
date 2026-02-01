@@ -382,3 +382,222 @@ impl<'a> NoteVersionRepository<'a> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+    use crate::models::Note;
+    use crate::repository::NoteRepository;
+
+    fn setup_test_db() -> (Database, [u8; 32]) {
+        let db = Database::in_memory("test_password").unwrap();
+        let crypto = CryptoService::new();
+        let salt = crypto.generate_salt();
+        let key = crypto.derive_key("test_password", &salt, 100_000).unwrap();
+        (db, key)
+    }
+
+    #[test]
+    fn test_create_version_basic() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        // Create a note first
+        let note = Note::new("Test content".to_string());
+        note_repo.create(&note, &key).unwrap();
+
+        // Create a version
+        let result = version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key);
+        assert!(result.is_ok());
+
+        let version_key = result.unwrap();
+        assert!(version_key.is_some());
+        assert!(version_key.unwrap().starts_with(&note.id));
+    }
+
+    #[test]
+    fn test_create_version_deduplication() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let note = Note::new("Test content".to_string());
+        note_repo.create(&note, &key).unwrap();
+
+        // Create first version
+        let first = version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+        assert!(first.is_some());
+
+        // Try to create duplicate version (same content)
+        let duplicate = version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+        // Should be None due to deduplication
+        assert!(duplicate.is_none());
+    }
+
+    #[test]
+    fn test_get_versions_for_note() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let mut note = Note::new("Version 1".to_string());
+        note_repo.create(&note, &key).unwrap();
+
+        // Create first version
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        // Modify and create second version
+        note.content = "Version 2".to_string();
+        note.version = 2;
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        // Get all versions
+        let versions = version_repo.get_versions_for_note(&note.id, &key).unwrap();
+        assert_eq!(versions.len(), 2);
+
+        // Versions should be sorted newest first
+        assert_eq!(versions[0].version, 2);
+        assert_eq!(versions[1].version, 1);
+    }
+
+    #[test]
+    fn test_get_specific_version() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let note = Note::new("Test content".to_string());
+        note_repo.create(&note, &key).unwrap();
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        // Get specific version
+        let version = version_repo.get_version(&note.id, note.version, &key).unwrap();
+        assert!(version.is_some());
+
+        let v = version.unwrap();
+        assert_eq!(v.note_id, note.id);
+        assert_eq!(v.content, "Test content");
+    }
+
+    #[test]
+    fn test_get_nonexistent_version() {
+        let (db, key) = setup_test_db();
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let version = version_repo.get_version("nonexistent", 1, &key).unwrap();
+        assert!(version.is_none());
+    }
+
+    #[test]
+    fn test_get_latest_version() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let mut note = Note::new("Version 1".to_string());
+        note_repo.create(&note, &key).unwrap();
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        note.content = "Version 2".to_string();
+        note.version = 2;
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        let latest = version_repo.get_latest_version(&note.id, &key).unwrap();
+        assert!(latest.is_some());
+        assert_eq!(latest.unwrap().version, 2);
+    }
+
+    #[test]
+    fn test_count_versions() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let mut note = Note::new("Version 1".to_string());
+        note_repo.create(&note, &key).unwrap();
+
+        assert_eq!(version_repo.count_versions_for_note(&note.id).unwrap(), 0);
+
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+        assert_eq!(version_repo.count_versions_for_note(&note.id).unwrap(), 1);
+
+        note.content = "Version 2".to_string();
+        note.version = 2;
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+        assert_eq!(version_repo.count_versions_for_note(&note.id).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_delete_versions_for_note() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let mut note = Note::new("Content".to_string());
+        note_repo.create(&note, &key).unwrap();
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        note.content = "Modified".to_string();
+        note.version = 2;
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        assert_eq!(version_repo.count_versions_for_note(&note.id).unwrap(), 2);
+
+        let deleted = version_repo.delete_versions_for_note(&note.id).unwrap();
+        assert_eq!(deleted, 2);
+        assert_eq!(version_repo.count_versions_for_note(&note.id).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_version_with_tags() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let mut note = Note::new("Test content".to_string());
+        note.tags = vec!["tag1".to_string(), "tag2".to_string()];
+        note_repo.create(&note, &key).unwrap();
+        version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        let version = version_repo.get_version(&note.id, note.version, &key).unwrap().unwrap();
+        assert_eq!(version.tags, vec!["tag1".to_string(), "tag2".to_string()]);
+    }
+
+    #[test]
+    fn test_version_reason_manual_sync() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        note_repo.create(&note, &key).unwrap();
+        version_repo.create_version(&note, Utc::now(), VersionReason::ManualSync, &key).unwrap();
+
+        let version = version_repo.get_version(&note.id, note.version, &key).unwrap().unwrap();
+        assert!(matches!(version.reason, VersionReason::ManualSync));
+    }
+
+    #[test]
+    fn test_get_version_by_key() {
+        let (db, key) = setup_test_db();
+        let note_repo = NoteRepository::new(db.connection());
+        let version_repo = NoteVersionRepository::new(db.connection());
+
+        let note = Note::new("Test".to_string());
+        note_repo.create(&note, &key).unwrap();
+        let version_key = version_repo.create_version(&note, Utc::now(), VersionReason::Sync, &key)
+            .unwrap()
+            .unwrap();
+
+        // Should find existing version
+        let found = version_repo.get_version_by_key(&version_key).unwrap();
+        assert!(found.is_some());
+        assert_eq!(found.unwrap(), version_key);
+
+        // Should not find nonexistent version
+        let not_found = version_repo.get_version_by_key("nonexistent:1").unwrap();
+        assert!(not_found.is_none());
+    }
+}
