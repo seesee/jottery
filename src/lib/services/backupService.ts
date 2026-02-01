@@ -189,11 +189,17 @@ export async function createBackup(): Promise<BackupData> {
 
   // Encrypt all note versions
   const db = getDB();
-  const versions = await db.getAll(STORES.NOTE_VERSIONS);
-  for (const version of versions) {
-    const record: BackupRecord = { type: 'version', data: version };
-    const jwe = await encryptRecordAsJWE(record, keyBytes);
-    jweRecords.push(jwe);
+  try {
+    const versions = await db.getAll(STORES.NOTE_VERSIONS);
+    console.log(`[backupService] Found ${versions.length} versions to export`);
+    for (const version of versions) {
+      const record: BackupRecord = { type: 'version', data: version };
+      const jwe = await encryptRecordAsJWE(record, keyBytes);
+      jweRecords.push(jwe);
+    }
+  } catch (error) {
+    console.error('[backupService] Failed to export versions:', error);
+    // Continue without versions rather than failing entire backup
   }
 
   // Encrypt saved searches
@@ -444,9 +450,12 @@ export async function restoreBackup(
           break;
         }
 
-        case 'version':
-          await db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion);
+        case 'version': {
+          const version = record.data as NoteVersion;
+          console.log(`[backupService] Restoring version: ${version.versionKey}`);
+          await db.put(STORES.NOTE_VERSIONS, version);
           break;
+        }
 
         case 'saved_search':
           await db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch);
