@@ -4,6 +4,7 @@
  */
 
 import type { EncryptionMetadata, MasterKey } from '../types';
+import type { BackupData } from './backupService';
 import { encryptionRepository } from './encryptionRepository';
 import { settingsRepository } from './settingsRepository';
 import { noteRepository } from './noteRepository';
@@ -14,6 +15,7 @@ import { sessionStorageService } from './sessionStorageService';
 import { authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
+import { restoreBackup as restoreBackupData, verifyBackupPassword } from './backupService';
 
 /**
  * Check if the application has been initialized
@@ -324,4 +326,65 @@ export async function changePassword(
   throw new Error(
     'Password change not yet implemented. This requires re-encrypting all data.'
   );
+}
+
+/**
+ * Restore from an encrypted backup
+ *
+ * This function:
+ * 1. Verifies the password against the backup's encryption metadata
+ * 2. Restores all data from the backup
+ * 3. Unlocks the application with the verified key
+ *
+ * @param backup - The validated backup data
+ * @param password - The password used when the backup was created
+ * @param onProgress - Optional progress callback
+ */
+export async function restoreFromBackup(
+  backup: BackupData,
+  password: string,
+  onProgress?: (progress: {
+    phase: 'validating' | 'notes' | 'attachments' | 'versions' | 'settings' | 'complete';
+    current?: number;
+    total?: number;
+  }) => void
+): Promise<void> {
+  console.log('[RestoreFromBackup] Starting restore process...');
+
+  // Step 1: Verify password against backup
+  onProgress?.({ phase: 'validating' });
+  console.log('[RestoreFromBackup] Verifying password...');
+
+  const verification = await verifyBackupPassword(backup, password);
+  if (!verification.valid || !verification.key) {
+    console.error('[RestoreFromBackup] Password verification failed:', verification.error);
+    throw new Error(verification.error || 'Incorrect password');
+  }
+
+  console.log('[RestoreFromBackup] Password verified successfully');
+
+  // Step 2: Restore all data from backup
+  console.log('[RestoreFromBackup] Restoring data...');
+  await restoreBackupData(backup, onProgress);
+
+  // Step 3: Store the master key (we already verified it works)
+  const masterKey: MasterKey = {
+    key: verification.key,
+    derivedAt: Date.now(),
+  };
+
+  keyManager.setMasterKey(masterKey);
+  console.log('[RestoreFromBackup] Master key stored in keyManager');
+
+  // Step 4: Setup auto-lock based on restored settings
+  const settings = await settingsRepository.get();
+
+  if (settings.rememberPassword) {
+    console.log('[RestoreFromBackup] Remember Password enabled - auto-lock DISABLED');
+  } else {
+    setupActivityListeners(settings.autoLockTimeout);
+    console.log('[RestoreFromBackup] Auto-lock enabled with timeout:', settings.autoLockTimeout, 'minutes');
+  }
+
+  console.log('[RestoreFromBackup] Restore complete!');
 }

@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Etiketi kaldır"
   },
+  "backup": {
+    "title": "Şifreli Yedekleme",
+    "description": "Herhangi bir cihazda geri yüklenebilecek güvenli bir yedek oluşturun. Yedeğiniz şifrenizle şifrelenir.",
+    "createButton": "Şifreli Yedekleme Oluştur",
+    "creating": "Yedekleme oluşturuluyor...",
+    "created": "Yedekleme başarıyla oluşturuldu",
+    "failed": "Yedekleme oluşturulamadı",
+    "restore": {
+      "title": "Yedekten Geri Yükle",
+      "selectFile": "Yedek dosyası seçin",
+      "selectFileHint": "Bir .jottery-backup dosyası seçin",
+      "noFileSelected": "Dosya seçilmedi",
+      "password": "Şifre",
+      "passwordHint": "Yedekleme oluşturulurken kullanılan şifreyi girin",
+      "restoreButton": "Geri Yükle",
+      "restoring": "Geri yükleniyor...",
+      "cancel": "İptal",
+      "success": "Yedekleme başarıyla geri yüklendi!",
+      "wrongPassword": "Yanlış şifre. Lütfen yedekleme oluşturulurken kullanılan şifreyi kullanın.",
+      "invalidFile": "Geçersiz yedekleme dosyası. Lütfen geçerli bir .jottery-backup dosyası seçin.",
+      "confirmOverwrite": "Bu, mevcut tüm verileri değiştirecektir. Devam etmek istediğinizden emin misiniz?",
+      "confirmOverwriteTitle": "Yedeklemeyi Geri Yükle?",
+      "confirmOverwriteMessage": "Bu yedeklemenin geri yüklenmesi, bu cihazdaki tüm mevcut notları ve ayarları değiştirecektir. Bu işlem geri alınamaz.",
+      "confirmButton": "Yedeklemeyi Geri Yükle",
+      "progress": {
+        "validating": "Yedekleme doğrulanıyor...",
+        "notes": "Notlar geri yükleniyor ({current}/{total})...",
+        "attachments": "Ekler geri yükleniyor ({current}/{total})...",
+        "versions": "Sürümler geri yükleniyor ({current}/{total})...",
+        "settings": "Ayarlar geri yükleniyor...",
+        "complete": "Geri yükleme tamamlandı!"
+      },
+      "stats": {
+        "createdAt": "Oluşturulma:",
+        "notes": "Notlar:",
+        "attachments": "Ekler:"
+      }
+    }
+  },
   "settings": {
     "title": "Ayarlar",
     "closeLabel": "Ayarları kapat",
@@ -819,7 +858,9 @@
       "message": "Kilidini açmak için diğer cihazınızda kullandığınız aynı şifreyi girin.",
       "passwordLabel": "Şifre (diğer cihazınızdan)",
       "passwordPlaceholder": "Diğer cihazdan şifreyi girin"
-    }
+    },
+    "restoreFromBackup": "Yedekten Geri Yükle",
+    "orDivider": "veya"
   },
   "lock": {
     "title": "Uygulamayı Kilitle",

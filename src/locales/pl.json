@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Usuń tag"
   },
+  "backup": {
+    "title": "Zaszyfrowana Kopia Zapasowa",
+    "description": "Utwórz bezpieczną kopię zapasową, którą można przywrócić na dowolnym urządzeniu. Twoja kopia zapasowa jest zaszyfrowana hasłem.",
+    "createButton": "Utwórz Zaszyfrowaną Kopię Zapasową",
+    "creating": "Tworzenie kopii zapasowej...",
+    "created": "Kopia zapasowa utworzona pomyślnie",
+    "failed": "Nie udało się utworzyć kopii zapasowej",
+    "restore": {
+      "title": "Przywróć z Kopii Zapasowej",
+      "selectFile": "Wybierz plik kopii zapasowej",
+      "selectFileHint": "Wybierz plik .jottery-backup",
+      "noFileSelected": "Nie wybrano pliku",
+      "password": "Hasło",
+      "passwordHint": "Wprowadź hasło użyte podczas tworzenia kopii zapasowej",
+      "restoreButton": "Przywróć",
+      "restoring": "Przywracanie...",
+      "cancel": "Anuluj",
+      "success": "Kopia zapasowa przywrócona pomyślnie!",
+      "wrongPassword": "Nieprawidłowe hasło. Użyj hasła użytego podczas tworzenia kopii zapasowej.",
+      "invalidFile": "Nieprawidłowy plik kopii zapasowej. Wybierz prawidłowy plik .jottery-backup.",
+      "confirmOverwrite": "Spowoduje to zastąpienie wszystkich istniejących danych. Czy na pewno chcesz kontynuować?",
+      "confirmOverwriteTitle": "Przywrócić Kopię Zapasową?",
+      "confirmOverwriteMessage": "Przywrócenie tej kopii zapasowej zastąpi wszystkie istniejące notatki i ustawienia na tym urządzeniu. Tej akcji nie można cofnąć.",
+      "confirmButton": "Przywróć Kopię Zapasową",
+      "progress": {
+        "validating": "Weryfikacja kopii zapasowej...",
+        "notes": "Przywracanie notatek ({current}/{total})...",
+        "attachments": "Przywracanie załączników ({current}/{total})...",
+        "versions": "Przywracanie wersji ({current}/{total})...",
+        "settings": "Przywracanie ustawień...",
+        "complete": "Przywracanie zakończone!"
+      },
+      "stats": {
+        "createdAt": "Utworzono:",
+        "notes": "Notatki:",
+        "attachments": "Załączniki:"
+      }
+    }
+  },
   "settings": {
     "title": "Ustawienia",
     "closeLabel": "Zamknij ustawienia",
@@ -819,7 +858,9 @@
       "message": "Wprowadź to samo hasło, którego używasz na innym urządzeniu, aby odblokować.",
       "passwordLabel": "Hasło (z innego urządzenia)",
       "passwordPlaceholder": "Wprowadź hasło z innego urządzenia"
-    }
+    },
+    "restoreFromBackup": "Przywróć z Kopii Zapasowej",
+    "orDivider": "lub"
   },
   "lock": {
     "title": "Zablokuj aplikację",

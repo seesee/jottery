@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Tag verwijderen"
   },
+  "backup": {
+    "title": "Versleutelde Back-up",
+    "description": "Maak een veilige back-up die op elk apparaat kan worden hersteld. Je back-up is versleuteld met je wachtwoord.",
+    "createButton": "Versleutelde Back-up Maken",
+    "creating": "Back-up maken...",
+    "created": "Back-up succesvol gemaakt",
+    "failed": "Back-up maken mislukt",
+    "restore": {
+      "title": "Herstellen vanuit Back-up",
+      "selectFile": "Selecteer back-upbestand",
+      "selectFileHint": "Kies een .jottery-backup bestand",
+      "noFileSelected": "Geen bestand geselecteerd",
+      "password": "Wachtwoord",
+      "passwordHint": "Voer het wachtwoord in dat werd gebruikt toen de back-up werd gemaakt",
+      "restoreButton": "Herstellen",
+      "restoring": "Herstellen...",
+      "cancel": "Annuleren",
+      "success": "Back-up succesvol hersteld!",
+      "wrongPassword": "Onjuist wachtwoord. Gebruik het wachtwoord dat werd gebruikt toen de back-up werd gemaakt.",
+      "invalidFile": "Ongeldig back-upbestand. Selecteer een geldig .jottery-backup bestand.",
+      "confirmOverwrite": "Dit zal alle bestaande gegevens vervangen. Weet je zeker dat je wilt doorgaan?",
+      "confirmOverwriteTitle": "Back-up Herstellen?",
+      "confirmOverwriteMessage": "Het herstellen van deze back-up zal alle bestaande notities en instellingen op dit apparaat vervangen. Deze actie kan niet ongedaan worden gemaakt.",
+      "confirmButton": "Back-up Herstellen",
+      "progress": {
+        "validating": "Back-up valideren...",
+        "notes": "Notities herstellen ({current}/{total})...",
+        "attachments": "Bijlagen herstellen ({current}/{total})...",
+        "versions": "Versies herstellen ({current}/{total})...",
+        "settings": "Instellingen herstellen...",
+        "complete": "Herstel voltooid!"
+      },
+      "stats": {
+        "createdAt": "Gemaakt:",
+        "notes": "Notities:",
+        "attachments": "Bijlagen:"
+      }
+    }
+  },
   "settings": {
     "title": "Instellingen",
     "closeLabel": "Instellingen sluiten",
@@ -819,7 +858,9 @@
       "message": "Voer hetzelfde wachtwoord in dat je op je andere apparaat gebruikt om te ontgrendelen.",
       "passwordLabel": "Wachtwoord (van je andere apparaat)",
       "passwordPlaceholder": "Voer wachtwoord van ander apparaat in"
-    }
+    },
+    "restoreFromBackup": "Herstellen vanuit Back-up",
+    "orDivider": "of"
   },
   "lock": {
     "title": "Applicatie vergrendelen",

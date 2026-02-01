@@ -3,6 +3,7 @@
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
+  import { createBackup, downloadBackup } from '../services/backupService';
   import { authService } from '../services/authService';
   import { exportCredentials, parseAndStoreImportedCredentials, copyToClipboard } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
@@ -97,6 +98,7 @@
   // Documentation and downloads
   let showDocumentation = false;
   let selectedArchitecture = detectArchitecture();
+  let isCreatingBackup = false;
 
   // About tab stats
   let noteStats: { total: number; active: number; deleted: number; pinned: number; } | null = null;
@@ -931,6 +933,20 @@
     }
   }
 
+  async function handleCreateBackup() {
+    isCreatingBackup = true;
+    try {
+      const backup = await createBackup();
+      downloadBackup(backup);
+      toast.success($_('backup.created'));
+    } catch (error) {
+      console.error('Failed to create backup:', error);
+      toast.error($_('backup.failed', { values: { error: error instanceof Error ? error.message : String(error) } }));
+    } finally {
+      isCreatingBackup = false;
+    }
+  }
+
   async function handleImport() {
     fileInput.click();
   }
@@ -1143,6 +1159,8 @@
             onImport={handleImport}
             onDownload={handleDownload}
             onDeleteDatabase={handleDeleteDatabase}
+            onCreateBackup={handleCreateBackup}
+            {isCreatingBackup}
           />
         {/if}
 

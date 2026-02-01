@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Eliminar etiqueta"
   },
+  "backup": {
+    "title": "Copia de seguridad cifrada",
+    "description": "Crea una copia de seguridad que se puede restaurar en cualquier dispositivo. Tu copia de seguridad está cifrada con tu contraseña.",
+    "createButton": "Crear copia de seguridad cifrada",
+    "creating": "Creando copia de seguridad...",
+    "created": "Copia de seguridad creada con éxito",
+    "failed": "Error al crear la copia de seguridad",
+    "restore": {
+      "title": "Restaurar desde copia de seguridad",
+      "selectFile": "Seleccionar archivo de copia de seguridad",
+      "selectFileHint": "Elige un archivo .jottery-backup",
+      "noFileSelected": "Ningún archivo seleccionado",
+      "password": "Contraseña",
+      "passwordHint": "Introduce la contraseña usada al crear la copia de seguridad",
+      "restoreButton": "Restaurar",
+      "restoring": "Restaurando...",
+      "cancel": "Cancelar",
+      "success": "¡Copia de seguridad restaurada con éxito!",
+      "wrongPassword": "Contraseña incorrecta. Por favor, usa la contraseña usada al crear la copia de seguridad.",
+      "invalidFile": "Archivo de copia de seguridad inválido. Por favor, selecciona un archivo .jottery-backup válido.",
+      "confirmOverwrite": "Esto reemplazará todos los datos existentes. ¿Estás seguro de que deseas continuar?",
+      "confirmOverwriteTitle": "¿Restaurar copia de seguridad?",
+      "confirmOverwriteMessage": "Restaurar esta copia de seguridad reemplazará todas las notas y configuraciones existentes en este dispositivo. Esta acción no se puede deshacer.",
+      "confirmButton": "Restaurar copia de seguridad",
+      "progress": {
+        "validating": "Validando copia de seguridad...",
+        "notes": "Restaurando notas ({current}/{total})...",
+        "attachments": "Restaurando archivos adjuntos ({current}/{total})...",
+        "versions": "Restaurando versiones ({current}/{total})...",
+        "settings": "Restaurando configuración...",
+        "complete": "¡Restauración completada!"
+      },
+      "stats": {
+        "createdAt": "Creado:",
+        "notes": "Notas:",
+        "attachments": "Archivos adjuntos:"
+      }
+    }
+  },
   "settings": {
     "title": "Configuración",
     "closeLabel": "Cerrar configuración",
@@ -819,7 +858,9 @@
       "message": "Introduzca la misma contraseña que usa en su otro dispositivo para desbloquear.",
       "passwordLabel": "Contraseña (de su otro dispositivo)",
       "passwordPlaceholder": "Introduzca la contraseña del otro dispositivo"
-    }
+    },
+    "restoreFromBackup": "Restaurar desde copia de seguridad",
+    "orDivider": "o"
   },
   "lock": {
     "title": "Bloquear aplicación",

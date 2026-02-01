@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "タグを削除"
   },
+  "backup": {
+    "title": "暗号化バックアップ",
+    "description": "どのデバイスでも復元できる安全なバックアップを作成します。バックアップはパスワードで暗号化されます。",
+    "createButton": "暗号化バックアップを作成",
+    "creating": "バックアップを作成中...",
+    "created": "バックアップが正常に作成されました",
+    "failed": "バックアップの作成に失敗しました",
+    "restore": {
+      "title": "バックアップから復元",
+      "selectFile": "バックアップファイルを選択",
+      "selectFileHint": ".jottery-backupファイルを選択してください",
+      "noFileSelected": "ファイルが選択されていません",
+      "password": "パスワード",
+      "passwordHint": "バックアップ作成時に使用したパスワードを入力してください",
+      "restoreButton": "復元",
+      "restoring": "復元中...",
+      "cancel": "キャンセル",
+      "success": "バックアップが正常に復元されました！",
+      "wrongPassword": "パスワードが正しくありません。バックアップ作成時に使用したパスワードを使用してください。",
+      "invalidFile": "無効なバックアップファイルです。有効な.jottery-backupファイルを選択してください。",
+      "confirmOverwrite": "既存のすべてのデータが置き換えられます。続行してもよろしいですか？",
+      "confirmOverwriteTitle": "バックアップを復元しますか？",
+      "confirmOverwriteMessage": "このバックアップを復元すると、このデバイス上のすべての既存のノートと設定が置き換えられます。この操作は元に戻せません。",
+      "confirmButton": "バックアップを復元",
+      "progress": {
+        "validating": "バックアップを検証中...",
+        "notes": "ノートを復元中 ({current}/{total})...",
+        "attachments": "添付ファイルを復元中 ({current}/{total})...",
+        "versions": "バージョンを復元中 ({current}/{total})...",
+        "settings": "設定を復元中...",
+        "complete": "復元が完了しました！"
+      },
+      "stats": {
+        "createdAt": "作成日:",
+        "notes": "ノート:",
+        "attachments": "添付ファイル:"
+      }
+    }
+  },
   "settings": {
     "title": "設定",
     "closeLabel": "設定を閉じる",
@@ -819,7 +858,9 @@
       "message": "ロック解除するには、他のデバイスで使用している同じパスワードを入力してください。",
       "passwordLabel": "パスワード（他のデバイスから）",
       "passwordPlaceholder": "他のデバイスのパスワードを入力"
-    }
+    },
+    "restoreFromBackup": "バックアップから復元",
+    "orDivider": "または"
   },
   "lock": {
     "title": "アプリケーションをロック",

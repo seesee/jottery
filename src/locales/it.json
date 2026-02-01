@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Rimuovi tag"
   },
+  "backup": {
+    "title": "Backup Crittografato",
+    "description": "Crea un backup sicuro che può essere ripristinato su qualsiasi dispositivo. Il tuo backup è crittografato con la tua password.",
+    "createButton": "Crea Backup Crittografato",
+    "creating": "Creazione backup...",
+    "created": "Backup creato con successo",
+    "failed": "Impossibile creare il backup",
+    "restore": {
+      "title": "Ripristina da Backup",
+      "selectFile": "Seleziona file di backup",
+      "selectFileHint": "Scegli un file .jottery-backup",
+      "noFileSelected": "Nessun file selezionato",
+      "password": "Password",
+      "passwordHint": "Inserisci la password usata quando il backup è stato creato",
+      "restoreButton": "Ripristina",
+      "restoring": "Ripristino in corso...",
+      "cancel": "Annulla",
+      "success": "Backup ripristinato con successo!",
+      "wrongPassword": "Password errata. Usa la password usata quando il backup è stato creato.",
+      "invalidFile": "File di backup non valido. Seleziona un file .jottery-backup valido.",
+      "confirmOverwrite": "Questo sostituirà tutti i dati esistenti. Sei sicuro di voler continuare?",
+      "confirmOverwriteTitle": "Ripristinare il Backup?",
+      "confirmOverwriteMessage": "Il ripristino di questo backup sostituirà tutte le note e le impostazioni esistenti su questo dispositivo. Questa azione non può essere annullata.",
+      "confirmButton": "Ripristina Backup",
+      "progress": {
+        "validating": "Validazione backup...",
+        "notes": "Ripristino note ({current}/{total})...",
+        "attachments": "Ripristino allegati ({current}/{total})...",
+        "versions": "Ripristino versioni ({current}/{total})...",
+        "settings": "Ripristino impostazioni...",
+        "complete": "Ripristino completato!"
+      },
+      "stats": {
+        "createdAt": "Creato:",
+        "notes": "Note:",
+        "attachments": "Allegati:"
+      }
+    }
+  },
   "settings": {
     "title": "Impostazioni",
     "closeLabel": "Chiudi impostazioni",
@@ -819,7 +858,9 @@
       "message": "Inserisci la stessa password che usi sull'altro dispositivo per sbloccare.",
       "passwordLabel": "Password (dall'altro dispositivo)",
       "passwordPlaceholder": "Inserisci la password dall'altro dispositivo"
-    }
+    },
+    "restoreFromBackup": "Ripristina da Backup",
+    "orDivider": "o"
   },
   "lock": {
     "title": "Blocca applicazione",

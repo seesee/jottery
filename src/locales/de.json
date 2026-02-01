@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Schlagwort entfernen"
   },
+  "backup": {
+    "title": "Verschlüsseltes Backup",
+    "description": "Erstellen Sie ein sicheres Backup, das auf jedem Gerät wiederhergestellt werden kann. Ihr Backup wird mit Ihrem Passwort verschlüsselt.",
+    "createButton": "Verschlüsseltes Backup erstellen",
+    "creating": "Backup wird erstellt...",
+    "created": "Backup erfolgreich erstellt",
+    "failed": "Backup konnte nicht erstellt werden",
+    "restore": {
+      "title": "Aus Backup wiederherstellen",
+      "selectFile": "Backup-Datei auswählen",
+      "selectFileHint": "Wählen Sie eine .jottery-backup Datei",
+      "noFileSelected": "Keine Datei ausgewählt",
+      "password": "Passwort",
+      "passwordHint": "Geben Sie das Passwort ein, das beim Erstellen des Backups verwendet wurde",
+      "restoreButton": "Wiederherstellen",
+      "restoring": "Wiederherstellung läuft...",
+      "cancel": "Abbrechen",
+      "success": "Backup erfolgreich wiederhergestellt!",
+      "wrongPassword": "Falsches Passwort. Bitte verwenden Sie das Passwort, das beim Erstellen des Backups verwendet wurde.",
+      "invalidFile": "Ungültige Backup-Datei. Bitte wählen Sie eine gültige .jottery-backup Datei.",
+      "confirmOverwrite": "Dies ersetzt alle vorhandenen Daten. Möchten Sie fortfahren?",
+      "confirmOverwriteTitle": "Backup wiederherstellen?",
+      "confirmOverwriteMessage": "Die Wiederherstellung aus diesem Backup ersetzt alle vorhandenen Notizen und Einstellungen auf diesem Gerät. Dies kann nicht rückgängig gemacht werden.",
+      "confirmButton": "Backup wiederherstellen",
+      "progress": {
+        "validating": "Backup wird validiert...",
+        "notes": "Notizen werden wiederhergestellt ({current}/{total})...",
+        "attachments": "Anhänge werden wiederhergestellt ({current}/{total})...",
+        "versions": "Versionen werden wiederhergestellt ({current}/{total})...",
+        "settings": "Einstellungen werden wiederhergestellt...",
+        "complete": "Wiederherstellung abgeschlossen!"
+      },
+      "stats": {
+        "createdAt": "Erstellt:",
+        "notes": "Notizen:",
+        "attachments": "Anhänge:"
+      }
+    }
+  },
   "settings": {
     "title": "Einstellungen",
     "closeLabel": "Einstellungen schließen",
@@ -819,7 +858,9 @@
       "message": "Geben Sie dasselbe Passwort ein, das Sie auf Ihrem anderen Gerät verwenden.",
       "passwordLabel": "Passwort (von Ihrem anderen Gerät)",
       "passwordPlaceholder": "Passwort vom anderen Gerät eingeben"
-    }
+    },
+    "restoreFromBackup": "Aus Backup wiederherstellen",
+    "orDivider": "oder"
   },
   "lock": {
     "title": "Anwendung sperren",

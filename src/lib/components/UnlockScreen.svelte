@@ -2,7 +2,9 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
-  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository } from '../services';
+  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup } from '../services';
+  import { validateBackup, getBackupStats } from '../services/backupService';
+  import type { BackupData } from '../services/backupService';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { parseAndStoreImportedCredentials } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
@@ -32,6 +34,16 @@
   let importDeviceName = '';
   let importing = false;
   let credentialsImported = false;
+
+  // Backup restore state
+  let showBackupRestore = false;
+  let backupFile: File | null = null;
+  let backupData: BackupData | null = null;
+  let backupStats: { createdAt?: string; noteCount?: number; attachmentCount?: number } | null = null;
+  let backupPassword = '';
+  let restoring = false;
+  let restoreProgress: { phase: string; current?: number; total?: number } | null = null;
+  let backupFileInput: HTMLInputElement;
 
   // Get current notebook info for display
   const notebook = getCurrentNotebook();
@@ -272,6 +284,107 @@
     error = '';
   }
 
+  function handleShowBackupRestore() {
+    showBackupRestore = true;
+    showLandingPage = false;
+    error = '';
+  }
+
+  function handleCancelBackupRestore() {
+    showBackupRestore = false;
+    backupFile = null;
+    backupData = null;
+    backupStats = null;
+    backupPassword = '';
+    restoreProgress = null;
+    error = '';
+  }
+
+  async function handleBackupFileSelect(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    error = '';
+    backupFile = file;
+    backupData = null;
+    backupStats = null;
+
+    // Get quick stats first
+    const stats = await getBackupStats(file);
+    if (!stats.valid) {
+      error = stats.error || $_('backup.restore.invalidFile');
+      backupFile = null;
+      return;
+    }
+    backupStats = stats;
+
+    // Validate the full backup structure
+    const validation = await validateBackup(file);
+    if (!validation.valid || !validation.backup) {
+      error = validation.error || $_('backup.restore.invalidFile');
+      backupFile = null;
+      backupStats = null;
+      return;
+    }
+
+    backupData = validation.backup;
+  }
+
+  async function handleRestoreBackup() {
+    if (!backupData || !backupPassword) {
+      error = $_('backup.restore.passwordHint');
+      return;
+    }
+
+    restoring = true;
+    error = '';
+    restoreProgress = null;
+
+    try {
+      await restoreFromBackup(backupData, backupPassword, (progress) => {
+        restoreProgress = progress;
+      });
+
+      // Restore successful - update UI state
+      needsInit = false;
+      isInitializedStore.set(true);
+      isLocked.set(false);
+
+      // Clear restore state
+      handleCancelBackupRestore();
+    } catch (err) {
+      console.error('[UnlockScreen] Backup restore failed:', err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      if (errorMessage.includes('Incorrect password')) {
+        error = $_('backup.restore.wrongPassword');
+      } else {
+        error = errorMessage;
+      }
+
+      backupPassword = '';
+      restoreProgress = null;
+    } finally {
+      restoring = false;
+    }
+  }
+
+  function formatBackupDate(isoDate?: string): string {
+    if (!isoDate) return '';
+    try {
+      return new Date(isoDate).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return isoDate;
+    }
+  }
+
   function handleGetStarted() {
     showLandingPage = false;
     // Focus password input after a short delay to allow form to render
@@ -283,9 +396,162 @@
   }
 </script>
 
-{#if showLandingPage}
+{#if showBackupRestore}
+  <!-- Backup Restore Screen -->
+  <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 py-8" style="min-height: 100vh; overflow-y: auto;">
+    <div class="w-full max-w-lg mx-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+        <div class="text-center mb-6">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {$_('backup.restore.title')}
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400 text-sm">
+            {$_('backup.restore.selectFileHint')}
+          </p>
+        </div>
+
+        <!-- Back Button -->
+        <button
+          type="button"
+          on:click={handleCancelBackupRestore}
+          disabled={restoring}
+          class="mb-6 flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50"
+        >
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          {$_('backup.restore.cancel')}
+        </button>
+
+        <!-- File Selection -->
+        <div class="mb-6">
+          <label for="backup-file-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {$_('backup.restore.selectFile')}
+          </label>
+          <div class="flex gap-2">
+            <button
+              id="backup-file-select"
+              type="button"
+              on:click={() => backupFileInput.click()}
+              disabled={restoring}
+              class="flex-1 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div class="text-center">
+                {#if backupFile}
+                  <span class="text-sm text-gray-900 dark:text-white font-medium">
+                    {backupFile.name}
+                  </span>
+                {:else}
+                  <span class="text-sm text-gray-500 dark:text-gray-400">
+                    {$_('backup.restore.noFileSelected')}
+                  </span>
+                {/if}
+              </div>
+            </button>
+          </div>
+          <input
+            bind:this={backupFileInput}
+            type="file"
+            accept=".jottery-backup,.json"
+            on:change={handleBackupFileSelect}
+            class="hidden"
+            aria-hidden="true"
+          />
+        </div>
+
+        <!-- Backup Info (shown after file selected) -->
+        {#if backupStats}
+          <div class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+              {$_('backup.restore.stats.title')}
+            </h3>
+            <div class="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+              {#if backupStats.createdAt}
+                <p>
+                  <span class="font-medium">{$_('backup.restore.stats.created')}:</span>
+                  {formatBackupDate(backupStats.createdAt)}
+                </p>
+              {/if}
+              <p>
+                <span class="font-medium">{$_('backup.restore.stats.notes')}:</span>
+                {backupStats.noteCount ?? 0}
+              </p>
+              <p>
+                <span class="font-medium">{$_('backup.restore.stats.attachments')}:</span>
+                {backupStats.attachmentCount ?? 0}
+              </p>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Password Input (shown after file selected and validated) -->
+        {#if backupData}
+          <div class="mb-6">
+            <label for="backup-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {$_('backup.restore.password')}
+            </label>
+            <input
+              id="backup-password"
+              type="password"
+              bind:value={backupPassword}
+              disabled={restoring}
+              on:keydown={(e) => e.key === 'Enter' && handleRestoreBackup()}
+              placeholder={$_('backup.restore.password')}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            />
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {$_('backup.restore.passwordHint')}
+            </p>
+          </div>
+        {/if}
+
+        <!-- Error Message -->
+        {#if error}
+          <div class="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+            <p class="text-sm text-red-800 dark:text-red-200">{error}</p>
+          </div>
+        {/if}
+
+        <!-- Restore Progress -->
+        {#if restoreProgress}
+          <div class="mb-6 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+            <div class="flex items-center gap-3">
+              <div class="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  {$_(`backup.restore.progress.${restoreProgress.phase}`)}
+                </p>
+                {#if restoreProgress.total && restoreProgress.current !== undefined}
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    {restoreProgress.current} / {restoreProgress.total}
+                  </p>
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Restore Button -->
+        {#if backupData}
+          <button
+            type="button"
+            on:click={handleRestoreBackup}
+            disabled={restoring || !backupPassword}
+            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors duration-200"
+          >
+            {restoring ? $_('backup.restore.restoring') : $_('backup.restore.restoreButton')}
+          </button>
+        {/if}
+      </div>
+
+      <div class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">
+        <p>{$_('app.tagline')}</p>
+      </div>
+    </div>
+  </div>
+{:else if showLandingPage}
   <!-- Landing Page for First-Time Users -->
-  <LandingPage onGetStarted={handleGetStarted} />
+  <LandingPage onGetStarted={handleGetStarted} onRestoreFromBackup={handleShowBackupRestore} />
 {:else}
   <!-- Password Setup/Unlock Form -->
   <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 py-8" style="min-height: 100vh; overflow-y: auto;">

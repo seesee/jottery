@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Remover tag"
   },
+  "backup": {
+    "title": "Backup Encriptado",
+    "description": "Crie um backup seguro que pode ser restaurado em qualquer dispositivo. O seu backup é encriptado com a sua palavra-passe.",
+    "createButton": "Criar Backup Encriptado",
+    "creating": "A criar backup...",
+    "created": "Backup criado com sucesso",
+    "failed": "Falha ao criar backup",
+    "restore": {
+      "title": "Restaurar do Backup",
+      "selectFile": "Selecionar ficheiro de backup",
+      "selectFileHint": "Escolha um ficheiro .jottery-backup",
+      "noFileSelected": "Nenhum ficheiro selecionado",
+      "password": "Palavra-passe",
+      "passwordHint": "Introduza a palavra-passe usada quando o backup foi criado",
+      "restoreButton": "Restaurar",
+      "restoring": "A restaurar...",
+      "cancel": "Cancelar",
+      "success": "Backup restaurado com sucesso!",
+      "wrongPassword": "Palavra-passe incorreta. Por favor use a palavra-passe usada quando o backup foi criado.",
+      "invalidFile": "Ficheiro de backup inválido. Por favor selecione um ficheiro .jottery-backup válido.",
+      "confirmOverwrite": "Isto irá substituir todos os dados existentes. Tem a certeza que deseja continuar?",
+      "confirmOverwriteTitle": "Restaurar Backup?",
+      "confirmOverwriteMessage": "Restaurar este backup irá substituir todas as notas e definições existentes neste dispositivo. Esta ação não pode ser desfeita.",
+      "confirmButton": "Restaurar Backup",
+      "progress": {
+        "validating": "A validar backup...",
+        "notes": "A restaurar notas ({current}/{total})...",
+        "attachments": "A restaurar anexos ({current}/{total})...",
+        "versions": "A restaurar versões ({current}/{total})...",
+        "settings": "A restaurar definições...",
+        "complete": "Restauração concluída!"
+      },
+      "stats": {
+        "createdAt": "Criado:",
+        "notes": "Notas:",
+        "attachments": "Anexos:"
+      }
+    }
+  },
   "settings": {
     "title": "Configurações",
     "closeLabel": "Fechar configurações",
@@ -819,7 +858,9 @@
       "message": "Digite a mesma senha que você usa no seu outro dispositivo para desbloquear.",
       "passwordLabel": "Senha (do seu outro dispositivo)",
       "passwordPlaceholder": "Digite a senha do outro dispositivo"
-    }
+    },
+    "restoreFromBackup": "Restaurar do Backup",
+    "orDivider": "ou"
   },
   "lock": {
     "title": "Bloquear aplicativo",

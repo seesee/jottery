@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "移除标签"
   },
+  "backup": {
+    "title": "加密备份",
+    "description": "创建可在任何设备上恢复的安全备份。您的备份使用密码加密。",
+    "createButton": "创建加密备份",
+    "creating": "正在创建备份...",
+    "created": "备份创建成功",
+    "failed": "创建备份失败",
+    "restore": {
+      "title": "从备份恢复",
+      "selectFile": "选择备份文件",
+      "selectFileHint": "选择一个 .jottery-backup 文件",
+      "noFileSelected": "未选择文件",
+      "password": "密码",
+      "passwordHint": "输入创建备份时使用的密码",
+      "restoreButton": "恢复",
+      "restoring": "正在恢复...",
+      "cancel": "取消",
+      "success": "备份恢复成功！",
+      "wrongPassword": "密码错误。请使用创建备份时使用的密码。",
+      "invalidFile": "无效的备份文件。请选择有效的 .jottery-backup 文件。",
+      "confirmOverwrite": "这将替换所有现有数据。您确定要继续吗？",
+      "confirmOverwriteTitle": "恢复备份？",
+      "confirmOverwriteMessage": "恢复此备份将替换此设备上的所有现有笔记和设置。此操作无法撤消。",
+      "confirmButton": "恢复备份",
+      "progress": {
+        "validating": "正在验证备份...",
+        "notes": "正在恢复笔记 ({current}/{total})...",
+        "attachments": "正在恢复附件 ({current}/{total})...",
+        "versions": "正在恢复版本 ({current}/{total})...",
+        "settings": "正在恢复设置...",
+        "complete": "恢复完成！"
+      },
+      "stats": {
+        "createdAt": "创建时间：",
+        "notes": "笔记：",
+        "attachments": "附件："
+      }
+    }
+  },
   "settings": {
     "title": "设置",
     "closeLabel": "关闭设置",
@@ -819,7 +858,9 @@
       "message": "输入您在其他设备上使用的相同密码以解锁。",
       "passwordLabel": "密码（来自您的其他设备）",
       "passwordPlaceholder": "输入其他设备的密码"
-    }
+    },
+    "restoreFromBackup": "从备份恢复",
+    "orDivider": "或"
   },
   "lock": {
     "title": "锁定应用程序",

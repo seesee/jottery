@@ -6,6 +6,8 @@
   export let onImport: () => void;
   export let onDownload: () => void;
   export let onDeleteDatabase: () => void;
+  export let onCreateBackup: () => void;
+  export let isCreatingBackup: boolean = false;
 
   const githubRepo = 'https://github.com/seesee/jottery';
 
@@ -41,6 +43,23 @@
         {$_('settings.advancedTab.exportDescription')}
       </p>
     </div>
+  </div>
+
+  <!-- Encrypted Backup -->
+  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+    <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+      {$_('backup.title')}
+    </h4>
+    <p class="text-sm text-blue-700 dark:text-blue-300 mb-3">
+      {$_('backup.description')}
+    </p>
+    <button
+      on:click={onCreateBackup}
+      disabled={isCreatingBackup}
+      class="px-4 py-2 min-h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors"
+    >
+      {isCreatingBackup ? $_('backup.creating') : $_('backup.createButton')}
+    </button>
   </div>
 
   <!-- Download Terminal Client -->

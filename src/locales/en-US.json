@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Remove tag"
   },
+  "backup": {
+    "title": "Encrypted Backup",
+    "description": "Create a secure backup that can be restored on any device. Your backup is encrypted with your password.",
+    "createButton": "Create Encrypted Backup",
+    "creating": "Creating backup...",
+    "created": "Backup created successfully",
+    "failed": "Failed to create backup",
+    "restore": {
+      "title": "Restore from Backup",
+      "selectFile": "Select backup file",
+      "selectFileHint": "Choose a .jottery-backup file",
+      "noFileSelected": "No file selected",
+      "password": "Password",
+      "passwordHint": "Enter the password from when the backup was created",
+      "restoreButton": "Restore",
+      "restoring": "Restoring...",
+      "cancel": "Cancel",
+      "success": "Backup restored successfully!",
+      "wrongPassword": "Incorrect password. Please use the password from when the backup was created.",
+      "invalidFile": "Invalid backup file. Please select a valid .jottery-backup file.",
+      "confirmOverwrite": "This will replace all existing data. Are you sure you want to continue?",
+      "confirmOverwriteTitle": "Restore Backup?",
+      "confirmOverwriteMessage": "Restoring from this backup will replace all existing notes and settings on this device. This cannot be undone.",
+      "confirmButton": "Restore Backup",
+      "progress": {
+        "validating": "Validating backup...",
+        "notes": "Restoring notes ({current}/{total})...",
+        "attachments": "Restoring attachments ({current}/{total})...",
+        "versions": "Restoring versions ({current}/{total})...",
+        "settings": "Restoring settings...",
+        "complete": "Restore complete!"
+      },
+      "stats": {
+        "createdAt": "Created:",
+        "notes": "Notes:",
+        "attachments": "Attachments:"
+      }
+    }
+  },
   "settings": {
     "title": "Settings",
     "closeLabel": "Close settings",
@@ -805,7 +844,9 @@
       "message": "Enter the same password you use on your other device to unlock.",
       "passwordLabel": "Password (from your other device)",
       "passwordPlaceholder": "Enter password from other device"
-    }
+    },
+    "restoreFromBackup": "Restore from Backup",
+    "orDivider": "or"
   },
   "lock": {
     "title": "Lock Application",

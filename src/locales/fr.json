@@ -188,6 +188,45 @@
   "tagInput": {
     "removeTag": "Supprimer l'étiquette"
   },
+  "backup": {
+    "title": "Sauvegarde chiffrée",
+    "description": "Créez une sauvegarde sécurisée qui peut être restaurée sur n'importe quel appareil. Votre sauvegarde est chiffrée avec votre mot de passe.",
+    "createButton": "Créer une sauvegarde chiffrée",
+    "creating": "Création de la sauvegarde...",
+    "created": "Sauvegarde créée avec succès",
+    "failed": "Échec de la création de la sauvegarde",
+    "restore": {
+      "title": "Restaurer depuis une sauvegarde",
+      "selectFile": "Sélectionner le fichier de sauvegarde",
+      "selectFileHint": "Choisissez un fichier .jottery-backup",
+      "noFileSelected": "Aucun fichier sélectionné",
+      "password": "Mot de passe",
+      "passwordHint": "Entrez le mot de passe utilisé lors de la création de la sauvegarde",
+      "restoreButton": "Restaurer",
+      "restoring": "Restauration en cours...",
+      "cancel": "Annuler",
+      "success": "Sauvegarde restaurée avec succès !",
+      "wrongPassword": "Mot de passe incorrect. Veuillez utiliser le mot de passe utilisé lors de la création de la sauvegarde.",
+      "invalidFile": "Fichier de sauvegarde invalide. Veuillez sélectionner un fichier .jottery-backup valide.",
+      "confirmOverwrite": "Cela remplacera toutes les données existantes. Êtes-vous sûr de vouloir continuer ?",
+      "confirmOverwriteTitle": "Restaurer la sauvegarde ?",
+      "confirmOverwriteMessage": "La restauration de cette sauvegarde remplacera toutes les notes et paramètres existants sur cet appareil. Cette action est irréversible.",
+      "confirmButton": "Restaurer la sauvegarde",
+      "progress": {
+        "validating": "Validation de la sauvegarde...",
+        "notes": "Restauration des notes ({current}/{total})...",
+        "attachments": "Restauration des pièces jointes ({current}/{total})...",
+        "versions": "Restauration des versions ({current}/{total})...",
+        "settings": "Restauration des paramètres...",
+        "complete": "Restauration terminée !"
+      },
+      "stats": {
+        "createdAt": "Créé le :",
+        "notes": "Notes :",
+        "attachments": "Pièces jointes :"
+      }
+    }
+  },
   "settings": {
     "title": "Paramètres",
     "closeLabel": "Fermer les paramètres",
@@ -819,7 +858,9 @@
       "message": "Entrez le même mot de passe que vous utilisez sur votre autre appareil pour déverrouiller.",
       "passwordLabel": "Mot de passe (de votre autre appareil)",
       "passwordPlaceholder": "Entrez le mot de passe de l'autre appareil"
-    }
+    },
+    "restoreFromBackup": "Restaurer depuis une sauvegarde",
+    "orDivider": "ou"
   },
   "lock": {
     "title": "Verrouiller l'application",

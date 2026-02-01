@@ -12,6 +12,7 @@
   }
 
   export let onGetStarted: () => void;
+  export let onRestoreFromBackup: (() => void) | undefined = undefined;
 
   let isDarkMode = false;
   let currentCarouselSlide = 0;
@@ -191,6 +192,18 @@
         >
           {$_('landing.hero.cta')}
         </button>
+        {#if onRestoreFromBackup}
+          <div class="hero-restore">
+            <span class="hero-restore-divider">{$_('unlock.orDivider')}</span>
+            <button
+              type="button"
+              class="restore-link"
+              on:click={onRestoreFromBackup}
+            >
+              {$_('unlock.restoreFromBackup')}
+            </button>
+          </div>
+        {/if}
         <p class="hero-note">
           {$_('landing.hero.note')}
         </p>
@@ -1244,5 +1257,47 @@
     object-fit: contain;
     border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Restore from Backup */
+  .hero-restore {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .hero-restore-divider {
+    color: #64748b;
+    font-size: 0.875rem;
+  }
+
+  :global(.dark) .hero-restore-divider {
+    color: #94a3b8;
+  }
+
+  .restore-link {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.2s;
+  }
+
+  .restore-link:hover {
+    color: #764ba2;
+  }
+
+  :global(.dark) .restore-link {
+    color: #818cf8;
+  }
+
+  :global(.dark) .restore-link:hover {
+    color: #a78bfa;
   }
 </style>
