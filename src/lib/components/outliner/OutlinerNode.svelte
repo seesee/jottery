@@ -335,10 +335,6 @@
     white-space: pre;
   }
 
-  .children {
-    /* Children container - no additional styling needed */
-  }
-
   /* Drag and drop styles */
   .outliner-node.dragging {
     opacity: 0.5;
