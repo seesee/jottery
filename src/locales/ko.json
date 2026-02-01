@@ -190,6 +190,27 @@
   "tagInput": {
     "removeTag": "태그 제거"
   },
+  "backupReminder": {
+    "title": "Time to back up your notes",
+    "lastBackup": "Last backup: {date}",
+    "never": "Never",
+    "backupNow": "Back up now",
+    "backingUp": "Backing up...",
+    "dismissLabel": "Remind me later"
+  },
+  "backupSettings": {
+    "title": "Automatic Backups",
+    "lastBackup": "Last backup",
+    "never": "Never",
+    "enableReminders": "Enable backup reminders",
+    "enableAutoBackup": "Enable automatic backups",
+    "frequencyDaily": "Daily",
+    "frequencyWeekly": "Weekly",
+    "frequencyMonthly": "Monthly",
+    "frequencyOnChanges": "After a number of changes",
+    "changesThreshold": "Back up after this many note changes",
+    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+  },
   "backup": {
     "title": "암호화된 백업",
     "description": "모든 기기에서 복원할 수 있는 안전한 백업을 만듭니다. 백업은 비밀번호로 암호화됩니다.",

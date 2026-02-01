@@ -108,3 +108,22 @@ export const NOTE_OPERATION_BATCH_SIZE = 50;
 
 /** Interval for checking app updates in milliseconds (5 minutes) */
 export const APP_UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
+// =============================================================================
+// Backup Scheduler Constants
+// =============================================================================
+
+/** Interval for checking backup reminders in milliseconds (1 hour) */
+export const BACKUP_REMINDER_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
+/** Interval for checking auto-backup triggers in milliseconds (15 minutes) */
+export const BACKUP_AUTO_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+
+/** Milliseconds in a day */
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Milliseconds in a week */
+export const MS_PER_WEEK = 7 * MS_PER_DAY;
+
+/** Milliseconds in a month (30 days) */
+export const MS_PER_MONTH = 30 * MS_PER_DAY;

@@ -10,6 +10,7 @@ import { attachmentRepository } from './attachmentRepository';
 import { cryptoService, encryptStringArray, decryptStringArray } from './crypto';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
+import { backupSchedulerService } from './backupSchedulerService';
 
 /**
  * Note service class
@@ -62,7 +63,12 @@ class NoteService {
       attachments: options?.attachments || [],
     };
 
-    return await noteRepository.create(note);
+    const createdNote = await noteRepository.create(note);
+
+    // Notify backup scheduler of note creation (fire and forget)
+    backupSchedulerService.onNoteUpdated().catch(() => {});
+
+    return createdNote;
   }
 
   /**
@@ -355,7 +361,14 @@ class NoteService {
     }
 
     // Update modifiedAt for any change (content or UI state) so it syncs properly
-    return await noteRepository.update(note, hasContentChange);
+    const updatedNote = await noteRepository.update(note, hasContentChange);
+
+    // Notify backup scheduler of note update (fire and forget)
+    if (hasContentChange) {
+      backupSchedulerService.onNoteUpdated().catch(() => {});
+    }
+
+    return updatedNote;
   }
 
   /**

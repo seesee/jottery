@@ -130,6 +130,14 @@ export interface UserSettings {
   persistSessionTimeout?: number; // Session expiry in minutes (default: 30)
   colorPalette?: ColorPalette; // User-customised color palette (defaults to DEFAULT_COLOR_PALETTE)
   tagColors?: Record<string, string>; // Global tag name → color name mapping
+  // Backup settings
+  backupReminderEnabled?: boolean; // Enable periodic backup reminders
+  backupReminderFrequency?: 'daily' | 'weekly' | 'monthly'; // How often to show reminders
+  autoBackupEnabled?: boolean; // Enable automatic backup downloads
+  autoBackupFrequency?: 'daily' | 'weekly' | 'on-changes'; // When to trigger auto-backup
+  autoBackupAfterChanges?: number; // Number of changes before auto-backup (default: 10)
+  lastBackupAt?: string; // ISO timestamp of last backup
+  noteUpdatesSinceBackup?: number; // Counter for note changes since last backup
 }
 
 /**
@@ -407,4 +415,12 @@ export const DEFAULT_SETTINGS: UserSettings = {
   persistSessionTimeout: 30, // 30 minutes default expiry
   colorPalette: DEFAULT_COLOR_PALETTE, // Default color palette
   tagColors: {}, // No tag colors by default
+  // Backup settings - disabled by default
+  backupReminderEnabled: false,
+  backupReminderFrequency: 'weekly',
+  autoBackupEnabled: false,
+  autoBackupFrequency: 'weekly',
+  autoBackupAfterChanges: 10,
+  lastBackupAt: undefined,
+  noteUpdatesSinceBackup: 0,
 };

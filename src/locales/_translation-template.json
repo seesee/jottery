@@ -120,6 +120,27 @@
   "tagInput": {
     "removeTag": "REMOVE TAG"
   },
+  "backupReminder": {
+    "title": "TIME TO BACK UP YOUR NOTES",
+    "lastBackup": "LAST BACKUP: {date}",
+    "never": "NEVER",
+    "backupNow": "BACK UP NOW",
+    "backingUp": "BACKING UP...",
+    "dismissLabel": "REMIND ME LATER"
+  },
+  "backupSettings": {
+    "title": "AUTOMATIC BACKUPS",
+    "lastBackup": "LAST BACKUP",
+    "never": "NEVER",
+    "enableReminders": "ENABLE BACKUP REMINDERS",
+    "enableAutoBackup": "ENABLE AUTOMATIC BACKUPS",
+    "frequencyDaily": "DAILY",
+    "frequencyWeekly": "WEEKLY",
+    "frequencyMonthly": "MONTHLY",
+    "frequencyOnChanges": "AFTER A NUMBER OF CHANGES",
+    "changesThreshold": "BACK UP AFTER THIS MANY NOTE CHANGES",
+    "description": "AUTOMATIC BACKUPS ARE DOWNLOADED TO YOUR DEVICE. ENABLE REMINDERS TO GET NOTIFIED WHEN IT'S TIME TO BACK UP."
+  },
   "settings": {
     "title": "SETTINGS",
     "closeLabel": "CLOSE SETTINGS",

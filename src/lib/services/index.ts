@@ -33,3 +33,4 @@ export { initI18n, getInitialLocale, AVAILABLE_LOCALES, DEFAULT_LOCALE } from '.
 export { appUpdateService, updateAvailable, newVersionInfo } from './appUpdateService';
 export { backupService, createBackup, validateBackup, verifyBackupPassword, restoreBackup, downloadBackup, getBackupStats } from './backupService';
 export type { BackupData, BackupValidationResult, RestoreProgressCallback } from './backupService';
+export { backupSchedulerService, showBackupReminder, lastBackupDate, isAutoBackingUp } from './backupSchedulerService';

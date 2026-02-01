@@ -190,6 +190,27 @@
   "tagInput": {
     "removeTag": "Supprimer l'étiquette"
   },
+  "backupReminder": {
+    "title": "Time to back up your notes",
+    "lastBackup": "Last backup: {date}",
+    "never": "Never",
+    "backupNow": "Back up now",
+    "backingUp": "Backing up...",
+    "dismissLabel": "Remind me later"
+  },
+  "backupSettings": {
+    "title": "Automatic Backups",
+    "lastBackup": "Last backup",
+    "never": "Never",
+    "enableReminders": "Enable backup reminders",
+    "enableAutoBackup": "Enable automatic backups",
+    "frequencyDaily": "Daily",
+    "frequencyWeekly": "Weekly",
+    "frequencyMonthly": "Monthly",
+    "frequencyOnChanges": "After a number of changes",
+    "changesThreshold": "Back up after this many note changes",
+    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+  },
   "backup": {
     "title": "Sauvegarde chiffrée",
     "description": "Créez une sauvegarde sécurisée qui peut être restaurée sur n'importe quel appareil. Votre sauvegarde est chiffrée avec votre mot de passe.",

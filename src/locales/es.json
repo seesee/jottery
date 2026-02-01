@@ -190,6 +190,27 @@
   "tagInput": {
     "removeTag": "Eliminar etiqueta"
   },
+  "backupReminder": {
+    "title": "Time to back up your notes",
+    "lastBackup": "Last backup: {date}",
+    "never": "Never",
+    "backupNow": "Back up now",
+    "backingUp": "Backing up...",
+    "dismissLabel": "Remind me later"
+  },
+  "backupSettings": {
+    "title": "Automatic Backups",
+    "lastBackup": "Last backup",
+    "never": "Never",
+    "enableReminders": "Enable backup reminders",
+    "enableAutoBackup": "Enable automatic backups",
+    "frequencyDaily": "Daily",
+    "frequencyWeekly": "Weekly",
+    "frequencyMonthly": "Monthly",
+    "frequencyOnChanges": "After a number of changes",
+    "changesThreshold": "Back up after this many note changes",
+    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+  },
   "backup": {
     "title": "Copia de seguridad cifrada",
     "description": "Crea una copia de seguridad que se puede restaurar en cualquier dispositivo. Tu copia de seguridad está cifrada con tu contraseña.",

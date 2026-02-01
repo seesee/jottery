@@ -19,6 +19,7 @@
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
   import Toast from './lib/components/Toast.svelte';
   import BulkOperationsToolbar from './lib/components/BulkOperationsToolbar.svelte';
+  import BackupReminderBanner from './lib/components/BackupReminderBanner.svelte';
 
   let initialized = false;
   let loadingNotes = false;
@@ -451,6 +452,9 @@
 {:else}
   <!-- Update banner (appears at top when new version available) -->
   <UpdateBanner />
+
+  <!-- Backup reminder banner (appears when backup is due) -->
+  <BackupReminderBanner />
 
   <!-- Skip link for keyboard accessibility -->
   <a

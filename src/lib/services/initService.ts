@@ -16,6 +16,7 @@ import { authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 import { restoreBackup as restoreBackupData, verifyBackupPassword } from './backupService';
+import { backupSchedulerService } from './backupSchedulerService';
 
 /**
  * Check if the application has been initialized
@@ -138,6 +139,10 @@ export async function unlock(password: string): Promise<void> {
     setupActivityListeners(settings.autoLockTimeout);
     console.log('[Unlock] ✓ Auto-lock enabled with timeout:', settings.autoLockTimeout, 'minutes');
   }
+
+  // Start backup scheduler
+  backupSchedulerService.start();
+  console.log('[Unlock] ✓ Backup scheduler started');
 
   console.log('[Unlock] ✓ Unlock complete!');
 }
@@ -355,6 +360,7 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
 export function lock(): void {
   keyManager.clearMasterKey();
   sessionStorageService.clear();
+  backupSchedulerService.stop();
 }
 
 /**
@@ -446,6 +452,10 @@ export async function restoreFromBackup(
     setupActivityListeners(settings.autoLockTimeout);
     console.log('[RestoreFromBackup] Auto-lock enabled with timeout:', settings.autoLockTimeout, 'minutes');
   }
+
+  // Start backup scheduler
+  backupSchedulerService.start();
+  console.log('[RestoreFromBackup] Backup scheduler started');
 
   console.log('[RestoreFromBackup] Restore complete!');
 }
