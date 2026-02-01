@@ -369,11 +369,7 @@ export async function restoreFromBackup(
 
   console.log('[RestoreFromBackup] Password verified successfully');
 
-  // Step 2: Restore all data from backup (passing the keyBytes for JWE decryption)
-  console.log('[RestoreFromBackup] Restoring data...');
-  await restoreBackupData(backup, verification.keyBytes, onProgress);
-
-  // Step 3: Store the master key with bytes (we already verified it works)
+  // Step 2: Store the master key BEFORE restoring (repositories need it for encryption)
   const masterKey: MasterKey = {
     key: verification.key,
     keyBytes: verification.keyBytes,
@@ -382,6 +378,10 @@ export async function restoreFromBackup(
 
   keyManager.setMasterKey(masterKey);
   console.log('[RestoreFromBackup] Master key stored in keyManager');
+
+  // Step 3: Restore all data from backup (passing the keyBytes for JWE decryption)
+  console.log('[RestoreFromBackup] Restoring data...');
+  await restoreBackupData(backup, verification.keyBytes, onProgress);
 
   // Step 4: Setup auto-lock based on restored settings
   const settings = await settingsRepository.get();
