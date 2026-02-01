@@ -285,8 +285,62 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
         }
         throw new Error('Failed to decrypt sync credentials. Please ensure you are using the same password as the source device.');
       }
+    }
+    // Check for RESTORE: marker (credentials restored from backup - need new device ID)
+    else if (metadata.apiKey.startsWith('RESTORE:')) {
+      console.log('[ImportHandler] ✓ RESTORE marker detected! Re-registering device with new ID...');
+
+      // Extract encrypted API key payload (JSON stringified EncryptedData)
+      const encryptedPayload = metadata.apiKey.substring(8); // Remove "RESTORE:" prefix
+
+      try {
+        // Parse the encrypted data
+        const encryptedData = JSON.parse(encryptedPayload);
+
+        // Decrypt to get the plaintext API key
+        const plaintextApiKey = await cryptoService.decryptText(encryptedData, masterKey);
+        console.log('[ImportHandler] ✓ API key decrypted successfully');
+
+        const endpoint = metadata.syncEndpoint;
+        if (!endpoint) {
+          throw new Error('No sync endpoint found for restored credentials');
+        }
+
+        // Call clone-device to register as a NEW device
+        console.log('[ImportHandler] Calling clone-device to register new device...');
+        const cloneResult = await authService.cloneDevice(endpoint, plaintextApiKey, deviceName);
+        console.log('[ImportHandler] ✓ Clone-device successful, got new clientId:', cloneResult.clientId);
+
+        // Encrypt the NEW API key
+        const encryptedApiKey = await cryptoService.encryptText(cloneResult.apiKey, masterKey);
+        console.log('[ImportHandler] ✓ New API key encrypted');
+
+        // Update sync metadata with NEW credentials
+        await syncRepository.updateMetadata({
+          clientId: cloneResult.clientId,
+          userId: cloneResult.userId,
+          apiKey: JSON.stringify(encryptedApiKey),
+          syncEnabled: true,
+          pendingDeviceName: undefined,
+        });
+        console.log('[ImportHandler] ✓ Sync metadata updated with new device credentials');
+
+        console.log('[ImportHandler] ✓✓✓ Restored credentials processed successfully! Registered as new device.');
+      } catch (restoreError) {
+        console.error('[ImportHandler] Failed to re-register restored device:', restoreError);
+        // Clear the invalid data so sync is disabled but app still works
+        await syncRepository.updateMetadata({
+          apiKey: '',
+          syncEnabled: false,
+          pendingDeviceName: undefined,
+        });
+
+        const errorMessage = restoreError instanceof Error ? restoreError.message : String(restoreError);
+        console.warn('[ImportHandler] Sync disabled due to re-registration failure:', errorMessage);
+        // Don't throw - let the app work without sync
+      }
     } else {
-      console.log('[ImportHandler] No IMPORT/ENCRYPTED marker - credentials already encrypted');
+      console.log('[ImportHandler] No IMPORT/ENCRYPTED/RESTORE marker - credentials already encrypted');
     }
   } catch (error) {
     console.error('[ImportHandler] ERROR handling imported credentials:', error);

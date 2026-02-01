@@ -456,9 +456,15 @@ export async function restoreBackup(
           await settingsRepository.update(record.data as UserSettings);
           break;
 
-        case 'sync_metadata':
-          await syncRepository.updateMetadata(record.data as SyncMetadata);
+        case 'sync_metadata': {
+          // Mark the API key for re-registration so restored device gets a new ID
+          const syncMeta = record.data as SyncMetadata;
+          if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
+            syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
+          }
+          await syncRepository.updateMetadata(syncMeta);
           break;
+        }
 
         default:
           console.warn(`[backupService] Unknown record type: ${(record as BackupRecord).type}`);
