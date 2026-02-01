@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importieren/Exportieren",
       "exportDescription": "Notizen als entschlüsseltes JSON exportieren. Der Import führt Notizen mit vorhandenen Daten zusammen.",
+      "downloadClient": "Terminal-/HTML-Client herunterladen",
       "downloadTerminalClient": "Terminal-Client herunterladen",
+      "clientDescription": "Laden Sie den Terminal-Client für Befehlszeilenzugriff herunter oder den HTML-Client, um ihn lokal vom Dateisystem auszuführen",
       "terminalClientDescription": "Verwenden Sie den Terminal-Client, um von der Befehlszeile auf Ihre Notizen zuzugreifen",
       "selectPlatform": "Plattform auswählen...",
       "download": "Herunterladen",

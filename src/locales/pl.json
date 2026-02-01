@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Import/Eksport",
       "exportDescription": "Eksportuj notatki jako odszyfrowany JSON. Import scali notatki z istniejącymi danymi.",
+      "downloadClient": "Pobierz klienta terminalowego/HTML",
       "downloadTerminalClient": "Pobierz klienta terminalowego",
+      "clientDescription": "Pobierz klienta terminalowego dla dostępu z wiersza poleceń lub klienta HTML do lokalnego uruchomienia z systemu plików",
       "terminalClientDescription": "Użyj klienta terminalowego, aby uzyskać dostęp do notatek z wiersza poleceń",
       "selectPlatform": "Wybierz platformę...",
       "download": "Pobierz",

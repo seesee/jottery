@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "导入/导出",
       "exportDescription": "将笔记导出为解密的 JSON。导入将合并笔记与现有数据。",
+      "downloadClient": "下载终端/HTML客户端",
       "downloadTerminalClient": "下载终端客户端",
+      "clientDescription": "下载终端客户端用于命令行访问，或下载HTML客户端从本地文件系统运行",
       "terminalClientDescription": "使用终端客户端从命令行访问您的笔记",
       "selectPlatform": "选择平台...",
       "download": "下载",

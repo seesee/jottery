@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "インポート/エクスポート",
       "exportDescription": "ノートを復号化されたJSONとしてエクスポート。インポートは既存のデータとノートをマージします。",
+      "downloadClient": "ターミナル/HTMLクライアントをダウンロード",
       "downloadTerminalClient": "ターミナルクライアントをダウンロード",
+      "clientDescription": "コマンドラインアクセス用のターミナルクライアント、またはファイルシステムからローカルで実行するHTMLクライアントをダウンロード",
       "terminalClientDescription": "コマンドラインからノートにアクセスするにはターミナルクライアントを使用",
       "selectPlatform": "プラットフォームを選択...",
       "download": "ダウンロード",

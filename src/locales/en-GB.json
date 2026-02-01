@@ -580,7 +580,9 @@
     "advancedTab": {
       "importExport": "Import/Export",
       "exportDescription": "Export notes as decrypted JSON. Import will merge notes with existing data.",
+      "downloadClient": "Download Terminal/HTML Client",
       "downloadTerminalClient": "Download Terminal Client",
+      "clientDescription": "Download the terminal client for command-line access, or the HTML client to run locally from the filesystem",
       "terminalClientDescription": "Use the terminal client to access your notes from the command line",
       "selectPlatform": "Select platform...",
       "download": "Download",

@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importer/Exporter",
       "exportDescription": "Exportez les notes au format JSON déchiffré. L'importation fusionnera les notes avec les données existantes.",
+      "downloadClient": "Télécharger le client terminal/HTML",
       "downloadTerminalClient": "Télécharger le client terminal",
+      "clientDescription": "Téléchargez le client terminal pour l'accès en ligne de commande, ou le client HTML pour une exécution locale depuis le système de fichiers",
       "terminalClientDescription": "Utilisez le client terminal pour accéder à vos notes depuis la ligne de commande",
       "selectPlatform": "Sélectionner la plateforme...",
       "download": "Télécharger",

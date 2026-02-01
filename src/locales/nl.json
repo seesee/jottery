@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importeren/Exporteren",
       "exportDescription": "Exporteer notities als ontsleutelde JSON. Import zal notities samenvoegen met bestaande gegevens.",
+      "downloadClient": "Terminal/HTML-client downloaden",
       "downloadTerminalClient": "Terminalclient downloaden",
+      "clientDescription": "Download de terminalclient voor opdrachtregeltoegang, of de HTML-client om lokaal vanuit het bestandssysteem uit te voeren",
       "terminalClientDescription": "Gebruik de terminalclient om uw notities vanaf de opdrachtregel te openen",
       "selectPlatform": "Selecteer platform...",
       "download": "Downloaden",

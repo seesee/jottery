@@ -168,6 +168,7 @@
     { value: 'linux-x64', label: 'Linux (x64)', url: `${githubRepo}/releases/latest/download/jottery-linux-x64` },
     { value: 'linux-arm64', label: 'Linux (ARM64)', url: `${githubRepo}/releases/latest/download/jottery-linux-arm64` },
     { value: 'linux-armv7', label: 'Linux (ARMv7)', url: `${githubRepo}/releases/latest/download/jottery-linux-armv7` },
+    { value: 'html', label: 'HTML Client (zip)', url: `${githubRepo}/releases/latest/download/jottery-web.zip` },
   ];
 
   function handleDownload() {

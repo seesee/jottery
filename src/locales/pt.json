@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importar/Exportar",
       "exportDescription": "Exportar notas como JSON descriptografado. A importação mesclará notas com dados existentes.",
+      "downloadClient": "Baixar cliente de terminal/HTML",
       "downloadTerminalClient": "Baixar cliente de terminal",
+      "clientDescription": "Baixe o cliente de terminal para acesso via linha de comando, ou o cliente HTML para executar localmente a partir do sistema de arquivos",
       "terminalClientDescription": "Use o cliente de terminal para acessar suas notas da linha de comando",
       "selectPlatform": "Selecionar plataforma...",
       "download": "Baixar",

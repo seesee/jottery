@@ -372,7 +372,9 @@
     "advancedTab": {
       "importExport": "IMPORT/EXPORT",
       "exportDescription": "EXPORT NOTES AS DECRYPTED JSON. IMPORT WILL MERGE NOTES WITH EXISTING DATA.",
+      "downloadClient": "DOWNLOAD TERMINAL/HTML CLIENT",
       "downloadTerminalClient": "DOWNLOAD TERMINAL CLIENT",
+      "clientDescription": "DOWNLOAD THE TERMINAL CLIENT FOR COMMAND-LINE ACCESS, OR THE HTML CLIENT TO RUN LOCALLY FROM THE FILESYSTEM",
       "terminalClientDescription": "USE THE TERMINAL CLIENT TO ACCESS YOUR NOTES FROM THE COMMAND LINE",
       "selectPlatform": "SELECT PLATFORM...",
       "download": "DOWNLOAD",

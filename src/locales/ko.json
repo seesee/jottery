@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "가져오기/내보내기",
       "exportDescription": "노트를 복호화된 JSON으로 내보냅니다. 가져오기는 노트를 기존 데이터와 병합합니다.",
+      "downloadClient": "터미널/HTML 클라이언트 다운로드",
       "downloadTerminalClient": "터미널 클라이언트 다운로드",
+      "clientDescription": "명령줄 액세스용 터미널 클라이언트 또는 파일 시스템에서 로컬로 실행하는 HTML 클라이언트 다운로드",
       "terminalClientDescription": "터미널 클라이언트를 사용하여 명령줄에서 노트에 액세스하세요",
       "selectPlatform": "플랫폼 선택...",
       "download": "다운로드",
