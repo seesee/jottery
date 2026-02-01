@@ -54,6 +54,7 @@ class SyncService {
   private sseReconnectAttempts = 0;
   private maxSseReconnectAttempts = 5;
   private sseReconnectDelay = 1000; // Start with 1 second
+  private sseConnecting = false; // Guard against concurrent connection attempts
   private savedAutoSyncInterval?: number; // Saved interval when SSE suspends periodic sync
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
@@ -1056,16 +1057,20 @@ class SyncService {
    * When another device syncs, the server sends a notification to trigger an immediate pull
    */
   async connectToSyncEvents(): Promise<void> {
-    // Don't reconnect if already connected
-    if (this.eventSource) {
+    // Don't reconnect if already connected or connecting
+    if (this.eventSource || this.sseConnecting) {
       return;
     }
+
+    // Set connecting flag immediately to prevent race conditions
+    this.sseConnecting = true;
 
     // Check network availability first
     if (!this.isOnline()) {
       console.log('[SyncService] Skipping SSE connection - network offline');
       // Fall back to periodic sync
       this.sseFailedOver = true;
+      this.sseConnecting = false;
       this.restorePeriodicSync();
       return;
     }
@@ -1073,12 +1078,14 @@ class SyncService {
     try {
       const metadata = await syncRepository.getMetadata();
       if (!metadata?.syncEnabled || !metadata?.apiKey || !metadata?.syncEndpoint) {
+        this.sseConnecting = false;
         return;
       }
 
       // Decrypt API key
       const masterKey = keyManager.getMasterKey();
       if (!masterKey) {
+        this.sseConnecting = false;
         return; // App is locked
       }
 
@@ -1092,6 +1099,7 @@ class SyncService {
 
       console.log('[SyncService] Connecting to SSE for real-time sync notifications');
       this.eventSource = new EventSource(sseUrl);
+      this.sseConnecting = false; // EventSource created, clear connecting flag
 
       // Reset reconnect state on successful connection
       this.eventSource.onopen = () => {
@@ -1145,6 +1153,7 @@ class SyncService {
     } catch (error) {
       console.error('[SyncService] Failed to connect to SSE:', error);
       // Fall back to periodic sync on any error
+      this.sseConnecting = false;
       this.sseFailedOver = true;
       this.restorePeriodicSync();
     }
@@ -1160,7 +1169,8 @@ class SyncService {
       this.eventSource.close();
       this.eventSource = null;
     }
-    // Reset reconnect state
+    // Reset connection state
+    this.sseConnecting = false;
     this.sseReconnectAttempts = 0;
     this.sseReconnectDelay = 1000;
   }
