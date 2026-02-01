@@ -130,6 +130,13 @@ pub struct SyncNote {
     pub word_wrap: Option<bool>,
     pub syntax_language: Option<String>,
     pub color: Option<String>,        // Semantic color name (unencrypted)
+    // Hash chain fields for git-like conflict detection
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<String>,      // SHA-256 of content + tags + attachments + change fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_hash: Option<String>,       // Hash of previous version (None for new notes)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hash_chain: Option<Vec<String>>,   // Array of ancestor hashes (max 50)
 }
 
 /// Attachment reference (metadata only)
@@ -187,6 +194,20 @@ pub struct SyncRejected {
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
+    // Hash chain fields for git-like conflict detection
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_content_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_parent_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_hash_chain: Option<Vec<String>>,
+    // Ancestor data for 3-way merge (if divergence point found)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ancestor_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ancestor_content: Option<String>,  // Encrypted content of common ancestor
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ancestor_tags: Option<Vec<String>>, // Encrypted tags of common ancestor
 }
 
 /// Stored conflict data for resolution UI
@@ -208,6 +229,20 @@ pub struct ConflictData {
     pub server_word_wrap: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
     pub detected_at: DateTime<Utc>,       // When conflict was detected
+    // Hash chain fields for git-like conflict detection
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_content_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_parent_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server_hash_chain: Option<Vec<String>>,
+    // Ancestor data for 3-way merge (if divergence point found)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ancestor_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ancestor_content: Option<String>,  // Encrypted content of common ancestor
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ancestor_tags: Option<Vec<String>>, // Encrypted tags of common ancestor
 }
 
 /// Pull request payload
@@ -255,6 +290,11 @@ pub struct SyncNoteVersion {
     pub show_preview: Option<bool>, // Whether to show preview in version history
     pub color: Option<String>,     // Semantic color name (unencrypted)
     pub reason: String,            // 'sync' or 'manual-sync'
+    // Hash chain fields for git-like conflict detection
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_hash: Option<String>,
 }
 
 /// Server status response
@@ -396,6 +436,9 @@ mod tests {
             locked: false,
             locked_at: None,
             color: Some("red".to_string()),
+            content_hash: None,
+            parent_hash: None,
+            hash_chain: None,
         };
 
         // Serialize to JSON
@@ -427,6 +470,9 @@ mod tests {
             archived_at: None,
             locked: false,
             locked_at: None,
+            content_hash: None,
+            parent_hash: None,
+            hash_chain: None,
         };
 
         let json = serde_json::to_string(&sync_note).expect("Failed to serialize");
@@ -453,6 +499,8 @@ mod tests {
             show_preview: Some(true),
             color: Some("blue".to_string()),
             reason: "sync".to_string(),
+            content_hash: None,
+            parent_hash: None,
         };
 
         let json = serde_json::to_string(&version).expect("Failed to serialize");
@@ -480,6 +528,13 @@ mod tests {
             server_locked: false,
             server_locked_at: None,
             detected_at: Utc::now(),
+            // Hash chain fields for git-like conflict detection
+            server_content_hash: None,
+            server_parent_hash: None,
+            server_hash_chain: None,
+            ancestor_hash: None,
+            ancestor_content: None,
+            ancestor_tags: None,
         };
 
         let json = serde_json::to_string(&conflict).expect("Failed to serialize");
@@ -507,6 +562,13 @@ mod tests {
             server_archived_at: None,
             server_locked: false,
             server_locked_at: None,
+            // Hash chain fields for git-like conflict detection
+            server_content_hash: None,
+            server_parent_hash: None,
+            server_hash_chain: None,
+            ancestor_hash: None,
+            ancestor_content: None,
+            ancestor_tags: None,
         };
 
         let json = serde_json::to_string(&rejected).expect("Failed to serialize");
@@ -536,6 +598,9 @@ mod tests {
             archived_at: None,
             locked: false,
             locked_at: None,
+            content_hash: None,
+            parent_hash: None,
+            hash_chain: None,
         };
 
         // Serialize and deserialize

@@ -340,6 +340,10 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
                 word_wrap: Some(note.word_wrap),
                 syntax_language: Some(note.syntax_language.to_string()),
                 color: note.color.clone(),
+                // Hash chain fields for git-like conflict detection
+                content_hash: note.content_hash.clone(),
+                parent_hash: note.parent_hash.clone(),
+                hash_chain: note.hash_chain.clone(),
             })
         }).collect();
 

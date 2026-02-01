@@ -185,6 +185,10 @@ sync:
   paste_success: Sync credentials configured successfully!
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
+  import_device_title: Import Credentials - Device Name
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: No credentials entered
+  import_failed: Failed to import credentials
 register:
   title: 注册到同步服务器
   enter_endpoint: "输入同步服务器 URL (例如 https://sync.example.com):"
@@ -472,6 +476,8 @@ conflict:
   title: Sync Conflict
   your_version: Your Version
   server_version: Server Version
+  common_ancestor: Common Ancestor
+  ancestor_description: The version both started from before changes diverged
   resolved_mine: Conflict resolved - kept your version
   resolved_server: Conflict resolved - kept server version
   resolved_both: Conflict resolved - kept both versions

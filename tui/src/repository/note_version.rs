@@ -23,6 +23,9 @@ pub struct NoteVersion {
     pub show_preview: Option<bool>, // Whether to show preview in version history
     pub color: Option<String>,  // Semantic color name
     pub reason: VersionReason,
+    // Hash chain fields for git-like conflict detection
+    pub content_hash: Option<String>,
+    pub parent_hash: Option<String>,
 }
 
 /// Reason why a version was created
@@ -191,6 +194,9 @@ impl<'a> NoteVersionRepository<'a> {
                 show_preview: show_preview.map(|v| v != 0),
                 color,
                 reason: reason.parse().unwrap_or(VersionReason::Sync),
+                // Hash chain fields - computed on create, not stored in old versions
+                content_hash: None,
+                parent_hash: None,
             });
         }
 
@@ -272,6 +278,9 @@ impl<'a> NoteVersionRepository<'a> {
                     show_preview: show_preview.map(|v| v != 0),
                     color,
                     reason: reason.parse().unwrap_or(VersionReason::Sync),
+                    // Hash chain fields - computed on create, not stored in old versions
+                    content_hash: None,
+                    parent_hash: None,
                 }))
             }
             None => Ok(None),

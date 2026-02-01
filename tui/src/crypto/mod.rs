@@ -5,7 +5,10 @@
 mod service;
 mod key_manager;
 
-pub use service::*;
+pub use service::{
+    CryptoService, DEFAULT_ITERATIONS, MAX_HASH_CHAIN_LENGTH,
+    update_hash_chain, find_common_ancestor,
+};
 pub use key_manager::*;
 
 // Re-export commonly used types

@@ -197,6 +197,10 @@ pub struct App {
     pub conflict_server_scroll: usize,
     /// Which pane is focused in conflict view (false = local, true = server)
     pub conflict_focus_server: bool,
+    /// Decrypted ancestor content for 3-way merge (if available)
+    pub conflict_ancestor_content: Option<String>,
+    /// Decrypted ancestor tags for 3-way merge (if available)
+    pub conflict_ancestor_tags: Option<Vec<String>>,
     /// Bulk tags input buffer (for adding tags to selected notes)
     pub bulk_tags_input: String,
     /// Bulk export path input buffer
@@ -305,6 +309,8 @@ impl App {
             conflict_local_scroll: 0,
             conflict_server_scroll: 0,
             conflict_focus_server: false,
+            conflict_ancestor_content: None,
+            conflict_ancestor_tags: None,
             bulk_tags_input: String::new(),
             bulk_export_path_input: String::new(),
             show_bulk_delete_confirm: false,
@@ -1280,6 +1286,10 @@ impl App {
                     word_wrap: Some(note.word_wrap),
                     syntax_language: Some(note.syntax_language.to_string()),
                     color: note.color.clone(),
+                    // Hash chain fields for git-like conflict detection
+                    content_hash: note.content_hash.clone(),
+                    parent_hash: note.parent_hash.clone(),
+                    hash_chain: note.hash_chain.clone(),
                 })
             }).collect();
 
@@ -1330,6 +1340,9 @@ impl App {
                         show_preview: version.show_preview,
                         color: version.color.clone(),
                         reason: version.reason.to_string(),
+                        // Hash chain fields for git-like conflict detection
+                        content_hash: version.content_hash.clone(),
+                        parent_hash: version.parent_hash.clone(),
                     });
                 }
             }
@@ -1723,6 +1736,9 @@ impl App {
                     show_preview: server_version.show_preview,
                     color: server_version.color.clone(),
                     reason,
+                    // Hash chain fields from server
+                    content_hash: server_version.content_hash.clone(),
+                    parent_hash: server_version.parent_hash.clone(),
                 };
 
                 // Store the version

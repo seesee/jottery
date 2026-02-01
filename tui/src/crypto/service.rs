@@ -20,6 +20,8 @@ const SALT_LENGTH: usize = 32; // 256 bits
 pub const DEFAULT_ITERATIONS: u32 = 600_000;
 /// Minimum iterations accepted (for backwards compatibility with existing databases)
 const MIN_ITERATIONS: u32 = 100_000;
+/// Maximum hash chain length (matching web client)
+pub const MAX_HASH_CHAIN_LENGTH: usize = 50;
 
 type NonceType = [u8; NONCE_LENGTH];
 
@@ -174,6 +176,30 @@ impl CryptoService {
         general_purpose::STANDARD.encode(result)
     }
 
+    /// Compute content hash for a note (for git-like conflict detection)
+    /// Matches web client implementation in src/lib/services/crypto.ts
+    pub fn compute_content_hash(&self, note: &crate::models::Note) -> String {
+        use serde_json::json;
+
+        // Get sorted attachment IDs for consistent hashing
+        let mut attachment_ids: Vec<&str> = note.attachments.iter()
+            .map(|a| a.id.as_str())
+            .collect();
+        attachment_ids.sort();
+
+        // Build hash data matching web client structure
+        let hash_data = json!({
+            "content": note.content,
+            "tags": note.tags,
+            "attachments": attachment_ids,
+            "pinned": note.pinned,
+            "syntaxLanguage": note.syntax_language.to_string(),
+            "wordWrap": note.word_wrap,
+        });
+
+        self.hash(&hash_data.to_string())
+    }
+
     /// Encrypt JSON data (helper)
     pub fn encrypt_json<T: serde::Serialize>(
         &self,
@@ -193,6 +219,30 @@ impl CryptoService {
         let json = self.decrypt_text(encrypted, key)?;
         serde_json::from_str(&json).context("JSON deserialization failed")
     }
+}
+
+/// Update hash chain by prepending new hash and trimming to MAX_HASH_CHAIN_LENGTH
+/// Matches web client implementation
+pub fn update_hash_chain(current_hash: &str, parent_chain: Option<&[String]>) -> Vec<String> {
+    let mut new_chain = vec![current_hash.to_string()];
+    if let Some(chain) = parent_chain {
+        new_chain.extend(chain.iter().cloned());
+    }
+    new_chain.truncate(MAX_HASH_CHAIN_LENGTH);
+    new_chain
+}
+
+/// Find common ancestor hash between two hash chains
+/// Returns the first hash that appears in both chains, or None if no common ancestor
+pub fn find_common_ancestor(chain_a: &[String], chain_b: &[String]) -> Option<String> {
+    use std::collections::HashSet;
+    let chain_b_set: HashSet<&String> = chain_b.iter().collect();
+    for hash in chain_a {
+        if chain_b_set.contains(hash) {
+            return Some(hash.clone());
+        }
+    }
+    None
 }
 
 impl Default for CryptoService {

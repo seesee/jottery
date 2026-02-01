@@ -31,11 +31,18 @@ impl<'a> NoteRepository<'a> {
         let attachments_json = serde_json::to_string(&note.attachments)
             .context("Failed to serialize attachments")?;
 
+        // Serialize hash chain (if present)
+        let hash_chain_json = note.hash_chain.as_ref()
+            .map(|c| serde_json::to_string(c))
+            .transpose()
+            .context("Failed to serialize hash chain")?;
+
         self.conn.execute(
             "INSERT INTO notes (
                 id, created_at, modified_at, synced_at, content, tags, attachments,
-                pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
+                pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
+                content_hash, parent_hash, hash_chain
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
             params![
                 &note.id,
                 note.created_at.to_rfc3339(),
@@ -56,6 +63,9 @@ impl<'a> NoteRepository<'a> {
                 note.word_wrap as i32,
                 note.syntax_language.to_string(),
                 &note.color,
+                &note.content_hash,
+                &note.parent_hash,
+                hash_chain_json,
             ],
         )?;
 
@@ -66,7 +76,8 @@ impl<'a> NoteRepository<'a> {
     pub fn get(&self, id: &str, key: &[u8; 32]) -> Result<Option<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
+                    content_hash, parent_hash, hash_chain
              FROM notes WHERE id = ?1"
         )?;
 
@@ -92,6 +103,9 @@ impl<'a> NoteRepository<'a> {
                     row.get::<_, i32>(16)?,        // word_wrap
                     row.get::<_, String>(17)?,     // syntax_language
                     row.get::<_, Option<String>>(18)?, // color
+                    row.get::<_, Option<String>>(19)?, // content_hash
+                    row.get::<_, Option<String>>(20)?, // parent_hash
+                    row.get::<_, Option<String>>(21)?, // hash_chain (JSON)
                 ))
             })
             .optional()?;
@@ -117,6 +131,9 @@ impl<'a> NoteRepository<'a> {
                 word_wrap,
                 syntax_language,
                 color,
+                content_hash,
+                parent_hash,
+                hash_chain_json,
             )) => {
                 // Decrypt content and tags
                 let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -127,6 +144,12 @@ impl<'a> NoteRepository<'a> {
 
                 // Deserialize attachments
                 let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+
+                // Deserialize hash chain
+                let hash_chain: Option<Vec<String>> = hash_chain_json
+                    .map(|j| serde_json::from_str(&j))
+                    .transpose()
+                    .context("Failed to deserialize hash chain")?;
 
                 Ok(Some(Note {
                     id,
@@ -148,6 +171,9 @@ impl<'a> NoteRepository<'a> {
                     word_wrap: word_wrap != 0,
                     syntax_language: syntax_language.parse().unwrap_or_default(),
                     color,
+                    content_hash,
+                    parent_hash,
+                    hash_chain,
                 }))
             }
             None => Ok(None),
@@ -162,13 +188,20 @@ impl<'a> NoteRepository<'a> {
 
         let attachments_json = serde_json::to_string(&note.attachments)?;
 
+        // Serialize hash chain (if present)
+        let hash_chain_json = note.hash_chain.as_ref()
+            .map(|c| serde_json::to_string(c))
+            .transpose()
+            .context("Failed to serialize hash chain")?;
+
         self.conn.execute(
             "UPDATE notes SET
                 modified_at = ?1, synced_at = ?2, content = ?3, tags = ?4, attachments = ?5,
                 pinned = ?6, archived = ?7, archived_at = ?8, locked = ?9, locked_at = ?10,
                 deleted = ?11, deleted_at = ?12, sync_hash = ?13, version = ?14,
-                word_wrap = ?15, syntax_language = ?16, color = ?17
-             WHERE id = ?18",
+                word_wrap = ?15, syntax_language = ?16, color = ?17,
+                content_hash = ?18, parent_hash = ?19, hash_chain = ?20
+             WHERE id = ?21",
             params![
                 note.modified_at.to_rfc3339(),
                 note.synced_at.map(|dt| dt.to_rfc3339()),
@@ -187,6 +220,9 @@ impl<'a> NoteRepository<'a> {
                 note.word_wrap as i32,
                 note.syntax_language.to_string(),
                 &note.color,
+                &note.content_hash,
+                &note.parent_hash,
+                hash_chain_json,
                 &note.id,
             ],
         )?;
@@ -223,11 +259,13 @@ impl<'a> NoteRepository<'a> {
     pub fn list(&self, include_deleted: bool, key: &[u8; 32]) -> Result<Vec<Note>> {
         let query = if include_deleted {
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
+                    content_hash, parent_hash, hash_chain
              FROM notes ORDER BY modified_at DESC"
         } else {
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
+                    content_hash, parent_hash, hash_chain
              FROM notes WHERE deleted = 0 AND archived = 0 ORDER BY modified_at DESC"
         };
 
@@ -253,6 +291,9 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, i32>(16)?,
                 row.get::<_, String>(17)?,
                 row.get::<_, Option<String>>(18)?,
+                row.get::<_, Option<String>>(19)?,
+                row.get::<_, Option<String>>(20)?,
+                row.get::<_, Option<String>>(21)?,
             ))
         })?;
 
@@ -278,6 +319,9 @@ impl<'a> NoteRepository<'a> {
                 word_wrap,
                 syntax_language,
                 color,
+                content_hash,
+                parent_hash,
+                hash_chain_json,
             ) = row?;
 
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -286,6 +330,10 @@ impl<'a> NoteRepository<'a> {
             let content = self.crypto.decrypt_text(&encrypted_content, key)?;
             let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
             let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+            let hash_chain: Option<Vec<String>> = hash_chain_json
+                .map(|j| serde_json::from_str(&j))
+                .transpose()
+                .unwrap_or(None);
 
             notes.push(Note {
                 id,
@@ -307,6 +355,9 @@ impl<'a> NoteRepository<'a> {
                 word_wrap: word_wrap != 0,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
                 color,
+                content_hash,
+                parent_hash,
+                hash_chain,
             });
         }
 
@@ -321,7 +372,8 @@ impl<'a> NoteRepository<'a> {
     ) -> Result<Vec<Note>> {
         let mut stmt = self.conn.prepare(
             "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
+                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
+                    content_hash, parent_hash, hash_chain
              FROM notes WHERE modified_at > ?1 ORDER BY modified_at DESC"
         )?;
 
@@ -346,6 +398,9 @@ impl<'a> NoteRepository<'a> {
                 row.get::<_, i32>(16)?,
                 row.get::<_, String>(17)?,
                 row.get::<_, Option<String>>(18)?,
+                row.get::<_, Option<String>>(19)?,
+                row.get::<_, Option<String>>(20)?,
+                row.get::<_, Option<String>>(21)?,
             ))
         })?;
 
@@ -371,6 +426,9 @@ impl<'a> NoteRepository<'a> {
                 word_wrap,
                 syntax_language,
                 color,
+                content_hash,
+                parent_hash,
+                hash_chain_json,
             ) = row?;
 
             let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
@@ -379,6 +437,10 @@ impl<'a> NoteRepository<'a> {
             let content = self.crypto.decrypt_text(&encrypted_content, key)?;
             let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
             let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+            let hash_chain: Option<Vec<String>> = hash_chain_json
+                .map(|j| serde_json::from_str(&j))
+                .transpose()
+                .unwrap_or(None);
 
             notes.push(Note {
                 id,
@@ -400,6 +462,9 @@ impl<'a> NoteRepository<'a> {
                 word_wrap: word_wrap != 0,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
                 color,
+                content_hash,
+                parent_hash,
+                hash_chain,
             });
         }
 
@@ -495,6 +560,10 @@ impl<'a> NoteRepository<'a> {
                 word_wrap,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
                 color,
+                // Hash chain fields not loaded in deleted view
+                content_hash: None,
+                parent_hash: None,
+                hash_chain: None,
             });
         }
 
@@ -577,6 +646,10 @@ impl<'a> NoteRepository<'a> {
                 word_wrap,
                 syntax_language: syntax_language.parse().unwrap_or_default(),
                 color,
+                // Hash chain fields not loaded in get_archived (use dedicated sync queries)
+                content_hash: None,
+                parent_hash: None,
+                hash_chain: None,
             });
         }
 
