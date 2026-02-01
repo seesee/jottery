@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "세션이 만료되었거나 유효하지 않습니다. 비밀번호를 입력하세요.",
+    "alreadyUsingJottery": "이미 Jottery를 사용 중이신가요?",
+    "alreadyUsingJotteryDescription": "백업에서 복원하거나 동기화를 설정하여 기존 노트에 액세스하세요.",
+    "restoreFromBackupSubtitle": ".jottery-backup 파일에서 노트 복원",
     "syncConfig": {
       "title": "동기화 설정 (선택 사항)",
       "description": "선택적으로 지금 동기화를 구성하세요. 설정 > 동기화에서 나중에 할 수도 있습니다.",

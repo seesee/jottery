@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sitzung abgelaufen oder ungültig. Bitte geben Sie Ihr Passwort ein.",
+    "alreadyUsingJottery": "Verwenden Sie Jottery bereits?",
+    "alreadyUsingJotteryDescription": "Stellen Sie aus einem Backup wieder her oder richten Sie Sync ein, um auf Ihre bestehenden Notizen zuzugreifen.",
+    "restoreFromBackupSubtitle": "Notizen aus einer .jottery-backup-Datei wiederherstellen",
     "syncConfig": {
       "title": "Synchronisierungskonfiguration (Optional)",
       "description": "Optional können Sie die Synchronisierung jetzt konfigurieren. Sie können dies auch später unter Einstellungen > Synchronisierung tun.",

@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "セッションが期限切れまたは無効です。パスワードを入力してください。",
+    "alreadyUsingJottery": "すでにJotteryをお使いですか？",
+    "alreadyUsingJotteryDescription": "バックアップから復元するか、同期を設定して既存のノートにアクセスできます。",
+    "restoreFromBackupSubtitle": ".jottery-backupファイルからノートを復元",
     "syncConfig": {
       "title": "同期設定（オプション）",
       "description": "オプションで今すぐ同期を設定できます。設定 > 同期で後から設定することもできます。",

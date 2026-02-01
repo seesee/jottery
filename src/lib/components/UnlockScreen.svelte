@@ -547,7 +547,7 @@
   </div>
 {:else if showLandingPage}
   <!-- Landing Page for First-Time Users -->
-  <LandingPage onGetStarted={handleGetStarted} onRestoreFromBackup={handleShowBackupRestore} />
+  <LandingPage onGetStarted={handleGetStarted} />
 {:else}
   <!-- Password Setup/Unlock Form -->
   <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 py-8" style="min-height: 100vh; overflow-y: auto;">
@@ -626,7 +626,7 @@
             />
           </div>
 
-          <!-- Optional Sync Configuration -->
+          <!-- Already using Jottery? -->
           <div class="border border-gray-300 dark:border-gray-600 rounded-md">
             <button
               type="button"
@@ -634,7 +634,7 @@
               class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {$_('unlock.syncConfig.title')}
+                {$_('unlock.alreadyUsingJottery')}
               </span>
               <svg
                 class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showSyncConfig ? 'rotate-180' : ''}"
@@ -649,13 +649,32 @@
             {#if showSyncConfig}
               <div class="px-4 pb-4 space-y-3">
                 <p class="text-xs text-gray-600 dark:text-gray-400">
-                  {$_('unlock.syncConfig.description')}
+                  {$_('unlock.alreadyUsingJotteryDescription')}
                 </p>
 
                 {#if syncSetupMode === null}
-                  <!-- Sync Setup Method Selection -->
+                  <!-- Setup Method Selection -->
                   <div class="space-y-2">
-                    <!-- Option 1: Import Credentials -->
+                    <!-- Option 1: Restore from Backup -->
+                    <button
+                      type="button"
+                      on:click={handleShowBackupRestore}
+                      class="w-full text-left border-2 border-amber-500 dark:border-amber-600 rounded-lg p-3 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                    >
+                      <div class="flex items-start gap-2">
+                        <span class="text-lg">💾</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-amber-900 dark:text-amber-100">
+                            {$_('unlock.restoreFromBackup')}
+                          </div>
+                          <div class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                            {$_('unlock.restoreFromBackupSubtitle')}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <!-- Option 2: Import Credentials -->
                     <button
                       type="button"
                       on:click={() => syncSetupMode = 'importCredentials'}
@@ -674,7 +693,7 @@
                       </div>
                     </button>
 
-                    <!-- Option 2: Connect Existing Account -->
+                    <!-- Option 3: Connect Existing Account -->
                     <button
                       type="button"
                       on:click={() => syncSetupMode = 'existingUser'}
@@ -693,7 +712,7 @@
                       </div>
                     </button>
 
-                    <!-- Option 3: Register New Account -->
+                    <!-- Option 4: Register New Account -->
                     <button
                       type="button"
                       on:click={() => syncSetupMode = 'newUser'}

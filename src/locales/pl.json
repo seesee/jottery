@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sesja wygasła lub jest nieprawidłowa. Wprowadź swoje hasło.",
+    "alreadyUsingJottery": "Już używasz Jottery?",
+    "alreadyUsingJotteryDescription": "Przywróć z kopii zapasowej lub skonfiguruj synchronizację, aby uzyskać dostęp do istniejących notatek.",
+    "restoreFromBackupSubtitle": "Przywróć notatki z pliku .jottery-backup",
     "syncConfig": {
       "title": "Konfiguracja synchronizacji (Opcjonalne)",
       "description": "Opcjonalnie skonfiguruj synchronizację teraz. Możesz to również zrobić później w Ustawienia > Synchronizacja.",

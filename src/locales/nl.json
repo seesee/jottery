@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sessie verlopen of ongeldig. Voer je wachtwoord in.",
+    "alreadyUsingJottery": "Gebruikt u Jottery al?",
+    "alreadyUsingJotteryDescription": "Herstel vanuit een back-up of stel synchronisatie in om toegang te krijgen tot uw bestaande notities.",
+    "restoreFromBackupSubtitle": "Notities herstellen vanuit een .jottery-backup bestand",
     "syncConfig": {
       "title": "Synchronisatieconfiguratie (Optioneel)",
       "description": "Configureer optioneel nu synchronisatie. Je kunt dit ook later doen in Instellingen > Synchronisatie.",

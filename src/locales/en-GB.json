@@ -813,6 +813,9 @@
     "deleteAndStartOver": "Delete Database & Start Over",
     "storedPasswordInvalid": "Stored password is invalid. Please re-enter your password.",
     "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password.",
+    "alreadyUsingJottery": "Already using Jottery?",
+    "alreadyUsingJotteryDescription": "Restore from a backup or set up sync to access your existing notes.",
+    "restoreFromBackupSubtitle": "Restore notes from a .jottery-backup file",
     "syncConfig": {
       "title": "Sync Configuration (Optional)",
       "description": "Set up sync to back up your notes and access them across devices.",

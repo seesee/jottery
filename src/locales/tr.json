@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Oturum süresi doldu veya geçersiz. Lütfen şifrenizi girin.",
+    "alreadyUsingJottery": "Zaten Jottery kullanıyor musunuz?",
+    "alreadyUsingJotteryDescription": "Yedekten geri yükleyin veya mevcut notlarınıza erişmek için senkronizasyonu ayarlayın.",
+    "restoreFromBackupSubtitle": ".jottery-backup dosyasından notları geri yükle",
     "syncConfig": {
       "title": "Senkronizasyon Yapılandırması (İsteğe Bağlı)",
       "description": "İsteğe bağlı olarak şimdi senkronizasyonu yapılandırın. Bunu daha sonra Ayarlar > Senkronizasyon bölümünde de yapabilirsiniz.",

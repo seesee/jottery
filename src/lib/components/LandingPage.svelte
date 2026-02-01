@@ -12,7 +12,6 @@
   }
 
   export let onGetStarted: () => void;
-  export let onRestoreFromBackup: (() => void) | undefined = undefined;
 
   let isDarkMode = false;
   let currentCarouselSlide = 0;
@@ -192,18 +191,6 @@
         >
           {$_('landing.hero.cta')}
         </button>
-        {#if onRestoreFromBackup}
-          <div class="hero-restore">
-            <span class="hero-restore-divider">{$_('unlock.orDivider')}</span>
-            <button
-              type="button"
-              class="restore-link"
-              on:click={onRestoreFromBackup}
-            >
-              {$_('unlock.restoreFromBackup')}
-            </button>
-          </div>
-        {/if}
         <p class="hero-note">
           {$_('landing.hero.note')}
         </p>
@@ -259,8 +246,7 @@
       <div class="grid">
         {#each features as feature}
           <div class="feature-card">
-            <div class="feature-icon">{feature.icon}</div>
-            <h3 class="feature-title">{$_(`landing.features.${feature.key}.title`)}</h3>
+            <h3 class="feature-title"><span class="feature-icon">{feature.icon}</span> {$_(`landing.features.${feature.key}.title`)}</h3>
             <p class="feature-description">{$_(`landing.features.${feature.key}.description`)}</p>
           </div>
         {/each}
@@ -278,8 +264,7 @@
         {#each webFeatures as feature, index}
           <div class="showcase-item" class:reverse={index % 2 === 1}>
             <div class="showcase-content">
-              <div class="showcase-icon">{feature.icon}</div>
-              <h3 class="showcase-title">{$_(`landing.webFeatures.${feature.key}.title`)}</h3>
+              <h3 class="showcase-title"><span class="showcase-icon">{feature.icon}</span> {$_(`landing.webFeatures.${feature.key}.title`)}</h3>
               <p class="showcase-description">{$_(`landing.webFeatures.${feature.key}.description`)}</p>
               <ul class="showcase-list">
                 {#each $_(`landing.webFeatures.${feature.key}.points`) as point}
@@ -349,10 +334,9 @@
               {/if}
             </div>
             <div class="tui-content">
-              <div class="tui-icon">{feature.icon}</div>
-              <h3 class="tui-title">{$_(`landing.tuiFeatures.${feature.key}.title`)}</h3>
+              <h3 class="tui-title"><span class="tui-icon">{feature.icon}</span> {$_(`landing.tuiFeatures.${feature.key}.title`)}</h3>
               <p class="tui-description">{$_(`landing.tuiFeatures.${feature.key}.description`)}</p>
-              {#if $_(`landing.tuiFeatures.${feature.key}.code`)}
+              {#if $_(`landing.tuiFeatures.${feature.key}.code`) && !$_(`landing.tuiFeatures.${feature.key}.code`).startsWith('landing.')}
                 <pre class="tui-code"><code>{$_(`landing.tuiFeatures.${feature.key}.code`)}</code></pre>
               {/if}
             </div>
@@ -403,18 +387,15 @@
 
         <div class="security-grid">
           <div class="security-item">
-            <div class="security-icon">🔐</div>
-            <h3 class="security-item-title">{$_('landing.security.encryption.title')}</h3>
+            <h3 class="security-item-title"><span class="security-icon">🔐</span> {$_('landing.security.encryption.title')}</h3>
             <p class="security-item-description">{$_('landing.security.encryption.description')}</p>
           </div>
           <div class="security-item">
-            <div class="security-icon">🏠</div>
-            <h3 class="security-item-title">{$_('landing.security.selfHosted.title')}</h3>
+            <h3 class="security-item-title"><span class="security-icon">🏠</span> {$_('landing.security.selfHosted.title')}</h3>
             <p class="security-item-description">{$_('landing.security.selfHosted.description')}</p>
           </div>
           <div class="security-item">
-            <div class="security-icon">🚫</div>
-            <h3 class="security-item-title">{$_('landing.security.noTracking.title')}</h3>
+            <h3 class="security-item-title"><span class="security-icon">🚫</span> {$_('landing.security.noTracking.title')}</h3>
             <p class="security-item-description">{$_('landing.security.noTracking.description')}</p>
           </div>
         </div>
@@ -743,12 +724,11 @@
   }
 
   .feature-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 1.125rem;
   }
 
   .feature-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: #111827;
@@ -828,8 +808,7 @@
   }
 
   .showcase-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 1.5rem;
   }
 
   .showcase-title {
@@ -928,8 +907,7 @@
   }
 
   .tui-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    font-size: 1.25rem;
   }
 
   .tui-title {
@@ -1063,12 +1041,11 @@
   }
 
   .security-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 1.125rem;
   }
 
   .security-item-title {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
     color: #111827;
@@ -1252,45 +1229,4 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   }
 
-  /* Restore from Backup */
-  .hero-restore {
-    margin-top: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-  }
-
-  .hero-restore-divider {
-    color: #64748b;
-    font-size: 0.875rem;
-  }
-
-  :global(.dark) .hero-restore-divider {
-    color: #94a3b8;
-  }
-
-  .restore-link {
-    background: none;
-    border: none;
-    color: #2563eb;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    transition: color 0.2s;
-  }
-
-  .restore-link:hover {
-    color: #1d4ed8;
-  }
-
-  :global(.dark) .restore-link {
-    color: #60a5fa;
-  }
-
-  :global(.dark) .restore-link:hover {
-    color: #93c5fd;
-  }
 </style>

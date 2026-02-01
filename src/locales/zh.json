@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "会话已过期或无效。请输入密码。",
+    "alreadyUsingJottery": "已经在使用 Jottery？",
+    "alreadyUsingJotteryDescription": "从备份恢复或设置同步以访问现有笔记。",
+    "restoreFromBackupSubtitle": "从 .jottery-backup 文件恢复笔记",
     "syncConfig": {
       "title": "同步配置（可选）",
       "description": "可选地现在配置同步。您也可以稍后在设置 > 同步中执行此操作。",

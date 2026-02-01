@@ -852,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sesión expirada o inválida. Por favor, introduce tu contraseña.",
+    "alreadyUsingJottery": "¿Ya usas Jottery?",
+    "alreadyUsingJotteryDescription": "Restaura desde una copia de seguridad o configura la sincronización para acceder a tus notas existentes.",
+    "restoreFromBackupSubtitle": "Restaurar notas desde un archivo .jottery-backup",
     "syncConfig": {
       "title": "Configuración de sincronización (Opcional)",
       "description": "Opcionalmente configure la sincronización ahora. También puede hacerlo más tarde en Configuración > Sincronización.",
