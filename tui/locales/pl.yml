@@ -23,10 +23,10 @@ password:
   change_success: Hasło zmienione pomyślnie
   remember: Zapamiętaj hasło
   remember_toggle: Zapamiętaj hasło (Ctrl+R aby przełączyć)
-  remember_enabled: "Hasło zapisane do automatycznego odblokowywania. OSTRZEŻENIE: Dostępne dla każdego z dostępem do urządzenia!"
+  remember_enabled: "Hasło zapisane do automatycznego odblokowywania. Uwaga: Może być dostępne dla użytkowników z uprawnieniami superużytkownika."
   remember_keychain_enabled: Hasło bezpiecznie zapisane w pęku kluczy systemu.
   remember_disabled: Przechowywanie hasła wyłączone. Zostaniesz poproszony przy następnym uruchomieniu.
-  remember_warning: "OSTRZEŻENIE: Hasło będzie dostępne dla każdego z fizycznym dostępem do tego urządzenia!"
+  remember_warning: "Proszę założyć, że hasło może być dostępne dla każdego z dostępem superużytkownika/root do tego urządzenia."
   remember_keychain_warning: Hasło zostanie bezpiecznie zapisane w pęku kluczy systemu.
   remember_keychain_info: Hasło bezpiecznie zapisane w pęku kluczy systemu
   storage_keychain: Pęk kluczy systemu

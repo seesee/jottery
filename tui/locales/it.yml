@@ -23,10 +23,10 @@ password:
   change_success: Password modificata con successo
   remember: Ricorda password
   remember_toggle: Ricorda password (Ctrl+R per attivare/disattivare)
-  remember_enabled: "Password salvata per lo sblocco automatico. ATTENZIONE: Accessibile a chiunque abbia accesso al dispositivo!"
+  remember_enabled: "Password salvata per lo sblocco automatico. Nota: Potrebbe essere accessibile agli utenti con accesso superuser."
   remember_keychain_enabled: Password salvata in modo sicuro nel portachiavi di sistema.
   remember_disabled: Memorizzazione password disattivata. Verrà richiesta al prossimo avvio.
-  remember_warning: "ATTENZIONE: La password sarà accessibile a chiunque abbia accesso fisico a questo dispositivo!"
+  remember_warning: "Si prega di considerare che la password potrebbe essere accessibile a chiunque abbia accesso superuser/root a questo dispositivo."
   remember_keychain_warning: La password verrà salvata in modo sicuro nel portachiavi di sistema.
   remember_keychain_info: Password salvata in modo sicuro nel portachiavi di sistema
   storage_keychain: Portachiavi di sistema

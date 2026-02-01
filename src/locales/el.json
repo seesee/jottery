@@ -1122,6 +1122,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Κοινός πρόγονος",
+    "ancestorDescription": "Η έκδοση από την οποία ξεκινήσατε και οι δύο",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",

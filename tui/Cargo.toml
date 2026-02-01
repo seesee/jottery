@@ -103,6 +103,9 @@ evalexpr = "13.1"
 # Internationalization
 rust-i18n = "3"
 
+# Unicode width calculation (for proper emoji/CJK character handling)
+unicode-width = "0.2"
+
 [dev-dependencies]
 serde_yaml = "0.9"
 

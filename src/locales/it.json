@@ -1122,6 +1122,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Antenato comune",
+    "ancestorDescription": "La versione da cui entrambi siete partiti",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",

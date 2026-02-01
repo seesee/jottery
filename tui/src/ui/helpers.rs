@@ -1,12 +1,52 @@
-//! Helper functions for markdown processing
+//! Helper functions for markdown processing and text utilities
 //!
 //! This module provides utilities for stripping and rendering markdown
-//! content in the terminal using pulldown-cmark and ratatui.
+//! content in the terminal using pulldown-cmark and ratatui, as well as
+//! Unicode-aware text width calculations for proper TUI rendering.
 
 use std::fs::File;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
 use ratatui::text::Line;
+use unicode_width::UnicodeWidthStr;
+
+/// Calculate the display width of a string, accounting for wide characters (emojis, CJK, etc.)
+///
+/// This uses the Unicode Standard Annex #11 (East Asian Width) to determine
+/// how many terminal columns a string will occupy.
+pub fn display_width(s: &str) -> usize {
+    UnicodeWidthStr::width(s)
+}
+
+/// Truncate a string to fit within a maximum display width, adding "..." if truncated.
+///
+/// This properly handles wide characters (emojis, CJK) that take 2 columns.
+/// Returns the truncated string that fits within `max_width` columns.
+pub fn truncate_to_width(s: &str, max_width: usize) -> String {
+    let current_width = display_width(s);
+
+    if current_width <= max_width {
+        return s.to_string();
+    }
+
+    // Need to truncate - reserve 3 columns for "..."
+    let target_width = max_width.saturating_sub(3);
+
+    let mut result = String::new();
+    let mut width = 0;
+
+    for c in s.chars() {
+        let char_width = unicode_width::UnicodeWidthChar::width(c).unwrap_or(0);
+        if width + char_width > target_width {
+            break;
+        }
+        result.push(c);
+        width += char_width;
+    }
+
+    format!("{}...", result)
+}
+
 
 /// Result of rendering markdown, includes lines and link positions
 #[derive(Debug, Default)]

@@ -1122,6 +1122,8 @@
     "description": "此笔记在本地和服务器上都被修改过。请选择如何解决冲突。",
     "yourVersion": "您的版本",
     "serverVersion": "服务器版本",
+    "commonAncestor": "共同祖先",
+    "ancestorDescription": "双方开始时的版本",
     "chooseAction": "选择如何解决此冲突:",
     "keepMine": "保留我的",
     "keepServer": "保留服务器",

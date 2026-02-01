@@ -23,10 +23,10 @@ password:
   change_success: Mot de passe modifié avec succès
   remember: Mémoriser le mot de passe
   remember_toggle: Mémoriser le mot de passe (Ctrl+R pour basculer)
-  remember_enabled: "Mot de passe enregistré pour le déverrouillage automatique. ATTENTION : Accessible à toute personne ayant accès à cet appareil !"
+  remember_enabled: "Mot de passe enregistré pour le déverrouillage automatique. Note : Peut être accessible aux utilisateurs avec accès superutilisateur."
   remember_keychain_enabled: Mot de passe stocké de manière sécurisée dans le trousseau système.
   remember_disabled: Stockage du mot de passe désactivé. Vous serez invité au prochain démarrage.
-  remember_warning: "ATTENTION : Le mot de passe sera accessible à toute personne ayant un accès physique à cet appareil !"
+  remember_warning: "Veuillez supposer que votre mot de passe pourrait être accessible à toute personne ayant un accès superutilisateur/root à cet appareil."
   remember_keychain_warning: Le mot de passe sera stocké de manière sécurisée dans le trousseau système.
   remember_keychain_info: Mot de passe stocké de manière sécurisée dans le trousseau système
   storage_keychain: Trousseau système

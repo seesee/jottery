@@ -1122,6 +1122,8 @@
     "description": "このノートはローカルとサーバーの両方で変更されました。競合の解決方法を選択してください。",
     "yourVersion": "あなたのバージョン",
     "serverVersion": "サーバーのバージョン",
+    "commonAncestor": "共通の祖先",
+    "ancestorDescription": "両者が開始した元のバージョン",
     "chooseAction": "この競合の解決方法を選択:",
     "keepMine": "自分のを保持",
     "keepServer": "サーバーを保持",

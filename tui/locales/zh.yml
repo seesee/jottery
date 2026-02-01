@@ -23,10 +23,10 @@ password:
   change_success: 密码修改成功
   remember: 记住密码
   remember_toggle: 记住密码 (Ctrl+R 切换)
-  remember_enabled: "密码已保存用于自动解锁。警告：任何能访问此设备的人都可以访问！"
+  remember_enabled: "密码已保存用于自动解锁。注意：具有超级用户权限的用户可能可以访问。"
   remember_keychain_enabled: 密码已安全存储在系统钥匙串中。
   remember_disabled: 密码存储已禁用。下次启动时将提示输入。
-  remember_warning: "警告：任何能物理访问此设备的人都可以访问密码！"
+  remember_warning: "请假设您的密码可能被任何拥有此设备超级用户/root权限的人访问。"
   remember_keychain_warning: 密码将安全存储在系统钥匙串中。
   remember_keychain_info: 密码已安全存储在系统钥匙串中
   storage_keychain: 系统钥匙串

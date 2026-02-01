@@ -11,6 +11,7 @@ use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::ColorScheme;
+use crate::ui::helpers::truncate_to_width;
 
 /// Render conflict resolution modal
 pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
@@ -173,16 +174,12 @@ fn render_ancestor_section(
         }
     }
 
-    // Show truncated content preview
+    // Show truncated content preview (Unicode-aware)
     let preview: String = content.lines()
         .take(2)
         .collect::<Vec<_>>()
         .join(" ");
-    let truncated = if preview.chars().count() > 80 {
-        format!("{}...", preview.chars().take(80).collect::<String>())
-    } else {
-        preview
-    };
+    let truncated = truncate_to_width(&preview, 80);
     lines.push(Line::styled(truncated, Style::default().fg(color_scheme.muted)));
 
     let paragraph = Paragraph::new(lines)
@@ -201,13 +198,8 @@ fn render_conflict_header(
 ) {
     // Extract first line as title
     let title = local_content.lines().next().unwrap_or("Untitled");
-    // Use character-aware truncation to avoid panicking on multi-byte UTF-8
-    let title_truncated = if title.chars().count() > 50 {
-        let truncated: String = title.chars().take(50).collect();
-        format!("{}...", truncated)
-    } else {
-        title.to_string()
-    };
+    // Use Unicode-aware truncation to handle emojis and wide characters
+    let title_truncated = truncate_to_width(title, 50);
 
     let local_date = conflict_data.detected_at.format("%Y-%m-%d %H:%M").to_string();
     let server_date = conflict_data.server_modified_at.format("%Y-%m-%d %H:%M").to_string();

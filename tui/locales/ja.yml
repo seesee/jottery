@@ -23,10 +23,10 @@ password:
   change_success: パスワードを正常に変更しました
   remember: パスワードを記憶
   remember_toggle: パスワードを記憶 (Ctrl+Rで切り替え)
-  remember_enabled: "自動ロック解除用にパスワードを保存しました。警告: デバイスにアクセスできる人なら誰でもアクセス可能です!"
+  remember_enabled: "自動ロック解除用にパスワードを保存しました。注意: スーパーユーザー権限を持つユーザーがアクセスできる可能性があります。"
   remember_keychain_enabled: パスワードがシステムキーチェーンに安全に保存されました。
   remember_disabled: パスワード保存が無効です。次回起動時に入力を求められます。
-  remember_warning: "警告: パスワードはこのデバイスに物理的にアクセスできる人なら誰でもアクセス可能になります!"
+  remember_warning: "パスワードはこのデバイスへのスーパーユーザー/root権限を持つ人がアクセスできる可能性があることをご了承ください。"
   remember_keychain_warning: パスワードはシステムキーチェーンに安全に保存されます。
   remember_keychain_info: パスワードがシステムキーチェーンに安全に保存されています
   storage_keychain: システムキーチェーン

@@ -9,6 +9,8 @@ use ratatui::text::{Line, Span, Text};
 use regex::Regex;
 use std::f64::consts::{E, PI, TAU};
 
+use crate::ui::helpers::truncate_to_width;
+
 /// Maximum number of lines to evaluate in calc mode
 /// Documents longer than this will show a warning
 const MAX_CALC_LINES: usize = 500;
@@ -344,13 +346,8 @@ impl CalcEvaluator {
     /// Format an error message
     fn format_error(error: &evalexpr::EvalexprError) -> String {
         let msg = error.to_string();
-        // Truncate long errors (use character-aware truncation)
-        if msg.chars().count() > 50 {
-            let truncated: String = msg.chars().take(47).collect();
-            format!("{}...", truncated)
-        } else {
-            msg
-        }
+        // Truncate long errors (Unicode-aware)
+        truncate_to_width(&msg, 50)
     }
 
     /// Evaluate all lines in a document, with error limits

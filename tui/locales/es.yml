@@ -23,10 +23,10 @@ password:
   change_success: Contraseña cambiada con éxito
   remember: Recordar contraseña
   remember_toggle: Recordar contraseña (Ctrl+R para alternar)
-  remember_enabled: "Contraseña almacenada para desbloqueo automático. ADVERTENCIA: ¡Accesible para cualquiera con acceso al dispositivo!"
+  remember_enabled: "Contraseña almacenada para desbloqueo automático. Nota: Puede ser accesible para usuarios con acceso de superusuario."
   remember_keychain_enabled: Contraseña almacenada de forma segura en el llavero del sistema.
   remember_disabled: Almacenamiento de contraseña desactivado. Se le pedirá en el próximo inicio.
-  remember_warning: "ADVERTENCIA: ¡La contraseña será accesible para cualquiera con acceso físico a este dispositivo!"
+  remember_warning: "Asuma que su contraseña podría ser accesible para cualquiera con acceso de superusuario/root a este dispositivo."
   remember_keychain_warning: La contraseña se almacenará de forma segura en el llavero del sistema.
   remember_keychain_info: Contraseña almacenada de forma segura en el llavero del sistema
   storage_keychain: Llavero del sistema

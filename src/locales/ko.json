@@ -1122,6 +1122,8 @@
     "description": "이 노트가 로컬과 서버에서 모두 수정되었습니다. 충돌을 해결할 방법을 선택하세요.",
     "yourVersion": "내 버전",
     "serverVersion": "서버 버전",
+    "commonAncestor": "공통 조상",
+    "ancestorDescription": "둘 다 시작한 버전",
     "chooseAction": "이 충돌을 해결할 방법을 선택하세요:",
     "keepMine": "내 것 유지",
     "keepServer": "서버 것 유지",

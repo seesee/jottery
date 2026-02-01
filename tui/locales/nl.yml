@@ -23,10 +23,10 @@ password:
   change_success: Wachtwoord succesvol gewijzigd
   remember: Wachtwoord onthouden
   remember_toggle: Wachtwoord onthouden (Ctrl+R om te wisselen)
-  remember_enabled: "Wachtwoord opgeslagen voor automatisch ontgrendelen. WAARSCHUWING: Toegankelijk voor iedereen met toegang tot dit apparaat!"
+  remember_enabled: "Wachtwoord opgeslagen voor automatisch ontgrendelen. Let op: Mogelijk toegankelijk voor gebruikers met superuser-toegang."
   remember_keychain_enabled: Wachtwoord veilig opgeslagen in systeemsleutelhanger.
   remember_disabled: Wachtwoordopslag uitgeschakeld. U wordt gevraagd bij de volgende start.
-  remember_warning: "WAARSCHUWING: Het wachtwoord is toegankelijk voor iedereen met fysieke toegang tot dit apparaat!"
+  remember_warning: "Ga ervan uit dat uw wachtwoord toegankelijk kan zijn voor iedereen met superuser/root-toegang tot dit apparaat."
   remember_keychain_warning: Het wachtwoord wordt veilig opgeslagen in de systeemsleutelhanger.
   remember_keychain_info: Wachtwoord veilig opgeslagen in systeemsleutelhanger
   storage_keychain: Systeemsleutelhanger
