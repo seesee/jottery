@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { updateAvailable, newVersionInfo, appUpdateService } from '../services';
-  import { exportAllNotes, downloadExport } from '../services/exportService';
+  import { createBackup, downloadBackup } from '../services/backupService';
 
   let isBackingUp = false;
 
@@ -12,14 +12,14 @@
   async function handleBackupAndReload() {
     isBackingUp = true;
     try {
-      const exportData = await exportAllNotes();
-      await downloadExport(exportData, `jottery-backup-${new Date().toISOString().split('T')[0]}.json`);
+      const backup = await createBackup();
+      downloadBackup(backup);
       // Give the download a moment to start before reloading
       setTimeout(() => {
         appUpdateService.reloadApp();
       }, 500);
     } catch (error) {
-      console.error('Failed to backup notes:', error);
+      console.error('Failed to create encrypted backup:', error);
       isBackingUp = false;
     }
   }
