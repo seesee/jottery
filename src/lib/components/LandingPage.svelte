@@ -485,12 +485,12 @@
 
 <style>
   .landing-page {
-    background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
+    background: #ffffff;
     min-height: 100vh;
   }
 
   :global(.dark) .landing-page {
-    background: linear-gradient(to bottom, #0f172a 0%, #1e293b 100%);
+    background: #111827;
   }
 
   .container {
@@ -520,11 +520,7 @@
     font-weight: 800;
     line-height: 1.2;
     margin-bottom: 1.5rem;
-    color: #1e293b;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #111827;
   }
 
   @media (min-width: 768px) {
@@ -534,7 +530,7 @@
   }
 
   :global(.dark) .hero-title {
-    color: #f1f5f9;
+    color: #f9fafb;
   }
 
   .hero-subtitle {
@@ -561,17 +557,15 @@
     font-size: 1.125rem;
     font-weight: 600;
     color: white;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #2563eb;
     border: none;
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4), 0 4px 6px -2px rgba(102, 126, 234, 0.2);
+    transition: background 0.2s;
   }
 
   .cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(102, 126, 234, 0.4), 0 10px 10px -5px rgba(102, 126, 234, 0.2);
+    background: #1d4ed8;
   }
 
   .cta-button-large {
@@ -680,29 +674,29 @@
   /* Features Grid */
   .features-grid {
     padding: 4rem 0;
-    background: white;
+    background: #f9fafb;
   }
 
   :global(.dark) .features-grid {
-    background: #1e293b;
+    background: #1f2937;
   }
 
   .section-title {
-    font-size: 2rem;
+    font-size: 1.875rem;
     font-weight: 700;
     text-align: center;
     margin-bottom: 1rem;
-    color: #1e293b;
+    color: #111827;
   }
 
   @media (min-width: 768px) {
     .section-title {
-      font-size: 3rem;
+      font-size: 2.25rem;
     }
   }
 
   :global(.dark) .section-title {
-    color: #f1f5f9;
+    color: #f9fafb;
   }
 
   .section-subtitle {
@@ -737,19 +731,15 @@
   }
 
   .feature-card {
-    padding: 2rem;
-    background: #f8fafc;
-    border-radius: 1rem;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  .feature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    padding: 1.5rem;
+    background: #ffffff;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
   }
 
   :global(.dark) .feature-card {
-    background: #0f172a;
+    background: #111827;
+    border-color: #374151;
   }
 
   .feature-icon {
@@ -758,14 +748,14 @@
   }
 
   .feature-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: #1e293b;
+    color: #111827;
   }
 
   :global(.dark) .feature-title {
-    color: #f1f5f9;
+    color: #f9fafb;
   }
 
   .feature-description {
@@ -843,14 +833,14 @@
   }
 
   .showcase-title {
-    font-size: 1.875rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 600;
     margin-bottom: 1rem;
-    color: #1e293b;
+    color: #111827;
   }
 
   :global(.dark) .showcase-title {
-    color: #f1f5f9;
+    color: #f9fafb;
   }
 
   .showcase-description {
@@ -880,8 +870,8 @@
     content: "✓";
     position: absolute;
     left: 0;
-    color: #667eea;
-    font-weight: 700;
+    color: #059669;
+    font-weight: 600;
   }
 
   :global(.dark) .showcase-list li {
@@ -891,11 +881,11 @@
   /* TUI Features */
   .tui-features {
     padding: 4rem 0;
-    background: white;
+    background: #f9fafb;
   }
 
   :global(.dark) .tui-features {
-    background: #1e293b;
+    background: #1f2937;
   }
 
   .tui-grid {
@@ -912,14 +902,15 @@
   }
 
   .tui-card {
-    background: #f8fafc;
-    border-radius: 1rem;
+    background: #ffffff;
+    border-radius: 0.5rem;
     overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
   }
 
   :global(.dark) .tui-card {
-    background: #0f172a;
+    background: #111827;
+    border-color: #374151;
   }
 
   .tui-screenshot {
@@ -942,14 +933,14 @@
   }
 
   .tui-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
-    color: #1e293b;
+    color: #111827;
   }
 
   :global(.dark) .tui-title {
-    color: #f1f5f9;
+    color: #f9fafb;
   }
 
   .tui-description {
@@ -1060,15 +1051,15 @@
   }
 
   .security-item {
-    padding: 2rem;
-    background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
-    border-radius: 1rem;
-    border: 2px solid #e2e8f0;
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
   }
 
   :global(.dark) .security-item {
-    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
-    border-color: #334155;
+    background: #1f2937;
+    border-color: #374151;
   }
 
   .security-icon {
@@ -1077,14 +1068,14 @@
   }
 
   .security-item-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
-    color: #1e293b;
+    color: #111827;
   }
 
   :global(.dark) .security-item-title {
-    color: #f1f5f9;
+    color: #f9fafb;
   }
 
   .security-item-description {
@@ -1100,13 +1091,17 @@
   /* Final CTA */
   .final-cta {
     padding: 4rem 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #111827;
     text-align: center;
     color: white;
   }
 
+  :global(.dark) .final-cta {
+    background: #030712;
+  }
+
   .cta-title {
-    font-size: 2.5rem;
+    font-size: 1.875rem;
     font-weight: 700;
     margin-bottom: 1rem;
     color: white;
@@ -1114,26 +1109,24 @@
 
   @media (min-width: 768px) {
     .cta-title {
-      font-size: 3rem;
+      font-size: 2.25rem;
     }
   }
 
   .cta-subtitle {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     line-height: 1.75;
     margin-bottom: 2rem;
-    opacity: 0.9;
+    color: #9ca3af;
   }
 
   .final-cta .cta-button {
-    background: white;
-    color: #764ba2;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    background: #2563eb;
+    color: white;
   }
 
   .final-cta .cta-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    background: #1d4ed8;
   }
 
   .cta-links {
@@ -1174,7 +1167,7 @@
   }
 
   .screenshot-button:focus {
-    outline: 2px solid #667eea;
+    outline: 2px solid #2563eb;
     outline-offset: 4px;
     border-radius: 0.5rem;
   }
@@ -1280,7 +1273,7 @@
   .restore-link {
     background: none;
     border: none;
-    color: #667eea;
+    color: #2563eb;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -1290,14 +1283,14 @@
   }
 
   .restore-link:hover {
-    color: #764ba2;
+    color: #1d4ed8;
   }
 
   :global(.dark) .restore-link {
-    color: #818cf8;
+    color: #60a5fa;
   }
 
   :global(.dark) .restore-link:hover {
-    color: #a78bfa;
+    color: #93c5fd;
   }
 </style>
