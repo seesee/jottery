@@ -191,25 +191,25 @@
     "removeTag": "Remover tag"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Hora de fazer backup das suas notas",
+    "lastBackup": "Último backup: {date}",
+    "never": "Nunca",
+    "backupNow": "Fazer backup agora",
+    "backingUp": "A fazer backup...",
+    "dismissLabel": "Lembrar mais tarde"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Backups automáticos",
+    "lastBackup": "Último backup",
+    "never": "Nunca",
+    "enableReminders": "Ativar lembretes de backup",
+    "enableAutoBackup": "Ativar backups automáticos",
+    "frequencyDaily": "Diário",
+    "frequencyWeekly": "Semanal",
+    "frequencyMonthly": "Mensal",
+    "frequencyOnChanges": "Após um número de alterações",
+    "changesThreshold": "Fazer backup após este número de alterações",
+    "description": "Os backups automáticos são descarregados para o seu dispositivo. Ative os lembretes para ser notificado quando for hora de fazer backup."
   },
   "backup": {
     "title": "Backup Encriptado",

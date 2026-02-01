@@ -191,25 +191,25 @@
     "removeTag": "Supprimer l'étiquette"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Il est temps de sauvegarder vos notes",
+    "lastBackup": "Dernière sauvegarde : {date}",
+    "never": "Jamais",
+    "backupNow": "Sauvegarder maintenant",
+    "backingUp": "Sauvegarde en cours...",
+    "dismissLabel": "Me rappeler plus tard"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Sauvegardes automatiques",
+    "lastBackup": "Dernière sauvegarde",
+    "never": "Jamais",
+    "enableReminders": "Activer les rappels de sauvegarde",
+    "enableAutoBackup": "Activer les sauvegardes automatiques",
+    "frequencyDaily": "Quotidien",
+    "frequencyWeekly": "Hebdomadaire",
+    "frequencyMonthly": "Mensuel",
+    "frequencyOnChanges": "Après un certain nombre de modifications",
+    "changesThreshold": "Sauvegarder après ce nombre de modifications",
+    "description": "Les sauvegardes automatiques sont téléchargées sur votre appareil. Activez les rappels pour être notifié quand il est temps de sauvegarder."
   },
   "backup": {
     "title": "Sauvegarde chiffrée",

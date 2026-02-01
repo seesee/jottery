@@ -191,25 +191,25 @@
     "removeTag": "Usuń tag"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Czas na kopię zapasową notatek",
+    "lastBackup": "Ostatnia kopia: {date}",
+    "never": "Nigdy",
+    "backupNow": "Utwórz kopię teraz",
+    "backingUp": "Tworzenie kopii...",
+    "dismissLabel": "Przypomnij później"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Automatyczne kopie zapasowe",
+    "lastBackup": "Ostatnia kopia zapasowa",
+    "never": "Nigdy",
+    "enableReminders": "Włącz przypomnienia o kopiach zapasowych",
+    "enableAutoBackup": "Włącz automatyczne kopie zapasowe",
+    "frequencyDaily": "Codziennie",
+    "frequencyWeekly": "Co tydzień",
+    "frequencyMonthly": "Co miesiąc",
+    "frequencyOnChanges": "Po określonej liczbie zmian",
+    "changesThreshold": "Utwórz kopię po tylu zmianach notatek",
+    "description": "Automatyczne kopie zapasowe są pobierane na Twoje urządzenie. Włącz przypomnienia, aby otrzymywać powiadomienia o czasie utworzenia kopii."
   },
   "backup": {
     "title": "Zaszyfrowana Kopia Zapasowa",

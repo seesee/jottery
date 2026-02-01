@@ -191,25 +191,25 @@
     "removeTag": "Etiketi kaldır"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Notlarınızı yedekleme zamanı",
+    "lastBackup": "Son yedekleme: {date}",
+    "never": "Hiç",
+    "backupNow": "Şimdi yedekle",
+    "backingUp": "Yedekleniyor...",
+    "dismissLabel": "Daha sonra hatırlat"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Otomatik Yedeklemeler",
+    "lastBackup": "Son yedekleme",
+    "never": "Hiç",
+    "enableReminders": "Yedekleme hatırlatıcılarını etkinleştir",
+    "enableAutoBackup": "Otomatik yedeklemeleri etkinleştir",
+    "frequencyDaily": "Günlük",
+    "frequencyWeekly": "Haftalık",
+    "frequencyMonthly": "Aylık",
+    "frequencyOnChanges": "Belirli sayıda değişiklikten sonra",
+    "changesThreshold": "Bu kadar not değişikliğinden sonra yedekle",
+    "description": "Otomatik yedeklemeler cihazınıza indirilir. Yedekleme zamanı geldiğinde bildirim almak için hatırlatıcıları etkinleştirin."
   },
   "backup": {
     "title": "Şifreli Yedekleme",

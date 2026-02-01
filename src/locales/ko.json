@@ -191,25 +191,25 @@
     "removeTag": "태그 제거"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "노트를 백업할 시간입니다",
+    "lastBackup": "마지막 백업: {date}",
+    "never": "없음",
+    "backupNow": "지금 백업",
+    "backingUp": "백업 중...",
+    "dismissLabel": "나중에 알림"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "자동 백업",
+    "lastBackup": "마지막 백업",
+    "never": "없음",
+    "enableReminders": "백업 알림 활성화",
+    "enableAutoBackup": "자동 백업 활성화",
+    "frequencyDaily": "매일",
+    "frequencyWeekly": "매주",
+    "frequencyMonthly": "매월",
+    "frequencyOnChanges": "일정 횟수 변경 후",
+    "changesThreshold": "이 횟수만큼 변경 후 백업",
+    "description": "자동 백업은 장치에 다운로드됩니다. 알림을 활성화하면 백업할 시간이 되면 알려드립니다."
   },
   "backup": {
     "title": "암호화된 백업",

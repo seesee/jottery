@@ -191,25 +191,25 @@
     "removeTag": "移除标签"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "是时候备份您的笔记了",
+    "lastBackup": "上次备份：{date}",
+    "never": "从未",
+    "backupNow": "立即备份",
+    "backingUp": "正在备份...",
+    "dismissLabel": "稍后提醒"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "自动备份",
+    "lastBackup": "上次备份",
+    "never": "从未",
+    "enableReminders": "启用备份提醒",
+    "enableAutoBackup": "启用自动备份",
+    "frequencyDaily": "每天",
+    "frequencyWeekly": "每周",
+    "frequencyMonthly": "每月",
+    "frequencyOnChanges": "在一定数量的更改后",
+    "changesThreshold": "在此数量的笔记更改后备份",
+    "description": "自动备份将下载到您的设备。启用提醒以便在需要备份时收到通知。"
   },
   "backup": {
     "title": "加密备份",

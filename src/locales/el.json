@@ -191,25 +191,25 @@
     "removeTag": "Αφαίρεση ετικέτας"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Ώρα να δημιουργήσετε αντίγραφο ασφαλείας",
+    "lastBackup": "Τελευταίο αντίγραφο: {date}",
+    "never": "Ποτέ",
+    "backupNow": "Δημιουργία τώρα",
+    "backingUp": "Δημιουργία αντιγράφου...",
+    "dismissLabel": "Υπενθύμιση αργότερα"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Αυτόματα αντίγραφα ασφαλείας",
+    "lastBackup": "Τελευταίο αντίγραφο ασφαλείας",
+    "never": "Ποτέ",
+    "enableReminders": "Ενεργοποίηση υπενθυμίσεων αντιγράφων",
+    "enableAutoBackup": "Ενεργοποίηση αυτόματων αντιγράφων",
+    "frequencyDaily": "Καθημερινά",
+    "frequencyWeekly": "Εβδομαδιαία",
+    "frequencyMonthly": "Μηνιαία",
+    "frequencyOnChanges": "Μετά από ορισμένο αριθμό αλλαγών",
+    "changesThreshold": "Δημιουργία αντιγράφου μετά από τόσες αλλαγές",
+    "description": "Τα αυτόματα αντίγραφα ασφαλείας λαμβάνονται στη συσκευή σας. Ενεργοποιήστε τις υπενθυμίσεις για να ειδοποιείστε όταν είναι ώρα για αντίγραφο."
   },
   "backup": {
     "title": "Κρυπτογραφημένο Αντίγραφο Ασφαλείας",

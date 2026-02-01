@@ -191,25 +191,25 @@
     "removeTag": "タグを削除"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "ノートをバックアップする時間です",
+    "lastBackup": "前回のバックアップ: {date}",
+    "never": "なし",
+    "backupNow": "今すぐバックアップ",
+    "backingUp": "バックアップ中...",
+    "dismissLabel": "後で通知"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "自動バックアップ",
+    "lastBackup": "前回のバックアップ",
+    "never": "なし",
+    "enableReminders": "バックアップリマインダーを有効にする",
+    "enableAutoBackup": "自動バックアップを有効にする",
+    "frequencyDaily": "毎日",
+    "frequencyWeekly": "毎週",
+    "frequencyMonthly": "毎月",
+    "frequencyOnChanges": "一定回数の変更後",
+    "changesThreshold": "この回数の変更後にバックアップ",
+    "description": "自動バックアップはデバイスにダウンロードされます。リマインダーを有効にすると、バックアップの時間になったら通知されます。"
   },
   "backup": {
     "title": "暗号化バックアップ",

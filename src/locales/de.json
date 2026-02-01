@@ -191,25 +191,25 @@
     "removeTag": "Schlagwort entfernen"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Zeit für eine Sicherung Ihrer Notizen",
+    "lastBackup": "Letzte Sicherung: {date}",
+    "never": "Nie",
+    "backupNow": "Jetzt sichern",
+    "backingUp": "Sicherung läuft...",
+    "dismissLabel": "Später erinnern"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Automatische Sicherungen",
+    "lastBackup": "Letzte Sicherung",
+    "never": "Nie",
+    "enableReminders": "Sicherungserinnerungen aktivieren",
+    "enableAutoBackup": "Automatische Sicherungen aktivieren",
+    "frequencyDaily": "Täglich",
+    "frequencyWeekly": "Wöchentlich",
+    "frequencyMonthly": "Monatlich",
+    "frequencyOnChanges": "Nach einer bestimmten Anzahl von Änderungen",
+    "changesThreshold": "Sichern nach dieser Anzahl von Änderungen",
+    "description": "Automatische Sicherungen werden auf Ihr Gerät heruntergeladen. Aktivieren Sie Erinnerungen, um benachrichtigt zu werden, wenn es Zeit für eine Sicherung ist."
   },
   "backup": {
     "title": "Verschlüsseltes Backup",

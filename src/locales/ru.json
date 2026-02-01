@@ -191,25 +191,25 @@
     "removeTag": "Удалить тег"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Пора сделать резервную копию заметок",
+    "lastBackup": "Последняя копия: {date}",
+    "never": "Никогда",
+    "backupNow": "Создать копию сейчас",
+    "backingUp": "Создание копии...",
+    "dismissLabel": "Напомнить позже"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Автоматические резервные копии",
+    "lastBackup": "Последняя резервная копия",
+    "never": "Никогда",
+    "enableReminders": "Включить напоминания о резервном копировании",
+    "enableAutoBackup": "Включить автоматическое резервное копирование",
+    "frequencyDaily": "Ежедневно",
+    "frequencyWeekly": "Еженедельно",
+    "frequencyMonthly": "Ежемесячно",
+    "frequencyOnChanges": "После определённого числа изменений",
+    "changesThreshold": "Создать копию после этого числа изменений",
+    "description": "Автоматические резервные копии загружаются на ваше устройство. Включите напоминания, чтобы получать уведомления о времени создания копии."
   },
   "backup": {
     "title": "Зашифрованная Резервная Копия",

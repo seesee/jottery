@@ -191,25 +191,25 @@
     "removeTag": "Tag verwijderen"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Tijd om een back-up te maken",
+    "lastBackup": "Laatste back-up: {date}",
+    "never": "Nooit",
+    "backupNow": "Nu back-up maken",
+    "backingUp": "Back-up maken...",
+    "dismissLabel": "Herinner me later"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Automatische back-ups",
+    "lastBackup": "Laatste back-up",
+    "never": "Nooit",
+    "enableReminders": "Back-upherinneringen inschakelen",
+    "enableAutoBackup": "Automatische back-ups inschakelen",
+    "frequencyDaily": "Dagelijks",
+    "frequencyWeekly": "Wekelijks",
+    "frequencyMonthly": "Maandelijks",
+    "frequencyOnChanges": "Na een aantal wijzigingen",
+    "changesThreshold": "Back-up maken na dit aantal wijzigingen",
+    "description": "Automatische back-ups worden naar je apparaat gedownload. Schakel herinneringen in om een melding te krijgen wanneer het tijd is voor een back-up."
   },
   "backup": {
     "title": "Versleutelde Back-up",

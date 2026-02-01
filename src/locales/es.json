@@ -191,25 +191,25 @@
     "removeTag": "Eliminar etiqueta"
   },
   "backupReminder": {
-    "title": "Time to back up your notes",
-    "lastBackup": "Last backup: {date}",
-    "never": "Never",
-    "backupNow": "Back up now",
-    "backingUp": "Backing up...",
-    "dismissLabel": "Remind me later"
+    "title": "Es hora de hacer una copia de seguridad",
+    "lastBackup": "Última copia: {date}",
+    "never": "Nunca",
+    "backupNow": "Hacer copia ahora",
+    "backingUp": "Creando copia...",
+    "dismissLabel": "Recordar más tarde"
   },
   "backupSettings": {
-    "title": "Automatic Backups",
-    "lastBackup": "Last backup",
-    "never": "Never",
-    "enableReminders": "Enable backup reminders",
-    "enableAutoBackup": "Enable automatic backups",
-    "frequencyDaily": "Daily",
-    "frequencyWeekly": "Weekly",
-    "frequencyMonthly": "Monthly",
-    "frequencyOnChanges": "After a number of changes",
-    "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "title": "Copias de seguridad automáticas",
+    "lastBackup": "Última copia de seguridad",
+    "never": "Nunca",
+    "enableReminders": "Activar recordatorios de copia de seguridad",
+    "enableAutoBackup": "Activar copias de seguridad automáticas",
+    "frequencyDaily": "Diario",
+    "frequencyWeekly": "Semanal",
+    "frequencyMonthly": "Mensual",
+    "frequencyOnChanges": "Después de cierto número de cambios",
+    "changesThreshold": "Hacer copia después de este número de cambios",
+    "description": "Las copias de seguridad automáticas se descargan en tu dispositivo. Activa los recordatorios para recibir notificaciones cuando sea hora de hacer una copia."
   },
   "backup": {
     "title": "Copia de seguridad cifrada",
