@@ -480,7 +480,10 @@
                             use:focusOnMount
                           />
                         {:else}
-                          <span class="text-sm font-medium text-gray-900">{device.name}</span>
+                          <div>
+                            <span class="text-sm font-medium text-gray-900">{device.name}</span>
+                            <p class="text-xs text-gray-400 font-mono">{device.id}</p>
+                          </div>
                         {/if}
                       </td>
                       <td class="px-4 py-3 whitespace-nowrap">

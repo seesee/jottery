@@ -8,6 +8,10 @@
   export let syncing: boolean;
   export let syncError: string;
 
+  // Connection details
+  export let syncEndpoint: string = '';
+  export let deviceName: string = '';
+
   // Account management
   export let showAccountManagement: boolean;
   export let accountEmail: string;
@@ -33,12 +37,12 @@
   export let onAccountLogout: () => void;
   export let onShowDeleteServerNotesConfirm: () => void;
   export let onShowDisconnectConfirm: () => void;
-  export let syncEndpoint: string = '';
 
   // Local state for legacy format toggle
   let showLegacyOption = false;
   let useLegacyFormat = false;
   let showDangerZone = false;
+  let showConnectionDetails = false;
 
   // Derive user portal URL from sync endpoint
   $: userPortalUrl = syncEndpoint ? `${syncEndpoint}/user` : '';
@@ -159,6 +163,43 @@
                 </p>
               </div>
             {/if}
+
+<!-- Connection Details -->
+<div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+  <button
+    type="button"
+    on:click={() => showConnectionDetails = !showConnectionDetails}
+    class="w-full flex items-center justify-between p-3 text-left"
+  >
+    <span class="text-sm font-medium text-gray-900 dark:text-white">
+      {$_('settings.syncTab.connectionDetails.title')}
+    </span>
+    <span class="text-gray-500 dark:text-gray-400">
+      {showConnectionDetails ? '▼' : '▶'}
+    </span>
+  </button>
+
+  {#if showConnectionDetails}
+    <div class="border-t border-gray-200 dark:border-gray-700 p-3 space-y-2">
+      <div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">{$_('settings.syncTab.connectionDetails.server')}</span>
+        <p class="text-sm text-gray-900 dark:text-white font-mono break-all">{syncEndpoint || '-'}</p>
+      </div>
+      {#if deviceName}
+        <div>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{$_('settings.syncTab.connectionDetails.deviceName')}</span>
+          <p class="text-sm text-gray-900 dark:text-white">{deviceName}</p>
+        </div>
+      {/if}
+      {#if syncStatus?.clientId}
+        <div>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{$_('settings.syncTab.connectionDetails.deviceId')}</span>
+          <p class="text-sm text-gray-900 dark:text-white font-mono break-all">{syncStatus.clientId}</p>
+        </div>
+      {/if}
+    </div>
+  {/if}
+</div>
 
 <!-- User Portal Link -->
 {#if userPortalUrl}

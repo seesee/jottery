@@ -152,6 +152,7 @@
         bind:accountInfo
         bind:loadingAccountInfo
         {syncEndpoint}
+        {deviceName}
         {onSyncNow}
         {onFullSync}
         {onCopySyncCredentials}

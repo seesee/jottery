@@ -529,6 +529,12 @@
         "description": "Gérez votre compte, changez votre mot de passe ou supprimez vos données",
         "openButton": "Ouvrir le portail utilisateur"
       },
+      "connectionDetails": {
+        "title": "Détails de connexion",
+        "server": "Serveur",
+        "deviceName": "Nom de l'appareil",
+        "deviceId": "ID de l'appareil"
+      },
       "dangerZone": {
         "title": "Zone dangereuse",
         "disconnectTitle": "Se déconnecter du serveur de synchronisation",

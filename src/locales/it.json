@@ -529,6 +529,12 @@
         "description": "Gestisci il tuo account, cambia la password o elimina i tuoi dati",
         "openButton": "Apri portale utente"
       },
+      "connectionDetails": {
+        "title": "Dettagli connessione",
+        "server": "Server",
+        "deviceName": "Nome dispositivo",
+        "deviceId": "ID dispositivo"
+      },
       "dangerZone": {
         "title": "Zona pericolosa",
         "disconnectTitle": "Disconnetti dal server di sincronizzazione",

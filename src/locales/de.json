@@ -529,6 +529,12 @@
         "description": "Verwalten Sie Ihr Konto, ändern Sie Ihr Passwort oder löschen Sie Ihre Daten",
         "openButton": "Benutzerportal öffnen"
       },
+      "connectionDetails": {
+        "title": "Verbindungsdetails",
+        "server": "Server",
+        "deviceName": "Gerätename",
+        "deviceId": "Geräte-ID"
+      },
       "dangerZone": {
         "title": "Gefahrenzone",
         "disconnectTitle": "Vom Synchronisierungsserver trennen",

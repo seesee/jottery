@@ -53,7 +53,7 @@
   let syncStatus: SyncStatus | null = null;
   let syncing = false;
   let syncError = '';
-  let deviceName = 'My Device';
+  let deviceName = $settings.deviceName || 'My Device';
   let importCredentialsText = '';
   let importDeviceName = 'My Device';
   let importing = false;
@@ -289,14 +289,15 @@
         userEmail: userEmail,
       });
 
-      // Update settings store
+      // Update settings store (including device name)
       settings.update(s => ({
         ...s,
         syncEndpoint,
         syncEnabled: true,
+        deviceName: deviceName.trim(),
       }));
 
-      await settingsRepository.update({ syncEndpoint, syncEnabled: true });
+      await settingsRepository.update({ syncEndpoint, syncEnabled: true, deviceName: deviceName.trim() });
 
       // Reload status
       await loadSyncStatus();

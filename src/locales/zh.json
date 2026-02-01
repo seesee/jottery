@@ -529,6 +529,12 @@
         "description": "管理您的账户、更改密码或删除数据",
         "openButton": "打开用户门户"
       },
+      "connectionDetails": {
+        "title": "连接详情",
+        "server": "服务器",
+        "deviceName": "设备名称",
+        "deviceId": "设备ID"
+      },
       "dangerZone": {
         "title": "危险区域",
         "disconnectTitle": "断开同步服务器连接",

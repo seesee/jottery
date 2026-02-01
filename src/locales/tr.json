@@ -529,6 +529,12 @@
         "description": "Hesabınızı yönetin, şifrenizi değiştirin veya verilerinizi silin",
         "openButton": "Kullanıcı Portalını Aç"
       },
+      "connectionDetails": {
+        "title": "Bağlantı Detayları",
+        "server": "Sunucu",
+        "deviceName": "Cihaz Adı",
+        "deviceId": "Cihaz Kimliği"
+      },
       "dangerZone": {
         "title": "Tehlikeli Bölge",
         "disconnectTitle": "Senkronizasyon Sunucusundan Bağlantıyı Kes",

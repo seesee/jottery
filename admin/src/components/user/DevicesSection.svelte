@@ -126,6 +126,7 @@
                   </span>
                 {/if}
               </div>
+              <div class="text-xs text-gray-400 font-mono mt-0.5">{device.id}</div>
               <div class="text-sm text-gray-500 mt-1">
                 <span>{device.type}</span>
                 <span class="mx-2">•</span>

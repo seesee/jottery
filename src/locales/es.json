@@ -529,6 +529,12 @@
         "description": "Administre su cuenta, cambie la contraseña o elimine sus datos",
         "openButton": "Abrir portal de usuario"
       },
+      "connectionDetails": {
+        "title": "Detalles de conexión",
+        "server": "Servidor",
+        "deviceName": "Nombre del dispositivo",
+        "deviceId": "ID del dispositivo"
+      },
       "dangerZone": {
         "title": "Zona de peligro",
         "disconnectTitle": "Desconectar del servidor de sincronización",

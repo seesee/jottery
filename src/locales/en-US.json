@@ -502,6 +502,12 @@
         "description": "Manage your account, change password, or delete your data",
         "openButton": "Open User Portal"
       },
+      "connectionDetails": {
+        "title": "Connection Details",
+        "server": "Server",
+        "deviceName": "Device Name",
+        "deviceId": "Device ID"
+      },
       "dangerZone": {
         "title": "Danger Zone",
         "disconnectTitle": "Disconnect from Sync Server",

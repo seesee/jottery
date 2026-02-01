@@ -529,6 +529,12 @@
         "description": "Zarządzaj kontem, zmień hasło lub usuń dane",
         "openButton": "Otwórz portal użytkownika"
       },
+      "connectionDetails": {
+        "title": "Szczegóły połączenia",
+        "server": "Serwer",
+        "deviceName": "Nazwa urządzenia",
+        "deviceId": "ID urządzenia"
+      },
       "dangerZone": {
         "title": "Strefa niebezpieczna",
         "disconnectTitle": "Odłącz od serwera synchronizacji",

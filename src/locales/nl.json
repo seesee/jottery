@@ -529,6 +529,12 @@
         "description": "Beheer uw account, wijzig uw wachtwoord of verwijder uw gegevens",
         "openButton": "Open gebruikersportaal"
       },
+      "connectionDetails": {
+        "title": "Verbindingsdetails",
+        "server": "Server",
+        "deviceName": "Apparaatnaam",
+        "deviceId": "Apparaat-ID"
+      },
       "dangerZone": {
         "title": "Gevarenzone",
         "disconnectTitle": "Verbinding met synchronisatieserver verbreken",

@@ -529,6 +529,12 @@
         "description": "계정 관리, 비밀번호 변경 또는 데이터 삭제",
         "openButton": "사용자 포털 열기"
       },
+      "connectionDetails": {
+        "title": "연결 세부정보",
+        "server": "서버",
+        "deviceName": "기기 이름",
+        "deviceId": "기기 ID"
+      },
       "dangerZone": {
         "title": "위험 구역",
         "disconnectTitle": "동기화 서버에서 연결 해제",

@@ -529,6 +529,12 @@
         "description": "アカウントの管理、パスワードの変更、またはデータの削除",
         "openButton": "ユーザーポータルを開く"
       },
+      "connectionDetails": {
+        "title": "接続詳細",
+        "server": "サーバー",
+        "deviceName": "デバイス名",
+        "deviceId": "デバイスID"
+      },
       "dangerZone": {
         "title": "危険ゾーン",
         "disconnectTitle": "同期サーバーから切断",
