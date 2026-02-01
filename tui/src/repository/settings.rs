@@ -135,7 +135,7 @@ impl<'a> SettingsRepository<'a> {
 
         // Serialize tag_colors to JSON if present
         let tag_colors_json = settings.tag_colors.as_ref()
-            .map(|tc| serde_json::to_string(tc))
+            .map(serde_json::to_string)
             .transpose()?;
 
         self.conn.execute(

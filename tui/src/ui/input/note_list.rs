@@ -47,7 +47,7 @@ fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
 fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<String> {
     let color_names = app.settings.get_color_palette()
         .keys()
-        .map(|s| s.clone())
+        .cloned()
         .collect::<Vec<String>>();
 
     if color_names.is_empty() {
@@ -82,7 +82,7 @@ fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<Stri
 fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<String> {
     let color_names = app.settings.get_color_palette()
         .keys()
-        .map(|s| s.clone())
+        .cloned()
         .collect::<Vec<String>>();
 
     if color_names.is_empty() {

@@ -1563,7 +1563,7 @@ impl App {
                         key
                     )?;
 
-                    self.debug_log(&"Pull - Stored attachment in database".to_string());
+                    self.debug_log("Pull - Stored attachment in database");
 
                     // Add to note's attachment array
                     note_attachments.push(Attachment {
@@ -1575,7 +1575,7 @@ impl App {
                         thumbnail_data: None,
                     });
 
-                    self.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
+                    self.debug_log("Pull - Added attachment to note_attachments array");
                 } else {
                     self.debug_log(&format!("Pull - Attachment data NOT found in map for {}", attachment_ref.id));
                 }

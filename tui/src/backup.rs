@@ -1,7 +1,7 @@
-/// Encrypted backup functionality (compatible with web app v2.1 format)
-///
-/// Creates JWE-encrypted backups where each record is a JWE compact serialization token.
-/// Format matches the web app's backup format for cross-platform compatibility.
+//! Encrypted backup functionality (compatible with web app v2.1 format)
+//!
+//! Creates JWE-encrypted backups where each record is a JWE compact serialization token.
+//! Format matches the web app's backup format for cross-platform compatibility.
 
 use anyhow::{Context, Result, anyhow};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
@@ -51,6 +51,7 @@ pub struct BackupEncryption {
 /// Record types in backup
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
+#[allow(clippy::large_enum_variant)]
 enum BackupRecord {
     #[serde(rename = "note")]
     Note(BackupNote),

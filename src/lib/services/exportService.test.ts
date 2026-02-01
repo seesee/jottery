@@ -106,11 +106,11 @@ describe('exportService', () => {
     });
 
     it('should not include deleted notes', async () => {
-      const note1 = await noteService.createNote('Active note', ['active']);
-      const note2 = await noteService.createNote('Deleted note', ['deleted']);
+      await noteService.createNote('Active note', ['active']);
+      const noteToDelete = await noteService.createNote('Deleted note', ['deleted']);
 
       // Delete the second note
-      await noteService.deleteNote(note2.id);
+      await noteService.deleteNote(noteToDelete.id);
 
       const exportData = await exportAllNotes();
 
@@ -203,8 +203,8 @@ describe('exportService', () => {
       } as unknown as HTMLAnchorElement);
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => ({} as Node));
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => ({} as Node));
-      vi.spyOn(URL, 'createObjectURL').mockImplementation((blob: Blob) => {
-        blobContent = blob;
+      vi.spyOn(URL, 'createObjectURL').mockImplementation((obj: Blob | MediaSource) => {
+        blobContent = obj as Blob;
         return 'blob:test';
       });
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});

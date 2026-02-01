@@ -112,7 +112,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 .collect();
 
             // Extract title (first line)
-            let title_raw = content_lines.get(0).unwrap_or(&"Untitled");
+            let title_raw = content_lines.first().unwrap_or(&"Untitled");
             let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
                 strip_markdown(title_raw)
             } else {
@@ -504,7 +504,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                         // Get first non-empty line as title
                         n.content.lines()
                             .find(|line| !line.trim().is_empty())
-                            .map(|line| strip_markdown(line))
+                            .map(strip_markdown)
                             .unwrap_or_else(|| "Untitled".to_string())
                     })
             };
@@ -1263,7 +1263,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             ]));
 
             // Colour
-            let color_str = note.color.as_ref().map(|c| c.as_str()).unwrap_or("None");
+            let color_str = note.color.as_deref().unwrap_or("None");
             info_lines.push(Line::from(vec![
                 Span::styled("Colour:      ", Style::default().fg(app.color_scheme.muted)),
                 Span::styled(color_str, Style::default().fg(app.color_scheme.foreground)),

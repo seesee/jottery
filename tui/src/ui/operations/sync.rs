@@ -551,7 +551,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     key
                 )?;
 
-                app.debug_log(&"Pull - Stored attachment in database".to_string());
+                app.debug_log("Pull - Stored attachment in database");
 
                 // Add to note's attachment array
                 note_attachments.push(Attachment {
@@ -563,7 +563,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     thumbnail_data: None,
                 });
 
-                app.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
+                app.debug_log("Pull - Added attachment to note_attachments array");
             } else {
                 app.debug_log(&format!("Pull - Attachment data NOT found in map for {} - will try to preserve from local", attachment_ref.id));
                 // Server didn't send data because we said we had it - mark for local preservation

@@ -1,5 +1,5 @@
-/// JSON import/export functionality
-/// Matches web app export format
+//! JSON import/export functionality
+//! Matches web app export format
 
 use anyhow::{Context, Result};
 use chrono::Utc;

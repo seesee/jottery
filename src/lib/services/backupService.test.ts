@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createBackup, downloadBackup, type BackupData, type BackupProgressCallback } from './backupService';
+import { createBackup, downloadBackup, type BackupProgressCallback } from './backupService';
 import { noteService } from './noteService';
 import { keyManager } from './keyManager';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
@@ -89,8 +89,8 @@ describe('backupService', () => {
 
     it('should include all notes in backup', async () => {
       // Create multiple test notes
-      const note1 = await noteService.createNote('Note 1', ['tag1']);
-      const note2 = await noteService.createNote('Note 2', ['tag2']);
+      await noteService.createNote('Note 1', ['tag1']);
+      await noteService.createNote('Note 2', ['tag2']);
 
       const backup = await createBackup();
 
@@ -159,8 +159,8 @@ describe('backupService', () => {
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node);
 
       let blobContent: Blob | undefined;
-      vi.spyOn(URL, 'createObjectURL').mockImplementation((blob: Blob) => {
-        blobContent = blob;
+      vi.spyOn(URL, 'createObjectURL').mockImplementation((obj: Blob | MediaSource) => {
+        blobContent = obj as Blob;
         return 'blob:test';
       });
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});

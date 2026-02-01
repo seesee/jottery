@@ -33,7 +33,7 @@ impl<'a> NoteRepository<'a> {
 
         // Serialize hash chain (if present)
         let hash_chain_json = note.hash_chain.as_ref()
-            .map(|c| serde_json::to_string(c))
+            .map(serde_json::to_string)
             .transpose()
             .context("Failed to serialize hash chain")?;
 
@@ -190,7 +190,7 @@ impl<'a> NoteRepository<'a> {
 
         // Serialize hash chain (if present)
         let hash_chain_json = note.hash_chain.as_ref()
-            .map(|c| serde_json::to_string(c))
+            .map(serde_json::to_string)
             .transpose()
             .context("Failed to serialize hash chain")?;
 
