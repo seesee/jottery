@@ -4,7 +4,6 @@ use axum::{
     routing::{delete, get, patch, post},
     Router,
 };
-use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
@@ -231,13 +230,23 @@ async fn main() {
         app
     };
 
-    // Start server
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-    tracing::info!("Listening on {}", addr);
+    // Start server - try IPv6 first (which also accepts IPv4 on most systems),
+    // fall back to IPv4-only if IPv6 is not available
+    let addr_v6 = format!("[::]:{}", config.port);
+    let addr_v4 = format!("0.0.0.0:{}", config.port);
 
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .expect("Failed to bind to address");
+    let listener = match tokio::net::TcpListener::bind(&addr_v6).await {
+        Ok(l) => {
+            tracing::info!("Listening on {} (IPv4 and IPv6)", addr_v6);
+            l
+        }
+        Err(_) => {
+            tracing::info!("IPv6 not available, listening on {} (IPv4 only)", addr_v4);
+            tokio::net::TcpListener::bind(&addr_v4)
+                .await
+                .expect("Failed to bind to address")
+        }
+    };
 
     axum::serve(listener, app)
         .await

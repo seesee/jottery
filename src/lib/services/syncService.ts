@@ -42,8 +42,12 @@ import {
 // Debounce delay for background sync (30 seconds of inactivity)
 const BACKGROUND_SYNC_DEBOUNCE_MS = 30000;
 
+// Maximum time a sync can run before we consider it stuck (2 minutes)
+const SYNC_STUCK_TIMEOUT_MS = 120000;
+
 class SyncService {
   private isSyncing = false;
+  private syncStartTime = 0; // Timestamp when sync started
   private autoSyncTimer?: number;
   private backgroundSyncTimer?: number;
   private eventSource: EventSource | null = null;
@@ -53,6 +57,25 @@ class SyncService {
   private savedAutoSyncInterval?: number; // Saved interval when SSE suspends periodic sync
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
+
+  /**
+   * Check if a sync appears to be stuck (running for too long)
+   * and reset the state if needed
+   */
+  private checkAndResetStuckSync(): boolean {
+    if (this.isSyncing && this.syncStartTime > 0) {
+      const elapsed = Date.now() - this.syncStartTime;
+      if (elapsed > SYNC_STUCK_TIMEOUT_MS) {
+        console.warn(`[SyncService] Sync appears stuck (${Math.round(elapsed / 1000)}s), resetting state`);
+        this.isSyncing = false;
+        this.syncStartTime = 0;
+        isSyncingStore.set(false);
+        syncProgress.set({ total: 0, completed: 0 });
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Check if the browser reports being online
@@ -220,12 +243,16 @@ class SyncService {
       return { success: false, error: 'Database not available' };
     }
 
+    // Check if a previous sync got stuck and reset if needed
+    this.checkAndResetStuckSync();
+
     if (this.isSyncing) {
       return { success: false, error: 'Sync already in progress' };
     }
 
     console.log('[SyncService] Starting sync', forceFullSync ? '(force full)' : '');
     this.isSyncing = true;
+    this.syncStartTime = Date.now();
     isSyncingStore.set(true);
     // Reset progress
     syncProgress.set({ total: 0, completed: 0 });
@@ -248,7 +275,7 @@ class SyncService {
       try {
         await getServerStatus(metadata.syncEndpoint || '', apiKey);
       } catch (error) {
-        console.error('[SyncService] Server status check failed:', error);
+        console.warn('[SyncService] Server status check failed:', error);
         // Continue anyway - server might be slow but still functional
       }
 
@@ -311,7 +338,7 @@ class SyncService {
 
       return { success: true };
     } catch (error) {
-      console.error('Sync failed:', error);
+      console.error('[SyncService] Sync failed:', error);
       // Clear refresh flag immediately on error (no batches loading)
       isSyncRefreshing.set(false);
       return {
@@ -320,6 +347,7 @@ class SyncService {
       };
     } finally {
       this.isSyncing = false;
+      this.syncStartTime = 0;
       isSyncingStore.set(false);
       // Reset progress after sync completes
       syncProgress.set({ total: 0, completed: 0 });

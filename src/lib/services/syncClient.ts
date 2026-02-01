@@ -17,6 +17,20 @@ import type {
 import { toast } from '../utils/toast.svelte';
 
 const API_VERSION = 'v1';
+const DEFAULT_TIMEOUT_MS = 30000; // 30 second timeout for fetch requests
+
+/**
+ * Create a fetch request with timeout
+ */
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  return fetch(url, {
+    ...options,
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeoutId));
+}
 
 /**
  * Normalize endpoint URL by removing trailing slash
@@ -72,7 +86,7 @@ export async function registerDevice(
     deviceType: 'web',
   };
 
-  const response = await fetch(`${endpoint}/api/${API_VERSION}/auth/register`, {
+  const response = await fetchWithTimeout(`${endpoint}/api/${API_VERSION}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
@@ -100,7 +114,8 @@ export async function pushToServer(
 ): Promise<SyncPushResponse> {
   endpoint = normalizeEndpoint(endpoint);
 
-  const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/push`, {
+  const url = `${endpoint}/api/${API_VERSION}/sync/push`;
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -127,7 +142,8 @@ export async function pullFromServer(
 ): Promise<SyncPullResponse> {
   endpoint = normalizeEndpoint(endpoint);
 
-  const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/pull`, {
+  const url = `${endpoint}/api/${API_VERSION}/sync/pull`;
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -153,12 +169,13 @@ export async function getServerStatus(
 ): Promise<SyncStatusResponse> {
   endpoint = normalizeEndpoint(endpoint);
 
-  const response = await fetch(`${endpoint}/api/${API_VERSION}/sync/status`, {
+  const url = `${endpoint}/api/${API_VERSION}/sync/status`;
+  const response = await fetchWithTimeout(url, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
     },
-  });
+  }, 10000); // 10 second timeout for status check
 
   if (!response.ok) {
     const errorText = await response.text();
