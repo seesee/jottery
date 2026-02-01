@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT modified_at, server_version, content_hash, parent_hash, hash_chain FROM notes WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "modified_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "server_version",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "content_hash",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_hash",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "hash_chain",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "6cf64dea5a1e37cee1fd1fb1b8b1b89baa6f0d3707934b644cb67e134e41abcf"
+}
