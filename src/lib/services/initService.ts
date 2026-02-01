@@ -356,16 +356,16 @@ export async function restoreFromBackup(
   console.log('[RestoreFromBackup] Verifying password...');
 
   const verification = await verifyBackupPassword(backup, password);
-  if (!verification.valid || !verification.key) {
+  if (!verification.valid || !verification.key || !verification.keyBytes) {
     console.error('[RestoreFromBackup] Password verification failed:', verification.error);
     throw new Error(verification.error || 'Incorrect password');
   }
 
   console.log('[RestoreFromBackup] Password verified successfully');
 
-  // Step 2: Restore all data from backup (passing the verified key)
+  // Step 2: Restore all data from backup (passing the keyBytes for JWE decryption)
   console.log('[RestoreFromBackup] Restoring data...');
-  await restoreBackupData(backup, verification.key, onProgress);
+  await restoreBackupData(backup, verification.keyBytes, onProgress);
 
   // Step 3: Store the master key (we already verified it works)
   const masterKey: MasterKey = {

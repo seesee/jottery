@@ -1,23 +1,29 @@
 /**
- * Encrypted backup and restore service (v2.0)
+ * Encrypted backup and restore service (v2.1)
  *
- * Creates fully encrypted backups where each record is individually encrypted.
- * The backup file only reveals the encryption parameters and record count -
- * all data (including types, metadata, and content) is encrypted.
+ * Creates fully encrypted backups where each record is a JWE (JSON Web Encryption)
+ * token using RFC 7516 standard. This provides:
+ * - Standardized encryption format
+ * - Self-describing algorithm headers
+ * - Interoperability with other JWE-compatible tools
+ * - Future-proofing for features like note sharing
  *
  * Format:
  * {
- *   version: "2.0",
+ *   version: "2.1",
  *   type: "jottery-encrypted-backup",
  *   createdAt: "...",
  *   encryption: { salt, iterations, algorithm },
  *   data: [
- *     { iv, ciphertext },  // Each is an encrypted { type, data } object
+ *     "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..IV.ciphertext.tag",
  *     ...
  *   ]
  * }
+ *
+ * Each JWE decrypts to: { type: "note"|"attachment"|..., data: {...} }
  */
 
+import { CompactEncrypt, compactDecrypt } from 'jose';
 import type {
   Note,
   NoteVersion,
@@ -25,7 +31,6 @@ import type {
   UserSettings,
   EncryptionMetadata,
   SyncMetadata,
-  EncryptionResult,
 } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -33,13 +38,17 @@ import { settingsRepository } from './settingsRepository';
 import { encryptionRepository } from './encryptionRepository';
 import { syncRepository } from './syncRepository';
 import { getDB, STORES } from './db';
-import { cryptoService, encryptJSON, decryptJSON } from './crypto';
+import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { base64ToUint8Array } from '../utils/base64';
 
-const BACKUP_VERSION = '2.0';
+const BACKUP_VERSION = '2.1';
 const BACKUP_TYPE = 'jottery-encrypted-backup';
 const BACKUP_FILE_EXTENSION = '.jottery-backup';
+
+// JWE algorithms
+const JWE_ALG = 'dir'; // Direct encryption (no key wrapping)
+const JWE_ENC = 'A256GCM'; // AES-256-GCM content encryption
 
 /**
  * Record types stored in the backup
@@ -70,14 +79,14 @@ interface AttachmentRecord {
 }
 
 /**
- * Backup file structure (v2.0)
+ * Backup file structure (v2.1 - JWE format)
  */
 export interface BackupData {
   version: string;
   type: typeof BACKUP_TYPE;
   createdAt: string;
   encryption: EncryptionMetadata;
-  data: EncryptionResult[]; // Array of encrypted records
+  data: string[]; // Array of JWE compact serialization strings
 }
 
 /**
@@ -99,9 +108,39 @@ export type RestoreProgressCallback = (progress: {
 }) => void;
 
 /**
+ * Export CryptoKey as raw bytes for use with jose
+ */
+async function exportKeyAsBytes(key: CryptoKey): Promise<Uint8Array> {
+  const rawKey = await crypto.subtle.exportKey('raw', key);
+  return new Uint8Array(rawKey);
+}
+
+/**
+ * Encrypt a record as a JWE compact serialization string
+ */
+async function encryptRecordAsJWE(record: BackupRecord, keyBytes: Uint8Array): Promise<string> {
+  const plaintext = new TextEncoder().encode(JSON.stringify(record));
+
+  const jwe = await new CompactEncrypt(plaintext)
+    .setProtectedHeader({ alg: JWE_ALG, enc: JWE_ENC })
+    .encrypt(keyBytes);
+
+  return jwe;
+}
+
+/**
+ * Decrypt a JWE compact serialization string to a record
+ */
+async function decryptJWEToRecord(jwe: string, keyBytes: Uint8Array): Promise<BackupRecord> {
+  const { plaintext } = await compactDecrypt(jwe, keyBytes);
+  const json = new TextDecoder().decode(plaintext);
+  return JSON.parse(json);
+}
+
+/**
  * Create an encrypted backup of all data
  *
- * Each record (note, attachment, version, etc.) is individually encrypted.
+ * Each record (note, attachment, version, etc.) is encrypted as a JWE token.
  * The backup file only reveals the record count and encryption parameters.
  */
 export async function createBackup(): Promise<BackupData> {
@@ -117,14 +156,17 @@ export async function createBackup(): Promise<BackupData> {
     throw new Error('No encryption metadata found. Application not initialised.');
   }
 
-  const encryptedRecords: EncryptionResult[] = [];
+  // Export key as raw bytes for jose
+  const keyBytes = await exportKeyAsBytes(masterKey.key);
+
+  const jweRecords: string[] = [];
 
   // Encrypt all notes
   const notes = await noteRepository.getAll();
   for (const note of notes) {
     const record: BackupRecord = { type: 'note', data: note };
-    const encrypted = await encryptJSON(record, masterKey.key);
-    encryptedRecords.push(encrypted);
+    const jwe = await encryptRecordAsJWE(record, keyBytes);
+    jweRecords.push(jwe);
   }
 
   // Encrypt all attachments with their blob data
@@ -140,8 +182,8 @@ export async function createBackup(): Promise<BackupData> {
         thumbnail: thumbnail ? arrayBufferToBase64(thumbnail) : undefined,
       };
       const record: BackupRecord = { type: 'attachment', data: attachmentData };
-      const encrypted = await encryptJSON(record, masterKey.key);
-      encryptedRecords.push(encrypted);
+      const jwe = await encryptRecordAsJWE(record, keyBytes);
+      jweRecords.push(jwe);
     }
   }
 
@@ -150,8 +192,8 @@ export async function createBackup(): Promise<BackupData> {
   const versions = await db.getAll(STORES.NOTE_VERSIONS);
   for (const version of versions) {
     const record: BackupRecord = { type: 'version', data: version };
-    const encrypted = await encryptJSON(record, masterKey.key);
-    encryptedRecords.push(encrypted);
+    const jwe = await encryptRecordAsJWE(record, keyBytes);
+    jweRecords.push(jwe);
   }
 
   // Encrypt saved searches
@@ -159,8 +201,8 @@ export async function createBackup(): Promise<BackupData> {
     const savedSearches = await db.getAll(STORES.SAVED_SEARCHES);
     for (const savedSearch of savedSearches) {
       const record: BackupRecord = { type: 'saved_search', data: savedSearch };
-      const encrypted = await encryptJSON(record, masterKey.key);
-      encryptedRecords.push(encrypted);
+      const jwe = await encryptRecordAsJWE(record, keyBytes);
+      jweRecords.push(jwe);
     }
   } catch {
     // Store might not exist in older databases
@@ -170,15 +212,15 @@ export async function createBackup(): Promise<BackupData> {
   // Encrypt settings
   const settings = await settingsRepository.get();
   const settingsRecord: BackupRecord = { type: 'settings', data: settings };
-  const encryptedSettings = await encryptJSON(settingsRecord, masterKey.key);
-  encryptedRecords.push(encryptedSettings);
+  const settingsJwe = await encryptRecordAsJWE(settingsRecord, keyBytes);
+  jweRecords.push(settingsJwe);
 
   // Encrypt sync metadata (if present)
   const syncMetadata = await syncRepository.getMetadata();
   if (syncMetadata) {
     const syncRecord: BackupRecord = { type: 'sync_metadata', data: syncMetadata };
-    const encrypted = await encryptJSON(syncRecord, masterKey.key);
-    encryptedRecords.push(encrypted);
+    const jwe = await encryptRecordAsJWE(syncRecord, keyBytes);
+    jweRecords.push(jwe);
   }
 
   const backup: BackupData = {
@@ -186,7 +228,7 @@ export async function createBackup(): Promise<BackupData> {
     type: BACKUP_TYPE,
     createdAt: new Date().toISOString(),
     encryption,
-    data: encryptedRecords,
+    data: jweRecords,
   };
 
   return backup;
@@ -199,7 +241,7 @@ export async function createBackup(): Promise<BackupData> {
  * - JSON structure is valid
  * - Required fields are present
  * - Version is compatible
- * - Data is an array of encrypted records
+ * - Data is an array of JWE strings
  */
 export async function validateBackup(file: File): Promise<BackupValidationResult> {
   try {
@@ -239,10 +281,9 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    // Check version compatibility (support v1.x and v2.x)
-    const [major] = backup.version.split('.');
-    const majorVersion = parseInt(major, 10);
-    if (majorVersion > 2) {
+    // Check version compatibility
+    const [major, minor] = backup.version.split('.').map(n => parseInt(n, 10));
+    if (major > 2 || (major === 2 && minor > 1)) {
       return {
         valid: false,
         error: `Backup version ${backup.version} is not supported. Please update Jottery.`,
@@ -270,21 +311,28 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    // v2.0: data is an array of encrypted records
-    if (majorVersion >= 2) {
-      if (!Array.isArray(backup.data)) {
-        return {
-          valid: false,
-          error: 'Invalid backup file. Data section must be an array.',
-        };
-      }
+    if (!Array.isArray(backup.data)) {
+      return {
+        valid: false,
+        error: 'Invalid backup file. Data section must be an array.',
+      };
+    }
 
-      // Verify each record has the expected encrypted structure
+    // v2.1: data is an array of JWE strings
+    if (major === 2 && minor >= 1) {
       for (const record of backup.data) {
-        if (!record.iv || !record.ciphertext) {
+        if (typeof record !== 'string') {
           return {
             valid: false,
-            error: 'Invalid backup file. Encrypted records are malformed.',
+            error: 'Invalid backup file. Expected JWE tokens as strings.',
+          };
+        }
+        // Basic JWE format check (5 parts separated by dots)
+        const parts = record.split('.');
+        if (parts.length !== 5) {
+          return {
+            valid: false,
+            error: 'Invalid backup file. Malformed JWE token.',
           };
         }
       }
@@ -306,12 +354,12 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
  * Verify password against a backup
  *
  * Derives the key using the backup's encryption metadata and attempts
- * to decrypt the first record to verify the password.
+ * to decrypt the first JWE record to verify the password.
  */
 export async function verifyBackupPassword(
   backup: BackupData,
   password: string
-): Promise<{ valid: boolean; key?: CryptoKey; error?: string }> {
+): Promise<{ valid: boolean; key?: CryptoKey; keyBytes?: Uint8Array; error?: string }> {
   try {
     // Derive key using backup's salt and iterations
     const salt = base64ToUint8Array(backup.encryption.salt);
@@ -322,11 +370,13 @@ export async function verifyBackupPassword(
       algorithm: 'PBKDF2',
     });
 
+    // Export key as raw bytes for jose
+    const keyBytes = await exportKeyAsBytes(key);
+
     // Verify by attempting to decrypt the first record
     if (backup.data.length > 0) {
       try {
-        const firstRecord = backup.data[0];
-        await decryptJSON<BackupRecord>(firstRecord, key);
+        await decryptJWEToRecord(backup.data[0], keyBytes);
       } catch {
         return {
           valid: false,
@@ -335,7 +385,7 @@ export async function verifyBackupPassword(
       }
     }
 
-    return { valid: true, key };
+    return { valid: true, key, keyBytes };
   } catch (error) {
     return {
       valid: false,
@@ -347,14 +397,14 @@ export async function verifyBackupPassword(
 /**
  * Restore data from a backup
  *
- * Decrypts each record and restores based on its type.
+ * Decrypts each JWE record and restores based on its type.
  *
  * IMPORTANT: This should only be called on a fresh/empty database.
  * Existing data will be overwritten.
  */
 export async function restoreBackup(
   backup: BackupData,
-  key: CryptoKey,
+  keyBytes: Uint8Array,
   onProgress?: RestoreProgressCallback
 ): Promise<void> {
   const db = getDB();
@@ -369,10 +419,10 @@ export async function restoreBackup(
 
   // 2. Decrypt and restore each record
   for (let i = 0; i < backup.data.length; i++) {
-    const encryptedRecord = backup.data[i];
+    const jwe = backup.data[i];
 
     try {
-      const record = await decryptJSON<BackupRecord>(encryptedRecord, key);
+      const record = await decryptJWEToRecord(jwe, keyBytes);
 
       onProgress?.({ phase: 'restoring', current: i + 1, total });
 
@@ -448,7 +498,7 @@ export function downloadBackup(backup: BackupData): void {
 /**
  * Get backup file stats without full validation
  *
- * For v2.0 backups, we can only show record count (types are encrypted).
+ * For v2.x backups, we can only show record count (types are encrypted).
  */
 export async function getBackupStats(file: File): Promise<{
   valid: boolean;
