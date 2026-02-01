@@ -430,7 +430,12 @@
         "warningText": "Se usi una password diversa, le note non verranno decifrate.",
         "placeholder": "Incolla credenziali base64 qui...",
         "button": "📥 Importa e blocca",
-        "importing": "Importazione..."
+        "importing": "Importazione...",
+        "deviceName": {
+          "label": "Nome dispositivo",
+          "placeholder": "Il mio laptop",
+          "help": "Un nome per identificare questo dispositivo nel tuo account"
+        }
       },
       "error": "Errore"
     },
@@ -855,7 +860,13 @@
         "button": "Importa credenziali",
         "importing": "Importazione...",
         "emptyError": "Incolla le credenziali",
-        "failed": "Importazione credenziali non riuscita"
+        "failed": "Importazione credenziali non riuscita",
+        "deviceName": {
+          "label": "Nome dispositivo",
+          "placeholder": "Il mio laptop",
+          "help": "Un nome per identificare questo dispositivo nel tuo account"
+        },
+        "deviceNameRequired": "Inserisci un nome dispositivo"
       },
       "completeInSettings": "Completa la configurazione della sincronizzazione in Impostazioni > Sync dopo aver creato la password."
     },

@@ -430,7 +430,12 @@
         "warningText": "Als u een ander wachtwoord gebruikt, worden notities niet ontsleuteld.",
         "placeholder": "Plak hier base64-inloggegevens...",
         "button": "📥 Importeren en vergrendelen",
-        "importing": "Importeren..."
+        "importing": "Importeren...",
+        "deviceName": {
+          "label": "Apparaatnaam",
+          "placeholder": "Mijn laptop",
+          "help": "Een naam om dit apparaat in uw account te identificeren"
+        }
       },
       "error": "Fout"
     },
@@ -855,7 +860,13 @@
         "button": "Inloggegevens importeren",
         "importing": "Importeren...",
         "emptyError": "Plak de inloggegevens",
-        "failed": "Importeren van inloggegevens mislukt"
+        "failed": "Importeren van inloggegevens mislukt",
+        "deviceName": {
+          "label": "Apparaatnaam",
+          "placeholder": "Mijn laptop",
+          "help": "Een naam om dit apparaat in uw account te identificeren"
+        },
+        "deviceNameRequired": "Voer een apparaatnaam in"
       },
       "completeInSettings": "Voltooi de sync-instellingen in Instellingen > Sync na het aanmaken van je wachtwoord."
     },

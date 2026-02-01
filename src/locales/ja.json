@@ -430,7 +430,12 @@
         "warningText": "異なるパスワードを使用すると、ノートを復号化できません。",
         "placeholder": "base64認証情報をここに貼り付け...",
         "button": "📥 インポートしてロック",
-        "importing": "インポート中..."
+        "importing": "インポート中...",
+        "deviceName": {
+          "label": "デバイス名",
+          "placeholder": "マイノートPC",
+          "help": "アカウントでこのデバイスを識別するための名前"
+        }
       },
       "error": "エラー"
     },
@@ -855,7 +860,13 @@
         "button": "認証情報をインポート",
         "importing": "インポート中...",
         "emptyError": "認証情報を貼り付けてください",
-        "failed": "認証情報のインポートに失敗しました"
+        "failed": "認証情報のインポートに失敗しました",
+        "deviceName": {
+          "label": "デバイス名",
+          "placeholder": "マイノートPC",
+          "help": "アカウントでこのデバイスを識別するための名前"
+        },
+        "deviceNameRequired": "デバイス名を入力してください"
       },
       "completeInSettings": "パスワード作成後、設定 > 同期で同期設定を完了してください。"
     },

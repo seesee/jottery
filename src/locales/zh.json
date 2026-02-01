@@ -430,7 +430,12 @@
         "warningText": "如果使用不同的密码,笔记将无法解密。",
         "placeholder": "在此粘贴 base64 凭据...",
         "button": "📥 导入并锁定",
-        "importing": "导入中..."
+        "importing": "导入中...",
+        "deviceName": {
+          "label": "设备名称",
+          "placeholder": "我的笔记本",
+          "help": "用于在您的账户中识别此设备的名称"
+        }
       },
       "error": "错误"
     },
@@ -855,7 +860,13 @@
         "button": "导入凭据",
         "importing": "正在导入...",
         "emptyError": "请粘贴凭据",
-        "failed": "导入凭据失败"
+        "failed": "导入凭据失败",
+        "deviceName": {
+          "label": "设备名称",
+          "placeholder": "我的笔记本",
+          "help": "用于在您的账户中识别此设备的名称"
+        },
+        "deviceNameRequired": "请输入设备名称"
       },
       "completeInSettings": "创建密码后，在设置 > 同步中完成同步设置。"
     },

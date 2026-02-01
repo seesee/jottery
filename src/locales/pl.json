@@ -430,7 +430,12 @@
         "warningText": "Jeśli użyjesz innego hasła, notatki nie zostaną odszyfrowane.",
         "placeholder": "Wklej tutaj dane uwierzytelniające base64...",
         "button": "📥 Importuj i zablokuj",
-        "importing": "Importowanie..."
+        "importing": "Importowanie...",
+        "deviceName": {
+          "label": "Nazwa urządzenia",
+          "placeholder": "Mój laptop",
+          "help": "Nazwa do identyfikacji tego urządzenia na Twoim koncie"
+        }
       },
       "error": "Błąd"
     },
@@ -855,7 +860,13 @@
         "button": "Importuj dane logowania",
         "importing": "Importowanie...",
         "emptyError": "Proszę wkleić dane logowania",
-        "failed": "Nie udało się zaimportować danych logowania"
+        "failed": "Nie udało się zaimportować danych logowania",
+        "deviceName": {
+          "label": "Nazwa urządzenia",
+          "placeholder": "Mój laptop",
+          "help": "Nazwa do identyfikacji tego urządzenia na Twoim koncie"
+        },
+        "deviceNameRequired": "Wprowadź nazwę urządzenia"
       },
       "completeInSettings": "Dokończ konfigurację synchronizacji w Ustawienia > Sync po utworzeniu hasła."
     },

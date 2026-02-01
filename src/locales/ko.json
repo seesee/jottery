@@ -430,7 +430,12 @@
         "warningText": "다른 비밀번호를 사용하면 노트가 해독되지 않습니다.",
         "placeholder": "여기에 base64 자격 증명을 붙여넣으세요...",
         "button": "📥 가져오기 및 잠금",
-        "importing": "가져오는 중..."
+        "importing": "가져오는 중...",
+        "deviceName": {
+          "label": "기기 이름",
+          "placeholder": "내 노트북",
+          "help": "계정에서 이 기기를 식별하기 위한 이름"
+        }
       },
       "error": "오류"
     },
@@ -855,7 +860,13 @@
         "button": "자격 증명 가져오기",
         "importing": "가져오는 중...",
         "emptyError": "자격 증명을 붙여넣으세요",
-        "failed": "자격 증명 가져오기 실패"
+        "failed": "자격 증명 가져오기 실패",
+        "deviceName": {
+          "label": "기기 이름",
+          "placeholder": "내 노트북",
+          "help": "계정에서 이 기기를 식별하기 위한 이름"
+        },
+        "deviceNameRequired": "기기 이름을 입력하세요"
       },
       "completeInSettings": "비밀번호 생성 후 설정 > 동기화에서 동기화 설정을 완료하세요."
     },

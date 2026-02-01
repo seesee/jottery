@@ -430,7 +430,12 @@
         "warningText": "Se você usar uma senha diferente, as notas não serão descriptografadas.",
         "placeholder": "Cole credenciais base64 aqui...",
         "button": "📥 Importar e bloquear",
-        "importing": "Importando..."
+        "importing": "Importando...",
+        "deviceName": {
+          "label": "Nome do dispositivo",
+          "placeholder": "Meu laptop",
+          "help": "Um nome para identificar este dispositivo na sua conta"
+        }
       },
       "error": "Erro"
     },
@@ -855,7 +860,13 @@
         "button": "Importar credenciais",
         "importing": "Importando...",
         "emptyError": "Por favor, cole as credenciais",
-        "failed": "Falha ao importar credenciais"
+        "failed": "Falha ao importar credenciais",
+        "deviceName": {
+          "label": "Nome do dispositivo",
+          "placeholder": "Meu laptop",
+          "help": "Um nome para identificar este dispositivo na sua conta"
+        },
+        "deviceNameRequired": "Por favor, insira um nome de dispositivo"
       },
       "completeInSettings": "Complete a configuração de sincronização em Configurações > Sync após criar sua senha."
     },

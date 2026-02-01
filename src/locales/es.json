@@ -430,7 +430,12 @@
         "warningText": "Si usa una contraseña diferente, las notas no se descifrarán.",
         "placeholder": "Pegue credenciales en base64 aquí...",
         "button": "📥 Importar y bloquear",
-        "importing": "Importando..."
+        "importing": "Importando...",
+        "deviceName": {
+          "label": "Nombre del dispositivo",
+          "placeholder": "Mi portátil",
+          "help": "Un nombre para identificar este dispositivo en tu cuenta"
+        }
       },
       "error": "Error"
     },
@@ -855,7 +860,13 @@
         "button": "Importar credenciales",
         "importing": "Importando...",
         "emptyError": "Por favor pegue las credenciales",
-        "failed": "Error al importar credenciales"
+        "failed": "Error al importar credenciales",
+        "deviceName": {
+          "label": "Nombre del dispositivo",
+          "placeholder": "Mi portátil",
+          "help": "Un nombre para identificar este dispositivo en tu cuenta"
+        },
+        "deviceNameRequired": "Por favor, introduce un nombre de dispositivo"
       },
       "completeInSettings": "Complete la configuración de sincronización en Configuración > Sync después de crear su contraseña."
     },

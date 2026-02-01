@@ -430,7 +430,12 @@
         "warningText": "Farklı bir şifre kullanırsanız, notların şifresi çözülmez.",
         "placeholder": "Buraya base64 kimlik bilgilerini yapıştırın...",
         "button": "📥 İçe aktar ve kilitle",
-        "importing": "İçe aktarılıyor..."
+        "importing": "İçe aktarılıyor...",
+        "deviceName": {
+          "label": "Cihaz adı",
+          "placeholder": "Dizüstü bilgisayarım",
+          "help": "Bu cihazı hesabınızda tanımlamak için bir ad"
+        }
       },
       "error": "Hata"
     },
@@ -855,7 +860,13 @@
         "button": "Kimlik bilgilerini içe aktar",
         "importing": "İçe aktarılıyor...",
         "emptyError": "Lütfen kimlik bilgilerini yapıştırın",
-        "failed": "Kimlik bilgileri içe aktarılamadı"
+        "failed": "Kimlik bilgileri içe aktarılamadı",
+        "deviceName": {
+          "label": "Cihaz adı",
+          "placeholder": "Dizüstü bilgisayarım",
+          "help": "Bu cihazı hesabınızda tanımlamak için bir ad"
+        },
+        "deviceNameRequired": "Lütfen bir cihaz adı girin"
       },
       "completeInSettings": "Şifrenizi oluşturduktan sonra Ayarlar > Sync'de senkronizasyon kurulumunu tamamlayın."
     },

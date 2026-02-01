@@ -430,7 +430,12 @@
         "warningText": "Wenn Sie ein anderes Passwort verwenden, werden die Notizen nicht entschlüsselt.",
         "placeholder": "Base64-Anmeldedaten hier einfügen...",
         "button": "📥 Importieren und sperren",
-        "importing": "Wird importiert..."
+        "importing": "Wird importiert...",
+        "deviceName": {
+          "label": "Gerätename",
+          "placeholder": "Mein Laptop",
+          "help": "Ein Name zur Identifizierung dieses Geräts in Ihrem Konto"
+        }
       },
       "error": "Fehler"
     },
@@ -855,7 +860,13 @@
         "button": "Anmeldedaten importieren",
         "importing": "Wird importiert...",
         "emptyError": "Bitte fügen Sie die Anmeldedaten ein",
-        "failed": "Import der Anmeldedaten fehlgeschlagen"
+        "failed": "Import der Anmeldedaten fehlgeschlagen",
+        "deviceName": {
+          "label": "Gerätename",
+          "placeholder": "Mein Laptop",
+          "help": "Ein Name zur Identifizierung dieses Geräts in Ihrem Konto"
+        },
+        "deviceNameRequired": "Bitte geben Sie einen Gerätenamen ein"
       },
       "completeInSettings": "Schließen Sie die Sync-Einrichtung unter Einstellungen > Sync ab, nachdem Sie Ihr Passwort erstellt haben."
     },

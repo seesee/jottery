@@ -430,7 +430,12 @@
         "warningText": "Si vous utilisez un mot de passe différent, les notes ne seront pas déchiffrées.",
         "placeholder": "Collez les identifiants en base64 ici...",
         "button": "📥 Importer et verrouiller",
-        "importing": "Importation..."
+        "importing": "Importation...",
+        "deviceName": {
+          "label": "Nom de l'appareil",
+          "placeholder": "Mon ordinateur",
+          "help": "Un nom pour identifier cet appareil dans votre compte"
+        }
       },
       "error": "Erreur"
     },
@@ -855,7 +860,13 @@
         "button": "Importer les identifiants",
         "importing": "Importation...",
         "emptyError": "Veuillez coller les identifiants",
-        "failed": "Échec de l'importation des identifiants"
+        "failed": "Échec de l'importation des identifiants",
+        "deviceName": {
+          "label": "Nom de l'appareil",
+          "placeholder": "Mon ordinateur",
+          "help": "Un nom pour identifier cet appareil dans votre compte"
+        },
+        "deviceNameRequired": "Veuillez entrer un nom d'appareil"
       },
       "completeInSettings": "Terminez la configuration de la synchronisation dans Paramètres > Sync après avoir créé votre mot de passe."
     },

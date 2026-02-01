@@ -417,7 +417,12 @@
         "warningText": "If you use a different password, notes will not decrypt.",
         "placeholder": "Paste base64 credentials here...",
         "button": "📥 Import and lock",
-        "importing": "Importing..."
+        "importing": "Importing...",
+        "deviceName": {
+          "label": "Device name",
+          "placeholder": "My Laptop",
+          "help": "A name to identify this device in your account"
+        }
       },
       "error": "Error"
     },
@@ -841,7 +846,13 @@
         "button": "Import Credentials",
         "importing": "Importing...",
         "emptyError": "Please paste the credentials",
-        "failed": "Failed to import credentials"
+        "failed": "Failed to import credentials",
+        "deviceName": {
+          "label": "Device name",
+          "placeholder": "My Laptop",
+          "help": "A name to identify this device in your account"
+        },
+        "deviceNameRequired": "Please enter a device name"
       },
       "completeInSettings": "Complete sync setup in Settings > Sync after creating your password."
     },
