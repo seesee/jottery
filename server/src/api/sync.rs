@@ -406,9 +406,18 @@ pub async fn push(
                 }
             }
 
+            // Determine rejection reason based on conflict type
+            let rejection_reason = if note.content_hash.is_some() && note.parent_hash.is_some() {
+                // Hash-based conflict detection was used
+                "Conflict: diverged from common ancestor".to_string()
+            } else {
+                // Timestamp-based fallback was used
+                "Server has newer version".to_string()
+            };
+
             rejected.push(SyncRejected {
                 id: note.id.clone(),
-                reason: "Conflict: diverged from common ancestor".to_string(),
+                reason: rejection_reason,
                 server_modified_at: server_note.modified_at,
                 server_content: server_note.content,
                 server_tags,
