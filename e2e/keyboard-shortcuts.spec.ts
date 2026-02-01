@@ -37,17 +37,19 @@ test.describe('Keyboard Shortcuts', () => {
   }
 
   test('should focus search with Ctrl/Cmd+K', async ({ page }) => {
+    // Ensure the search input exists first
+    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
+
+    // Click elsewhere first to ensure we're not already focused on search
+    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    await page.waitForTimeout(100);
+
     // Press Ctrl+K
     await page.keyboard.press('Control+k');
 
-    // Wait for search input to be focused (state-based wait using polling)
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-
-    // Use expect with polling to wait for focus state
-    await expect(async () => {
-      const isFocused = await searchInput.evaluate((el) => document.activeElement === el);
-      expect(isFocused).toBe(true);
-    }).toPass({ timeout: 3000 });
+    // Wait for search input to be focused - use Playwright's built-in focus assertion
+    await expect(searchInput).toBeFocused({ timeout: 5000 });
   });
 
   test('should open settings with Ctrl/Cmd+,', async ({ page }) => {
