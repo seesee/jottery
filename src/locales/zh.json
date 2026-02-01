@@ -214,16 +214,14 @@
       "confirmButton": "恢复备份",
       "progress": {
         "validating": "正在验证备份...",
-        "notes": "正在恢复笔记 ({current}/{total})...",
-        "attachments": "正在恢复附件 ({current}/{total})...",
-        "versions": "正在恢复版本 ({current}/{total})...",
-        "settings": "正在恢复设置...",
+        "decrypting": "正在解密记录...",
+        "restoring": "正在恢复数据...",
         "complete": "恢复完成！"
       },
       "stats": {
-        "createdAt": "创建时间：",
-        "notes": "笔记：",
-        "attachments": "附件："
+        "title": "备份信息",
+        "created": "创建时间",
+        "records": "记录"
       }
     }
   },

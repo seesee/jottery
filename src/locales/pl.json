@@ -214,16 +214,14 @@
       "confirmButton": "Przywróć Kopię Zapasową",
       "progress": {
         "validating": "Weryfikacja kopii zapasowej...",
-        "notes": "Przywracanie notatek ({current}/{total})...",
-        "attachments": "Przywracanie załączników ({current}/{total})...",
-        "versions": "Przywracanie wersji ({current}/{total})...",
-        "settings": "Przywracanie ustawień...",
+        "decrypting": "Odszyfrowywanie rekordów...",
+        "restoring": "Przywracanie danych...",
         "complete": "Przywracanie zakończone!"
       },
       "stats": {
-        "createdAt": "Utworzono:",
-        "notes": "Notatki:",
-        "attachments": "Załączniki:"
+        "title": "Informacje o Kopii Zapasowej",
+        "created": "Utworzono",
+        "records": "Rekordy"
       }
     }
   },

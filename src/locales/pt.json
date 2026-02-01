@@ -214,16 +214,14 @@
       "confirmButton": "Restaurar Backup",
       "progress": {
         "validating": "A validar backup...",
-        "notes": "A restaurar notas ({current}/{total})...",
-        "attachments": "A restaurar anexos ({current}/{total})...",
-        "versions": "A restaurar versões ({current}/{total})...",
-        "settings": "A restaurar definições...",
+        "decrypting": "A desencriptar registos...",
+        "restoring": "A restaurar dados...",
         "complete": "Restauração concluída!"
       },
       "stats": {
-        "createdAt": "Criado:",
-        "notes": "Notas:",
-        "attachments": "Anexos:"
+        "title": "Informações do Backup",
+        "created": "Criado",
+        "records": "Registos"
       }
     }
   },

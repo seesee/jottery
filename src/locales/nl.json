@@ -214,16 +214,14 @@
       "confirmButton": "Back-up Herstellen",
       "progress": {
         "validating": "Back-up valideren...",
-        "notes": "Notities herstellen ({current}/{total})...",
-        "attachments": "Bijlagen herstellen ({current}/{total})...",
-        "versions": "Versies herstellen ({current}/{total})...",
-        "settings": "Instellingen herstellen...",
+        "decrypting": "Records ontsleutelen...",
+        "restoring": "Gegevens herstellen...",
         "complete": "Herstel voltooid!"
       },
       "stats": {
-        "createdAt": "Gemaakt:",
-        "notes": "Notities:",
-        "attachments": "Bijlagen:"
+        "title": "Back-up Informatie",
+        "created": "Gemaakt",
+        "records": "Records"
       }
     }
   },

@@ -214,16 +214,14 @@
       "confirmButton": "Restaurar copia de seguridad",
       "progress": {
         "validating": "Validando copia de seguridad...",
-        "notes": "Restaurando notas ({current}/{total})...",
-        "attachments": "Restaurando archivos adjuntos ({current}/{total})...",
-        "versions": "Restaurando versiones ({current}/{total})...",
-        "settings": "Restaurando configuración...",
+        "decrypting": "Descifrando registros...",
+        "restoring": "Restaurando datos...",
         "complete": "¡Restauración completada!"
       },
       "stats": {
-        "createdAt": "Creado:",
-        "notes": "Notas:",
-        "attachments": "Archivos adjuntos:"
+        "title": "Información de la copia de seguridad",
+        "created": "Creado",
+        "records": "Registros"
       }
     }
   },

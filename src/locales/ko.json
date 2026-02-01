@@ -214,16 +214,14 @@
       "confirmButton": "백업 복원",
       "progress": {
         "validating": "백업 검증 중...",
-        "notes": "노트 복원 중 ({current}/{total})...",
-        "attachments": "첨부 파일 복원 중 ({current}/{total})...",
-        "versions": "버전 복원 중 ({current}/{total})...",
-        "settings": "설정 복원 중...",
+        "decrypting": "레코드 복호화 중...",
+        "restoring": "데이터 복원 중...",
         "complete": "복원 완료!"
       },
       "stats": {
-        "createdAt": "생성일:",
-        "notes": "노트:",
-        "attachments": "첨부 파일:"
+        "title": "백업 정보",
+        "created": "생성일",
+        "records": "레코드"
       }
     }
   },

@@ -214,16 +214,14 @@
       "confirmButton": "Yedeklemeyi Geri Yükle",
       "progress": {
         "validating": "Yedekleme doğrulanıyor...",
-        "notes": "Notlar geri yükleniyor ({current}/{total})...",
-        "attachments": "Ekler geri yükleniyor ({current}/{total})...",
-        "versions": "Sürümler geri yükleniyor ({current}/{total})...",
-        "settings": "Ayarlar geri yükleniyor...",
+        "decrypting": "Kayıtlar çözülüyor...",
+        "restoring": "Veriler geri yükleniyor...",
         "complete": "Geri yükleme tamamlandı!"
       },
       "stats": {
-        "createdAt": "Oluşturulma:",
-        "notes": "Notlar:",
-        "attachments": "Ekler:"
+        "title": "Yedekleme Bilgileri",
+        "created": "Oluşturulma",
+        "records": "Kayıtlar"
       }
     }
   },

@@ -39,7 +39,7 @@
   let showBackupRestore = false;
   let backupFile: File | null = null;
   let backupData: BackupData | null = null;
-  let backupStats: { createdAt?: string; noteCount?: number; attachmentCount?: number } | null = null;
+  let backupStats: { createdAt?: string; recordCount?: number } | null = null;
   let backupPassword = '';
   let restoring = false;
   let restoreProgress: { phase: string; current?: number; total?: number } | null = null;
@@ -473,12 +473,8 @@
                 </p>
               {/if}
               <p>
-                <span class="font-medium">{$_('backup.restore.stats.notes')}:</span>
-                {backupStats.noteCount ?? 0}
-              </p>
-              <p>
-                <span class="font-medium">{$_('backup.restore.stats.attachments')}:</span>
-                {backupStats.attachmentCount ?? 0}
+                <span class="font-medium">{$_('backup.restore.stats.records')}:</span>
+                {backupStats.recordCount ?? 0}
               </p>
             </div>
           </div>

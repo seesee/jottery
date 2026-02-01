@@ -1,12 +1,21 @@
 /**
- * Encrypted backup and restore service
+ * Encrypted backup and restore service (v2.0)
  *
- * Creates encrypted backups that can be safely stored in cloud storage
- * and restored on a fresh install using the same password.
+ * Creates fully encrypted backups where each record is individually encrypted.
+ * The backup file only reveals the encryption parameters and record count -
+ * all data (including types, metadata, and content) is encrypted.
  *
- * Key insight: Notes are already encrypted in IndexedDB. We export them as-is
- * without decrypting. The backup includes the encryption metadata (salt, iterations),
- * so the same password derives the same key on restore.
+ * Format:
+ * {
+ *   version: "2.0",
+ *   type: "jottery-encrypted-backup",
+ *   createdAt: "...",
+ *   encryption: { salt, iterations, algorithm },
+ *   data: [
+ *     { iv, ciphertext },  // Each is an encrypted { type, data } object
+ *     ...
+ *   ]
+ * }
  */
 
 import type {
@@ -16,6 +25,7 @@ import type {
   UserSettings,
   EncryptionMetadata,
   SyncMetadata,
+  EncryptionResult,
 } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -23,38 +33,51 @@ import { settingsRepository } from './settingsRepository';
 import { encryptionRepository } from './encryptionRepository';
 import { syncRepository } from './syncRepository';
 import { getDB, STORES } from './db';
-import { cryptoService } from './crypto';
+import { cryptoService, encryptJSON, decryptJSON } from './crypto';
+import { keyManager } from './keyManager';
 import { base64ToUint8Array } from '../utils/base64';
 
-const BACKUP_VERSION = '1.0';
+const BACKUP_VERSION = '2.0';
 const BACKUP_TYPE = 'jottery-encrypted-backup';
 const BACKUP_FILE_EXTENSION = '.jottery-backup';
 
 /**
- * Stored attachment with encrypted blob data
+ * Record types stored in the backup
  */
-interface StoredAttachment {
-  id: string;
-  data: string; // Base64 encoded encrypted blob
-  thumbnail?: string; // Base64 encoded encrypted thumbnail
+type BackupRecordType =
+  | 'note'
+  | 'attachment'
+  | 'version'
+  | 'saved_search'
+  | 'settings'
+  | 'sync_metadata';
+
+/**
+ * Encrypted record wrapper (decrypted form)
+ */
+interface BackupRecord {
+  type: BackupRecordType;
+  data: unknown;
 }
 
 /**
- * Backup file structure
+ * Attachment record data
+ */
+interface AttachmentRecord {
+  id: string;
+  blob: string; // Base64 encoded
+  thumbnail?: string; // Base64 encoded
+}
+
+/**
+ * Backup file structure (v2.0)
  */
 export interface BackupData {
   version: string;
   type: typeof BACKUP_TYPE;
   createdAt: string;
   encryption: EncryptionMetadata;
-  data: {
-    notes: Note[];
-    attachments: StoredAttachment[];
-    versions: NoteVersion[];
-    savedSearches: SavedSearch[];
-    settings: UserSettings;
-    syncMetadata?: SyncMetadata;
-  };
+  data: EncryptionResult[]; // Array of encrypted records
 }
 
 /**
@@ -70,7 +93,7 @@ export interface BackupValidationResult {
  * Restore progress callback
  */
 export type RestoreProgressCallback = (progress: {
-  phase: 'validating' | 'notes' | 'attachments' | 'versions' | 'settings' | 'complete';
+  phase: 'validating' | 'decrypting' | 'restoring' | 'complete';
   current?: number;
   total?: number;
 }) => void;
@@ -78,93 +101,105 @@ export type RestoreProgressCallback = (progress: {
 /**
  * Create an encrypted backup of all data
  *
- * The backup contains:
- * - Encryption metadata (salt, iterations, algorithm)
- * - All encrypted notes (as-is from IndexedDB)
- * - All encrypted attachments
- * - Version history
- * - Settings (theme, colours, etc.)
- * - Sync metadata (optional, encrypted API key)
- * - Saved searches
+ * Each record (note, attachment, version, etc.) is individually encrypted.
+ * The backup file only reveals the record count and encryption parameters.
  */
 export async function createBackup(): Promise<BackupData> {
+  // Get master key (required - must be unlocked)
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new Error('Application is locked. Please unlock to create a backup.');
+  }
+
   // Get encryption metadata (required)
   const encryption = await encryptionRepository.getMetadata();
   if (!encryption) {
     throw new Error('No encryption metadata found. Application not initialised.');
   }
 
-  // Get all notes (including deleted - for complete backup)
+  const encryptedRecords: EncryptionResult[] = [];
+
+  // Encrypt all notes
   const notes = await noteRepository.getAll();
+  for (const note of notes) {
+    const record: BackupRecord = { type: 'note', data: note };
+    const encrypted = await encryptJSON(record, masterKey.key);
+    encryptedRecords.push(encrypted);
+  }
 
-  // Get all attachments with their blob data
+  // Encrypt all attachments with their blob data
   const attachmentIds = await attachmentRepository.listAllIds();
-  const attachments: StoredAttachment[] = [];
-
   for (const id of attachmentIds) {
     const blob = await attachmentRepository.getBlob(id);
     const thumbnail = await attachmentRepository.getThumbnail(id);
 
     if (blob) {
-      // Convert ArrayBuffer to base64 for JSON serialisation
-      const dataBase64 = arrayBufferToBase64(blob);
-      const attachment: StoredAttachment = {
+      const attachmentData: AttachmentRecord = {
         id,
-        data: dataBase64,
+        blob: arrayBufferToBase64(blob),
+        thumbnail: thumbnail ? arrayBufferToBase64(thumbnail) : undefined,
       };
-
-      if (thumbnail) {
-        attachment.thumbnail = arrayBufferToBase64(thumbnail);
-      }
-
-      attachments.push(attachment);
+      const record: BackupRecord = { type: 'attachment', data: attachmentData };
+      const encrypted = await encryptJSON(record, masterKey.key);
+      encryptedRecords.push(encrypted);
     }
   }
 
-  // Get all note versions
+  // Encrypt all note versions
   const db = getDB();
   const versions = await db.getAll(STORES.NOTE_VERSIONS);
+  for (const version of versions) {
+    const record: BackupRecord = { type: 'version', data: version };
+    const encrypted = await encryptJSON(record, masterKey.key);
+    encryptedRecords.push(encrypted);
+  }
 
-  // Get saved searches (encrypted)
-  let savedSearches: SavedSearch[] = [];
+  // Encrypt saved searches
   try {
-    savedSearches = await db.getAll(STORES.SAVED_SEARCHES);
+    const savedSearches = await db.getAll(STORES.SAVED_SEARCHES);
+    for (const savedSearch of savedSearches) {
+      const record: BackupRecord = { type: 'saved_search', data: savedSearch };
+      const encrypted = await encryptJSON(record, masterKey.key);
+      encryptedRecords.push(encrypted);
+    }
   } catch {
     // Store might not exist in older databases
     console.warn('[backupService] Could not read saved searches');
   }
 
-  // Get settings
+  // Encrypt settings
   const settings = await settingsRepository.get();
+  const settingsRecord: BackupRecord = { type: 'settings', data: settings };
+  const encryptedSettings = await encryptJSON(settingsRecord, masterKey.key);
+  encryptedRecords.push(encryptedSettings);
 
-  // Get sync metadata (optional - includes encrypted API key)
+  // Encrypt sync metadata (if present)
   const syncMetadata = await syncRepository.getMetadata();
+  if (syncMetadata) {
+    const syncRecord: BackupRecord = { type: 'sync_metadata', data: syncMetadata };
+    const encrypted = await encryptJSON(syncRecord, masterKey.key);
+    encryptedRecords.push(encrypted);
+  }
 
   const backup: BackupData = {
     version: BACKUP_VERSION,
     type: BACKUP_TYPE,
     createdAt: new Date().toISOString(),
     encryption,
-    data: {
-      notes,
-      attachments,
-      versions,
-      savedSearches,
-      settings,
-      syncMetadata: syncMetadata ?? undefined,
-    },
+    data: encryptedRecords,
   };
 
   return backup;
 }
 
 /**
- * Validate a backup file
+ * Validate a backup file structure
  *
  * Checks:
  * - JSON structure is valid
  * - Required fields are present
  * - Version is compatible
+ * - Data is an array of encrypted records
  */
 export async function validateBackup(file: File): Promise<BackupValidationResult> {
   try {
@@ -204,9 +239,10 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    // Check version compatibility
+    // Check version compatibility (support v1.x and v2.x)
     const [major] = backup.version.split('.');
-    if (parseInt(major, 10) > 1) {
+    const majorVersion = parseInt(major, 10);
+    if (majorVersion > 2) {
       return {
         valid: false,
         error: `Backup version ${backup.version} is not supported. Please update Jottery.`,
@@ -234,11 +270,24 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    if (!Array.isArray(backup.data.notes)) {
-      return {
-        valid: false,
-        error: 'Invalid backup file. Missing or invalid notes array.',
-      };
+    // v2.0: data is an array of encrypted records
+    if (majorVersion >= 2) {
+      if (!Array.isArray(backup.data)) {
+        return {
+          valid: false,
+          error: 'Invalid backup file. Data section must be an array.',
+        };
+      }
+
+      // Verify each record has the expected encrypted structure
+      for (const record of backup.data) {
+        if (!record.iv || !record.ciphertext) {
+          return {
+            valid: false,
+            error: 'Invalid backup file. Encrypted records are malformed.',
+          };
+        }
+      }
     }
 
     return {
@@ -257,7 +306,7 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
  * Verify password against a backup
  *
  * Derives the key using the backup's encryption metadata and attempts
- * to decrypt the first note's content to verify the password.
+ * to decrypt the first record to verify the password.
  */
 export async function verifyBackupPassword(
   backup: BackupData,
@@ -273,19 +322,16 @@ export async function verifyBackupPassword(
       algorithm: 'PBKDF2',
     });
 
-    // If there are notes, verify by attempting to decrypt the first one
-    if (backup.data.notes.length > 0) {
-      const testNote = backup.data.notes.find(n => n.content && n.content !== '');
-      if (testNote && testNote.content) {
-        try {
-          const encryptedContent = JSON.parse(testNote.content);
-          await cryptoService.decryptText(encryptedContent, key);
-        } catch {
-          return {
-            valid: false,
-            error: 'Incorrect password',
-          };
-        }
+    // Verify by attempting to decrypt the first record
+    if (backup.data.length > 0) {
+      try {
+        const firstRecord = backup.data[0];
+        await decryptJSON<BackupRecord>(firstRecord, key);
+      } catch {
+        return {
+          valid: false,
+          error: 'Incorrect password',
+        };
       }
     }
 
@@ -301,77 +347,75 @@ export async function verifyBackupPassword(
 /**
  * Restore data from a backup
  *
- * This function:
- * 1. Sets the encryption metadata from the backup
- * 2. Restores all notes, attachments, versions, settings
- * 3. Optionally restores sync metadata
+ * Decrypts each record and restores based on its type.
  *
  * IMPORTANT: This should only be called on a fresh/empty database.
  * Existing data will be overwritten.
  */
 export async function restoreBackup(
   backup: BackupData,
+  key: CryptoKey,
   onProgress?: RestoreProgressCallback
 ): Promise<void> {
   const db = getDB();
+  const total = backup.data.length;
 
   onProgress?.({ phase: 'validating' });
 
-  // 1. Restore encryption metadata
+  // 1. Restore encryption metadata first
   await encryptionRepository.setMetadata(backup.encryption);
 
-  // 2. Restore notes
-  onProgress?.({ phase: 'notes', current: 0, total: backup.data.notes.length });
+  onProgress?.({ phase: 'decrypting', current: 0, total });
 
-  for (let i = 0; i < backup.data.notes.length; i++) {
-    const note = backup.data.notes[i];
-    await db.put(STORES.NOTES, note);
-    onProgress?.({ phase: 'notes', current: i + 1, total: backup.data.notes.length });
-  }
+  // 2. Decrypt and restore each record
+  for (let i = 0; i < backup.data.length; i++) {
+    const encryptedRecord = backup.data[i];
 
-  // 3. Restore attachments
-  onProgress?.({ phase: 'attachments', current: 0, total: backup.data.attachments.length });
+    try {
+      const record = await decryptJSON<BackupRecord>(encryptedRecord, key);
 
-  for (let i = 0; i < backup.data.attachments.length; i++) {
-    const attachment = backup.data.attachments[i];
+      onProgress?.({ phase: 'restoring', current: i + 1, total });
 
-    // Convert base64 back to ArrayBuffer
-    const blob = base64ToArrayBuffer(attachment.data);
-    await attachmentRepository.storeBlob(attachment.id, blob);
+      switch (record.type) {
+        case 'note':
+          await db.put(STORES.NOTES, record.data as Note);
+          break;
 
-    if (attachment.thumbnail) {
-      const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-      await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+        case 'attachment': {
+          const attachment = record.data as AttachmentRecord;
+          const blob = base64ToArrayBuffer(attachment.blob);
+          await attachmentRepository.storeBlob(attachment.id, blob);
+
+          if (attachment.thumbnail) {
+            const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+            await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+          }
+          break;
+        }
+
+        case 'version':
+          await db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion);
+          break;
+
+        case 'saved_search':
+          await db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch);
+          break;
+
+        case 'settings':
+          await settingsRepository.update(record.data as UserSettings);
+          break;
+
+        case 'sync_metadata':
+          await syncRepository.updateMetadata(record.data as SyncMetadata);
+          break;
+
+        default:
+          console.warn(`[backupService] Unknown record type: ${(record as BackupRecord).type}`);
+      }
+    } catch (error) {
+      console.error(`[backupService] Failed to restore record ${i}:`, error);
+      throw new Error(`Failed to restore record ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    onProgress?.({ phase: 'attachments', current: i + 1, total: backup.data.attachments.length });
-  }
-
-  // 4. Restore versions
-  onProgress?.({ phase: 'versions', current: 0, total: backup.data.versions.length });
-
-  for (let i = 0; i < backup.data.versions.length; i++) {
-    const version = backup.data.versions[i];
-    await db.put(STORES.NOTE_VERSIONS, version);
-    onProgress?.({ phase: 'versions', current: i + 1, total: backup.data.versions.length });
-  }
-
-  // 5. Restore saved searches
-  if (backup.data.savedSearches && backup.data.savedSearches.length > 0) {
-    for (const savedSearch of backup.data.savedSearches) {
-      await db.put(STORES.SAVED_SEARCHES, savedSearch);
-    }
-  }
-
-  // 6. Restore settings
-  onProgress?.({ phase: 'settings' });
-  await settingsRepository.update(backup.data.settings);
-
-  // 7. Restore sync metadata (optional)
-  // Note: The API key in sync metadata is already encrypted with the user's key
-  // and will work after restore since we're using the same encryption metadata
-  if (backup.data.syncMetadata) {
-    await syncRepository.updateMetadata(backup.data.syncMetadata);
   }
 
   onProgress?.({ phase: 'complete' });
@@ -381,7 +425,7 @@ export async function restoreBackup(
  * Download a backup as a file
  */
 export function downloadBackup(backup: BackupData): void {
-  const json = JSON.stringify(backup, null, 2);
+  const json = JSON.stringify(backup);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
@@ -403,12 +447,13 @@ export function downloadBackup(backup: BackupData): void {
 
 /**
  * Get backup file stats without full validation
+ *
+ * For v2.0 backups, we can only show record count (types are encrypted).
  */
 export async function getBackupStats(file: File): Promise<{
   valid: boolean;
   createdAt?: string;
-  noteCount?: number;
-  attachmentCount?: number;
+  recordCount?: number;
   error?: string;
 }> {
   try {
@@ -422,8 +467,7 @@ export async function getBackupStats(file: File): Promise<{
     return {
       valid: true,
       createdAt: backup.createdAt,
-      noteCount: backup.data?.notes?.length ?? 0,
-      attachmentCount: backup.data?.attachments?.length ?? 0,
+      recordCount: Array.isArray(backup.data) ? backup.data.length : 0,
     };
   } catch {
     return { valid: false, error: 'Could not read backup file' };

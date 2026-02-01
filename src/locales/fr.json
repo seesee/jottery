@@ -214,16 +214,14 @@
       "confirmButton": "Restaurer la sauvegarde",
       "progress": {
         "validating": "Validation de la sauvegarde...",
-        "notes": "Restauration des notes ({current}/{total})...",
-        "attachments": "Restauration des pièces jointes ({current}/{total})...",
-        "versions": "Restauration des versions ({current}/{total})...",
-        "settings": "Restauration des paramètres...",
+        "decrypting": "Déchiffrement des enregistrements...",
+        "restoring": "Restauration des données...",
         "complete": "Restauration terminée !"
       },
       "stats": {
-        "createdAt": "Créé le :",
-        "notes": "Notes :",
-        "attachments": "Pièces jointes :"
+        "title": "Informations de sauvegarde",
+        "created": "Créé le",
+        "records": "Enregistrements"
       }
     }
   },

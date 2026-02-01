@@ -214,16 +214,14 @@
       "confirmButton": "Restore Backup",
       "progress": {
         "validating": "Validating backup...",
-        "notes": "Restoring notes ({current}/{total})...",
-        "attachments": "Restoring attachments ({current}/{total})...",
-        "versions": "Restoring versions ({current}/{total})...",
-        "settings": "Restoring settings...",
+        "decrypting": "Decrypting records...",
+        "restoring": "Restoring data...",
         "complete": "Restore complete!"
       },
       "stats": {
-        "createdAt": "Created:",
-        "notes": "Notes:",
-        "attachments": "Attachments:"
+        "title": "Backup Information",
+        "created": "Created",
+        "records": "Records"
       }
     }
   },

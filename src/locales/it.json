@@ -214,16 +214,14 @@
       "confirmButton": "Ripristina Backup",
       "progress": {
         "validating": "Validazione backup...",
-        "notes": "Ripristino note ({current}/{total})...",
-        "attachments": "Ripristino allegati ({current}/{total})...",
-        "versions": "Ripristino versioni ({current}/{total})...",
-        "settings": "Ripristino impostazioni...",
+        "decrypting": "Decrittazione record...",
+        "restoring": "Ripristino dati...",
         "complete": "Ripristino completato!"
       },
       "stats": {
-        "createdAt": "Creato:",
-        "notes": "Note:",
-        "attachments": "Allegati:"
+        "title": "Informazioni Backup",
+        "created": "Creato",
+        "records": "Record"
       }
     }
   },

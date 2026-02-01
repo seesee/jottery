@@ -214,16 +214,14 @@
       "confirmButton": "Backup wiederherstellen",
       "progress": {
         "validating": "Backup wird validiert...",
-        "notes": "Notizen werden wiederhergestellt ({current}/{total})...",
-        "attachments": "Anhänge werden wiederhergestellt ({current}/{total})...",
-        "versions": "Versionen werden wiederhergestellt ({current}/{total})...",
-        "settings": "Einstellungen werden wiederhergestellt...",
+        "decrypting": "Datensätze werden entschlüsselt...",
+        "restoring": "Daten werden wiederhergestellt...",
         "complete": "Wiederherstellung abgeschlossen!"
       },
       "stats": {
-        "createdAt": "Erstellt:",
-        "notes": "Notizen:",
-        "attachments": "Anhänge:"
+        "title": "Backup-Informationen",
+        "created": "Erstellt",
+        "records": "Datensätze"
       }
     }
   },

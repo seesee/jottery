@@ -333,7 +333,7 @@ export async function changePassword(
  *
  * This function:
  * 1. Verifies the password against the backup's encryption metadata
- * 2. Restores all data from the backup
+ * 2. Restores all data from the backup (decrypting each record)
  * 3. Unlocks the application with the verified key
  *
  * @param backup - The validated backup data
@@ -344,7 +344,7 @@ export async function restoreFromBackup(
   backup: BackupData,
   password: string,
   onProgress?: (progress: {
-    phase: 'validating' | 'notes' | 'attachments' | 'versions' | 'settings' | 'complete';
+    phase: 'validating' | 'decrypting' | 'restoring' | 'complete';
     current?: number;
     total?: number;
   }) => void
@@ -363,9 +363,9 @@ export async function restoreFromBackup(
 
   console.log('[RestoreFromBackup] Password verified successfully');
 
-  // Step 2: Restore all data from backup
+  // Step 2: Restore all data from backup (passing the verified key)
   console.log('[RestoreFromBackup] Restoring data...');
-  await restoreBackupData(backup, onProgress);
+  await restoreBackupData(backup, verification.key, onProgress);
 
   // Step 3: Store the master key (we already verified it works)
   const masterKey: MasterKey = {

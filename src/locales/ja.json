@@ -214,16 +214,14 @@
       "confirmButton": "バックアップを復元",
       "progress": {
         "validating": "バックアップを検証中...",
-        "notes": "ノートを復元中 ({current}/{total})...",
-        "attachments": "添付ファイルを復元中 ({current}/{total})...",
-        "versions": "バージョンを復元中 ({current}/{total})...",
-        "settings": "設定を復元中...",
+        "decrypting": "レコードを復号化中...",
+        "restoring": "データを復元中...",
         "complete": "復元が完了しました！"
       },
       "stats": {
-        "createdAt": "作成日:",
-        "notes": "ノート:",
-        "attachments": "添付ファイル:"
+        "title": "バックアップ情報",
+        "created": "作成日",
+        "records": "レコード"
       }
     }
   },
