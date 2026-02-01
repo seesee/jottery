@@ -24,7 +24,7 @@ const DEFAULT_TIMEOUT_MS = 30000; // 30 second timeout for fetch requests
  */
 function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs);
 
   return fetch(url, {
     ...options,
