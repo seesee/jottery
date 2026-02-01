@@ -29,6 +29,7 @@ password:
   remember_warning: "Bitte gehen Sie davon aus, dass Ihr Passwort für jeden mit Superuser-/Root-Zugriff auf dieses Gerät zugänglich sein könnte."
   remember_keychain_warning: Das Passwort wird sicher im System-Schlüsselbund gespeichert.
   remember_keychain_info: Passwort sicher im System-Schlüsselbund gespeichert
+  correct: "Passwort verifiziert"
   storage_keychain: System-Schlüsselbund
   storage_file: Datei (verschleiert)
   incorrect: Falsches Passwort. Erneut versuchen.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "Konflikt"
   count_plural: "Konflikte"
+
+# Backup functionality
+backup:
+  created: "Sicherung erstellt"
+  restore: "Sicherung wird wiederhergestellt"
+  valid: "Gültige Sicherung"
+  records: "Einträge"
+  validating: "Sicherungsdatei wird validiert..."
+  verifying_password: "Passwort wird überprüft..."
+  restoring: "Daten werden wiederhergestellt..."
+  restored: "Wiederhergestellt"
+
+# Progress indicators
+progress:
+  backup: "Sicherung wird erstellt..."
+  processing: "Verarbeitung"
+  export: "Exportieren..."

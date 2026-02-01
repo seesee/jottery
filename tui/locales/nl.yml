@@ -29,6 +29,7 @@ password:
   remember_warning: "Ga ervan uit dat uw wachtwoord toegankelijk kan zijn voor iedereen met superuser/root-toegang tot dit apparaat."
   remember_keychain_warning: Het wachtwoord wordt veilig opgeslagen in de systeemsleutelhanger.
   remember_keychain_info: Wachtwoord veilig opgeslagen in systeemsleutelhanger
+  correct: "Wachtwoord geverifieerd"
   storage_keychain: Systeemsleutelhanger
   storage_file: Bestand (verduisterd)
   incorrect: Onjuist wachtwoord. Probeer opnieuw.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "conflict"
   count_plural: "conflicten"
+
+# Backup functionality
+backup:
+  created: "Back-up aangemaakt"
+  restore: "Back-up herstellen"
+  valid: "Geldige back-up"
+  records: "records"
+  validating: "Back-upbestand valideren..."
+  verifying_password: "Wachtwoord verifiëren..."
+  restoring: "Gegevens herstellen..."
+  restored: "Hersteld"
+
+# Progress indicators
+progress:
+  backup: "Back-up aanmaken..."
+  processing: "Verwerken"
+  export: "Exporteren..."

@@ -29,6 +29,7 @@ password:
   remember_warning: "请假设您的密码可能被任何拥有此设备超级用户/root权限的人访问。"
   remember_keychain_warning: 密码将安全存储在系统钥匙串中。
   remember_keychain_info: 密码已安全存储在系统钥匙串中
+  correct: "密码已验证"
   storage_keychain: 系统钥匙串
   storage_file: 文件（混淆）
   incorrect: 密码错误，请重试。
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "个冲突"
   count_plural: "个冲突"
+
+# Backup functionality
+backup:
+  created: "备份已创建"
+  restore: "正在恢复备份"
+  valid: "有效的备份"
+  records: "条记录"
+  validating: "正在验证备份文件..."
+  verifying_password: "正在验证密码..."
+  restoring: "正在恢复数据..."
+  restored: "已恢复"
+
+# Progress indicators
+progress:
+  backup: "正在创建备份..."
+  processing: "处理中"
+  export: "正在导出..."

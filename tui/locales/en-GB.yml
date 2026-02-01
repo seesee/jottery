@@ -34,6 +34,7 @@ password:
   remember_warning: "Please assume your password could be accessible to anyone with superuser/root access to this device."
   remember_keychain_warning: "Password will be stored securely in the system keychain."
   remember_keychain_info: "Password stored securely in system keychain"
+  correct: "Password verified"
   storage_keychain: "System Keychain"
   storage_file: "File (obfuscated)"
   incorrect: "Incorrect password. Try again."
@@ -528,3 +529,20 @@ time:
   date_format: "%Y-%m-%d"
   time_format: "%H:%M:%S"
   datetime_format: "%Y-%m-%d %H:%M:%S"
+
+# Backup functionality
+backup:
+  created: "Backup created"
+  restore: "Restoring backup"
+  valid: "Valid backup"
+  records: "records"
+  validating: "Validating backup file..."
+  verifying_password: "Verifying password..."
+  restoring: "Restoring data..."
+  restored: "Restored"
+
+# Progress indicators
+progress:
+  backup: "Creating backup..."
+  processing: "Processing"
+  export: "Exporting..."

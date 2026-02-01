@@ -29,6 +29,7 @@ password:
   remember_warning: "Proszę założyć, że hasło może być dostępne dla każdego z dostępem superużytkownika/root do tego urządzenia."
   remember_keychain_warning: Hasło zostanie bezpiecznie zapisane w pęku kluczy systemu.
   remember_keychain_info: Hasło bezpiecznie zapisane w pęku kluczy systemu
+  correct: "Hasło zweryfikowane"
   storage_keychain: Pęk kluczy systemu
   storage_file: Plik (zaciemniony)
   incorrect: Nieprawidłowe hasło. Spróbuj ponownie.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "konflikt"
   count_plural: "konfliktów"
+
+# Backup functionality
+backup:
+  created: "Kopia zapasowa utworzona"
+  restore: "Przywracanie kopii zapasowej"
+  valid: "Prawidłowa kopia zapasowa"
+  records: "rekordów"
+  validating: "Walidacja pliku kopii zapasowej..."
+  verifying_password: "Weryfikacja hasła..."
+  restoring: "Przywracanie danych..."
+  restored: "Przywrócono"
+
+# Progress indicators
+progress:
+  backup: "Tworzenie kopii zapasowej..."
+  processing: "Przetwarzanie"
+  export: "Eksportowanie..."

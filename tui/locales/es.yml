@@ -29,6 +29,7 @@ password:
   remember_warning: "Asuma que su contraseña podría ser accesible para cualquiera con acceso de superusuario/root a este dispositivo."
   remember_keychain_warning: La contraseña se almacenará de forma segura en el llavero del sistema.
   remember_keychain_info: Contraseña almacenada de forma segura en el llavero del sistema
+  correct: "Contraseña verificada"
   storage_keychain: Llavero del sistema
   storage_file: Archivo (ofuscado)
   incorrect: Contraseña incorrecta. Inténtelo de nuevo.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "conflicto"
   count_plural: "conflictos"
+
+# Backup functionality
+backup:
+  created: "Copia de seguridad creada"
+  restore: "Restaurando copia de seguridad"
+  valid: "Copia de seguridad válida"
+  records: "registros"
+  validating: "Validando archivo de copia de seguridad..."
+  verifying_password: "Verificando contraseña..."
+  restoring: "Restaurando datos..."
+  restored: "Restaurado"
+
+# Progress indicators
+progress:
+  backup: "Creando copia de seguridad..."
+  processing: "Procesando"
+  export: "Exportando..."

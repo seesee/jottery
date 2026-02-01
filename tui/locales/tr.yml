@@ -29,6 +29,7 @@ password:
   remember_warning: "Lütfen şifrenizin bu cihaza süper kullanıcı/root erişimi olan herkes tarafından erişilebilir olabileceğini varsayın."
   remember_keychain_warning: Şifre sistem anahtar zincirinde güvenli şekilde saklanacak.
   remember_keychain_info: Şifre sistem anahtar zincirinde güvenli şekilde kaydedildi
+  correct: "Şifre doğrulandı"
   storage_keychain: Sistem Anahtar Zinciri
   storage_file: Dosya (gizlenmiş)
   incorrect: Yanlış şifre. Tekrar deneyin.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "çakışma"
   count_plural: "çakışma"
+
+# Backup functionality
+backup:
+  created: "Yedek oluşturuldu"
+  restore: "Yedek geri yükleniyor"
+  valid: "Geçerli yedek"
+  records: "kayıt"
+  validating: "Yedek dosyası doğrulanıyor..."
+  verifying_password: "Şifre doğrulanıyor..."
+  restoring: "Veriler geri yükleniyor..."
+  restored: "Geri yüklendi"
+
+# Progress indicators
+progress:
+  backup: "Yedek oluşturuluyor..."
+  processing: "İşleniyor"
+  export: "Dışa aktarılıyor..."

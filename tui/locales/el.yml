@@ -29,6 +29,7 @@ password:
   remember_warning: "Θεωρήστε ότι ο κωδικός σας μπορεί να είναι προσβάσιμος σε οποιονδήποτε έχει superuser/root πρόσβαση σε αυτή τη συσκευή."
   remember_keychain_warning: Ο κωδικός θα αποθηκευτεί με ασφάλεια στο κλειδοθήκη συστήματος.
   remember_keychain_info: Ο κωδικός αποθηκεύτηκε με ασφάλεια στο κλειδοθήκη συστήματος
+  correct: "Ο κωδικός επαληθεύτηκε"
   storage_keychain: Κλειδοθήκη συστήματος
   storage_file: Αρχείο (συσκοτισμένο)
   incorrect: Λάθος κωδικός. Δοκιμάστε ξανά.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "διένεξη"
   count_plural: "διενέξεις"
+
+# Backup functionality
+backup:
+  created: "Το αντίγραφο ασφαλείας δημιουργήθηκε"
+  restore: "Επαναφορά αντιγράφου ασφαλείας"
+  valid: "Έγκυρο αντίγραφο ασφαλείας"
+  records: "εγγραφές"
+  validating: "Επικύρωση αρχείου αντιγράφου ασφαλείας..."
+  verifying_password: "Επαλήθευση κωδικού..."
+  restoring: "Επαναφορά δεδομένων..."
+  restored: "Επαναφέρθηκε"
+
+# Progress indicators
+progress:
+  backup: "Δημιουργία αντιγράφου ασφαλείας..."
+  processing: "Επεξεργασία"
+  export: "Εξαγωγή..."

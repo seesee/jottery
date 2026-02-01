@@ -1,4 +1,5 @@
 mod api;
+mod backup;
 mod crypto;
 mod db;
 mod export;
@@ -185,6 +186,30 @@ enum Commands {
         /// Password for encryption
         #[arg(short, long)]
         password: String,
+    },
+    /// Create encrypted backup (compatible with web app)
+    Backup {
+        /// Output file path
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Password for encryption
+        #[arg(short, long)]
+        password: String,
+    },
+    /// Restore from encrypted backup
+    RestoreBackup {
+        /// Input file path
+        #[arg(short, long)]
+        input: PathBuf,
+
+        /// Password for decryption (backup password)
+        #[arg(short, long)]
+        password: String,
+
+        /// Local database encryption password (defaults to backup password)
+        #[arg(short = 'k', long)]
+        key_password: Option<String>,
     },
 }
 
@@ -842,6 +867,73 @@ fn main() -> Result<()> {
 
             let count = export::import_notes(&db, &key, &input)?;
             println!("✓ {}: {} {}", t!("cli.import"), count, input.display());
+            return Ok(());
+        }
+        Some(Commands::Backup { output, password }) => {
+            info!("{}: {}", t!("backup.created"), output.display());
+            let db = Database::open(&db_path, &password)
+                .context(t!("password.unlock_failed", error = ""))?;
+
+            // Derive key using stored salt
+            let key = derive_key_from_db(&db, &password)?;
+
+            println!("{}", t!("progress.backup"));
+
+            // Create backup with progress indicator
+            let backup = backup::create_backup(&db, &key, Some(Box::new(|current, total, item| {
+                print!("\r{}: {}/{} ({})", t!("progress.processing"), current, total, item);
+                let _ = io::stdout().flush();
+            })))?;
+
+            println!();
+
+            // Write to file
+            backup::write_backup(&backup, &output)?;
+
+            println!("✓ {}: {} ({} {})",
+                t!("backup.created"),
+                output.display(),
+                backup.data.len(),
+                t!("backup.records")
+            );
+            return Ok(());
+        }
+        Some(Commands::RestoreBackup { input, password, key_password }) => {
+            info!("{}: {}", t!("backup.restore"), input.display());
+
+            // Validate backup file first
+            println!("{}", t!("backup.validating"));
+            let backup = backup::validate_backup(&input)?;
+
+            println!("✓ {} v{} ({} {})",
+                t!("backup.valid"),
+                backup.version,
+                backup.data.len(),
+                t!("backup.records")
+            );
+
+            // Verify password
+            println!("{}", t!("backup.verifying_password"));
+            let key = backup::verify_backup_password(&backup, &password)?;
+            println!("✓ {}", t!("password.correct"));
+
+            // Use key_password for local database if provided, otherwise use backup password
+            let local_password = key_password.as_ref().unwrap_or(&password);
+
+            // Open or create database
+            let db = Database::open(&db_path, local_password)
+                .context(t!("password.unlock_failed", error = ""))?;
+
+            println!("{}", t!("backup.restoring"));
+
+            // Restore with progress indicator
+            let restored = backup::restore_backup(&db, &backup, &key, Some(Box::new(|current, total, item| {
+                print!("\r{}: {}/{} ({})", t!("progress.processing"), current, total, item);
+                let _ = io::stdout().flush();
+            })))?;
+
+            println!();
+            println!("✓ {}: {} {}", t!("backup.restored"), restored, t!("menu.notes"));
             return Ok(());
         }
         None => {

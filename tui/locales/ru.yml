@@ -29,6 +29,7 @@ password:
   remember_warning: "Пожалуйста, предполагайте, что ваш пароль может быть доступен любому с правами суперпользователя/root на этом устройстве."
   remember_keychain_warning: Пароль будет надёжно сохранён в системной связке ключей.
   remember_keychain_info: Пароль надёжно сохранён в системной связке ключей
+  correct: "Пароль подтверждён"
   storage_keychain: Системная связка ключей
   storage_file: Файл (обфусцированный)
   incorrect: Неверный пароль. Попробуйте ещё раз.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "конфликт"
   count_plural: "конфликтов"
+
+# Backup functionality
+backup:
+  created: "Резервная копия создана"
+  restore: "Восстановление резервной копии"
+  valid: "Действительная резервная копия"
+  records: "записей"
+  validating: "Проверка файла резервной копии..."
+  verifying_password: "Проверка пароля..."
+  restoring: "Восстановление данных..."
+  restored: "Восстановлено"
+
+# Progress indicators
+progress:
+  backup: "Создание резервной копии..."
+  processing: "Обработка"
+  export: "Экспорт..."

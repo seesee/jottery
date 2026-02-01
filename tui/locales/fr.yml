@@ -29,6 +29,7 @@ password:
   remember_warning: "Veuillez supposer que votre mot de passe pourrait être accessible à toute personne ayant un accès superutilisateur/root à cet appareil."
   remember_keychain_warning: Le mot de passe sera stocké de manière sécurisée dans le trousseau système.
   remember_keychain_info: Mot de passe stocké de manière sécurisée dans le trousseau système
+  correct: "Mot de passe vérifié"
   storage_keychain: Trousseau système
   storage_file: Fichier (obfusqué)
   incorrect: Mot de passe incorrect. Réessayez.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "conflit"
   count_plural: "conflits"
+
+# Backup functionality
+backup:
+  created: "Sauvegarde créée"
+  restore: "Restauration de la sauvegarde"
+  valid: "Sauvegarde valide"
+  records: "enregistrements"
+  validating: "Validation du fichier de sauvegarde..."
+  verifying_password: "Vérification du mot de passe..."
+  restoring: "Restauration des données..."
+  restored: "Restauré"
+
+# Progress indicators
+progress:
+  backup: "Création de la sauvegarde..."
+  processing: "Traitement"
+  export: "Exportation..."

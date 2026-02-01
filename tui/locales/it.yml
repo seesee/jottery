@@ -29,6 +29,7 @@ password:
   remember_warning: "Si prega di considerare che la password potrebbe essere accessibile a chiunque abbia accesso superuser/root a questo dispositivo."
   remember_keychain_warning: La password verrà salvata in modo sicuro nel portachiavi di sistema.
   remember_keychain_info: Password salvata in modo sicuro nel portachiavi di sistema
+  correct: "Password verificata"
   storage_keychain: Portachiavi di sistema
   storage_file: File (offuscato)
   incorrect: Password errata. Riprova.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "conflitto"
   count_plural: "conflitti"
+
+# Backup functionality
+backup:
+  created: "Backup creato"
+  restore: "Ripristino backup"
+  valid: "Backup valido"
+  records: "record"
+  validating: "Validazione file di backup..."
+  verifying_password: "Verifica password..."
+  restoring: "Ripristino dati..."
+  restored: "Ripristinato"
+
+# Progress indicators
+progress:
+  backup: "Creazione backup..."
+  processing: "Elaborazione"
+  export: "Esportazione..."

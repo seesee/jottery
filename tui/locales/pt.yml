@@ -29,6 +29,7 @@ password:
   remember_warning: "Por favor, assuma que sua senha pode ser acessível a qualquer pessoa com acesso de superusuário/root a este dispositivo."
   remember_keychain_warning: A senha será armazenada com segurança no chaveiro do sistema.
   remember_keychain_info: Senha armazenada com segurança no chaveiro do sistema
+  correct: "Senha verificada"
   storage_keychain: Chaveiro do sistema
   storage_file: Arquivo (ofuscado)
   incorrect: Senha incorreta. Tente novamente.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "conflito"
   count_plural: "conflitos"
+
+# Backup functionality
+backup:
+  created: "Backup criado"
+  restore: "Restaurando backup"
+  valid: "Backup válido"
+  records: "registros"
+  validating: "Validando arquivo de backup..."
+  verifying_password: "Verificando senha..."
+  restoring: "Restaurando dados..."
+  restored: "Restaurado"
+
+# Progress indicators
+progress:
+  backup: "Criando backup..."
+  processing: "Processando"
+  export: "Exportando..."

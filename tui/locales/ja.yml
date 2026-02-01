@@ -29,6 +29,7 @@ password:
   remember_warning: "パスワードはこのデバイスへのスーパーユーザー/root権限を持つ人がアクセスできる可能性があることをご了承ください。"
   remember_keychain_warning: パスワードはシステムキーチェーンに安全に保存されます。
   remember_keychain_info: パスワードがシステムキーチェーンに安全に保存されています
+  correct: "パスワードが確認されました"
   storage_keychain: システムキーチェーン
   storage_file: ファイル (難読化)
   incorrect: パスワードが正しくありません。再試行してください。
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "件の競合"
   count_plural: "件の競合"
+
+# Backup functionality
+backup:
+  created: "バックアップ作成完了"
+  restore: "バックアップを復元中"
+  valid: "有効なバックアップ"
+  records: "件のレコード"
+  validating: "バックアップファイルを検証中..."
+  verifying_password: "パスワードを確認中..."
+  restoring: "データを復元中..."
+  restored: "復元完了"
+
+# Progress indicators
+progress:
+  backup: "バックアップを作成中..."
+  processing: "処理中"
+  export: "エクスポート中..."

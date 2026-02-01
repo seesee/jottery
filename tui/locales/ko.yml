@@ -29,6 +29,7 @@ password:
   remember_warning: "슈퍼유저/root 권한이 있는 사람이 비밀번호에 접근할 수 있다고 가정하시기 바랍니다."
   remember_keychain_warning: 비밀번호가 시스템 키체인에 안전하게 저장됩니다.
   remember_keychain_info: 비밀번호가 시스템 키체인에 안전하게 저장됨
+  correct: "비밀번호 확인됨"
   storage_keychain: 시스템 키체인
   storage_file: 파일 (난독화)
   incorrect: 잘못된 비밀번호입니다. 다시 시도하세요.
@@ -486,3 +487,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "개 충돌"
   count_plural: "개 충돌"
+
+# Backup functionality
+backup:
+  created: "백업 생성됨"
+  restore: "백업 복원 중"
+  valid: "유효한 백업"
+  records: "개 레코드"
+  validating: "백업 파일 검증 중..."
+  verifying_password: "비밀번호 확인 중..."
+  restoring: "데이터 복원 중..."
+  restored: "복원됨"
+
+# Progress indicators
+progress:
+  backup: "백업 생성 중..."
+  processing: "처리 중"
+  export: "내보내기 중..."
