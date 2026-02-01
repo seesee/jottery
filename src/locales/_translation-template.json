@@ -17,7 +17,9 @@
     "unlock": "UNLOCK",
     "settings": "SETTINGS",
     "search": "SEARCH",
-    "error": "ERROR"
+    "error": "ERROR",
+    "showPassword": "SHOW PASSWORD",
+    "hidePassword": "HIDE PASSWORD"
   },
   "note": {
     "new": "NEW",
