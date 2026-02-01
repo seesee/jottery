@@ -51,6 +51,13 @@ pub struct SyncNote {
     #[serde(rename = "showPreview")]
     pub show_preview: Option<bool>,
     pub color: Option<String>,
+    // Hash chain fields for git-like conflict detection
+    #[serde(rename = "contentHash")]
+    pub content_hash: Option<String>,
+    #[serde(rename = "parentHash")]
+    pub parent_hash: Option<String>,
+    #[serde(rename = "hashChain")]
+    pub hash_chain: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -119,6 +126,20 @@ pub struct SyncRejected {
     pub server_show_preview: Option<bool>,
     #[serde(rename = "serverColor")]
     pub server_color: Option<String>,
+    // Hash chain fields for git-like conflict detection
+    #[serde(rename = "serverContentHash")]
+    pub server_content_hash: Option<String>,
+    #[serde(rename = "serverParentHash")]
+    pub server_parent_hash: Option<String>,
+    #[serde(rename = "serverHashChain")]
+    pub server_hash_chain: Option<Vec<String>>,
+    // Ancestor data for 3-way merge (if divergence point found)
+    #[serde(rename = "ancestorHash", skip_serializing_if = "Option::is_none")]
+    pub ancestor_hash: Option<String>,
+    #[serde(rename = "ancestorContent", skip_serializing_if = "Option::is_none")]
+    pub ancestor_content: Option<String>,
+    #[serde(rename = "ancestorTags", skip_serializing_if = "Option::is_none")]
+    pub ancestor_tags: Option<Vec<String>>,
 }
 
 // Sync pull request
@@ -199,4 +220,9 @@ pub struct SyncNoteVersion {
     pub show_preview: Option<bool>,
     pub color: Option<String>,
     pub reason: String,             // 'sync' or 'manual-sync'
+    // Hash chain fields for git-like conflict detection
+    #[serde(rename = "contentHash")]
+    pub content_hash: Option<String>,
+    #[serde(rename = "parentHash")]
+    pub parent_hash: Option<String>,
 }

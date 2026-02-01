@@ -1110,7 +1110,9 @@
     "resolvedBoth": "Conflict resolved - duplicate note created",
     "noConflict": "No conflict data found",
     "indicator": "Sync conflict",
-    "syncNotification": "{count, plural, one {1 note has a sync conflict} other {{count} notes have sync conflicts}}"
+    "syncNotification": "{count, plural, one {1 note has a sync conflict} other {{count} notes have sync conflicts}}",
+    "commonAncestor": "Common ancestor",
+    "ancestorDescription": "The version you both started from"
   },
   "sync": {
     "syncing": "Syncing...",

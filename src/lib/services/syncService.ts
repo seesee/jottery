@@ -20,7 +20,7 @@ import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { versionRepository } from './versionRepository';
 import { savedSearchRepository } from './savedSearchRepository';
-import { cryptoService } from './crypto';
+import { cryptoService, findCommonAncestor } from './crypto';
 import { storageToSync, syncToStorage } from './tagConversionService';
 import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
@@ -498,6 +498,14 @@ class SyncService {
         serverPinned: item.serverPinned,
         serverSyntaxLanguage: item.serverSyntaxLanguage,
         serverWordWrap: item.serverWordWrap,
+        // Hash chain fields for git-like conflict detection
+        serverContentHash: item.serverContentHash,
+        serverParentHash: item.serverParentHash,
+        serverHashChain: item.serverHashChain,
+        // Ancestor data for 3-way merge (if available)
+        ancestorHash: item.ancestorHash,
+        ancestorContent: item.ancestorContent,
+        ancestorTags: item.ancestorTags,
       });
 
       // Clear needsSync flag to prevent infinite retry loop
@@ -535,6 +543,10 @@ class SyncService {
       syntaxLanguage: note.syntaxLanguage,
       showPreview: note.showPreview,
       color: note.color,
+      // Hash chain fields for git-like conflict detection
+      contentHash: note.contentHash,
+      parentHash: note.parentHash,
+      hashChain: note.hashChain,
     };
   }
 
@@ -679,6 +691,10 @@ class SyncService {
       color: remoteNote.color,
       syncedAt,
       needsSync: false,
+      // Hash chain fields
+      contentHash: remoteNote.contentHash,
+      parentHash: remoteNote.parentHash,
+      hashChain: remoteNote.hashChain,
     };
 
     const localNote = await noteRepository.getById(remoteNote.id);
@@ -695,9 +711,55 @@ class SyncService {
       return true;
     }
 
-    // Check for conflict
-    if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+    // Hash-based conflict detection (like git)
+    let isConflict = false;
+    let isFastForward = false;
+
+    // If both have hash chains, use hash-based detection
+    if (remoteNote.contentHash && localNote.contentHash) {
+      // Case 1: Local hash == remote parent hash -> can fast-forward (remote is newer)
+      if (localNote.contentHash === remoteNote.parentHash) {
+        isFastForward = true;
+      }
+      // Case 2: Same content hash -> identical, no-op
+      else if (localNote.contentHash === remoteNote.contentHash) {
+        return false; // No change needed
+      }
+      // Case 3: Local has unsaved changes and hashes diverged
+      else if (localNote.needsSync) {
+        // Check if local parent exists in remote chain (remote includes local's history)
+        if (localNote.parentHash && remoteNote.hashChain?.includes(localNote.parentHash)) {
+          isFastForward = true; // Remote has our ancestor, safe to update
+        } else {
+          isConflict = true;
+        }
+      }
+      // Case 4: Check if remote parent exists in local chain (local is ahead)
+      else if (remoteNote.parentHash && localNote.hashChain?.includes(remoteNote.parentHash)) {
+        return false; // Local is ahead, no update needed
+      }
+      // Case 5: Check if local parent exists in remote chain (can fast-forward)
+      else if (localNote.contentHash && remoteNote.hashChain?.includes(localNote.contentHash)) {
+        isFastForward = true;
+      }
+    } else {
+      // Fallback to timestamp-based detection for legacy notes
+      if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+        isConflict = true;
+      } else if (remoteNote.modifiedAt > localNote.modifiedAt) {
+        isFastForward = true;
+      }
+    }
+
+    if (isConflict) {
       console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}`);
+
+      // Find common ancestor for 3-way merge
+      let ancestorHash: string | null = null;
+      if (localNote.hashChain && remoteNote.hashChain) {
+        ancestorHash = findCommonAncestor(localNote.hashChain, remoteNote.hashChain);
+      }
+
       await storeConflict(remoteNote.id, {
         serverContent: remoteNote.content,
         serverTags: remoteNote.tags,
@@ -707,12 +769,18 @@ class SyncService {
         serverPinned: remoteNote.pinned,
         serverSyntaxLanguage: remoteNote.syntaxLanguage,
         serverWordWrap: remoteNote.wordWrap,
+        // Hash chain fields
+        serverContentHash: remoteNote.contentHash,
+        serverParentHash: remoteNote.parentHash,
+        serverHashChain: remoteNote.hashChain,
+        // Ancestor hash (content would need to be fetched from versions)
+        ancestorHash: ancestorHash ?? undefined,
       });
       return false;
     }
 
-    if (remoteNote.modifiedAt > localNote.modifiedAt) {
-      // Server is newer, safe to update
+    if (isFastForward) {
+      // Server is newer (fast-forward), safe to update
       await noteRepository.update(noteForStorage, false, true);
       await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
         noteId: remoteNote.id,
@@ -1155,6 +1223,9 @@ class SyncService {
           wordWrap: version.wordWrap,
           showPreview: version.showPreview,
           reason: version.reason,
+          // Hash chain fields
+          contentHash: version.contentHash,
+          parentHash: version.parentHash,
         });
       }
     }

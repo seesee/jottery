@@ -83,6 +83,10 @@ export interface SyncNote {
   syntaxLanguage?: string;
   showPreview?: boolean;
   color?: string;               // Semantic color name (unencrypted)
+  // Hash chain fields for git-like conflict detection
+  contentHash?: string;         // SHA-256 of content + tags + attachments + change fields
+  parentHash?: string | null;   // Hash of previous version (null for new notes)
+  hashChain?: string[];         // Array of ancestor hashes (max 50)
 }
 
 // Attachment reference (metadata only)
@@ -128,6 +132,14 @@ export interface SyncRejected {
   serverSyntaxLanguage?: string;
   serverWordWrap?: boolean;
   serverShowPreview?: boolean;
+  // Hash chain fields for git-like conflict detection
+  serverContentHash?: string;
+  serverParentHash?: string | null;
+  serverHashChain?: string[];
+  // Ancestor data for 3-way merge (if divergence point found)
+  ancestorHash?: string;
+  ancestorContent?: string;        // Encrypted content of common ancestor
+  ancestorTags?: string[];         // Encrypted tags of common ancestor
 }
 
 // Stored conflict data for resolution UI
@@ -143,6 +155,14 @@ export interface ConflictData {
   serverWordWrap?: boolean;
   serverShowPreview?: boolean;
   detectedAt: string;              // When conflict was detected (ISO 8601)
+  // Hash chain fields for git-like conflict detection
+  serverContentHash?: string;
+  serverParentHash?: string | null;
+  serverHashChain?: string[];
+  // Ancestor data for 3-way merge (if divergence point found)
+  ancestorHash?: string;           // Hash of common ancestor
+  ancestorContent?: string;        // Encrypted content of common ancestor
+  ancestorTags?: string[];         // Encrypted tags of common ancestor
 }
 
 // Pull request payload
@@ -189,6 +209,9 @@ export interface SyncNoteVersion {
   showPreview?: boolean;
   color?: string;            // Semantic color name (unencrypted)
   reason: 'sync' | 'manual-sync';
+  // Hash chain fields for git-like conflict detection
+  contentHash?: string;
+  parentHash?: string | null;
 }
 
 // Server status response

@@ -22,8 +22,13 @@ export interface Note {
   lockedAt?: string; // Lock timestamp
   deleted: boolean; // Soft delete flag
   deletedAt?: string; // Deletion timestamp
-  syncHash?: string; // Hash for conflict detection
+  syncHash?: string; // Hash for conflict detection (DEPRECATED - use contentHash)
   version: number; // Optimistic locking
+
+  // Hash chain fields for git-like conflict detection
+  contentHash?: string; // SHA-256 of content + tags + attachments + change-triggering fields
+  parentHash?: string | null; // Hash of previous version (null for new notes)
+  hashChain?: string[]; // Array of ancestor hashes (max 50, for quick divergence check)
   wordWrap?: boolean; // Word wrap enabled (default: true)
   syntaxLanguage?: string; // Syntax highlighting language (any supported language ID)
   showPreview?: boolean; // Show preview panel for markdown/html (default: false)
@@ -191,6 +196,9 @@ export interface NoteVersion {
   showPreview?: boolean;
   color?: string; // Semantic color name (unencrypted)
   reason: 'sync' | 'manual-sync';
+  // Hash chain fields for git-like conflict detection
+  contentHash?: string;
+  parentHash?: string | null;
 }
 
 /**
@@ -331,6 +339,10 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
   syntaxLanguage: 'markdown',
   showPreview: false,
   needsSync: true, // New notes should be synced
+  // Hash chain fields - computed after content is set
+  contentHash: undefined,
+  parentHash: null, // New notes have no parent
+  hashChain: [], // Empty chain for new notes
 };
 
 /**

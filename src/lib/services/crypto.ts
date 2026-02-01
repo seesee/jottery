@@ -9,8 +9,15 @@ import type {
   EncryptionResult,
   DecryptionParams,
 } from '../types';
+import type { Note, Attachment } from '../types/models';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
+
+/**
+ * Maximum number of ancestor hashes to keep in the hash chain.
+ * Older history can be retrieved from note_versions if needed.
+ */
+export const MAX_HASH_CHAIN_LENGTH = 50;
 
 const ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
@@ -178,6 +185,37 @@ class WebCryptoService implements CryptoService {
   }
 
   /**
+   * Compute content hash for a note.
+   * This hash uniquely identifies the note's content state for conflict detection.
+   * Includes all fields that constitute a "change" to the note.
+   *
+   * @param note - The note to hash (with encrypted content/tags)
+   * @returns SHA-256 hash of the note's change-triggering fields
+   */
+  async computeContentHash(note: Partial<Note>): Promise<string> {
+    // Build a deterministic representation of change-triggering fields
+    const hashData = {
+      // Core encrypted content (already encrypted strings)
+      content: note.content ?? '',
+      tags: note.tags ?? [],
+      // Attachment references (sorted IDs for consistency)
+      attachments: (note.attachments ?? []).map((a: Attachment) => a.id).sort(),
+      // UI preferences that constitute a change
+      pinned: note.pinned ?? false,
+      archived: note.archived ?? false,
+      locked: note.locked ?? false,
+      syntaxLanguage: note.syntaxLanguage ?? null,
+      wordWrap: note.wordWrap ?? true,
+      showPreview: note.showPreview ?? false,
+      color: note.color ?? null,
+    };
+
+    // JSON.stringify produces deterministic output for this simple object
+    const data = JSON.stringify(hashData);
+    return this.hash(data);
+  }
+
+  /**
    * Generate UUID v4
    */
   generateUUID(): string {
@@ -230,4 +268,45 @@ export async function decryptStringArray(
   key: CryptoKey
 ): Promise<string[]> {
   return decryptJSON<string[]>(params, key);
+}
+
+/**
+ * Update the hash chain with a new content hash.
+ * Prepends the current hash and trims to max length.
+ *
+ * @param currentHash - The new content hash to add
+ * @param parentChain - The previous hash chain (or empty array for new notes)
+ * @returns Updated hash chain with current hash prepended
+ */
+export function updateHashChain(
+  currentHash: string,
+  parentChain: string[] = []
+): string[] {
+  const newChain = [currentHash, ...parentChain];
+  return newChain.slice(0, MAX_HASH_CHAIN_LENGTH);
+}
+
+/**
+ * Find the common ancestor hash between two hash chains.
+ * Returns the first hash that appears in both chains.
+ *
+ * @param chainA - First hash chain
+ * @param chainB - Second hash chain
+ * @returns The common ancestor hash, or null if no common ancestor found
+ */
+export function findCommonAncestor(
+  chainA: string[],
+  chainB: string[]
+): string | null {
+  // Create a Set for O(1) lookup
+  const chainBSet = new Set(chainB);
+
+  // Find first hash from chainA that exists in chainB
+  for (const hash of chainA) {
+    if (chainBSet.has(hash)) {
+      return hash;
+    }
+  }
+
+  return null;
 }

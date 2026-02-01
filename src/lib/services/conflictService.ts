@@ -47,6 +47,13 @@ export interface ConflictInfo {
   serverSyntaxLanguage?: string;
   serverWordWrap?: boolean;
   detectedAt: string;
+  // Hash chain fields for git-like conflict detection
+  serverContentHash?: string;
+  serverParentHash?: string | null;
+  // Ancestor data for 3-way merge
+  ancestorHash?: string;
+  ancestorContent?: string;        // Decrypted ancestor content
+  ancestorTags?: string[];         // Decrypted ancestor tags
 }
 
 /**
@@ -100,6 +107,23 @@ export async function getConflictInfo(noteId: string): Promise<ConflictInfo | nu
   // Decrypt server tags (sync format: each tag individually encrypted)
   const serverTags = await decryptSyncFormatTags(conflict.serverTags, masterKey.key);
 
+  // Decrypt ancestor content if available (for 3-way merge)
+  let ancestorContent: string | undefined;
+  let ancestorTags: string[] | undefined;
+
+  if (conflict.ancestorContent) {
+    try {
+      const encryptedAncestorContent = JSON.parse(conflict.ancestorContent);
+      ancestorContent = await cryptoService.decryptText(encryptedAncestorContent, masterKey.key);
+    } catch {
+      // Fall through - ancestor content unavailable
+    }
+  }
+
+  if (conflict.ancestorTags) {
+    ancestorTags = await decryptSyncFormatTags(conflict.ancestorTags, masterKey.key);
+  }
+
   return {
     noteId,
     localNote,
@@ -110,6 +134,13 @@ export async function getConflictInfo(noteId: string): Promise<ConflictInfo | nu
     serverSyntaxLanguage: conflict.serverSyntaxLanguage,
     serverWordWrap: conflict.serverWordWrap,
     detectedAt: conflict.detectedAt,
+    // Hash chain fields
+    serverContentHash: conflict.serverContentHash,
+    serverParentHash: conflict.serverParentHash,
+    // Ancestor data for 3-way merge
+    ancestorHash: conflict.ancestorHash,
+    ancestorContent,
+    ancestorTags,
   };
 }
 
@@ -302,6 +333,14 @@ export async function storeConflict(
     serverPinned: boolean;
     serverSyntaxLanguage?: string;
     serverWordWrap?: boolean;
+    // Hash chain fields for git-like conflict detection
+    serverContentHash?: string;
+    serverParentHash?: string | null;
+    serverHashChain?: string[];
+    // Ancestor data for 3-way merge
+    ancestorHash?: string;
+    ancestorContent?: string;
+    ancestorTags?: string[];
   }
 ): Promise<void> {
   const conflictData: ConflictData = {
@@ -315,12 +354,20 @@ export async function storeConflict(
     serverSyntaxLanguage: rejected.serverSyntaxLanguage,
     serverWordWrap: rejected.serverWordWrap,
     detectedAt: new Date().toISOString(),
+    // Hash chain fields
+    serverContentHash: rejected.serverContentHash,
+    serverParentHash: rejected.serverParentHash,
+    serverHashChain: rejected.serverHashChain,
+    // Ancestor data for 3-way merge
+    ancestorHash: rejected.ancestorHash,
+    ancestorContent: rejected.ancestorContent,
+    ancestorTags: rejected.ancestorTags,
   };
 
   await syncRepository.updateNoteSyncMetadata(noteId, {
     noteId,
     lastSyncStatus: 'conflict',
-    errorMessage: 'Server version is newer - manual resolution required',
+    errorMessage: 'Conflict: diverged from common ancestor - manual resolution required',
     conflictData,
   });
 }

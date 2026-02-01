@@ -165,20 +165,47 @@ pub async fn push(
 
         // Check if note exists for this user (across all their devices)
         let existing = sqlx::query!(
-            "SELECT modified_at, server_version FROM notes WHERE id = ? AND user_id = ?",
+            "SELECT modified_at, server_version, content_hash, parent_hash, hash_chain FROM notes WHERE id = ? AND user_id = ?",
             note.id,
             client_info.user_id
         )
         .fetch_optional(&state.pool)
         .await?;
 
+        // Hash-based conflict detection (like git)
         let should_accept = match &existing {
-            None => true, // New note
+            None => true, // New note - always accept
             Some(existing_note) => {
-                // Last-Write-Wins: compare modifiedAt
-                // Use >= to avoid false conflicts when timestamps are identical
-                // (can happen if note is synced, then client re-syncs without changes)
-                note.modified_at >= existing_note.modified_at
+                // If incoming note has hash chain fields, use hash-based detection
+                if let (Some(incoming_content_hash), Some(incoming_parent_hash)) =
+                    (&note.content_hash, &note.parent_hash)
+                {
+                    if let Some(server_content_hash) = &existing_note.content_hash {
+                        // Case 1: Server hash == incoming parent hash -> clean fast-forward
+                        if server_content_hash == incoming_parent_hash {
+                            true
+                        }
+                        // Case 2: Same content hash -> identical content, no-op accept
+                        else if server_content_hash == incoming_content_hash {
+                            true
+                        }
+                        // Case 3: Check if server hash exists in incoming hash chain
+                        else if let Some(incoming_chain) = &note.hash_chain {
+                            incoming_chain.contains(server_content_hash)
+                        }
+                        // Case 4: No match in chain -> conflict
+                        else {
+                            false
+                        }
+                    } else {
+                        // Server has no hash yet (legacy note) - use timestamp fallback
+                        note.modified_at >= existing_note.modified_at
+                    }
+                } else {
+                    // Client doesn't have hash fields (legacy client) - use timestamp fallback
+                    // Use >= to avoid false conflicts when timestamps are identical
+                    note.modified_at >= existing_note.modified_at
+                }
             }
         };
 
@@ -201,6 +228,11 @@ pub async fn push(
                 .map(|e| e.server_version + 1)
                 .unwrap_or(1);
 
+            // Serialize hash chain as JSON
+            let hash_chain_json = note.hash_chain.as_ref()
+                .map(|chain| serde_json::to_string(chain).ok())
+                .flatten();
+
             // Upsert note (with both user_id for access control and client_id for audit)
             // Use composite primary key (id, user_id) to allow same note UUIDs across users
             sqlx::query!(
@@ -208,9 +240,10 @@ pub async fn push(
                 INSERT INTO notes (
                     id, user_id, client_id, created_at, modified_at, server_modified_at,
                     content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version,
-                    word_wrap, syntax_language, show_preview, color
+                    word_wrap, syntax_language, show_preview, color,
+                    content_hash, parent_hash, hash_chain
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
@@ -228,7 +261,10 @@ pub async fn push(
                     word_wrap = excluded.word_wrap,
                     syntax_language = excluded.syntax_language,
                     show_preview = excluded.show_preview,
-                    color = excluded.color
+                    color = excluded.color,
+                    content_hash = excluded.content_hash,
+                    parent_hash = excluded.parent_hash,
+                    hash_chain = excluded.hash_chain
                 "#,
                 note.id,
                 client_info.user_id,
@@ -250,7 +286,10 @@ pub async fn push(
                 word_wrap,
                 note.syntax_language,
                 show_preview,
-                note.color
+                note.color,
+                note.content_hash,
+                note.parent_hash,
+                hash_chain_json
             )
             .execute(&state.pool)
             .await?;
@@ -290,7 +329,8 @@ pub async fn push(
         } else {
             // Fetch full server note data for conflict resolution
             let server_note = sqlx::query!(
-                r#"SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at
+                r#"SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at,
+                          content_hash, parent_hash, hash_chain
                    FROM notes WHERE id = ? AND user_id = ?"#,
                 note.id,
                 client_info.user_id
@@ -324,9 +364,51 @@ pub async fn push(
             let server_tags: Vec<String> = serde_json::from_str(&server_note.tags)
                 .unwrap_or_default();
 
+            // Parse server hash chain from JSON
+            let server_hash_chain: Option<Vec<String>> = server_note.hash_chain
+                .as_ref()
+                .and_then(|json| serde_json::from_str(json).ok());
+
+            // Try to find common ancestor for 3-way merge
+            let mut ancestor_hash: Option<String> = None;
+            let mut ancestor_content: Option<String> = None;
+            let mut ancestor_tags: Option<Vec<String>> = None;
+
+            // Find common ancestor by checking if incoming parent exists in server chain
+            // or server parent exists in incoming chain
+            if let (Some(incoming_chain), Some(server_chain)) = (&note.hash_chain, &server_hash_chain) {
+                // Look for common hash in both chains
+                let server_chain_set: std::collections::HashSet<&String> = server_chain.iter().collect();
+                for hash in incoming_chain {
+                    if server_chain_set.contains(hash) {
+                        ancestor_hash = Some(hash.clone());
+                        break;
+                    }
+                }
+
+                // If we found an ancestor hash, try to retrieve its content from note_versions
+                if let Some(ref anc_hash) = ancestor_hash {
+                    // Look up version by content hash
+                    if let Ok(Some(version_row)) = sqlx::query!(
+                        r#"SELECT content, tags FROM note_versions
+                           WHERE note_id = ? AND user_id = ? AND content_hash = ?
+                           LIMIT 1"#,
+                        note.id,
+                        client_info.user_id,
+                        anc_hash
+                    )
+                    .fetch_optional(&state.pool)
+                    .await
+                    {
+                        ancestor_content = Some(version_row.content);
+                        ancestor_tags = serde_json::from_str(&version_row.tags).ok();
+                    }
+                }
+            }
+
             rejected.push(SyncRejected {
                 id: note.id.clone(),
-                reason: "Server version is newer".to_string(),
+                reason: "Conflict: diverged from common ancestor".to_string(),
                 server_modified_at: server_note.modified_at,
                 server_content: server_note.content,
                 server_tags,
@@ -341,9 +423,17 @@ pub async fn push(
                 server_word_wrap: server_note.word_wrap.map(|w| w == 1),
                 server_show_preview: server_note.show_preview.map(|p| p == 1),
                 server_color: server_note.color,
+                // Hash chain fields
+                server_content_hash: server_note.content_hash,
+                server_parent_hash: server_note.parent_hash,
+                server_hash_chain,
+                // Ancestor data for 3-way merge
+                ancestor_hash,
+                ancestor_content,
+                ancestor_tags,
             });
 
-            tracing::debug!("Rejected note: {} (conflict) - included server data for resolution", note.id);
+            tracing::debug!("Rejected note: {} (conflict) - included server data and ancestor for resolution", note.id);
         }
     }
 
@@ -381,12 +471,15 @@ pub async fn push(
             r#"
             INSERT INTO note_versions (
                 version_key, note_id, user_id, client_id, version, created_at, synced_at,
-                server_synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason
+                server_synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason,
+                content_hash, parent_hash
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
             ON CONFLICT(version_key) DO UPDATE SET
                 synced_at = excluded.synced_at,
-                server_synced_at = excluded.server_synced_at
+                server_synced_at = excluded.server_synced_at,
+                content_hash = excluded.content_hash,
+                parent_hash = excluded.parent_hash
             "#,
             version.version_key,
             version.note_id,
@@ -403,7 +496,9 @@ pub async fn push(
             word_wrap,
             show_preview,
             version.color,
-            version.reason
+            version.reason,
+            version.content_hash,
+            version.parent_hash
         )
         .execute(&state.pool)
         .await;
@@ -627,7 +722,7 @@ pub async fn pull(
     // Get notes with pagination (LIMIT/OFFSET)
     let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             last_sync,
             limit,
@@ -658,11 +753,14 @@ pub async fn pull(
                 syntax_language: row.syntax_language,
                 show_preview: row.show_preview,
                 color: row.color,
+                content_hash: row.content_hash,
+                parent_hash: row.parent_hash,
+                hash_chain: row.hash_chain,
             }))
             .collect()
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
             client_info.user_id,
             limit,
             offset
@@ -692,6 +790,9 @@ pub async fn pull(
                 syntax_language: row.syntax_language,
                 show_preview: row.show_preview,
                 color: row.color,
+                content_hash: row.content_hash,
+                parent_hash: row.parent_hash,
+                hash_chain: row.hash_chain,
             }))
             .collect()
     };
@@ -755,6 +856,11 @@ pub async fn pull(
             .remove(&db_note.id)
             .unwrap_or_default();
 
+        // Parse hash chain from JSON
+        let hash_chain: Option<Vec<String>> = db_note.hash_chain
+            .as_ref()
+            .and_then(|json| serde_json::from_str(json).ok());
+
         notes.push(SyncNote {
             id: db_note.id,
             created_at: db_note.created_at,
@@ -774,6 +880,10 @@ pub async fn pull(
             syntax_language: db_note.syntax_language,
             show_preview: db_note.show_preview.map(|p| p != 0),
             color: db_note.color,
+            // Hash chain fields
+            content_hash: db_note.content_hash,
+            parent_hash: db_note.parent_hash,
+            hash_chain,
         });
     }
 
@@ -852,7 +962,7 @@ pub async fn pull(
     let epoch = "1970-01-01T00:00:00Z".to_string();
     let last_sync_filter = pull_req.last_sync_at.as_ref().unwrap_or(&epoch);
     let db_versions = sqlx::query!(
-        "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason
+        "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason, content_hash, parent_hash
          FROM note_versions
          WHERE user_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
          ORDER BY note_id, version",
@@ -896,6 +1006,9 @@ pub async fn pull(
             show_preview: db_version.show_preview.map(|p| p != 0),
             color: db_version.color,
             reason: db_version.reason,
+            // Hash chain fields
+            content_hash: db_version.content_hash,
+            parent_hash: db_version.parent_hash,
         });
     }
 

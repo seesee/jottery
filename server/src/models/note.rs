@@ -22,6 +22,10 @@ pub struct Note {
     pub syntax_language: Option<String>,
     pub show_preview: Option<i64>,
     pub color: Option<String>,
+    // Hash chain fields for git-like conflict detection
+    pub content_hash: Option<String>,
+    pub parent_hash: Option<String>,
+    pub hash_chain: Option<String>, // JSON array of ancestor hashes
 }
 
 #[allow(dead_code)]
