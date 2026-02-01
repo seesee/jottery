@@ -20,7 +20,9 @@
     "error": "Hata",
     "back": "Geri",
     "edit": "Düzenle",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "Şifreyi göster",
+    "hidePassword": "Şifreyi gizle"
   },
   "docs": {
     "title": "Belgeler",

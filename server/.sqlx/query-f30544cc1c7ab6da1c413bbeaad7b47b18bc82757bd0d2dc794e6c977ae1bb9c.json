@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT device_name FROM clients WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "device_name",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f30544cc1c7ab6da1c413bbeaad7b47b18bc82757bd0d2dc794e6c977ae1bb9c"
+}

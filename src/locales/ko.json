@@ -20,7 +20,9 @@
     "error": "오류",
     "back": "뒤로",
     "edit": "편집",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "비밀번호 표시",
+    "hidePassword": "비밀번호 숨기기"
   },
   "docs": {
     "title": "문서",

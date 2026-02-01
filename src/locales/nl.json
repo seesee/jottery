@@ -20,7 +20,9 @@
     "error": "Fout",
     "back": "Terug",
     "edit": "Bewerken",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "Wachtwoord tonen",
+    "hidePassword": "Wachtwoord verbergen"
   },
   "docs": {
     "title": "Documentatie",

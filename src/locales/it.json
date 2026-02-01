@@ -20,7 +20,9 @@
     "error": "Errore",
     "back": "Indietro",
     "edit": "Modifica",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password"
   },
   "docs": {
     "title": "Documentazione",

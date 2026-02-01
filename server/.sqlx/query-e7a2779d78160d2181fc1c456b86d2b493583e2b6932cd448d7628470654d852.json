@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason\n         FROM note_versions\n         WHERE client_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)\n         ORDER BY note_id, version",
+  "query": "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason\n         FROM note_versions\n         WHERE user_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)\n         ORDER BY note_id, version",
   "describe": {
     "columns": [
       {
@@ -88,5 +88,5 @@
       false
     ]
   },
-  "hash": "5be99c7c7fbfdc3dfb93677d5f55e99a6693823f3ff22b195feff496d08c1636"
+  "hash": "e7a2779d78160d2181fc1c456b86d2b493583e2b6932cd448d7628470654d852"
 }

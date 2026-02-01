@@ -20,7 +20,9 @@
     "error": "错误",
     "back": "返回",
     "edit": "编辑",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码"
   },
   "docs": {
     "title": "文档",

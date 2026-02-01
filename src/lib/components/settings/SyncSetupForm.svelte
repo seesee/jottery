@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import PasswordInput from '../PasswordInput.svelte';
 
   // Setup configuration
   export let syncEndpoint: string;
@@ -191,24 +192,22 @@
                       <label for="user-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {$_('settings.syncSetup.registration.passwordLabel')}
                       </label>
-                      <input
+                      <PasswordInput
                         id="user-password"
-                        type="password"
                         bind:value={userPassword}
                         placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
                       <label for="user-password-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {$_('settings.syncSetup.registration.confirmPasswordLabel')}
                       </label>
-                      <input
+                      <PasswordInput
                         id="user-password-confirm"
-                        type="password"
                         bind:value={userPasswordConfirm}
                         placeholder={$_('settings.syncSetup.registration.confirmPasswordPlaceholder')}
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <div class="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded p-2">
                         <p class="text-xs text-amber-800 dark:text-amber-200 font-medium flex items-start gap-1">
@@ -333,12 +332,11 @@
                     <label for="existing-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {$_('settings.syncSetup.existingAccount.passwordLabel')}
                     </label>
-                    <input
+                    <PasswordInput
                       id="existing-password"
-                      type="password"
                       bind:value={userPassword}
                       placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                   <button

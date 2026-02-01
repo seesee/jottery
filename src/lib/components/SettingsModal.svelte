@@ -12,6 +12,7 @@
   import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
+  import PasswordInput from './PasswordInput.svelte';
   import TabContainer from './TabContainer.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
   import { toast } from '../utils/toast.svelte';
@@ -202,7 +203,7 @@
       if (syncStatus?.isEnabled && syncStatus.syncEndpoint) {
         try {
           const metadata = await syncRepository.getMetadata();
-          if (metadata?.apiKey) {
+          if (metadata?.apiKey && !metadata.apiKey.startsWith('IMPORT:') && !metadata.apiKey.startsWith('ENCRYPTED:') && !metadata.apiKey.startsWith('RESTORE:')) {
             const masterKey = keyManager.getMasterKey();
             if (masterKey) {
               const apiKeyEncrypted = JSON.parse(metadata.apiKey);
@@ -1299,13 +1300,12 @@
           <label for="remember-password-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {$_('settings.rememberPasswordModal.confirmPassword')}
           </label>
-          <input
+          <PasswordInput
             id="remember-password-confirm"
-            type="password"
             bind:value={rememberPasswordConfirmInput}
-            on:keydown={(e) => e.key === 'Enter' && confirmEnableRememberPassword()}
+            on:keydown={(e) => e.detail.key === 'Enter' && confirmEnableRememberPassword()}
             placeholder="{$_('settings.rememberPasswordModal.passwordPlaceholder')}"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
           {#if rememberPasswordError}
             <p class="mt-2 text-sm text-red-600 dark:text-red-400">{rememberPasswordError}</p>
@@ -1357,13 +1357,12 @@
           <label for="persist-session-confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {$_('settings.persistSessionModal.confirmPassword')}
           </label>
-          <input
+          <PasswordInput
             id="persist-session-confirm"
-            type="password"
             bind:value={persistSessionConfirmInput}
-            on:keydown={(e) => e.key === 'Enter' && confirmEnablePersistSession()}
+            on:keydown={(e) => e.detail.key === 'Enter' && confirmEnablePersistSession()}
             placeholder="{$_('settings.rememberPasswordModal.passwordPlaceholder')}"
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {#if persistSessionError}
             <p class="mt-2 text-sm text-red-600 dark:text-red-400">{persistSessionError}</p>

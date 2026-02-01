@@ -10,6 +10,7 @@
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
+  import PasswordInput from './PasswordInput.svelte';
   import type { UserSettings } from '../types';
 
   let password = '';
@@ -20,7 +21,7 @@
   let failedAttempts = 0;
   let showDeleteOption = false;
   let showDeleteConfirm = false;
-  let passwordInput: HTMLInputElement;
+  let passwordInput: { focus: () => void } | undefined;
 
   // Landing page state for first-time users
   let showLandingPage = false;
@@ -486,14 +487,13 @@
             <label for="backup-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {$_('backup.restore.password')}
             </label>
-            <input
+            <PasswordInput
               id="backup-password"
-              type="password"
               bind:value={backupPassword}
               disabled={restoring}
-              on:keydown={(e) => e.key === 'Enter' && handleRestoreBackup()}
+              on:keydown={(e) => e.detail.key === 'Enter' && handleRestoreBackup()}
               placeholder={$_('backup.restore.password')}
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {$_('backup.restore.passwordHint')}
@@ -602,15 +602,13 @@
           <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {credentialsImported ? $_('unlock.credentialsImported.passwordLabel') : $_('unlock.password')}
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             bind:value={password}
             bind:this={passwordInput}
             disabled={loading}
-            required
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder={credentialsImported ? $_('unlock.credentialsImported.passwordPlaceholder') : $_('unlock.password')}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           />
         </div>
 
@@ -619,14 +617,12 @@
             <label for="confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {$_('unlock.confirmPassword')}
             </label>
-            <input
+            <PasswordInput
               id="confirm"
-              type="password"
               bind:value={confirmPassword}
               disabled={loading}
-              required
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               placeholder={$_('unlock.confirmPassword')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             />
           </div>
 

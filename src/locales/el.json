@@ -20,7 +20,9 @@
     "error": "Σφάλμα",
     "back": "Πίσω",
     "edit": "Επεξεργασία",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "Εμφάνιση κωδικού",
+    "hidePassword": "Απόκρυψη κωδικού"
   },
   "docs": {
     "title": "Τεκμηρίωση",

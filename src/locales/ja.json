@@ -20,7 +20,9 @@
     "error": "エラー",
     "back": "戻る",
     "edit": "編集",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを非表示"
   },
   "docs": {
     "title": "ドキュメント",

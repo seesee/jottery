@@ -20,7 +20,9 @@
     "error": "Ошибка",
     "back": "Назад",
     "edit": "Редактировать",
-    "add": "Add"
+    "add": "Add",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль"
   },
   "docs": {
     "title": "Документация",
