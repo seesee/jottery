@@ -194,6 +194,7 @@ export interface SyncNoteVersion {
 // Server status response
 export interface SyncStatusResponse {
   clientId: string;
+  deviceName: string;
   serverLastModified: string;
   noteCount: number;
   lastSyncedAt?: string;

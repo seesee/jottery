@@ -197,6 +197,29 @@
   async function loadSyncStatus() {
     try {
       syncStatus = await syncService.getSyncStatus();
+
+      // If sync is enabled, fetch device name from server
+      if (syncStatus?.isEnabled && syncStatus.syncEndpoint) {
+        try {
+          const metadata = await syncRepository.getMetadata();
+          if (metadata?.apiKey) {
+            const masterKey = keyManager.getMasterKey();
+            if (masterKey) {
+              const apiKeyEncrypted = JSON.parse(metadata.apiKey);
+              const apiKey = await cryptoService.decryptText(apiKeyEncrypted, masterKey.key);
+              const { getServerStatus } = await import('../services/syncClient');
+              const serverStatus = await getServerStatus(syncStatus.syncEndpoint, apiKey);
+              // Update local device name with server value
+              if (serverStatus.deviceName) {
+                deviceName = serverStatus.deviceName;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to fetch device name from server:', error);
+          // Fall back to local device name - not critical
+        }
+      }
     } catch (error) {
       console.error('Failed to load sync status:', error);
     }

@@ -44,6 +44,18 @@ pub async fn get_status(
     AuthClient(client_info): AuthClient,
 ) -> AppResult<Json<SyncStatusResponse>> {
 
+    // Get device name for this client
+    let client_result = sqlx::query!(
+        "SELECT device_name FROM clients WHERE id = ?",
+        client_info.client_id
+    )
+    .fetch_optional(&state.pool)
+    .await?;
+
+    let device_name = client_result
+        .map(|r| r.device_name)
+        .unwrap_or_else(|| "Unknown Device".to_string());
+
     // Get note count for this user (across all their devices)
     let count_result = sqlx::query!(
         "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
@@ -68,6 +80,7 @@ pub async fn get_status(
 
     Ok(Json(SyncStatusResponse {
         client_id: client_info.client_id,
+        device_name,
         server_last_modified,
         note_count: note_count as i64,
         last_synced_at: None,

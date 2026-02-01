@@ -166,6 +166,8 @@ pub struct SyncAttachmentData {
 pub struct SyncStatusResponse {
     #[serde(rename = "clientId")]
     pub client_id: String,
+    #[serde(rename = "deviceName")]
+    pub device_name: String,
     #[serde(rename = "serverLastModified")]
     pub server_last_modified: String,
     #[serde(rename = "noteCount")]
