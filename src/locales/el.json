@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Παρακαλώ περιμένετε",
+    "processing": "Επεξεργασία...",
+    "backup": "Δημιουργία αντιγράφου ασφαλείας...",
+    "export": "Εξαγωγή σημειώσεων..."
   }
 }

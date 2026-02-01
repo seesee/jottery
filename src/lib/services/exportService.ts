@@ -13,25 +13,40 @@ import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 const EXPORT_VERSION = '1.0';
 
 /**
+ * Progress callback for export operations
+ */
+export type ExportProgressCallback = (progress: {
+  phase: 'counting' | 'exporting' | 'complete';
+  current?: number;
+  total?: number;
+}) => void;
+
+/**
  * Export all notes to JSON format
  */
-export async function exportAllNotes(): Promise<ExportData> {
+export async function exportAllNotes(onProgress?: ExportProgressCallback): Promise<ExportData> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
     throw new Error('Application is locked');
   }
 
+  onProgress?.({ phase: 'counting' });
+
   const notes = await noteRepository.getAllActive();
+  const total = notes.length;
   const exportNotes: ExportNote[] = [];
 
-  for (const note of notes) {
-    const exportNote = await convertNoteToExport(note, masterKey.key);
+  for (let i = 0; i < notes.length; i++) {
+    const exportNote = await convertNoteToExport(notes[i], masterKey.key);
     exportNotes.push(exportNote);
+    onProgress?.({ phase: 'exporting', current: i + 1, total });
   }
 
   // Export color settings
   const { settingsRepository } = await import('./settingsRepository');
   const userSettings = await settingsRepository.get();
+
+  onProgress?.({ phase: 'complete', current: total, total });
 
   return {
     version: EXPORT_VERSION,

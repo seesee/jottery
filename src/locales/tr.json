@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Lütfen bekleyin",
+    "processing": "İşleniyor...",
+    "backup": "Yedek oluşturuluyor...",
+    "export": "Notlar dışa aktarılıyor..."
   }
 }

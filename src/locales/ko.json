@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "잠시만 기다려 주세요",
+    "processing": "처리 중...",
+    "backup": "백업 생성 중...",
+    "export": "노트 내보내는 중..."
   }
 }

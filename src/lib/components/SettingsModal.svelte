@@ -13,6 +13,7 @@
   import { DEFAULT_KEYBOARD_SHORTCUTS, DEFAULT_QUICK_COMMANDS } from '../types';
   import ConfirmModal from './ConfirmModal.svelte';
   import DocumentationModal from './DocumentationModal.svelte';
+  import ProgressModal from './ProgressModal.svelte';
   import PasswordInput from './PasswordInput.svelte';
   import TabContainer from './TabContainer.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
@@ -101,6 +102,13 @@
   let showDocumentation = false;
   let selectedArchitecture = detectArchitecture();
   let isCreatingBackup = false;
+
+  // Progress modal state
+  let showProgress = false;
+  let progressTitle = '';
+  let progressMessage = '';
+  let progressCurrent = 0;
+  let progressTotal = 0;
 
   // About tab stats
   let noteStats: { total: number; active: number; deleted: number; pinned: number; } | null = null;
@@ -951,18 +959,38 @@
 
   async function handleExport() {
     try {
-      const data = await exportAllNotes();
+      showProgress = true;
+      progressTitle = $_('progress.export');
+      progressMessage = '';
+      progressCurrent = 0;
+      progressTotal = 0;
+
+      const data = await exportAllNotes((progress) => {
+        if (progress.total) progressTotal = progress.total;
+        if (progress.current) progressCurrent = progress.current;
+      });
       await downloadExport(data);
     } catch (error) {
       console.error('Failed to export notes:', error);
       toast.error($_('settings.exportFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
+    } finally {
+      showProgress = false;
     }
   }
 
   async function handleCreateBackup() {
     isCreatingBackup = true;
+    showProgress = true;
+    progressTitle = $_('progress.backup');
+    progressMessage = '';
+    progressCurrent = 0;
+    progressTotal = 0;
+
     try {
-      const backup = await createBackup();
+      const backup = await createBackup((progress) => {
+        if (progress.total) progressTotal = progress.total;
+        if (progress.current) progressCurrent = progress.current;
+      });
       downloadBackup(backup);
       // Record the backup to reset counters and hide reminder
       await backupSchedulerService.recordBackup();
@@ -972,6 +1000,7 @@
       toast.error($_('backup.failed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       isCreatingBackup = false;
+      showProgress = false;
     }
   }
 
@@ -1456,6 +1485,15 @@
       </div>
     </div>
   {/if}
+
+  <!-- Progress Modal for backup/export operations -->
+  <ProgressModal
+    show={showProgress}
+    title={progressTitle}
+    message={progressMessage}
+    current={progressCurrent}
+    total={progressTotal}
+  />
 {/if}
 
 <!-- Import Progress Modal -->

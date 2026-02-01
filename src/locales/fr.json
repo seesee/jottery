@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Veuillez patienter",
+    "processing": "Traitement en cours...",
+    "backup": "Création de la sauvegarde...",
+    "export": "Exportation des notes..."
   }
 }

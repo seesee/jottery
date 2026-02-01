@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "お待ちください",
+    "processing": "処理中...",
+    "backup": "バックアップを作成中...",
+    "export": "ノートをエクスポート中..."
   }
 }

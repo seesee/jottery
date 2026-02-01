@@ -664,5 +664,11 @@
   "sync": {
     "syncing": "SYNCING...",
     "syncProgress": "SYNCING: {PERCENTAGE}% COMPLETE"
+  },
+  "progress": {
+    "title": "PLEASE WAIT",
+    "processing": "PROCESSING...",
+    "backup": "CREATING BACKUP...",
+    "export": "EXPORTING NOTES..."
   }
 }

@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "请稍候",
+    "processing": "处理中...",
+    "backup": "正在创建备份...",
+    "export": "正在导出笔记..."
   }
 }

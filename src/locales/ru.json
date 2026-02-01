@@ -1186,5 +1186,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Пожалуйста, подождите",
+    "processing": "Обработка...",
+    "backup": "Создание резервной копии...",
+    "export": "Экспорт заметок..."
   }
 }
