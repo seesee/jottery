@@ -77,16 +77,21 @@ export async function unlock(password: string): Promise<void> {
   console.log('[Unlock] Encryption metadata found, deriving key...');
   console.log('[Unlock] Salt length:', metadata.salt.length, 'Iterations:', metadata.iterations);
 
-  // Derive master key
+  // Derive master key (extractable so we can export bytes for JWE backup)
   const salt = base64ToUint8Array(metadata.salt);
   const key = await cryptoService.deriveKey({
     password,
     salt,
     iterations: metadata.iterations,
     algorithm: 'PBKDF2',
+    extractable: true,
   });
 
-  console.log('[Unlock] ✓ Master key derived');
+  // Export key as raw bytes for JWE operations (backup)
+  const rawKey = await crypto.subtle.exportKey('raw', key);
+  const keyBytes = new Uint8Array(rawKey);
+
+  console.log('[Unlock] ✓ Master key derived and exported');
 
   // Verify the key is correct by attempting to decrypt an existing note
   // This prevents the UI from loading with a wrong password
@@ -109,9 +114,10 @@ export async function unlock(password: string): Promise<void> {
     console.log('[Unlock] ⚠️ No notes to verify password against - skipping verification');
   }
 
-  // Store the master key
+  // Store the master key with bytes for JWE operations
   const masterKey: MasterKey = {
     key,
+    keyBytes,
     derivedAt: Date.now(),
   };
 
@@ -367,9 +373,10 @@ export async function restoreFromBackup(
   console.log('[RestoreFromBackup] Restoring data...');
   await restoreBackupData(backup, verification.keyBytes, onProgress);
 
-  // Step 3: Store the master key (we already verified it works)
+  // Step 3: Store the master key with bytes (we already verified it works)
   const masterKey: MasterKey = {
     key: verification.key,
+    keyBytes: verification.keyBytes,
     derivedAt: Date.now(),
   };
 

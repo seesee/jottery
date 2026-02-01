@@ -36,7 +36,7 @@ class WebCryptoService implements CryptoService {
    * Derive a cryptographic key from password using PBKDF2
    */
   async deriveKey(params: KeyDerivationParams): Promise<CryptoKey> {
-    const { password, salt, iterations } = params;
+    const { password, salt, iterations, extractable = false } = params;
 
     // Import password as key material
     const passwordKey = await crypto.subtle.importKey(
@@ -60,7 +60,7 @@ class WebCryptoService implements CryptoService {
         name: ALGORITHM,
         length: KEY_LENGTH,
       },
-      false, // Not extractable for security
+      extractable, // Extractable if needed for backup (JWE operations)
       ['encrypt', 'decrypt']
     );
 

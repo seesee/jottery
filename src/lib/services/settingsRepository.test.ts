@@ -19,6 +19,7 @@ describe('settingsRepository', () => {
     // Set up authenticated key manager for encryption tests
     keyManager.setMasterKey({
       key: masterKey,
+      keyBytes: new Uint8Array(32),
       derivedAt: Date.now(),
     });
   });
@@ -616,6 +617,7 @@ describe('settingsRepository', () => {
       // Restore key for cleanup
       keyManager.setMasterKey({
         key: masterKey,
+        keyBytes: new Uint8Array(32),
         derivedAt: Date.now(),
       });
     });
@@ -642,6 +644,7 @@ describe('settingsRepository', () => {
       // Restore key for cleanup
       keyManager.setMasterKey({
         key: masterKey,
+        keyBytes: new Uint8Array(32),
         derivedAt: Date.now(),
       });
     });

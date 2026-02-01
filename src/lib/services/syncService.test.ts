@@ -43,6 +43,7 @@ describe('syncService', () => {
     // Set up authenticated key manager
     keyManager.setMasterKey({
       key: masterKey,
+      keyBytes: new Uint8Array(32),
       derivedAt: Date.now(),
     });
 

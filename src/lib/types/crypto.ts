@@ -8,6 +8,7 @@
  */
 export interface MasterKey {
   key: CryptoKey;
+  keyBytes: Uint8Array; // Raw key bytes for JWE operations (jose library)
   derivedAt: number; // Timestamp when derived
   password?: string; // Optional: kept in memory for Remember Password feature
 }
@@ -20,6 +21,7 @@ export interface KeyDerivationParams {
   salt: Uint8Array;
   iterations: number;
   algorithm?: 'PBKDF2' | 'Argon2id'; // Optional, defaults to PBKDF2
+  extractable?: boolean; // If true, key can be exported as raw bytes
 }
 
 /**

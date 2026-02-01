@@ -156,8 +156,8 @@ export async function createBackup(): Promise<BackupData> {
     throw new Error('No encryption metadata found. Application not initialised.');
   }
 
-  // Export key as raw bytes for jose
-  const keyBytes = await exportKeyAsBytes(masterKey.key);
+  // Use pre-exported key bytes from keyManager
+  const keyBytes = masterKey.keyBytes;
 
   const jweRecords: string[] = [];
 
@@ -361,13 +361,14 @@ export async function verifyBackupPassword(
   password: string
 ): Promise<{ valid: boolean; key?: CryptoKey; keyBytes?: Uint8Array; error?: string }> {
   try {
-    // Derive key using backup's salt and iterations
+    // Derive key using backup's salt and iterations (extractable for JWE)
     const salt = base64ToUint8Array(backup.encryption.salt);
     const key = await cryptoService.deriveKey({
       password,
       salt,
       iterations: backup.encryption.iterations,
       algorithm: 'PBKDF2',
+      extractable: true,
     });
 
     // Export key as raw bytes for jose

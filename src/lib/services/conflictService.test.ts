@@ -18,7 +18,7 @@ describe('conflictService', () => {
     const { masterKey: key } = await initTestDB();
     masterKey = key;
     // Mock keyManager to return our test key
-    vi.spyOn(keyManager, 'getMasterKey').mockReturnValue({ key: masterKey, derivedAt: Date.now() });
+    vi.spyOn(keyManager, 'getMasterKey').mockReturnValue({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
   });
 
   afterEach(async () => {
