@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "既存のアカウントに接続",
         "subtitle": "すでにアカウントをお持ちですか？このデバイスを接続",
-        "formTitle": "既存のアカウントに接続"
+        "formTitle": "既存のアカウントに接続",
+        "infoText": "同期サーバーの認証情報を入力してください。マスターパスワードを作成後、ノートが同期されます。",
+        "emailLabel": "メールアドレス",
+        "passwordLabel": "サーバーパスワード",
+        "createPasswordNote": "同期情報を入力後、下でマスターパスワードを作成してセットアップを完了してください。"
       },
       "registerServer": {
         "title": "新しいアカウントを登録",

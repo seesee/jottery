@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "Conectar cuenta existente",
         "subtitle": "¿Ya tiene una cuenta? Conecte este dispositivo",
-        "formTitle": "Conectar a cuenta existente"
+        "formTitle": "Conectar a cuenta existente",
+        "infoText": "Ingrese sus credenciales del servidor de sincronización. Sus notas se sincronizarán después de crear su contraseña maestra.",
+        "emailLabel": "Correo electrónico",
+        "passwordLabel": "Contraseña del servidor",
+        "createPasswordNote": "Después de ingresar sus datos de sincronización, cree su contraseña maestra abajo para completar la configuración."
       },
       "registerServer": {
         "title": "Registrar nueva cuenta",

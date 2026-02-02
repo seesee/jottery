@@ -832,7 +832,11 @@
       "existingAccount": {
         "title": "Connect existing account",
         "subtitle": "Already have an account? Connect this device",
-        "formTitle": "Connect to Existing Account"
+        "formTitle": "Connect to Existing Account",
+        "infoText": "Enter your sync server credentials. Your notes will sync after you create your master password.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Server password",
+        "createPasswordNote": "After entering your sync details, create your master password below to complete setup."
       },
       "registerServer": {
         "title": "Register new account",

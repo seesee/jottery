@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "Mevcut hesabı bağla",
         "subtitle": "Zaten bir hesabınız var mı? Bu cihazı bağlayın",
-        "formTitle": "Mevcut hesaba bağlan"
+        "formTitle": "Mevcut hesaba bağlan",
+        "infoText": "Senkronizasyon sunucusu kimlik bilgilerinizi girin. Ana parolanızı oluşturduktan sonra notlarınız senkronize edilecektir.",
+        "emailLabel": "E-posta adresi",
+        "passwordLabel": "Sunucu parolası",
+        "createPasswordNote": "Senkronizasyon bilgilerinizi girdikten sonra, kurulumu tamamlamak için aşağıda ana parolanızı oluşturun."
       },
       "registerServer": {
         "title": "Yeni hesap kaydet",

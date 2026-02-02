@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "Bestehendes Konto verbinden",
         "subtitle": "Sie haben bereits ein Konto? Verbinden Sie dieses Gerät",
-        "formTitle": "Mit bestehendem Konto verbinden"
+        "formTitle": "Mit bestehendem Konto verbinden",
+        "infoText": "Geben Sie Ihre Sync-Server-Anmeldedaten ein. Ihre Notizen werden synchronisiert, nachdem Sie Ihr Master-Passwort erstellt haben.",
+        "emailLabel": "E-Mail-Adresse",
+        "passwordLabel": "Server-Passwort",
+        "createPasswordNote": "Erstellen Sie nach Eingabe Ihrer Sync-Daten unten Ihr Master-Passwort, um die Einrichtung abzuschließen."
       },
       "registerServer": {
         "title": "Neues Konto registrieren",

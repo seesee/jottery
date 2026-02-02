@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "连接现有账户",
         "subtitle": "已有账户？连接此设备",
-        "formTitle": "连接到现有账户"
+        "formTitle": "连接到现有账户",
+        "infoText": "输入您的同步服务器凭据。创建主密码后，您的笔记将同步。",
+        "emailLabel": "电子邮件地址",
+        "passwordLabel": "服务器密码",
+        "createPasswordNote": "输入同步信息后，请在下方创建主密码以完成设置。"
       },
       "registerServer": {
         "title": "注册新账户",

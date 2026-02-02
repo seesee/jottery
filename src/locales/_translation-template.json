@@ -428,7 +428,11 @@
       "existingAccount": {
         "title": "CONNECT EXISTING ACCOUNT",
         "subtitle": "ALREADY HAVE AN ACCOUNT? CONNECT THIS DEVICE",
-        "formTitle": "CONNECT TO EXISTING ACCOUNT"
+        "formTitle": "CONNECT TO EXISTING ACCOUNT",
+        "infoText": "ENTER YOUR SYNC SERVER CREDENTIALS. YOUR NOTES WILL SYNC AFTER YOU CREATE YOUR MASTER PASSWORD.",
+        "emailLabel": "EMAIL ADDRESS",
+        "passwordLabel": "SERVER PASSWORD",
+        "createPasswordNote": "AFTER ENTERING YOUR SYNC DETAILS, CREATE YOUR MASTER PASSWORD BELOW TO COMPLETE SETUP."
       },
       "registerServer": {
         "title": "REGISTER NEW ACCOUNT",

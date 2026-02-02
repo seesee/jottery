@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "Bestaand account verbinden",
         "subtitle": "Heb je al een account? Verbind dit apparaat",
-        "formTitle": "Verbinden met bestaand account"
+        "formTitle": "Verbinden met bestaand account",
+        "infoText": "Voer uw synchronisatieservergegevens in. Uw notities worden gesynchroniseerd nadat u uw hoofdwachtwoord heeft aangemaakt.",
+        "emailLabel": "E-mailadres",
+        "passwordLabel": "Serverwachtwoord",
+        "createPasswordNote": "Maak na het invoeren van uw synchronisatiegegevens hieronder uw hoofdwachtwoord aan om de installatie te voltooien."
       },
       "registerServer": {
         "title": "Nieuw account registreren",

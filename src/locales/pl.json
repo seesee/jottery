@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "Połącz istniejące konto",
         "subtitle": "Masz już konto? Połącz to urządzenie",
-        "formTitle": "Połącz z istniejącym kontem"
+        "formTitle": "Połącz z istniejącym kontem",
+        "infoText": "Wprowadź dane logowania do serwera synchronizacji. Twoje notatki zostaną zsynchronizowane po utworzeniu hasła głównego.",
+        "emailLabel": "Adres e-mail",
+        "passwordLabel": "Hasło serwera",
+        "createPasswordNote": "Po wprowadzeniu danych synchronizacji, utwórz poniżej hasło główne, aby zakończyć konfigurację."
       },
       "registerServer": {
         "title": "Zarejestruj nowe konto",

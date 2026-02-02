@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "Collega account esistente",
         "subtitle": "Hai già un account? Collega questo dispositivo",
-        "formTitle": "Collega ad account esistente"
+        "formTitle": "Collega ad account esistente",
+        "infoText": "Inserisci le credenziali del server di sincronizzazione. Le tue note verranno sincronizzate dopo aver creato la password principale.",
+        "emailLabel": "Indirizzo email",
+        "passwordLabel": "Password del server",
+        "createPasswordNote": "Dopo aver inserito i dettagli di sincronizzazione, crea la tua password principale qui sotto per completare la configurazione."
       },
       "registerServer": {
         "title": "Registra nuovo account",

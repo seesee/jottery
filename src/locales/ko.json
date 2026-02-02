@@ -871,7 +871,11 @@
       "existingAccount": {
         "title": "기존 계정 연결",
         "subtitle": "이미 계정이 있으신가요? 이 기기를 연결하세요",
-        "formTitle": "기존 계정에 연결"
+        "formTitle": "기존 계정에 연결",
+        "infoText": "동기화 서버 자격 증명을 입력하세요. 마스터 비밀번호를 생성한 후 노트가 동기화됩니다.",
+        "emailLabel": "이메일 주소",
+        "passwordLabel": "서버 비밀번호",
+        "createPasswordNote": "동기화 정보를 입력한 후 아래에서 마스터 비밀번호를 생성하여 설정을 완료하세요."
       },
       "registerServer": {
         "title": "새 계정 등록",
