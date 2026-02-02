@@ -1,6 +1,6 @@
 appId: io.jottery.app
 productName: Jottery
-copyright: Copyright © 2024-present ${author}
+copyright: Copyright © 2025 Jottery Contributors
 
 directories:
   output: dist-electron
