@@ -875,7 +875,7 @@
         "infoText": "Entrez vos identifiants de serveur de synchronisation. Vos notes seront synchronisées après avoir créé votre mot de passe principal.",
         "emailLabel": "Adresse e-mail",
         "passwordLabel": "Mot de passe du serveur",
-        "createPasswordNote": "Après avoir saisi vos informations de synchronisation, créez votre mot de passe principal ci-dessous pour terminer la configuration."
+        "createPasswordNote": "Après avoir saisi vos informations de synchronisation, utilisez votre mot de passe principal ci-dessous pour terminer la configuration."
       },
       "registerServer": {
         "title": "Enregistrer un nouveau compte",

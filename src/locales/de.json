@@ -875,7 +875,7 @@
         "infoText": "Geben Sie Ihre Sync-Server-Anmeldedaten ein. Ihre Notizen werden synchronisiert, nachdem Sie Ihr Master-Passwort erstellt haben.",
         "emailLabel": "E-Mail-Adresse",
         "passwordLabel": "Server-Passwort",
-        "createPasswordNote": "Erstellen Sie nach Eingabe Ihrer Sync-Daten unten Ihr Master-Passwort, um die Einrichtung abzuschließen."
+        "createPasswordNote": "Geben Sie nach Eingabe Ihrer Sync-Daten unten Ihr Master-Passwort ein, um die Einrichtung abzuschließen."
       },
       "registerServer": {
         "title": "Neues Konto registrieren",

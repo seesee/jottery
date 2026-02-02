@@ -875,7 +875,7 @@
         "infoText": "Insira suas credenciais do servidor de sincronização. Suas notas serão sincronizadas após criar sua senha mestra.",
         "emailLabel": "Endereço de e-mail",
         "passwordLabel": "Senha do servidor",
-        "createPasswordNote": "Após inserir seus dados de sincronização, crie sua senha mestra abaixo para concluir a configuração."
+        "createPasswordNote": "Após inserir seus dados de sincronização, use sua senha mestra abaixo para concluir a configuração."
       },
       "registerServer": {
         "title": "Registrar nova conta",

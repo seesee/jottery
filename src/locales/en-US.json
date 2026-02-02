@@ -861,7 +861,7 @@
         "infoText": "Enter your sync server credentials. Your notes will sync after you create your master password.",
         "emailLabel": "Email address",
         "passwordLabel": "Server password",
-        "createPasswordNote": "After entering your sync details, create your master password below to complete setup."
+        "createPasswordNote": "After entering your sync details, use your master password below to complete setup."
       },
       "registerServer": {
         "title": "Register new account",

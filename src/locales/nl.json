@@ -875,7 +875,7 @@
         "infoText": "Voer uw synchronisatieservergegevens in. Uw notities worden gesynchroniseerd nadat u uw hoofdwachtwoord heeft aangemaakt.",
         "emailLabel": "E-mailadres",
         "passwordLabel": "Serverwachtwoord",
-        "createPasswordNote": "Maak na het invoeren van uw synchronisatiegegevens hieronder uw hoofdwachtwoord aan om de installatie te voltooien."
+        "createPasswordNote": "Gebruik na het invoeren van uw synchronisatiegegevens hieronder uw hoofdwachtwoord om de installatie te voltooien."
       },
       "registerServer": {
         "title": "Nieuw account registreren",

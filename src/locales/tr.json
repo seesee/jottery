@@ -875,7 +875,7 @@
         "infoText": "Senkronizasyon sunucusu kimlik bilgilerinizi girin. Ana parolanızı oluşturduktan sonra notlarınız senkronize edilecektir.",
         "emailLabel": "E-posta adresi",
         "passwordLabel": "Sunucu parolası",
-        "createPasswordNote": "Senkronizasyon bilgilerinizi girdikten sonra, kurulumu tamamlamak için aşağıda ana parolanızı oluşturun."
+        "createPasswordNote": "Senkronizasyon bilgilerinizi girdikten sonra, kurulumu tamamlamak için aşağıda ana parolanızı girin."
       },
       "registerServer": {
         "title": "Yeni hesap kaydet",
