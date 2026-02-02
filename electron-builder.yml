@@ -37,7 +37,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   darkModeSupport: true
-  icon: build/icon.icns
+  icon: dist/android-chrome-512x512.png
 
 dmg:
   contents:
@@ -55,7 +55,7 @@ win:
       arch:
         - x64
         - arm64
-  icon: build/icon.ico
+  icon: dist/favicon.ico
   publisherName: Jottery
 
 nsis:
@@ -78,7 +78,7 @@ linux:
         - x64
         - arm64
   category: Office
-  icon: build/icon.png
+  icon: dist/android-chrome-512x512.png
   synopsis: Privacy-focused encrypted notes
   description: A privacy-focused, self-hosted scratch pad application for capturing, organising, and searching notes with rich content, syntax highlighting, and encryption.
 
