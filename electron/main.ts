@@ -9,7 +9,6 @@ import path from 'path';
 import { setupMenu } from './menu';
 import { setupPasswordStorage } from './ipc/password-storage';
 import { setupFileOperations } from './ipc/file-operations';
-import { setupAutoUpdater } from './updater';
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
@@ -111,9 +110,16 @@ app.whenReady().then(() => {
   setupIpcHandlers();
   createWindow();
 
-  // Setup auto-updater (only in production)
+  // Setup auto-updater lazily (only in production, after window is ready)
+  // This defers loading electron-updater to avoid slowing down startup
   if (!isDev) {
-    setupAutoUpdater(mainWindow);
+    setTimeout(() => {
+      import('./updater').then(({ setupAutoUpdater }) => {
+        setupAutoUpdater(mainWindow);
+      }).catch(err => {
+        console.error('Failed to load auto-updater:', err);
+      });
+    }, 3000);
   }
 
   // On macOS, re-create a window when the dock icon is clicked
