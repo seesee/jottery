@@ -6,14 +6,10 @@ import {
   shell,
 } from 'electron';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { setupMenu } from './menu.js';
-import { setupPasswordStorage } from './ipc/password-storage.js';
-import { setupFileOperations } from './ipc/file-operations.js';
-import { setupAutoUpdater } from './updater.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { setupMenu } from './menu';
+import { setupPasswordStorage } from './ipc/password-storage';
+import { setupFileOperations } from './ipc/file-operations';
+import { setupAutoUpdater } from './updater';
 
 // Keep a global reference of the window object to prevent garbage collection
 let mainWindow: BrowserWindow | null = null;
@@ -54,7 +50,8 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools();
   } else {
     // In production, load from built files
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // __dirname is electron/dist, so go up two levels to reach root dist/
+    mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
   }
 
   // Handle external links

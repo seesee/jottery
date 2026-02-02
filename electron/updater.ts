@@ -1,7 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron';
-import pkg from 'electron-updater';
-const { autoUpdater } = pkg;
-import type { UpdateInfo } from 'electron-updater';
+import { autoUpdater, UpdateInfo } from 'electron-updater';
 
 /**
  * Setup auto-updater with GitHub Releases.
