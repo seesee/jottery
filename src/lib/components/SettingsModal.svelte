@@ -888,7 +888,7 @@
       }
 
       // Password is correct! Store it
-      passwordStorageService.store(rememberPasswordConfirmInput);
+      await passwordStorageService.store(rememberPasswordConfirmInput);
 
       // Save the setting immediately to persist it
       await settingsRepository.update({ rememberPassword: true });
@@ -927,7 +927,7 @@
     rememberPassword = false;
 
     // Clear stored password
-    passwordStorageService.clear();
+    await passwordStorageService.clear();
 
     // Save the setting immediately to persist it
     try {

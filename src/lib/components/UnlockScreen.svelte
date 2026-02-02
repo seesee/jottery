@@ -76,7 +76,7 @@
 
         // First try rememberPassword (localStorage - permanent)
         if (settings.rememberPassword) {
-          const storedPassword = passwordStorageService.get();
+          const storedPassword = await passwordStorageService.get();
           if (storedPassword) {
             loading = true;
             try {
@@ -87,7 +87,7 @@
             } catch (err) {
               console.error('[UnlockScreen] Auto-unlock failed:', err);
               // Clear invalid stored password
-              passwordStorageService.clear();
+              await passwordStorageService.clear();
               error = get(_)('unlock.storedPasswordInvalid');
             } finally {
               loading = false;
@@ -253,7 +253,7 @@
       try {
         const settings = await settingsRepository.get();
         if (settings.rememberPassword) {
-          passwordStorageService.store(passwordToStore);
+          await passwordStorageService.store(passwordToStore);
         } else if (settings.persistSession && sessionStorageService.isAvailable()) {
           // Store session password (tab-scoped, will expire)
           sessionStorageService.store(passwordToStore);
