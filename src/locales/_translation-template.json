@@ -420,6 +420,22 @@
     "alreadyUsingJottery": "ALREADY USING JOTTERY?",
     "alreadyUsingJotteryDescription": "RESTORE FROM A BACKUP OR SET UP SYNC TO ACCESS YOUR EXISTING NOTES.",
     "restoreFromBackupSubtitle": "RESTORE NOTES FROM A .JOTTERY-BACKUP FILE",
+    "syncSetup": {
+      "importCredentials": {
+        "title": "HAVE SYNC CREDENTIALS?",
+        "subtitle": "PASTE YOUR CREDENTIALS HERE TO SYNC THIS DEVICE"
+      },
+      "existingAccount": {
+        "title": "CONNECT EXISTING ACCOUNT",
+        "subtitle": "ALREADY HAVE AN ACCOUNT? CONNECT THIS DEVICE",
+        "formTitle": "CONNECT TO EXISTING ACCOUNT"
+      },
+      "registerServer": {
+        "title": "REGISTER NEW ACCOUNT",
+        "subtitle": "FIRST DEVICE ONLY - CREATES YOUR ACCOUNT",
+        "formTitle": "REGISTER NEW ACCOUNT"
+      }
+    },
     "syncConfig": {
       "title": "SYNC CONFIGURATION (OPTIONAL)",
       "description": "OPTIONALLY CONFIGURE SYNC NOW. YOU CAN ALSO DO THIS LATER IN SETTINGS > SYNC.",

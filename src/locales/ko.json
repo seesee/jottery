@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "다른 기기에서 가져오기",
-        "subtitle": "추가 기기에 권장"
+        "title": "동기화 자격 증명이 있으신가요?",
+        "subtitle": "여기에 자격 증명을 붙여넣어 이 기기를 동기화하세요"
       },
       "existingAccount": {
         "title": "기존 계정 연결",

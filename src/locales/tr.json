@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Başka bir cihazdan içe aktar",
-        "subtitle": "Ek cihazlar için önerilir"
+        "title": "Senkronizasyon kimlik bilgileriniz var mı?",
+        "subtitle": "Bu cihazı senkronize etmek için kimlik bilgilerinizi buraya yapıştırın"
       },
       "existingAccount": {
         "title": "Mevcut hesabı bağla",

@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "从其他设备导入",
-        "subtitle": "推荐用于附加设备"
+        "title": "有同步凭据吗？",
+        "subtitle": "在此粘贴您的凭据以同步此设备"
       },
       "existingAccount": {
         "title": "连接现有账户",

@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Importar de outro dispositivo",
-        "subtitle": "Recomendado para dispositivos adicionais"
+        "title": "Tem credenciais de sincronização?",
+        "subtitle": "Cole suas credenciais aqui para sincronizar este dispositivo"
       },
       "existingAccount": {
         "title": "Conectar conta existente",

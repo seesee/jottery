@@ -711,25 +711,6 @@
                         </div>
                       </div>
                     </button>
-
-                    <!-- Option 4: Register New Account -->
-                    <button
-                      type="button"
-                      on:click={() => syncSetupMode = 'newUser'}
-                      class="w-full text-left border-2 border-blue-500 dark:border-blue-600 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                    >
-                      <div class="flex items-start gap-2">
-                        <span class="text-lg">🌐</span>
-                        <div class="flex-1">
-                          <div class="font-semibold text-sm text-blue-900 dark:text-blue-100">
-                            {$_('unlock.syncSetup.registerServer.title')}
-                          </div>
-                          <div class="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                            {$_('unlock.syncSetup.registerServer.subtitle')}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
                   </div>
 
                 {:else if syncSetupMode === 'importCredentials'}

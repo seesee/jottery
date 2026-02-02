@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "別のデバイスからインポート",
-        "subtitle": "追加デバイスに推奨"
+        "title": "同期認証情報をお持ちですか？",
+        "subtitle": "認証情報をここに貼り付けてこのデバイスを同期"
       },
       "existingAccount": {
         "title": "既存のアカウントに接続",

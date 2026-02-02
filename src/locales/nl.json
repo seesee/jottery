@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Importeren van ander apparaat",
-        "subtitle": "Aanbevolen voor extra apparaten"
+        "title": "Heeft u synchronisatiegegevens?",
+        "subtitle": "Plak uw gegevens hier om dit apparaat te synchroniseren"
       },
       "existingAccount": {
         "title": "Bestaand account verbinden",

@@ -865,8 +865,8 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Von einem anderen Gerät importieren",
-        "subtitle": "Empfohlen für zusätzliche Geräte"
+        "title": "Haben Sie Sync-Anmeldedaten?",
+        "subtitle": "Fügen Sie Ihre Anmeldedaten hier ein, um dieses Gerät zu synchronisieren"
       },
       "existingAccount": {
         "title": "Bestehendes Konto verbinden",
