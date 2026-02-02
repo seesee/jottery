@@ -27,7 +27,7 @@
     "test:report:quick": "node scripts/test-report.cjs --quick",
     "test:report:history": "node scripts/test-report.cjs --history",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && npm run electron:compile && electron .\"",
-    "electron:compile": "tsc -p electron/tsconfig.json",
+    "electron:compile": "tsc -p electron/tsconfig.json && cp electron/package.json electron/dist/",
     "electron:build": "npm run build && npm run electron:compile && electron-builder",
     "electron:build:mac": "npm run build && npm run electron:compile && electron-builder --mac",
     "electron:build:win": "npm run build && npm run electron:compile && electron-builder --win",
