@@ -557,7 +557,7 @@
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {needsInit ? $_('unlock.welcome') : $_('app.name')}
         </h1>
-        {#if notebook.id !== 'main'}
+        {#if notebook.id.startsWith('_')}
           <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mb-2">
             {notebook.displayName}
           </p>

@@ -571,7 +571,7 @@
       </button>
     {/if}
 
-    {#if notebook.id !== 'main' && !forceMobileLayout}
+    {#if notebook.id.startsWith('_') && !forceMobileLayout}
       <div class="block ml-auto">
         <span class="text-xs text-blue-600 dark:text-blue-400 font-medium opacity-75 truncate max-w-[200px] inline-block" title={notebook.displayName}>
           {notebook.displayName}

@@ -26,8 +26,9 @@ const MAX_NOTEBOOK_ID_LENGTH = 50;
 
 /**
  * Valid notebook ID pattern: alphanumeric + hyphens/underscores
+ * Can start with underscore (for private/dev notebooks that show display name)
  */
-const VALID_NOTEBOOK_ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
+const VALID_NOTEBOOK_ID_PATTERN = /^[a-z0-9_][a-z0-9_-]*$/;
 
 /**
  * Extract notebook information from current URL pathname
@@ -137,8 +138,11 @@ function isValidNotebookId(id: string): boolean {
  * @returns Formatted display name
  */
 function formatDisplayName(id: string): string {
+  // Strip leading underscore (used for private/dev notebooks)
+  const cleanId = id.startsWith('_') ? id.slice(1) : id;
+
   // Replace hyphens and underscores with spaces
-  const withSpaces = id.replace(/[-_]/g, ' ');
+  const withSpaces = cleanId.replace(/[-_]/g, ' ');
 
   // Capitalize first letter of each word
   return withSpaces
