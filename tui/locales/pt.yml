@@ -161,6 +161,10 @@ sync:
   legacy_format_warning: "Aviso: Usando formato legado não criptografado. A chave API está exposta em texto simples."
   disconnected: Desconectado do servidor de sincronização. Notas locais preservadas.
   disconnect_failed: Falha ao desconectar do servidor de sincronização
+  import_device_title: "Import Credentials - Device Name"
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: "No credentials entered"
+  import_failed: "Failed to import credentials"
   status:
     check_title: Verificar Estado do Registo
     result_title: Estado do Registo

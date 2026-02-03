@@ -161,6 +161,10 @@ sync:
   legacy_format_warning: "Внимание: Используется устаревший формат без шифрования. API-ключ отображается в открытом виде."
   disconnected: Отключено от сервера синхронизации. Локальные заметки сохранены.
   disconnect_failed: Не удалось отключиться от сервера синхронизации
+  import_device_title: "Import Credentials - Device Name"
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: "No credentials entered"
+  import_failed: "Failed to import credentials"
   status:
     check_title: Проверить Статус Регистрации
     result_title: Статус Регистрации

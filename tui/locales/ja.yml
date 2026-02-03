@@ -161,6 +161,10 @@ sync:
   legacy_format_warning: "警告: 暗号化なしのレガシー形式を使用しています。APIキーが平文で表示されます。"
   disconnected: 同期サーバーから切断されました。ローカルノートは保持されています。
   disconnect_failed: 同期サーバーからの切断に失敗しました
+  import_device_title: "Import Credentials - Device Name"
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: "No credentials entered"
+  import_failed: "Failed to import credentials"
   status:
     check_title: 登録状態の確認
     result_title: 登録状態

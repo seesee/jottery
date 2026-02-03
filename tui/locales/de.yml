@@ -161,6 +161,10 @@ sync:
   legacy_format_warning: "Warnung: Verwendung des Legacy-Formats ohne Verschlüsselung. API-Schlüssel wird im Klartext angezeigt."
   disconnected: Vom Sync-Server getrennt. Lokale Notizen bleiben erhalten.
   disconnect_failed: Trennung vom Sync-Server fehlgeschlagen
+  import_device_title: "Import Credentials - Device Name"
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: "No credentials entered"
+  import_failed: "Failed to import credentials"
   status:
     check_title: Registrierungsstatus prüfen
     result_title: Registrierungsstatus
