@@ -16,6 +16,7 @@
   let previewContent: string | null = null;
   let previewType: PreviewType = null;
   let isLoading = false;
+  let decryptedFilename: string | null = null;
 
   // Check if attachment can be previewed
   function canPreview(mimeType: string): boolean {
@@ -57,8 +58,14 @@
     isLoading = true;
     previewType = getPreviewType(att.mimeType);
     previewContent = null;
+    decryptedFilename = null;
 
     try {
+      // Decrypt the filename if not explicitly provided
+      if (!filename) {
+        decryptedFilename = await attachmentService.getDecryptedFilename(att);
+      }
+
       // Get the decrypted data (returns Blob)
       const blob = await attachmentService.getAttachmentData(att);
 
@@ -87,6 +94,7 @@
 
     previewContent = null;
     previewType = null;
+    decryptedFilename = null;
     onClose();
   }
 
@@ -98,7 +106,7 @@
 
   $: backdropHandler = createBackdropHandler(handleClose);
 
-  $: displayFilename = filename || attachment?.filename || $_('attachments.preview.title');
+  $: displayFilename = filename || decryptedFilename || $_('attachments.preview.title');
 </script>
 
 {#if show && attachment}
