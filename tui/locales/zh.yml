@@ -162,10 +162,6 @@ sync:
   legacy_format_warning: 警告：使用未加密的旧版格式。API密钥以明文显示。
   disconnected: 已断开与同步服务器的连接。本地笔记已保留。
   disconnect_failed: 断开与同步服务器的连接失败
-  import_device_title: "Import Credentials - Device Name"
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: "No credentials entered"
-  import_failed: "Failed to import credentials"
   status:
     check_title: 检查注册状态
     result_title: 注册状态

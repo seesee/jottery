@@ -181,10 +181,6 @@ sync:
   legacy_format_warning: "Attention : Utilisation du format hérité non chiffré. La clé API est exposée en texte clair."
   disconnected: Déconnecté du serveur de synchronisation. Les notes locales sont conservées.
   disconnect_failed: Échec de la déconnexion du serveur de synchronisation
-  import_device_title: "Import Credentials - Device Name"
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: "No credentials entered"
-  import_failed: "Failed to import credentials"
   status:
     check_title: Vérifier le Statut d'Inscription
     result_title: Statut d'Inscription
