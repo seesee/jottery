@@ -20,7 +20,7 @@ import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { versionRepository } from './versionRepository';
 import { savedSearchRepository } from './savedSearchRepository';
-import { cryptoService } from './crypto';
+import { cryptoService, findCommonAncestor } from './crypto';
 import { storageToSync, syncToStorage } from './tagConversionService';
 import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
@@ -54,6 +54,7 @@ class SyncService {
   private sseReconnectAttempts = 0;
   private maxSseReconnectAttempts = 5;
   private sseReconnectDelay = 1000; // Start with 1 second
+  private sseConnecting = false; // Guard against concurrent connection attempts
   private savedAutoSyncInterval?: number; // Saved interval when SSE suspends periodic sync
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
@@ -498,6 +499,14 @@ class SyncService {
         serverPinned: item.serverPinned,
         serverSyntaxLanguage: item.serverSyntaxLanguage,
         serverWordWrap: item.serverWordWrap,
+        // Hash chain fields for git-like conflict detection
+        serverContentHash: item.serverContentHash,
+        serverParentHash: item.serverParentHash,
+        serverHashChain: item.serverHashChain,
+        // Ancestor data for 3-way merge (if available)
+        ancestorHash: item.ancestorHash,
+        ancestorContent: item.ancestorContent,
+        ancestorTags: item.ancestorTags,
       });
 
       // Clear needsSync flag to prevent infinite retry loop
@@ -535,6 +544,10 @@ class SyncService {
       syntaxLanguage: note.syntaxLanguage,
       showPreview: note.showPreview,
       color: note.color,
+      // Hash chain fields for git-like conflict detection
+      contentHash: note.contentHash,
+      parentHash: note.parentHash,
+      hashChain: note.hashChain,
     };
   }
 
@@ -679,6 +692,10 @@ class SyncService {
       color: remoteNote.color,
       syncedAt,
       needsSync: false,
+      // Hash chain fields
+      contentHash: remoteNote.contentHash,
+      parentHash: remoteNote.parentHash,
+      hashChain: remoteNote.hashChain,
     };
 
     const localNote = await noteRepository.getById(remoteNote.id);
@@ -695,9 +712,55 @@ class SyncService {
       return true;
     }
 
-    // Check for conflict
-    if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+    // Hash-based conflict detection (like git)
+    let isConflict = false;
+    let isFastForward = false;
+
+    // If both have hash chains, use hash-based detection
+    if (remoteNote.contentHash && localNote.contentHash) {
+      // Case 1: Local hash == remote parent hash -> can fast-forward (remote is newer)
+      if (localNote.contentHash === remoteNote.parentHash) {
+        isFastForward = true;
+      }
+      // Case 2: Same content hash -> identical, no-op
+      else if (localNote.contentHash === remoteNote.contentHash) {
+        return false; // No change needed
+      }
+      // Case 3: Local has unsaved changes and hashes diverged
+      else if (localNote.needsSync) {
+        // Check if local parent exists in remote chain (remote includes local's history)
+        if (localNote.parentHash && remoteNote.hashChain?.includes(localNote.parentHash)) {
+          isFastForward = true; // Remote has our ancestor, safe to update
+        } else {
+          isConflict = true;
+        }
+      }
+      // Case 4: Check if remote parent exists in local chain (local is ahead)
+      else if (remoteNote.parentHash && localNote.hashChain?.includes(remoteNote.parentHash)) {
+        return false; // Local is ahead, no update needed
+      }
+      // Case 5: Check if local parent exists in remote chain (can fast-forward)
+      else if (localNote.contentHash && remoteNote.hashChain?.includes(localNote.contentHash)) {
+        isFastForward = true;
+      }
+    } else {
+      // Fallback to timestamp-based detection for legacy notes
+      if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+        isConflict = true;
+      } else if (remoteNote.modifiedAt > localNote.modifiedAt) {
+        isFastForward = true;
+      }
+    }
+
+    if (isConflict) {
       console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}`);
+
+      // Find common ancestor for 3-way merge
+      let ancestorHash: string | null = null;
+      if (localNote.hashChain && remoteNote.hashChain) {
+        ancestorHash = findCommonAncestor(localNote.hashChain, remoteNote.hashChain);
+      }
+
       await storeConflict(remoteNote.id, {
         serverContent: remoteNote.content,
         serverTags: remoteNote.tags,
@@ -707,12 +770,18 @@ class SyncService {
         serverPinned: remoteNote.pinned,
         serverSyntaxLanguage: remoteNote.syntaxLanguage,
         serverWordWrap: remoteNote.wordWrap,
+        // Hash chain fields
+        serverContentHash: remoteNote.contentHash,
+        serverParentHash: remoteNote.parentHash,
+        serverHashChain: remoteNote.hashChain,
+        // Ancestor hash (content would need to be fetched from versions)
+        ancestorHash: ancestorHash ?? undefined,
       });
       return false;
     }
 
-    if (remoteNote.modifiedAt > localNote.modifiedAt) {
-      // Server is newer, safe to update
+    if (isFastForward) {
+      // Server is newer (fast-forward), safe to update
       await noteRepository.update(noteForStorage, false, true);
       await syncRepository.updateNoteSyncMetadata(remoteNote.id, {
         noteId: remoteNote.id,
@@ -988,16 +1057,20 @@ class SyncService {
    * When another device syncs, the server sends a notification to trigger an immediate pull
    */
   async connectToSyncEvents(): Promise<void> {
-    // Don't reconnect if already connected
-    if (this.eventSource) {
+    // Don't reconnect if already connected or connecting
+    if (this.eventSource || this.sseConnecting) {
       return;
     }
+
+    // Set connecting flag immediately to prevent race conditions
+    this.sseConnecting = true;
 
     // Check network availability first
     if (!this.isOnline()) {
       console.log('[SyncService] Skipping SSE connection - network offline');
       // Fall back to periodic sync
       this.sseFailedOver = true;
+      this.sseConnecting = false;
       this.restorePeriodicSync();
       return;
     }
@@ -1005,12 +1078,14 @@ class SyncService {
     try {
       const metadata = await syncRepository.getMetadata();
       if (!metadata?.syncEnabled || !metadata?.apiKey || !metadata?.syncEndpoint) {
+        this.sseConnecting = false;
         return;
       }
 
       // Decrypt API key
       const masterKey = keyManager.getMasterKey();
       if (!masterKey) {
+        this.sseConnecting = false;
         return; // App is locked
       }
 
@@ -1024,6 +1099,7 @@ class SyncService {
 
       console.log('[SyncService] Connecting to SSE for real-time sync notifications');
       this.eventSource = new EventSource(sseUrl);
+      this.sseConnecting = false; // EventSource created, clear connecting flag
 
       // Reset reconnect state on successful connection
       this.eventSource.onopen = () => {
@@ -1077,6 +1153,7 @@ class SyncService {
     } catch (error) {
       console.error('[SyncService] Failed to connect to SSE:', error);
       // Fall back to periodic sync on any error
+      this.sseConnecting = false;
       this.sseFailedOver = true;
       this.restorePeriodicSync();
     }
@@ -1092,7 +1169,8 @@ class SyncService {
       this.eventSource.close();
       this.eventSource = null;
     }
-    // Reset reconnect state
+    // Reset connection state
+    this.sseConnecting = false;
     this.sseReconnectAttempts = 0;
     this.sseReconnectDelay = 1000;
   }
@@ -1155,6 +1233,9 @@ class SyncService {
           wordWrap: version.wordWrap,
           showPreview: version.showPreview,
           reason: version.reason,
+          // Hash chain fields
+          contentHash: version.contentHash,
+          parentHash: version.parentHash,
         });
       }
     }

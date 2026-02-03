@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",
       "exportDescription": "Notları şifresi çözülmüş JSON olarak dışa aktarın. İçe aktarma, notları mevcut verilerle birleştirir.",
+      "downloadClient": "Terminal/HTML İstemcisini İndir",
       "downloadTerminalClient": "Terminal İstemcisini İndir",
+      "clientDescription": "Komut satırı erişimi için terminal istemcisini veya dosya sisteminden yerel olarak çalıştırmak için HTML istemcisini indirin",
       "terminalClientDescription": "Komut satırından notlarınıza erişmek için terminal istemcisini kullanın",
       "selectPlatform": "Platform seçin...",
       "download": "İndir",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Oturum süresi doldu veya geçersiz. Lütfen şifrenizi girin.",
+    "alreadyUsingJottery": "Zaten Jottery kullanıyor musunuz?",
+    "alreadyUsingJotteryDescription": "Yedekten geri yükleyin veya mevcut notlarınıza erişmek için senkronizasyonu ayarlayın.",
+    "restoreFromBackupSubtitle": ".jottery-backup dosyasından notları geri yükle",
     "syncConfig": {
       "title": "Senkronizasyon Yapılandırması (İsteğe Bağlı)",
       "description": "İsteğe bağlı olarak şimdi senkronizasyonu yapılandırın. Bunu daha sonra Ayarlar > Senkronizasyon bölümünde de yapabilirsiniz.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Başka bir cihazdan içe aktar",
-        "subtitle": "Ek cihazlar için önerilir"
+        "title": "Senkronizasyon kimlik bilgileriniz var mı?",
+        "subtitle": "Bu cihazı senkronize etmek için kimlik bilgilerinizi buraya yapıştırın"
       },
       "existingAccount": {
         "title": "Mevcut hesabı bağla",
         "subtitle": "Zaten bir hesabınız var mı? Bu cihazı bağlayın",
-        "formTitle": "Mevcut hesaba bağlan"
+        "formTitle": "Mevcut hesaba bağlan",
+        "infoText": "Senkronizasyon sunucusu kimlik bilgilerinizi girin. Ana parolanızı oluşturduktan sonra notlarınız senkronize edilecektir.",
+        "emailLabel": "E-posta adresi",
+        "passwordLabel": "Sunucu parolası",
+        "createPasswordNote": "Senkronizasyon bilgilerinizi girdikten sonra, kurulumu tamamlamak için aşağıda ana parolanızı girin."
       },
       "registerServer": {
         "title": "Yeni hesap kaydet",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Ortak ata",
+    "ancestorDescription": "Her ikinizin de başladığı sürüm",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Lütfen bekleyin",
+    "processing": "İşleniyor...",
+    "backup": "Yedek oluşturuluyor...",
+    "export": "Notlar dışa aktarılıyor..."
   }
 }

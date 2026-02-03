@@ -25,6 +25,10 @@ pub struct Note {
     pub word_wrap: bool,
     pub syntax_language: SyntaxLanguage,
     pub color: Option<String>,        // Semantic color name (unencrypted)
+    // Hash chain fields for git-like conflict detection
+    pub content_hash: Option<String>,      // SHA-256 of content + tags + attachments + change fields
+    pub parent_hash: Option<String>,       // Hash of previous version (None for new notes)
+    pub hash_chain: Option<Vec<String>>,   // Array of ancestor hashes (max 50)
 }
 
 /// Syntax highlighting language options
@@ -163,6 +167,10 @@ impl Note {
             word_wrap: true,
             syntax_language: SyntaxLanguage::Markdown,
             color: None,
+            // Hash chain fields - computed on save
+            content_hash: None,
+            parent_hash: None,
+            hash_chain: None,
         }
     }
 

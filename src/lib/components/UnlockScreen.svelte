@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
-  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup } from '../services';
+  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, createSyncRecoveryNote } from '../services';
+  import { authService } from '../services/authService';
   import { validateBackup, getBackupStats } from '../services/backupService';
   import type { BackupData } from '../services/backupService';
   import { getCurrentNotebook } from '../utils/notebookPath';
@@ -35,6 +36,11 @@
   let importDeviceName = '';
   let importing = false;
   let credentialsImported = false;
+
+  // Existing account connection state
+  let existingUserEmail = '';
+  let existingUserPassword = '';
+  let connectingExistingAccount = false;
 
   // Backup restore state
   let showBackupRestore = false;
@@ -70,7 +76,7 @@
 
         // First try rememberPassword (localStorage - permanent)
         if (settings.rememberPassword) {
-          const storedPassword = passwordStorageService.get();
+          const storedPassword = await passwordStorageService.get();
           if (storedPassword) {
             loading = true;
             try {
@@ -81,7 +87,7 @@
             } catch (err) {
               console.error('[UnlockScreen] Auto-unlock failed:', err);
               // Clear invalid stored password
-              passwordStorageService.clear();
+              await passwordStorageService.clear();
               error = get(_)('unlock.storedPasswordInvalid');
             } finally {
               loading = false;
@@ -174,11 +180,80 @@
         }
       }
 
+      // Connect existing account if all fields are provided (first-time setup only)
+      if (needsInit && syncSetupMode === 'existingUser' && syncEndpoint && deviceName && existingUserEmail && existingUserPassword) {
+        connectingExistingAccount = true;
+        try {
+          console.log('[UnlockScreen] Connecting to existing account...');
+          const response = await authService.registerDevice(
+            syncEndpoint.trim(),
+            existingUserEmail,
+            existingUserPassword,
+            deviceName.trim()
+          );
+
+          // Get the master key (now available after initialization)
+          const masterKey = keyManager.getMasterKey();
+          if (!masterKey) {
+            throw new Error('Application is locked');
+          }
+
+          // Encrypt and store API key
+          const encryptedApiKey = await cryptoService.encryptText(response.apiKey, masterKey.key);
+
+          // Save sync settings
+          await syncRepository.updateMetadata({
+            syncEnabled: true,
+            syncEndpoint: syncEndpoint.trim(),
+            apiKey: JSON.stringify(encryptedApiKey),
+            clientId: response.clientId,
+            userId: response.userId,
+            userEmail: existingUserEmail,
+          });
+
+          // Update settings
+          await settingsRepository.update({
+            syncEndpoint: syncEndpoint.trim(),
+            syncEnabled: true,
+            deviceName: deviceName.trim(),
+          });
+
+          console.log('[UnlockScreen] Successfully connected to existing account');
+
+          // Trigger initial sync (non-blocking)
+          syncService.syncNow(true).then(syncResult => {
+            if (syncResult.success) {
+              console.log('[UnlockScreen] Initial sync completed successfully');
+            } else {
+              console.warn('[UnlockScreen] Initial sync failed:', syncResult.error);
+            }
+          }).catch(err => {
+            console.warn('[UnlockScreen] Initial sync error:', err);
+          });
+
+          // Create sync recovery note (non-blocking)
+          createSyncRecoveryNote().catch(err =>
+            console.warn('[UnlockScreen] Failed to create recovery note:', err)
+          );
+
+          // Clear the form fields
+          existingUserEmail = '';
+          existingUserPassword = '';
+          syncSetupMode = null;
+        } catch (err) {
+          console.error('[UnlockScreen] Failed to connect existing account:', err);
+          // Don't fail initialization - just show a warning and let them complete in settings
+          error = err instanceof Error ? err.message : 'Failed to connect account. You can complete setup in Settings > Sync.';
+        } finally {
+          connectingExistingAccount = false;
+        }
+      }
+
       // Store password if rememberPassword or persistSession is enabled
       try {
         const settings = await settingsRepository.get();
         if (settings.rememberPassword) {
-          passwordStorageService.store(passwordToStore);
+          await passwordStorageService.store(passwordToStore);
         } else if (settings.persistSession && sessionStorageService.isAvailable()) {
           // Store session password (tab-scoped, will expire)
           sessionStorageService.store(passwordToStore);
@@ -282,6 +357,8 @@
     syncSetupMode = null;
     importCredentialsText = '';
     importDeviceName = '';
+    existingUserEmail = '';
+    existingUserPassword = '';
     error = '';
   }
 
@@ -547,7 +624,7 @@
   </div>
 {:else if showLandingPage}
   <!-- Landing Page for First-Time Users -->
-  <LandingPage onGetStarted={handleGetStarted} onRestoreFromBackup={handleShowBackupRestore} />
+  <LandingPage onGetStarted={handleGetStarted} />
 {:else}
   <!-- Password Setup/Unlock Form -->
   <div class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 py-8" style="min-height: 100vh; overflow-y: auto;">
@@ -626,7 +703,7 @@
             />
           </div>
 
-          <!-- Optional Sync Configuration -->
+          <!-- Already using Jottery? -->
           <div class="border border-gray-300 dark:border-gray-600 rounded-md">
             <button
               type="button"
@@ -634,7 +711,7 @@
               class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {$_('unlock.syncConfig.title')}
+                {$_('unlock.alreadyUsingJottery')}
               </span>
               <svg
                 class="w-5 h-5 text-gray-500 dark:text-gray-400 transform transition-transform {showSyncConfig ? 'rotate-180' : ''}"
@@ -649,13 +726,32 @@
             {#if showSyncConfig}
               <div class="px-4 pb-4 space-y-3">
                 <p class="text-xs text-gray-600 dark:text-gray-400">
-                  {$_('unlock.syncConfig.description')}
+                  {$_('unlock.alreadyUsingJotteryDescription')}
                 </p>
 
                 {#if syncSetupMode === null}
-                  <!-- Sync Setup Method Selection -->
+                  <!-- Setup Method Selection -->
                   <div class="space-y-2">
-                    <!-- Option 1: Import Credentials -->
+                    <!-- Option 1: Restore from Backup -->
+                    <button
+                      type="button"
+                      on:click={handleShowBackupRestore}
+                      class="w-full text-left border-2 border-amber-500 dark:border-amber-600 rounded-lg p-3 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                    >
+                      <div class="flex items-start gap-2">
+                        <span class="text-lg">💾</span>
+                        <div class="flex-1">
+                          <div class="font-semibold text-sm text-amber-900 dark:text-amber-100">
+                            {$_('unlock.restoreFromBackup')}
+                          </div>
+                          <div class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                            {$_('unlock.restoreFromBackupSubtitle')}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <!-- Option 2: Import Credentials -->
                     <button
                       type="button"
                       on:click={() => syncSetupMode = 'importCredentials'}
@@ -674,7 +770,7 @@
                       </div>
                     </button>
 
-                    <!-- Option 2: Connect Existing Account -->
+                    <!-- Option 3: Connect Existing Account -->
                     <button
                       type="button"
                       on:click={() => syncSetupMode = 'existingUser'}
@@ -688,25 +784,6 @@
                           </div>
                           <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">
                             {$_('unlock.syncSetup.existingAccount.subtitle')}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-
-                    <!-- Option 3: Register New Account -->
-                    <button
-                      type="button"
-                      on:click={() => syncSetupMode = 'newUser'}
-                      class="w-full text-left border-2 border-blue-500 dark:border-blue-600 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                    >
-                      <div class="flex items-start gap-2">
-                        <span class="text-lg">🌐</span>
-                        <div class="flex-1">
-                          <div class="font-semibold text-sm text-blue-900 dark:text-blue-100">
-                            {$_('unlock.syncSetup.registerServer.title')}
-                          </div>
-                          <div class="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                            {$_('unlock.syncSetup.registerServer.subtitle')}
                           </div>
                         </div>
                       </div>
@@ -773,12 +850,12 @@
                     </button>
                   </div>
 
-                {:else if syncSetupMode === 'existingUser' || syncSetupMode === 'newUser'}
-                  <!-- Connect Existing / Register New - collect endpoint info -->
-                  <div class="border border-{syncSetupMode === 'existingUser' ? 'purple' : 'blue'}-200 dark:border-{syncSetupMode === 'existingUser' ? 'purple' : 'blue'}-800 rounded-lg p-3 bg-{syncSetupMode === 'existingUser' ? 'purple' : 'blue'}-50 dark:bg-{syncSetupMode === 'existingUser' ? 'purple' : 'blue'}-900/20 space-y-3">
+                {:else if syncSetupMode === 'existingUser'}
+                  <!-- Connect Existing Account - full form with email/password -->
+                  <div class="border border-purple-200 dark:border-purple-800 rounded-lg p-3 bg-purple-50 dark:bg-purple-900/20 space-y-3">
                     <div class="flex items-center justify-between">
                       <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                        {syncSetupMode === 'existingUser' ? $_('unlock.syncSetup.existingAccount.formTitle') : $_('unlock.syncSetup.registerServer.formTitle')}
+                        {$_('unlock.syncSetup.existingAccount.formTitle')}
                       </h4>
                       <button
                         type="button"
@@ -789,6 +866,12 @@
                       </button>
                     </div>
 
+                    <div class="bg-purple-100 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded p-2">
+                      <p class="text-xs text-purple-800 dark:text-purple-200">
+                        {$_('unlock.syncSetup.existingAccount.infoText')}
+                      </p>
+                    </div>
+
                     <div>
                       <label for="sync-endpoint" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {$_('unlock.syncConfig.endpoint')}
@@ -797,9 +880,9 @@
                         id="sync-endpoint"
                         type="url"
                         bind:value={syncEndpoint}
-                        disabled={loading}
+                        disabled={loading || connectingExistingAccount}
                         placeholder={typeof window !== 'undefined' ? window.location.origin : 'https://example.com'}
-                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       />
                     </div>
 
@@ -811,15 +894,42 @@
                         id="device-name"
                         type="text"
                         bind:value={deviceName}
-                        disabled={loading}
+                        disabled={loading || connectingExistingAccount}
                         placeholder={$_('unlock.syncConfig.deviceNamePlaceholder')}
-                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       />
                     </div>
 
-                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded p-2">
-                      <p class="text-xs text-blue-800 dark:text-blue-200">
-                        {$_('unlock.syncSetup.completeInSettings')}
+                    <div>
+                      <label for="existing-email" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {$_('unlock.syncSetup.existingAccount.emailLabel')}
+                      </label>
+                      <input
+                        id="existing-email"
+                        type="email"
+                        bind:value={existingUserEmail}
+                        disabled={loading || connectingExistingAccount}
+                        placeholder={$_('settings.syncSetup.registration.emailPlaceholder')}
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label for="existing-password" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {$_('unlock.syncSetup.existingAccount.passwordLabel')}
+                      </label>
+                      <PasswordInput
+                        id="existing-password"
+                        bind:value={existingUserPassword}
+                        disabled={loading || connectingExistingAccount}
+                        placeholder={$_('settings.syncSetup.registration.passwordPlaceholder')}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded p-2">
+                      <p class="text-xs text-amber-800 dark:text-amber-200">
+                        {$_('unlock.syncSetup.existingAccount.createPasswordNote')}
                       </p>
                     </div>
                   </div>

@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Εισαγωγή/Εξαγωγή",
       "exportDescription": "Εξαγωγή σημειώσεων ως αποκρυπτογραφημένο JSON. Η εισαγωγή θα συγχωνεύσει τις σημειώσεις με τα υπάρχοντα δεδομένα.",
+      "downloadClient": "Λήψη τερματικού/HTML προγράμματος",
       "downloadTerminalClient": "Λήψη προγράμματος τερματικού",
+      "clientDescription": "Κατεβάστε το πρόγραμμα τερματικού για πρόσβαση γραμμής εντολών ή το πρόγραμμα HTML για τοπική εκτέλεση",
       "terminalClientDescription": "Χρησιμοποιήστε το πρόγραμμα τερματικού για πρόσβαση στις σημειώσεις σας από τη γραμμή εντολών",
       "selectPlatform": "Επιλογή πλατφόρμας...",
       "download": "Λήψη",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Η συνεδρία έληξε ή δεν είναι έγκυρη. Παρακαλώ εισαγάγετε τον κωδικό πρόσβασής σας.",
+    "alreadyUsingJottery": "Χρησιμοποιείτε ήδη το Jottery;",
+    "alreadyUsingJotteryDescription": "Επαναφέρετε από αντίγραφο ασφαλείας ή ρυθμίστε τον συγχρονισμό για πρόσβαση στις υπάρχουσες σημειώσεις σας.",
+    "restoreFromBackupSubtitle": "Επαναφορά σημειώσεων από αρχείο .jottery-backup",
     "syncConfig": {
       "title": "Διαμόρφωση συγχρονισμού (Προαιρετικό)",
       "description": "Προαιρετικά διαμορφώστε τον συγχρονισμό τώρα. Μπορείτε επίσης να το κάνετε αργότερα στις Ρυθμίσεις > Συγχρονισμός.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Εισαγωγή από άλλη συσκευή",
-        "subtitle": "Συνιστάται για επιπλέον συσκευές"
+        "title": "Έχετε διαπιστευτήρια συγχρονισμού;",
+        "subtitle": "Επικολλήστε τα διαπιστευτήριά σας εδώ για συγχρονισμό αυτής της συσκευής"
       },
       "existingAccount": {
         "title": "Σύνδεση υπάρχοντος λογαριασμού",
         "subtitle": "Έχετε ήδη λογαριασμό; Συνδέστε αυτή τη συσκευή",
-        "formTitle": "Σύνδεση σε υπάρχοντα λογαριασμό"
+        "formTitle": "Σύνδεση σε υπάρχοντα λογαριασμό",
+        "infoText": "Εισαγάγετε τα διαπιστευτήρια του διακομιστή συγχρονισμού. Οι σημειώσεις σας θα συγχρονιστούν αφού δημιουργήσετε τον κύριο κωδικό πρόσβασης.",
+        "emailLabel": "Διεύθυνση email",
+        "passwordLabel": "Κωδικός διακομιστή",
+        "createPasswordNote": "Αφού εισαγάγετε τα στοιχεία συγχρονισμού, χρησιμοποιήστε τον κύριο κωδικό πρόσβασης παρακάτω για να ολοκληρώσετε τη ρύθμιση."
       },
       "registerServer": {
         "title": "Εγγραφή νέου λογαριασμού",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Κοινός πρόγονος",
+    "ancestorDescription": "Η έκδοση από την οποία ξεκινήσατε και οι δύο",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Παρακαλώ περιμένετε",
+    "processing": "Επεξεργασία...",
+    "backup": "Δημιουργία αντιγράφου ασφαλείας...",
+    "export": "Εξαγωγή σημειώσεων..."
   }
 }

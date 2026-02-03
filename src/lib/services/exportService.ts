@@ -13,25 +13,40 @@ import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 const EXPORT_VERSION = '1.0';
 
 /**
+ * Progress callback for export operations
+ */
+export type ExportProgressCallback = (progress: {
+  phase: 'counting' | 'exporting' | 'complete';
+  current?: number;
+  total?: number;
+}) => void;
+
+/**
  * Export all notes to JSON format
  */
-export async function exportAllNotes(): Promise<ExportData> {
+export async function exportAllNotes(onProgress?: ExportProgressCallback): Promise<ExportData> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
     throw new Error('Application is locked');
   }
 
+  onProgress?.({ phase: 'counting' });
+
   const notes = await noteRepository.getAllActive();
+  const total = notes.length;
   const exportNotes: ExportNote[] = [];
 
-  for (const note of notes) {
-    const exportNote = await convertNoteToExport(note, masterKey.key);
+  for (let i = 0; i < notes.length; i++) {
+    const exportNote = await convertNoteToExport(notes[i], masterKey.key);
     exportNotes.push(exportNote);
+    onProgress?.({ phase: 'exporting', current: i + 1, total });
   }
 
   // Export color settings
   const { settingsRepository } = await import('./settingsRepository');
   const userSettings = await settingsRepository.get();
+
+  onProgress?.({ phase: 'complete', current: total, total });
 
   return {
     version: EXPORT_VERSION,
@@ -314,10 +329,40 @@ export async function importNotes(
 
 /**
  * Download export data as JSON file
+ *
+ * Uses chunked JSON generation to avoid string length limits on large exports.
  */
 export async function downloadExport(data: ExportData, filename?: string): Promise<void> {
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
+  // Build JSON in chunks to avoid string length limits
+  const chunks: string[] = [];
+
+  // Opening structure
+  chunks.push('{\n  "version": ');
+  chunks.push(JSON.stringify(data.version));
+  chunks.push(',\n  "exportDate": ');
+  chunks.push(JSON.stringify(data.exportDate));
+  chunks.push(',\n  "notes": [\n');
+
+  // Add each note individually
+  for (let i = 0; i < data.notes.length; i++) {
+    if (i > 0) chunks.push(',\n');
+    // Stringify each note with indentation
+    const noteJson = JSON.stringify(data.notes[i], null, 2);
+    // Indent the note JSON by 4 spaces
+    chunks.push('    ' + noteJson.split('\n').join('\n    '));
+  }
+
+  chunks.push('\n  ]');
+
+  // Add settings if present
+  if (data.settings) {
+    chunks.push(',\n  "settings": ');
+    chunks.push(JSON.stringify(data.settings, null, 2).split('\n').join('\n  '));
+  }
+
+  chunks.push('\n}');
+
+  const blob = new Blob(chunks, { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement('a');

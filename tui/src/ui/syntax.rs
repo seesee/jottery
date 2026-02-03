@@ -317,13 +317,13 @@ impl SyntaxHighlighter {
             let content = line.trim_start();
 
             // Determine bullet style and content based on prefix
-            let (bullet_char, is_collapsed, text_content) = if content.starts_with("+ ") {
-                ("▸", true, &content[2..]) // Collapsed: right-pointing triangle
-            } else if content.starts_with("- ") {
-                ("•", false, &content[2..]) // Expanded: bullet
-            } else if content.starts_with('>') {
+            let (bullet_char, is_collapsed, text_content) = if let Some(rest) = content.strip_prefix("+ ") {
+                ("▸", true, rest) // Collapsed: right-pointing triangle
+            } else if let Some(rest) = content.strip_prefix("- ") {
+                ("•", false, rest) // Expanded: bullet
+            } else if let Some(rest) = content.strip_prefix('>') {
                 // Backwards compat: old collapsed format
-                ("▸", true, &content[1..])
+                ("▸", true, rest)
             } else {
                 // No bullet prefix, just show content
                 ("•", false, content)

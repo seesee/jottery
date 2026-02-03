@@ -35,6 +35,7 @@ pub fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
 /// * `color_scheme` - The app's color scheme
 /// * `width` - Modal width
 /// * `height` - Modal height (should include room for message lines + prompt)
+#[allow(clippy::too_many_arguments)]
 pub fn render_confirmation_modal(
     frame: &mut Frame,
     area: Rect,

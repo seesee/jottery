@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT content, tags FROM note_versions\n                           WHERE note_id = ? AND user_id = ? AND content_hash = ?\n                           LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "content",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "tags",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "1a01d9eda6954d7772994ff879431a6c850259e9f732227fe29babfeffff6062"
+}

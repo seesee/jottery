@@ -23,12 +23,13 @@ password:
   change_success: 密码修改成功
   remember: 记住密码
   remember_toggle: 记住密码 (Ctrl+R 切换)
-  remember_enabled: "密码已保存用于自动解锁。警告：任何能访问此设备的人都可以访问！"
+  remember_enabled: "密码已保存用于自动解锁。注意：具有超级用户权限的用户可能可以访问。"
   remember_keychain_enabled: 密码已安全存储在系统钥匙串中。
   remember_disabled: 密码存储已禁用。下次启动时将提示输入。
-  remember_warning: "警告：任何能物理访问此设备的人都可以访问密码！"
+  remember_warning: "请假设您的密码可能被任何拥有此设备超级用户/root权限的人访问。"
   remember_keychain_warning: 密码将安全存储在系统钥匙串中。
   remember_keychain_info: 密码已安全存储在系统钥匙串中
+  correct: "密码已验证"
   storage_keychain: 系统钥匙串
   storage_file: 文件（混淆）
   incorrect: 密码错误，请重试。
@@ -189,6 +190,10 @@ sync:
   paste_success: Sync credentials configured successfully!
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
+  import_device_title: Import Credentials - Device Name
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: No credentials entered
+  import_failed: Failed to import credentials
 register:
   title: 注册到同步服务器
   enter_endpoint: "输入同步服务器 URL (例如 https://sync.example.com):"
@@ -476,6 +481,8 @@ conflict:
   title: Sync Conflict
   your_version: Your Version
   server_version: Server Version
+  common_ancestor: Common Ancestor
+  ancestor_description: The version both started from before changes diverged
   resolved_mine: Conflict resolved - kept your version
   resolved_server: Conflict resolved - kept server version
   resolved_both: Conflict resolved - kept both versions
@@ -484,3 +491,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "个冲突"
   count_plural: "个冲突"
+
+# Backup functionality
+backup:
+  created: "备份已创建"
+  restore: "正在恢复备份"
+  valid: "有效的备份"
+  records: "条记录"
+  validating: "正在验证备份文件..."
+  verifying_password: "正在验证密码..."
+  restoring: "正在恢复数据..."
+  restored: "已恢复"
+
+# Progress indicators
+progress:
+  backup: "正在创建备份..."
+  processing: "处理中"
+  export: "正在导出..."

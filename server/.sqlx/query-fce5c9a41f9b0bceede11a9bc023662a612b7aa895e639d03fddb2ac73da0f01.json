@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO note_versions (\n                version_key, note_id, user_id, client_id, version, created_at, synced_at,\n                server_synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason,\n                content_hash, parent_hash\n            )\n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)\n            ON CONFLICT(version_key) DO UPDATE SET\n                synced_at = excluded.synced_at,\n                server_synced_at = excluded.server_synced_at,\n                content_hash = excluded.content_hash,\n                parent_hash = excluded.parent_hash\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 18
+    },
+    "nullable": []
+  },
+  "hash": "fce5c9a41f9b0bceede11a9bc023662a612b7aa895e639d03fddb2ac73da0f01"
+}

@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "导入/导出",
       "exportDescription": "将笔记导出为解密的 JSON。导入将合并笔记与现有数据。",
+      "downloadClient": "下载终端/HTML客户端",
       "downloadTerminalClient": "下载终端客户端",
+      "clientDescription": "下载终端客户端用于命令行访问，或下载HTML客户端从本地文件系统运行",
       "terminalClientDescription": "使用终端客户端从命令行访问您的笔记",
       "selectPlatform": "选择平台...",
       "download": "下载",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "会话已过期或无效。请输入密码。",
+    "alreadyUsingJottery": "已经在使用 Jottery？",
+    "alreadyUsingJotteryDescription": "从备份恢复或设置同步以访问现有笔记。",
+    "restoreFromBackupSubtitle": "从 .jottery-backup 文件恢复笔记",
     "syncConfig": {
       "title": "同步配置（可选）",
       "description": "可选地现在配置同步。您也可以稍后在设置 > 同步中执行此操作。",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "从其他设备导入",
-        "subtitle": "推荐用于附加设备"
+        "title": "有同步凭据吗？",
+        "subtitle": "在此粘贴您的凭据以同步此设备"
       },
       "existingAccount": {
         "title": "连接现有账户",
         "subtitle": "已有账户？连接此设备",
-        "formTitle": "连接到现有账户"
+        "formTitle": "连接到现有账户",
+        "infoText": "输入您的同步服务器凭据。创建主密码后，您的笔记将同步。",
+        "emailLabel": "电子邮件地址",
+        "passwordLabel": "服务器密码",
+        "createPasswordNote": "输入同步信息后，请在下方使用您的主密码以完成设置。"
       },
       "registerServer": {
         "title": "注册新账户",
@@ -1122,6 +1131,8 @@
     "description": "此笔记在本地和服务器上都被修改过。请选择如何解决冲突。",
     "yourVersion": "您的版本",
     "serverVersion": "服务器版本",
+    "commonAncestor": "共同祖先",
+    "ancestorDescription": "双方开始时的版本",
     "chooseAction": "选择如何解决此冲突:",
     "keepMine": "保留我的",
     "keepServer": "保留服务器",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "请稍候",
+    "processing": "处理中...",
+    "backup": "正在创建备份...",
+    "export": "正在导出笔记..."
   }
 }

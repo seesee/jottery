@@ -47,7 +47,7 @@ fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
 fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<String> {
     let color_names = app.settings.get_color_palette()
         .keys()
-        .map(|s| s.clone())
+        .cloned()
         .collect::<Vec<String>>();
 
     if color_names.is_empty() {
@@ -82,7 +82,7 @@ fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<Stri
 fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<String> {
     let color_names = app.settings.get_color_palette()
         .keys()
-        .map(|s| s.clone())
+        .cloned()
         .collect::<Vec<String>>();
 
     if color_names.is_empty() {
@@ -628,21 +628,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                     }
                 }
-                // In attachment viewer: view selected attachment
-                else if matches!(app.view_mode, ViewMode::AttachmentViewer) {
-                    let filtered = app.filtered_notes();
-                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        let note = filtered[app.selected_note];
-                        if app.selected_attachment < note.attachments.len() {
-                            let attachment = note.attachments[app.selected_attachment].clone();
-                            if let Err(e) = operations::attachments::view_attachment(app, &attachment) {
-                                app.error = Some(t!("attachment.view_failed", error = e.to_string()).to_string());
-                            }
-                        }
-                    }
-                }
-                // View attachment when attachment panel is focused
-                else if matches!(app.view_mode, ViewMode::NoteList) && app.focused_panel == FocusedPanel::Attachments {
+                // In attachment viewer or when attachment panel is focused: view selected attachment
+                else if matches!(app.view_mode, ViewMode::AttachmentViewer)
+                    || (matches!(app.view_mode, ViewMode::NoteList) && app.focused_panel == FocusedPanel::Attachments)
+                {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                         let note = filtered[app.selected_note];
@@ -1158,10 +1147,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                     // If no more attachments, switch focus back to content
                     let filtered = app.filtered_notes();
-                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        if filtered[app.selected_note].attachments.is_empty() {
-                            app.focused_panel = FocusedPanel::NoteContent;
-                        }
+                    if !filtered.is_empty()
+                        && app.selected_note < filtered.len()
+                        && filtered[app.selected_note].attachments.is_empty()
+                    {
+                        app.focused_panel = FocusedPanel::NoteContent;
                     }
                 }
                 // In multi-select mode: show bulk delete confirmation

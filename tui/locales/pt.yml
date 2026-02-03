@@ -23,12 +23,13 @@ password:
   change_success: Senha alterada com sucesso
   remember: Lembrar senha
   remember_toggle: Lembrar senha (Ctrl+R para alternar)
-  remember_enabled: "Senha armazenada para desbloqueio automático. AVISO: Acessível a qualquer pessoa com acesso ao dispositivo!"
+  remember_enabled: "Senha armazenada para desbloqueio automático. Nota: Pode ser acessível a usuários com acesso de superusuário."
   remember_keychain_enabled: Senha armazenada com segurança no chaveiro do sistema.
   remember_disabled: Armazenamento de senha desativado. Será solicitado no próximo início.
-  remember_warning: "AVISO: A senha será acessível a qualquer pessoa com acesso físico a este dispositivo!"
+  remember_warning: "Por favor, assuma que sua senha pode ser acessível a qualquer pessoa com acesso de superusuário/root a este dispositivo."
   remember_keychain_warning: A senha será armazenada com segurança no chaveiro do sistema.
   remember_keychain_info: Senha armazenada com segurança no chaveiro do sistema
+  correct: "Senha verificada"
   storage_keychain: Chaveiro do sistema
   storage_file: Arquivo (ofuscado)
   incorrect: Senha incorreta. Tente novamente.
@@ -189,6 +190,10 @@ sync:
   paste_success: Sync credentials configured successfully!
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
+  import_device_title: Import Credentials - Device Name
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: No credentials entered
+  import_failed: Failed to import credentials
 register:
   title: Registar no Servidor de Sincronização
   enter_endpoint: "Introduza o URL do servidor de sincronização (ex. https://sync.example.com):"
@@ -476,6 +481,8 @@ conflict:
   title: Sync Conflict
   your_version: Your Version
   server_version: Server Version
+  common_ancestor: Common Ancestor
+  ancestor_description: The version both started from before changes diverged
   resolved_mine: Conflict resolved - kept your version
   resolved_server: Conflict resolved - kept server version
   resolved_both: Conflict resolved - kept both versions
@@ -484,3 +491,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "conflito"
   count_plural: "conflitos"
+
+# Backup functionality
+backup:
+  created: "Backup criado"
+  restore: "Restaurando backup"
+  valid: "Backup válido"
+  records: "registros"
+  validating: "Validando arquivo de backup..."
+  verifying_password: "Verificando senha..."
+  restoring: "Restaurando dados..."
+  restored: "Restaurado"
+
+# Progress indicators
+progress:
+  backup: "Criando backup..."
+  processing: "Processando"
+  export: "Exportando..."

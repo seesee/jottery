@@ -190,6 +190,31 @@
             </div>
           </div>
 
+          <!-- Common Ancestor (if available for 3-way merge) -->
+          {#if conflictInfo.ancestorContent}
+            <div class="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div class="bg-gray-50 dark:bg-gray-800/50 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <h3 class="font-medium text-gray-600 dark:text-gray-400">{$_('conflict.commonAncestor')}</h3>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">{$_('conflict.ancestorDescription')}</p>
+                {#if conflictInfo.ancestorTags && conflictInfo.ancestorTags.length > 0}
+                  <div class="flex flex-wrap gap-1 mt-2">
+                    {#each conflictInfo.ancestorTags as tag}
+                      <span class="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">#{tag}</span>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+              <div class="max-h-32 overflow-auto p-4 font-mono text-xs whitespace-pre-wrap text-gray-500 dark:text-gray-500 bg-gray-50/50 dark:bg-gray-800/30">
+                {conflictInfo.ancestorContent}
+              </div>
+            </div>
+          {/if}
+
           <!-- Side-by-side comparison -->
           <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
             <!-- Local version -->

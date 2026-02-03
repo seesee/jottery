@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-electron
+electron/dist
 *.local
 
 # Test results
@@ -18,6 +20,9 @@ playwright-report/
 .playwright/
 coverage/
 scripts/test-history.db
+
+# Demo generation intermediates
+screenshots/
 
 # Editor directories and files
 .vscode/*

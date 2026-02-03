@@ -372,7 +372,9 @@
     "advancedTab": {
       "importExport": "IMPORT/EXPORT",
       "exportDescription": "EXPORT NOTES AS DECRYPTED JSON. IMPORT WILL MERGE NOTES WITH EXISTING DATA.",
+      "downloadClient": "DOWNLOAD TERMINAL/HTML CLIENT",
       "downloadTerminalClient": "DOWNLOAD TERMINAL CLIENT",
+      "clientDescription": "DOWNLOAD THE TERMINAL CLIENT FOR COMMAND-LINE ACCESS, OR THE HTML CLIENT TO RUN LOCALLY FROM THE FILESYSTEM",
       "terminalClientDescription": "USE THE TERMINAL CLIENT TO ACCESS YOUR NOTES FROM THE COMMAND LINE",
       "selectPlatform": "SELECT PLATFORM...",
       "download": "DOWNLOAD",
@@ -415,6 +417,29 @@
     "failedAttempts": "INCORRECT PASSWORD. AFTER 3 FAILED ATTEMPTS, YOU MAY NEED TO DELETE THE DATABASE AND START OVER.",
     "deleteAndStartOver": "DELETE DATABASE & START OVER",
     "storedPasswordInvalid": "STORED PASSWORD IS INVALID. PLEASE RE-ENTER YOUR PASSWORD.",
+    "alreadyUsingJottery": "ALREADY USING JOTTERY?",
+    "alreadyUsingJotteryDescription": "RESTORE FROM A BACKUP OR SET UP SYNC TO ACCESS YOUR EXISTING NOTES.",
+    "restoreFromBackupSubtitle": "RESTORE NOTES FROM A .JOTTERY-BACKUP FILE",
+    "syncSetup": {
+      "importCredentials": {
+        "title": "HAVE SYNC CREDENTIALS?",
+        "subtitle": "PASTE YOUR CREDENTIALS HERE TO SYNC THIS DEVICE"
+      },
+      "existingAccount": {
+        "title": "CONNECT EXISTING ACCOUNT",
+        "subtitle": "ALREADY HAVE AN ACCOUNT? CONNECT THIS DEVICE",
+        "formTitle": "CONNECT TO EXISTING ACCOUNT",
+        "infoText": "ENTER YOUR SYNC SERVER CREDENTIALS. YOUR NOTES WILL SYNC AFTER YOU CREATE YOUR MASTER PASSWORD.",
+        "emailLabel": "EMAIL ADDRESS",
+        "passwordLabel": "SERVER PASSWORD",
+        "createPasswordNote": "AFTER ENTERING YOUR SYNC DETAILS, USE YOUR MASTER PASSWORD BELOW TO COMPLETE SETUP."
+      },
+      "registerServer": {
+        "title": "REGISTER NEW ACCOUNT",
+        "subtitle": "FIRST DEVICE ONLY - CREATES YOUR ACCOUNT",
+        "formTitle": "REGISTER NEW ACCOUNT"
+      }
+    },
     "syncConfig": {
       "title": "SYNC CONFIGURATION (OPTIONAL)",
       "description": "OPTIONALLY CONFIGURE SYNC NOW. YOU CAN ALSO DO THIS LATER IN SETTINGS > SYNC.",
@@ -664,5 +689,11 @@
   "sync": {
     "syncing": "SYNCING...",
     "syncProgress": "SYNCING: {PERCENTAGE}% COMPLETE"
+  },
+  "progress": {
+    "title": "PLEASE WAIT",
+    "processing": "PROCESSING...",
+    "backup": "CREATING BACKUP...",
+    "export": "EXPORTING NOTES..."
   }
 }

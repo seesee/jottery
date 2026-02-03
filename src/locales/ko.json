@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "가져오기/내보내기",
       "exportDescription": "노트를 복호화된 JSON으로 내보냅니다. 가져오기는 노트를 기존 데이터와 병합합니다.",
+      "downloadClient": "터미널/HTML 클라이언트 다운로드",
       "downloadTerminalClient": "터미널 클라이언트 다운로드",
+      "clientDescription": "명령줄 액세스용 터미널 클라이언트 또는 파일 시스템에서 로컬로 실행하는 HTML 클라이언트 다운로드",
       "terminalClientDescription": "터미널 클라이언트를 사용하여 명령줄에서 노트에 액세스하세요",
       "selectPlatform": "플랫폼 선택...",
       "download": "다운로드",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "세션이 만료되었거나 유효하지 않습니다. 비밀번호를 입력하세요.",
+    "alreadyUsingJottery": "이미 Jottery를 사용 중이신가요?",
+    "alreadyUsingJotteryDescription": "백업에서 복원하거나 동기화를 설정하여 기존 노트에 액세스하세요.",
+    "restoreFromBackupSubtitle": ".jottery-backup 파일에서 노트 복원",
     "syncConfig": {
       "title": "동기화 설정 (선택 사항)",
       "description": "선택적으로 지금 동기화를 구성하세요. 설정 > 동기화에서 나중에 할 수도 있습니다.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "다른 기기에서 가져오기",
-        "subtitle": "추가 기기에 권장"
+        "title": "동기화 자격 증명이 있으신가요?",
+        "subtitle": "여기에 자격 증명을 붙여넣어 이 기기를 동기화하세요"
       },
       "existingAccount": {
         "title": "기존 계정 연결",
         "subtitle": "이미 계정이 있으신가요? 이 기기를 연결하세요",
-        "formTitle": "기존 계정에 연결"
+        "formTitle": "기존 계정에 연결",
+        "infoText": "동기화 서버 자격 증명을 입력하세요. 마스터 비밀번호를 생성한 후 노트가 동기화됩니다.",
+        "emailLabel": "이메일 주소",
+        "passwordLabel": "서버 비밀번호",
+        "createPasswordNote": "동기화 정보를 입력한 후 아래에서 마스터 비밀번호를 입력하여 설정을 완료하세요."
       },
       "registerServer": {
         "title": "새 계정 등록",
@@ -1122,6 +1131,8 @@
     "description": "이 노트가 로컬과 서버에서 모두 수정되었습니다. 충돌을 해결할 방법을 선택하세요.",
     "yourVersion": "내 버전",
     "serverVersion": "서버 버전",
+    "commonAncestor": "공통 조상",
+    "ancestorDescription": "둘 다 시작한 버전",
     "chooseAction": "이 충돌을 해결할 방법을 선택하세요:",
     "keepMine": "내 것 유지",
     "keepServer": "서버 것 유지",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "잠시만 기다려 주세요",
+    "processing": "처리 중...",
+    "backup": "백업 생성 중...",
+    "export": "노트 내보내는 중..."
   }
 }

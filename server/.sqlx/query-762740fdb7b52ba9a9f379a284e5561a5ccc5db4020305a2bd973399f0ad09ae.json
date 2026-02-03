@@ -1,47 +1,47 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at\n                   FROM notes WHERE id = ? AND user_id = ?",
+  "query": "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason, content_hash, parent_hash\n         FROM note_versions\n         WHERE user_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)\n         ORDER BY note_id, version",
   "describe": {
     "columns": [
       {
-        "name": "content",
+        "name": "version_key",
         "ordinal": 0,
         "type_info": "Text"
       },
       {
-        "name": "tags",
+        "name": "note_id",
         "ordinal": 1,
         "type_info": "Text"
       },
       {
-        "name": "pinned",
+        "name": "version",
         "ordinal": 2,
         "type_info": "Integer"
       },
       {
-        "name": "archived",
+        "name": "created_at",
         "ordinal": 3,
-        "type_info": "Bool"
+        "type_info": "Text"
       },
       {
-        "name": "archived_at",
+        "name": "synced_at",
         "ordinal": 4,
         "type_info": "Text"
       },
       {
-        "name": "locked",
+        "name": "content",
         "ordinal": 5,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
-        "name": "locked_at",
+        "name": "tags",
         "ordinal": 6,
         "type_info": "Text"
       },
       {
-        "name": "server_version",
+        "name": "attachments",
         "ordinal": 7,
-        "type_info": "Integer"
+        "type_info": "Text"
       },
       {
         "name": "syntax_language",
@@ -64,29 +64,41 @@
         "type_info": "Text"
       },
       {
-        "name": "modified_at",
+        "name": "reason",
         "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "content_hash",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_hash",
+        "ordinal": 14,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
       true,
       false,
       true,
-      false,
-      true,
-      true,
-      true,
-      true,
-      false
+      true
     ]
   },
-  "hash": "1b535171c9ae7c428631fd6480bf51db46319a45072d5f3e6f40ac1e29e6b36c"
+  "hash": "762740fdb7b52ba9a9f379a284e5561a5ccc5db4020305a2bd973399f0ad09ae"
 }

@@ -7,7 +7,7 @@ import type { Note, DecryptedNote, SortOrder, Attachment } from '../types';
 import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
-import { cryptoService, encryptStringArray, decryptStringArray } from './crypto';
+import { cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
 import { backupSchedulerService } from './backupSchedulerService';
@@ -61,7 +61,15 @@ class NoteService {
       content: JSON.stringify(encryptedContent),
       tags: [JSON.stringify(encryptedTags)],
       attachments: options?.attachments || [],
+      // Hash chain fields - new notes start with no parent
+      parentHash: null,
+      hashChain: [],
     };
+
+    // Compute content hash for the new note
+    const contentHash = await cryptoService.computeContentHash(note);
+    note.contentHash = contentHash;
+    note.hashChain = updateHashChain(contentHash, []);
 
     const createdNote = await noteRepository.create(note);
 
@@ -358,6 +366,19 @@ class NoteService {
     if ('color' in updates && updates.color !== note.color) {
       note.color = updates.color || undefined; // Allow removing color by setting to empty string or undefined
       hasContentChange = true; // UI state changes should also sync
+    }
+
+    // Update hash chain if content changed
+    if (hasContentChange) {
+      // Store old hash as parent
+      const oldContentHash = note.contentHash;
+      const oldHashChain = note.hashChain || [];
+
+      // Compute new content hash
+      const newContentHash = await cryptoService.computeContentHash(note);
+      note.contentHash = newContentHash;
+      note.parentHash = oldContentHash || null;
+      note.hashChain = updateHashChain(newContentHash, oldHashChain);
     }
 
     // Update modifiedAt for any change (content or UI state) so it syncs properly

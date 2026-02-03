@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Импорт/Экспорт",
       "exportDescription": "Экспортировать заметки как расшифрованный JSON. Импорт объединит заметки с существующими данными.",
+      "downloadClient": "Скачать терминальный/HTML клиент",
       "downloadTerminalClient": "Скачать терминальный клиент",
+      "clientDescription": "Скачайте терминальный клиент для доступа из командной строки или HTML клиент для локального запуска из файловой системы",
       "terminalClientDescription": "Используйте терминальный клиент для доступа к заметкам из командной строки",
       "selectPlatform": "Выберите платформу...",
       "download": "Скачать",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Сессия истекла или недействительна. Пожалуйста, введите пароль.",
+    "alreadyUsingJottery": "Уже используете Jottery?",
+    "alreadyUsingJotteryDescription": "Восстановите из резервной копии или настройте синхронизацию для доступа к существующим заметкам.",
+    "restoreFromBackupSubtitle": "Восстановить заметки из файла .jottery-backup",
     "syncConfig": {
       "title": "Настройка синхронизации (Необязательно)",
       "description": "Необязательно настройте синхронизацию сейчас. Вы также можете сделать это позже в Настройки > Синхронизация.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Импорт с другого устройства",
-        "subtitle": "Рекомендуется для дополнительных устройств"
+        "title": "Есть учётные данные для синхронизации?",
+        "subtitle": "Вставьте свои учётные данные здесь для синхронизации этого устройства"
       },
       "existingAccount": {
         "title": "Подключить существующий аккаунт",
         "subtitle": "Уже есть аккаунт? Подключите это устройство",
-        "formTitle": "Подключиться к существующему аккаунту"
+        "formTitle": "Подключиться к существующему аккаунту",
+        "infoText": "Введите учётные данные сервера синхронизации. Ваши заметки будут синхронизированы после создания главного пароля.",
+        "emailLabel": "Адрес электронной почты",
+        "passwordLabel": "Пароль сервера",
+        "createPasswordNote": "После ввода данных синхронизации введите ниже главный пароль для завершения настройки."
       },
       "registerServer": {
         "title": "Зарегистрировать новый аккаунт",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Общий предок",
+    "ancestorDescription": "Версия, с которой вы оба начали",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Пожалуйста, подождите",
+    "processing": "Обработка...",
+    "backup": "Создание резервной копии...",
+    "export": "Экспорт заметок..."
   }
 }

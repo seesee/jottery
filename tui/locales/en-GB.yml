@@ -28,12 +28,13 @@ password:
   change_success: "Password changed successfully"
   remember: "Remember password"
   remember_toggle: "Remember password (Ctrl+R to toggle)"
-  remember_enabled: "Password stored for auto-unlock. WARNING: Accessible to anyone with device access!"
+  remember_enabled: "Password stored for auto-unlock. Note: May be accessible to users with superuser access."
   remember_keychain_enabled: "Password stored securely in system keychain."
   remember_disabled: "Password storage disabled. You will be prompted on next start."
-  remember_warning: "WARNING: Password will be accessible to anyone with physical access to this device!"
+  remember_warning: "Please assume your password could be accessible to anyone with superuser/root access to this device."
   remember_keychain_warning: "Password will be stored securely in the system keychain."
   remember_keychain_info: "Password stored securely in system keychain"
+  correct: "Password verified"
   storage_keychain: "System Keychain"
   storage_file: "File (obfuscated)"
   incorrect: "Incorrect password. Try again."
@@ -241,6 +242,8 @@ conflict:
   title: "Sync Conflict"
   your_version: "Your Version"
   server_version: "Server Version"
+  common_ancestor: "Common Ancestor"
+  ancestor_description: "The version both started from before changes diverged"
   resolved_mine: "Conflict resolved - kept your version"
   resolved_server: "Conflict resolved - kept server version"
   resolved_both: "Conflict resolved - kept both versions"
@@ -526,3 +529,20 @@ time:
   date_format: "%Y-%m-%d"
   time_format: "%H:%M:%S"
   datetime_format: "%Y-%m-%d %H:%M:%S"
+
+# Backup functionality
+backup:
+  created: "Backup created"
+  restore: "Restoring backup"
+  valid: "Valid backup"
+  records: "records"
+  validating: "Validating backup file..."
+  verifying_password: "Verifying password..."
+  restoring: "Restoring data..."
+  restored: "Restored"
+
+# Progress indicators
+progress:
+  backup: "Creating backup..."
+  processing: "Processing"
+  export: "Exporting..."

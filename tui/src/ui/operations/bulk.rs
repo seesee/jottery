@@ -193,7 +193,7 @@ pub fn get_tags_from_selected(app: &App) -> Vec<String> {
     }
 
     let mut tags: Vec<String> = tags.into_iter().collect();
-    tags.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    tags.sort_by_key(|a| a.to_lowercase());
     tags
 }
 

@@ -91,6 +91,7 @@ impl Database {
             (12, include_str!("../migrations/012_add_deletions_tracking.sql")),
             (13, include_str!("../migrations/013_add_pending_device_name.sql")),
             (14, include_str!("../migrations/014_add_version_show_preview.sql")),
+            (15, include_str!("../migrations/015_add_hash_chain.sql")),
         ];
 
         // Run pending migrations
@@ -117,6 +118,28 @@ impl Database {
                                 [],
                             )
                             .context("Failed to record migration 11 version")?;
+                        continue;
+                    }
+                }
+
+                // Special handling for migration 15: check if hash chain columns already exist
+                if version == 15 {
+                    let has_content_hash_column: bool = self.conn
+                        .query_row(
+                            "SELECT COUNT(*) > 0 FROM pragma_table_info('notes') WHERE name = 'content_hash'",
+                            [],
+                            |row| row.get(0),
+                        )
+                        .unwrap_or(false);
+
+                    if has_content_hash_column {
+                        info!("Migration 15: content_hash column already exists, recording schema version only");
+                        self.conn
+                            .execute(
+                                "INSERT INTO schema_version (version, applied_at) VALUES (15, datetime('now'))",
+                                [],
+                            )
+                            .context("Failed to record migration 15 version")?;
                         continue;
                     }
                 }
@@ -229,7 +252,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory("test_password").unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 14);
+        assert_eq!(db.schema_version().unwrap(), 15);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -257,13 +280,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 14);
+            assert_eq!(db.schema_version().unwrap(), 15);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, "password").unwrap();
-            assert_eq!(db.schema_version().unwrap(), 14);
+            assert_eq!(db.schema_version().unwrap(), 15);
         }
     }
 }

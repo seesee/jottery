@@ -1,5 +1,5 @@
-/// JSON import/export functionality
-/// Matches web app export format
+//! JSON import/export functionality
+//! Matches web app export format
 
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -133,6 +133,10 @@ pub fn import_notes<P: AsRef<Path>>(
             locked: export_note.locked,
             locked_at: None,
             color: export_note.color,
+            // Hash chain fields - computed on first sync
+            content_hash: None,
+            parent_hash: None,
+            hash_chain: None,
         };
 
         // Try to create (will fail if already exists, which is fine)

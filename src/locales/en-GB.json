@@ -580,7 +580,9 @@
     "advancedTab": {
       "importExport": "Import/Export",
       "exportDescription": "Export notes as decrypted JSON. Import will merge notes with existing data.",
+      "downloadClient": "Download Terminal/HTML Client",
       "downloadTerminalClient": "Download Terminal Client",
+      "clientDescription": "Download the terminal client for command-line access, or the HTML client to run locally from the filesystem",
       "terminalClientDescription": "Use the terminal client to access your notes from the command line",
       "selectPlatform": "Select platform...",
       "download": "Download",
@@ -811,6 +813,9 @@
     "deleteAndStartOver": "Delete Database & Start Over",
     "storedPasswordInvalid": "Stored password is invalid. Please re-enter your password.",
     "sessionExpiredOrInvalid": "Session expired or invalid. Please enter your password.",
+    "alreadyUsingJottery": "Already using Jottery?",
+    "alreadyUsingJotteryDescription": "Restore from a backup or set up sync to access your existing notes.",
+    "restoreFromBackupSubtitle": "Restore notes from a .jottery-backup file",
     "syncConfig": {
       "title": "Sync Configuration (Optional)",
       "description": "Set up sync to back up your notes and access them across devices.",
@@ -821,13 +826,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Import from another device",
-        "subtitle": "Recommended for additional devices"
+        "title": "Have Sync Credentials?",
+        "subtitle": "Paste your credentials here to sync this device"
       },
       "existingAccount": {
         "title": "Connect existing account",
         "subtitle": "Already have an account? Connect this device",
-        "formTitle": "Connect to Existing Account"
+        "formTitle": "Connect to Existing Account",
+        "infoText": "Enter your sync server credentials. Your notes will sync after you create your master password.",
+        "emailLabel": "Email address",
+        "passwordLabel": "Server password",
+        "createPasswordNote": "After entering your sync details, use your master password below to complete setup."
       },
       "registerServer": {
         "title": "Register new account",
@@ -1110,7 +1119,9 @@
     "resolvedBoth": "Conflict resolved - duplicate note created",
     "noConflict": "No conflict data found",
     "indicator": "Sync conflict",
-    "syncNotification": "{count, plural, one {1 note has a sync conflict} other {{count} notes have sync conflicts}}"
+    "syncNotification": "{count, plural, one {1 note has a sync conflict} other {{count} notes have sync conflicts}}",
+    "commonAncestor": "Common ancestor",
+    "ancestorDescription": "The version you both started from"
   },
   "sync": {
     "syncing": "Syncing...",
@@ -1160,5 +1171,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Please wait",
+    "processing": "Processing...",
+    "backup": "Creating backup...",
+    "export": "Exporting notes..."
   }
 }

@@ -23,12 +23,13 @@ password:
   change_success: Passwort erfolgreich geändert
   remember: Passwort merken
   remember_toggle: Passwort merken (Strg+R zum Umschalten)
-  remember_enabled: "Passwort für Auto-Unlock gespeichert. WARNUNG: Für jeden mit Gerätezugriff zugänglich!"
+  remember_enabled: "Passwort für Auto-Unlock gespeichert. Hinweis: Möglicherweise für Benutzer mit Superuser-Zugriff zugänglich."
   remember_keychain_enabled: Passwort sicher im System-Schlüsselbund gespeichert.
   remember_disabled: Passwortspeicherung deaktiviert. Beim nächsten Start wird nachgefragt.
-  remember_warning: "WARNUNG: Das Passwort ist für jeden mit physischem Zugang zu diesem Gerät zugänglich!"
+  remember_warning: "Bitte gehen Sie davon aus, dass Ihr Passwort für jeden mit Superuser-/Root-Zugriff auf dieses Gerät zugänglich sein könnte."
   remember_keychain_warning: Das Passwort wird sicher im System-Schlüsselbund gespeichert.
   remember_keychain_info: Passwort sicher im System-Schlüsselbund gespeichert
+  correct: "Passwort verifiziert"
   storage_keychain: System-Schlüsselbund
   storage_file: Datei (verschleiert)
   incorrect: Falsches Passwort. Erneut versuchen.
@@ -189,6 +190,10 @@ sync:
   paste_success: Sync credentials configured successfully!
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
+  import_device_title: Import Credentials - Device Name
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: No credentials entered
+  import_failed: Failed to import credentials
 register:
   title: Bei Sync-Server registrieren
   enter_endpoint: "Sync-Server-URL eingeben (z.B. https://sync.example.com):"
@@ -476,6 +481,8 @@ conflict:
   title: Sync Conflict
   your_version: Your Version
   server_version: Server Version
+  common_ancestor: Common Ancestor
+  ancestor_description: The version both started from before changes diverged
   resolved_mine: Conflict resolved - kept your version
   resolved_server: Conflict resolved - kept server version
   resolved_both: Conflict resolved - kept both versions
@@ -484,3 +491,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "Konflikt"
   count_plural: "Konflikte"
+
+# Backup functionality
+backup:
+  created: "Sicherung erstellt"
+  restore: "Sicherung wird wiederhergestellt"
+  valid: "Gültige Sicherung"
+  records: "Einträge"
+  validating: "Sicherungsdatei wird validiert..."
+  verifying_password: "Passwort wird überprüft..."
+  restoring: "Daten werden wiederhergestellt..."
+  restored: "Wiederhergestellt"
+
+# Progress indicators
+progress:
+  backup: "Sicherung wird erstellt..."
+  processing: "Verarbeitung"
+  export: "Exportieren..."

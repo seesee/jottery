@@ -1,5 +1,5 @@
-/// Repository pattern for database access
-/// Provides clean abstraction over database operations
+//! Repository pattern for database access
+//! Provides clean abstraction over database operations
 
 pub mod note;
 pub mod note_version;

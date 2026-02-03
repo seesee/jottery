@@ -197,6 +197,10 @@ pub struct App {
     pub conflict_server_scroll: usize,
     /// Which pane is focused in conflict view (false = local, true = server)
     pub conflict_focus_server: bool,
+    /// Decrypted ancestor content for 3-way merge (if available)
+    pub conflict_ancestor_content: Option<String>,
+    /// Decrypted ancestor tags for 3-way merge (if available)
+    pub conflict_ancestor_tags: Option<Vec<String>>,
     /// Bulk tags input buffer (for adding tags to selected notes)
     pub bulk_tags_input: String,
     /// Bulk export path input buffer
@@ -305,6 +309,8 @@ impl App {
             conflict_local_scroll: 0,
             conflict_server_scroll: 0,
             conflict_focus_server: false,
+            conflict_ancestor_content: None,
+            conflict_ancestor_tags: None,
             bulk_tags_input: String::new(),
             bulk_export_path_input: String::new(),
             show_bulk_delete_confirm: false,
@@ -802,12 +808,12 @@ impl App {
                     // Color filtering
                     if !modifiers.colors.is_empty() {
                         let note_has_color = modifiers.colors.iter().any(|color_key| {
-                            note.color.as_ref().map_or(false, |c| c.to_lowercase() == color_key.to_lowercase())
+                            note.color.as_ref().is_some_and(|c| c.to_lowercase() == color_key.to_lowercase())
                         });
 
                         let tag_has_color = note.tags.iter().any(|tag| {
                             let tag_color = self.settings.get_tag_color(tag);
-                            tag_color.map_or(false, |tc| {
+                            tag_color.is_some_and(|tc| {
                                 modifiers.colors.iter().any(|color_key| tc.to_lowercase() == color_key.to_lowercase())
                             })
                         });
@@ -931,15 +937,13 @@ impl App {
                         continue;
                     }
 
-                    if part.starts_with('#') {
+                    if let Some(tag) = part.strip_prefix('#') {
                         // Tag search
-                        let tag = &part[1..];
                         if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
                             return false;
                         }
-                    } else if part.starts_with('-') {
+                    } else if let Some(negated) = part.strip_prefix('-') {
                         // Negation
-                        let negated = &part[1..];
                         if content_lower.contains(negated) {
                             return false;
                         }
@@ -1280,6 +1284,10 @@ impl App {
                     word_wrap: Some(note.word_wrap),
                     syntax_language: Some(note.syntax_language.to_string()),
                     color: note.color.clone(),
+                    // Hash chain fields for git-like conflict detection
+                    content_hash: note.content_hash.clone(),
+                    parent_hash: note.parent_hash.clone(),
+                    hash_chain: note.hash_chain.clone(),
                 })
             }).collect();
 
@@ -1330,6 +1338,9 @@ impl App {
                         show_preview: version.show_preview,
                         color: version.color.clone(),
                         reason: version.reason.to_string(),
+                        // Hash chain fields for git-like conflict detection
+                        content_hash: version.content_hash.clone(),
+                        parent_hash: version.parent_hash.clone(),
                     });
                 }
             }
@@ -1550,7 +1561,7 @@ impl App {
                         key
                     )?;
 
-                    self.debug_log(&"Pull - Stored attachment in database".to_string());
+                    self.debug_log("Pull - Stored attachment in database");
 
                     // Add to note's attachment array
                     note_attachments.push(Attachment {
@@ -1562,7 +1573,7 @@ impl App {
                         thumbnail_data: None,
                     });
 
-                    self.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
+                    self.debug_log("Pull - Added attachment to note_attachments array");
                 } else {
                     self.debug_log(&format!("Pull - Attachment data NOT found in map for {}", attachment_ref.id));
                 }
@@ -1723,6 +1734,9 @@ impl App {
                     show_preview: server_version.show_preview,
                     color: server_version.color.clone(),
                     reason,
+                    // Hash chain fields from server
+                    content_hash: server_version.content_hash.clone(),
+                    parent_hash: server_version.parent_hash.clone(),
                 };
 
                 // Store the version

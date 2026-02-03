@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importa/Esporta",
       "exportDescription": "Esporta note come JSON decifrato. L'importazione unirà le note con i dati esistenti.",
+      "downloadClient": "Scarica client terminale/HTML",
       "downloadTerminalClient": "Scarica client terminale",
+      "clientDescription": "Scarica il client terminale per l'accesso da riga di comando, o il client HTML per l'esecuzione locale dal filesystem",
       "terminalClientDescription": "Usa il client terminale per accedere alle note dalla riga di comando",
       "selectPlatform": "Seleziona piattaforma...",
       "download": "Scarica",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sessione scaduta o non valida. Inserisci la tua password.",
+    "alreadyUsingJottery": "Usi già Jottery?",
+    "alreadyUsingJotteryDescription": "Ripristina da un backup o configura la sincronizzazione per accedere alle tue note esistenti.",
+    "restoreFromBackupSubtitle": "Ripristina le note da un file .jottery-backup",
     "syncConfig": {
       "title": "Configurazione sincronizzazione (Facoltativo)",
       "description": "Facoltativamente configura la sincronizzazione ora. Puoi anche farlo più tardi in Impostazioni > Sincronizzazione.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Importa da un altro dispositivo",
-        "subtitle": "Consigliato per dispositivi aggiuntivi"
+        "title": "Hai le credenziali di sincronizzazione?",
+        "subtitle": "Incolla le tue credenziali qui per sincronizzare questo dispositivo"
       },
       "existingAccount": {
         "title": "Collega account esistente",
         "subtitle": "Hai già un account? Collega questo dispositivo",
-        "formTitle": "Collega ad account esistente"
+        "formTitle": "Collega ad account esistente",
+        "infoText": "Inserisci le credenziali del server di sincronizzazione. Le tue note verranno sincronizzate dopo aver creato la password principale.",
+        "emailLabel": "Indirizzo email",
+        "passwordLabel": "Password del server",
+        "createPasswordNote": "Dopo aver inserito i dettagli di sincronizzazione, usa la tua password principale qui sotto per completare la configurazione."
       },
       "registerServer": {
         "title": "Registra nuovo account",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Antenato comune",
+    "ancestorDescription": "La versione da cui entrambi siete partiti",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Attendere prego",
+    "processing": "Elaborazione...",
+    "backup": "Creazione backup...",
+    "export": "Esportazione note..."
   }
 }

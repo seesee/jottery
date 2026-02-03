@@ -20,6 +20,8 @@ const SALT_LENGTH: usize = 32; // 256 bits
 pub const DEFAULT_ITERATIONS: u32 = 600_000;
 /// Minimum iterations accepted (for backwards compatibility with existing databases)
 const MIN_ITERATIONS: u32 = 100_000;
+/// Maximum hash chain length (matching web client)
+pub const MAX_HASH_CHAIN_LENGTH: usize = 50;
 
 type NonceType = [u8; NONCE_LENGTH];
 
@@ -174,6 +176,30 @@ impl CryptoService {
         general_purpose::STANDARD.encode(result)
     }
 
+    /// Compute content hash for a note (for git-like conflict detection)
+    /// Matches web client implementation in src/lib/services/crypto.ts
+    pub fn compute_content_hash(&self, note: &crate::models::Note) -> String {
+        use serde_json::json;
+
+        // Get sorted attachment IDs for consistent hashing
+        let mut attachment_ids: Vec<&str> = note.attachments.iter()
+            .map(|a| a.id.as_str())
+            .collect();
+        attachment_ids.sort();
+
+        // Build hash data matching web client structure
+        let hash_data = json!({
+            "content": note.content,
+            "tags": note.tags,
+            "attachments": attachment_ids,
+            "pinned": note.pinned,
+            "syntaxLanguage": note.syntax_language.to_string(),
+            "wordWrap": note.word_wrap,
+        });
+
+        self.hash(&hash_data.to_string())
+    }
+
     /// Encrypt JSON data (helper)
     pub fn encrypt_json<T: serde::Serialize>(
         &self,
@@ -193,6 +219,30 @@ impl CryptoService {
         let json = self.decrypt_text(encrypted, key)?;
         serde_json::from_str(&json).context("JSON deserialization failed")
     }
+}
+
+/// Update hash chain by prepending new hash and trimming to MAX_HASH_CHAIN_LENGTH
+/// Matches web client implementation
+pub fn update_hash_chain(current_hash: &str, parent_chain: Option<&[String]>) -> Vec<String> {
+    let mut new_chain = vec![current_hash.to_string()];
+    if let Some(chain) = parent_chain {
+        new_chain.extend(chain.iter().cloned());
+    }
+    new_chain.truncate(MAX_HASH_CHAIN_LENGTH);
+    new_chain
+}
+
+/// Find common ancestor hash between two hash chains
+/// Returns the first hash that appears in both chains, or None if no common ancestor
+pub fn find_common_ancestor(chain_a: &[String], chain_b: &[String]) -> Option<String> {
+    use std::collections::HashSet;
+    let chain_b_set: HashSet<&String> = chain_b.iter().collect();
+    for hash in chain_a {
+        if chain_b_set.contains(hash) {
+            return Some(hash.clone());
+        }
+    }
+    None
 }
 
 impl Default for CryptoService {
@@ -309,5 +359,205 @@ mod tests {
 
         // Hash should be base64
         assert!(general_purpose::STANDARD.decode(&hash1).is_ok());
+    }
+
+    // ===== Hash Chain Tests =====
+
+    #[test]
+    fn test_update_hash_chain_empty_parent() {
+        let hash = "abc123";
+        let chain = update_hash_chain(hash, None);
+
+        assert_eq!(chain.len(), 1);
+        assert_eq!(chain[0], hash);
+    }
+
+    #[test]
+    fn test_update_hash_chain_with_parent() {
+        let current = "new_hash";
+        let parent = vec!["parent1".to_string(), "parent2".to_string()];
+        let chain = update_hash_chain(current, Some(&parent));
+
+        assert_eq!(chain.len(), 3);
+        assert_eq!(chain[0], current);
+        assert_eq!(chain[1], "parent1");
+        assert_eq!(chain[2], "parent2");
+    }
+
+    #[test]
+    fn test_update_hash_chain_truncates_at_max_length() {
+        // Create a parent chain at max length
+        let parent: Vec<String> = (0..MAX_HASH_CHAIN_LENGTH)
+            .map(|i| format!("hash_{}", i))
+            .collect();
+
+        let current = "new_hash";
+        let chain = update_hash_chain(current, Some(&parent));
+
+        // Should still be MAX_HASH_CHAIN_LENGTH (new hash replaces oldest)
+        assert_eq!(chain.len(), MAX_HASH_CHAIN_LENGTH);
+        assert_eq!(chain[0], current);
+        // Last element should be hash_48 (not hash_49 which was truncated)
+        assert_eq!(chain[MAX_HASH_CHAIN_LENGTH - 1], "hash_48");
+    }
+
+    #[test]
+    fn test_update_hash_chain_empty_parent_slice() {
+        let current = "new_hash";
+        let empty: Vec<String> = vec![];
+        let chain = update_hash_chain(current, Some(&empty));
+
+        assert_eq!(chain.len(), 1);
+        assert_eq!(chain[0], current);
+    }
+
+    #[test]
+    fn test_find_common_ancestor_basic() {
+        let chain_a = vec!["a1".to_string(), "common".to_string(), "old".to_string()];
+        let chain_b = vec!["b1".to_string(), "b2".to_string(), "common".to_string()];
+
+        let ancestor = find_common_ancestor(&chain_a, &chain_b);
+        assert_eq!(ancestor, Some("common".to_string()));
+    }
+
+    #[test]
+    fn test_find_common_ancestor_first_match() {
+        // Should return the first match from chain_a's perspective
+        let chain_a = vec!["a1".to_string(), "first".to_string(), "second".to_string()];
+        let chain_b = vec!["b1".to_string(), "second".to_string(), "first".to_string()];
+
+        let ancestor = find_common_ancestor(&chain_a, &chain_b);
+        // "first" appears first in chain_a and is in chain_b
+        assert_eq!(ancestor, Some("first".to_string()));
+    }
+
+    #[test]
+    fn test_find_common_ancestor_no_common() {
+        let chain_a = vec!["a1".to_string(), "a2".to_string()];
+        let chain_b = vec!["b1".to_string(), "b2".to_string()];
+
+        let ancestor = find_common_ancestor(&chain_a, &chain_b);
+        assert_eq!(ancestor, None);
+    }
+
+    #[test]
+    fn test_find_common_ancestor_identical_chains() {
+        let chain = vec!["h1".to_string(), "h2".to_string(), "h3".to_string()];
+
+        let ancestor = find_common_ancestor(&chain, &chain);
+        // First element should be the common ancestor
+        assert_eq!(ancestor, Some("h1".to_string()));
+    }
+
+    #[test]
+    fn test_find_common_ancestor_empty_chains() {
+        let empty: Vec<String> = vec![];
+        let chain = vec!["h1".to_string()];
+
+        assert_eq!(find_common_ancestor(&empty, &chain), None);
+        assert_eq!(find_common_ancestor(&chain, &empty), None);
+        assert_eq!(find_common_ancestor(&empty, &empty), None);
+    }
+
+    #[test]
+    fn test_find_common_ancestor_single_element() {
+        let chain_a = vec!["common".to_string()];
+        let chain_b = vec!["common".to_string()];
+
+        let ancestor = find_common_ancestor(&chain_a, &chain_b);
+        assert_eq!(ancestor, Some("common".to_string()));
+    }
+
+    #[test]
+    fn test_compute_content_hash_deterministic() {
+        use crate::models::Note;
+
+        let service = CryptoService::new();
+        let note = Note::new("Test content".to_string());
+
+        let hash1 = service.compute_content_hash(&note);
+        let hash2 = service.compute_content_hash(&note);
+
+        // Same note should produce same hash
+        assert_eq!(hash1, hash2);
+
+        // Hash should be valid base64
+        assert!(general_purpose::STANDARD.decode(&hash1).is_ok());
+    }
+
+    #[test]
+    fn test_compute_content_hash_differs_by_content() {
+        use crate::models::Note;
+
+        let service = CryptoService::new();
+
+        let note1 = Note::new("Content A".to_string());
+        let mut note2 = Note::new("Content B".to_string());
+
+        // Use same ID to isolate content difference
+        note2.id = note1.id.clone();
+
+        let hash1 = service.compute_content_hash(&note1);
+        let hash2 = service.compute_content_hash(&note2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_compute_content_hash_differs_by_tags() {
+        use crate::models::Note;
+
+        let service = CryptoService::new();
+
+        let mut note1 = Note::new("Same content".to_string());
+        note1.tags = vec!["tag1".to_string()];
+
+        let mut note2 = Note::new("Same content".to_string());
+        note2.id = note1.id.clone();
+        note2.tags = vec!["tag2".to_string()];
+
+        let hash1 = service.compute_content_hash(&note1);
+        let hash2 = service.compute_content_hash(&note2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_compute_content_hash_differs_by_pinned() {
+        use crate::models::Note;
+
+        let service = CryptoService::new();
+
+        let mut note1 = Note::new("Same content".to_string());
+        note1.pinned = false;
+
+        let mut note2 = Note::new("Same content".to_string());
+        note2.id = note1.id.clone();
+        note2.pinned = true;
+
+        let hash1 = service.compute_content_hash(&note1);
+        let hash2 = service.compute_content_hash(&note2);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_compute_content_hash_ignores_timestamps() {
+        use crate::models::Note;
+        use chrono::Duration;
+
+        let service = CryptoService::new();
+
+        let note1 = Note::new("Same content".to_string());
+        let mut note2 = Note::new("Same content".to_string());
+        note2.id = note1.id.clone();
+        note2.created_at = note1.created_at + Duration::hours(1);
+        note2.modified_at = note1.modified_at + Duration::hours(1);
+
+        let hash1 = service.compute_content_hash(&note1);
+        let hash2 = service.compute_content_hash(&note2);
+
+        // Timestamps should not affect hash
+        assert_eq!(hash1, hash2);
     }
 }

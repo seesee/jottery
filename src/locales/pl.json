@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Import/Eksport",
       "exportDescription": "Eksportuj notatki jako odszyfrowany JSON. Import scali notatki z istniejącymi danymi.",
+      "downloadClient": "Pobierz klienta terminalowego/HTML",
       "downloadTerminalClient": "Pobierz klienta terminalowego",
+      "clientDescription": "Pobierz klienta terminalowego dla dostępu z wiersza poleceń lub klienta HTML do lokalnego uruchomienia z systemu plików",
       "terminalClientDescription": "Użyj klienta terminalowego, aby uzyskać dostęp do notatek z wiersza poleceń",
       "selectPlatform": "Wybierz platformę...",
       "download": "Pobierz",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sesja wygasła lub jest nieprawidłowa. Wprowadź swoje hasło.",
+    "alreadyUsingJottery": "Już używasz Jottery?",
+    "alreadyUsingJotteryDescription": "Przywróć z kopii zapasowej lub skonfiguruj synchronizację, aby uzyskać dostęp do istniejących notatek.",
+    "restoreFromBackupSubtitle": "Przywróć notatki z pliku .jottery-backup",
     "syncConfig": {
       "title": "Konfiguracja synchronizacji (Opcjonalne)",
       "description": "Opcjonalnie skonfiguruj synchronizację teraz. Możesz to również zrobić później w Ustawienia > Synchronizacja.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Importuj z innego urządzenia",
-        "subtitle": "Zalecane dla dodatkowych urządzeń"
+        "title": "Masz dane logowania do synchronizacji?",
+        "subtitle": "Wklej swoje dane tutaj, aby zsynchronizować to urządzenie"
       },
       "existingAccount": {
         "title": "Połącz istniejące konto",
         "subtitle": "Masz już konto? Połącz to urządzenie",
-        "formTitle": "Połącz z istniejącym kontem"
+        "formTitle": "Połącz z istniejącym kontem",
+        "infoText": "Wprowadź dane logowania do serwera synchronizacji. Twoje notatki zostaną zsynchronizowane po utworzeniu hasła głównego.",
+        "emailLabel": "Adres e-mail",
+        "passwordLabel": "Hasło serwera",
+        "createPasswordNote": "Po wprowadzeniu danych synchronizacji, użyj poniżej hasła głównego, aby zakończyć konfigurację."
       },
       "registerServer": {
         "title": "Zarejestruj nowe konto",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Wspólny przodek",
+    "ancestorDescription": "Wersja, od której oboje zaczęliście",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Proszę czekać",
+    "processing": "Przetwarzanie...",
+    "backup": "Tworzenie kopii zapasowej...",
+    "export": "Eksportowanie notatek..."
   }
 }

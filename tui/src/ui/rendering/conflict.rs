@@ -11,6 +11,7 @@ use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::ColorScheme;
+use crate::ui::helpers::truncate_to_width;
 
 /// Render conflict resolution modal
 pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
@@ -48,19 +49,37 @@ pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
     let inner_area = modal_block.inner(modal_area);
     frame.render_widget(modal_block, modal_area);
 
-    // Split into: header, content panes, and footer (help/actions)
-    let main_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),  // Header with note info and timestamps
-            Constraint::Min(0),     // Content panes
-            Constraint::Length(2),  // Footer with actions
-        ])
-        .split(inner_area);
+    // Determine if we have ancestor data for 3-way merge
+    let has_ancestor = app.conflict_ancestor_content.is_some();
+
+    // Split into: header, ancestor (optional), content panes, and footer (help/actions)
+    let main_layout = if has_ancestor {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),  // Header with note info and timestamps
+                Constraint::Length(6),  // Ancestor section (3-way merge)
+                Constraint::Min(0),     // Content panes
+                Constraint::Length(2),  // Footer with actions
+            ])
+            .split(inner_area)
+    } else {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),  // Header with note info and timestamps
+                Constraint::Min(0),     // Content panes
+                Constraint::Length(2),  // Footer with actions
+            ])
+            .split(inner_area)
+    };
 
     let header_area = main_layout[0];
-    let content_area = main_layout[1];
-    let footer_area = main_layout[2];
+    let (ancestor_area, content_area, footer_area) = if has_ancestor {
+        (Some(main_layout[1]), main_layout[2], main_layout[3])
+    } else {
+        (None, main_layout[1], main_layout[2])
+    };
 
     // Render header
     render_conflict_header(
@@ -70,6 +89,17 @@ pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
         conflict_data,
         &app.color_scheme,
     );
+
+    // Render ancestor section if available (3-way merge)
+    if let (Some(ancestor_area), Some(ancestor_content)) = (ancestor_area, &app.conflict_ancestor_content) {
+        render_ancestor_section(
+            frame,
+            ancestor_area,
+            ancestor_content,
+            app.conflict_ancestor_tags.as_deref(),
+            &app.color_scheme,
+        );
+    }
 
     // Split content into two panes (local | server)
     let panes = Layout::default()
@@ -105,6 +135,59 @@ pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
     render_conflict_footer(frame, footer_area, &app.color_scheme);
 }
 
+/// Render the ancestor section for 3-way merge
+fn render_ancestor_section(
+    frame: &mut Frame,
+    area: Rect,
+    content: &str,
+    tags: Option<&[String]>,
+    color_scheme: &ColorScheme,
+) {
+    let ancestor_block = Block::default()
+        .title(format!(" {} ", t!("conflict.common_ancestor")))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(color_scheme.muted))
+        .style(Style::default().bg(color_scheme.background));
+
+    let inner = ancestor_block.inner(area);
+    frame.render_widget(ancestor_block, area);
+
+    let mut lines = vec![];
+
+    // Add description
+    lines.push(Line::styled(
+        t!("conflict.ancestor_description").to_string(),
+        Style::default().fg(color_scheme.muted),
+    ));
+
+    // Show tags if present
+    if let Some(tags) = tags {
+        if !tags.is_empty() {
+            let tags_str = tags.iter()
+                .map(|t| format!("#{}", t))
+                .collect::<Vec<_>>()
+                .join(" ");
+            lines.push(Line::styled(
+                format!("Tags: {}", tags_str),
+                Style::default().fg(color_scheme.muted),
+            ));
+        }
+    }
+
+    // Show truncated content preview (Unicode-aware)
+    let preview: String = content.lines()
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" ");
+    let truncated = truncate_to_width(&preview, 80);
+    lines.push(Line::styled(truncated, Style::default().fg(color_scheme.muted)));
+
+    let paragraph = Paragraph::new(lines)
+        .wrap(Wrap { trim: false });
+
+    frame.render_widget(paragraph, inner);
+}
+
 /// Render the header showing note info and timestamps
 fn render_conflict_header(
     frame: &mut Frame,
@@ -115,13 +198,8 @@ fn render_conflict_header(
 ) {
     // Extract first line as title
     let title = local_content.lines().next().unwrap_or("Untitled");
-    // Use character-aware truncation to avoid panicking on multi-byte UTF-8
-    let title_truncated = if title.chars().count() > 50 {
-        let truncated: String = title.chars().take(50).collect();
-        format!("{}...", truncated)
-    } else {
-        title.to_string()
-    };
+    // Use Unicode-aware truncation to handle emojis and wide characters
+    let title_truncated = truncate_to_width(title, 50);
 
     let local_date = conflict_data.detected_at.format("%Y-%m-%d %H:%M").to_string();
     let server_date = conflict_data.server_modified_at.format("%Y-%m-%d %H:%M").to_string();
@@ -145,6 +223,7 @@ fn render_conflict_header(
 }
 
 /// Render a content pane (local or server version)
+#[allow(clippy::too_many_arguments)]
 fn render_content_pane(
     frame: &mut Frame,
     area: Rect,

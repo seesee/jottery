@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importar/Exportar",
       "exportDescription": "Exporte notas como JSON descifrado. La importación fusionará las notas con los datos existentes.",
+      "downloadClient": "Descargar cliente de terminal/HTML",
       "downloadTerminalClient": "Descargar cliente de terminal",
+      "clientDescription": "Descargue el cliente de terminal para acceso desde la línea de comandos, o el cliente HTML para ejecutar localmente desde el sistema de archivos",
       "terminalClientDescription": "Use el cliente de terminal para acceder a sus notas desde la línea de comandos",
       "selectPlatform": "Seleccionar plataforma...",
       "download": "Descargar",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sesión expirada o inválida. Por favor, introduce tu contraseña.",
+    "alreadyUsingJottery": "¿Ya usas Jottery?",
+    "alreadyUsingJotteryDescription": "Restaura desde una copia de seguridad o configura la sincronización para acceder a tus notas existentes.",
+    "restoreFromBackupSubtitle": "Restaurar notas desde un archivo .jottery-backup",
     "syncConfig": {
       "title": "Configuración de sincronización (Opcional)",
       "description": "Opcionalmente configure la sincronización ahora. También puede hacerlo más tarde en Configuración > Sincronización.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Importar desde otro dispositivo",
-        "subtitle": "Recomendado para dispositivos adicionales"
+        "title": "¿Tienes credenciales de sincronización?",
+        "subtitle": "Pega tus credenciales aquí para sincronizar este dispositivo"
       },
       "existingAccount": {
         "title": "Conectar cuenta existente",
         "subtitle": "¿Ya tiene una cuenta? Conecte este dispositivo",
-        "formTitle": "Conectar a cuenta existente"
+        "formTitle": "Conectar a cuenta existente",
+        "infoText": "Ingrese sus credenciales del servidor de sincronización. Sus notas se sincronizarán después de crear su contraseña maestra.",
+        "emailLabel": "Correo electrónico",
+        "passwordLabel": "Contraseña del servidor",
+        "createPasswordNote": "Después de ingresar sus datos de sincronización, use su contraseña maestra abajo para completar la configuración."
       },
       "registerServer": {
         "title": "Registrar nueva cuenta",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Ancestro común",
+    "ancestorDescription": "La versión desde la que ambos empezaron",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Por favor espere",
+    "processing": "Procesando...",
+    "backup": "Creando copia de seguridad...",
+    "export": "Exportando notas..."
   }
 }

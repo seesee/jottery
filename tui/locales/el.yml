@@ -23,12 +23,13 @@ password:
   change_success: Ο κωδικός άλλαξε επιτυχώς
   remember: Απομνημόνευση κωδικού
   remember_toggle: Απομνημόνευση κωδικού (Ctrl+R για εναλλαγή)
-  remember_enabled: "Ο κωδικός αποθηκεύτηκε για αυτόματο ξεκλείδωμα. ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Προσβάσιμος σε οποιονδήποτε έχει πρόσβαση στη συσκευή!"
+  remember_enabled: "Ο κωδικός αποθηκεύτηκε για αυτόματο ξεκλείδωμα. Σημείωση: Ενδέχεται να είναι προσβάσιμος σε χρήστες με δικαιώματα superuser."
   remember_keychain_enabled: Ο κωδικός αποθηκεύτηκε με ασφάλεια στο κλειδοθήκη συστήματος.
   remember_disabled: Η αποθήκευση κωδικού απενεργοποιήθηκε. Θα ζητηθεί στην επόμενη εκκίνηση.
-  remember_warning: "ΠΡΟΕΙΔΟΠΟΙΗΣΗ: Ο κωδικός θα είναι προσβάσιμος σε οποιονδήποτε έχει φυσική πρόσβαση σε αυτή τη συσκευή!"
+  remember_warning: "Θεωρήστε ότι ο κωδικός σας μπορεί να είναι προσβάσιμος σε οποιονδήποτε έχει superuser/root πρόσβαση σε αυτή τη συσκευή."
   remember_keychain_warning: Ο κωδικός θα αποθηκευτεί με ασφάλεια στο κλειδοθήκη συστήματος.
   remember_keychain_info: Ο κωδικός αποθηκεύτηκε με ασφάλεια στο κλειδοθήκη συστήματος
+  correct: "Ο κωδικός επαληθεύτηκε"
   storage_keychain: Κλειδοθήκη συστήματος
   storage_file: Αρχείο (συσκοτισμένο)
   incorrect: Λάθος κωδικός. Δοκιμάστε ξανά.
@@ -189,6 +190,10 @@ sync:
   paste_success: Sync credentials configured successfully!
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
+  import_device_title: Import Credentials - Device Name
+  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
+  credentials_empty: No credentials entered
+  import_failed: Failed to import credentials
 register:
   title: Εγγραφή σε Διακομιστή Συγχρονισμού
   enter_endpoint: "Εισαγάγετε τη διεύθυνση URL του διακομιστή συγχρονισμού (π.χ. https://sync.example.com):"
@@ -476,6 +481,8 @@ conflict:
   title: Sync Conflict
   your_version: Your Version
   server_version: Server Version
+  common_ancestor: Common Ancestor
+  ancestor_description: The version both started from before changes diverged
   resolved_mine: Conflict resolved - kept your version
   resolved_server: Conflict resolved - kept server version
   resolved_both: Conflict resolved - kept both versions
@@ -484,3 +491,20 @@ conflict:
   no_conflict: This note has no sync conflict
   count_singular: "διένεξη"
   count_plural: "διενέξεις"
+
+# Backup functionality
+backup:
+  created: "Το αντίγραφο ασφαλείας δημιουργήθηκε"
+  restore: "Επαναφορά αντιγράφου ασφαλείας"
+  valid: "Έγκυρο αντίγραφο ασφαλείας"
+  records: "εγγραφές"
+  validating: "Επικύρωση αρχείου αντιγράφου ασφαλείας..."
+  verifying_password: "Επαλήθευση κωδικού..."
+  restoring: "Επαναφορά δεδομένων..."
+  restored: "Επαναφέρθηκε"
+
+# Progress indicators
+progress:
+  backup: "Δημιουργία αντιγράφου ασφαλείας..."
+  processing: "Επεξεργασία"
+  export: "Εξαγωγή..."

@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "Importieren/Exportieren",
       "exportDescription": "Notizen als entschlüsseltes JSON exportieren. Der Import führt Notizen mit vorhandenen Daten zusammen.",
+      "downloadClient": "Terminal-/HTML-Client herunterladen",
       "downloadTerminalClient": "Terminal-Client herunterladen",
+      "clientDescription": "Laden Sie den Terminal-Client für Befehlszeilenzugriff herunter oder den HTML-Client, um ihn lokal vom Dateisystem auszuführen",
       "terminalClientDescription": "Verwenden Sie den Terminal-Client, um von der Befehlszeile auf Ihre Notizen zuzugreifen",
       "selectPlatform": "Plattform auswählen...",
       "download": "Herunterladen",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "Sitzung abgelaufen oder ungültig. Bitte geben Sie Ihr Passwort ein.",
+    "alreadyUsingJottery": "Verwenden Sie Jottery bereits?",
+    "alreadyUsingJotteryDescription": "Stellen Sie aus einem Backup wieder her oder richten Sie Sync ein, um auf Ihre bestehenden Notizen zuzugreifen.",
+    "restoreFromBackupSubtitle": "Notizen aus einer .jottery-backup-Datei wiederherstellen",
     "syncConfig": {
       "title": "Synchronisierungskonfiguration (Optional)",
       "description": "Optional können Sie die Synchronisierung jetzt konfigurieren. Sie können dies auch später unter Einstellungen > Synchronisierung tun.",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "Von einem anderen Gerät importieren",
-        "subtitle": "Empfohlen für zusätzliche Geräte"
+        "title": "Haben Sie Sync-Anmeldedaten?",
+        "subtitle": "Fügen Sie Ihre Anmeldedaten hier ein, um dieses Gerät zu synchronisieren"
       },
       "existingAccount": {
         "title": "Bestehendes Konto verbinden",
         "subtitle": "Sie haben bereits ein Konto? Verbinden Sie dieses Gerät",
-        "formTitle": "Mit bestehendem Konto verbinden"
+        "formTitle": "Mit bestehendem Konto verbinden",
+        "infoText": "Geben Sie Ihre Sync-Server-Anmeldedaten ein. Ihre Notizen werden synchronisiert, nachdem Sie Ihr Master-Passwort erstellt haben.",
+        "emailLabel": "E-Mail-Adresse",
+        "passwordLabel": "Server-Passwort",
+        "createPasswordNote": "Geben Sie nach Eingabe Ihrer Sync-Daten unten Ihr Master-Passwort ein, um die Einrichtung abzuschließen."
       },
       "registerServer": {
         "title": "Neues Konto registrieren",
@@ -1122,6 +1131,8 @@
     "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
     "yourVersion": "Your version",
     "serverVersion": "Server version",
+    "commonAncestor": "Gemeinsamer Vorfahre",
+    "ancestorDescription": "Die Version, von der Sie beide ausgegangen sind",
     "chooseAction": "Choose how to resolve this conflict:",
     "keepMine": "Keep mine",
     "keepServer": "Keep server",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "Bitte warten",
+    "processing": "Verarbeitung...",
+    "backup": "Backup wird erstellt...",
+    "export": "Notizen werden exportiert..."
   }
 }

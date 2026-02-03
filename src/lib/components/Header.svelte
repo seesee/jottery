@@ -95,7 +95,7 @@
     showDisableRememberPasswordConfirm = false;
 
     // Clear stored password
-    passwordStorageService.clear();
+    await passwordStorageService.clear();
 
     // Save the setting
     try {

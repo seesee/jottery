@@ -18,6 +18,7 @@
     { value: 'linux-x64', label: 'Linux (x64)', url: `${githubRepo}/releases/latest/download/jottery-linux-x64` },
     { value: 'linux-arm64', label: 'Linux (ARM64)', url: `${githubRepo}/releases/latest/download/jottery-linux-arm64` },
     { value: 'linux-armv7', label: 'Linux (ARMv7)', url: `${githubRepo}/releases/latest/download/jottery-linux-armv7` },
+    { value: 'html', label: 'HTML Client (zip)', url: `${githubRepo}/releases/latest/download/jottery-web.zip` },
   ];
 </script>
 
@@ -53,7 +54,7 @@
 
   <!-- Download Terminal Client -->
   <div>
-    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">💻 {$_('settings.advancedTab.downloadTerminalClient')}</h4>
+    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">💻 {$_('settings.advancedTab.downloadClient')}</h4>
     <div class="flex gap-2 mb-2">
       <select
         bind:value={selectedArchitecture}
@@ -75,7 +76,7 @@
       </button>
     </div>
     <p class="text-sm text-gray-500 dark:text-gray-400">
-      {$_('settings.advancedTab.terminalClientDescription')}
+      {$_('settings.advancedTab.clientDescription')}
     </p>
   </div>
 

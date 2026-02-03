@@ -596,7 +596,9 @@
     "advancedTab": {
       "importExport": "インポート/エクスポート",
       "exportDescription": "ノートを復号化されたJSONとしてエクスポート。インポートは既存のデータとノートをマージします。",
+      "downloadClient": "ターミナル/HTMLクライアントをダウンロード",
       "downloadTerminalClient": "ターミナルクライアントをダウンロード",
+      "clientDescription": "コマンドラインアクセス用のターミナルクライアント、またはファイルシステムからローカルで実行するHTMLクライアントをダウンロード",
       "terminalClientDescription": "コマンドラインからノートにアクセスするにはターミナルクライアントを使用",
       "selectPlatform": "プラットフォームを選択...",
       "download": "ダウンロード",
@@ -850,6 +852,9 @@
       }
     },
     "sessionExpiredOrInvalid": "セッションが期限切れまたは無効です。パスワードを入力してください。",
+    "alreadyUsingJottery": "すでにJotteryをお使いですか？",
+    "alreadyUsingJotteryDescription": "バックアップから復元するか、同期を設定して既存のノートにアクセスできます。",
+    "restoreFromBackupSubtitle": ".jottery-backupファイルからノートを復元",
     "syncConfig": {
       "title": "同期設定（オプション）",
       "description": "オプションで今すぐ同期を設定できます。設定 > 同期で後から設定することもできます。",
@@ -860,13 +865,17 @@
     },
     "syncSetup": {
       "importCredentials": {
-        "title": "別のデバイスからインポート",
-        "subtitle": "追加デバイスに推奨"
+        "title": "同期認証情報をお持ちですか？",
+        "subtitle": "認証情報をここに貼り付けてこのデバイスを同期"
       },
       "existingAccount": {
         "title": "既存のアカウントに接続",
         "subtitle": "すでにアカウントをお持ちですか？このデバイスを接続",
-        "formTitle": "既存のアカウントに接続"
+        "formTitle": "既存のアカウントに接続",
+        "infoText": "同期サーバーの認証情報を入力してください。マスターパスワードを作成後、ノートが同期されます。",
+        "emailLabel": "メールアドレス",
+        "passwordLabel": "サーバーパスワード",
+        "createPasswordNote": "同期情報を入力後、下でマスターパスワードを入力してセットアップを完了してください。"
       },
       "registerServer": {
         "title": "新しいアカウントを登録",
@@ -1122,6 +1131,8 @@
     "description": "このノートはローカルとサーバーの両方で変更されました。競合の解決方法を選択してください。",
     "yourVersion": "あなたのバージョン",
     "serverVersion": "サーバーのバージョン",
+    "commonAncestor": "共通の祖先",
+    "ancestorDescription": "両者が開始した元のバージョン",
     "chooseAction": "この競合の解決方法を選択:",
     "keepMine": "自分のを保持",
     "keepServer": "サーバーを保持",
@@ -1184,5 +1195,11 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "level": "Level {n}"
+  },
+  "progress": {
+    "title": "お待ちください",
+    "processing": "処理中...",
+    "backup": "バックアップを作成中...",
+    "export": "ノートをエクスポート中..."
   }
 }

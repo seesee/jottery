@@ -138,12 +138,22 @@ async function decryptJWEToRecord(jwe: string, keyBytes: Uint8Array): Promise<Ba
 }
 
 /**
+ * Progress callback for backup creation
+ */
+export type BackupProgressCallback = (progress: {
+  phase: 'counting' | 'encrypting' | 'complete';
+  current?: number;
+  total?: number;
+  item?: string;
+}) => void;
+
+/**
  * Create an encrypted backup of all data
  *
  * Each record (note, attachment, version, etc.) is encrypted as a JWE token.
  * The backup file only reveals the record count and encryption parameters.
  */
-export async function createBackup(): Promise<BackupData> {
+export async function createBackup(onProgress?: BackupProgressCallback): Promise<BackupData> {
   // Get master key (required - must be unlocked)
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
@@ -159,18 +169,35 @@ export async function createBackup(): Promise<BackupData> {
   // Use pre-exported key bytes from keyManager
   const keyBytes = masterKey.keyBytes;
 
+  onProgress?.({ phase: 'counting' });
+
+  // Count total items first
+  const notes = await noteRepository.getAll();
+  const attachmentIds = await attachmentRepository.listAllIds();
+  const db = getDB();
+  const versions = await db.getAll(STORES.NOTE_VERSIONS);
+  let savedSearches: unknown[] = [];
+  try {
+    savedSearches = await db.getAll(STORES.SAVED_SEARCHES);
+  } catch {
+    console.warn('[backupService] Could not read saved searches');
+  }
+
+  const total = notes.length + attachmentIds.length + versions.length + savedSearches.length + 2; // +2 for settings and sync metadata
+  let current = 0;
+
   const jweRecords: string[] = [];
 
   // Encrypt all notes
-  const notes = await noteRepository.getAll();
   for (const note of notes) {
     const record: BackupRecord = { type: 'note', data: note };
     const jwe = await encryptRecordAsJWE(record, keyBytes);
     jweRecords.push(jwe);
+    current++;
+    onProgress?.({ phase: 'encrypting', current, total, item: 'notes' });
   }
 
   // Encrypt all attachments with their blob data
-  const attachmentIds = await attachmentRepository.listAllIds();
   for (const id of attachmentIds) {
     const blob = await attachmentRepository.getBlob(id);
     const thumbnail = await attachmentRepository.getThumbnail(id);
@@ -185,28 +212,26 @@ export async function createBackup(): Promise<BackupData> {
       const jwe = await encryptRecordAsJWE(record, keyBytes);
       jweRecords.push(jwe);
     }
+    current++;
+    onProgress?.({ phase: 'encrypting', current, total, item: 'attachments' });
   }
 
   // Encrypt all note versions
-  const db = getDB();
-  const versions = await db.getAll(STORES.NOTE_VERSIONS);
   for (const version of versions) {
     const record: BackupRecord = { type: 'version', data: version };
     const jwe = await encryptRecordAsJWE(record, keyBytes);
     jweRecords.push(jwe);
+    current++;
+    onProgress?.({ phase: 'encrypting', current, total, item: 'versions' });
   }
 
   // Encrypt saved searches
-  try {
-    const savedSearches = await db.getAll(STORES.SAVED_SEARCHES);
-    for (const savedSearch of savedSearches) {
-      const record: BackupRecord = { type: 'saved_search', data: savedSearch };
-      const jwe = await encryptRecordAsJWE(record, keyBytes);
-      jweRecords.push(jwe);
-    }
-  } catch {
-    // Store might not exist in older databases
-    console.warn('[backupService] Could not read saved searches');
+  for (const savedSearch of savedSearches) {
+    const record: BackupRecord = { type: 'saved_search', data: savedSearch };
+    const jwe = await encryptRecordAsJWE(record, keyBytes);
+    jweRecords.push(jwe);
+    current++;
+    onProgress?.({ phase: 'encrypting', current, total, item: 'searches' });
   }
 
   // Encrypt settings
@@ -214,6 +239,8 @@ export async function createBackup(): Promise<BackupData> {
   const settingsRecord: BackupRecord = { type: 'settings', data: settings };
   const settingsJwe = await encryptRecordAsJWE(settingsRecord, keyBytes);
   jweRecords.push(settingsJwe);
+  current++;
+  onProgress?.({ phase: 'encrypting', current, total, item: 'settings' });
 
   // Encrypt sync metadata (if present)
   const syncMetadata = await syncRepository.getMetadata();
@@ -222,6 +249,10 @@ export async function createBackup(): Promise<BackupData> {
     const jwe = await encryptRecordAsJWE(syncRecord, keyBytes);
     jweRecords.push(jwe);
   }
+  current++;
+  onProgress?.({ phase: 'encrypting', current, total, item: 'metadata' });
+
+  onProgress?.({ phase: 'complete', current: total, total });
 
   const backup: BackupData = {
     version: BACKUP_VERSION,
@@ -480,10 +511,34 @@ export async function restoreBackup(
 
 /**
  * Download a backup as a file
+ *
+ * Uses chunked JSON generation to avoid string length limits on large backups.
  */
 export function downloadBackup(backup: BackupData): void {
-  const json = JSON.stringify(backup);
-  const blob = new Blob([json], { type: 'application/json' });
+  // Build JSON in chunks to avoid string length limits
+  const chunks: string[] = [];
+
+  // Opening structure (everything except the data array contents)
+  chunks.push('{"version":');
+  chunks.push(JSON.stringify(backup.version));
+  chunks.push(',"type":');
+  chunks.push(JSON.stringify(backup.type));
+  chunks.push(',"createdAt":');
+  chunks.push(JSON.stringify(backup.createdAt));
+  chunks.push(',"encryption":');
+  chunks.push(JSON.stringify(backup.encryption));
+  chunks.push(',"data":[');
+
+  // Add each JWE record individually
+  for (let i = 0; i < backup.data.length; i++) {
+    if (i > 0) chunks.push(',');
+    chunks.push(JSON.stringify(backup.data[i]));
+  }
+
+  // Close the structure
+  chunks.push(']}');
+
+  const blob = new Blob(chunks, { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
   // Generate filename with date

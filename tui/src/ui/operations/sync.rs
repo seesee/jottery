@@ -218,6 +218,10 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 word_wrap: Some(note.word_wrap),
                 syntax_language: Some(note.syntax_language.to_string()),
                 color: note.color.clone(),
+                // Hash chain fields for git-like conflict detection
+                content_hash: note.content_hash.clone(),
+                parent_hash: note.parent_hash.clone(),
+                hash_chain: note.hash_chain.clone(),
             })
         }).collect();
 
@@ -267,6 +271,9 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     show_preview: version.show_preview,
                     color: version.color.clone(),
                     reason: version.reason.to_string(),
+                    // Hash chain fields
+                    content_hash: version.content_hash.clone(),
+                    parent_hash: version.parent_hash.clone(),
                 });
             }
         }
@@ -368,6 +375,14 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 server_word_wrap: rejected.server_word_wrap,
                 server_color: rejected.server_color.clone(),
                 detected_at: Utc::now(),
+                // Hash chain fields for git-like conflict detection
+                server_content_hash: rejected.server_content_hash.clone(),
+                server_parent_hash: rejected.server_parent_hash.clone(),
+                server_hash_chain: rejected.server_hash_chain.clone(),
+                // Ancestor data for 3-way merge
+                ancestor_hash: rejected.ancestor_hash.clone(),
+                ancestor_content: rejected.ancestor_content.clone(),
+                ancestor_tags: rejected.ancestor_tags.clone(),
             };
 
             // Store conflict in sync metadata
@@ -536,7 +551,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     key
                 )?;
 
-                app.debug_log(&"Pull - Stored attachment in database".to_string());
+                app.debug_log("Pull - Stored attachment in database");
 
                 // Add to note's attachment array
                 note_attachments.push(Attachment {
@@ -548,7 +563,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     thumbnail_data: None,
                 });
 
-                app.debug_log(&"Pull - Added attachment to note_attachments array".to_string());
+                app.debug_log("Pull - Added attachment to note_attachments array");
             } else {
                 app.debug_log(&format!("Pull - Attachment data NOT found in map for {} - will try to preserve from local", attachment_ref.id));
                 // Server didn't send data because we said we had it - mark for local preservation
@@ -746,6 +761,9 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                 show_preview: server_version.show_preview,
                 color: server_version.color.clone(),
                 reason,
+                // Hash chain fields from server
+                content_hash: server_version.content_hash.clone(),
+                parent_hash: server_version.parent_hash.clone(),
             };
 
             // Store the version
@@ -822,6 +840,26 @@ pub fn open_conflict_resolution(app: &mut App, note_id: &str) -> Result<()> {
         })
         .collect();
 
+    // Decrypt ancestor content if available (for 3-way merge)
+    let ancestor_content = conflict_data.ancestor_content.as_ref().and_then(|encrypted_ancestor| {
+        let encrypted: crate::crypto::EncryptedData = serde_json::from_str(encrypted_ancestor).ok()?;
+        app.crypto.decrypt_text(&encrypted, key).ok()
+    });
+
+    // Decrypt ancestor tags if available
+    let ancestor_tags = if let Some(ref encrypted_tags) = conflict_data.ancestor_tags {
+        let tags: Vec<String> = encrypted_tags.iter()
+            .filter_map(|tag_json| {
+                let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
+                let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
+                serde_json::from_str::<String>(&tag_json_str).ok()
+            })
+            .collect();
+        if tags.is_empty() { None } else { Some(tags) }
+    } else {
+        None
+    };
+
     // Store data in app for display
     app.conflict_note_id = Some(note_id.to_string());
     app.conflict_data = Some(conflict_data);
@@ -829,6 +867,8 @@ pub fn open_conflict_resolution(app: &mut App, note_id: &str) -> Result<()> {
     app.conflict_server_content = server_content;
     app.conflict_local_tags = local_note.tags;
     app.conflict_server_tags = server_tags;
+    app.conflict_ancestor_content = ancestor_content;
+    app.conflict_ancestor_tags = ancestor_tags;
     app.conflict_local_scroll = 0;
     app.conflict_server_scroll = 0;
     app.conflict_focus_server = false;
@@ -973,6 +1013,8 @@ fn clear_conflict_state(app: &mut App) {
     app.conflict_server_content.clear();
     app.conflict_local_tags.clear();
     app.conflict_server_tags.clear();
+    app.conflict_ancestor_content = None;
+    app.conflict_ancestor_tags = None;
     app.conflict_local_scroll = 0;
     app.conflict_server_scroll = 0;
     app.conflict_focus_server = false;

@@ -9,7 +9,7 @@ use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
-use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal};
+use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width};
 use crate::ui::rendering::modal::render_confirmation_modal;
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
 use crate::models::SyntaxLanguage;
@@ -112,22 +112,15 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 .collect();
 
             // Extract title (first line)
-            let title_raw = content_lines.get(0).unwrap_or(&"Untitled");
+            let title_raw = content_lines.first().unwrap_or(&"Untitled");
             let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
                 strip_markdown(title_raw)
             } else {
                 title_raw.to_string()
             };
 
-            // Truncate title to 38 chars to leave room for indicators
-            let title_truncated = if title_content.chars().count() > 38 {
-                let truncated: String = title_content.chars().take(35).collect();
-                format!("{}...", truncated)
-            } else {
-                title_content
-            };
-
-            // Add indicators for pinned, attachments, and multi-select
+            // Build indicators for pinned, attachments, and multi-select FIRST
+            // so we can calculate remaining space for title
             let mut indicators = String::new();
 
             // Show checkbox for multi-select mode
@@ -153,6 +146,16 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 indicators.push_str("⚠ ");
             }
 
+            // Calculate available width for title (40 columns minus borders, minus indicator width)
+            // Left pane is 42 cols, borders take 2, leaving 40 for content
+            let max_line_width: usize = 40;
+            let indicator_width = display_width(&indicators);
+            let available_title_width = max_line_width.saturating_sub(indicator_width);
+
+            // Truncate title to fit in remaining space
+            // Use Unicode-aware width calculation to handle emojis and wide characters
+            let title_truncated = truncate_to_width(&title_content, available_title_width);
+
             let title_line = if !indicators.is_empty() {
                 format!("{}{}", indicators, title_truncated)
             } else {
@@ -160,6 +163,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             };
 
             // Extract preview lines (lines 2-3 from content)
+            // Use Unicode-aware width calculation for proper truncation
+            // Preview lines are indented by 2 spaces, so reduce available width
+            let preview_max_width = max_line_width.saturating_sub(2);
             let preview_line1 = if content_lines.len() > 1 {
                 let line = content_lines[1];
                 let stripped = if note.syntax_language == SyntaxLanguage::Markdown {
@@ -167,12 +173,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 } else {
                     line.to_string()
                 };
-                if stripped.chars().count() > 38 {
-                    let truncated: String = stripped.chars().take(35).collect();
-                    format!("{}...", truncated)
-                } else {
-                    stripped
-                }
+                truncate_to_width(&stripped, preview_max_width)
             } else {
                 String::new()
             };
@@ -184,12 +185,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 } else {
                     line.to_string()
                 };
-                if stripped.chars().count() > 38 {
-                    let truncated: String = stripped.chars().take(35).collect();
-                    format!("{}...", truncated)
-                } else {
-                    stripped
-                }
+                truncate_to_width(&stripped, preview_max_width)
             } else {
                 String::new()
             };
@@ -416,18 +412,18 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let is_dark = is_dark_theme(&theme_name);
 
         let tags_spans = if !note.tags.is_empty() {
-            let mut x_offset = preview_inner_x + tags_prefix.len() as u16;
+            let mut x_offset = preview_inner_x + display_width(tags_prefix) as u16;
             let mut spans = vec![Span::raw(tags_prefix)];
 
             for (i, tag) in note.tags.iter().enumerate() {
                 let tag_str = format!("#{}", tag);
-                let tag_len = tag_str.len() as u16;
+                let tag_display_width = display_width(&tag_str) as u16;
 
                 // Store position only if visible (scroll offset is 0 for tags line)
                 if scroll_offset == 0 {
-                    tag_positions_local.push((tag.clone(), x_offset, x_offset + tag_len));
+                    tag_positions_local.push((tag.clone(), x_offset, x_offset + tag_display_width));
                 }
-                x_offset += tag_len + 1; // +1 for space separator
+                x_offset += tag_display_width + 1; // +1 for space separator
 
                 // Get tag color and create styled span
                 app.debug_log(&format!("Tag '{}' - looking up color", tag));
@@ -508,7 +504,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                         // Get first non-empty line as title
                         n.content.lines()
                             .find(|line| !line.trim().is_empty())
-                            .map(|line| strip_markdown(line))
+                            .map(strip_markdown)
                             .unwrap_or_else(|| "Untitled".to_string())
                     })
             };
@@ -609,6 +605,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 ));
             }
         }
+
+        // Clear the preview area first to remove any remnants from previous content
+        // This prevents stray characters when switching notes or scrolling
+        frame.render_widget(Clear, preview_area);
 
         let preview = Paragraph::new(Text::from(lines))
             .block(preview_block)
@@ -1263,7 +1263,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             ]));
 
             // Colour
-            let color_str = note.color.as_ref().map(|c| c.as_str()).unwrap_or("None");
+            let color_str = note.color.as_deref().unwrap_or("None");
             info_lines.push(Line::from(vec![
                 Span::styled("Colour:      ", Style::default().fg(app.color_scheme.muted)),
                 Span::styled(color_str, Style::default().fg(app.color_scheme.foreground)),
