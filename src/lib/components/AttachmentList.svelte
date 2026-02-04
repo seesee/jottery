@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
   import type { Attachment } from '../types';
   import { attachmentService } from '../services';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { toast } from '../utils/toast.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
 
@@ -10,14 +10,29 @@
   export let onDelete: (attachment: Attachment) => void;
   export let readonly: boolean = false;
 
-  // Thumbnail cache
+  // Thumbnail cache (blob URLs)
   let thumbnails: Map<string, string | null> = new Map();
 
   // Preview state
   let previewAttachment: Attachment | null = null;
 
+  /**
+   * Revoke all thumbnail blob URLs to prevent memory leaks
+   */
+  function revokeThumbnailUrls(): void {
+    for (const url of thumbnails.values()) {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }
+    thumbnails.clear();
+  }
+
   // Load thumbnails for image attachments
   async function loadThumbnails() {
+    // Revoke old URLs before loading new ones
+    revokeThumbnailUrls();
+
     for (const attachment of attachments) {
       if (attachmentService.supportsThumbnail(attachment.mimeType)) {
         try {
@@ -121,6 +136,11 @@
   onMount(() => {
     loadThumbnails();
     loadFilenames();
+  });
+
+  // Clean up blob URLs when component is destroyed
+  onDestroy(() => {
+    revokeThumbnailUrls();
   });
 
   // Reload when attachments change

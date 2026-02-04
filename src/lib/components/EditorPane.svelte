@@ -116,6 +116,17 @@
   // Track blob URLs for cleanup
   let blobUrls: Set<string> = new Set();
 
+  /**
+   * Revoke all blob URLs to prevent memory leaks.
+   * Called when switching notes or when component is destroyed.
+   */
+  function revokeBlobUrls(): void {
+    for (const url of blobUrls) {
+      URL.revokeObjectURL(url);
+    }
+    blobUrls.clear();
+  }
+
   // Attachment preview state
   let previewAttachment: Attachment | null = null;
 
@@ -262,6 +273,8 @@
       // Only reset local state when switching to a different note
       // Don't reset when the same note is reloaded (e.g., after save)
       if (noteChanged) {
+        // Revoke blob URLs from previous note's preview to prevent memory leaks
+        revokeBlobUrls();
 
       // Exit draft mode if we were in it
       if ($isDraftMode) {
@@ -1005,8 +1018,7 @@
     }
 
     // Clean up all blob URLs
-    blobUrls.forEach(url => URL.revokeObjectURL(url));
-    blobUrls.clear();
+    revokeBlobUrls();
   });
 
   // Process attachment URLs in preview mode

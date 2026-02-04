@@ -8,6 +8,7 @@ import type { KeyManager, MasterKey } from '../types';
 class KeyManagerService implements KeyManager {
   private masterKey: MasterKey | null = null;
   private autoLockTimer: number | null = null;
+  private autoLockTimeoutMinutes: number = 0;
   private activityCallbacks: Set<() => void> = new Set();
   private lockCallbacks: Set<() => void> = new Set();
 
@@ -72,6 +73,7 @@ class KeyManagerService implements KeyManager {
    */
   startAutoLock(timeoutMinutes: number): void {
     this.stopAutoLock();
+    this.autoLockTimeoutMinutes = timeoutMinutes;
 
     if (timeoutMinutes <= 0) return;
 
@@ -93,13 +95,11 @@ class KeyManagerService implements KeyManager {
 
   /**
    * Reset auto-lock timer on activity
+   * Restarts the timer with the previously configured timeout
    */
   private resetAutoLockTimer(): void {
-    // The timer will be restarted by the component that manages settings
-    // This just ensures we clear the old one
-    if (this.autoLockTimer !== null) {
-      clearTimeout(this.autoLockTimer);
-      this.autoLockTimer = null;
+    if (this.autoLockTimeoutMinutes > 0) {
+      this.startAutoLock(this.autoLockTimeoutMinutes);
     }
   }
 
