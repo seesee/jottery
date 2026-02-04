@@ -6,7 +6,8 @@ WORKDIR /app
 
 # Only copy web client deps first for caching
 COPY package.json package-lock.json ./
-RUN npm install
+# Use --ignore-scripts to skip Electron postinstall scripts (not needed for Docker builds)
+RUN npm ci --ignore-scripts
 
 # Copy rest of web client source
 COPY src ./src
@@ -29,7 +30,7 @@ WORKDIR /app/admin
 
 # Copy admin dashboard deps first for caching
 COPY admin/package.json admin/package-lock.json ./
-RUN npm install
+RUN npm ci
 
 # Copy rest of admin dashboard source
 COPY admin/src ./src
