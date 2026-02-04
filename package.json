@@ -1,6 +1,6 @@
 {
   "name": "jottery",
-  "version": "0.9.30",
+  "version": "0.9.31",
   "private": true,
   "type": "module",
   "main": "electron/dist/main.js",
