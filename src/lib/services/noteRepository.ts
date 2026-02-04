@@ -123,17 +123,13 @@ class IndexedDBNoteRepository implements NoteRepository {
    * Soft delete a note
    */
   async softDelete(id: string): Promise<void> {
-    console.log('[noteRepository] softDelete called with ID:', id);
     const note = await this.getById(id);
     if (!note) {
-      console.error('[noteRepository] Note not found:', id);
       throw new NotFoundError('Note', id);
     }
-    console.log('[noteRepository] Note found, marking as deleted');
     note.deleted = true;
     note.deletedAt = new Date().toISOString();
     await this.update(note);
-    console.log('[noteRepository] Note updated as deleted');
   }
 
   /**

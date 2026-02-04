@@ -26,25 +26,30 @@ const indexedIds = new Set<string>();
  * Removes entries for notes that no longer exist in the provided array
  */
 export function indexNotes(notes: DecryptedNote[]): void {
-  const newIds = new Set(notes.map(n => n.id));
+  try {
+    const newIds = new Set(notes.map(n => n.id));
 
-  // Remove entries for notes that no longer exist
-  for (const id of indexedIds) {
-    if (!newIds.has(id)) {
-      index.remove(id);
-      indexedIds.delete(id);
+    // Remove entries for notes that no longer exist
+    for (const id of indexedIds) {
+      if (!newIds.has(id)) {
+        index.remove(id);
+        indexedIds.delete(id);
+      }
     }
-  }
 
-  // Add/update all current notes
-  notes.forEach((note) => {
-    index.add({
-      id: note.id,
-      content: note.content,
-      tags: note.tags.join(' '),
+    // Add/update all current notes
+    notes.forEach((note) => {
+      index.add({
+        id: note.id,
+        content: note.content,
+        tags: note.tags.join(' '),
+      });
+      indexedIds.add(note.id);
     });
-    indexedIds.add(note.id);
-  });
+  } catch (error) {
+    console.error('FlexSearch indexing error:', error);
+    // Index state may be inconsistent, but search will fall back to basic filtering
+  }
 }
 
 /**
@@ -52,20 +57,28 @@ export function indexNotes(notes: DecryptedNote[]): void {
  * This is much faster than re-indexing all notes
  */
 export function updateNote(note: DecryptedNote): void {
-  index.add({
-    id: note.id,
-    content: note.content,
-    tags: note.tags.join(' '),
-  });
-  indexedIds.add(note.id);
+  try {
+    index.add({
+      id: note.id,
+      content: note.content,
+      tags: note.tags.join(' '),
+    });
+    indexedIds.add(note.id);
+  } catch (error) {
+    console.error('FlexSearch update error:', error);
+  }
 }
 
 /**
  * Remove a note from the search index
  */
 export function removeNote(noteId: string): void {
-  index.remove(noteId);
-  indexedIds.delete(noteId);
+  try {
+    index.remove(noteId);
+    indexedIds.delete(noteId);
+  } catch (error) {
+    console.error('FlexSearch remove error:', error);
+  }
 }
 
 /**
@@ -484,26 +497,36 @@ async function filterByFullText(
   notes: DecryptedNote[],
   searchText: string
 ): Promise<DecryptedNote[]> {
-  const searchResults = await index.searchAsync(searchText, {
-    limit: 1000,
-    enrich: true,
-  });
-
-  const matchingIds = new Set<string>();
-  if (Array.isArray(searchResults)) {
-    (searchResults as unknown as FlexSearchEnrichedResult[]).forEach((result) => {
-      if (result.result) {
-        result.result.forEach((item: string | FlexSearchResultItem) => {
-          const id = typeof item === 'string' ? item : item.id;
-          if (id) {
-            matchingIds.add(id);
-          }
-        });
-      }
+  try {
+    const searchResults = await index.searchAsync(searchText, {
+      limit: 1000,
+      enrich: true,
     });
-  }
 
-  return notes.filter((note) => matchingIds.has(note.id));
+    const matchingIds = new Set<string>();
+    if (Array.isArray(searchResults)) {
+      (searchResults as unknown as FlexSearchEnrichedResult[]).forEach((result) => {
+        if (result.result) {
+          result.result.forEach((item: string | FlexSearchResultItem) => {
+            const id = typeof item === 'string' ? item : item.id;
+            if (id) {
+              matchingIds.add(id);
+            }
+          });
+        }
+      });
+    }
+
+    return notes.filter((note) => matchingIds.has(note.id));
+  } catch (error) {
+    console.error('FlexSearch search error, falling back to basic filter:', error);
+    // Graceful degradation: fall back to basic case-insensitive text matching
+    const lowerSearchText = searchText.toLowerCase();
+    return notes.filter((note) =>
+      note.content.toLowerCase().includes(lowerSearchText) ||
+      note.tags.some((tag) => tag.toLowerCase().includes(lowerSearchText))
+    );
+  }
 }
 
 /** Filter notes by required tags (AND logic) */

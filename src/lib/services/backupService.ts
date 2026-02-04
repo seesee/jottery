@@ -1103,8 +1103,11 @@ export function downloadBackup(backup: BackupData): void {
   link.click();
   document.body.removeChild(link);
 
-  // Clean up blob URL
-  URL.revokeObjectURL(url);
+  // Clean up blob URL after delay to ensure download initiates
+  // (immediate revocation can fail on slow systems or large files)
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 /**
