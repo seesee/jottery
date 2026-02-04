@@ -92,6 +92,17 @@
     loadConflictNotes();
   }
 
+  // Auto-trigger conflict resolution when selecting a conflicted note
+  $: if ($selectedNoteId && conflictNoteIds.has($selectedNoteId) && !showConflictModal) {
+    // Delay slightly to ensure the note selection completes first
+    setTimeout(() => {
+      if ($selectedNoteId && conflictNoteIds.has($selectedNoteId)) {
+        conflictNoteId = $selectedNoteId;
+        showConflictModal = true;
+      }
+    }, 100);
+  }
+
   // Subscribe to sync state changes to reload conflicts after sync completes
   let wasSyncing = false;
   $: {

@@ -1142,6 +1142,8 @@
     "resolvedBoth": "충돌 해결됨 - 복제 노트 생성됨",
     "noConflict": "충돌 데이터를 찾을 수 없습니다",
     "indicator": "동기화 충돌",
+    "bannerText": "This note has a sync conflict that needs to be resolved",
+    "resolveButton": "Resolve Conflict",
     "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다"
   },
   "pullToRefresh": {

@@ -1142,6 +1142,8 @@
     "resolvedBoth": "Conflict resolved - duplicate note created",
     "noConflict": "No conflict data found",
     "indicator": "Sync conflict",
+    "bannerText": "This note has a sync conflict that needs to be resolved",
+    "resolveButton": "Resolve Conflict",
     "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}"
   },
   "pullToRefresh": {

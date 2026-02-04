@@ -307,7 +307,12 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.search_input.clear();
                         app.search_active = false;
 
-                        if is_locked {
+                        // Check if note has a conflict - open conflict resolution instead of editor
+                        if app.conflict_note_ids.contains(&note_id) {
+                            if let Err(e) = operations::sync::open_conflict_resolution(app, &note_id) {
+                                app.error = Some(format!("{}: {}", t!("conflict.resolve_failed"), e));
+                            }
+                        } else if is_locked {
                             // View with pager (read-only)
                             if let Err(e) = operations::notes::view_note_readonly(app, &content, syntax_lang) {
                                 app.error = Some(format!("Failed to view note: {}", e));
@@ -647,19 +652,23 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 else if matches!(app.view_mode, ViewMode::NoteList) {
                     let filtered = app.filtered_notes();
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        // Check if note is locked - use pager for viewing instead
+                        // Clone data before modifying self
+                        let note_id = filtered[app.selected_note].id.clone();
                         let is_locked = filtered[app.selected_note].locked;
                         let content = filtered[app.selected_note].content.clone();
                         let syntax_lang = filtered[app.selected_note].syntax_language;
 
-                        if is_locked {
+                        // Check if note has a conflict - open conflict resolution instead of editor
+                        if app.conflict_note_ids.contains(&note_id) {
+                            if let Err(e) = operations::sync::open_conflict_resolution(app, &note_id) {
+                                app.error = Some(format!("{}: {}", t!("conflict.resolve_failed"), e));
+                            }
+                        } else if is_locked {
                             // View with pager (read-only)
                             if let Err(e) = operations::notes::view_note_readonly(app, &content, syntax_lang) {
                                 app.error = Some(format!("Failed to view note: {}", e));
                             }
                         } else {
-                            // Clone data before modifying self
-                            let note_id = filtered[app.selected_note].id.clone();
                             let tags = filtered[app.selected_note].tags.clone();
 
                             // Set up for editing
