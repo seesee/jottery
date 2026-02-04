@@ -1,14 +1,23 @@
 name: Build Electron App
 
+# DISABLED: Electron builds are experimental and not ready for production.
+# This workflow only runs via manual dispatch for testing purposes.
+# To re-enable automatic builds on tags, uncomment the push trigger below.
+
 on:
-  push:
-    tags:
-      - 'v*'
+  # Disabled: automatic builds on version tags
+  # push:
+  #   tags:
+  #     - 'v*'
   workflow_dispatch:
     inputs:
       version:
         description: 'Version tag (e.g., v1.0.0)'
         required: false
+        type: string
+      confirm:
+        description: 'Type "build" to confirm (experimental feature)'
+        required: true
         type: string
 
 permissions:
@@ -17,6 +26,7 @@ permissions:
 jobs:
   build-macos:
     runs-on: macos-latest
+    if: github.event.inputs.confirm == 'build'
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +73,7 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    if: github.event.inputs.confirm == 'build'
     strategy:
       fail-fast: false
       matrix:
@@ -105,6 +116,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'build'
     strategy:
       fail-fast: false
       matrix:
