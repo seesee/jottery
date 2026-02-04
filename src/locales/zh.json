@@ -1142,6 +1142,8 @@
     "resolvedBoth": "冲突已解决 - 已创建副本",
     "noConflict": "未找到冲突数据",
     "indicator": "同步冲突",
+    "bannerText": "This note has a sync conflict that needs to be resolved",
+    "resolveButton": "Resolve Conflict",
     "syncNotification": "{count}个笔记有同步冲突"
   },
   "pullToRefresh": {

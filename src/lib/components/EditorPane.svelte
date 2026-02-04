@@ -3,13 +3,14 @@
   import { _ } from 'svelte-i18n';
   import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate } from '../stores/appStore';
   import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
-  import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository } from '../services';
+  import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository, syncRepository } from '../services';
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
+  import ConflictResolutionModal from './ConflictResolutionModal.svelte';
   import { getPreviewHtml } from '../utils/markdownPreview';
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
@@ -107,6 +108,10 @@
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
   let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
   let syncEnabled: boolean = false; // Track if sync is enabled
+
+  // Conflict resolution state
+  let hasConflict: boolean = false;
+  let showConflictModal: boolean = false;
 
   // Track blob URLs for cleanup
   let blobUrls: Set<string> = new Set();
@@ -211,6 +216,40 @@
 
   // Compute note background color based on theme
   $: noteBackgroundColor = $selectedNote?.color ? getColorHex($selectedNote.color, currentTheme) : undefined;
+
+  // Check for sync conflicts when note changes
+  async function checkForConflict(noteId: string) {
+    if (!$settings.syncEnabled) {
+      hasConflict = false;
+      return;
+    }
+    try {
+      const syncMeta = await syncRepository.getNoteSyncMetadata(noteId);
+      hasConflict = syncMeta?.lastSyncStatus === 'conflict' && !!syncMeta.conflictData;
+    } catch {
+      hasConflict = false;
+    }
+  }
+
+  // Reactive conflict check when selected note changes
+  $: if ($selectedNote?.id) {
+    checkForConflict($selectedNote.id);
+  } else {
+    hasConflict = false;
+  }
+
+  // Handler to open conflict resolution modal
+  function handleResolveConflict() {
+    if ($selectedNote?.id) {
+      showConflictModal = true;
+    }
+  }
+
+  // Handler when conflict is resolved
+  function handleConflictResolved() {
+    hasConflict = false;
+    showConflictModal = false;
+  }
 
   // Watch for note selection changes
   $: if ($selectedNote) {
@@ -1050,6 +1089,8 @@
       {editorMode}
       readOnly={isReadOnly}
       {readOnlyBanner}
+      {hasConflict}
+      onResolveConflict={handleResolveConflict}
       bind:codeEditor
       onContentChange={() => handleInput()}
       onTagsChange={() => handleInput()}
@@ -1191,4 +1232,12 @@
   currentColor={$selectedNote?.color}
   onColorSelect={handleColorSelected}
   onClose={() => showColorPicker = false}
+/>
+
+<!-- Conflict Resolution Modal -->
+<ConflictResolutionModal
+  show={showConflictModal}
+  noteId={$selectedNote?.id}
+  onClose={() => showConflictModal = false}
+  onResolved={handleConflictResolved}
 />
