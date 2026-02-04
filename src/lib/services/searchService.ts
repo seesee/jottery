@@ -18,20 +18,32 @@ const index = new FlexSearch.Document({
   cache: true,
 });
 
+// Track indexed note IDs to properly remove stale entries
+const indexedIds = new Set<string>();
+
 /**
  * Index all notes for search
+ * Removes entries for notes that no longer exist in the provided array
  */
 export function indexNotes(notes: DecryptedNote[]): void {
-  // Note: FlexSearch Document index doesn't have a clear method
-  // So we just re-add all documents (it will update existing ones)
+  const newIds = new Set(notes.map(n => n.id));
 
-  // Add all notes to index
+  // Remove entries for notes that no longer exist
+  for (const id of indexedIds) {
+    if (!newIds.has(id)) {
+      index.remove(id);
+      indexedIds.delete(id);
+    }
+  }
+
+  // Add/update all current notes
   notes.forEach((note) => {
     index.add({
       id: note.id,
       content: note.content,
       tags: note.tags.join(' '),
     });
+    indexedIds.add(note.id);
   });
 }
 
@@ -45,6 +57,7 @@ export function updateNote(note: DecryptedNote): void {
     content: note.content,
     tags: note.tags.join(' '),
   });
+  indexedIds.add(note.id);
 }
 
 /**
@@ -52,6 +65,7 @@ export function updateNote(note: DecryptedNote): void {
  */
 export function removeNote(noteId: string): void {
   index.remove(noteId);
+  indexedIds.delete(noteId);
 }
 
 /**

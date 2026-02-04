@@ -65,15 +65,8 @@ export const searchResultCount = derived(
   })
 );
 
-// Update filtered notes when search query or notes change
-export function updateFilteredNotes(allNotes: DecryptedNote[], query: string) {
-  if (!query.trim()) {
-    filteredNotes.set(allNotes);
-  } else {
-    // Will use searchService in App.svelte
-    filteredNotes.set(allNotes);
-  }
-}
+// Note: Search filtering is handled in App.svelte using searchService.searchNotes()
+// The filteredNotes store is updated directly from there
 
 // Multi-select state
 export const selectedNoteIds = writable<Set<string>>(new Set());
