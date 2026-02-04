@@ -8,7 +8,7 @@ pub mod services;
 pub mod utils;
 
 // Re-export types for tests and external use
-pub use api::sse::{SyncBroadcast, SyncNotification};
+pub use api::sse::{SseTokenStore, SyncBroadcast, SyncNotification};
 
 use sqlx::SqlitePool;
 
@@ -17,4 +17,5 @@ pub struct AppState {
     pub pool: SqlitePool,
     pub config: config::Config,
     pub sync_broadcast: SyncBroadcast,
+    pub sse_tokens: SseTokenStore,
 }

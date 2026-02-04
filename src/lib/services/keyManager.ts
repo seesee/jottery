@@ -161,17 +161,32 @@ class KeyManagerService implements KeyManager {
 export const keyManager = new KeyManagerService();
 
 /**
+ * Activity listener events to track
+ */
+const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
+
+/**
+ * Stored handler reference for proper cleanup
+ * Must be the same reference for addEventListener and removeEventListener
+ */
+let activityHandler: (() => void) | null = null;
+
+/**
  * Setup global activity listeners for auto-lock
  */
 export function setupActivityListeners(timeoutMinutes: number): void {
-  const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+  // Remove any existing listeners first to prevent duplicates
+  if (activityHandler) {
+    removeActivityListeners();
+  }
 
-  const handler = () => {
+  // Create and store the handler reference
+  activityHandler = () => {
     keyManager.registerActivity();
   };
 
-  events.forEach(event => {
-    window.addEventListener(event, handler, { passive: true });
+  ACTIVITY_EVENTS.forEach(event => {
+    window.addEventListener(event, activityHandler!, { passive: true });
   });
 
   // Start initial auto-lock timer
@@ -182,15 +197,12 @@ export function setupActivityListeners(timeoutMinutes: number): void {
  * Remove activity listeners
  */
 export function removeActivityListeners(): void {
-  const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-
-  const handler = () => {
-    keyManager.registerActivity();
-  };
-
-  events.forEach(event => {
-    window.removeEventListener(event, handler);
-  });
+  if (activityHandler) {
+    ACTIVITY_EVENTS.forEach(event => {
+      window.removeEventListener(event, activityHandler!);
+    });
+    activityHandler = null;
+  }
 
   keyManager.stopAutoLock();
 }

@@ -178,10 +178,12 @@ async fn test_admin_stats_requires_authentication() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -227,10 +229,12 @@ async fn test_admin_stats_success() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -296,10 +300,12 @@ async fn test_user_login_success() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -358,10 +364,12 @@ async fn test_user_login_wrong_password() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -413,10 +421,12 @@ async fn test_user_login_nonexistent_user() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -467,10 +477,12 @@ async fn test_get_account_info_success() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -552,10 +564,12 @@ async fn test_get_account_info_requires_authentication() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
@@ -603,10 +617,12 @@ async fn test_delete_all_notes_success() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
         config,
+        sse_tokens,
     });
 
     let app = axum::Router::new()
