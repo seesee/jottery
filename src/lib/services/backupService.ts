@@ -1,14 +1,14 @@
 /**
- * Encrypted backup and restore service (v2.1)
+ * Encrypted backup and restore service (v2.1 and v3.0)
  *
- * Creates fully encrypted backups where each record is a JWE (JSON Web Encryption)
- * token using RFC 7516 standard. This provides:
+ * Creates fully encrypted backups where data is encrypted using JWE (JSON Web Encryption)
+ * tokens using RFC 7516 standard. This provides:
  * - Standardized encryption format
  * - Self-describing algorithm headers
  * - Interoperability with other JWE-compatible tools
  * - Future-proofing for features like note sharing
  *
- * Format:
+ * v2.1 Format (legacy):
  * {
  *   version: "2.1",
  *   type: "jottery-encrypted-backup",
@@ -19,11 +19,25 @@
  *     ...
  *   ]
  * }
- *
  * Each JWE decrypts to: { type: "note"|"attachment"|..., data: {...} }
+ *
+ * v3.0 Format (batched, compressed):
+ * {
+ *   version: "3.0",
+ *   type: "jottery-encrypted-backup",
+ *   createdAt: "...",
+ *   encryption: { salt, iterations, algorithm },
+ *   batches: [
+ *     { type: "notes", index: 0, count: 100, data: "JWE..." },
+ *     ...
+ *   ],
+ *   summary: { notes: 250, attachments: 50, versions: 100, savedSearches: 5 }
+ * }
+ * Each JWE decrypts to compressed JSON array of items.
  */
 
 import { CompactEncrypt, compactDecrypt } from 'jose';
+import pako from 'pako';
 import type {
   Note,
   NoteVersion,
@@ -42,9 +56,15 @@ import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { base64ToUint8Array } from '../utils/base64';
 
-const BACKUP_VERSION = '2.1';
+const BACKUP_VERSION_LEGACY = '2.1';
+const BACKUP_VERSION = '3.0';
 const BACKUP_TYPE = 'jottery-encrypted-backup';
 const BACKUP_FILE_EXTENSION = '.jottery-backup';
+
+// Batch sizes for different record types
+const NOTE_BATCH_SIZE = 100;
+const ATTACHMENT_BATCH_SIZE = 20; // Larger items, smaller batches
+const VERSION_BATCH_SIZE = 100;
 
 // JWE algorithms
 const JWE_ALG = 'dir'; // Direct encryption (no key wrapping)
@@ -79,14 +99,65 @@ interface AttachmentRecord {
 }
 
 /**
- * Backup file structure (v2.1 - JWE format)
+ * Backup file structure (v2.1 - JWE format, legacy)
  */
-export interface BackupData {
+export interface BackupDataV2 {
   version: string;
   type: typeof BACKUP_TYPE;
   createdAt: string;
   encryption: EncryptionMetadata;
   data: string[]; // Array of JWE compact serialization strings
+}
+
+/**
+ * Batch record in v3.0 format
+ */
+export interface BatchRecord {
+  type: 'notes' | 'attachments' | 'versions' | 'saved_searches' | 'settings' | 'sync_metadata';
+  index: number;
+  count: number;
+  data: string; // JWE compact serialization of compressed batch
+}
+
+/**
+ * Summary of backup contents
+ */
+export interface BackupSummary {
+  notes: number;
+  attachments: number;
+  versions: number;
+  savedSearches: number;
+}
+
+/**
+ * Backup file structure (v3.0 - batched, compressed)
+ */
+export interface BackupDataV3 {
+  version: string;
+  type: typeof BACKUP_TYPE;
+  createdAt: string;
+  encryption: EncryptionMetadata;
+  batches: BatchRecord[];
+  summary: BackupSummary;
+}
+
+/**
+ * Union type for backup data (supports both versions)
+ */
+export type BackupData = BackupDataV2 | BackupDataV3;
+
+/**
+ * Type guard to check if backup is v3.0 format
+ */
+function isBackupV3(backup: BackupData): backup is BackupDataV3 {
+  return 'batches' in backup && Array.isArray(backup.batches);
+}
+
+/**
+ * Type guard to check if backup is v2.x format
+ */
+function isBackupV2(backup: BackupData): backup is BackupDataV2 {
+  return 'data' in backup && Array.isArray(backup.data);
 }
 
 /**
@@ -135,6 +206,71 @@ async function decryptJWEToRecord(jwe: string, keyBytes: Uint8Array): Promise<Ba
   const { plaintext } = await compactDecrypt(jwe, keyBytes);
   const json = new TextDecoder().decode(plaintext);
   return JSON.parse(json);
+}
+
+// ============================================================================
+// v3.0 Batched Backup - Compression Utilities
+// ============================================================================
+
+/**
+ * Compress a JSON string using pako deflate
+ */
+function compressData(jsonString: string): Uint8Array {
+  const textEncoder = new TextEncoder();
+  const bytes = textEncoder.encode(jsonString);
+  return pako.deflate(bytes);
+}
+
+/**
+ * Decompress data using pako inflate
+ */
+function decompressData(compressed: Uint8Array): string {
+  const decompressed = pako.inflate(compressed);
+  const textDecoder = new TextDecoder();
+  return textDecoder.decode(decompressed);
+}
+
+/**
+ * Encrypt a batch of items: JSON.stringify → compress → JWE encrypt
+ */
+async function encryptBatch(items: unknown[], keyBytes: Uint8Array): Promise<string> {
+  // 1. Serialise to JSON
+  const jsonString = JSON.stringify(items);
+
+  // 2. Compress
+  const compressed = compressData(jsonString);
+
+  // 3. Encrypt as JWE
+  const jwe = await new CompactEncrypt(compressed)
+    .setProtectedHeader({ alg: JWE_ALG, enc: JWE_ENC })
+    .encrypt(keyBytes);
+
+  return jwe;
+}
+
+/**
+ * Decrypt a batch: JWE decrypt → decompress → JSON.parse
+ */
+async function decryptBatch<T>(jwe: string, keyBytes: Uint8Array): Promise<T[]> {
+  // 1. Decrypt JWE
+  const { plaintext } = await compactDecrypt(jwe, keyBytes);
+
+  // 2. Decompress
+  const jsonString = decompressData(plaintext);
+
+  // 3. Parse JSON
+  return JSON.parse(jsonString);
+}
+
+/**
+ * Split an array into batches of specified size
+ */
+function splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize));
+  }
+  return batches;
 }
 
 /**
@@ -254,12 +390,211 @@ export async function createBackup(onProgress?: BackupProgressCallback): Promise
 
   onProgress?.({ phase: 'complete', current: total, total });
 
-  const backup: BackupData = {
-    version: BACKUP_VERSION,
+  const backup: BackupDataV2 = {
+    version: BACKUP_VERSION_LEGACY,
     type: BACKUP_TYPE,
     createdAt: new Date().toISOString(),
     encryption,
     data: jweRecords,
+  };
+
+  return backup;
+}
+
+/**
+ * Create a batched, compressed backup (v3.0)
+ *
+ * Items are batched, then each batch is: JSON → compress → encrypt.
+ * This significantly reduces backup size and memory usage for large collections.
+ */
+export async function createBatchedBackup(
+  onProgress?: BackupProgressCallback
+): Promise<BackupDataV3> {
+  // Get master key (required - must be unlocked)
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new Error('Application is locked. Please unlock to create a backup.');
+  }
+
+  // Get encryption metadata (required)
+  const encryption = await encryptionRepository.getMetadata();
+  if (!encryption) {
+    throw new Error('No encryption metadata found. Application not initialised.');
+  }
+
+  const keyBytes = masterKey.keyBytes;
+
+  onProgress?.({ phase: 'counting' });
+
+  // Gather all data
+  const notes = await noteRepository.getAll();
+  const attachmentIds = await attachmentRepository.listAllIds();
+  const db = getDB();
+  const versions = await db.getAll(STORES.NOTE_VERSIONS);
+  let savedSearches: SavedSearch[] = [];
+  try {
+    savedSearches = await db.getAll(STORES.SAVED_SEARCHES);
+  } catch {
+    console.warn('[backupService] Could not read saved searches');
+  }
+
+  // Calculate total batches for progress
+  const noteBatches = Math.ceil(notes.length / NOTE_BATCH_SIZE) || 1;
+  const attachmentBatches = Math.ceil(attachmentIds.length / ATTACHMENT_BATCH_SIZE) || 1;
+  const versionBatches = Math.ceil(versions.length / VERSION_BATCH_SIZE) || 1;
+  const totalBatches = noteBatches + attachmentBatches + versionBatches + 2; // +2 for settings/sync batches
+
+  let currentBatch = 0;
+  const batches: BatchRecord[] = [];
+
+  // Process notes in batches
+  const noteBatchArrays = splitIntoBatches(notes, NOTE_BATCH_SIZE);
+  for (let i = 0; i < noteBatchArrays.length; i++) {
+    const batch = noteBatchArrays[i];
+    const jwe = await encryptBatch(batch, keyBytes);
+    batches.push({
+      type: 'notes',
+      index: i,
+      count: batch.length,
+      data: jwe,
+    });
+    currentBatch++;
+    onProgress?.({ phase: 'encrypting', current: currentBatch, total: totalBatches, item: 'notes' });
+  }
+
+  // If no notes, still report progress
+  if (noteBatchArrays.length === 0) {
+    currentBatch++;
+    onProgress?.({ phase: 'encrypting', current: currentBatch, total: totalBatches, item: 'notes' });
+  }
+
+  // Process attachments in batches (need to load blob data first)
+  const attachmentRecords: AttachmentRecord[] = [];
+  for (const id of attachmentIds) {
+    const blob = await attachmentRepository.getBlob(id);
+    const thumbnail = await attachmentRepository.getThumbnail(id);
+
+    if (blob) {
+      attachmentRecords.push({
+        id,
+        blob: arrayBufferToBase64(blob),
+        thumbnail: thumbnail ? arrayBufferToBase64(thumbnail) : undefined,
+      });
+    }
+  }
+
+  const attachmentBatchArrays = splitIntoBatches(attachmentRecords, ATTACHMENT_BATCH_SIZE);
+  for (let i = 0; i < attachmentBatchArrays.length; i++) {
+    const batch = attachmentBatchArrays[i];
+    const jwe = await encryptBatch(batch, keyBytes);
+    batches.push({
+      type: 'attachments',
+      index: i,
+      count: batch.length,
+      data: jwe,
+    });
+    currentBatch++;
+    onProgress?.({
+      phase: 'encrypting',
+      current: currentBatch,
+      total: totalBatches,
+      item: 'attachments',
+    });
+  }
+
+  // If no attachments, still report progress
+  if (attachmentBatchArrays.length === 0) {
+    currentBatch++;
+    onProgress?.({
+      phase: 'encrypting',
+      current: currentBatch,
+      total: totalBatches,
+      item: 'attachments',
+    });
+  }
+
+  // Process versions in batches
+  const versionBatchArrays = splitIntoBatches(versions, VERSION_BATCH_SIZE);
+  for (let i = 0; i < versionBatchArrays.length; i++) {
+    const batch = versionBatchArrays[i];
+    const jwe = await encryptBatch(batch, keyBytes);
+    batches.push({
+      type: 'versions',
+      index: i,
+      count: batch.length,
+      data: jwe,
+    });
+    currentBatch++;
+    onProgress?.({
+      phase: 'encrypting',
+      current: currentBatch,
+      total: totalBatches,
+      item: 'versions',
+    });
+  }
+
+  // If no versions, still report progress
+  if (versionBatchArrays.length === 0) {
+    currentBatch++;
+    onProgress?.({
+      phase: 'encrypting',
+      current: currentBatch,
+      total: totalBatches,
+      item: 'versions',
+    });
+  }
+
+  // Process saved searches (usually small, single batch)
+  if (savedSearches.length > 0) {
+    const jwe = await encryptBatch(savedSearches, keyBytes);
+    batches.push({
+      type: 'saved_searches',
+      index: 0,
+      count: savedSearches.length,
+      data: jwe,
+    });
+  }
+  currentBatch++;
+  onProgress?.({ phase: 'encrypting', current: currentBatch, total: totalBatches, item: 'searches' });
+
+  // Process settings (single item batch)
+  const settings = await settingsRepository.get();
+  const settingsJwe = await encryptBatch([settings], keyBytes);
+  batches.push({
+    type: 'settings',
+    index: 0,
+    count: 1,
+    data: settingsJwe,
+  });
+  currentBatch++;
+  onProgress?.({ phase: 'encrypting', current: currentBatch, total: totalBatches, item: 'settings' });
+
+  // Process sync metadata (if present)
+  const syncMetadata = await syncRepository.getMetadata();
+  if (syncMetadata) {
+    const jwe = await encryptBatch([syncMetadata], keyBytes);
+    batches.push({
+      type: 'sync_metadata',
+      index: 0,
+      count: 1,
+      data: jwe,
+    });
+  }
+
+  onProgress?.({ phase: 'complete', current: totalBatches, total: totalBatches });
+
+  const backup: BackupDataV3 = {
+    version: BACKUP_VERSION,
+    type: BACKUP_TYPE,
+    createdAt: new Date().toISOString(),
+    encryption,
+    batches,
+    summary: {
+      notes: notes.length,
+      attachments: attachmentRecords.length,
+      versions: versions.length,
+      savedSearches: savedSearches.length,
+    },
   };
 
   return backup;
@@ -271,8 +606,8 @@ export async function createBackup(onProgress?: BackupProgressCallback): Promise
  * Checks:
  * - JSON structure is valid
  * - Required fields are present
- * - Version is compatible
- * - Data is an array of JWE strings
+ * - Version is compatible (v2.1 or v3.0)
+ * - Data format matches version
  */
 export async function validateBackup(file: File): Promise<BackupValidationResult> {
   try {
@@ -312,9 +647,9 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    // Check version compatibility
+    // Check version compatibility (supports 2.x and 3.x)
     const [major, minor] = backup.version.split('.').map(n => parseInt(n, 10));
-    if (major > 2 || (major === 2 && minor > 1)) {
+    if (major > 3 || (major === 3 && minor > 0)) {
       return {
         valid: false,
         error: `Backup version ${backup.version} is not supported. Please update Jottery.`,
@@ -332,6 +667,67 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       return {
         valid: false,
         error: 'Invalid backup file. Incomplete encryption metadata.',
+      };
+    }
+
+    // v3.0: batched format
+    if (major === 3) {
+      if (!isBackupV3(backup)) {
+        return {
+          valid: false,
+          error: 'Invalid backup file. v3.0 backup must have batches array.',
+        };
+      }
+
+      if (!backup.batches || !Array.isArray(backup.batches)) {
+        return {
+          valid: false,
+          error: 'Invalid backup file. Missing batches section.',
+        };
+      }
+
+      // Validate batch records
+      for (const batch of backup.batches) {
+        if (typeof batch.type !== 'string' || typeof batch.index !== 'number' || typeof batch.count !== 'number') {
+          return {
+            valid: false,
+            error: 'Invalid backup file. Malformed batch record.',
+          };
+        }
+        if (typeof batch.data !== 'string') {
+          return {
+            valid: false,
+            error: 'Invalid backup file. Batch data must be a JWE string.',
+          };
+        }
+        // Basic JWE format check (5 parts separated by dots)
+        const parts = batch.data.split('.');
+        if (parts.length !== 5) {
+          return {
+            valid: false,
+            error: 'Invalid backup file. Malformed JWE token in batch.',
+          };
+        }
+      }
+
+      if (!backup.summary) {
+        return {
+          valid: false,
+          error: 'Invalid backup file. Missing summary section.',
+        };
+      }
+
+      return {
+        valid: true,
+        backup,
+      };
+    }
+
+    // v2.x: legacy format
+    if (!isBackupV2(backup)) {
+      return {
+        valid: false,
+        error: 'Invalid backup file. v2.x backup must have data array.',
       };
     }
 
@@ -386,6 +782,7 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
  *
  * Derives the key using the backup's encryption metadata and attempts
  * to decrypt the first JWE record to verify the password.
+ * Supports both v2.x and v3.0 backup formats.
  */
 export async function verifyBackupPassword(
   backup: BackupData,
@@ -405,15 +802,30 @@ export async function verifyBackupPassword(
     // Export key as raw bytes for jose
     const keyBytes = await exportKeyAsBytes(key);
 
-    // Verify by attempting to decrypt the first record
-    if (backup.data.length > 0) {
-      try {
-        await decryptJWEToRecord(backup.data[0], keyBytes);
-      } catch {
-        return {
-          valid: false,
-          error: 'Incorrect password',
-        };
+    // Verify by attempting to decrypt the first record/batch
+    if (isBackupV3(backup)) {
+      // v3.0: decrypt first batch
+      if (backup.batches.length > 0) {
+        try {
+          await decryptBatch(backup.batches[0].data, keyBytes);
+        } catch {
+          return {
+            valid: false,
+            error: 'Incorrect password',
+          };
+        }
+      }
+    } else if (isBackupV2(backup)) {
+      // v2.x: decrypt first record
+      if (backup.data.length > 0) {
+        try {
+          await decryptJWEToRecord(backup.data[0], keyBytes);
+        } catch {
+          return {
+            valid: false,
+            error: 'Incorrect password',
+          };
+        }
       }
     }
 
@@ -427,7 +839,7 @@ export async function verifyBackupPassword(
 }
 
 /**
- * Restore data from a backup
+ * Restore data from a v2.x backup (legacy)
  *
  * Decrypts each JWE record and restores based on its type.
  *
@@ -435,7 +847,7 @@ export async function verifyBackupPassword(
  * Existing data will be overwritten.
  */
 export async function restoreBackup(
-  backup: BackupData,
+  backup: BackupDataV2,
   keyBytes: Uint8Array,
   onProgress?: RestoreProgressCallback
 ): Promise<void> {
@@ -510,15 +922,139 @@ export async function restoreBackup(
 }
 
 /**
+ * Restore data from a v3.0 batched backup
+ *
+ * Decrypts and decompresses each batch, then restores items.
+ *
+ * IMPORTANT: This should only be called on a fresh/empty database.
+ * Existing data will be overwritten.
+ */
+export async function restoreBatchedBackup(
+  backup: BackupDataV3,
+  keyBytes: Uint8Array,
+  onProgress?: RestoreProgressCallback
+): Promise<void> {
+  const db = getDB();
+  const totalBatches = backup.batches.length;
+
+  onProgress?.({ phase: 'validating' });
+
+  // 1. Restore encryption metadata first
+  await encryptionRepository.setMetadata(backup.encryption);
+
+  onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
+
+  // 2. Process each batch
+  for (let i = 0; i < backup.batches.length; i++) {
+    const batch = backup.batches[i];
+
+    try {
+      onProgress?.({ phase: 'decrypting', current: i, total: totalBatches });
+
+      // Decrypt and decompress the batch
+      const items = await decryptBatch<unknown>(batch.data, keyBytes);
+
+      onProgress?.({ phase: 'restoring', current: i + 1, total: totalBatches });
+
+      // Restore items based on batch type
+      switch (batch.type) {
+        case 'notes':
+          for (const note of items) {
+            await db.put(STORES.NOTES, note as Note);
+          }
+          break;
+
+        case 'attachments':
+          for (const item of items) {
+            const attachment = item as AttachmentRecord;
+            const blob = base64ToArrayBuffer(attachment.blob);
+            await attachmentRepository.storeBlob(attachment.id, blob);
+
+            if (attachment.thumbnail) {
+              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+            }
+          }
+          break;
+
+        case 'versions':
+          for (const version of items) {
+            await db.put(STORES.NOTE_VERSIONS, version as NoteVersion);
+          }
+          break;
+
+        case 'saved_searches':
+          for (const savedSearch of items) {
+            await db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch);
+          }
+          break;
+
+        case 'settings':
+          // Settings batch contains a single item
+          if (items.length > 0) {
+            await settingsRepository.update(items[0] as UserSettings);
+          }
+          break;
+
+        case 'sync_metadata':
+          // Sync metadata batch contains a single item
+          if (items.length > 0) {
+            const syncMeta = items[0] as SyncMetadata;
+            // Mark the API key for re-registration so restored device gets a new ID
+            if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
+              syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
+            }
+            await syncRepository.updateMetadata(syncMeta);
+          }
+          break;
+
+        default:
+          console.warn(`[backupService] Unknown batch type: ${batch.type}`);
+      }
+    } catch (error) {
+      console.error(`[backupService] Failed to restore batch ${i} (${batch.type}):`, error);
+      throw new Error(
+        `Failed to restore batch ${i + 1} (${batch.type}): ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  onProgress?.({ phase: 'complete' });
+}
+
+/**
+ * Unified restore function that handles both v2.x and v3.0 backup formats
+ *
+ * Automatically detects the backup version and delegates to the appropriate
+ * restore function.
+ */
+export async function restoreFromBackup(
+  backup: BackupData,
+  keyBytes: Uint8Array,
+  onProgress?: RestoreProgressCallback
+): Promise<void> {
+  if (isBackupV3(backup)) {
+    return restoreBatchedBackup(backup, keyBytes, onProgress);
+  }
+
+  if (isBackupV2(backup)) {
+    return restoreBackup(backup, keyBytes, onProgress);
+  }
+
+  throw new Error('Unknown backup format');
+}
+
+/**
  * Download a backup as a file
  *
  * Uses chunked JSON generation to avoid string length limits on large backups.
+ * Handles both v2.x (data array) and v3.0 (batches array) formats.
  */
 export function downloadBackup(backup: BackupData): void {
   // Build JSON in chunks to avoid string length limits
   const chunks: string[] = [];
 
-  // Opening structure (everything except the data array contents)
+  // Opening structure
   chunks.push('{"version":');
   chunks.push(JSON.stringify(backup.version));
   chunks.push(',"type":');
@@ -527,16 +1063,30 @@ export function downloadBackup(backup: BackupData): void {
   chunks.push(JSON.stringify(backup.createdAt));
   chunks.push(',"encryption":');
   chunks.push(JSON.stringify(backup.encryption));
-  chunks.push(',"data":[');
 
-  // Add each JWE record individually
-  for (let i = 0; i < backup.data.length; i++) {
-    if (i > 0) chunks.push(',');
-    chunks.push(JSON.stringify(backup.data[i]));
+  if (isBackupV3(backup)) {
+    // v3.0 format: batches array and summary
+    chunks.push(',"batches":[');
+
+    for (let i = 0; i < backup.batches.length; i++) {
+      if (i > 0) chunks.push(',');
+      chunks.push(JSON.stringify(backup.batches[i]));
+    }
+
+    chunks.push('],"summary":');
+    chunks.push(JSON.stringify(backup.summary));
+    chunks.push('}');
+  } else if (isBackupV2(backup)) {
+    // v2.x format: data array
+    chunks.push(',"data":[');
+
+    for (let i = 0; i < backup.data.length; i++) {
+      if (i > 0) chunks.push(',');
+      chunks.push(JSON.stringify(backup.data[i]));
+    }
+
+    chunks.push(']}');
   }
-
-  // Close the structure
-  chunks.push(']}');
 
   const blob = new Blob(chunks, { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -561,11 +1111,14 @@ export function downloadBackup(backup: BackupData): void {
  * Get backup file stats without full validation
  *
  * For v2.x backups, we can only show record count (types are encrypted).
+ * For v3.0 backups, we can show the full summary (notes, attachments, versions, saved searches).
  */
 export async function getBackupStats(file: File): Promise<{
   valid: boolean;
+  version?: string;
   createdAt?: string;
   recordCount?: number;
+  summary?: BackupSummary;
   error?: string;
 }> {
   try {
@@ -576,11 +1129,32 @@ export async function getBackupStats(file: File): Promise<{
       return { valid: false, error: 'Not a Jottery backup file' };
     }
 
-    return {
-      valid: true,
-      createdAt: backup.createdAt,
-      recordCount: Array.isArray(backup.data) ? backup.data.length : 0,
-    };
+    if (isBackupV3(backup)) {
+      // v3.0: return detailed summary
+      return {
+        valid: true,
+        version: backup.version,
+        createdAt: backup.createdAt,
+        summary: backup.summary,
+        recordCount:
+          backup.summary.notes +
+          backup.summary.attachments +
+          backup.summary.versions +
+          backup.summary.savedSearches,
+      };
+    }
+
+    // v2.x: can only show record count
+    if (isBackupV2(backup)) {
+      return {
+        valid: true,
+        version: backup.version,
+        createdAt: backup.createdAt,
+        recordCount: backup.data.length,
+      };
+    }
+
+    return { valid: false, error: 'Unknown backup format' };
   } catch {
     return { valid: false, error: 'Could not read backup file' };
   }
@@ -610,10 +1184,17 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
  */
 export const backupService = {
   createBackup,
+  createBatchedBackup,
   validateBackup,
   verifyBackupPassword,
   restoreBackup,
+  restoreBatchedBackup,
+  restoreFromBackup,
   downloadBackup,
   getBackupStats,
   BACKUP_FILE_EXTENSION,
+  // Constants for external use
+  NOTE_BATCH_SIZE,
+  ATTACHMENT_BATCH_SIZE,
+  VERSION_BATCH_SIZE,
 };
