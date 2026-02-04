@@ -1053,8 +1053,31 @@ class SyncService {
   }
 
   /**
+   * Get a short-lived SSE token from the server
+   * This exchanges the API key for a temporary token that can be safely used in URLs
+   */
+  private async getSseToken(endpoint: string, apiKey: string): Promise<string> {
+    const response = await fetch(`${endpoint}/api/v1/sync/events/token`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get SSE token: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.token;
+  }
+
+  /**
    * Connect to SSE endpoint for real-time sync notifications
    * When another device syncs, the server sends a notification to trigger an immediate pull
+   *
+   * Security: Uses short-lived tokens instead of API keys in the URL.
+   * The API key is exchanged for a token via an authenticated endpoint.
    */
   async connectToSyncEvents(): Promise<void> {
     // Don't reconnect if already connected or connecting
@@ -1092,10 +1115,14 @@ class SyncService {
       const apiKeyEncrypted = JSON.parse(metadata.apiKey);
       const apiKey = await cryptoService.decryptText(apiKeyEncrypted, masterKey.key);
 
-      // Build SSE URL with API key as query parameter
-      // EventSource doesn't support custom headers, so we use query params
       const endpoint = normalizeEndpoint(metadata.syncEndpoint);
-      const sseUrl = `${endpoint}/api/v1/sync/events?api_key=${encodeURIComponent(apiKey)}`;
+
+      // Exchange API key for a short-lived SSE token
+      // This prevents the API key from appearing in URLs/browser history/logs
+      const sseToken = await this.getSseToken(endpoint, apiKey);
+
+      // Build SSE URL with the short-lived token (not the API key)
+      const sseUrl = `${endpoint}/api/v1/sync/events?token=${encodeURIComponent(sseToken)}`;
 
       console.log('[SyncService] Connecting to SSE for real-time sync notifications');
       this.eventSource = new EventSource(sseUrl);

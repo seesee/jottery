@@ -19,7 +19,7 @@ mod error;
 mod models;
 mod utils;
 
-use crate::api::sse::{SyncBroadcast, SyncNotification};
+use crate::api::sse::{SseTokenStore, SyncBroadcast, SyncNotification, create_token_store};
 use crate::config::Config;
 
 #[derive(Clone)]
@@ -27,6 +27,7 @@ pub struct AppState {
     pub pool: sqlx::SqlitePool,
     pub config: Config,
     pub sync_broadcast: SyncBroadcast,
+    pub sse_tokens: SseTokenStore,
 }
 
 /// Build CORS layer based on configuration
@@ -101,11 +102,15 @@ async fn main() {
     // Capacity of 100 is sufficient - notifications are small and ephemeral
     let (sync_broadcast, _) = broadcast::channel::<SyncNotification>(100);
 
+    // Create SSE token store for short-lived tokens
+    let sse_tokens = create_token_store();
+
     // Build application state
     let app_state = Arc::new(AppState {
         pool,
         config: config.clone(),
         sync_broadcast,
+        sse_tokens,
     });
 
     // Build protected sync routes with API key auth middleware
@@ -119,9 +124,11 @@ async fn main() {
             api::middleware::auth_middleware,
         ));
 
-    // SSE route for real-time sync notifications
-    // Uses query param auth because EventSource doesn't support headers
+    // SSE routes for real-time sync notifications
+    // Token endpoint exchanges API key for short-lived SSE token
+    // Events endpoint uses the short-lived token (not the API key)
     let sse_routes = Router::new()
+        .route("/api/v1/sync/events/token", get(api::sse::get_sse_token))
         .route("/api/v1/sync/events", get(api::sse::sync_events));
 
     // Build protected user routes with session auth middleware (for account management)

@@ -145,7 +145,49 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
     info!("SSE thread exiting");
 }
 
+/// Get a short-lived SSE token from the server
+///
+/// This exchanges the API key for a temporary token that can be safely used in URLs.
+/// The token expires after 5 minutes but the SSE connection will remain open.
+fn get_sse_token(endpoint: &str, api_key: &str) -> Result<String, String> {
+    let url = format!(
+        "{}/api/v1/sync/events/token",
+        endpoint.trim_end_matches('/')
+    );
+
+    debug!("Fetching SSE token from: {}", url);
+
+    let response = ureq::get(&url)
+        .set("Authorization", &format!("Bearer {}", api_key))
+        .timeout(Duration::from_secs(10))
+        .call()
+        .map_err(|e| format!("Failed to get SSE token: {}", e))?;
+
+    if response.status() != 200 {
+        return Err(format!(
+            "Failed to get SSE token: HTTP {} {}",
+            response.status(),
+            response.status_text()
+        ));
+    }
+
+    let body_str = response
+        .into_string()
+        .map_err(|e| format!("Failed to read SSE token response: {}", e))?;
+
+    let body: serde_json::Value = serde_json::from_str(&body_str)
+        .map_err(|e| format!("Failed to parse SSE token response: {}", e))?;
+
+    body.get("token")
+        .and_then(|t| t.as_str())
+        .map(String::from)
+        .ok_or_else(|| "SSE token response missing 'token' field".to_string())
+}
+
 /// Connect to SSE endpoint and listen for events
+///
+/// Security: Uses short-lived tokens instead of API keys in the URL.
+/// The API key is exchanged for a token via an authenticated endpoint.
 fn connect_and_listen(
     config: &SseConfig,
     sender: &Sender<SseMessage>,
@@ -153,10 +195,14 @@ fn connect_and_listen(
 ) -> Result<(), String> {
     use std::io::{BufRead, BufReader};
 
+    // First, exchange the API key for a short-lived SSE token
+    // This prevents the API key from appearing in URLs/logs
+    let sse_token = get_sse_token(&config.endpoint, &config.api_key)?;
+
     let url = format!(
-        "{}/api/v1/sync/events?api_key={}",
+        "{}/api/v1/sync/events?token={}",
         config.endpoint.trim_end_matches('/'),
-        config.api_key
+        sse_token
     );
 
     debug!("Connecting to SSE endpoint: {}", config.endpoint);
