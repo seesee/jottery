@@ -152,6 +152,10 @@ describe('backupService', () => {
       expect(mockLink.click).toHaveBeenCalled();
       expect(mockLink.download).toMatch(/^jottery-backup-\d{4}-\d{2}-\d{2}\.jottery-backup$/);
       expect(createObjectURLSpy).toHaveBeenCalled();
+
+      // revokeObjectURL is called after a 1 second delay to ensure download initiates
+      // Wait for the delayed cleanup
+      await new Promise(resolve => setTimeout(resolve, 1100));
       expect(revokeObjectURLSpy).toHaveBeenCalled();
 
       // Cleanup
@@ -338,6 +342,10 @@ describe('backupService', () => {
       expect(mockLink.click).toHaveBeenCalled();
       expect(mockLink.download).toMatch(/^jottery-backup-\d{4}-\d{2}-\d{2}\.jottery-backup$/);
       expect(createObjectURLSpy).toHaveBeenCalled();
+
+      // revokeObjectURL is called after a 1 second delay to ensure download initiates
+      // Wait for the delayed cleanup
+      await new Promise(resolve => setTimeout(resolve, 1100));
       expect(revokeObjectURLSpy).toHaveBeenCalled();
 
       // Cleanup
