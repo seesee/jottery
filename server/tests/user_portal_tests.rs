@@ -57,9 +57,11 @@ async fn create_test_app() -> (Router, SqlitePool) {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 

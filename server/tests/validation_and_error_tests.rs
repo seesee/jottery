@@ -107,9 +107,11 @@ async fn test_malformed_json_sync_push() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -162,9 +164,11 @@ async fn test_malformed_json_user_login() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -211,9 +215,11 @@ async fn test_sync_push_missing_notes_field() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -272,9 +278,11 @@ async fn test_sync_push_note_missing_required_fields() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -341,9 +349,11 @@ async fn test_register_user_missing_email() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -394,9 +404,11 @@ async fn test_login_missing_password() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -449,9 +461,11 @@ async fn test_sync_push_wrong_data_type() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -511,9 +525,11 @@ async fn test_sync_push_version_wrong_type() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -591,9 +607,11 @@ async fn test_register_device_wrong_type() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -649,9 +667,11 @@ async fn test_get_user_invalid_uuid() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -739,9 +759,11 @@ async fn test_empty_string_fields() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -795,9 +817,11 @@ async fn test_extremely_large_note_content() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -877,9 +901,11 @@ async fn test_many_tags() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -962,9 +988,11 @@ async fn test_special_characters_in_content() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -1047,9 +1075,11 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
@@ -1191,9 +1221,11 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
     let app_state = Arc::new(jottery_server::AppState {
         pool: pool.clone(),
         sync_broadcast,
+        sse_tokens,
         config,
     });
 
