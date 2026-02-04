@@ -15,7 +15,7 @@ import { sessionStorageService } from './sessionStorageService';
 import { authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
-import { restoreBackup as restoreBackupData, verifyBackupPassword } from './backupService';
+import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
 
 /**

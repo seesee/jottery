@@ -67,6 +67,7 @@
     "@tiptap/starter-kit": "^3.17.1",
     "@tsconfig/svelte": "^5.0.4",
     "@types/node": "^25.0.3",
+    "@types/pako": "^2.0.4",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^10.0.0",
     "@uiw/codemirror-theme-github": "^4.25.4",
@@ -111,7 +112,8 @@
     "wait-on": "^8.0.0"
   },
   "dependencies": {
-    "electron-updater": "^6.3.0"
+    "electron-updater": "^6.3.0",
+    "pako": "^2.1.0"
   },
   "optionalDependencies": {
     "keytar": "^7.9.0"
