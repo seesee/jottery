@@ -264,7 +264,23 @@
       "attachmentCount": "Allegati",
       "storageUsed": "Spazio utilizzato",
       "lastSync": "Ultima sincronizzazione",
-      "never": "Mai"
+      "never": "Mai",
+      "inbox": {
+        "title": "API Posta in arrivo",
+        "description": "Invia note al tuo account tramite API — nessuna password di crittografia necessaria. Gli elementi appaiono nella tua posta in arrivo per la revisione.",
+        "itemsLabel": "Elementi",
+        "sizeLabel": "Dimensione",
+        "noToken": "Nessun token di posta in arrivo configurato. Generane uno per iniziare a inviare note tramite API.",
+        "generate": "Genera token",
+        "generated": "Token generato — salvalo ora, non verrà mostrato di nuovo.",
+        "active": "Token posta in arrivo attivo",
+        "copyToken": "Copia",
+        "quickStart": "Avvio rapido",
+        "revoke": "Revoca token",
+        "revokeConfirmTitle": "Revoca token posta in arrivo",
+        "revokeConfirmMessage": "Revocare il token della posta in arrivo? Le integrazioni che lo utilizzano smetteranno di funzionare.",
+        "cancel": "Annulla"
+      }
     },
     "devices": {
       "title": "I tuoi dispositivi",

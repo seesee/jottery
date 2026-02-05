@@ -264,7 +264,23 @@
       "attachmentCount": "Archivos adjuntos",
       "storageUsed": "Almacenamiento usado",
       "lastSync": "Última sincronización",
-      "never": "Nunca"
+      "never": "Nunca",
+      "inbox": {
+        "title": "API de bandeja de entrada",
+        "description": "Envíe notas a su cuenta mediante la API — sin necesidad de contraseña de cifrado. Los elementos aparecen en su bandeja de entrada para revisión.",
+        "itemsLabel": "Elementos",
+        "sizeLabel": "Tamaño",
+        "noToken": "No hay token de bandeja de entrada configurado. Genere uno para empezar a enviar notas por API.",
+        "generate": "Generar token",
+        "generated": "Token generado — guárdelo ahora, no se mostrará de nuevo.",
+        "active": "Token de bandeja de entrada activo",
+        "copyToken": "Copiar",
+        "quickStart": "Inicio rápido",
+        "revoke": "Revocar token",
+        "revokeConfirmTitle": "Revocar token de bandeja de entrada",
+        "revokeConfirmMessage": "¿Revocar su token de bandeja de entrada? Las integraciones que lo usen dejarán de funcionar.",
+        "cancel": "Cancelar"
+      }
     },
     "devices": {
       "title": "Tus dispositivos",

@@ -264,7 +264,23 @@
       "attachmentCount": "Pièces jointes",
       "storageUsed": "Stockage utilisé",
       "lastSync": "Dernière synchronisation",
-      "never": "Jamais"
+      "never": "Jamais",
+      "inbox": {
+        "title": "API Boîte de réception",
+        "description": "Envoyez des notes à votre compte via l'API — aucun mot de passe de chiffrement requis. Les éléments apparaissent dans votre boîte de réception pour examen.",
+        "itemsLabel": "Éléments",
+        "sizeLabel": "Taille",
+        "noToken": "Aucun jeton de boîte de réception configuré. Générez-en un pour commencer à envoyer des notes via l'API.",
+        "generate": "Générer un jeton",
+        "generated": "Jeton généré — enregistrez-le maintenant, il ne sera plus affiché.",
+        "active": "Jeton de boîte de réception actif",
+        "copyToken": "Copier",
+        "quickStart": "Démarrage rapide",
+        "revoke": "Révoquer le jeton",
+        "revokeConfirmTitle": "Révoquer le jeton de boîte de réception",
+        "revokeConfirmMessage": "Révoquer votre jeton de boîte de réception ? Les intégrations qui l'utilisent cesseront de fonctionner.",
+        "cancel": "Annuler"
+      }
     },
     "devices": {
       "title": "Vos appareils",

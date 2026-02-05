@@ -264,7 +264,23 @@
       "attachmentCount": "附件",
       "storageUsed": "已用存储空间",
       "lastSync": "最后同步",
-      "never": "从未"
+      "never": "从未",
+      "inbox": {
+        "title": "收件箱 API",
+        "description": "通过 API 向您的帐户提交笔记——无需加密密码。项目将出现在您的收件箱中等待审阅。",
+        "itemsLabel": "项目",
+        "sizeLabel": "大小",
+        "noToken": "尚未配置收件箱令牌。生成一个以开始通过 API 提交笔记。",
+        "generate": "生成令牌",
+        "generated": "令牌已生成——请立即保存，此后将不再显示。",
+        "active": "收件箱令牌已启用",
+        "copyToken": "复制",
+        "quickStart": "快速入门",
+        "revoke": "撤销令牌",
+        "revokeConfirmTitle": "撤销收件箱令牌",
+        "revokeConfirmMessage": "撤销您的收件箱令牌？使用该令牌的所有集成将停止工作。",
+        "cancel": "取消"
+      }
     },
     "devices": {
       "title": "您的设备",

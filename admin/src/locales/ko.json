@@ -264,7 +264,23 @@
       "attachmentCount": "첨부 파일",
       "storageUsed": "사용 중인 저장 공간",
       "lastSync": "마지막 동기화",
-      "never": "없음"
+      "never": "없음",
+      "inbox": {
+        "title": "받은편지함 API",
+        "description": "API를 통해 계정으로 노트를 제출 — 암호화 비밀번호가 필요 없습니다. 항목이 받은편지함에 표시되어 검토할 수 있습니다.",
+        "itemsLabel": "항목",
+        "sizeLabel": "크기",
+        "noToken": "받은편지함 토큰이 구성되지 않았습니다. API를 통해 노트를 제출하려면 토큰을 생성하세요.",
+        "generate": "토큰 생성",
+        "generated": "토큰이 생성되었습니다 — 지금 저장하세요. 다시 표시되지 않습니다.",
+        "active": "받은편지함 토큰 활성",
+        "copyToken": "복사",
+        "quickStart": "빠른 시작",
+        "revoke": "토큰 해지",
+        "revokeConfirmTitle": "받은편지함 토큰 해지",
+        "revokeConfirmMessage": "받은편지함 토큰을 해지하시겠습니까? 이 토큰을 사용하는 모든 연동이 중단됩니다.",
+        "cancel": "취소"
+      }
     },
     "devices": {
       "title": "내 기기",

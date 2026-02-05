@@ -264,7 +264,23 @@
       "attachmentCount": "Anexos",
       "storageUsed": "Armazenamento usado",
       "lastSync": "Última sincronização",
-      "never": "Nunca"
+      "never": "Nunca",
+      "inbox": {
+        "title": "API da Caixa de entrada",
+        "description": "Envie notas para a sua conta via API — sem necessidade de palavra-passe de encriptação. Os itens aparecem na sua caixa de entrada para revisão.",
+        "itemsLabel": "Itens",
+        "sizeLabel": "Tamanho",
+        "noToken": "Nenhum token de caixa de entrada configurado. Gere um para começar a enviar notas via API.",
+        "generate": "Gerar token",
+        "generated": "Token gerado — guarde-o agora, não será mostrado novamente.",
+        "active": "Token de caixa de entrada activo",
+        "copyToken": "Copiar",
+        "quickStart": "Início rápido",
+        "revoke": "Revogar token",
+        "revokeConfirmTitle": "Revogar token da caixa de entrada",
+        "revokeConfirmMessage": "Revogar o token da caixa de entrada? As integrações que o utilizam deixarão de funcionar.",
+        "cancel": "Cancelar"
+      }
     },
     "devices": {
       "title": "Os seus dispositivos",

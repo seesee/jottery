@@ -264,7 +264,23 @@
       "attachmentCount": "Attachments",
       "storageUsed": "Storage Used",
       "lastSync": "Last Sync",
-      "never": "Never"
+      "never": "Never",
+      "inbox": {
+        "title": "Inbox API",
+        "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+        "itemsLabel": "Items",
+        "sizeLabel": "Size",
+        "noToken": "No inbox token configured. Generate one to start submitting notes via API.",
+        "generate": "Generate Token",
+        "generated": "Token generated — save it now, it won't be shown again.",
+        "active": "Inbox token active",
+        "copyToken": "Copy",
+        "quickStart": "Quick Start",
+        "revoke": "Revoke Token",
+        "revokeConfirmTitle": "Revoke Inbox Token",
+        "revokeConfirmMessage": "Revoke your inbox token? Any integrations using it will stop working.",
+        "cancel": "Cancel"
+      }
     },
     "devices": {
       "title": "Your Devices",

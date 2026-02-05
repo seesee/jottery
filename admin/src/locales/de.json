@@ -264,7 +264,23 @@
       "attachmentCount": "Anhänge",
       "storageUsed": "Speicher genutzt",
       "lastSync": "Letzte Synchronisation",
-      "never": "Nie"
+      "never": "Nie",
+      "inbox": {
+        "title": "Posteingang-API",
+        "description": "Senden Sie Notizen per API an Ihr Konto — kein Verschlüsselungspasswort nötig. Einträge erscheinen in Ihrem Posteingang zur Überprüfung.",
+        "itemsLabel": "Einträge",
+        "sizeLabel": "Größe",
+        "noToken": "Kein Posteingang-Token konfiguriert. Generieren Sie einen, um Notizen per API einzureichen.",
+        "generate": "Token generieren",
+        "generated": "Token generiert — speichern Sie ihn jetzt, er wird nicht erneut angezeigt.",
+        "active": "Posteingang-Token aktiv",
+        "copyToken": "Kopieren",
+        "quickStart": "Schnellstart",
+        "revoke": "Token widerrufen",
+        "revokeConfirmTitle": "Posteingang-Token widerrufen",
+        "revokeConfirmMessage": "Posteingang-Token widerrufen? Alle Integrationen, die ihn verwenden, funktionieren nicht mehr.",
+        "cancel": "Abbrechen"
+      }
     },
     "devices": {
       "title": "Ihre Geräte",
