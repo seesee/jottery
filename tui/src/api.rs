@@ -242,6 +242,7 @@ impl AuthClient {
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
     pub session_id: String,
+    #[allow(dead_code)]
     pub expires_at: String,
 }
 
