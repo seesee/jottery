@@ -8,11 +8,119 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-const LANG = process.env.LANG || 'en-GB';
+// Normalize LANG environment variable to our file naming convention
+function normalizeLang(lang: string | undefined): string {
+  if (!lang) return 'en-GB';
+
+  // Strip encoding suffix like .UTF-8
+  let normalized = lang.replace(/\..*$/, '');
+
+  // Convert underscore to hyphen (en_GB -> en-GB)
+  normalized = normalized.replace('_', '-');
+
+  // Handle just 'en' -> 'en-GB'
+  if (normalized === 'en') return 'en-GB';
+
+  // Map common variants
+  const validLangs = ['en-GB', 'en-US', 'de', 'el', 'es', 'fr', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'tr', 'zh'];
+  if (validLangs.includes(normalized)) return normalized;
+
+  // Default to en-GB for unknown
+  return 'en-GB';
+}
+
+const LANG = normalizeLang(process.env.LANG);
 const SCREENSHOT_DIR = `screenshots/${LANG}`;
 
+// Map language codes to demo note files
+function getDemoNotesFile(lang: string): string {
+  // Check if a language-specific file exists
+  const langFile = `jottery-demo-notes-${lang}.json`;
+  // For now, fall back to the main demo file if no language-specific file
+  // The language-specific files follow the pattern: jottery-demo-notes-{lang}.json
+  return langFile;
+}
+
+// Language-specific tag colour mappings
+// Only 2-3 tags per language to make colouring look intentional
+const TAG_COLORS: Record<string, Record<string, string>> = {
+  'en-GB': { recipe: 'orange', travel: 'blue', shopping: 'red' },
+  'en-US': { recipe: 'orange', travel: 'blue', shopping: 'red' },
+  'de': { rezept: 'orange', reise: 'blue', einkaufen: 'red' },
+  'el': { 'συνταγή': 'orange', 'ταξίδι': 'blue', 'αγορές': 'red' },
+  'es': { receta: 'orange', viaje: 'blue', compras: 'red' },
+  'fr': { recette: 'orange', voyage: 'blue', courses: 'red' },
+  'it': { ricetta: 'orange', viaggio: 'blue', spesa: 'red' },
+  'ja': { 'レシピ': 'orange', '旅行': 'blue', '買い物': 'red' },
+  'ko': { '레시피': 'orange', '여행': 'blue', '쇼핑': 'red' },
+  'nl': { recept: 'orange', reis: 'blue', boodschappen: 'red' },
+  'pl': { przepis: 'orange', 'podróż': 'blue', zakupy: 'red' },
+  'pt': { receita: 'orange', viagem: 'blue', compras: 'red' },
+  'ru': { 'рецепт': 'orange', 'путешествие': 'blue', 'покупки': 'red' },
+  'tr': { tarif: 'orange', seyahat: 'blue', 'alışveriş': 'red' },
+  'zh': { '食谱': 'orange', '旅行': 'blue', '购物': 'red' },
+};
+
+// Get tag colours for current language, falling back to en-GB
+function getTagColors(lang: string): Record<string, string> {
+  return TAG_COLORS[lang] || TAG_COLORS['en-GB'];
+}
+
+// Helper function to set the app's UI language
+async function setAppLanguage(page: any, lang: string) {
+  // Map our language codes to the app's locale codes
+  const localeMap: Record<string, string> = {
+    'en-GB': 'en-GB',
+    'en-US': 'en-US',
+    'de': 'de',
+    'el': 'el',
+    'es': 'es',
+    'fr': 'fr',
+    'it': 'it',
+    'ja': 'ja',
+    'ko': 'ko',
+    'nl': 'nl',
+    'pl': 'pl',
+    'pt': 'pt',
+    'ru': 'ru',
+    'tr': 'tr',
+    'zh': 'zh',
+  };
+
+  const locale = localeMap[lang] || 'en-GB';
+
+  // Open settings
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsButton.click();
+  await page.waitForTimeout(500);
+
+  // Navigate to General tab where language dropdown is (within the modal)
+  const modal = page.locator('[role="dialog"]').first();
+  const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+  await generalTab.waitFor({ state: 'visible' });
+  await generalTab.click();
+  await page.waitForTimeout(500);
+
+  // Find the language dropdown and select the target locale
+  const languageDropdown = modal.locator('select').filter({ has: page.locator(`option[value="${locale}"]`) }).first();
+  await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+  await languageDropdown.selectOption(locale);
+  await page.waitForTimeout(500);
+
+  // Save settings to apply the language change
+  const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+  await saveButton.waitFor({ state: 'visible' });
+  await saveButton.click();
+
+  // Wait for toast to disappear and close modal
+  await page.waitForTimeout(2000);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+}
+
 // Helper function to import demo notes via Settings UI
-async function importDemoNotes(page: any, demoFile: string = 'jottery-demo-notes.json') {
+async function importDemoNotes(page: any, demoFile: string = getDemoNotesFile(LANG)) {
   const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
 
   // Open settings
@@ -21,14 +129,20 @@ async function importDemoNotes(page: any, demoFile: string = 'jottery-demo-notes
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to Advanced tab
-  const advancedTab = page.locator('button, [role="tab"]').filter({ hasText: /Advanced/i }).first();
+  // Navigate to Advanced tab (handle multiple languages)
+  // English: Advanced, German: Erweitert, French: Avancé, Spanish: Avanzado, etc.
+  const advancedTab = page.locator('button, [role="tab"]').filter({
+    hasText: /Advanced|Erweitert|Avancé|Avanzado|Avançadas|Avanzate|Geavanceerd|Zaawansowane|Gelişmiş|Расширенные|詳細|고급|高级|Προηγμένα/i
+  }).first();
   await advancedTab.waitFor({ state: 'visible' });
   await advancedTab.click();
   await page.waitForTimeout(500);
 
   // Find and click the Import button (which triggers file input)
-  const importButton = page.locator('button').filter({ hasText: /📥.*Import/i }).first();
+  // Handle multiple languages: Import, Importieren, Importer, Importar, Importeren, etc.
+  const importButton = page.locator('button').filter({
+    hasText: /📥.*(Import|Importieren|Importer|Importar|Importeren|Importuj|İçe Aktar|Импортировать|インポート|가져오기|导入|Εισαγωγή)/i
+  }).first();
   await importButton.waitFor({ state: 'visible' });
 
   // Set up file chooser handler before clicking
@@ -37,8 +151,10 @@ async function importDemoNotes(page: any, demoFile: string = 'jottery-demo-notes
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(demoNotesPath);
 
-  // Wait for import to complete - look for the Done button
-  const doneButton = page.locator('button').filter({ hasText: /Done|Close/i }).last();
+  // Wait for import to complete - look for the Done button (handle multiple languages)
+  const doneButton = page.locator('button').filter({
+    hasText: /Done|Close|Fertig|Schließen|Terminé|Fermer|Listo|Cerrar|Fatto|Chiudi|Klaar|Sluiten|Gotowe|Zamknij|Tamam|Kapat|Готово|Закрыть|完了|閉じる|완료|닫기|完成|关闭|Ολοκληρώθηκε|Κλείσιμο/i
+  }).last();
   await doneButton.waitFor({ state: 'visible', timeout: 15000 });
   await doneButton.click();
   await page.waitForTimeout(500);
@@ -121,15 +237,16 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
+    // Set the app's UI language before importing notes
+    if (LANG !== 'en-GB') {
+      await setAppLanguage(page, LANG);
+    }
+
     // Import demo notes
     await importDemoNotes(page);
 
-    // Set tag colors for demo, recipe, and notes tags
-    await setTagColors(page, {
-      demo: 'blue',
-      recipe: 'orange',
-      notes: 'purple',
-    });
+    // Set tag colors using language-specific tag names
+    await setTagColors(page, getTagColors(LANG));
 
     // Wait for tag colors to apply
     await page.waitForTimeout(1000);
@@ -181,15 +298,20 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-preview.png');
   });
 
-  test('01b-light. Main Interface - Japan Preview', async ({ page }) => {
+  test('01b-light. Main Interface - Travel Note Preview', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the Japan Trip note
+    // Find and click the travel note (4th note in language-specific files, or Japan Trip)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    // Try to find Japan Trip first (original demo), fall back to 4th note (language-specific demos)
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3); // 4th note (0-indexed) is the travel plan
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Click Preview button
@@ -200,42 +322,52 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/01-main-interface-light-japan-preview.png`,
+      path: `${SCREENSHOT_DIR}/01-main-interface-light-travel-preview.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-japan-preview.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-travel-preview.png');
   });
 
-  test('01c-light. Main Interface - Japan Note', async ({ page }) => {
+  test('01c-light. Main Interface - Travel Note', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the Japan Trip note
+    // Find and click the travel note (4th note in language-specific files, or Japan Trip)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    // Try to find Japan Trip first (original demo), fall back to 4th note (language-specific demos)
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3); // 4th note (0-indexed) is the travel plan
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Take screenshot
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/01-main-interface-light-japan.png`,
+      path: `${SCREENSHOT_DIR}/01-main-interface-light-travel.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-japan.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-travel.png');
   });
 
-  test('02-light. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
+  test('02-light. Rich Editor - Recipe Note', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the Python QuickSort note from demo
+    // Find and click a content-rich note (Python in original demo, Recipe in language-specific)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const pythonNote = noteListItems.filter({ hasText: /Python Quick Sort/i }).first();
-    await pythonNote.waitFor({ state: 'visible' });
-    await pythonNote.click();
+    // Try to find Python QuickSort first (original demo), fall back to 3rd note (recipe in language-specific demos)
+    let contentNote = noteListItems.filter({ hasText: /Python Quick Sort|QuickSort/i }).first();
+    const hasContentNote = await contentNote.isVisible().catch(() => false);
+    if (!hasContentNote) {
+      contentNote = noteListItems.nth(2); // 3rd note (0-indexed) is the recipe
+    }
+    await contentNote.waitFor({ state: 'visible' });
+    await contentNote.click();
     await page.waitForTimeout(1000);
 
     await page.screenshot({
@@ -278,16 +410,20 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the Japan Trip note
+    // Click on the travel note (or Japan Trip in original demo)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3); // 4th note is the travel plan
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Create version history by making edits and navigating away/back to trigger sync
     const editor = page.locator('.cm-content').first();
-    const welcomeNote = noteListItems.filter({ hasText: /Welcome to Jottery/i }).first();
+    const welcomeNote = noteListItems.first(); // Use first note (welcome) instead of searching by title
 
     // Edit 1: Add packing list start
     await editor.click();
@@ -304,7 +440,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Navigate away and back to trigger sync (creates version 1)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await japanNote.click();
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Edit 2: Add more items
@@ -319,7 +455,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Navigate away and back to trigger sync (creates version 2)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await japanNote.click();
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Edit 3: Add final items
@@ -334,7 +470,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Navigate away and back to trigger sync (creates version 3)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await japanNote.click();
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Open the more menu to access version history
@@ -472,15 +608,16 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
+    // Set the app's UI language before importing notes
+    if (LANG !== 'en-GB') {
+      await setAppLanguage(page, LANG);
+    }
+
     // Import demo notes
     await importDemoNotes(page);
 
-    // Set tag colors for demo, recipe, and notes tags
-    await setTagColors(page, {
-      demo: 'blue',
-      recipe: 'orange',
-      notes: 'purple',
-    });
+    // Set tag colors using language-specific tag names
+    await setTagColors(page, getTagColors(LANG));
 
     // Wait for tag colors to apply
     await page.waitForTimeout(1000);
@@ -537,15 +674,19 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-preview.png');
   });
 
-  test('01b-dark. Main Interface - Japan Preview', async ({ page }) => {
+  test('01b-dark. Main Interface - Travel Note Preview', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the Japan Trip note
+    // Find and click the travel note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3);
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Click Preview button
@@ -556,42 +697,50 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Take screenshot
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/01-main-interface-dark-japan-preview.png`,
+      path: `${SCREENSHOT_DIR}/01-main-interface-dark-travel-preview.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-japan-preview.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-travel-preview.png');
   });
 
-  test('01c-dark. Main Interface - Japan Note', async ({ page }) => {
+  test('01c-dark. Main Interface - Travel Note', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the Japan Trip note
+    // Find and click the travel note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3);
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Take screenshot
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/01-main-interface-dark-japan.png`,
+      path: `${SCREENSHOT_DIR}/01-main-interface-dark-travel.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-japan.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-travel.png');
   });
 
-  test('02-dark. Rich Editor - Python Syntax Highlighting', async ({ page }) => {
+  test('02-dark. Rich Editor - Recipe Note', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the Python QuickSort note from demo
+    // Find and click a content-rich note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const pythonNote = noteListItems.filter({ hasText: /Python Quick Sort/i }).first();
-    await pythonNote.waitFor({ state: 'visible' });
-    await pythonNote.click();
+    let contentNote = noteListItems.filter({ hasText: /Python Quick Sort|QuickSort/i }).first();
+    const hasContentNote = await contentNote.isVisible().catch(() => false);
+    if (!hasContentNote) {
+      contentNote = noteListItems.nth(2); // 3rd note is the recipe
+    }
+    await contentNote.waitFor({ state: 'visible' });
+    await contentNote.click();
     await page.waitForTimeout(1000);
 
     await page.screenshot({
@@ -634,16 +783,20 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the Japan Trip note
+    // Click on the travel note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3);
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Create version history by making edits and navigating away/back to trigger sync
     const editor = page.locator('.cm-content').first();
-    const welcomeNote = noteListItems.filter({ hasText: /Welcome to Jottery/i }).first();
+    const welcomeNote = noteListItems.first();
 
     // Edit 1: Add packing list start
     await editor.click();
@@ -660,7 +813,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Navigate away and back to trigger sync (creates version 1)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await japanNote.click();
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Edit 2: Add more items
@@ -675,7 +828,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Navigate away and back to trigger sync (creates version 2)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await japanNote.click();
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Edit 3: Add final items
@@ -690,7 +843,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Navigate away and back to trigger sync (creates version 3)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await japanNote.click();
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Open the more menu to access version history
@@ -792,7 +945,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 });
 
 // Helper function to import demo notes on mobile (via hamburger menu)
-async function importDemoNotesMobile(page: any, demoFile: string = 'jottery-demo-notes.json') {
+async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesFile(LANG)) {
   const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
 
   // On mobile, settings is behind the hamburger menu
@@ -810,14 +963,20 @@ async function importDemoNotesMobile(page: any, demoFile: string = 'jottery-demo
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to Advanced tab
-  const advancedTab = page.locator('button, [role="tab"]').filter({ hasText: /Advanced/i }).first();
+  // Navigate to Advanced tab (handle multiple languages)
+  // English: Advanced, German: Erweitert, French: Avancé, Spanish: Avanzado, etc.
+  const advancedTab = page.locator('button, [role="tab"]').filter({
+    hasText: /Advanced|Erweitert|Avancé|Avanzado|Avançadas|Avanzate|Geavanceerd|Zaawansowane|Gelişmiş|Расширенные|詳細|고급|高级|Προηγμένα/i
+  }).first();
   await advancedTab.waitFor({ state: 'visible' });
   await advancedTab.click();
   await page.waitForTimeout(500);
 
   // Find and click the Import button (which triggers file input)
-  const importButton = page.locator('button').filter({ hasText: /📥.*Import/i }).first();
+  // Handle multiple languages: Import, Importieren, Importer, Importar, Importeren, etc.
+  const importButton = page.locator('button').filter({
+    hasText: /📥.*(Import|Importieren|Importer|Importar|Importeren|Importuj|İçe Aktar|Импортировать|インポート|가져오기|导入|Εισαγωγή)/i
+  }).first();
   await importButton.waitFor({ state: 'visible' });
 
   // Set up file chooser handler before clicking
@@ -826,8 +985,10 @@ async function importDemoNotesMobile(page: any, demoFile: string = 'jottery-demo
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(demoNotesPath);
 
-  // Wait for import to complete - look for the Done button
-  const doneButton = page.locator('button').filter({ hasText: /Done|Close/i }).last();
+  // Wait for import to complete - look for the Done button (handle multiple languages)
+  const doneButton = page.locator('button').filter({
+    hasText: /Done|Close|Fertig|Schließen|Terminé|Fermer|Listo|Cerrar|Fatto|Chiudi|Klaar|Sluiten|Gotowe|Zamknij|Tamam|Kapat|Готово|Закрыть|完了|閉じる|완료|닫기|完成|关闭|Ολοκληρώθηκε|Κλείσιμο/i
+  }).last();
   await doneButton.waitFor({ state: 'visible', timeout: 15000 });
   await doneButton.click();
   await page.waitForTimeout(500);
@@ -845,6 +1006,54 @@ async function importDemoNotesMobile(page: any, demoFile: string = 'jottery-demo
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
   }
+}
+
+// Helper function to set the app's UI language on mobile (via hamburger menu)
+async function setAppLanguageMobile(page: any, lang: string) {
+  const localeMap: Record<string, string> = {
+    'en-GB': 'en-GB', 'en-US': 'en-US', 'de': 'de', 'el': 'el', 'es': 'es',
+    'fr': 'fr', 'it': 'it', 'ja': 'ja', 'ko': 'ko', 'nl': 'nl',
+    'pl': 'pl', 'pt': 'pt', 'ru': 'ru', 'tr': 'tr', 'zh': 'zh',
+  };
+  const locale = localeMap[lang] || 'en-GB';
+
+  // On mobile, settings is behind the hamburger menu
+  const hamburgerMenu = page.locator('button[aria-label="Menu"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
+  const isHamburgerVisible = await hamburgerMenu.isVisible().catch(() => false);
+
+  if (isHamburgerVisible) {
+    await hamburgerMenu.click();
+    await page.waitForTimeout(500);
+  }
+
+  // Open settings
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsButton.click();
+  await page.waitForTimeout(500);
+
+  // Navigate to General tab
+  const modal = page.locator('[role="dialog"]').first();
+  const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+  await generalTab.waitFor({ state: 'visible' });
+  await generalTab.click();
+  await page.waitForTimeout(500);
+
+  // Find the language dropdown and select the target locale
+  const languageDropdown = modal.locator('select').filter({ has: page.locator(`option[value="${locale}"]`) }).first();
+  await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
+  await languageDropdown.selectOption(locale);
+  await page.waitForTimeout(500);
+
+  // Save settings
+  const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+  await saveButton.waitFor({ state: 'visible' });
+  await saveButton.click();
+
+  // Wait for toast to disappear and close modal
+  await page.waitForTimeout(2000);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
 }
 
 test.describe('Landing Page Screenshots - Mobile Light', () => {
@@ -890,15 +1099,16 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
+    // Set the app's UI language before importing notes
+    if (LANG !== 'en-GB') {
+      await setAppLanguageMobile(page, LANG);
+    }
+
     // Import demo notes (mobile version - handles hamburger menu)
     await importDemoNotesMobile(page);
 
-    // Set tag colors for demo, recipe, and notes tags
-    await setTagColors(page, {
-      demo: 'blue',
-      recipe: 'orange',
-      notes: 'purple',
-    });
+    // Set tag colors using language-specific tag names
+    await setTagColors(page, getTagColors(LANG));
 
     // Wait for tag colors to apply
     await page.waitForTimeout(1000);
@@ -917,24 +1127,28 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/06-mobile-list-light.png');
   });
 
-  test('07-mobile-light. Japan Itinerary Note', async ({ page }) => {
+  test('07-mobile-light. Travel Itinerary Note', async ({ page }) => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Find and click the Japan Trip note
+    // Find and click the travel note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3);
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Take screenshot of the note view
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/07-mobile-japan-light.png`,
+      path: `${SCREENSHOT_DIR}/07-mobile-travel-light.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-japan-light.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-travel-light.png');
   });
 
   test('08-mobile-light. Calculator Note', async ({ page }) => {
@@ -1070,15 +1284,16 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
+    // Set the app's UI language before importing notes
+    if (LANG !== 'en-GB') {
+      await setAppLanguageMobile(page, LANG);
+    }
+
     // Import demo notes (mobile version - handles hamburger menu)
     await importDemoNotesMobile(page);
 
-    // Set tag colors for demo, recipe, and notes tags
-    await setTagColors(page, {
-      demo: 'blue',
-      recipe: 'orange',
-      notes: 'purple',
-    });
+    // Set tag colors using language-specific tag names
+    await setTagColors(page, getTagColors(LANG));
 
     // Wait for tag colors to apply
     await page.waitForTimeout(1000);
@@ -1103,24 +1318,28 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/06-mobile-list-dark.png');
   });
 
-  test('07-mobile-dark. Japan Itinerary Note', async ({ page }) => {
+  test('07-mobile-dark. Travel Itinerary Note', async ({ page }) => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Find and click the Japan Trip note
+    // Find and click the travel note
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const japanNote = noteListItems.filter({ hasText: /Japan Trip/i }).first();
-    await japanNote.waitFor({ state: 'visible' });
-    await japanNote.click();
+    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
+    const hasTravelNote = await travelNote.isVisible().catch(() => false);
+    if (!hasTravelNote) {
+      travelNote = noteListItems.nth(3);
+    }
+    await travelNote.waitFor({ state: 'visible' });
+    await travelNote.click();
     await page.waitForTimeout(1000);
 
     // Take screenshot of the note view
     await page.screenshot({
-      path: `${SCREENSHOT_DIR}/07-mobile-japan-dark.png`,
+      path: `${SCREENSHOT_DIR}/07-mobile-travel-dark.png`,
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-japan-dark.png');
+    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-travel-dark.png');
   });
 
   test('08-mobile-dark. Calculator Note', async ({ page }) => {
@@ -1248,6 +1467,11 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
 
     // Wait for app to load
     await page.waitForTimeout(2000);
+
+    // Set the app's UI language
+    if (LANG !== 'en-GB') {
+      await setAppLanguage(page, LANG);
+    }
   });
 
   test('09-light. Outliner Mode', async ({ page }) => {
@@ -1390,6 +1614,11 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
 
     // Wait for app to load
     await page.waitForTimeout(2000);
+
+    // Set the app's UI language
+    if (LANG !== 'en-GB') {
+      await setAppLanguage(page, LANG);
+    }
 
     // Apply dark theme
     await page.evaluate(() => {

@@ -47,9 +47,13 @@ DEMOS[tui-interface]="VHS TUI interactive interface demo"
 DEMOS[tui-piping]="VHS TUI piping content demo"
 DEMOS[tui-sync]="VHS TUI sync commands demo"
 
+# Available languages for screenshot generation
+AVAILABLE_LANGS="de el en-GB en-US es fr it ja ko nl pl pt ru tr zh"
+
 # Parse command line arguments
 SPECIFIC_DEMO=""
 SHOW_LIST=false
+ALL_LANGS=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -65,6 +69,10 @@ while [[ $# -gt 0 ]]; do
       DEMO_LANG="$2"
       shift 2
       ;;
+    --all-langs)
+      ALL_LANGS=true
+      shift
+      ;;
     --help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
@@ -72,14 +80,18 @@ while [[ $# -gt 0 ]]; do
       echo "  --list              List all available demos"
       echo "  --name DEMO_NAME    Generate specific demo only"
       echo "  --lang LANGUAGE     Set language (default: en-GB)"
+      echo "  --all-langs         Generate web screenshots for all languages"
       echo "  --help              Show this help message"
       echo ""
+      echo "Available languages: $AVAILABLE_LANGS"
+      echo ""
       echo "Examples:"
-      echo "  $0                           # Generate all demos"
+      echo "  $0                           # Generate all demos for en-GB"
       echo "  $0 --list                    # List available demos"
       echo "  $0 --name tui-cli            # Generate only TUI CLI demo"
       echo "  $0 --name web-carousel-light # Generate only light carousel"
-      echo "  $0 --lang en-US              # Generate for en-US (future)"
+      echo "  $0 --lang en-US              # Generate for en-US"
+      echo "  $0 --all-langs               # Generate web screenshots for all languages"
       exit 0
       ;;
     *)
@@ -112,7 +124,12 @@ fi
 
 echo "🎬 Jottery Demo Generation"
 echo "=========================="
-echo "Language: $DEMO_LANG"
+if [ "$ALL_LANGS" = true ]; then
+  echo "Mode: All languages"
+  echo "Languages: $AVAILABLE_LANGS"
+else
+  echo "Language: $DEMO_LANG"
+fi
 if [ -n "$SPECIFIC_DEMO" ]; then
   echo "Generating: $SPECIFIC_DEMO"
 fi
@@ -123,11 +140,59 @@ echo -e "${BLUE}Checking dependencies...${NC}"
 command -v npm >/dev/null 2>&1 || { echo "❌ npm is required but not installed."; exit 1; }
 
 if [ -z "$SPECIFIC_DEMO" ] || [[ "$SPECIFIC_DEMO" == tui-* ]]; then
-  command -v vhs >/dev/null 2>&1 || { echo "❌ vhs is required but not installed. Run: brew install vhs"; exit 1; }
+  if [ "$ALL_LANGS" = false ]; then
+    command -v vhs >/dev/null 2>&1 || { echo "❌ vhs is required but not installed. Run: brew install vhs"; exit 1; }
+  fi
 fi
 
 echo -e "${GREEN}✓ All dependencies found${NC}"
 echo ""
+
+# Handle --all-langs mode
+if [ "$ALL_LANGS" = true ]; then
+  echo -e "${BLUE}Generating web screenshots for all languages...${NC}"
+  echo ""
+
+  for lang in $AVAILABLE_LANGS; do
+    echo -e "${CYAN}═══════════════════════════════════════${NC}"
+    echo -e "${YELLOW}Generating screenshots for: $lang${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════${NC}"
+
+    # Check if demo notes file exists for this language
+    DEMO_FILE="demo-generation/jottery-demo-notes-${lang}.json"
+    if [ ! -f "$DEMO_FILE" ]; then
+      echo -e "${YELLOW}⚠ Warning: $DEMO_FILE not found, skipping${NC}"
+      continue
+    fi
+
+    # Generate web screenshots for this language
+    LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts || {
+      echo -e "${YELLOW}⚠ Some tests failed for $lang, continuing...${NC}"
+    }
+
+    # Copy screenshots to public directory
+    if [ -d "screenshots/$lang" ]; then
+      mkdir -p "public/screenshots/$lang"
+      cp -r screenshots/$lang/* "public/screenshots/$lang/"
+      echo -e "${GREEN}✓ Screenshots copied to public/screenshots/$lang/${NC}"
+    fi
+
+    echo ""
+  done
+
+  # Clean up intermediate screenshots directory
+  if [ -d "screenshots" ]; then
+    echo -e "${BLUE}Cleaning up intermediate screenshots...${NC}"
+    rm -rf screenshots
+    echo -e "${GREEN}✓ Intermediate files removed${NC}"
+  fi
+
+  echo ""
+  echo -e "${GREEN}🎉 All language screenshots generated!${NC}"
+  echo ""
+  echo "Generated files in: public/screenshots/<lang>/"
+  exit 0
+fi
 
 # Function to generate web screenshots
 generate_web_screenshots() {
