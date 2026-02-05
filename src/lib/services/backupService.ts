@@ -277,7 +277,7 @@ function splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
  * Progress callback for backup creation
  */
 export type BackupProgressCallback = (progress: {
-  phase: 'counting' | 'encrypting' | 'complete';
+  phase: 'counting' | 'loading' | 'encrypting' | 'complete';
   current?: number;
   total?: number;
   item?: string;
@@ -469,8 +469,17 @@ export async function createBatchedBackup(
   }
 
   // Process attachments in batches (need to load blob data first)
+  // Report progress during loading since this can be slow for many attachments
   const attachmentRecords: AttachmentRecord[] = [];
-  for (const id of attachmentIds) {
+  for (let idx = 0; idx < attachmentIds.length; idx++) {
+    const id = attachmentIds[idx];
+    onProgress?.({
+      phase: 'loading',
+      current: idx + 1,
+      total: attachmentIds.length,
+      item: 'attachments',
+    });
+
     const blob = await attachmentRepository.getBlob(id);
     const thumbnail = await attachmentRepository.getThumbnail(id);
 
@@ -601,6 +610,197 @@ export async function createBatchedBackup(
 }
 
 /**
+ * Parse a backup file using streaming for large files
+ * Falls back to full parse for smaller files or legacy formats
+ */
+async function parseBackupFile(file: File): Promise<BackupData | null> {
+  // For files under 100MB, try direct parse
+  if (file.size < 100 * 1024 * 1024) {
+    try {
+      const text = await file.text();
+      return JSON.parse(text);
+    } catch {
+      // Fall through to streaming parse
+    }
+  }
+
+  // For large files, use streaming parse
+  try {
+    // Parse header
+    const header = await parseBackupHeader(file);
+    if (!header || !header.version || !header.type || !header.encryption) {
+      return null;
+    }
+
+    // For v3.0, we can reconstruct the backup from header + streaming batches + summary
+    if (header.version === '3.0') {
+      const summary = await parseBackupSummary(file);
+      if (!summary) return null;
+
+      // Parse batches by reading the file in chunks and extracting JSON objects
+      const batches = await parseBackupBatches(file);
+      if (!batches) return null;
+
+      return {
+        version: header.version,
+        type: header.type,
+        createdAt: header.createdAt || new Date().toISOString(),
+        encryption: header.encryption,
+        batches,
+        summary,
+      } as BackupDataV3;
+    }
+
+    // For v2.x, parse the data array
+    if (header.version === '2.1' || header.version === '2.0') {
+      const data = await parseBackupV2Data(file);
+      if (!data) return null;
+
+      return {
+        version: header.version,
+        type: header.type,
+        createdAt: header.createdAt || new Date().toISOString(),
+        encryption: header.encryption,
+        data,
+      } as BackupDataV2;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse batches array from a v3.0 backup file using streaming
+ */
+async function parseBackupBatches(file: File): Promise<BatchRecord[] | null> {
+  const batches: BatchRecord[] = [];
+  const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+  let buffer = '';
+  let inBatchesArray = false;
+  let braceDepth = 0;
+  let currentBatch = '';
+
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+    const text = await chunk.text();
+    buffer += text;
+
+    // Find start of batches array if not found yet
+    if (!inBatchesArray) {
+      const batchesStart = buffer.indexOf('"batches"');
+      if (batchesStart === -1) {
+        // Keep last 100 chars in case "batches" is split across chunks
+        buffer = buffer.slice(-100);
+        continue;
+      }
+      // Find the opening bracket
+      const bracketPos = buffer.indexOf('[', batchesStart);
+      if (bracketPos === -1) {
+        buffer = buffer.slice(batchesStart);
+        continue;
+      }
+      buffer = buffer.slice(bracketPos + 1);
+      inBatchesArray = true;
+    }
+
+    // Parse batch objects from buffer
+    let i = 0;
+    while (i < buffer.length) {
+      const char = buffer[i];
+
+      if (char === '{') {
+        if (braceDepth === 0) {
+          currentBatch = '';
+        }
+        braceDepth++;
+        currentBatch += char;
+      } else if (char === '}') {
+        braceDepth--;
+        currentBatch += char;
+        if (braceDepth === 0 && currentBatch) {
+          try {
+            const batch = JSON.parse(currentBatch);
+            batches.push(batch);
+          } catch {
+            // Skip malformed batch
+          }
+          currentBatch = '';
+        }
+      } else if (char === ']' && braceDepth === 0) {
+        // End of batches array
+        return batches;
+      } else if (braceDepth > 0) {
+        currentBatch += char;
+      }
+
+      i++;
+    }
+
+    // Keep unprocessed part of buffer
+    if (braceDepth > 0) {
+      // We're in the middle of a batch object, keep it
+      buffer = currentBatch;
+      currentBatch = '';
+    } else {
+      buffer = '';
+    }
+  }
+
+  return batches.length > 0 ? batches : null;
+}
+
+/**
+ * Parse data array from a v2.x backup file using streaming
+ */
+async function parseBackupV2Data(file: File): Promise<string[] | null> {
+  const data: string[] = [];
+  const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+  let buffer = '';
+  let inDataArray = false;
+
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+    const text = await chunk.text();
+    buffer += text;
+
+    // Find start of data array if not found yet
+    if (!inDataArray) {
+      const dataStart = buffer.indexOf('"data"');
+      if (dataStart === -1) {
+        buffer = buffer.slice(-50);
+        continue;
+      }
+      const bracketPos = buffer.indexOf('[', dataStart);
+      if (bracketPos === -1) {
+        buffer = buffer.slice(dataStart);
+        continue;
+      }
+      buffer = buffer.slice(bracketPos + 1);
+      inDataArray = true;
+    }
+
+    // Extract JWE tokens (strings starting with "eyJ")
+    const tokenRegex = /"(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)"/g;
+    let match;
+    while ((match = tokenRegex.exec(buffer)) !== null) {
+      data.push(match[1]);
+    }
+
+    // Check for end of array
+    if (buffer.includes(']}') || buffer.includes(']\n}')) {
+      break;
+    }
+
+    // Keep last part in case token spans chunks
+    buffer = buffer.slice(-1000);
+  }
+
+  return data.length > 0 ? data : null;
+}
+
+/**
  * Validate a backup file structure
  *
  * Checks:
@@ -608,6 +808,8 @@ export async function createBatchedBackup(
  * - Required fields are present
  * - Version is compatible (v2.1 or v3.0)
  * - Data format matches version
+ *
+ * Uses streaming parsing for large files to avoid memory issues.
  */
 export async function validateBackup(file: File): Promise<BackupValidationResult> {
   try {
@@ -619,13 +821,9 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    // Read file content
-    const text = await file.text();
-    let backup: BackupData;
-
-    try {
-      backup = JSON.parse(text);
-    } catch {
+    // Parse file (uses streaming for large files)
+    const backup = await parseBackupFile(file);
+    if (!backup) {
       return {
         valid: false,
         error: 'Invalid backup file. Could not parse JSON.',
@@ -1052,40 +1250,43 @@ export async function restoreFromBackup(
  */
 export function downloadBackup(backup: BackupData): void {
   // Build JSON in chunks to avoid string length limits
+  // Use newlines between records to enable streaming parsing on import
   const chunks: string[] = [];
 
-  // Opening structure
-  chunks.push('{"version":');
+  // Opening structure (with newlines for readability and streaming)
+  chunks.push('{\n"version":');
   chunks.push(JSON.stringify(backup.version));
-  chunks.push(',"type":');
+  chunks.push(',\n"type":');
   chunks.push(JSON.stringify(backup.type));
-  chunks.push(',"createdAt":');
+  chunks.push(',\n"createdAt":');
   chunks.push(JSON.stringify(backup.createdAt));
-  chunks.push(',"encryption":');
+  chunks.push(',\n"encryption":');
   chunks.push(JSON.stringify(backup.encryption));
 
   if (isBackupV3(backup)) {
     // v3.0 format: batches array and summary
-    chunks.push(',"batches":[');
+    // Each batch on its own line for streaming parsing
+    chunks.push(',\n"batches":[\n');
 
     for (let i = 0; i < backup.batches.length; i++) {
-      if (i > 0) chunks.push(',');
+      if (i > 0) chunks.push(',\n');
       chunks.push(JSON.stringify(backup.batches[i]));
     }
 
-    chunks.push('],"summary":');
+    chunks.push('\n],\n"summary":');
     chunks.push(JSON.stringify(backup.summary));
-    chunks.push('}');
+    chunks.push('\n}');
   } else if (isBackupV2(backup)) {
     // v2.x format: data array
-    chunks.push(',"data":[');
+    // Each record on its own line for streaming parsing
+    chunks.push(',\n"data":[\n');
 
     for (let i = 0; i < backup.data.length; i++) {
-      if (i > 0) chunks.push(',');
+      if (i > 0) chunks.push(',\n');
       chunks.push(JSON.stringify(backup.data[i]));
     }
 
-    chunks.push(']}');
+    chunks.push('\n]\n}');
   }
 
   const blob = new Blob(chunks, { type: 'application/json' });
@@ -1111,10 +1312,95 @@ export function downloadBackup(backup: BackupData): void {
 }
 
 /**
+ * Parse backup header from the beginning of a file
+ * This avoids loading the entire file into memory
+ */
+async function parseBackupHeader(file: File): Promise<{
+  version?: string;
+  type?: string;
+  createdAt?: string;
+  encryption?: EncryptionMetadata;
+} | null> {
+  // Read first 10KB which should contain all header fields
+  const headerSize = Math.min(10 * 1024, file.size);
+  const headerSlice = file.slice(0, headerSize);
+  const headerText = await headerSlice.text();
+
+  try {
+    // Extract individual fields using regex (works on partial JSON)
+    const versionMatch = headerText.match(/"version"\s*:\s*"([^"]+)"/);
+    const typeMatch = headerText.match(/"type"\s*:\s*"([^"]+)"/);
+    const createdAtMatch = headerText.match(/"createdAt"\s*:\s*"([^"]+)"/);
+
+    // Extract encryption object (it's relatively small and near the start)
+    const encryptionMatch = headerText.match(/"encryption"\s*:\s*(\{[^}]+\})/);
+
+    if (!versionMatch || !typeMatch) {
+      return null;
+    }
+
+    return {
+      version: versionMatch[1],
+      type: typeMatch[1],
+      createdAt: createdAtMatch?.[1],
+      encryption: encryptionMatch ? JSON.parse(encryptionMatch[1]) : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse backup summary from the end of a v3.0 file
+ */
+async function parseBackupSummary(file: File): Promise<BackupSummary | null> {
+  // Read last 1KB which should contain the summary
+  const tailSize = Math.min(1024, file.size);
+  const tailSlice = file.slice(file.size - tailSize);
+  const tailText = await tailSlice.text();
+
+  try {
+    // Find the summary object
+    const summaryMatch = tailText.match(/"summary"\s*:\s*(\{[^}]+\})/);
+    if (summaryMatch) {
+      return JSON.parse(summaryMatch[1]);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Count records in a v2.x backup by counting JWE tokens
+ * Uses streaming to avoid loading entire file
+ */
+async function countV2Records(file: File): Promise<number> {
+  // For v2.x, count the JWE tokens in the data array
+  // Each JWE token starts with "eyJ" (base64 of '{"')
+  let count = 0;
+  const chunkSize = 1024 * 1024; // 1MB chunks
+
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const chunk = file.slice(offset, offset + chunkSize);
+    const text = await chunk.text();
+    // Count occurrences of JWE token starts (rough count)
+    const matches = text.match(/"eyJ[A-Za-z0-9_-]+\./g);
+    if (matches) {
+      count += matches.length;
+    }
+  }
+
+  return count;
+}
+
+/**
  * Get backup file stats without full validation
  *
  * For v2.x backups, we can only show record count (types are encrypted).
  * For v3.0 backups, we can show the full summary (notes, attachments, versions, saved searches).
+ *
+ * Uses streaming parsing to handle large files without loading everything into memory.
  */
 export async function getBackupStats(file: File): Promise<{
   valid: boolean;
@@ -1125,35 +1411,41 @@ export async function getBackupStats(file: File): Promise<{
   error?: string;
 }> {
   try {
-    const text = await file.text();
-    const backup: BackupData = JSON.parse(text);
+    // Parse header without loading entire file
+    const header = await parseBackupHeader(file);
 
-    if (backup.type !== BACKUP_TYPE) {
+    if (!header) {
+      return { valid: false, error: 'Could not read backup file header' };
+    }
+
+    if (header.type !== BACKUP_TYPE) {
       return { valid: false, error: 'Not a Jottery backup file' };
     }
 
-    if (isBackupV3(backup)) {
-      // v3.0: return detailed summary
-      return {
-        valid: true,
-        version: backup.version,
-        createdAt: backup.createdAt,
-        summary: backup.summary,
-        recordCount:
-          backup.summary.notes +
-          backup.summary.attachments +
-          backup.summary.versions +
-          backup.summary.savedSearches,
-      };
+    // v3.0: get summary from end of file
+    if (header.version === '3.0') {
+      const summary = await parseBackupSummary(file);
+      if (summary) {
+        return {
+          valid: true,
+          version: header.version,
+          createdAt: header.createdAt,
+          summary,
+          recordCount:
+            summary.notes + summary.attachments + summary.versions + summary.savedSearches,
+        };
+      }
+      return { valid: false, error: 'Could not read backup summary' };
     }
 
-    // v2.x: can only show record count
-    if (isBackupV2(backup)) {
+    // v2.x: count records by scanning file
+    if (header.version === '2.1' || header.version === '2.0') {
+      const recordCount = await countV2Records(file);
       return {
         valid: true,
-        version: backup.version,
-        createdAt: backup.createdAt,
-        recordCount: backup.data.length,
+        version: header.version,
+        createdAt: header.createdAt,
+        recordCount,
       };
     }
 

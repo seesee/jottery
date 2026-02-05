@@ -218,6 +218,8 @@
     "creating": "Creando copia de seguridad...",
     "created": "Copia de seguridad creada con éxito",
     "failed": "Error al crear la copia de seguridad",
+    "loadingAttachments": "Cargando archivos adjuntos...",
+    "encrypting": "Cifrando datos...",
     "restore": {
       "title": "Restaurar desde copia de seguridad",
       "selectFile": "Seleccionar archivo de copia de seguridad",

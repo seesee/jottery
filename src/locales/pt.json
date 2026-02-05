@@ -218,6 +218,8 @@
     "creating": "A criar backup...",
     "created": "Backup criado com sucesso",
     "failed": "Falha ao criar backup",
+    "loadingAttachments": "Carregando anexos...",
+    "encrypting": "Criptografando dados...",
     "restore": {
       "title": "Restaurar do Backup",
       "selectFile": "Selecionar ficheiro de backup",

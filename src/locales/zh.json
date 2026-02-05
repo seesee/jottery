@@ -218,6 +218,8 @@
     "creating": "正在创建备份...",
     "created": "备份创建成功",
     "failed": "创建备份失败",
+    "loadingAttachments": "正在加载附件...",
+    "encrypting": "正在加密数据...",
     "restore": {
       "title": "从备份恢复",
       "selectFile": "选择备份文件",

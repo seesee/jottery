@@ -218,6 +218,8 @@
     "creating": "Back-up maken...",
     "created": "Back-up succesvol gemaakt",
     "failed": "Back-up maken mislukt",
+    "loadingAttachments": "Bijlagen laden...",
+    "encrypting": "Gegevens versleutelen...",
     "restore": {
       "title": "Herstellen vanuit Back-up",
       "selectFile": "Selecteer back-upbestand",

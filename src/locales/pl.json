@@ -218,6 +218,8 @@
     "creating": "Tworzenie kopii zapasowej...",
     "created": "Kopia zapasowa utworzona pomyślnie",
     "failed": "Nie udało się utworzyć kopii zapasowej",
+    "loadingAttachments": "Ładowanie załączników...",
+    "encrypting": "Szyfrowanie danych...",
     "restore": {
       "title": "Przywróć z Kopii Zapasowej",
       "selectFile": "Wybierz plik kopii zapasowej",
