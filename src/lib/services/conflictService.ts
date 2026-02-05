@@ -11,7 +11,7 @@ import type { Note, ConflictData, Attachment } from '../types';
 import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
 import { noteService } from './noteService';
-import { cryptoService, encryptStringArray } from './crypto';
+import { cryptoService, encryptStringArray, updateHashChain } from './crypto';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError } from '../errors';
 
@@ -154,12 +154,32 @@ export async function resolveKeepMine(noteId: string): Promise<void> {
     throw new NotFoundError('Note', noteId);
   }
 
-  // Update note with current timestamp to ensure it wins on next push
+  // Get conflict data for server's hash info
+  const syncMeta = await syncRepository.getNoteSyncMetadata(noteId);
+  const conflict = syncMeta?.conflictData;
+
+  // Recompute content hash for current local content
+  const contentHash = await cryptoService.computeContentHash(note);
+
+  // Set parentHash to server's contentHash (acknowledges server version)
+  // This makes the next push a fast-forward from the server's perspective
+  const serverChain = conflict?.serverHashChain || [];
+  const parentHash = conflict?.serverContentHash || note.parentHash;
+
+  // Merge hash chains: local content hash + server hash + server chain
+  const hashChain = updateHashChain(contentHash,
+    [conflict?.serverContentHash, ...serverChain].filter((h): h is string => !!h)
+  );
+
+  // Update note with current timestamp and corrected hash chain
   const now = new Date().toISOString();
   await noteRepository.update({
     ...note,
     modifiedAt: now,
     needsSync: true,
+    contentHash,
+    parentHash,
+    hashChain,
   });
 
   // Clear conflict status
@@ -192,7 +212,7 @@ export async function resolveKeepServer(noteId: string): Promise<void> {
     throw new NotFoundError('Note', noteId);
   }
 
-  // Update note with server data
+  // Update note with server data, including hash chain fields
   await noteRepository.update({
     ...existingNote,
     content: conflict.serverContent,
@@ -203,12 +223,16 @@ export async function resolveKeepServer(noteId: string): Promise<void> {
     wordWrap: conflict.serverWordWrap,
     attachments: conflict.serverAttachments as Attachment[],
     needsSync: false,
+    contentHash: conflict.serverContentHash,
+    parentHash: conflict.serverParentHash,
+    hashChain: conflict.serverHashChain || [],
   });
 
-  // Clear conflict and mark as synced
+  // Clear conflict and mark as synced with matching syncHash
   await syncRepository.updateNoteSyncMetadata(noteId, {
     noteId,
     syncedAt: new Date().toISOString(),
+    syncHash: conflict.serverContentHash || '',
     serverVersion: conflict.serverVersion,
     lastSyncStatus: 'synced',
     errorMessage: undefined,
@@ -256,14 +280,24 @@ export async function resolveKeepBoth(noteId: string): Promise<string> {
     // Note: Attachments would need to be copied separately if needed
   });
 
-  // Clear conflict on original note and mark for sync
+  // Update original note's hash chain to acknowledge server version
   const now = new Date().toISOString();
   const originalNote = await noteRepository.getById(noteId);
   if (originalNote) {
+    const contentHash = await cryptoService.computeContentHash(originalNote);
+    const serverChain = conflict.serverHashChain || [];
+    const parentHash = conflict.serverContentHash || originalNote.parentHash;
+    const hashChain = updateHashChain(contentHash,
+      [conflict.serverContentHash, ...serverChain].filter((h): h is string => !!h)
+    );
+
     await noteRepository.update({
       ...originalNote,
       modifiedAt: now,
       needsSync: true,
+      contentHash,
+      parentHash,
+      hashChain,
     });
   }
 
@@ -296,18 +330,40 @@ export async function resolveMerge(
     throw new NotFoundError('Note', noteId);
   }
 
+  // Get conflict data for server's hash info
+  const syncMeta = await syncRepository.getNoteSyncMetadata(noteId);
+  const conflict = syncMeta?.conflictData;
+
   // Encrypt merged content
   const encryptedContent = await cryptoService.encryptText(mergedContent, masterKey.key);
   const encryptedTags = await encryptStringArray(mergedTags, masterKey.key);
 
-  // Update note with merged content
-  const now = new Date().toISOString();
-  await noteRepository.update({
+  // Build the updated note to compute its content hash
+  const updatedNote = {
     ...note,
     content: JSON.stringify(encryptedContent),
     tags: [JSON.stringify(encryptedTags)],
+  };
+
+  // Compute content hash for the merged version
+  const mergedContentHash = await cryptoService.computeContentHash(updatedNote);
+
+  // Set parentHash to server's hash (acknowledges both versions)
+  const serverChain = conflict?.serverHashChain || [];
+  const parentHash = conflict?.serverContentHash || note.parentHash;
+  const hashChain = updateHashChain(mergedContentHash,
+    [conflict?.serverContentHash, ...serverChain].filter((h): h is string => !!h)
+  );
+
+  // Update note with merged content and corrected hash chain
+  const now = new Date().toISOString();
+  await noteRepository.update({
+    ...updatedNote,
     modifiedAt: now,
     needsSync: true,
+    contentHash: mergedContentHash,
+    parentHash,
+    hashChain,
   });
 
   // Clear conflict status
