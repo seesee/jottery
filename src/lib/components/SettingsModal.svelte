@@ -991,6 +991,12 @@
       const backup = await createBatchedBackup((progress) => {
         if (progress.total) progressTotal = progress.total;
         if (progress.current) progressCurrent = progress.current;
+        // Show phase-specific message
+        if (progress.phase === 'loading' && progress.item === 'attachments') {
+          progressMessage = $_('backup.loadingAttachments');
+        } else if (progress.phase === 'encrypting') {
+          progressMessage = $_('backup.encrypting');
+        }
       });
       downloadBackup(backup);
       // Record the backup to reset counters and hide reminder

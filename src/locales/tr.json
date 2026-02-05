@@ -218,6 +218,8 @@
     "creating": "Yedekleme oluşturuluyor...",
     "created": "Yedekleme başarıyla oluşturuldu",
     "failed": "Yedekleme oluşturulamadı",
+    "loadingAttachments": "Ekler yükleniyor...",
+    "encrypting": "Veriler şifreleniyor...",
     "restore": {
       "title": "Yedekten Geri Yükle",
       "selectFile": "Yedek dosyası seçin",

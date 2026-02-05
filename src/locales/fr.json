@@ -218,6 +218,8 @@
     "creating": "Création de la sauvegarde...",
     "created": "Sauvegarde créée avec succès",
     "failed": "Échec de la création de la sauvegarde",
+    "loadingAttachments": "Chargement des pièces jointes...",
+    "encrypting": "Chiffrement des données...",
     "restore": {
       "title": "Restaurer depuis une sauvegarde",
       "selectFile": "Sélectionner le fichier de sauvegarde",
