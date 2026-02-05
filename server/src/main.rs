@@ -191,7 +191,7 @@ async fn main() {
     // Inbox management routes (device API key auth — same as sync)
     let inbox_manage_routes = Router::new()
         .route("/api/v1/inbox", get(api::inbox::list_items).delete(api::inbox::delete_all))
-        .route("/api/v1/inbox/{id}", delete(api::inbox::delete_item))
+        .route("/api/v1/inbox/:id", delete(api::inbox::delete_item))
         .route("/api/v1/inbox/status", get(api::inbox::get_status))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
