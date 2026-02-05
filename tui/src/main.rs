@@ -1092,9 +1092,21 @@ fn main() -> Result<()> {
 
     info!("Entering main event loop");
 
+    // Track state variant to force full redraw on major transitions
+    let mut last_state = std::mem::discriminant(&app.state);
+
     // Main loop
     while !app.should_quit() {
-        // Check if we need to force a full redraw (e.g., after external editor)
+        // Force full redraw when the app state variant changes (e.g., Locked→NoteList,
+        // NoteList→Settings). This works around terminals that leave stale characters
+        // or spacing artifacts across screen transitions.
+        let current_state = std::mem::discriminant(&app.state);
+        if current_state != last_state {
+            app.need_redraw = true;
+            last_state = current_state;
+        }
+
+        // Check if we need to force a full redraw (e.g., after external editor or state change)
         if app.should_redraw() {
             // Clear ratatui's internal buffer
             tui.clear()?;
