@@ -1,7 +1,7 @@
 # Jottery Sync Protocol Specification
 
-**Version**: 1.0
-**Last Updated**: January 2026
+**Version**: 1.1
+**Last Updated**: February 2026
 
 This document specifies the Jottery sync protocol, enabling third-party clients to synchronise notes with a Jottery server while maintaining end-to-end encryption.
 
@@ -584,7 +584,29 @@ async function syncNotes() {
 }
 ```
 
+## Inbox API
+
+The server also provides an **Inbox API** for submitting notes programmatically without the encryption password. Inbox items are stored unencrypted on the server and included in the sync pull response for client-side review. Users can accept (encrypt into the main note corpus) or delete inbox items.
+
+The inbox uses a separate authentication token with limited scope (submit only). For full documentation, see [INBOX-API.md](INBOX-API.md).
+
+**Key endpoints:**
+
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `POST /api/v1/inbox` | Inbox token | Submit an item to the inbox |
+| `GET /api/v1/inbox` | Device API key | List inbox items (used during sync pull) |
+| `DELETE /api/v1/inbox/:id` | Device API key | Delete a single inbox item |
+| `DELETE /api/v1/inbox` | Device API key | Delete all inbox items |
+| `GET /api/v1/inbox/status` | Device API key | Get inbox quota usage |
+
 ## Changelog
+
+### 1.1 (February 2026)
+- Added Inbox API for programmatic note submission
+- Inbox items included in sync pull response
+- Inbox token management endpoints (generate, revoke, status)
+- Per-user inbox quotas (item count and size)
 
 ### 1.0 (January 2026)
 - Initial specification
