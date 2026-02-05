@@ -610,15 +610,32 @@ export async function createBatchedBackup(
 }
 
 /**
+ * Progress callback for backup validation/parsing
+ */
+export type ValidationProgressCallback = (progress: {
+  phase: 'reading' | 'parsing' | 'complete';
+  bytesRead: number;
+  totalBytes: number;
+  percent: number;
+}) => void;
+
+/**
  * Parse a backup file using streaming for large files
  * Falls back to full parse for smaller files or legacy formats
  */
-async function parseBackupFile(file: File): Promise<BackupData | null> {
+async function parseBackupFile(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<BackupData | null> {
   // For files under 100MB, try direct parse
   if (file.size < 100 * 1024 * 1024) {
     try {
+      onProgress?.({ phase: 'reading', bytesRead: 0, totalBytes: file.size, percent: 0 });
       const text = await file.text();
-      return JSON.parse(text);
+      onProgress?.({ phase: 'parsing', bytesRead: file.size, totalBytes: file.size, percent: 50 });
+      const result = JSON.parse(text);
+      onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
+      return result;
     } catch {
       // Fall through to streaming parse
     }
@@ -627,6 +644,7 @@ async function parseBackupFile(file: File): Promise<BackupData | null> {
   // For large files, use streaming parse
   try {
     // Parse header
+    onProgress?.({ phase: 'reading', bytesRead: 0, totalBytes: file.size, percent: 0 });
     const header = await parseBackupHeader(file);
     if (!header || !header.version || !header.type || !header.encryption) {
       return null;
@@ -638,9 +656,10 @@ async function parseBackupFile(file: File): Promise<BackupData | null> {
       if (!summary) return null;
 
       // Parse batches by reading the file in chunks and extracting JSON objects
-      const batches = await parseBackupBatches(file);
+      const batches = await parseBackupBatches(file, onProgress);
       if (!batches) return null;
 
+      onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
       return {
         version: header.version,
         type: header.type,
@@ -653,9 +672,10 @@ async function parseBackupFile(file: File): Promise<BackupData | null> {
 
     // For v2.x, parse the data array
     if (header.version === '2.1' || header.version === '2.0') {
-      const data = await parseBackupV2Data(file);
+      const data = await parseBackupV2Data(file, onProgress);
       if (!data) return null;
 
+      onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
       return {
         version: header.version,
         type: header.type,
@@ -674,7 +694,10 @@ async function parseBackupFile(file: File): Promise<BackupData | null> {
 /**
  * Parse batches array from a v3.0 backup file using streaming
  */
-async function parseBackupBatches(file: File): Promise<BatchRecord[] | null> {
+async function parseBackupBatches(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<BatchRecord[] | null> {
   const batches: BatchRecord[] = [];
   const chunkSize = 10 * 1024 * 1024; // 10MB chunks
   let carryover = ''; // Text carried over when searching for "batches"
@@ -685,6 +708,11 @@ async function parseBackupBatches(file: File): Promise<BatchRecord[] | null> {
   for (let offset = 0; offset < file.size; offset += chunkSize) {
     const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
     const text = await chunk.text();
+
+    // Report progress
+    const bytesRead = Math.min(offset + chunkSize, file.size);
+    const percent = Math.round((bytesRead / file.size) * 100);
+    onProgress?.({ phase: 'reading', bytesRead, totalBytes: file.size, percent });
 
     // Find start of batches array if not found yet
     if (!inBatchesArray) {
@@ -766,7 +794,10 @@ async function parseBackupBatches(file: File): Promise<BatchRecord[] | null> {
 /**
  * Parse data array from a v2.x backup file using streaming
  */
-async function parseBackupV2Data(file: File): Promise<string[] | null> {
+async function parseBackupV2Data(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<string[] | null> {
   const data: string[] = [];
   const chunkSize = 10 * 1024 * 1024; // 10MB chunks
   let buffer = '';
@@ -776,6 +807,11 @@ async function parseBackupV2Data(file: File): Promise<string[] | null> {
     const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
     const text = await chunk.text();
     buffer += text;
+
+    // Report progress
+    const bytesRead = Math.min(offset + chunkSize, file.size);
+    const percent = Math.round((bytesRead / file.size) * 100);
+    onProgress?.({ phase: 'reading', bytesRead, totalBytes: file.size, percent });
 
     // Find start of data array if not found yet
     if (!inDataArray) {
@@ -823,7 +859,10 @@ async function parseBackupV2Data(file: File): Promise<string[] | null> {
  *
  * Uses streaming parsing for large files to avoid memory issues.
  */
-export async function validateBackup(file: File): Promise<BackupValidationResult> {
+export async function validateBackup(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<BackupValidationResult> {
   try {
     // Check file extension
     if (!file.name.endsWith(BACKUP_FILE_EXTENSION) && !file.name.endsWith('.json')) {
@@ -834,7 +873,7 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
     }
 
     // Parse file (uses streaming for large files)
-    const backup = await parseBackupFile(file);
+    const backup = await parseBackupFile(file, onProgress);
     if (!backup) {
       return {
         valid: false,
