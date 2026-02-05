@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "exportDate": "2026-01-24T12:00:00Z",
+  "notes": [
+    {
+      "id": "nl-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
+      "content": "# Welkom bij Jottery!\n\nDit is een demo-notitieblok dat de mogelijkheden van Jottery laat zien.\n\n## Wat je hier vindt\n\nDeze demo bevat voorbeelden van:\n- Georganiseerde notities met tags\n- Boodschappen- en takenlijsten\n- Kookrecepten\n- Reisplannen\n- Persoonlijke notities\n\n## Aan de slag\n\n1. **Blader door notities** - Klik op notities in de lijst\n2. **Probeer zoeken** - Gebruik de zoekbalk\n3. **Maak je eigen** - Druk op \"Nieuw\" om te beginnen\n4. **Organiseer met tags** - Gebruik #tag overal\n\n## Tips\n\n- Druk `Ctrl+K` om te zoeken\n- Druk `Ctrl+N` voor een nieuwe notitie\n- Gebruik #tags voor organisatie\n\nVeel plezier met verkennen!",
+      "tags": ["welkom", "demo", "aan-de-slag"],
+      "attachments": [],
+      "pinned": true
+    },
+    {
+      "id": "nl-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-23T10:05:00Z",
+      "modifiedAt": "2026-01-23T10:05:00Z",
+      "content": "# Boodschappenlijst\n\nDingen om deze week te kopen.\n\n## Boodschappen\n- [ ] Melk (1 liter)\n- [ ] Eieren (10 stuks)\n- [ ] Volkoren brood\n- [ ] Goudse kaas\n- [ ] Boter\n- [ ] Tomaten\n- [ ] Komkommer\n- [ ] Kipfilet\n- [ ] Rijst\n- [ ] Pasta\n- [ ] Olijfolie\n\n## Huishouden\n- [ ] Keukenpapier\n- [ ] Afwasmiddel\n- [ ] LED-lampen\n\n## Andere boodschappen\n- [ ] Stomerij ophalen\n- [ ] Postkantoor - pakket versturen\n- [ ] Boeken terugbrengen naar de bibliotheek\n\n## Notities\n- Albert Heijn sluit om 22:00\n- Herbruikbare tassen niet vergeten!",
+      "tags": ["boodschappen", "persoonlijk", "lijst"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "nl-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-23T10:10:00Z",
+      "modifiedAt": "2026-01-23T10:10:00Z",
+      "content": "# Stamppot Boerenkool - Traditioneel recept\n\n*Een Hollandse winterklassieker*\n\n## Ingrediënten\n\n### Voor de stamppot\n- 1 kg kruimige aardappelen\n- 500g boerenkool (gewassen en gesneden)\n- 1 ui\n- 200ml melk\n- 50g boter\n- Zout en peper\n- Nootmuskaat\n\n### Erbij\n- 4 rookworsten\n- Jus (uit een pakje mag)\n- Zure augurken\n- Mosterd\n\n## Bereiding\n\n### Aardappelen koken\n1. Schil de aardappelen en snijd in stukken\n2. Kook in ruim water met zout\n3. Na 10 minuten de boerenkool toevoegen\n4. Nog 15-20 minuten koken tot alles gaar is\n\n### De rookworst\n1. Verwarm de rookworst in heet water\n2. Niet laten koken!\n3. 15 minuten laten trekken\n\n### Stampen\n1. Giet de groenten af (bewaar wat kookvocht)\n2. Voeg boter en warme melk toe\n3. Stamp tot gewenste consistentie\n4. Voeg eventueel kookvocht toe\n5. Breng op smaak met zout, peper en nootmuskaat\n\n### Serveren\n1. Schep de stamppot op borden\n2. Maak een kuiltje voor de jus\n3. Leg de rookworst ernaast\n4. Serveer met mosterd en augurken\n\n## Tips\n\n- Vers van het land is het lekkerst na de eerste vorst\n- Knapperig gebakken spekjes zijn ook heerlijk erdoor\n- Restjes zijn de volgende dag nog lekkerder\n\nEet smakelijk!",
+      "tags": ["recept", "koken", "nederlands", "stamppot"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "nl-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "createdAt": "2026-01-23T10:15:00Z",
+      "modifiedAt": "2026-01-23T10:15:00Z",
+      "content": "# Fietsvakantie Zeeland 2026\n\n**Duur**: 5 dagen (15-19 juni 2026)\n\n## Checklist\n\n- [x] Accommodatie geboekt (Middelburg)\n- [x] Fietsen nagekeken\n- [ ] Fietskoffers kopen\n- [ ] Reserveringen restaurants\n- [ ] Reisverzekering\n\n## Route\n\n### Dag 1: Aankomst Middelburg\n- Trein naar Middelburg\n- Check-in B&B\n- Stadswandeling historisch centrum\n- Abdij en Lange Jan beklimmen\n- Diner: Zeeuwse mosselen!\n\n### Dag 2: Walcheren rond\n- Route: 45 km\n- Vertrek richting Domburg\n- Pauze aan het strand\n- Door naar Veere\n- Lunch: pannenkoeken\n- Via Vrouwenpolder terug\n\n### Dag 3: Noord-Beveland\n- Route: 50 km\n- Veer naar Wolphaartsdijk\n- Rond het eiland fietsen\n- Bezoek aan oesterputten\n- Proeverij Zeeuwse oesters\n\n### Dag 4: Schouwen-Duiveland\n- Route: 40 km\n- Veer naar Zierikzee\n- Prachtig historisch stadje\n- Watersnoodmuseum bezoeken\n- Delta-werken bekijken\n\n### Dag 5: Vertrek\n- Laatste fietstocht rond Middelburg\n- Souvenirs kopen (Zeeuwse bolus!)\n- Trein naar huis\n\n## Restaurants\n\n- **De Huifkar** (Middelburg) - Streekproducten\n- **Inter Scaldes** (Kruiningen) - Sterrenzaak\n- **Het Arsenaal** (Vlissingen) - Vis\n\n## Budget\n\n- Treinkaarten: €60\n- B&B (4 nachten): €320\n- Veerboten: €30\n- Eten: €250\n- Activiteiten: €50\n- **Totaal**: ~€710\n\n## Inpaklijst\n\n- Regenkleding (dit is Nederland!)\n- Fietsbroek\n- Zonnebrand\n- EHBO-kit\n- Fietspomp\n- Kaart/GPS\n\nKan niet wachten!",
+      "tags": ["reizen", "zeeland", "fietsen", "vakantie"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "nl-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "createdAt": "2026-01-23T10:20:00Z",
+      "modifiedAt": "2026-01-23T10:20:00Z",
+      "content": "# Weekmenu\n\nWeek van 20-26 januari 2026\n\n## Maandag\n- **Ontbijt**: Boterham met hagelslag\n- **Lunch**: Broodje kaas\n- **Avondeten**: Erwtensoep (het vriest!)\n\n## Dinsdag\n- **Ontbijt**: Yoghurt met muesli\n- **Lunch**: Tosti ham-kaas\n- **Avondeten**: Spaghetti bolognese\n\n## Woensdag\n- **Ontbijt**: Havermout\n- **Lunch**: Restjes soep\n- **Avondeten**: Kip met rijst en groenten\n\n## Donderdag\n- **Ontbijt**: Beschuit met muisjes (jarig!)\n- **Lunch**: Uitsmijter\n- **Avondeten**: Hutspot met klapstuk\n\n## Vrijdag\n- **Ontbijt**: Croissant\n- **Lunch**: Restjes\n- **Avondeten**: Friet met frikandel (het is vrijdag!)\n\n## Zaterdag\n- **Ontbijt**: Uitgebreid ontbijt\n- **Lunch**: Broodje haring\n- **Avondeten**: Stamppot boerenkool (zie recept)\n\n## Zondag\n- **Ontbijt**: Pannenkoeken\n- **Lunch**: Appeltaart bij oma\n- **Avondeten**: Restjes / boterham\n\n## Boodschappenlijst\n\n- Kipfilet (1 kg)\n- Gehakt (500g)\n- Rookworst (4)\n- Verse groenten\n- Kaas, boter\n- Eieren\n- Brood\n- Pasta, rijst",
+      "tags": ["weekmenu", "koken", "organisatie"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "nl-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "createdAt": "2026-01-23T10:25:00Z",
+      "modifiedAt": "2026-01-23T10:25:00Z",
+      "content": "# Boeken om te lezen 2026\n\nMijn leeslijst voor dit jaar.\n\n## Nu aan het lezen\n\n- [ ] **\"De ontdekking van de hemel\"** - Harry Mulisch\n  - Hoofdstuk 35\n  - Meesterwerk!\n\n## Nederlandse literatuur\n\n- [ ] \"Het diner\" - Herman Koch\n- [x] \"De aanslag\" - Harry Mulisch\n- [ ] \"Turks fruit\" - Jan Wolkers\n- [ ] \"Het Achterhuis\" - Anne Frank\n\n## Klassiekers\n\n- [ ] \"Misdaad en straf\" - Fjodor Dostojevski\n- [ ] \"De grote Gatsby\" - F. Scott Fitzgerald\n- [x] \"1984\" - George Orwell\n\n## Non-fictie\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"De kracht van gewoontes\" - Charles Duhigg\n- [ ] \"Ons feilbare denken\" - Daniel Kahneman\n\n## Doel\n\n- **Streefgetal**: 20 boeken\n- **Voortgang**: 2/20\n\n## Leesnotities\n\n### \"De aanslag\"\n- De willekeur van het lot\n- Omgaan met trauma\n- De schaduw van de oorlog over generaties",
+      "tags": ["boeken", "lezen", "doelen"],
+      "attachments": [],
+      "pinned": false
+    }
+  ]
+}

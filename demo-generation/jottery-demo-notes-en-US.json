@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "exportDate": "2026-01-24T12:00:00Z",
+  "notes": [
+    {
+      "id": "en-us-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
+      "content": "# Welcome to Jottery!\n\nThis is a demo notepad showcasing Jottery's capabilities.\n\n## What you'll find here\n\nThis demo includes examples of:\n- Organized notes with tags\n- To-do and shopping lists\n- Cooking recipes\n- Travel plans\n- Personal notes\n\n## Getting started\n\n1. **Browse the notes** - Click on notes in the list\n2. **Try the search** - Use the search bar\n3. **Create your own** - Press \"New\" to start\n4. **Organize with tags** - Use #tag anywhere\n\n## Tips\n\n- Press `Ctrl+K` to search\n- Press `Ctrl+N` for a new note\n- Use #tags for organization\n\nHappy exploring!",
+      "tags": ["welcome", "demo", "getting-started"],
+      "attachments": [],
+      "pinned": true
+    },
+    {
+      "id": "en-us-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-23T10:05:00Z",
+      "modifiedAt": "2026-01-23T10:05:00Z",
+      "content": "# Shopping List\n\nThings to buy this week.\n\n## Groceries\n- [ ] Milk (half gallon)\n- [ ] Eggs (dozen)\n- [ ] Whole wheat bread\n- [ ] American cheese\n- [ ] Butter\n- [ ] Tomatoes\n- [ ] Cucumber\n- [ ] Chicken breasts\n- [ ] Rice\n- [ ] Pasta\n- [ ] Olive oil\n\n## Household\n- [ ] Paper towels\n- [ ] Dish soap\n- [ ] LED bulbs\n\n## Other errands\n- [ ] Pick up dry cleaning\n- [ ] Post office - mail package\n- [ ] Return books to the library\n\n## Notes\n- Trader Joe's closes at 9pm\n- Don't forget the reusable bags!",
+      "tags": ["shopping", "personal", "list"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "en-us-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-23T10:10:00Z",
+      "modifiedAt": "2026-01-23T10:10:00Z",
+      "content": "# BBQ Pulled Pork - Slow Cooker Recipe\n\n*Classic American comfort food*\n\n## Ingredients\n\n### For the pork\n- 4 lb pork shoulder (bone-in)\n- 1 onion, sliced\n- 4 cloves garlic, minced\n- 1 cup chicken broth\n- 2 tbsp brown sugar\n- 1 tbsp smoked paprika\n- 1 tsp cumin\n- Salt and pepper\n\n### For the sauce\n- 1 cup ketchup\n- 1/4 cup apple cider vinegar\n- 2 tbsp brown sugar\n- 1 tbsp Worcestershire sauce\n- 1 tsp liquid smoke\n- Hot sauce to taste\n\n## Instructions\n\n### Prep the pork\n1. Mix paprika, cumin, salt, pepper and brown sugar\n2. Rub the spice mix all over the pork\n3. Place onions in the bottom of slow cooker\n4. Add pork on top, fat side up\n5. Pour broth around (not over) the pork\n\n### Slow cook\n1. Cook on LOW for 8-10 hours\n2. Pork should fall apart easily when done\n3. Remove and let rest 10 minutes\n4. Shred with two forks\n\n### Make the sauce\n1. Whisk all sauce ingredients together\n2. Simmer for 10 minutes\n3. Toss with shredded pork\n\n### Serving suggestions\n- Pile on brioche buns\n- Top with coleslaw\n- Serve with pickles and fries\n- Great for game day!\n\n## Tips\n\n- Can prep the night before\n- Freezes well for 3 months\n- Leftovers make great tacos\n\nEnjoy!",
+      "tags": ["recipe", "cooking", "bbq", "slow-cooker"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "en-us-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "createdAt": "2026-01-23T10:15:00Z",
+      "modifiedAt": "2026-01-23T10:15:00Z",
+      "content": "# Pacific Coast Highway Road Trip 2026\n\n**Duration**: 7 days (June 15-21, 2026)\n\n## Checklist\n\n- [x] Book flights to San Francisco\n- [x] Reserve rental car (convertible!)\n- [ ] Book hotels along the route\n- [ ] Make dinner reservations\n- [ ] Travel insurance\n\n## Itinerary\n\n### Day 1: San Francisco\n- Fly into SFO (arrive 11am)\n- Pick up rental car\n- Explore Fisherman's Wharf\n- Dinner in North Beach\n\n### Day 2: SF to Monterey\n- Drive across Golden Gate Bridge\n- Stop at Half Moon Bay\n- 17-Mile Drive\n- Overnight in Carmel-by-the-Sea\n\n### Day 3: Big Sur\n- Bixby Bridge (photo stop!)\n- Hike at Julia Pfeiffer Burns State Park\n- McWay Falls\n- Overnight in Big Sur\n\n### Day 4: Big Sur to San Simeon\n- More coastal driving\n- Hearst Castle tour (2pm)\n- Watch elephant seals\n- Overnight in Cambria\n\n### Day 5: Central Coast\n- Drive through wine country\n- Wine tasting in Paso Robles\n- Overnight in San Luis Obispo\n\n### Day 6: SLO to Santa Barbara\n- Morning in SLO\n- Stop in Pismo Beach\n- Arrive Santa Barbara\n- Stearns Wharf sunset\n\n### Day 7: Return\n- Morning on State Street\n- Drive to LAX\n- Flight home (6pm)\n\n## Budget\n\n- Flights: $400\n- Car rental (7 days): $350\n- Hotels (6 nights): $1,200\n- Gas: $150\n- Food: $500\n- Activities: $200\n- **Total**: ~$2,800\n\n## Packing\n\n- Layers (fog!)\n- Sunglasses\n- Sunscreen\n- Camera\n- Binoculars for whale watching\n- Comfortable walking shoes\n\nThis is going to be amazing!",
+      "tags": ["travel", "california", "road-trip", "vacation"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "en-us-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "createdAt": "2026-01-23T10:20:00Z",
+      "modifiedAt": "2026-01-23T10:20:00Z",
+      "content": "# Weekly Meal Plan\n\nWeek of January 20-26, 2026\n\n## Monday\n- **Breakfast**: Oatmeal with berries\n- **Lunch**: Turkey sandwich\n- **Dinner**: Spaghetti and meatballs\n\n## Tuesday\n- **Breakfast**: Scrambled eggs and toast\n- **Lunch**: Leftover pasta\n- **Dinner**: Grilled chicken with veggies\n\n## Wednesday\n- **Breakfast**: Smoothie bowl\n- **Lunch**: Salad with chicken\n- **Dinner**: Tacos (taco Tuesday... on Wednesday!)\n\n## Thursday\n- **Breakfast**: Avocado toast\n- **Lunch**: Soup and sandwich\n- **Dinner**: Stir-fry\n\n## Friday\n- **Breakfast**: Bagel with cream cheese\n- **Lunch**: Leftovers\n- **Dinner**: Pizza night!\n\n## Saturday\n- **Breakfast**: Pancakes\n- **Lunch**: Brunch out\n- **Dinner**: BBQ pulled pork (see recipe)\n\n## Sunday\n- **Breakfast**: Eggs Benedict\n- **Lunch**: BBQ leftovers\n- **Dinner**: Soup and grilled cheese\n\n## Grocery list\n\n- Ground beef (1 lb)\n- Chicken breasts (2 lbs)\n- Pork shoulder\n- Fresh vegetables\n- Cheese (cheddar, mozzarella)\n- Eggs\n- Bread, bagels, buns\n- Pasta, rice, tortillas",
+      "tags": ["meal-plan", "cooking", "organization"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "en-us-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "createdAt": "2026-01-23T10:25:00Z",
+      "modifiedAt": "2026-01-23T10:25:00Z",
+      "content": "# Books to Read 2026\n\nMy reading list for this year.\n\n## Currently reading\n\n- [ ] **\"The Goldfinch\"** - Donna Tartt\n  - Chapter 8 of 12\n  - Can't put it down!\n\n## American Fiction\n\n- [ ] \"The Great Gatsby\" - F. Scott Fitzgerald\n- [x] \"To Kill a Mockingbird\" - Harper Lee\n- [ ] \"East of Eden\" - John Steinbeck\n- [ ] \"Beloved\" - Toni Morrison\n\n## Contemporary\n\n- [ ] \"A Little Life\" - Hanya Yanagihara\n- [ ] \"The Overstory\" - Richard Powers\n- [x] \"Where the Crawdads Sing\" - Delia Owens\n\n## Non-Fiction\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Atomic Habits\" - James Clear\n- [ ] \"Born a Crime\" - Trevor Noah\n\n## Goal\n\n- **Target**: 24 books\n- **Progress**: 2/24\n\n## Notes\n\n### From \"To Kill a Mockingbird\"\n- You never really understand a person until you climb into their skin\n- Courage is knowing you're licked before you begin\n- The one thing that doesn't abide by majority rule is conscience",
+      "tags": ["books", "reading", "goals"],
+      "attachments": [],
+      "pinned": false
+    }
+  ]
+}

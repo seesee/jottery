@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "exportDate": "2026-01-24T12:00:00Z",
+  "notes": [
+    {
+      "id": "es-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
+      "content": "# ¡Bienvenido a Jottery!\n\nEste es un bloc de notas de demostración que muestra las capacidades de Jottery.\n\n## Lo que encontrarás aquí\n\nEsta demo incluye ejemplos de:\n- Notas organizadas con etiquetas\n- Listas de tareas y compras\n- Recetas de cocina\n- Planes de viaje\n- Notas personales\n\n## Primeros pasos\n\n1. **Explora las notas** - Haz clic en las notas de la lista\n2. **Prueba la búsqueda** - Usa la barra de búsqueda\n3. **Crea las tuyas** - Pulsa \"Nuevo\" para empezar\n4. **Organiza con etiquetas** - Usa #etiqueta en cualquier lugar\n\n## Consejos\n\n- Pulsa `Ctrl+K` para buscar\n- Pulsa `Ctrl+N` para nueva nota\n- Usa #etiquetas para organizar\n\n¡Disfruta explorando!",
+      "tags": ["bienvenida", "demo", "primeros-pasos"],
+      "attachments": [],
+      "pinned": true
+    },
+    {
+      "id": "es-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-23T10:05:00Z",
+      "modifiedAt": "2026-01-23T10:05:00Z",
+      "content": "# Lista de la compra\n\nCosas que comprar esta semana.\n\n## Alimentación\n- [ ] Leche (1 litro)\n- [ ] Huevos (docena)\n- [ ] Pan integral\n- [ ] Queso manchego\n- [ ] Mantequilla\n- [ ] Tomates\n- [ ] Pepino\n- [ ] Pechuga de pollo\n- [ ] Arroz\n- [ ] Pasta\n- [ ] Aceite de oliva virgen extra\n\n## Hogar\n- [ ] Papel de cocina\n- [ ] Jabón lavavajillas\n- [ ] Bombillas LED\n\n## Otros recados\n- [ ] Recoger la tintorería\n- [ ] Correos - enviar paquete\n- [ ] Devolver libros a la biblioteca\n\n## Notas\n- Mercadona cierra a las 21:30\n- ¡No olvidar las bolsas reutilizables!",
+      "tags": ["compras", "personal", "lista"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "es-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-23T10:10:00Z",
+      "modifiedAt": "2026-01-23T10:10:00Z",
+      "content": "# Paella Valenciana - Receta tradicional\n\n*El plato más emblemático de España*\n\n## Ingredientes\n\n### Para el arroz\n- 400g de arroz bomba\n- 1 pollo troceado\n- 200g de judías verdes\n- 200g de garrofón (o judías blancas)\n- 100g de tomate rallado\n- 1 litro de caldo de pollo\n- Azafrán\n- Pimentón dulce\n- Aceite de oliva\n- Sal\n- Romero fresco\n\n### Opcional\n- Conejo (200g)\n- Caracoles\n\n## Preparación\n\n### Sofreír\n1. Calentar aceite en la paella\n2. Dorar el pollo por todos lados\n3. Añadir las judías verdes y saltear\n4. Incorporar el tomate y cocinar 5 minutos\n5. Añadir pimentón (cuidado que no se queme)\n\n### El caldo\n1. Verter el caldo caliente\n2. Añadir el azafrán y sal\n3. Cocer 20 minutos a fuego medio\n4. Probar y rectificar de sal\n\n### El arroz\n1. Subir el fuego al máximo\n2. Repartir el arroz en forma de cruz\n3. No remover más\n4. Cocinar 18-20 minutos\n5. Los últimos 2 minutos a fuego fuerte (socarrat)\n6. Reposar 5 minutos tapada con paño\n\n## Consejos\n\n- El socarrat es sagrado - ¡no lo quemes pero sí que cruja!\n- Nunca uses chorizo (eso es invento)\n- Servir directamente de la paella\n- Acompañar con limón\n\n¡Buen provecho!",
+      "tags": ["receta", "cocina", "español", "paella"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "es-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "createdAt": "2026-01-23T10:15:00Z",
+      "modifiedAt": "2026-01-23T10:15:00Z",
+      "content": "# Viaje a Andalucía 2026\n\n**Duración**: 7 días (15-21 junio 2026)\n\n## Lista de verificación\n\n- [x] Reservar alojamiento (Sevilla, Granada)\n- [x] Billetes AVE\n- [ ] Alquilar coche\n- [ ] Reservar restaurantes\n- [ ] Entradas Alhambra (¡agotan rápido!)\n\n## Itinerario\n\n### Día 1: Llegada a Sevilla\n- AVE desde Madrid (09:00)\n- Llegada Sevilla (11:30)\n- Check-in hotel\n- Tarde: Barrio de Santa Cruz\n- Noche: Tapas en Triana\n\n### Día 2: Sevilla\n- Mañana: Catedral y Giralda\n- Real Alcázar\n- Tarde: Plaza de España\n- Noche: Flamenco en Tablao\n\n### Día 3: Sevilla - Córdoba\n- Mañana: Últimos paseos por Sevilla\n- Ruta a Córdoba\n- Tarde: Mezquita-Catedral\n- Paseo por la Judería\n\n### Día 4: Córdoba - Granada\n- Mañana: Patios cordobeses\n- Ruta a Granada\n- Tarde: Albaicín\n- Mirador San Nicolás al atardecer\n\n### Día 5: Granada\n- Mañana: Alhambra (visita completa)\n- Generalife\n- Tarde: Descanso\n- Noche: Tapas gratis en Granada\n\n### Día 6: Granada - Costa\n- Excursión a Frigiliana\n- Playa en Nerja\n- Cuevas de Nerja\n- Cena de pescaíto frito\n\n### Día 7: Regreso\n- Mañana tranquila\n- AVE Granada-Madrid (15:00)\n\n## Restaurantes\n\n- **El Rinconcillo** (Sevilla) - Tapas clásicas desde 1670\n- **Casa Pepe** (Córdoba) - Salmorejo\n- **Bodegas Castañeda** (Granada) - Tapas gratis\n\n## Presupuesto\n\n- Billetes AVE: 150€\n- Hoteles (6 noches): 480€\n- Coche alquiler: 180€\n- Comidas: 300€\n- Entradas: 100€\n- **Total**: ~1.210€\n\n## Equipaje\n\n- Ropa fresca (hace calor)\n- Gafas de sol\n- Protector solar\n- Zapatillas cómodas\n- Abanico\n\n¡Olé!",
+      "tags": ["viaje", "andalucía", "vacaciones", "españa"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "es-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "createdAt": "2026-01-23T10:20:00Z",
+      "modifiedAt": "2026-01-23T10:20:00Z",
+      "content": "# Menú semanal\n\nSemana del 20 al 26 de enero de 2026\n\n## Lunes\n- **Desayuno**: Tostada con tomate y aceite\n- **Comida**: Lentejas estofadas\n- **Cena**: Tortilla francesa con ensalada\n\n## Martes\n- **Desayuno**: Yogur con cereales\n- **Comida**: Restos de lentejas\n- **Cena**: Pollo al ajillo con patatas\n\n## Miércoles\n- **Desayuno**: Zumo y tostadas\n- **Comida**: Ensalada completa\n- **Cena**: Merluza a la plancha\n\n## Jueves\n- **Desayuno**: Café con churros\n- **Comida**: Cocido madrileño\n- **Cena**: Pimientos rellenos\n\n## Viernes\n- **Desayuno**: Tostada con aguacate\n- **Comida**: Restos\n- **Cena**: Pizzas caseras\n\n## Sábado\n- **Desayuno**: Brunch tardío\n- **Comida**: Tapeo\n- **Cena**: Paella (ver receta)\n\n## Domingo\n- **Desayuno**: Churros con chocolate\n- **Comida**: Asado familiar\n- **Cena**: Ligera - queso y jamón\n\n## Lista de la compra\n\n- Pollo (1 kg)\n- Merluza (2 lomos)\n- Lentejas (500g)\n- Arroz bomba\n- Verduras frescas\n- Huevos\n- Pan, churros\n- Jamón serrano",
+      "tags": ["menú", "cocina", "organización"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "es-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "createdAt": "2026-01-23T10:25:00Z",
+      "modifiedAt": "2026-01-23T10:25:00Z",
+      "content": "# Libros para leer 2026\n\nMi lista de lectura para este año.\n\n## Leyendo ahora\n\n- [ ] **\"Cien años de soledad\"** - Gabriel García Márquez\n  - Capítulo 12 de 20\n  - ¡Increíble!\n\n## Literatura hispana\n\n- [ ] \"La sombra del viento\" - Carlos Ruiz Zafón\n- [x] \"Don Quijote de la Mancha\" (adaptación)\n- [ ] \"Rayuela\" - Julio Cortázar\n- [ ] \"La casa de los espíritus\" - Isabel Allende\n\n## Clásicos\n\n- [ ] \"Orgullo y prejuicio\" - Jane Austen\n- [ ] \"El retrato de Dorian Gray\" - Oscar Wilde\n- [x] \"1984\" - George Orwell\n\n## No ficción\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Hábitos atómicos\" - James Clear\n- [ ] \"El poder de los hábitos\" - Charles Duhigg\n\n## Objetivo\n\n- **Meta**: 20 libros\n- **Progreso**: 2/20\n\n## Notas de lectura\n\n### \"Don Quijote\"\n- La locura como cordura alternativa\n- La importancia de los sueños\n- Sancho como contrapunto realista",
+      "tags": ["libros", "lectura", "objetivos"],
+      "attachments": [],
+      "pinned": false
+    }
+  ]
+}

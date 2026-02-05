@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "exportDate": "2026-01-24T12:00:00Z",
+  "notes": [
+    {
+      "id": "pt-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
+      "content": "# Bem-vindo ao Jottery!\n\nEste é um bloco de notas de demonstração que apresenta as funcionalidades do Jottery.\n\n## O que vai encontrar aqui\n\nEsta demonstração inclui exemplos de:\n- Notas organizadas com etiquetas\n- Listas de compras e tarefas\n- Receitas de culinária\n- Planos de viagem\n- Notas pessoais\n\n## Para começar\n\n1. **Navegue pelas notas** - Clique nas notas da lista\n2. **Experimente a pesquisa** - Use a barra de pesquisa\n3. **Crie as suas** - Prima \"Novo\" para começar\n4. **Organize com etiquetas** - Use #etiqueta em qualquer lugar\n\n## Dicas\n\n- Prima `Ctrl+K` para pesquisar\n- Prima `Ctrl+N` para nova nota\n- Use #etiquetas para organização\n\nBoa exploração!",
+      "tags": ["bem-vindo", "demo", "primeiros-passos"],
+      "attachments": [],
+      "pinned": true
+    },
+    {
+      "id": "pt-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-23T10:05:00Z",
+      "modifiedAt": "2026-01-23T10:05:00Z",
+      "content": "# Lista de compras\n\nCoisas para comprar esta semana.\n\n## Mercearia\n- [ ] Leite (1 litro)\n- [ ] Ovos (dúzia)\n- [ ] Pão de mistura\n- [ ] Queijo da Serra\n- [ ] Manteiga\n- [ ] Tomates\n- [ ] Pepino\n- [ ] Peito de frango\n- [ ] Arroz carolino\n- [ ] Massa\n- [ ] Azeite virgem extra\n\n## Casa\n- [ ] Rolo de cozinha\n- [ ] Detergente da loiça\n- [ ] Lâmpadas LED\n\n## Outras tarefas\n- [ ] Levantar roupa da lavandaria\n- [ ] CTT - enviar encomenda\n- [ ] Devolver livros à biblioteca\n\n## Notas\n- Continente fecha às 22h\n- Não esquecer os sacos reutilizáveis!",
+      "tags": ["compras", "pessoal", "lista"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "pt-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-23T10:10:00Z",
+      "modifiedAt": "2026-01-23T10:10:00Z",
+      "content": "# Bacalhau à Brás - Receita tradicional\n\n*Um clássico da cozinha portuguesa*\n\n## Ingredientes\n\n### Para o bacalhau\n- 500g de bacalhau demolhado e desfiado\n- 1kg de batatas\n- 2 cebolas grandes\n- 4 dentes de alho\n- 8 ovos\n- Azeitonas pretas\n- Salsa picada\n- Azeite q.b.\n- Sal e pimenta\n\n## Preparação\n\n### Preparar os ingredientes\n1. Desfiar o bacalhau em lascas pequenas\n2. Retirar todas as espinhas e peles\n3. Cortar as batatas em palha fina\n4. Cortar as cebolas em meias-luas finas\n5. Picar o alho\n\n### Fritar as batatas\n1. Fritar as batatas em azeite abundante\n2. Devem ficar douradinhas mas não crocantes\n3. Escorrer em papel absorvente\n4. Reservar\n\n### Refogar\n1. Numa frigideira grande, aquecer azeite\n2. Refogar a cebola até ficar translúcida\n3. Juntar o alho e deixar alourar\n4. Adicionar o bacalhau e saltear 5 minutos\n\n### Finalizar\n1. Juntar as batatas palha\n2. Bater os ovos levemente com sal e pimenta\n3. Verter sobre a mistura\n4. Mexer em lume brando até os ovos ficarem cremosos\n5. Não deixar secar!\n\n### Servir\n1. Transferir para travessa aquecida\n2. Decorar com azeitonas e salsa\n3. Servir imediatamente\n\n## Dicas\n\n- O segredo está nos ovos cremosos\n- O bacalhau deve ser bem demolhado (48-72h)\n- Acompanhar com salada verde\n- Um Vinho Verde branco combina na perfeição\n\nBom apetite!",
+      "tags": ["receita", "culinária", "português", "bacalhau"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "pt-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "createdAt": "2026-01-23T10:15:00Z",
+      "modifiedAt": "2026-01-23T10:15:00Z",
+      "content": "# Viagem ao Douro 2026\n\n**Duração**: 4 dias (15-18 junho 2026)\n\n## Lista de verificação\n\n- [x] Reservar alojamento (Pinhão)\n- [x] Bilhetes de comboio\n- [ ] Alugar carro\n- [ ] Reservar quintas para prova de vinhos\n- [ ] Cruzeiro no Douro\n\n## Itinerário\n\n### Dia 1: Chegada ao Porto\n- Comboio de Lisboa (08:00)\n- Chegada Porto Campanhã (10:45)\n- Almoço: Francesinha na Baixa\n- Visita às Caves de Gaia\n- Passeio pela Ribeira\n- Jantar: Tripas à moda do Porto\n\n### Dia 2: Porto - Douro\n- Apanhar comboio histórico do Douro\n- Chegada ao Pinhão\n- Check-in na quinta\n- Tarde: Prova de vinhos\n- Jantar: Cozinha regional\n\n### Dia 3: Vale do Douro\n- Cruzeiro fluvial até ao Pocinho\n- Almoço a bordo\n- Visita a quintas vinícolas\n- Vindima interativa (se disponível)\n- Pôr do sol nos miradouros\n\n### Dia 4: Regresso\n- Manhã: Últimos passeios\n- Comboio para Lisboa (14:30)\n\n## Quintas a visitar\n\n- **Quinta do Crasto** - Vista deslumbrante\n- **Quinta Nova** - Hotel boutique\n- **Quinta do Vallado** - Vinhos premiados\n\n## Orçamento\n\n- Comboios: €80\n- Alojamento (3 noites): €350\n- Carro: €100\n- Refeições: €250\n- Provas/Cruzeiro: €120\n- **Total**: ~€900\n\n## O que levar\n\n- Roupa confortável\n- Chapéu (sol intenso)\n- Protetor solar\n- Máquina fotográfica\n- Saca-rolhas (nunca se sabe!)\n\nMal posso esperar!",
+      "tags": ["viagem", "douro", "férias", "portugal"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "pt-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "createdAt": "2026-01-23T10:20:00Z",
+      "modifiedAt": "2026-01-23T10:20:00Z",
+      "content": "# Ementa semanal\n\nSemana de 20 a 26 de janeiro de 2026\n\n## Segunda-feira\n- **Pequeno-almoço**: Torradas com manteiga e café\n- **Almoço**: Sopa de legumes e pão\n- **Jantar**: Frango assado com batatas\n\n## Terça-feira\n- **Pequeno-almoço**: Iogurte com cereais\n- **Almoço**: Restos do frango\n- **Jantar**: Bacalhau à Brás (ver receita)\n\n## Quarta-feira\n- **Pequeno-almoço**: Pão com queijo\n- **Almoço**: Salada completa\n- **Jantar**: Arroz de pato\n\n## Quinta-feira\n- **Pequeno-almoço**: Sumo natural e torradas\n- **Almoço**: Sandes mista\n- **Jantar**: Bifes com cogumelos\n\n## Sexta-feira\n- **Pequeno-almoço**: Pastel de nata e café\n- **Almoço**: Restos\n- **Jantar**: Peixe grelhado com legumes\n\n## Sábado\n- **Pequeno-almoço**: Brunch tardio\n- **Almoço**: Petiscos variados\n- **Jantar**: Francesinha caseira\n\n## Domingo\n- **Pequeno-almoço**: Pão quente da padaria\n- **Almoço**: Cozido à portuguesa\n- **Jantar**: Leve - queijo e presunto\n\n## Lista de compras\n\n- Frango (1,5 kg)\n- Bacalhau (500g)\n- Pato (1)\n- Peixe (2 postas)\n- Legumes frescos\n- Queijo, presunto\n- Ovos\n- Pão\n- Arroz, massa",
+      "tags": ["ementa", "culinária", "organização"],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "pt-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "createdAt": "2026-01-23T10:25:00Z",
+      "modifiedAt": "2026-01-23T10:25:00Z",
+      "content": "# Livros para ler 2026\n\nA minha lista de leitura para este ano.\n\n## A ler atualmente\n\n- [ ] **\"Memorial do Convento\"** - José Saramago\n  - Capítulo 12\n  - Magnífico!\n\n## Literatura portuguesa\n\n- [ ] \"Os Maias\" - Eça de Queirós\n- [x] \"O Ano da Morte de Ricardo Reis\" - José Saramago\n- [ ] \"Aparição\" - Vergílio Ferreira\n- [ ] \"Ensaio sobre a Cegueira\" - José Saramago\n\n## Clássicos\n\n- [ ] \"Cem Anos de Solidão\" - Gabriel García Márquez\n- [ ] \"Crime e Castigo\" - Fiódor Dostoiévski\n- [x] \"1984\" - George Orwell\n\n## Não-ficção\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"O Poder do Hábito\" - Charles Duhigg\n- [ ] \"Pensar Depressa e Devagar\" - Daniel Kahneman\n\n## Objetivo\n\n- **Meta**: 20 livros\n- **Progresso**: 2/20\n\n## Notas de leitura\n\n### \"O Ano da Morte de Ricardo Reis\"\n- Lisboa como personagem\n- O encontro entre dois heterónimos\n- A história e a ficção entrelaçadas",
+      "tags": ["livros", "leitura", "objetivos"],
+      "attachments": [],
+      "pinned": false
+    }
+  ]
+}
