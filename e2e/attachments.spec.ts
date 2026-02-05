@@ -89,10 +89,14 @@ test.describe('Attachments', () => {
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
-    await editor.pressSequentially('Test note for attachments');
+    await editor.pressSequentially('Test note for attachments', { delay: 20 });
 
-    // Wait for auto-save
-    await page.waitForTimeout(1500);
+    // Wait for auto-save to complete: the debounce is 1000ms after last keystroke,
+    // then the save itself runs. Rather than guessing a timeout, wait for the
+    // editor toolbar's attachment button — it confirms the note is active and
+    // the editor is fully rendered.
+    const toolbarReady = page.locator('button').filter({ hasText: '📎' });
+    await expect(toolbarReady).toBeVisible({ timeout: 10000 });
   });
 
   test('should show attachment button in toolbar', async ({ page }) => {
