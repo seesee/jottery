@@ -1075,8 +1075,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Char('b') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Open inbox (only in note list view, and only if there are inbox items)
-                if matches!(app.view_mode, ViewMode::NoteList) && !app.inbox_items.is_empty() {
+                // Open inbox (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
                     app.view_mode = ViewMode::Inbox;
                     app.selected_inbox_item = 0;
                     app.show_inbox_delete_confirm = false;

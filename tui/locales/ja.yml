@@ -428,6 +428,8 @@ help:
   r_recycle_desc: Toggle recycle bin view
   v_versions_key: v
   v_versions_desc: View version history
+  b_inbox_key: b
+  b_inbox_desc: "受信トレイを開く"
   tab_search_key: Tab
   tab_search_desc: Exit search, focus attachments
   multi_select: MULTI-SELECT MODE
