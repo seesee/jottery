@@ -190,6 +190,29 @@ sync:
     approved: Votre compte est approuvé et actif. Vous pouvez synchroniser vos notes.
     pending: Votre compte est en attente d'approbation. Veuillez attendre qu'un administrateur approuve votre inscription.
     inactive: Votre compte a été désactivé. Veuillez contacter un administrateur.
+
+# Inbox
+inbox:
+  title: "Inbox"
+  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
+  accepted: "Note accepted"
+  deleted: "Inbox item deleted"
+  accepted_all: "All %{count} inbox items accepted"
+  deleted_all: "All inbox items deleted"
+  confirm_delete_title: "Delete Inbox Item"
+  confirm_delete_message: "Delete this inbox item? This cannot be undone."
+  confirm_delete_all_title: "Delete All Inbox Items"
+  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
+  indicator: "Inbox (%{count})"
+  token:
+    logging_in: "Logging in..."
+    generated_success: "Inbox token generated successfully!"
+    save_warning: "Save this token now — it will not be shown again."
+    example_title: "Quick Start"
+    revoked: "Inbox token revoked"
+    active: "Inbox token is active"
+    none: "No inbox token configured"
+
 register:
   title: S'inscrire auprès du Serveur de Synchronisation
   enter_endpoint: "Entrez l'URL du serveur de synchronisation (ex. https://sync.example.com) :"
