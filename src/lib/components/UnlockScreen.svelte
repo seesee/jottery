@@ -46,8 +46,9 @@
   let showBackupRestore = false;
   let backupFile: File | null = null;
   let backupData: BackupData | null = null;
-  let backupStats: { createdAt?: string; recordCount?: number } | null = null;
+  let backupStats: { createdAt?: string; recordCount?: number; summary?: { notes: number; attachments: number; versions: number } } | null = null;
   let backupPassword = '';
+  let validatingBackup = false;
   let restoring = false;
   let restoreProgress: { phase: string; current?: number; total?: number } | null = null;
   let backupFileInput: HTMLInputElement;
@@ -387,26 +388,33 @@
     backupFile = file;
     backupData = null;
     backupStats = null;
+    validatingBackup = true;
 
-    // Get quick stats first
-    const stats = await getBackupStats(file);
-    if (!stats.valid) {
-      error = stats.error || $_('backup.restore.invalidFile');
-      backupFile = null;
-      return;
+    try {
+      // Get quick stats first (fast, uses streaming)
+      const stats = await getBackupStats(file);
+      if (!stats.valid) {
+        error = stats.error || $_('backup.restore.invalidFile');
+        backupFile = null;
+        validatingBackup = false;
+        return;
+      }
+      backupStats = stats;
+
+      // Validate the full backup structure (can be slow for large files)
+      const validation = await validateBackup(file);
+      if (!validation.valid || !validation.backup) {
+        error = validation.error || $_('backup.restore.invalidFile');
+        backupFile = null;
+        backupStats = null;
+        validatingBackup = false;
+        return;
+      }
+
+      backupData = validation.backup;
+    } finally {
+      validatingBackup = false;
     }
-    backupStats = stats;
-
-    // Validate the full backup structure
-    const validation = await validateBackup(file);
-    if (!validation.valid || !validation.backup) {
-      error = validation.error || $_('backup.restore.invalidFile');
-      backupFile = null;
-      backupStats = null;
-      return;
-    }
-
-    backupData = validation.backup;
   }
 
   async function handleRestoreBackup() {
@@ -554,6 +562,25 @@
                 <span class="font-medium">{$_('backup.restore.stats.records')}:</span>
                 {backupStats.recordCount ?? 0}
               </p>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Validation Progress (shown while parsing large backup files) -->
+        {#if validatingBackup}
+          <div class="mb-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <div class="flex items-center gap-3">
+              <div class="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  {$_('backup.restore.progress.validating')}
+                </p>
+                {#if backupFile}
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    {(backupFile.size / (1024 * 1024)).toFixed(1)} MB
+                  </p>
+                {/if}
+              </div>
             </div>
           </div>
         {/if}
