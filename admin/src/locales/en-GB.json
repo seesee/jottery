@@ -130,7 +130,10 @@
       "passwordResetFailed": "Failed to reset password: {error}",
       "passwordResetFailedGeneric": "Failed to reset password",
       "passwordResetHelp": "Reset the user's password if they have forgotten it.",
-      "passwordResetWarning": "This only changes the account login password. It does not affect note encryption. If the user has forgotten their encryption password, their notes cannot be recovered."
+      "passwordResetWarning": "This only changes the account login password. It does not affect note encryption. If the user has forgotten their encryption password, their notes cannot be recovered.",
+      "inboxMaxItems": "Inbox Max Items",
+      "inboxMaxSize": "Inbox Max Size",
+      "items": "items"
     },
     "filters": {
       "all": "All",

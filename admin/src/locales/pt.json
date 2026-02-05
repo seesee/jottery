@@ -130,7 +130,10 @@
       "passwordResetFailed": "Falha ao redefinir senha: {error}",
       "passwordResetFailedGeneric": "Falha ao redefinir senha",
       "passwordResetHelp": "Redefina a senha do usuário se ele a esqueceu.",
-      "passwordResetWarning": "Isso só altera a senha de login. Não afeta a criptografia das notas. Se o usuário esqueceu sua senha de criptografia, suas notas não podem ser recuperadas."
+      "passwordResetWarning": "Isso só altera a senha de login. Não afeta a criptografia das notas. Se o usuário esqueceu sua senha de criptografia, suas notas não podem ser recuperadas.",
+      "inboxMaxItems": "Máx. itens na caixa de entrada",
+      "inboxMaxSize": "Tamanho máx. da caixa de entrada",
+      "items": "itens"
     },
     "filters": {
       "all": "Todos",

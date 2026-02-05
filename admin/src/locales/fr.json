@@ -130,7 +130,10 @@
       "passwordResetFailed": "Échec de la réinitialisation du mot de passe: {error}",
       "passwordResetFailedGeneric": "Échec de la réinitialisation du mot de passe",
       "passwordResetHelp": "Réinitialisez le mot de passe de l'utilisateur s'il l'a oublié.",
-      "passwordResetWarning": "Ceci ne change que le mot de passe de connexion. Le chiffrement des notes n'est pas affecté. Si l'utilisateur a oublié son mot de passe de chiffrement, ses notes ne peuvent pas être récupérées."
+      "passwordResetWarning": "Ceci ne change que le mot de passe de connexion. Le chiffrement des notes n'est pas affecté. Si l'utilisateur a oublié son mot de passe de chiffrement, ses notes ne peuvent pas être récupérées.",
+      "inboxMaxItems": "Éléments max. boîte de réception",
+      "inboxMaxSize": "Taille max. boîte de réception",
+      "items": "éléments"
     },
     "filters": {
       "all": "Tous",

@@ -130,7 +130,10 @@
       "passwordResetFailed": "비밀번호 재설정 실패: {error}",
       "passwordResetFailedGeneric": "비밀번호 재설정 실패",
       "passwordResetHelp": "사용자가 비밀번호를 잊어버린 경우 재설정합니다.",
-      "passwordResetWarning": "이것은 계정 로그인 비밀번호만 변경합니다. 노트 암호화에는 영향을 주지 않습니다. 사용자가 암호화 비밀번호를 잊어버린 경우 노트를 복구할 수 없습니다."
+      "passwordResetWarning": "이것은 계정 로그인 비밀번호만 변경합니다. 노트 암호화에는 영향을 주지 않습니다. 사용자가 암호화 비밀번호를 잊어버린 경우 노트를 복구할 수 없습니다.",
+      "inboxMaxItems": "받은편지함 최대 항목 수",
+      "inboxMaxSize": "받은편지함 최대 크기",
+      "items": "항목"
     },
     "filters": {
       "all": "전체",

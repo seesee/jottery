@@ -130,7 +130,10 @@
       "passwordResetFailed": "Nie udało się zresetować hasła: {error}",
       "passwordResetFailedGeneric": "Nie udało się zresetować hasła",
       "passwordResetHelp": "Zresetuj hasło użytkownika, jeśli je zapomniał.",
-      "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane."
+      "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane.",
+      "inboxMaxItems": "Maks. elementów w skrzynce",
+      "inboxMaxSize": "Maks. rozmiar skrzynki",
+      "items": "elementów"
     },
     "filters": {
       "all": "Wszyscy",

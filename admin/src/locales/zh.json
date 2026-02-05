@@ -130,7 +130,10 @@
       "passwordResetFailed": "重置密码失败：{error}",
       "passwordResetFailedGeneric": "重置密码失败",
       "passwordResetHelp": "如果用户忘记了密码，请为其重置。",
-      "passwordResetWarning": "这只会更改账户登录密码，不会影响笔记加密。如果用户忘记了加密密码，其笔记将无法恢复。"
+      "passwordResetWarning": "这只会更改账户登录密码，不会影响笔记加密。如果用户忘记了加密密码，其笔记将无法恢复。",
+      "inboxMaxItems": "收件箱最大条目数",
+      "inboxMaxSize": "收件箱最大容量",
+      "items": "条"
     },
     "filters": {
       "all": "全部",

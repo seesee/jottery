@@ -130,7 +130,10 @@
       "passwordResetFailed": "Impossibile reimpostare la password: {error}",
       "passwordResetFailedGeneric": "Impossibile reimpostare la password",
       "passwordResetHelp": "Reimposta la password dell'utente se l'ha dimenticata.",
-      "passwordResetWarning": "Questo cambia solo la password di accesso. Non influisce sulla crittografia delle note. Se l'utente ha dimenticato la password di crittografia, le sue note non possono essere recuperate."
+      "passwordResetWarning": "Questo cambia solo la password di accesso. Non influisce sulla crittografia delle note. Se l'utente ha dimenticato la password di crittografia, le sue note non possono essere recuperate.",
+      "inboxMaxItems": "Max elementi in arrivo",
+      "inboxMaxSize": "Dimensione max in arrivo",
+      "items": "elementi"
     },
     "filters": {
       "all": "Tutti",

@@ -130,7 +130,10 @@
       "passwordResetFailed": "Fehler beim Zurücksetzen des Passworts: {error}",
       "passwordResetFailedGeneric": "Fehler beim Zurücksetzen des Passworts",
       "passwordResetHelp": "Setzen Sie das Passwort des Benutzers zurück, wenn er es vergessen hat.",
-      "passwordResetWarning": "Dies ändert nur das Anmeldepasswort. Die Notizen-Verschlüsselung bleibt unberührt. Wenn der Benutzer sein Verschlüsselungspasswort vergessen hat, können seine Notizen nicht wiederhergestellt werden."
+      "passwordResetWarning": "Dies ändert nur das Anmeldepasswort. Die Notizen-Verschlüsselung bleibt unberührt. Wenn der Benutzer sein Verschlüsselungspasswort vergessen hat, können seine Notizen nicht wiederhergestellt werden.",
+      "inboxMaxItems": "Max. Posteingang-Elemente",
+      "inboxMaxSize": "Max. Posteingang-Größe",
+      "items": "Elemente"
     },
     "filters": {
       "all": "Alle",

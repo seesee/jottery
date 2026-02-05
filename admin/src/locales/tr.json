@@ -130,7 +130,10 @@
       "passwordResetFailed": "Parola sıfırlanamadı: {error}",
       "passwordResetFailedGeneric": "Parola sıfırlanamadı",
       "passwordResetHelp": "Kullanıcı parolasını unutmuşsa sıfırlayın.",
-      "passwordResetWarning": "Bu sadece hesap giriş parolasını değiştirir. Not şifrelemesini etkilemez. Kullanıcı şifreleme parolasını unutmuşsa, notları kurtarılamaz."
+      "passwordResetWarning": "Bu sadece hesap giriş parolasını değiştirir. Not şifrelemesini etkilemez. Kullanıcı şifreleme parolasını unutmuşsa, notları kurtarılamaz.",
+      "inboxMaxItems": "Maks. gelen kutusu öğeleri",
+      "inboxMaxSize": "Maks. gelen kutusu boyutu",
+      "items": "öğe"
     },
     "filters": {
       "all": "Tümü",

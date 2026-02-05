@@ -130,7 +130,10 @@
       "passwordResetFailed": "パスワードのリセットに失敗しました: {error}",
       "passwordResetFailedGeneric": "パスワードのリセットに失敗しました",
       "passwordResetHelp": "ユーザーがパスワードを忘れた場合にリセットします。",
-      "passwordResetWarning": "これはアカウントのログインパスワードのみを変更します。ノートの暗号化には影響しません。ユーザーが暗号化パスワードを忘れた場合、ノートは復元できません。"
+      "passwordResetWarning": "これはアカウントのログインパスワードのみを変更します。ノートの暗号化には影響しません。ユーザーが暗号化パスワードを忘れた場合、ノートは復元できません。",
+      "inboxMaxItems": "受信トレイ最大件数",
+      "inboxMaxSize": "受信トレイ最大サイズ",
+      "items": "件"
     },
     "filters": {
       "all": "すべて",

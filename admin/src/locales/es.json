@@ -130,7 +130,10 @@
       "passwordResetFailed": "Error al restablecer contraseña: {error}",
       "passwordResetFailedGeneric": "Error al restablecer contraseña",
       "passwordResetHelp": "Restablezca la contraseña del usuario si la ha olvidado.",
-      "passwordResetWarning": "Esto solo cambia la contraseña de inicio de sesión. No afecta el cifrado de notas. Si el usuario olvidó su contraseña de cifrado, sus notas no pueden recuperarse."
+      "passwordResetWarning": "Esto solo cambia la contraseña de inicio de sesión. No afecta el cifrado de notas. Si el usuario olvidó su contraseña de cifrado, sus notas no pueden recuperarse.",
+      "inboxMaxItems": "Máx. elementos en bandeja",
+      "inboxMaxSize": "Tamaño máx. de bandeja",
+      "items": "elementos"
     },
     "filters": {
       "all": "Todos",
