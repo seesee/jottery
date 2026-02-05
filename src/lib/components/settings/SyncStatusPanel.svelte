@@ -1,6 +1,5 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { onMount } from 'svelte';
   import AccountManagementPanel from './AccountManagementPanel.svelte';
   import ConfirmModal from '../ConfirmModal.svelte';
   import type { SyncStatus } from '../../types';
