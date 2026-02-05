@@ -62,9 +62,9 @@ const BACKUP_TYPE = 'jottery-encrypted-backup';
 const BACKUP_FILE_EXTENSION = '.jottery-backup';
 
 // Batch sizes for different record types
-const NOTE_BATCH_SIZE = 100;
-const ATTACHMENT_BATCH_SIZE = 20; // Larger items, smaller batches
-const VERSION_BATCH_SIZE = 100;
+const NOTE_BATCH_SIZE = 250;
+const ATTACHMENT_BATCH_SIZE = 50; // Larger items, smaller batches
+const VERSION_BATCH_SIZE = 250;
 
 // JWE algorithms
 const JWE_ALG = 'dir'; // Direct encryption (no key wrapping)

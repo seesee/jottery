@@ -3,7 +3,7 @@
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
-  import { createBackup, downloadBackup } from '../services/backupService';
+  import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
   import { authService } from '../services/authService';
   import { exportCredentials, parseAndStoreImportedCredentials, copyToClipboard } from '../utils/syncCredentials';
@@ -988,7 +988,7 @@
     progressTotal = 0;
 
     try {
-      const backup = await createBackup((progress) => {
+      const backup = await createBatchedBackup((progress) => {
         if (progress.total) progressTotal = progress.total;
         if (progress.current) progressCurrent = progress.current;
       });
