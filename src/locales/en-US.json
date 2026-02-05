@@ -939,6 +939,74 @@
       "emptyBin": "Failed to empty recycle bin"
     }
   },
+  "inbox": {
+    "title": "Inbox",
+    "count": "{count} items",
+    "countSingle": "1 item",
+    "empty": "Inbox is empty",
+    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
+    "accept": "Accept",
+    "acceptAll": "Accept All",
+    "delete": "Delete",
+    "deleteAll": "Delete All",
+    "accepting": "Accepting...",
+    "deleting": "Deleting...",
+    "accepted": "Note accepted",
+    "acceptedAll": "All {count} notes accepted",
+    "deleted": "Inbox item deleted",
+    "deletedAll": "All inbox items deleted",
+    "source": "Source: {source}",
+    "untitled": "Untitled",
+    "closeLabel": "Close inbox",
+    "indicator": "Inbox ({count})",
+    "confirm": {
+      "delete": {
+        "title": "Delete Inbox Item",
+        "message": "Delete this inbox item? This cannot be undone.",
+        "confirmButton": "Delete"
+      },
+      "deleteAll": {
+        "title": "Delete All Inbox Items",
+        "message": "Delete all {count} inbox items? This cannot be undone.",
+        "confirmButton": "Delete All"
+      }
+    },
+    "error": {
+      "accept": "Failed to accept inbox item",
+      "delete": "Failed to delete inbox item",
+      "acceptAll": "Failed to accept inbox items",
+      "deleteAll": "Failed to delete inbox items"
+    },
+    "token": {
+      "title": "Inbox API",
+      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "generate": "Generate Token",
+      "revoke": "Revoke Token",
+      "active": "Token active",
+      "none": "No token configured",
+      "generated": "Token generated — save it now, it won't be shown again.",
+      "revoked": "Inbox token revoked",
+      "copyToken": "Copy Token",
+      "copied": "Token copied to clipboard",
+      "quickStart": "Quick Start",
+      "curlExample": "Example: submit a note via curl",
+      "confirm": {
+        "revoke": {
+          "title": "Revoke Inbox Token",
+          "message": "Revoke your inbox token? Any integrations using it will stop working.",
+          "confirmButton": "Revoke"
+        }
+      },
+      "error": {
+        "generate": "Failed to generate inbox token",
+        "revoke": "Failed to revoke inbox token"
+      }
+    },
+    "quota": {
+      "items": "Items: {used}/{max}",
+      "size": "Size: {used}/{max}"
+    }
+  },
   "archive": {
     "title": "Archive",
     "closeLabel": "Close archive",
