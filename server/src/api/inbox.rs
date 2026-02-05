@@ -164,6 +164,13 @@ pub async fn create_item(
         new_size
     );
 
+    // Broadcast SSE notification so connected clients fetch the new inbox item
+    use crate::api::sse::SyncNotification;
+    let _ = state.sync_broadcast.send(SyncNotification {
+        user_id: auth.user_id.clone(),
+        source_client_id: String::new(), // No source client for inbox submissions
+    });
+
     Ok((
         StatusCode::CREATED,
         Json(CreateInboxItemResponse {

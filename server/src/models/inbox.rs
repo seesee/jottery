@@ -1,17 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-/// Database row for inbox items
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct InboxItem {
-    pub id: String,
-    pub user_id: String,
-    pub content: String,
-    pub tags: String,
-    pub created_at: String,
-    pub source: Option<String>,
-    pub size_bytes: i64,
-}
-
 /// API input for creating an inbox item (POST /api/v1/inbox)
 #[derive(Debug, Deserialize)]
 pub struct CreateInboxItemRequest {
