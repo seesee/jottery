@@ -22,6 +22,13 @@ const mockAccountInfo = {
   storageQuotaMb: 100,
   createdAt: '2024-01-15T10:30:00Z',
   lastSyncAt: '2025-01-09T15:00:00Z',
+  inbox: {
+    itemCount: 3,
+    totalSizeBytes: 2048,
+    maxItems: 100,
+    maxSizeMb: 10,
+    hasToken: false,
+  },
 };
 
 // Helper to set up API mocks
