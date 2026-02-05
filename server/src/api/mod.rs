@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod auth;
+pub mod inbox;
 pub mod sse;
 pub mod sync;
 pub mod user;
@@ -141,6 +142,59 @@ pub mod middleware {
         request.extensions_mut().insert(session);
 
         Ok(next.run(request).await)
+    }
+
+    /// Information extracted from inbox token authentication
+    /// Contains only user_id (inbox tokens have limited scope)
+    #[derive(Debug, Clone)]
+    pub struct InboxAuth {
+        pub user_id: String,
+    }
+
+    /// Inbox token middleware — extracts Bearer token, SHA-256 hashes it,
+    /// looks up users.inbox_token_hash, verifies user is active and approved
+    pub async fn inbox_auth_middleware(
+        State(state): State<Arc<AppState>>,
+        headers: HeaderMap,
+        mut request: Request,
+        next: Next,
+    ) -> Result<Response, StatusCode> {
+        // Extract Authorization header
+        let auth_header = headers
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok())
+            .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        // Check Bearer token format
+        if !auth_header.starts_with("Bearer ") {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+
+        let token = &auth_header[7..];
+
+        // Hash the token
+        let mut hasher = Sha256::new();
+        hasher.update(token.as_bytes());
+        let hashed_token = format!("{:x}", hasher.finalize());
+
+        // Look up user by inbox token hash
+        let result = sqlx::query!(
+            "SELECT id, is_active, approved FROM users WHERE inbox_token_hash = ?",
+            hashed_token
+        )
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        match result {
+            Some(user) if user.is_active == 1 && user.approved == 1 => {
+                request.extensions_mut().insert(InboxAuth {
+                    user_id: user.id,
+                });
+                Ok(next.run(request).await)
+            }
+            _ => Err(StatusCode::UNAUTHORIZED),
+        }
     }
 
     /// Extract session token from headers

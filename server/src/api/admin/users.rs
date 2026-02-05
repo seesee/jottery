@@ -82,7 +82,7 @@ pub async fn get_user(
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
     // Get user basic info
     let user = sqlx::query!(
-        r#"SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb, max_upload_size_mb FROM users WHERE id = ?"#,
+        r#"SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb, max_upload_size_mb, inbox_max_items, inbox_max_size_mb, inbox_token_hash FROM users WHERE id = ?"#,
         user_id
     )
     .fetch_optional(&state.pool)
@@ -139,6 +139,20 @@ pub async fn get_user(
     .fetch_one(&state.pool)
     .await?;
 
+    // Get inbox usage
+    let inbox_usage = sqlx::query!(
+        r#"
+        SELECT
+            COUNT(*) as count,
+            COALESCE(SUM(size_bytes), 0) as total_bytes
+        FROM inbox_items
+        WHERE user_id = ?
+        "#,
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await?;
+
     // Get list of devices
     let devices = sqlx::query!(
         r#"
@@ -179,6 +193,8 @@ pub async fn get_user(
             "lastLoginAt": user.last_login_at,
             "storageQuotaMb": user.storage_quota_mb,
             "maxUploadSizeMb": user.max_upload_size_mb,
+            "inboxMaxItems": user.inbox_max_items,
+            "inboxMaxSizeMb": user.inbox_max_size_mb,
             "stats": {
                 "devices": {
                     "total": device_stats.total,
@@ -191,6 +207,11 @@ pub async fn get_user(
                 "attachments": {
                     "count": attachment_stats.count,
                     "totalBytes": attachment_stats.total_bytes
+                },
+                "inbox": {
+                    "count": inbox_usage.count,
+                    "totalBytes": inbox_usage.total_bytes,
+                    "hasToken": user.inbox_token_hash.is_some()
                 },
                 "lastSyncAt": last_sync.last_sync
             },
@@ -598,6 +619,8 @@ pub async fn reset_user_password(
 pub struct UpdateUserSettingsRequest {
     pub storage_quota_mb: Option<i64>,
     pub max_upload_size_mb: Option<i64>,
+    pub inbox_max_items: Option<i64>,
+    pub inbox_max_size_mb: Option<i64>,
 }
 
 pub async fn update_user_settings(
@@ -631,6 +654,23 @@ pub async fn update_user_settings(
         }
     }
 
+    // Validate inbox quota values
+    if let Some(max_items) = req.inbox_max_items {
+        if max_items < 1 || max_items > 10000 {
+            return Err(crate::error::AppError::BadRequest(
+                "Inbox max items must be between 1 and 10000".to_string(),
+            ));
+        }
+    }
+
+    if let Some(max_size) = req.inbox_max_size_mb {
+        if max_size < 1 || max_size > 1000 {
+            return Err(crate::error::AppError::BadRequest(
+                "Inbox max size must be between 1 and 1000 MB".to_string(),
+            ));
+        }
+    }
+
     // Update settings
     if let Some(max_upload) = req.max_upload_size_mb {
         sqlx::query!(
@@ -652,6 +692,28 @@ pub async fn update_user_settings(
         .execute(&state.pool)
         .await?;
         tracing::info!("Updated storage_quota_mb to {} for user {}", quota, user_id);
+    }
+
+    if let Some(max_items) = req.inbox_max_items {
+        sqlx::query!(
+            "UPDATE users SET inbox_max_items = ? WHERE id = ?",
+            max_items,
+            user_id
+        )
+        .execute(&state.pool)
+        .await?;
+        tracing::info!("Updated inbox_max_items to {} for user {}", max_items, user_id);
+    }
+
+    if let Some(max_size) = req.inbox_max_size_mb {
+        sqlx::query!(
+            "UPDATE users SET inbox_max_size_mb = ? WHERE id = ?",
+            max_size,
+            user_id
+        )
+        .execute(&state.pool)
+        .await?;
+        tracing::info!("Updated inbox_max_size_mb to {} for user {}", max_size, user_id);
     }
 
     Ok(StatusCode::NO_CONTENT)

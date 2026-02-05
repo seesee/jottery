@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, is_active, approved FROM users WHERE inbox_token_hash = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "approved",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e3da52a9ef0b6ab17520f8190843ea92d362b805be3791c8ef2b7e1e6fc7220b"
+}

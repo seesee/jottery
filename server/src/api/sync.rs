@@ -1053,14 +1053,45 @@ pub async fn pull(
         .map(|db| db.into())
         .collect();
 
+    // Fetch inbox items for this user
+    let inbox_rows = sqlx::query!(
+        "SELECT id, content, tags, created_at, source, size_bytes FROM inbox_items WHERE user_id = ? ORDER BY created_at DESC",
+        client_info.user_id
+    )
+    .fetch_all(&state.pool)
+    .await?;
+
+    let inbox_count = inbox_rows.len() as i64;
+    let inbox_items: Vec<crate::models::InboxItemResponse> = inbox_rows
+        .into_iter()
+        .map(|row| {
+            let tags: Vec<String> = serde_json::from_str(&row.tags).unwrap_or_default();
+            crate::models::InboxItemResponse {
+                id: row.id,
+                content: row.content,
+                tags,
+                created_at: row.created_at,
+                source: row.source,
+                size_bytes: row.size_bytes,
+            }
+        })
+        .collect();
+
+    let (inbox_items_opt, inbox_count_opt) = if inbox_count > 0 {
+        (Some(inbox_items), Some(inbox_count))
+    } else {
+        (None, None)
+    };
+
     tracing::info!(
-        "Pull response: {} notes (total: {}, hasMore: {}), {} attachments, {} versions, {} saved searches",
+        "Pull response: {} notes (total: {}, hasMore: {}), {} attachments, {} versions, {} saved searches, {} inbox items",
         notes.len(),
         total_count,
         has_more,
         attachments_data.len(),
         versions_response.len(),
-        saved_searches.len()
+        saved_searches.len(),
+        inbox_count
     );
 
     Ok(Json(SyncPullResponse {
@@ -1072,6 +1103,8 @@ pub async fn pull(
         synced_at,
         total_count,
         has_more,
+        inbox_items: inbox_items_opt,
+        inbox_count: inbox_count_opt,
     }))
 }
 

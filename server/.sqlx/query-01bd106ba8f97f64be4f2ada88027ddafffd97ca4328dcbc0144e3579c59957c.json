@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb, max_upload_size_mb FROM users WHERE id = ?",
+  "query": "SELECT id, email, approved, is_admin, is_active, created_at, approved_at, last_login_at, storage_quota_mb, max_upload_size_mb, inbox_max_items, inbox_max_size_mb, inbox_token_hash FROM users WHERE id = ?",
   "describe": {
     "columns": [
       {
@@ -52,6 +52,21 @@
         "name": "max_upload_size_mb",
         "ordinal": 9,
         "type_info": "Integer"
+      },
+      {
+        "name": "inbox_max_items",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inbox_max_size_mb",
+        "ordinal": 11,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inbox_token_hash",
+        "ordinal": 12,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -67,8 +82,11 @@
       true,
       true,
       true,
-      false
+      false,
+      true,
+      true,
+      true
     ]
   },
-  "hash": "d96a44656ad949f6f4381e15db4ca772ec837eed54799dcdab45fac5e7d29e80"
+  "hash": "01bd106ba8f97f64be4f2ada88027ddafffd97ca4328dcbc0144e3579c59957c"
 }

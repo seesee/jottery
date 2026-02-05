@@ -174,6 +174,11 @@ pub struct SyncPullResponse {
     pub total_count: i64,
     #[serde(rename = "hasMore")]
     pub has_more: bool,
+    // Inbox items (unencrypted, pending acceptance)
+    #[serde(rename = "inboxItems", skip_serializing_if = "Option::is_none")]
+    pub inbox_items: Option<Vec<super::inbox::InboxItemResponse>>,
+    #[serde(rename = "inboxCount", skip_serializing_if = "Option::is_none")]
+    pub inbox_count: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]

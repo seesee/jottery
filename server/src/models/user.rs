@@ -16,6 +16,9 @@ pub struct User {
     pub storage_quota_mb: Option<i64>, // Can be NULL in DB (has DEFAULT but no NOT NULL)
     pub max_upload_size_mb: Option<i64>, // Per-request upload limit (default: 5MB)
     pub last_login_at: Option<String>,
+    pub inbox_token_hash: Option<String>,
+    pub inbox_max_items: Option<i64>,
+    pub inbox_max_size_mb: Option<i64>,
 }
 
 /// User registration request (email + password)
