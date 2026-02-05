@@ -677,43 +677,67 @@ async function parseBackupFile(file: File): Promise<BackupData | null> {
 async function parseBackupBatches(file: File): Promise<BatchRecord[] | null> {
   const batches: BatchRecord[] = [];
   const chunkSize = 10 * 1024 * 1024; // 10MB chunks
-  let buffer = '';
+  let carryover = ''; // Text carried over when searching for "batches"
   let inBatchesArray = false;
   let braceDepth = 0;
-  let currentBatch = '';
+  let currentBatch = ''; // Persists across chunks for partial batches
 
   for (let offset = 0; offset < file.size; offset += chunkSize) {
     const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
     const text = await chunk.text();
-    buffer += text;
 
     // Find start of batches array if not found yet
     if (!inBatchesArray) {
-      const batchesStart = buffer.indexOf('"batches"');
+      const searchBuffer = carryover + text;
+      const batchesStart = searchBuffer.indexOf('"batches"');
       if (batchesStart === -1) {
         // Keep last 100 chars in case "batches" is split across chunks
-        buffer = buffer.slice(-100);
+        carryover = searchBuffer.slice(-100);
         continue;
       }
       // Find the opening bracket
-      const bracketPos = buffer.indexOf('[', batchesStart);
+      const bracketPos = searchBuffer.indexOf('[', batchesStart);
       if (bracketPos === -1) {
-        buffer = buffer.slice(batchesStart);
+        carryover = searchBuffer.slice(batchesStart);
         continue;
       }
-      buffer = buffer.slice(bracketPos + 1);
+      // Start parsing from after the bracket
+      const startPos = bracketPos + 1;
       inBatchesArray = true;
+
+      // Process the rest of searchBuffer from startPos
+      for (let i = startPos; i < searchBuffer.length; i++) {
+        const char = searchBuffer[i];
+        if (char === '{') {
+          if (braceDepth === 0) currentBatch = '';
+          braceDepth++;
+          currentBatch += char;
+        } else if (char === '}') {
+          braceDepth--;
+          currentBatch += char;
+          if (braceDepth === 0 && currentBatch) {
+            try {
+              batches.push(JSON.parse(currentBatch));
+            } catch {
+              // Skip malformed batch
+            }
+            currentBatch = '';
+          }
+        } else if (char === ']' && braceDepth === 0) {
+          return batches;
+        } else if (braceDepth > 0) {
+          currentBatch += char;
+        }
+      }
+      carryover = '';
+      continue;
     }
 
-    // Parse batch objects from buffer
-    let i = 0;
-    while (i < buffer.length) {
-      const char = buffer[i];
-
+    // Process the entire chunk (currentBatch persists from previous chunks)
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
       if (char === '{') {
-        if (braceDepth === 0) {
-          currentBatch = '';
-        }
+        if (braceDepth === 0) currentBatch = '';
         braceDepth++;
         currentBatch += char;
       } else if (char === '}') {
@@ -721,31 +745,19 @@ async function parseBackupBatches(file: File): Promise<BatchRecord[] | null> {
         currentBatch += char;
         if (braceDepth === 0 && currentBatch) {
           try {
-            const batch = JSON.parse(currentBatch);
-            batches.push(batch);
+            batches.push(JSON.parse(currentBatch));
           } catch {
             // Skip malformed batch
           }
           currentBatch = '';
         }
       } else if (char === ']' && braceDepth === 0) {
-        // End of batches array
         return batches;
       } else if (braceDepth > 0) {
         currentBatch += char;
       }
-
-      i++;
     }
-
-    // Keep unprocessed part of buffer
-    if (braceDepth > 0) {
-      // We're in the middle of a batch object, keep it
-      buffer = currentBatch;
-      currentBatch = '';
-    } else {
-      buffer = '';
-    }
+    // currentBatch persists to next iteration if braceDepth > 0
   }
 
   return batches.length > 0 ? batches : null;
