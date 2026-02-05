@@ -139,6 +139,10 @@ async fn main() {
         .route("/api/v1/user/logout", post(api::user::logout))
         .route("/api/v1/user/devices", get(api::user::list_devices))
         .route("/api/v1/user/devices/:id", delete(api::user::revoke_device))
+        .route("/api/v1/user/inbox-token",
+            post(api::user::generate_inbox_token).delete(api::user::revoke_inbox_token))
+        .route("/api/v1/user/inbox-token/status",
+            get(api::user::get_inbox_token_status))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             api::middleware::user_auth_middleware,
@@ -176,6 +180,24 @@ async fn main() {
     tracing::info!("Serving admin dashboard from: {}", admin_dir.display());
     tracing::info!("Serving user portal from: {}", admin_dir.display());
 
+    // Inbox submission routes (inbox token auth — limited scope)
+    let inbox_submit_routes = Router::new()
+        .route("/api/v1/inbox", post(api::inbox::create_item))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            api::middleware::inbox_auth_middleware,
+        ));
+
+    // Inbox management routes (device API key auth — same as sync)
+    let inbox_manage_routes = Router::new()
+        .route("/api/v1/inbox", get(api::inbox::list_items).delete(api::inbox::delete_all))
+        .route("/api/v1/inbox/:id", delete(api::inbox::delete_item))
+        .route("/api/v1/inbox/status", get(api::inbox::get_status))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            api::middleware::auth_middleware,
+        ));
+
     // Auth routes (rate limiting disabled - requires proxy-aware key extractor)
     // TODO: Re-enable with SmartIpKeyExtractor when running behind reverse proxy
     let auth_routes = Router::new()
@@ -200,6 +222,8 @@ async fn main() {
         // Merge protected routes
         .merge(sync_routes)
         .merge(sse_routes)
+        .merge(inbox_submit_routes)
+        .merge(inbox_manage_routes)
         .merge(user_routes)
         .merge(admin_routes)
         // Serve admin dashboard and user portal (same SPA, different paths)

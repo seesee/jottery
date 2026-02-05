@@ -124,6 +124,12 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         app.sync_status = None;
     }
 
+    // Handle inbox view mode
+    if matches!(app.view_mode, ViewMode::Inbox) {
+        super::inbox::handle_inbox_key(app, key);
+        return Ok(());
+    }
+
     // Handle conflict resolution view mode
     if matches!(app.view_mode, ViewMode::ConflictResolution) {
         return super::conflict::handle_conflict_key(app, key);
@@ -490,7 +496,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.error = Some(format!("Failed to reload notes: {}", e));
                             }
                         }
-                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
+                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
                             app.view_mode = ViewMode::NoteList;
                         }
                     }
@@ -967,7 +973,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution => {
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
                         // 'r' does nothing in these views
                     }
                 }
@@ -1066,6 +1072,15 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else if !app.filtered_notes().is_empty() {
                         app.show_note_info = true;
                     }
+                }
+            }
+            KeyCode::Char('b') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                // Open inbox (only in note list view)
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    app.view_mode = ViewMode::Inbox;
+                    app.selected_inbox_item = 0;
+                    app.show_inbox_delete_confirm = false;
+                    app.show_inbox_delete_all_confirm = false;
                 }
             }
             KeyCode::Char('E') => {

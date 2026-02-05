@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT inbox_token_hash FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "inbox_token_hash",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "df3b8a7a9f813b2805ab8c4f1c28bc82f9082cc188e14d928f19a553f19b4a1e"
+}

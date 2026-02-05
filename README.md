@@ -14,6 +14,7 @@ Most note-taking apps are either too heavy (designed for long-form documents) or
 *   **Cross-Platform**: Access your notes from a web client or a Terminal User Interface (TUI).
 *   **Self-Hostable**: You have full control over your data by hosting the sync server yourself.
 *   **Device Management**: Register multiple devices per user, each with its own API key.
+*   **Inbox API**: Submit notes programmatically via a simple REST API — no encryption password needed. Items are held unencrypted on the server until reviewed and accepted through the web or TUI client. See [docs/INBOX-API.md](docs/INBOX-API.md) for full documentation.
 *   **Admin Dashboard**: Web-based interface for managing users, viewing statistics, and monitoring server activity.
 *   **Advanced Search**: Powerful full-text search with modifiers:
     - `has:attachment` - filter notes with attachments

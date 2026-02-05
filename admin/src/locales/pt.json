@@ -130,7 +130,10 @@
       "passwordResetFailed": "Falha ao redefinir senha: {error}",
       "passwordResetFailedGeneric": "Falha ao redefinir senha",
       "passwordResetHelp": "Redefina a senha do usuário se ele a esqueceu.",
-      "passwordResetWarning": "Isso só altera a senha de login. Não afeta a criptografia das notas. Se o usuário esqueceu sua senha de criptografia, suas notas não podem ser recuperadas."
+      "passwordResetWarning": "Isso só altera a senha de login. Não afeta a criptografia das notas. Se o usuário esqueceu sua senha de criptografia, suas notas não podem ser recuperadas.",
+      "inboxMaxItems": "Máx. itens na caixa de entrada",
+      "inboxMaxSize": "Tamanho máx. da caixa de entrada",
+      "items": "itens"
     },
     "filters": {
       "all": "Todos",
@@ -261,7 +264,23 @@
       "attachmentCount": "Anexos",
       "storageUsed": "Armazenamento usado",
       "lastSync": "Última sincronização",
-      "never": "Nunca"
+      "never": "Nunca",
+      "inbox": {
+        "title": "API da Caixa de entrada",
+        "description": "Envie notas para a sua conta via API — sem necessidade de palavra-passe de encriptação. Os itens aparecem na sua caixa de entrada para revisão.",
+        "itemsLabel": "Itens",
+        "sizeLabel": "Tamanho",
+        "noToken": "Nenhum token de caixa de entrada configurado. Gere um para começar a enviar notas via API.",
+        "generate": "Gerar token",
+        "generated": "Token gerado — guarde-o agora, não será mostrado novamente.",
+        "active": "Token de caixa de entrada activo",
+        "copyToken": "Copiar",
+        "quickStart": "Início rápido",
+        "revoke": "Revogar token",
+        "revokeConfirmTitle": "Revogar token da caixa de entrada",
+        "revokeConfirmMessage": "Revogar o token da caixa de entrada? As integrações que o utilizam deixarão de funcionar.",
+        "cancel": "Cancelar"
+      }
     },
     "devices": {
       "title": "Os seus dispositivos",

@@ -130,7 +130,10 @@
       "passwordResetFailed": "Nie udało się zresetować hasła: {error}",
       "passwordResetFailedGeneric": "Nie udało się zresetować hasła",
       "passwordResetHelp": "Zresetuj hasło użytkownika, jeśli je zapomniał.",
-      "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane."
+      "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane.",
+      "inboxMaxItems": "Maks. elementów w skrzynce",
+      "inboxMaxSize": "Maks. rozmiar skrzynki",
+      "items": "elementów"
     },
     "filters": {
       "all": "Wszyscy",
@@ -261,7 +264,23 @@
       "attachmentCount": "Załączniki",
       "storageUsed": "Użyta pamięć",
       "lastSync": "Ostatnia synchronizacja",
-      "never": "Nigdy"
+      "never": "Nigdy",
+      "inbox": {
+        "title": "API skrzynki odbiorczej",
+        "description": "Wysyłaj notatki na swoje konto przez API — bez hasła szyfrowania. Elementy pojawią się w skrzynce odbiorczej do przeglądu.",
+        "itemsLabel": "Elementy",
+        "sizeLabel": "Rozmiar",
+        "noToken": "Brak skonfigurowanego tokenu skrzynki odbiorczej. Wygeneruj jeden, aby zacząć wysyłać notatki przez API.",
+        "generate": "Generuj token",
+        "generated": "Token wygenerowany — zapisz go teraz, nie zostanie ponownie wyświetlony.",
+        "active": "Token skrzynki odbiorczej aktywny",
+        "copyToken": "Kopiuj",
+        "quickStart": "Szybki start",
+        "revoke": "Unieważnij token",
+        "revokeConfirmTitle": "Unieważnij token skrzynki odbiorczej",
+        "revokeConfirmMessage": "Unieważnić token skrzynki odbiorczej? Wszystkie integracje z niego korzystające przestaną działać.",
+        "cancel": "Anuluj"
+      }
     },
     "devices": {
       "title": "Twoje urządzenia",

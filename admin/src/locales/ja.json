@@ -130,7 +130,10 @@
       "passwordResetFailed": "パスワードのリセットに失敗しました: {error}",
       "passwordResetFailedGeneric": "パスワードのリセットに失敗しました",
       "passwordResetHelp": "ユーザーがパスワードを忘れた場合にリセットします。",
-      "passwordResetWarning": "これはアカウントのログインパスワードのみを変更します。ノートの暗号化には影響しません。ユーザーが暗号化パスワードを忘れた場合、ノートは復元できません。"
+      "passwordResetWarning": "これはアカウントのログインパスワードのみを変更します。ノートの暗号化には影響しません。ユーザーが暗号化パスワードを忘れた場合、ノートは復元できません。",
+      "inboxMaxItems": "受信トレイ最大件数",
+      "inboxMaxSize": "受信トレイ最大サイズ",
+      "items": "件"
     },
     "filters": {
       "all": "すべて",
@@ -261,7 +264,23 @@
       "attachmentCount": "添付ファイル",
       "storageUsed": "使用容量",
       "lastSync": "最終同期",
-      "never": "なし"
+      "never": "なし",
+      "inbox": {
+        "title": "受信トレイ API",
+        "description": "API 経由でアカウントにノートを送信 — 暗号化パスワード不要。アイテムは受信トレイに表示され、確認できます。",
+        "itemsLabel": "アイテム",
+        "sizeLabel": "サイズ",
+        "noToken": "受信トレイトークンが設定されていません。API 経由でノートを送信するにはトークンを生成してください。",
+        "generate": "トークンを生成",
+        "generated": "トークンが生成されました — 今すぐ保存してください。再表示されません。",
+        "active": "受信トレイトークン有効",
+        "copyToken": "コピー",
+        "quickStart": "クイックスタート",
+        "revoke": "トークンを取り消す",
+        "revokeConfirmTitle": "受信トレイトークンを取り消す",
+        "revokeConfirmMessage": "受信トレイトークンを取り消しますか？このトークンを使用するすべての連携が停止します。",
+        "cancel": "キャンセル"
+      }
     },
     "devices": {
       "title": "あなたのデバイス",

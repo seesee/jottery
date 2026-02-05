@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT inbox_max_items, inbox_max_size_mb FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "inbox_max_items",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inbox_max_size_mb",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "d5e9240920adde44d396ccd84aa1d1a395afb849167b8cd6c5074777a4b04fa7"
+}

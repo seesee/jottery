@@ -68,6 +68,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.L_lock_key", "help.L_lock_desc"),
                 HelpEntry::new("help.I_info_key", "help.I_info_desc"),
                 HelpEntry::new("help.v_versions_key", "help.v_versions_desc"),
+                HelpEntry::new("help.b_inbox_key", "help.b_inbox_desc"),
                 HelpEntry::new("help.bracket_cycle_key", "help.bracket_cycle_desc"),
                 HelpEntry::new("help.color_cycle_key", "help.color_cycle_desc"),
                 HelpEntry::new("help.j_down_key", "help.j_down_desc"),

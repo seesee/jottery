@@ -62,6 +62,21 @@
         "name": "max_upload_size_mb",
         "ordinal": 11,
         "type_info": "Integer"
+      },
+      {
+        "name": "inbox_token_hash",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "inbox_max_items",
+        "ordinal": 13,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inbox_max_size_mb",
+        "ordinal": 14,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -79,7 +94,10 @@
       false,
       true,
       true,
-      false
+      false,
+      true,
+      true,
+      true
     ]
   },
   "hash": "3e4e5c4be44ef130a6e886ed815bdf3e8d3d3f61e17713aa10f9912522cd84ca"

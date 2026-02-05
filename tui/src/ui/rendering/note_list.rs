@@ -19,15 +19,24 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     app.debug_log("render_note_list() started");
     let size = frame.area();
 
-    // Main layout: content + help at bottom
+    // Main layout: content + optional inbox indicator + help at bottom
     app.debug_log(&format!("Frame size: {}x{}", size.width, size.height));
-    let main_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(1)])
-        .split(size);
+    let show_inbox_bar = !app.inbox_items.is_empty() && matches!(app.view_mode, ViewMode::NoteList);
+    let main_layout = if show_inbox_bar {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1), Constraint::Length(1)])
+            .split(size)
+    } else {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .split(size)
+    };
 
     let content_area = main_layout[0];
-    let help_area = main_layout[1];
+    let inbox_area = if show_inbox_bar { Some(main_layout[1]) } else { None };
+    let help_area = if show_inbox_bar { main_layout[2] } else { main_layout[1] };
 
     // Split content into left (list) and right (preview) panes
     // Notes pane is fixed width (40 chars), preview takes the rest
@@ -49,6 +58,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
         ViewMode::VersionHistory => "Version History".to_string(),
         ViewMode::ConflictResolution => "Conflict Resolution".to_string(),
+        ViewMode::Inbox => format!("Inbox ({})", app.inbox_items.len()),
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
@@ -350,6 +360,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             ViewMode::ConflictResolution => {
                 "1: Keep Mine | 2: Keep Server | 3: Keep Both | Tab: switch | j/k: scroll | Esc: cancel".to_string()
             }
+            ViewMode::Inbox => {
+                "Enter: accept | d: delete | A: accept all | D: delete all | ↑/↓: navigate | Esc: close".to_string()
+            }
             ViewMode::NoteList => {
                 if app.archive_mode {
                     "A: unarchive | Shift+A: toggle mode | ↑/↓: navigate | /: search | Esc: exit archive".to_string()
@@ -376,6 +389,18 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         })
         .alignment(Alignment::Center);
     frame.render_widget(help, help_area);
+
+    // Render inbox indicator bar if inbox has items (only in NoteList mode)
+    if let Some(inbox_area) = inbox_area {
+        let inbox_text = format!("▶ {} — press b to open",
+            t!("inbox.indicator", count = app.inbox_items.len()));
+        let inbox_bar = Paragraph::new(inbox_text)
+            .style(Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD))
+            .alignment(Alignment::Center);
+        frame.render_widget(inbox_bar, inbox_area);
+    }
 
     // Right pane: note preview with timestamp footer
     // Split into main preview area and timestamp footer (2 lines: timestamp + border)
@@ -1325,6 +1350,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             frame.render_widget(modal_paragraph, modal_area);
         }
+    }
+
+    // Render inbox modal if showing
+    if matches!(app.view_mode, ViewMode::Inbox) {
+        super::inbox::render_inbox(app, frame, size);
     }
 
     // Store click detection areas in app (after all borrows of filtered are done)

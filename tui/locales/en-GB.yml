@@ -213,6 +213,28 @@ sync:
     pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
     inactive: "Your account has been deactivated. Please contact an administrator."
 
+# Inbox
+inbox:
+  title: "Inbox"
+  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
+  accepted: "Note accepted"
+  deleted: "Inbox item deleted"
+  accepted_all: "All %{count} inbox items accepted"
+  deleted_all: "All inbox items deleted"
+  confirm_delete_title: "Delete Inbox Item"
+  confirm_delete_message: "Delete this inbox item? This cannot be undone."
+  confirm_delete_all_title: "Delete All Inbox Items"
+  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
+  indicator: "Inbox (%{count})"
+  token:
+    logging_in: "Logging in..."
+    generated_success: "Inbox token generated successfully!"
+    save_warning: "Save this token now — it will not be shown again."
+    example_title: "Quick Start"
+    revoked: "Inbox token revoked"
+    active: "Inbox token is active"
+    none: "No inbox token configured"
+
 # Registration flow
 register:
   title: "Register with Sync Server"
@@ -453,6 +475,8 @@ help:
   r_recycle_desc: "Toggle recycle bin view"
   v_versions_key: "v"
   v_versions_desc: "View version history"
+  b_inbox_key: "b"
+  b_inbox_desc: "Open inbox"
   tab_search_key: "Tab"
   tab_search_desc: "Exit search, focus attachments"
   multi_select: "MULTI-SELECT MODE"

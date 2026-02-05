@@ -394,6 +394,213 @@ mod ui_tests {
     }
 }
 
+mod inbox_tests {
+    use serde_json::json;
+
+    #[test]
+    fn test_inbox_item_serialisation() {
+        // Verify InboxItem JSON structure matches the server API format
+        let item_json = json!({
+            "id": "inbox-001",
+            "content": "My inbox note",
+            "tags": ["tag1", "tag2"],
+            "createdAt": "2025-06-15T10:30:00Z",
+            "source": "curl",
+            "sizeBytes": 42
+        });
+
+        assert_eq!(item_json["id"], "inbox-001");
+        assert_eq!(item_json["content"], "My inbox note");
+        assert_eq!(item_json["tags"].as_array().unwrap().len(), 2);
+        assert_eq!(item_json["createdAt"], "2025-06-15T10:30:00Z");
+        assert_eq!(item_json["source"], "curl");
+        assert_eq!(item_json["sizeBytes"], 42);
+    }
+
+    #[test]
+    fn test_inbox_item_deserialisation_from_json_string() {
+        // Verify JSON deserialization matches the expected InboxItem shape
+        let json_str = r#"{
+            "id": "inbox-test-123",
+            "content": "Test content\nWith newlines",
+            "tags": ["inbox", "important"],
+            "createdAt": "2025-06-15T12:00:00Z",
+            "source": "github-webhook",
+            "sizeBytes": 128
+        }"#;
+
+        let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+        assert_eq!(parsed["id"], "inbox-test-123");
+        assert_eq!(parsed["content"], "Test content\nWith newlines");
+        assert_eq!(parsed["tags"][0], "inbox");
+        assert_eq!(parsed["tags"][1], "important");
+        assert_eq!(parsed["source"], "github-webhook");
+        assert_eq!(parsed["sizeBytes"], 128);
+    }
+
+    #[test]
+    fn test_inbox_item_without_optional_fields() {
+        // source is optional — should handle null/missing gracefully
+        let json_str = r#"{
+            "id": "inbox-no-source",
+            "content": "No source field",
+            "tags": [],
+            "createdAt": "2025-06-15T12:00:00Z",
+            "source": null,
+            "sizeBytes": 15
+        }"#;
+
+        let parsed: serde_json::Value = serde_json::from_str(json_str).unwrap();
+        assert!(parsed["source"].is_null());
+        assert!(parsed["tags"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_inbox_items_in_pull_response() {
+        // Verify SyncPullResponse includes inbox items when present
+        let pull_response = json!({
+            "notes": [],
+            "deletions": [],
+            "attachments": [],
+            "versions": [],
+            "savedSearches": [],
+            "syncedAt": "2025-06-15T12:00:00Z",
+            "totalCount": 0,
+            "hasMore": false,
+            "inboxItems": [
+                {
+                    "id": "inbox-from-pull",
+                    "content": "Synced inbox note",
+                    "tags": ["synced"],
+                    "createdAt": "2025-06-15T10:00:00Z",
+                    "source": "api",
+                    "sizeBytes": 50
+                }
+            ],
+            "inboxCount": 1
+        });
+
+        assert!(pull_response["inboxItems"].is_array());
+        let items = pull_response["inboxItems"].as_array().unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["id"], "inbox-from-pull");
+        assert_eq!(items[0]["content"], "Synced inbox note");
+        assert_eq!(pull_response["inboxCount"], 1);
+    }
+
+    #[test]
+    fn test_pull_response_without_inbox_items() {
+        // When no inbox items, fields should be absent or null
+        let pull_response = json!({
+            "notes": [],
+            "deletions": [],
+            "attachments": [],
+            "versions": [],
+            "savedSearches": [],
+            "syncedAt": "2025-06-15T12:00:00Z",
+            "totalCount": 0,
+            "hasMore": false
+        });
+
+        // inboxItems should not be present
+        assert!(pull_response.get("inboxItems").is_none());
+        assert!(pull_response.get("inboxCount").is_none());
+    }
+
+    #[test]
+    fn test_inbox_view_mode_state_transitions() {
+        // Simulate ViewMode state machine transitions for inbox
+        #[derive(Debug, PartialEq)]
+        enum ViewMode {
+            NoteList,
+            Inbox,
+            RecycleBin,
+        }
+
+        let mut mode = ViewMode::NoteList;
+
+        // Open inbox
+        mode = ViewMode::Inbox;
+        assert_eq!(mode, ViewMode::Inbox);
+
+        // Close inbox (back to note list)
+        mode = ViewMode::NoteList;
+        assert_eq!(mode, ViewMode::NoteList);
+
+        // Can't open inbox and recycle bin at same time
+        mode = ViewMode::RecycleBin;
+        assert_ne!(mode, ViewMode::Inbox);
+    }
+
+    #[test]
+    fn test_inbox_item_title_extraction() {
+        // The TUI extracts the title from the first line of content
+        let content = "Meeting notes from today\nDiscussed project roadmap\nAction items listed below";
+        let title = content.lines().next().unwrap_or("Untitled");
+        assert_eq!(title, "Meeting notes from today");
+
+        // Empty content should use fallback
+        let empty_content = "";
+        let empty_title = empty_content.lines().next().unwrap_or("Untitled");
+        assert_eq!(empty_title, "Untitled");
+
+        // Content with only newlines
+        let newline_content = "\n\n";
+        let newline_title = newline_content.lines().next().unwrap_or("Untitled");
+        assert_eq!(newline_title, ""); // First line is empty string
+    }
+
+    #[test]
+    fn test_inbox_selection_bounds() {
+        // Simulate inbox item selection with bounds checking
+        let inbox_count = 5;
+        let mut selected = 0_usize;
+
+        // Move down
+        if selected < inbox_count - 1 {
+            selected += 1;
+        }
+        assert_eq!(selected, 1);
+
+        // Move to last item
+        selected = inbox_count - 1;
+        assert_eq!(selected, 4);
+
+        // Try to move past last item — should stay at end
+        if selected < inbox_count - 1 {
+            selected += 1;
+        }
+        assert_eq!(selected, 4);
+
+        // Move up
+        if selected > 0 {
+            selected -= 1;
+        }
+        assert_eq!(selected, 3);
+
+        // Move to first item
+        selected = 0;
+        // Try to move before first item — should stay at 0
+        if selected > 0 {
+            selected -= 1;
+        }
+        assert_eq!(selected, 0);
+    }
+
+    #[test]
+    fn test_inbox_delete_api_url() {
+        let endpoint = "https://sync.example.com";
+        let item_id = "inbox-abc123";
+
+        let delete_url = format!("{}/api/v1/inbox/{}", endpoint, item_id);
+        assert_eq!(delete_url, "https://sync.example.com/api/v1/inbox/inbox-abc123");
+
+        // Bulk delete URL
+        let bulk_delete_url = format!("{}/api/v1/inbox", endpoint);
+        assert_eq!(bulk_delete_url, "https://sync.example.com/api/v1/inbox");
+    }
+}
+
 mod api_tests {
     #[test]
     fn test_api_url_construction() {

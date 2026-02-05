@@ -190,6 +190,29 @@ sync:
   import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
   credentials_empty: No credentials entered
   import_failed: Failed to import credentials
+
+# Inbox
+inbox:
+  title: "Inbox"
+  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
+  accepted: "Note accepted"
+  deleted: "Inbox item deleted"
+  accepted_all: "All %{count} inbox items accepted"
+  deleted_all: "All inbox items deleted"
+  confirm_delete_title: "Delete Inbox Item"
+  confirm_delete_message: "Delete this inbox item? This cannot be undone."
+  confirm_delete_all_title: "Delete All Inbox Items"
+  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
+  indicator: "Inbox (%{count})"
+  token:
+    logging_in: "Logging in..."
+    generated_success: "Inbox token generated successfully!"
+    save_warning: "Save this token now — it will not be shown again."
+    example_title: "Quick Start"
+    revoked: "Inbox token revoked"
+    active: "Inbox token is active"
+    none: "No inbox token configured"
+
 register:
   title: 동기화 서버에 등록
   enter_endpoint: "동기화 서버 URL을 입력하세요 (예: https://sync.example.com):"
@@ -405,6 +428,8 @@ help:
   r_recycle_desc: Toggle recycle bin view
   v_versions_key: v
   v_versions_desc: View version history
+  b_inbox_key: b
+  b_inbox_desc: "받은편지함 열기"
   tab_search_key: Tab
   tab_search_desc: Exit search, focus attachments
   multi_select: MULTI-SELECT MODE

@@ -214,10 +214,10 @@ pub fn view_with_chafa(app: &mut App, path: &std::path::Path) -> Result<()> {
     execute!(io::stdout(), LeaveAlternateScreen)
         .context("Failed to leave alternate screen")?;
 
-    // Launch chafa
+    // Launch chafa — let it auto-detect the best output format (symbols,
+    // sixel, kitty, etc.) and scale to fit the terminal
     let status = Command::new("chafa")
-        .arg("--size=80x40") // Reasonable terminal size
-        .arg("--animate=false") // No animation for static images
+        .arg("--animate=false")
         .arg(path)
         .status()
         .context("Failed to launch chafa")?;

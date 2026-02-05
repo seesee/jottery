@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT email, storage_quota_mb, created_at, inbox_token_hash, inbox_max_items, inbox_max_size_mb FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "email",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "storage_quota_mb",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "inbox_token_hash",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "inbox_max_items",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inbox_max_size_mb",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a0a8a05333325fed09f46eb427789e49d8f5109f266ae5f781dffdd79a815381"
+}

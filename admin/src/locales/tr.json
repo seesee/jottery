@@ -130,7 +130,10 @@
       "passwordResetFailed": "Parola sıfırlanamadı: {error}",
       "passwordResetFailedGeneric": "Parola sıfırlanamadı",
       "passwordResetHelp": "Kullanıcı parolasını unutmuşsa sıfırlayın.",
-      "passwordResetWarning": "Bu sadece hesap giriş parolasını değiştirir. Not şifrelemesini etkilemez. Kullanıcı şifreleme parolasını unutmuşsa, notları kurtarılamaz."
+      "passwordResetWarning": "Bu sadece hesap giriş parolasını değiştirir. Not şifrelemesini etkilemez. Kullanıcı şifreleme parolasını unutmuşsa, notları kurtarılamaz.",
+      "inboxMaxItems": "Maks. gelen kutusu öğeleri",
+      "inboxMaxSize": "Maks. gelen kutusu boyutu",
+      "items": "öğe"
     },
     "filters": {
       "all": "Tümü",
@@ -261,7 +264,23 @@
       "attachmentCount": "Ekler",
       "storageUsed": "Kullanılan depolama",
       "lastSync": "Son senkronizasyon",
-      "never": "Hiç"
+      "never": "Hiç",
+      "inbox": {
+        "title": "Gelen Kutusu API'si",
+        "description": "API aracılığıyla hesabınıza not gönderin — şifreleme parolası gerekmez. Öğeler incelenmek üzere gelen kutunuzda görünür.",
+        "itemsLabel": "Öğeler",
+        "sizeLabel": "Boyut",
+        "noToken": "Gelen kutusu jetonu yapılandırılmamış. API ile not göndermeye başlamak için bir jeton oluşturun.",
+        "generate": "Jeton oluştur",
+        "generated": "Jeton oluşturuldu — şimdi kaydedin, tekrar gösterilmeyecek.",
+        "active": "Gelen kutusu jetonu etkin",
+        "copyToken": "Kopyala",
+        "quickStart": "Hızlı başlangıç",
+        "revoke": "Jetonu iptal et",
+        "revokeConfirmTitle": "Gelen kutusu jetonunu iptal et",
+        "revokeConfirmMessage": "Gelen kutusu jetonunuzu iptal etmek istiyor musunuz? Onu kullanan tüm entegrasyonlar çalışmayı durduracak.",
+        "cancel": "İptal"
+      }
     },
     "devices": {
       "title": "Cihazlarınız",

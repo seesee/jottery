@@ -24,6 +24,17 @@ pub struct UserAccountInfo {
     pub storage_quota_mb: i64,
     pub created_at: String,
     pub last_sync_at: Option<String>,
+    pub inbox: InboxAccountInfo,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxAccountInfo {
+    pub item_count: i64,
+    pub total_size_bytes: i64,
+    pub max_items: i64,
+    pub max_size_mb: i64,
+    pub has_token: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -145,7 +156,7 @@ pub async fn get_account_info(
 
     // Get user info
     let user = sqlx::query!(
-        "SELECT email, storage_quota_mb, created_at FROM users WHERE id = ?",
+        "SELECT email, storage_quota_mb, created_at, inbox_token_hash, inbox_max_items, inbox_max_size_mb FROM users WHERE id = ?",
         user_id
     )
     .fetch_optional(&state.pool)
@@ -197,10 +208,22 @@ pub async fn get_account_info(
     let last_sync: Option<String> = sqlx::query_scalar(
         "SELECT MAX(last_seen_at) FROM clients WHERE user_id = ?"
     )
-    .bind(user_id)
+    .bind(&user_id)
     .fetch_optional(&state.pool)
     .await
     .unwrap_or(None);
+
+    // Get inbox stats
+    let inbox_stats = sqlx::query!(
+        "SELECT COUNT(*) as count, COALESCE(SUM(size_bytes), 0) as total_size FROM inbox_items WHERE user_id = ?",
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to query inbox stats: {}", e);
+        AppError::InternalServerError
+    })?;
 
     Ok(Json(UserAccountInfo {
         email: user.email,
@@ -210,6 +233,13 @@ pub async fn get_account_info(
         storage_quota_mb: user.storage_quota_mb.unwrap_or(1000) as i64,
         created_at: user.created_at,
         last_sync_at: last_sync,
+        inbox: InboxAccountInfo {
+            item_count: inbox_stats.count as i64,
+            total_size_bytes: inbox_stats.total_size as i64,
+            max_items: user.inbox_max_items.unwrap_or(100),
+            max_size_mb: user.inbox_max_size_mb.unwrap_or(10),
+            has_token: user.inbox_token_hash.is_some(),
+        },
     }))
 }
 
@@ -658,4 +688,109 @@ pub async fn revoke_device(
 
     tracing::info!("User {} revoked device {}", user_id, device_id);
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================================
+// Inbox Token Management
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateInboxTokenResponse {
+    pub token: String,
+}
+
+/// Generate a new inbox token (replaces any existing token)
+/// POST /api/v1/user/inbox-token
+pub async fn generate_inbox_token(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<(StatusCode, Json<GenerateInboxTokenResponse>)> {
+    let user_id = &session.user_id;
+
+    // Generate 32 random bytes as hex (64 chars)
+    let token: String = (0..32)
+        .map(|_| format!("{:02x}", rand::random::<u8>()))
+        .collect();
+
+    // SHA-256 hash for storage
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    let token_hash = format!("{:x}", hasher.finalize());
+
+    // Store hash (replaces any existing token)
+    sqlx::query!(
+        "UPDATE users SET inbox_token_hash = ? WHERE id = ?",
+        token_hash,
+        user_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to store inbox token: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    tracing::info!("Inbox token generated for user {}", user_id);
+
+    Ok((
+        StatusCode::CREATED,
+        Json(GenerateInboxTokenResponse { token }),
+    ))
+}
+
+/// Revoke the inbox token
+/// DELETE /api/v1/user/inbox-token
+pub async fn revoke_inbox_token(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<StatusCode> {
+    let user_id = &session.user_id;
+
+    sqlx::query!(
+        "UPDATE users SET inbox_token_hash = NULL WHERE id = ?",
+        user_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to revoke inbox token: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    tracing::info!("Inbox token revoked for user {}", user_id);
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxTokenStatusResponse {
+    pub has_token: bool,
+}
+
+/// Check if an inbox token exists
+/// GET /api/v1/user/inbox-token/status
+pub async fn get_inbox_token_status(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<Json<InboxTokenStatusResponse>> {
+    let user_id = &session.user_id;
+
+    let result = sqlx::query!(
+        "SELECT inbox_token_hash FROM users WHERE id = ?",
+        user_id
+    )
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to check inbox token: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    let has_token = result
+        .and_then(|r| r.inbox_token_hash)
+        .is_some();
+
+    Ok(Json(InboxTokenStatusResponse { has_token }))
 }

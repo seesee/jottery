@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO inbox_items (id, user_id, content, tags, created_at, source, size_bytes)\n        VALUES (?, ?, ?, ?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "b224bf97fabd2f2105a7fa01f618c35e952dbb7a72d7599ae4990ba98c7c17fd"
+}

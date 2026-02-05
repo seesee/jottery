@@ -15,6 +15,7 @@
   import SettingsModal from './lib/components/SettingsModal.svelte';
   import KeyboardShortcuts from './lib/components/KeyboardShortcuts.svelte';
   import RecycleBin from './lib/components/RecycleBin.svelte';
+  import InboxPanel from './lib/components/InboxPanel.svelte';
   import KeyboardShortcutsHelp from './lib/components/KeyboardShortcutsHelp.svelte';
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
   import Toast from './lib/components/Toast.svelte';
@@ -26,6 +27,7 @@
   let loadingProgress = { current: 0, total: 0 };
   let showSettings = false;
   let showRecycleBin = false;
+  let showInboxPanel = false;
   let showShortcutsHelp = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
@@ -114,6 +116,10 @@
 
   function handleOpenRecycleBin() {
     showRecycleBin = true;
+  }
+
+  function handleOpenInbox() {
+    showInboxPanel = true;
   }
 
   function handleOpenShortcutsHelp() {
@@ -483,7 +489,7 @@
           <!-- This preserves NoteList state (scroll position, height cache) across navigation -->
           <div class="w-full h-full relative">
             <div class="absolute inset-0" class:hidden={mobileView !== 'list'}>
-              <NoteList onNoteSelect={handleNoteSelect} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
+              <NoteList onNoteSelect={handleNoteSelect} onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
             </div>
             <div class="absolute inset-0" class:hidden={mobileView !== 'editor'}>
               <EditorPane bind:this={editorPaneRef} onBackToList={handleBackToList} forceMobileLayout={true} />
@@ -505,7 +511,7 @@
           <div class="flex w-full h-full min-h-0">
             <!-- Note List Sidebar -->
             <div class="w-80 h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden">
-              <NoteList {loadingNotes} {loadingProgress} />
+              <NoteList onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} />
             </div>
 
             <!-- Editor -->
@@ -528,6 +534,12 @@
     <RecycleBin
       show={showRecycleBin}
       onClose={() => showRecycleBin = false}
+    />
+
+    <!-- Inbox Panel Modal -->
+    <InboxPanel
+      show={showInboxPanel}
+      onClose={() => showInboxPanel = false}
     />
 
     <!-- Keyboard Shortcuts Help Modal -->

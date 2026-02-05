@@ -70,6 +70,7 @@ export type {
   AuthRegisterRequest,
   AuthRegisterResponse,
   ConflictData,
+  InboxItem,
 } from './sync';
 
 // Editor types (component refs and third-party library interfaces)

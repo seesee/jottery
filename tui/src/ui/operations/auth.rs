@@ -242,6 +242,9 @@ pub fn unlock(app: &mut App) -> Result<()> {
     // Start SSE connection for real-time sync notifications
     app.start_sse_if_enabled();
 
+    // Trigger an immediate sync to fetch inbox items and any pending changes
+    app.trigger_sync();
+
     Ok(())
 }
 

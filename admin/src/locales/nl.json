@@ -130,7 +130,10 @@
       "passwordResetFailed": "Wachtwoord resetten mislukt: {error}",
       "passwordResetFailedGeneric": "Wachtwoord resetten mislukt",
       "passwordResetHelp": "Reset het wachtwoord van de gebruiker als ze het zijn vergeten.",
-      "passwordResetWarning": "Dit wijzigt alleen het inlogwachtwoord. Het heeft geen invloed op de notitie-versleuteling. Als de gebruiker hun versleutelingswachtwoord is vergeten, kunnen hun notities niet worden hersteld."
+      "passwordResetWarning": "Dit wijzigt alleen het inlogwachtwoord. Het heeft geen invloed op de notitie-versleuteling. Als de gebruiker hun versleutelingswachtwoord is vergeten, kunnen hun notities niet worden hersteld.",
+      "inboxMaxItems": "Max. inbox-items",
+      "inboxMaxSize": "Max. inbox-grootte",
+      "items": "items"
     },
     "filters": {
       "all": "Alle",
@@ -261,7 +264,23 @@
       "attachmentCount": "Bijlagen",
       "storageUsed": "Opslag gebruikt",
       "lastSync": "Laatste synchronisatie",
-      "never": "Nooit"
+      "never": "Nooit",
+      "inbox": {
+        "title": "Postvak-in API",
+        "description": "Verstuur notities naar uw account via de API — geen versleutelingswachtwoord nodig. Items verschijnen in uw postvak-in ter beoordeling.",
+        "itemsLabel": "Items",
+        "sizeLabel": "Grootte",
+        "noToken": "Geen postvak-in token geconfigureerd. Genereer er een om notities via de API in te dienen.",
+        "generate": "Token genereren",
+        "generated": "Token gegenereerd — sla het nu op, het wordt niet opnieuw getoond.",
+        "active": "Postvak-in token actief",
+        "copyToken": "Kopiëren",
+        "quickStart": "Snelstart",
+        "revoke": "Token intrekken",
+        "revokeConfirmTitle": "Postvak-in token intrekken",
+        "revokeConfirmMessage": "Uw postvak-in token intrekken? Alle integraties die het gebruiken zullen stoppen met werken.",
+        "cancel": "Annuleren"
+      }
     },
     "devices": {
       "title": "Uw apparaten",

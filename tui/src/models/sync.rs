@@ -252,6 +252,22 @@ pub struct SyncPullResponse {
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
     pub synced_at: DateTime<Utc>,
+    #[serde(default)]
+    pub inbox_items: Option<Vec<InboxItem>>,
+    #[serde(default)]
+    pub inbox_count: Option<i64>,
+}
+
+/// Inbox item (unencrypted note submitted via Inbox API)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxItem {
+    pub id: String,
+    pub content: String,
+    pub tags: Vec<String>,
+    pub created_at: String,
+    pub source: Option<String>,
+    pub size_bytes: i64,
 }
 
 /// Deleted note info

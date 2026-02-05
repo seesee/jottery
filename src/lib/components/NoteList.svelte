@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing, inboxCount } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -22,6 +22,7 @@
   } from '../constants';
 
   export let onNoteSelect: (() => void) | undefined = undefined;
+  export let onOpenInbox: (() => void) | undefined = undefined;
   export let loadingNotes: boolean = false;
   export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
   export let forceMobileLayout: boolean = false;
@@ -506,11 +507,81 @@
 </script>
 
 {#if isMobile && $settings.syncEnabled}
-  <PullToRefresh onRefresh={handleRefresh} enabled={$settings.syncEnabled}>
+  <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+    <div class="flex-1 min-h-0">
+      <PullToRefresh onRefresh={handleRefresh} enabled={$settings.syncEnabled}>
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+          bind:this={scrollContainer}
+          class="h-full overflow-y-auto"
+          on:scroll={handleScroll}
+          on:keydown={handleKeydown}
+          role="list"
+          tabindex="-1"
+        >
+        {#if $filteredNotes.length === 0}
+          <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
+            <div>
+              {#if loadingNotes}
+                <!-- Loading state with progress -->
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-lg mb-2">{$_('common.loading')}</p>
+                {#if loadingProgress.total > 0}
+                  <p class="text-sm">
+                    {$_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } })}
+                  </p>
+                {/if}
+              {:else if $notes.length === 0}
+                <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
+                <p class="text-sm">{$_('note.createFirstNote')}</p>
+              {:else if $searchQuery.trim()}
+                <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
+                <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
+              {:else if $archiveMode}
+                <p class="text-lg mb-2">{$_('archive.empty')}</p>
+                <p class="text-sm">{$_('archive.emptyDescription')}</p>
+              {:else}
+                <p class="text-lg mb-2">{$_('note.noNotes')}</p>
+                <p class="text-sm">{$_('note.somethingWentWrong')}</p>
+              {/if}
+            </div>
+          </div>
+        {:else}
+          <!-- Virtual scrolling container -->
+          <div style="height: {totalHeight}px; position: relative;">
+            <!-- Offset for items before viewport -->
+            <div style="height: {offsetY}px;"></div>
+
+            <!-- Render only visible items -->
+            {#each visibleNotes as note, i (note.id)}
+              <div bind:this={itemElements[i]}>
+                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      </PullToRefresh>
+    </div>
+
+    <!-- Floating inbox indicator for mobile -->
+    {#if $inboxCount > 0 && onOpenInbox}
+      <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/20 text-center flex-shrink-0">
+        <button
+          on:click={onOpenInbox}
+          class="text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+        >
+          {$_('inbox.indicator', { values: { count: $inboxCount } })}
+        </button>
+      </div>
+    {/if}
+  </div>
+{:else}
+  <div class="h-full flex flex-col bg-white dark:bg-gray-900">
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       bind:this={scrollContainer}
-      class="h-full overflow-y-auto bg-white dark:bg-gray-900"
+      class="flex-1 min-h-0 overflow-y-auto"
       on:scroll={handleScroll}
       on:keydown={handleKeydown}
       role="list"
@@ -558,70 +629,29 @@
         </div>
       {/if}
     </div>
-  </PullToRefresh>
-{:else}
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <div
-    bind:this={scrollContainer}
-    class="h-full overflow-y-auto bg-white dark:bg-gray-900"
-    on:scroll={handleScroll}
-    on:keydown={handleKeydown}
-    role="list"
-    tabindex="-1"
-  >
-    {#if $filteredNotes.length === 0}
-      <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
-        <div>
-          {#if loadingNotes}
-            <!-- Loading state with progress -->
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p class="text-lg mb-2">{$_('common.loading')}</p>
-            {#if loadingProgress.total > 0}
-              <p class="text-sm">
-                {$_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } })}
-              </p>
-            {/if}
-          {:else if $notes.length === 0}
-            <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
-            <p class="text-sm">{$_('note.createFirstNote')}</p>
-          {:else if $searchQuery.trim()}
-            <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
-            <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
-          {:else if $archiveMode}
-            <p class="text-lg mb-2">{$_('archive.empty')}</p>
-            <p class="text-sm">{$_('archive.emptyDescription')}</p>
-          {:else}
-            <p class="text-lg mb-2">{$_('note.noNotes')}</p>
-            <p class="text-sm">{$_('note.somethingWentWrong')}</p>
-          {/if}
-        </div>
-      </div>
-    {:else}
-      <!-- Virtual scrolling container -->
-      <div style="height: {totalHeight}px; position: relative;">
-        <!-- Offset for items before viewport -->
-        <div style="height: {offsetY}px;"></div>
 
-        <!-- Render only visible items -->
-        {#each visibleNotes as note, i (note.id)}
-          <div bind:this={itemElements[i]}>
-            <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
-          </div>
-        {/each}
+    <!-- Floating indicators below scroll area (always visible without scrolling) -->
+    {#if $inboxCount > 0 && onOpenInbox}
+      <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/20 text-center flex-shrink-0">
+        <button
+          on:click={onOpenInbox}
+          class="text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+        >
+          {$_('inbox.indicator', { values: { count: $inboxCount } })}
+        </button>
       </div>
+    {/if}
 
-      <!-- Cross-mode match indicator (only shown when searching with few results) -->
-      {#if showCrossModeHint}
-        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-center">
-          <button
-            on:click={toggleArchiveMode}
-            class="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline"
-            title={$archiveMode ? $_('archive.crossModeHintActive') : $_('archive.crossModeHintArchive')}
-          >
-            {crossModeMatchCount} {crossModeMatchCount === 1 ? $_('note.matchSingular') : $_('note.matchPlural')} {$archiveMode ? $_('archive.inActive') : $_('archive.inArchive')}
-          </button>
-        </div>
-      {/if}
+    {#if showCrossModeHint}
+      <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-center flex-shrink-0">
+        <button
+          on:click={toggleArchiveMode}
+          class="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline"
+          title={$archiveMode ? $_('archive.crossModeHintActive') : $_('archive.crossModeHintArchive')}
+        >
+          {crossModeMatchCount} {crossModeMatchCount === 1 ? $_('note.matchSingular') : $_('note.matchPlural')} {$archiveMode ? $_('archive.inActive') : $_('archive.inArchive')}
+        </button>
+      </div>
     {/if}
   </div>
 {/if}
