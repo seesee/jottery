@@ -49,6 +49,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
         ViewMode::VersionHistory => "Version History".to_string(),
         ViewMode::ConflictResolution => "Conflict Resolution".to_string(),
+        ViewMode::Inbox => format!("Inbox ({})", app.inbox_items.len()),
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
@@ -349,6 +350,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             }
             ViewMode::ConflictResolution => {
                 "1: Keep Mine | 2: Keep Server | 3: Keep Both | Tab: switch | j/k: scroll | Esc: cancel".to_string()
+            }
+            ViewMode::Inbox => {
+                "Enter: accept | d: delete | A: accept all | D: delete all | ↑/↓: navigate | Esc: close".to_string()
             }
             ViewMode::NoteList => {
                 if app.archive_mode {
@@ -1325,6 +1329,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             frame.render_widget(modal_paragraph, modal_area);
         }
+    }
+
+    // Render inbox modal if showing
+    if matches!(app.view_mode, ViewMode::Inbox) {
+        super::inbox::render_inbox(app, frame, size);
     }
 
     // Store click detection areas in app (after all borrows of filtered are done)

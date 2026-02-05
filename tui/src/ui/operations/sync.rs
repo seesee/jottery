@@ -794,6 +794,14 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
         }
     }
 
+    // Process inbox items from pull response
+    if let Some(inbox_items) = pull_response.inbox_items {
+        app.inbox_items = inbox_items;
+        app.debug_log(&format!("Pull - Received {} inbox items", app.inbox_items.len()));
+    } else {
+        app.inbox_items.clear();
+    }
+
     // Update sync metadata
     metadata.last_sync_at = Some(Utc::now());
     metadata.last_pull_at = Some(Utc::now());

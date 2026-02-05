@@ -237,6 +237,167 @@ impl AuthClient {
     }
 }
 
+/// Login response for session-based auth
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoginResponse {
+    pub session_id: String,
+    pub expires_at: String,
+}
+
+/// Inbox token generation response
+#[derive(Debug, Deserialize)]
+pub struct InboxTokenResponse {
+    pub token: String,
+}
+
+/// Inbox token status response
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxTokenStatusResponse {
+    pub has_token: bool,
+}
+
+/// Session-based API client (for user operations requiring login)
+pub struct SessionClient {
+    base_url: String,
+    session_token: String,
+    client: reqwest::blocking::Client,
+}
+
+impl SessionClient {
+    /// Login and create a session client
+    pub fn login(base_url: &str, email: &str, password: &str) -> Result<Self> {
+        let client = reqwest::blocking::Client::new();
+        let url = format!("{}/api/v1/auth/login", base_url);
+
+        let response = client
+            .post(&url)
+            .json(&serde_json::json!({
+                "email": email,
+                "password": password,
+            }))
+            .send()
+            .context("Failed to send login request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Login failed: {} - {}", status, error_body);
+        }
+
+        let login_response: LoginResponse = response.json()
+            .context("Failed to parse login response")?;
+
+        Ok(Self {
+            base_url: base_url.to_string(),
+            session_token: login_response.session_id,
+            client,
+        })
+    }
+
+    /// Generate a new inbox token
+    pub fn generate_inbox_token(&self) -> Result<String> {
+        let url = format!("{}/api/v1/user/inbox-token", self.base_url);
+
+        let response = self.client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.session_token))
+            .send()
+            .context("Failed to send inbox token request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Failed to generate inbox token: {} - {}", status, error_body);
+        }
+
+        let result: InboxTokenResponse = response.json()
+            .context("Failed to parse inbox token response")?;
+
+        Ok(result.token)
+    }
+
+    /// Revoke the current inbox token
+    pub fn revoke_inbox_token(&self) -> Result<()> {
+        let url = format!("{}/api/v1/user/inbox-token", self.base_url);
+
+        let response = self.client
+            .delete(&url)
+            .header("Authorization", format!("Bearer {}", self.session_token))
+            .send()
+            .context("Failed to send revoke request")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Failed to revoke inbox token: {} - {}", status, error_body);
+        }
+
+        Ok(())
+    }
+
+    /// Check if an inbox token exists
+    pub fn get_inbox_token_status(&self) -> Result<bool> {
+        let url = format!("{}/api/v1/user/inbox-token/status", self.base_url);
+
+        let response = self.client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.session_token))
+            .send()
+            .context("Failed to check inbox token status")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Failed to check token status: {} - {}", status, error_body);
+        }
+
+        let result: InboxTokenStatusResponse = response.json()
+            .context("Failed to parse token status response")?;
+
+        Ok(result.has_token)
+    }
+}
+
+/// Delete an inbox item from the server (using device API key auth)
+pub fn delete_inbox_item(endpoint: &str, api_key: &str, item_id: &str) -> Result<()> {
+    let client = reqwest::blocking::Client::new();
+    let url = format!("{}/api/v1/inbox/{}", endpoint, item_id);
+
+    let response = client
+        .delete(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .context("Failed to delete inbox item")?;
+
+    if !response.status().is_success() && response.status() != reqwest::StatusCode::NOT_FOUND {
+        let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+        anyhow::bail!("Failed to delete inbox item: {}", error_body);
+    }
+
+    Ok(())
+}
+
+/// Delete all inbox items from the server (using device API key auth)
+pub fn delete_all_inbox_items(endpoint: &str, api_key: &str) -> Result<()> {
+    let client = reqwest::blocking::Client::new();
+    let url = format!("{}/api/v1/inbox", endpoint);
+
+    let response = client
+        .delete(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .context("Failed to delete all inbox items")?;
+
+    if !response.status().is_success() {
+        let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+        anyhow::bail!("Failed to delete all inbox items: {}", error_body);
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

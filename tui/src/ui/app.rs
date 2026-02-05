@@ -233,6 +233,14 @@ pub struct App {
     pub(crate) password_storage: Box<dyn PasswordStorage>,
     /// SSE handle for real-time sync notifications (when connected)
     pub(crate) sse_handle: Option<crate::sse::SseHandle>,
+    /// Inbox items from server (unencrypted)
+    pub inbox_items: Vec<crate::models::sync::InboxItem>,
+    /// Selected inbox item index
+    pub selected_inbox_item: usize,
+    /// Show inbox delete confirmation
+    pub show_inbox_delete_confirm: bool,
+    /// Show inbox delete-all confirmation
+    pub show_inbox_delete_all_confirm: bool,
 }
 
 
@@ -327,6 +335,10 @@ impl App {
             search_tag_completion_index: 0,
             password_storage,
             sse_handle: None,
+            inbox_items: Vec::new(),
+            selected_inbox_item: 0,
+            show_inbox_delete_confirm: false,
+            show_inbox_delete_all_confirm: false,
         })
     }
 

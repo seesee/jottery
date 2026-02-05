@@ -113,6 +113,8 @@ pub enum ViewMode {
     VersionHistory,
     /// Conflict resolution modal
     ConflictResolution,
+    /// Inbox view (unencrypted notes from Inbox API)
+    Inbox,
 }
 
 /// Which panel is focused in the preview pane

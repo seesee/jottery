@@ -197,6 +197,11 @@ enum Commands {
         #[arg(short, long)]
         password: String,
     },
+    /// Manage inbox API token
+    InboxToken {
+        #[command(subcommand)]
+        action: InboxTokenAction,
+    },
     /// Restore from encrypted backup
     RestoreBackup {
         /// Input file path
@@ -210,6 +215,52 @@ enum Commands {
         /// Local database encryption password (defaults to backup password)
         #[arg(short = 'k', long)]
         key_password: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum InboxTokenAction {
+    /// Generate a new inbox token (requires server login)
+    Generate {
+        /// Server endpoint URL (uses configured endpoint if omitted)
+        #[arg(short, long)]
+        server: Option<String>,
+
+        /// User email
+        #[arg(short, long)]
+        email: String,
+
+        /// Password (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Revoke the current inbox token
+    Revoke {
+        /// Server endpoint URL
+        #[arg(short, long)]
+        server: Option<String>,
+
+        /// User email
+        #[arg(short, long)]
+        email: String,
+
+        /// Password (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Check if an inbox token exists
+    Status {
+        /// Server endpoint URL
+        #[arg(short, long)]
+        server: Option<String>,
+
+        /// User email
+        #[arg(short, long)]
+        email: String,
+
+        /// Password (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
     },
 }
 
@@ -811,6 +862,77 @@ fn main() -> Result<()> {
             println!("1. {}: jottery note", t!("cli.new"));
             println!("2. {}: jottery sync", t!("cli.sync"));
             println!("3. {}: jottery", t!("menu.notes"));
+
+            return Ok(());
+        }
+        Some(Commands::InboxToken { action }) => {
+            use api::SessionClient;
+
+            let (server, email, password) = match &action {
+                InboxTokenAction::Generate { server, email, password } |
+                InboxTokenAction::Revoke { server, email, password } |
+                InboxTokenAction::Status { server, email, password } => {
+                    (server.clone(), email.clone(), password.clone())
+                }
+            };
+
+            let server = match server {
+                Some(s) => s,
+                None => {
+                    // Try to get from database sync metadata
+                    let pwd = get_password(None, &db_path)?;
+                    let db = Database::open(&db_path, &pwd)
+                        .context("Failed to open database")?;
+                    let sync_repo = SyncRepository::new(db.connection());
+                    match sync_repo.get_metadata()? {
+                        Some(m) if !m.sync_endpoint.is_empty() => m.sync_endpoint,
+                        _ => anyhow::bail!("No server specified and no sync endpoint configured. Use --server."),
+                    }
+                }
+            };
+
+            let password = match password {
+                Some(pwd) => pwd,
+                None => {
+                    print!("{}", t!("password.prompt"));
+                    io::stdout().flush()?;
+                    rpassword::read_password()?
+                }
+            };
+
+            // Login to get session
+            println!("{}", t!("inbox.token.logging_in"));
+            let session = SessionClient::login(&server, &email, &password)
+                .context("Failed to login to server")?;
+
+            match action {
+                InboxTokenAction::Generate { .. } => {
+                    let token = session.generate_inbox_token()
+                        .context("Failed to generate inbox token")?;
+                    println!("\n{}", t!("inbox.token.generated_success"));
+                    println!("\n  {}\n", token);
+                    println!("{}", t!("inbox.token.save_warning"));
+                    println!("\n{}:", t!("inbox.token.example_title"));
+                    println!("  curl -X POST {}/api/v1/inbox \\", server);
+                    println!("    -H \"Authorization: Bearer {}\" \\", token);
+                    println!("    -H \"Content-Type: application/json\" \\");
+                    println!("    -d '{{\"content\":\"My note\",\"tags\":[\"inbox\"]}}'");
+                }
+                InboxTokenAction::Revoke { .. } => {
+                    session.revoke_inbox_token()
+                        .context("Failed to revoke inbox token")?;
+                    println!("✓ {}", t!("inbox.token.revoked"));
+                }
+                InboxTokenAction::Status { .. } => {
+                    let has_token = session.get_inbox_token_status()
+                        .context("Failed to check inbox token status")?;
+                    if has_token {
+                        println!("✓ {}", t!("inbox.token.active"));
+                    } else {
+                        println!("{}", t!("inbox.token.none"));
+                    }
+                }
+            }
 
             return Ok(());
         }
