@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing, inboxCount } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -22,6 +22,7 @@
   } from '../constants';
 
   export let onNoteSelect: (() => void) | undefined = undefined;
+  export let onOpenInbox: (() => void) | undefined = undefined;
   export let loadingNotes: boolean = false;
   export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
   export let forceMobileLayout: boolean = false;
@@ -609,6 +610,18 @@
           </div>
         {/each}
       </div>
+
+      <!-- Inbox indicator (only shown when inbox has items) -->
+      {#if $inboxCount > 0 && onOpenInbox}
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/20 text-center">
+          <button
+            on:click={onOpenInbox}
+            class="text-sm font-medium text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+          >
+            {$_('inbox.indicator', { values: { count: $inboxCount } })}
+          </button>
+        </div>
+      {/if}
 
       <!-- Cross-mode match indicator (only shown when searching with few results) -->
       {#if showCrossModeHint}

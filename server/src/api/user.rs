@@ -24,6 +24,17 @@ pub struct UserAccountInfo {
     pub storage_quota_mb: i64,
     pub created_at: String,
     pub last_sync_at: Option<String>,
+    pub inbox: InboxAccountInfo,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxAccountInfo {
+    pub item_count: i64,
+    pub total_size_bytes: i64,
+    pub max_items: i64,
+    pub max_size_mb: i64,
+    pub has_token: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -145,7 +156,7 @@ pub async fn get_account_info(
 
     // Get user info
     let user = sqlx::query!(
-        "SELECT email, storage_quota_mb, created_at FROM users WHERE id = ?",
+        "SELECT email, storage_quota_mb, created_at, inbox_token_hash, inbox_max_items, inbox_max_size_mb FROM users WHERE id = ?",
         user_id
     )
     .fetch_optional(&state.pool)
@@ -197,10 +208,22 @@ pub async fn get_account_info(
     let last_sync: Option<String> = sqlx::query_scalar(
         "SELECT MAX(last_seen_at) FROM clients WHERE user_id = ?"
     )
-    .bind(user_id)
+    .bind(&user_id)
     .fetch_optional(&state.pool)
     .await
     .unwrap_or(None);
+
+    // Get inbox stats
+    let inbox_stats = sqlx::query!(
+        "SELECT COUNT(*) as count, COALESCE(SUM(size_bytes), 0) as total_size FROM inbox_items WHERE user_id = ?",
+        user_id
+    )
+    .fetch_one(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to query inbox stats: {}", e);
+        AppError::InternalServerError
+    })?;
 
     Ok(Json(UserAccountInfo {
         email: user.email,
@@ -210,6 +233,13 @@ pub async fn get_account_info(
         storage_quota_mb: user.storage_quota_mb.unwrap_or(1000) as i64,
         created_at: user.created_at,
         last_sync_at: last_sync,
+        inbox: InboxAccountInfo {
+            item_count: inbox_stats.count as i64,
+            total_size_bytes: inbox_stats.total_size as i64,
+            max_items: user.inbox_max_items.unwrap_or(100),
+            max_size_mb: user.inbox_max_size_mb.unwrap_or(10),
+            has_token: user.inbox_token_hash.is_some(),
+        },
     }))
 }
 

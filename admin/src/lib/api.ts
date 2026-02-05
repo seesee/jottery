@@ -68,6 +68,8 @@ interface UserDetail {
   lastLoginAt: string | null;
   storageQuotaMb: number;
   maxUploadSizeMb: number;
+  inboxMaxItems?: number;
+  inboxMaxSizeMb?: number;
   stats: {
     devices: {
       total: number;
@@ -81,6 +83,11 @@ interface UserDetail {
       count: number;
       totalBytes: number;
     };
+    inbox: {
+      count: number;
+      totalBytes: number;
+      hasToken: boolean;
+    };
     lastSyncAt: string | null;
   };
   devices: Device[];
@@ -89,6 +96,8 @@ interface UserDetail {
 interface UpdateUserSettingsRequest {
   storageQuotaMb?: number;
   maxUploadSizeMb?: number;
+  inboxMaxItems?: number;
+  inboxMaxSizeMb?: number;
 }
 
 class ApiError extends Error {

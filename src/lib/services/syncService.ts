@@ -26,7 +26,7 @@ import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
-import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress } from '../stores/appStore';
+import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { isDBAvailable, wasDBTerminated } from './db';
@@ -961,6 +961,14 @@ class SyncService {
       }
       if (result.deletions) {
         await this.processRemoteDeletions(result.deletions);
+      }
+
+      // Update inbox items from pull response
+      if (result.inboxItems && result.inboxItems.length > 0) {
+        inboxItems.set(result.inboxItems);
+      } else if (offset === 0) {
+        // Only clear on first page (full sync) — subsequent pages don't repeat inbox
+        inboxItems.set([]);
       }
     }
 

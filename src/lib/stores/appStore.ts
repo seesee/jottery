@@ -3,7 +3,7 @@
  */
 
 import { writable, derived } from 'svelte/store';
-import type { DecryptedNote, UserSettings } from '../types';
+import type { DecryptedNote, UserSettings, InboxItem } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
 
 // Lock state
@@ -25,7 +25,12 @@ export const settings = writable<UserSettings>(DEFAULT_SETTINGS);
 // UI state
 export const showSettings = writable<boolean>(false);
 export const showRecycleBin = writable<boolean>(false);
+export const showInbox = writable<boolean>(false);
 export const archiveMode = writable<boolean>(false);
+
+// Inbox state
+export const inboxItems = writable<InboxItem[]>([]);
+export const inboxCount = derived(inboxItems, $items => $items.length);
 
 // Sync state - prevents EditorPane from triggering sync during batch refresh
 export const isSyncRefreshing = writable<boolean>(false);

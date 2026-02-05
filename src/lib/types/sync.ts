@@ -175,6 +175,16 @@ export interface SyncPullRequest {
   offset?: number;
 }
 
+// Inbox item (unencrypted, pending acceptance)
+export interface InboxItem {
+  id: string;
+  content: string;
+  tags: string[];
+  createdAt: string;
+  source?: string;
+  sizeBytes: number;
+}
+
 // Pull response from server
 export interface SyncPullResponse {
   notes: SyncNote[];
@@ -186,6 +196,9 @@ export interface SyncPullResponse {
   // Pagination metadata for large datasets
   totalCount?: number;
   hasMore?: boolean;
+  // Inbox items (unencrypted, pending acceptance)
+  inboxItems?: InboxItem[];
+  inboxCount?: number;
 }
 
 // Deleted note info

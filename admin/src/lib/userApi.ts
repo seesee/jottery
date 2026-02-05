@@ -17,6 +17,14 @@ interface LoginResponse {
   };
 }
 
+interface InboxAccountInfo {
+  itemCount: number;
+  totalSizeBytes: number;
+  maxItems: number;
+  maxSizeMb: number;
+  hasToken: boolean;
+}
+
 interface UserAccountInfo {
   email: string;
   noteCount: number;
@@ -25,6 +33,11 @@ interface UserAccountInfo {
   storageQuotaMb: number;
   createdAt: string;
   lastSyncAt: string | null;
+  inbox: InboxAccountInfo;
+}
+
+interface InboxTokenResponse {
+  token: string;
 }
 
 interface Device {
@@ -166,6 +179,19 @@ class UserApiClient {
     return this.request('DELETE', `/api/v1/user/devices/${deviceId}`);
   }
 
+  // Inbox token management
+  async generateInboxToken(): Promise<InboxTokenResponse> {
+    return this.request('POST', '/api/v1/user/inbox-token');
+  }
+
+  async revokeInboxToken(): Promise<void> {
+    return this.request('DELETE', '/api/v1/user/inbox-token');
+  }
+
+  async getInboxTokenStatus(): Promise<{ hasToken: boolean }> {
+    return this.request('GET', '/api/v1/user/inbox-token/status');
+  }
+
   // Check user approval status (no auth required)
   async checkStatus(email: string): Promise<UserStatusResponse> {
     const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
@@ -186,4 +212,4 @@ class UserApiClient {
 
 export const userApi = new UserApiClient();
 export { ApiError };
-export type { LoginResponse, UserAccountInfo, UserStatusResponse, Device };
+export type { LoginResponse, UserAccountInfo, InboxAccountInfo, InboxTokenResponse, UserStatusResponse, Device };

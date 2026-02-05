@@ -22,7 +22,7 @@
 
   // Settings editing
   let editingSettings = $state(false);
-  let settingsForm = $state({ storageQuotaMb: 0, maxUploadSizeMb: 0 });
+  let settingsForm = $state({ storageQuotaMb: 0, maxUploadSizeMb: 0, inboxMaxItems: 100, inboxMaxSizeMb: 10 });
   let savingSettings = $state(false);
 
   // Password reset
@@ -96,6 +96,8 @@
     settingsForm = {
       storageQuotaMb: user.storageQuotaMb,
       maxUploadSizeMb: user.maxUploadSizeMb,
+      inboxMaxItems: user.inboxMaxItems ?? 100,
+      inboxMaxSizeMb: user.inboxMaxSizeMb ?? 10,
     };
     editingSettings = true;
   }
@@ -108,6 +110,8 @@
       await api.updateUserSettings(user.id, {
         storageQuotaMb: settingsForm.storageQuotaMb,
         maxUploadSizeMb: settingsForm.maxUploadSizeMb,
+        inboxMaxItems: settingsForm.inboxMaxItems,
+        inboxMaxSizeMb: settingsForm.inboxMaxSizeMb,
       });
       toast.success($_('users.detail.settingsSaved'));
       editingSettings = false;
@@ -341,6 +345,38 @@
                 </div>
                 <p class="mt-1 text-xs text-gray-500">{$_('users.detail.maxUploadSizeHelp')}</p>
               </div>
+              <div>
+                <label for="inboxMaxItems" class="block text-sm font-medium text-gray-700 mb-1">
+                  {$_('users.detail.inboxMaxItems')}
+                </label>
+                <div class="flex items-center space-x-2">
+                  <input
+                    id="inboxMaxItems"
+                    type="number"
+                    bind:value={settingsForm.inboxMaxItems}
+                    min="1"
+                    max="10000"
+                    class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span class="text-sm text-gray-500">{$_('users.detail.items')}</span>
+                </div>
+              </div>
+              <div>
+                <label for="inboxMaxSize" class="block text-sm font-medium text-gray-700 mb-1">
+                  {$_('users.detail.inboxMaxSize')}
+                </label>
+                <div class="flex items-center space-x-2">
+                  <input
+                    id="inboxMaxSize"
+                    type="number"
+                    bind:value={settingsForm.inboxMaxSizeMb}
+                    min="1"
+                    max="1000"
+                    class="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span class="text-sm text-gray-500">MB</span>
+                </div>
+              </div>
               <div class="flex space-x-2 pt-2">
                 <button
                   onclick={handleSaveSettings}
@@ -367,6 +403,14 @@
               <div class="bg-gray-50 rounded-lg p-4">
                 <span class="text-sm text-gray-500">{$_('users.detail.maxUploadSize')}</span>
                 <p class="text-2xl font-semibold text-gray-900">{user.maxUploadSizeMb} MB</p>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-4">
+                <span class="text-sm text-gray-500">{$_('users.detail.inboxMaxItems')}</span>
+                <p class="text-2xl font-semibold text-gray-900">{user.inboxMaxItems ?? 100}</p>
+              </div>
+              <div class="bg-gray-50 rounded-lg p-4">
+                <span class="text-sm text-gray-500">{$_('users.detail.inboxMaxSize')}</span>
+                <p class="text-2xl font-semibold text-gray-900">{user.inboxMaxSizeMb ?? 10} MB</p>
               </div>
             </div>
           {/if}
