@@ -7,8 +7,10 @@
 
 import type { InboxItem } from '../types';
 import { inboxItems } from '../stores/appStore';
+import { addNoteToStoreAndSearch } from '../stores/storeHelpers';
 import { noteService } from './noteService';
 import { syncRepository } from './syncRepository';
+import { syncService } from './syncService';
 import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { normalizeEndpoint } from './syncClient';
@@ -55,14 +57,26 @@ class InboxService {
     if (!creds) throw new Error('Sync not configured');
 
     // Create note with showPreview forced to false (XSS prevention)
-    await noteService.createNote(item.content, item.tags, {
+    const newNote = await noteService.createNote(item.content, item.tags ?? [], {
       showPreview: false,
     });
 
-    // Delete from server
-    await deleteFromServer(creds.endpoint, creds.apiKey, item.id);
+    // Add the note to the UI store and search index (same as normal note creation)
+    if (newNote?.id) {
+      const decryptedNote = await noteService.getNote(newNote.id);
+      if (decryptedNote) {
+        addNoteToStoreAndSearch(decryptedNote);
+      }
+    }
 
-    // Remove from store
+    // Delete from server — non-fatal if this fails (note is already created locally)
+    try {
+      await deleteFromServer(creds.endpoint, creds.apiKey, item.id);
+    } catch (error) {
+      console.warn('Failed to delete inbox item from server (will be cleaned up on next sync):', error);
+    }
+
+    // Remove from inbox store
     inboxItems.update(items => items.filter(i => i.id !== item.id));
 
     toast.success(get(_)('inbox.accepted'));
@@ -97,6 +111,9 @@ class InboxService {
     // Store should already be empty from individual acceptItem calls,
     // but ensure it's cleared
     inboxItems.set([]);
+
+    // Trigger background sync to push newly created notes
+    syncService.triggerBackgroundSync().catch(() => {});
 
     toast.success(get(_)('inbox.acceptedAll', { values: { count: String(count) } }));
   }
