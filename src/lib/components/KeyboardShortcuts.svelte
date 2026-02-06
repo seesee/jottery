@@ -9,6 +9,7 @@
   export let onOpenSettings: () => void;
   export let onFocusSearch: () => void;
   export let onOpenShortcutsHelp: () => void;
+  export let onOpenRecycleBin: () => void;
 
   async function handleLockNow() {
     isLocking.set(true);
@@ -99,6 +100,13 @@
       return;
     }
 
+    // Open recycle bin
+    if (matchesShortcut(event, shortcuts.openRecycleBin)) {
+      event.preventDefault();
+      onOpenRecycleBin();
+      return;
+    }
+
     // Copy note content
     if (matchesShortcut(event, shortcuts.copyNote)) {
       event.preventDefault();
@@ -126,20 +134,22 @@
     // Don't process other shortcuts when editing
     if (isEditing) return;
 
-    // Note list navigation
-    if (event.key === 'ArrowDown' || event.key === 'j') {
+    // Note list navigation - use customisable shortcuts
+    // Also support vim-style j/k as fallback for navigation
+    if (matchesShortcut(event, shortcuts.navigateDown) || event.key === 'j') {
       event.preventDefault();
       navigateNotes(1);
       return;
     }
 
-    if (event.key === 'ArrowUp' || event.key === 'k') {
+    if (matchesShortcut(event, shortcuts.navigateUp) || event.key === 'k') {
       event.preventDefault();
       navigateNotes(-1);
       return;
     }
 
-    if (event.key === 'Enter' && !$selectedNoteId) {
+    // Open selected note (Enter by default)
+    if (matchesShortcut(event, shortcuts.openNote) && !$selectedNoteId) {
       event.preventDefault();
       const firstNote = $filteredNotes[0];
       if (firstNote) {
@@ -148,13 +158,15 @@
       return;
     }
 
-    if (event.key === 'Delete' && $selectedNoteId) {
+    // Delete note
+    if (matchesShortcut(event, shortcuts.deleteNote) && $selectedNoteId) {
       event.preventDefault();
       handleDelete();
       return;
     }
 
-    if (event.key === 'p' && $selectedNoteId) {
+    // Pin/unpin note
+    if (matchesShortcut(event, shortcuts.pinNote) && $selectedNoteId) {
       event.preventDefault();
       handleTogglePin();
       return;
