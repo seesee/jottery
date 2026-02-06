@@ -71,6 +71,94 @@ enum ColorTarget {
     Tag,    // Match only tag colors
 }
 
+/// Check if a note matches search criteria (excluding archive mode)
+///
+/// This is the shared search logic used by both filtered_notes() and count_opposite_mode_matches()
+fn note_matches_search(
+    note: &Note,
+    modifiers: &SearchModifiers,
+    query_parts: &[&str],
+) -> bool {
+    // has:attachment
+    if modifiers.has_attachment && note.attachments.is_empty() {
+        return false;
+    }
+
+    // created:>DATE (created after)
+    if let Some(ref date) = modifiers.created_after {
+        let note_date = note.created_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() < date.as_str() {
+            return false;
+        }
+    }
+
+    // created:<DATE (created before)
+    if let Some(ref date) = modifiers.created_before {
+        let note_date = note.created_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() > date.as_str() {
+            return false;
+        }
+    }
+
+    // modified:>DATE (modified after)
+    if let Some(ref date) = modifiers.modified_after {
+        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() < date.as_str() {
+            return false;
+        }
+    }
+
+    // modified:<DATE (modified before)
+    if let Some(ref date) = modifiers.modified_before {
+        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() > date.as_str() {
+            return false;
+        }
+    }
+
+    // words:>N (minimum word count)
+    if let Some(min) = modifiers.word_count_min {
+        let word_count = note.content.split_whitespace().count();
+        if word_count < min {
+            return false;
+        }
+    }
+
+    // words:<N (maximum word count)
+    if let Some(max) = modifiers.word_count_max {
+        let word_count = note.content.split_whitespace().count();
+        if word_count > max {
+            return false;
+        }
+    }
+
+    // Check each remaining query part (text/tag search)
+    let content_lower = note.content.to_lowercase();
+    for part in query_parts {
+        if part.is_empty() {
+            continue;
+        }
+        if let Some(tag) = part.strip_prefix('#') {
+            // Tag search
+            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
+                return false;
+            }
+        } else if let Some(neg_word) = part.strip_prefix('-') {
+            // Negation
+            if content_lower.contains(neg_word) {
+                return false;
+            }
+        } else {
+            // Regular text search
+            if !content_lower.contains(part) {
+                return false;
+            }
+        }
+    }
+
+    true
+}
+
 /// Application state and coordinator
 pub struct App {
     /// Current view mode
@@ -742,87 +830,13 @@ impl App {
                     if note.archived != self.archive_mode {
                         return false;
                     }
-                    let content_lower = note.content.to_lowercase();
 
-                    // Apply advanced modifiers first
-
-                    // has:attachment
-                    if modifiers.has_attachment && note.attachments.is_empty() {
+                    // Apply shared search logic
+                    if !note_matches_search(note, &modifiers, &query_parts) {
                         return false;
                     }
 
-                    // created:>DATE (created after)
-                    if let Some(ref date) = modifiers.created_after {
-                        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() < date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // created:<DATE (created before)
-                    if let Some(ref date) = modifiers.created_before {
-                        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() > date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // modified:>DATE (modified after)
-                    if let Some(ref date) = modifiers.modified_after {
-                        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() < date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // modified:<DATE (modified before)
-                    if let Some(ref date) = modifiers.modified_before {
-                        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() > date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // words:>N (minimum word count)
-                    if let Some(min) = modifiers.word_count_min {
-                        let word_count = note.content.split_whitespace().count();
-                        if word_count < min {
-                            return false;
-                        }
-                    }
-
-                    // words:<N (maximum word count)
-                    if let Some(max) = modifiers.word_count_max {
-                        let word_count = note.content.split_whitespace().count();
-                        if word_count > max {
-                            return false;
-                        }
-                    }
-
-                    // Check each remaining query part (text/tag search)
-                    for part in &query_parts {
-                        if part.is_empty() {
-                            continue;
-                        }
-                        if let Some(tag) = part.strip_prefix('#') {
-                            // Tag search
-                            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                                return false;
-                            }
-                        } else if let Some(neg_word) = part.strip_prefix('-') {
-                            // Negation
-                            if content_lower.contains(neg_word) {
-                                return false;
-                            }
-                        } else {
-                            // Regular text search
-                            if !content_lower.contains(part) {
-                                return false;
-                            }
-                        }
-                    }
-
-                    // Color filtering
+                    // Color filtering (only in filtered_notes, not count_opposite_mode_matches)
                     if !modifiers.colors.is_empty() {
                         let note_has_color = modifiers.colors.iter().any(|color_key| {
                             note.color.as_ref().is_some_and(|c| c.to_lowercase() == color_key.to_lowercase())
@@ -885,88 +899,8 @@ impl App {
                     return false;
                 }
 
-                let content_lower = note.content.to_lowercase();
-
-                // Apply same search logic as filtered_notes()
-
-                // has:attachment
-                if modifiers.has_attachment && note.attachments.is_empty() {
-                    return false;
-                }
-
-                // created:>DATE (created after)
-                if let Some(ref date) = modifiers.created_after {
-                    let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() < date.as_str() {
-                        return false;
-                    }
-                }
-
-                // created:<DATE (created before)
-                if let Some(ref date) = modifiers.created_before {
-                    let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() > date.as_str() {
-                        return false;
-                    }
-                }
-
-                // modified:>DATE (modified after)
-                if let Some(ref date) = modifiers.modified_after {
-                    let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() < date.as_str() {
-                        return false;
-                    }
-                }
-
-                // modified:<DATE (modified before)
-                if let Some(ref date) = modifiers.modified_before {
-                    let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() > date.as_str() {
-                        return false;
-                    }
-                }
-
-                // words:>N (minimum word count)
-                if let Some(min) = modifiers.word_count_min {
-                    let word_count = note.content.split_whitespace().count();
-                    if word_count < min {
-                        return false;
-                    }
-                }
-
-                // words:<N (maximum word count)
-                if let Some(max) = modifiers.word_count_max {
-                    let word_count = note.content.split_whitespace().count();
-                    if word_count > max {
-                        return false;
-                    }
-                }
-
-                // Check each remaining query part (text/tag search)
-                for part in &query_parts {
-                    if part.is_empty() {
-                        continue;
-                    }
-
-                    if let Some(tag) = part.strip_prefix('#') {
-                        // Tag search
-                        if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                            return false;
-                        }
-                    } else if let Some(negated) = part.strip_prefix('-') {
-                        // Negation
-                        if content_lower.contains(negated) {
-                            return false;
-                        }
-                    } else {
-                        // Regular text search
-                        if !content_lower.contains(part) {
-                            return false;
-                        }
-                    }
-                }
-
-                true
+                // Apply shared search logic (no color filtering for opposite mode count)
+                note_matches_search(note, &modifiers, &query_parts)
             })
             .count()
     }
