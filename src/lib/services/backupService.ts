@@ -1167,7 +1167,9 @@ export async function restoreBackup(
           break;
 
         case 'settings':
-          await settingsRepository.update(record.data as UserSettings);
+          await storeWithQuotaHandling('settings', () =>
+            settingsRepository.update(record.data as UserSettings)
+          );
           break;
 
         case 'sync_metadata': {
@@ -1182,7 +1184,9 @@ export async function restoreBackup(
           if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
             syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
           }
-          await syncRepository.updateMetadata(syncMeta);
+          await storeWithQuotaHandling('sync_metadata', () =>
+            syncRepository.updateMetadata(syncMeta)
+          );
           break;
         }
 
@@ -1356,21 +1360,25 @@ export async function restoreBatchedBackup(
           break;
 
         case 'settings':
-          // Settings batch contains a single item - this should never fail
+          // Settings batch contains a single item
           if (items.length > 0) {
-            await settingsRepository.update(items[0] as UserSettings);
+            await storeWithQuotaHandling('settings', () =>
+              settingsRepository.update(items[0] as UserSettings)
+            );
           }
           break;
 
         case 'sync_metadata':
-          // Sync metadata batch contains a single item - this should never fail
+          // Sync metadata batch contains a single item
           if (items.length > 0) {
             const syncMeta = items[0] as SyncMetadata;
             // Mark the API key for re-registration so restored device gets a new ID
             if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
               syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
             }
-            await syncRepository.updateMetadata(syncMeta);
+            await storeWithQuotaHandling('sync_metadata', () =>
+              syncRepository.updateMetadata(syncMeta)
+            );
           }
           break;
 
