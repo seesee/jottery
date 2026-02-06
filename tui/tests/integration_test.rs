@@ -518,6 +518,7 @@ mod inbox_tests {
         }
 
         let mut mode = ViewMode::NoteList;
+        assert_eq!(mode, ViewMode::NoteList); // Initial state
 
         // Open inbox
         mode = ViewMode::Inbox;
