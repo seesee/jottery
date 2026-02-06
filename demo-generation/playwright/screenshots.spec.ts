@@ -66,6 +66,333 @@ function getTagColors(lang: string): Record<string, string> {
   return TAG_COLORS[lang] || TAG_COLORS['en-GB'];
 }
 
+// Language-specific calculator content (comments need translation, math is universal)
+const CALCULATOR_CONTENT: Record<string, { comment: string; principal: string; rate: string; years: string }> = {
+  'en-GB': { comment: '# Compound interest', principal: 'principal', rate: 'rate', years: 'years' },
+  'en-US': { comment: '# Compound interest', principal: 'principal', rate: 'rate', years: 'years' },
+  'de': { comment: '# Zinseszins', principal: 'kapital', rate: 'zinssatz', years: 'jahre' },
+  'el': { comment: '# Σύνθετος τόκος', principal: 'κεφάλαιο', rate: 'επιτόκιο', years: 'έτη' },
+  'es': { comment: '# Interés compuesto', principal: 'capital', rate: 'tasa', years: 'años' },
+  'fr': { comment: '# Intérêts composés', principal: 'capital', rate: 'taux', years: 'années' },
+  'it': { comment: '# Interesse composto', principal: 'capitale', rate: 'tasso', years: 'anni' },
+  'ja': { comment: '# 複利計算', principal: '元金', rate: '利率', years: '年数' },
+  'ko': { comment: '# 복리 계산', principal: '원금', rate: '이율', years: '연수' },
+  'nl': { comment: '# Samengestelde rente', principal: 'hoofdsom', rate: 'rente', years: 'jaren' },
+  'pl': { comment: '# Procent składany', principal: 'kapitał', rate: 'stopa', years: 'lata' },
+  'pt': { comment: '# Juros compostos', principal: 'capital', rate: 'taxa', years: 'anos' },
+  'ru': { comment: '# Сложные проценты', principal: 'капитал', rate: 'ставка', years: 'лет' },
+  'tr': { comment: '# Bileşik faiz', principal: 'anapara', rate: 'oran', years: 'yıl' },
+  'zh': { comment: '# 复利计算', principal: '本金', rate: '利率', years: '年数' },
+};
+
+// Get calculator content for current language
+function getCalculatorContent(lang: string) {
+  return CALCULATOR_CONTENT[lang] || CALCULATOR_CONTENT['en-GB'];
+}
+
+// Language-specific mobile calculator content (budget example)
+const MOBILE_CALCULATOR_CONTENT: Record<string, { comment: string; income: string; rent: string }> = {
+  'en-GB': { comment: '# Budget calc', income: 'income', rent: 'rent' },
+  'en-US': { comment: '# Budget calc', income: 'income', rent: 'rent' },
+  'de': { comment: '# Budget', income: 'einkommen', rent: 'miete' },
+  'el': { comment: '# Προϋπολογισμός', income: 'εισόδημα', rent: 'ενοίκιο' },
+  'es': { comment: '# Presupuesto', income: 'ingresos', rent: 'alquiler' },
+  'fr': { comment: '# Budget', income: 'revenus', rent: 'loyer' },
+  'it': { comment: '# Budget', income: 'entrate', rent: 'affitto' },
+  'ja': { comment: '# 予算計算', income: '収入', rent: '家賃' },
+  'ko': { comment: '# 예산 계산', income: '수입', rent: '임대료' },
+  'nl': { comment: '# Budget', income: 'inkomen', rent: 'huur' },
+  'pl': { comment: '# Budżet', income: 'dochód', rent: 'czynsz' },
+  'pt': { comment: '# Orçamento', income: 'renda', rent: 'aluguel' },
+  'ru': { comment: '# Бюджет', income: 'доход', rent: 'аренда' },
+  'tr': { comment: '# Bütçe', income: 'gelir', rent: 'kira' },
+  'zh': { comment: '# 预算计算', income: '收入', rent: '房租' },
+};
+
+// Get mobile calculator content for current language
+function getMobileCalculatorContent(lang: string) {
+  return MOBILE_CALCULATOR_CONTENT[lang] || MOBILE_CALCULATOR_CONTENT['en-GB'];
+}
+
+// Language-specific outliner content
+const OUTLINER_CONTENT: Record<string, string[]> = {
+  'en-GB': [
+    'Project Roadmap',
+    'Phase 1: Foundation',
+    'Set up project structure',
+    'Configure build tools',
+    'Write initial tests',
+    'Phase 2: Core Features',
+    'User authentication',
+    'Login/logout',
+    'Password reset',
+    'Data synchronisation',
+    'Real-time updates',
+    'Conflict resolution',
+    'Phase 3: Polish',
+    'UI/UX improvements',
+    'Performance optimisation',
+    'Documentation',
+  ],
+  'en-US': [
+    'Project Roadmap',
+    'Phase 1: Foundation',
+    'Set up project structure',
+    'Configure build tools',
+    'Write initial tests',
+    'Phase 2: Core Features',
+    'User authentication',
+    'Login/logout',
+    'Password reset',
+    'Data synchronization',
+    'Real-time updates',
+    'Conflict resolution',
+    'Phase 3: Polish',
+    'UI/UX improvements',
+    'Performance optimization',
+    'Documentation',
+  ],
+  'ja': [
+    'プロジェクト計画',
+    'フェーズ1：基盤構築',
+    'プロジェクト構造の設定',
+    'ビルドツールの構成',
+    '初期テストの作成',
+    'フェーズ2：主要機能',
+    'ユーザー認証',
+    'ログイン・ログアウト',
+    'パスワードリセット',
+    'データ同期',
+    'リアルタイム更新',
+    '競合解決',
+    'フェーズ3：仕上げ',
+    'UI/UXの改善',
+    'パフォーマンス最適化',
+    'ドキュメント作成',
+  ],
+  'de': [
+    'Projektplan',
+    'Phase 1: Grundlagen',
+    'Projektstruktur einrichten',
+    'Build-Tools konfigurieren',
+    'Erste Tests schreiben',
+    'Phase 2: Kernfunktionen',
+    'Benutzerauthentifizierung',
+    'Anmeldung/Abmeldung',
+    'Passwort zurücksetzen',
+    'Datensynchronisation',
+    'Echtzeit-Updates',
+    'Konfliktlösung',
+    'Phase 3: Feinschliff',
+    'UI/UX-Verbesserungen',
+    'Leistungsoptimierung',
+    'Dokumentation',
+  ],
+  'fr': [
+    'Plan du projet',
+    'Phase 1 : Fondations',
+    'Configurer la structure du projet',
+    'Configurer les outils de build',
+    'Écrire les tests initiaux',
+    'Phase 2 : Fonctionnalités principales',
+    'Authentification utilisateur',
+    'Connexion/déconnexion',
+    'Réinitialisation du mot de passe',
+    'Synchronisation des données',
+    'Mises à jour en temps réel',
+    'Résolution des conflits',
+    'Phase 3 : Finitions',
+    'Améliorations UI/UX',
+    'Optimisation des performances',
+    'Documentation',
+  ],
+  'es': [
+    'Plan del proyecto',
+    'Fase 1: Fundamentos',
+    'Configurar estructura del proyecto',
+    'Configurar herramientas de compilación',
+    'Escribir pruebas iniciales',
+    'Fase 2: Funciones principales',
+    'Autenticación de usuarios',
+    'Inicio/cierre de sesión',
+    'Restablecimiento de contraseña',
+    'Sincronización de datos',
+    'Actualizaciones en tiempo real',
+    'Resolución de conflictos',
+    'Fase 3: Pulido',
+    'Mejoras de UI/UX',
+    'Optimización del rendimiento',
+    'Documentación',
+  ],
+  'ko': [
+    '프로젝트 로드맵',
+    '1단계: 기반 구축',
+    '프로젝트 구조 설정',
+    '빌드 도구 구성',
+    '초기 테스트 작성',
+    '2단계: 핵심 기능',
+    '사용자 인증',
+    '로그인/로그아웃',
+    '비밀번호 재설정',
+    '데이터 동기화',
+    '실시간 업데이트',
+    '충돌 해결',
+    '3단계: 마무리',
+    'UI/UX 개선',
+    '성능 최적화',
+    '문서화',
+  ],
+  'zh': [
+    '项目路线图',
+    '第一阶段：基础建设',
+    '设置项目结构',
+    '配置构建工具',
+    '编写初始测试',
+    '第二阶段：核心功能',
+    '用户认证',
+    '登录/登出',
+    '密码重置',
+    '数据同步',
+    '实时更新',
+    '冲突解决',
+    '第三阶段：完善',
+    'UI/UX改进',
+    '性能优化',
+    '文档编写',
+  ],
+  'el': [
+    'Οδικός χάρτης έργου',
+    'Φάση 1: Θεμέλια',
+    'Ρύθμιση δομής έργου',
+    'Διαμόρφωση εργαλείων build',
+    'Γραφή αρχικών δοκιμών',
+    'Φάση 2: Βασικές λειτουργίες',
+    'Ταυτοποίηση χρήστη',
+    'Σύνδεση/Αποσύνδεση',
+    'Επαναφορά κωδικού',
+    'Συγχρονισμός δεδομένων',
+    'Ενημερώσεις πραγματικού χρόνου',
+    'Επίλυση συγκρούσεων',
+    'Φάση 3: Τελειοποίηση',
+    'Βελτιώσεις UI/UX',
+    'Βελτιστοποίηση απόδοσης',
+    'Τεκμηρίωση',
+  ],
+  'it': [
+    'Roadmap del progetto',
+    'Fase 1: Fondamenta',
+    'Configurare la struttura del progetto',
+    'Configurare gli strumenti di build',
+    'Scrivere i test iniziali',
+    'Fase 2: Funzionalità principali',
+    'Autenticazione utente',
+    'Login/logout',
+    'Ripristino password',
+    'Sincronizzazione dati',
+    'Aggiornamenti in tempo reale',
+    'Risoluzione conflitti',
+    'Fase 3: Rifinitura',
+    'Miglioramenti UI/UX',
+    'Ottimizzazione prestazioni',
+    'Documentazione',
+  ],
+  'nl': [
+    'Project routekaart',
+    'Fase 1: Fundament',
+    'Projectstructuur opzetten',
+    'Build-tools configureren',
+    'Eerste tests schrijven',
+    'Fase 2: Kernfuncties',
+    'Gebruikersauthenticatie',
+    'Inloggen/uitloggen',
+    'Wachtwoord resetten',
+    'Gegevenssynchronisatie',
+    'Realtime updates',
+    'Conflictoplossing',
+    'Fase 3: Afwerking',
+    'UI/UX-verbeteringen',
+    'Prestatieoptimalisatie',
+    'Documentatie',
+  ],
+  'pl': [
+    'Plan projektu',
+    'Faza 1: Fundamenty',
+    'Konfiguracja struktury projektu',
+    'Konfiguracja narzędzi budowania',
+    'Pisanie początkowych testów',
+    'Faza 2: Główne funkcje',
+    'Uwierzytelnianie użytkownika',
+    'Logowanie/wylogowanie',
+    'Reset hasła',
+    'Synchronizacja danych',
+    'Aktualizacje w czasie rzeczywistym',
+    'Rozwiązywanie konfliktów',
+    'Faza 3: Szlify',
+    'Ulepszenia UI/UX',
+    'Optymalizacja wydajności',
+    'Dokumentacja',
+  ],
+  'pt': [
+    'Roteiro do projeto',
+    'Fase 1: Fundamentos',
+    'Configurar estrutura do projeto',
+    'Configurar ferramentas de build',
+    'Escrever testes iniciais',
+    'Fase 2: Funcionalidades principais',
+    'Autenticação de usuário',
+    'Login/logout',
+    'Redefinição de senha',
+    'Sincronização de dados',
+    'Atualizações em tempo real',
+    'Resolução de conflitos',
+    'Fase 3: Polimento',
+    'Melhorias de UI/UX',
+    'Otimização de desempenho',
+    'Documentação',
+  ],
+  'ru': [
+    'Дорожная карта проекта',
+    'Этап 1: Фундамент',
+    'Настройка структуры проекта',
+    'Настройка инструментов сборки',
+    'Написание начальных тестов',
+    'Этап 2: Основные функции',
+    'Аутентификация пользователя',
+    'Вход/выход',
+    'Сброс пароля',
+    'Синхронизация данных',
+    'Обновления в реальном времени',
+    'Разрешение конфликтов',
+    'Этап 3: Доработка',
+    'Улучшения UI/UX',
+    'Оптимизация производительности',
+    'Документация',
+  ],
+  'tr': [
+    'Proje yol haritası',
+    'Aşama 1: Temel',
+    'Proje yapısını kurma',
+    'Build araçlarını yapılandırma',
+    'İlk testleri yazma',
+    'Aşama 2: Temel özellikler',
+    'Kullanıcı kimlik doğrulaması',
+    'Giriş/çıkış',
+    'Şifre sıfırlama',
+    'Veri senkronizasyonu',
+    'Gerçek zamanlı güncellemeler',
+    'Çakışma çözümü',
+    'Aşama 3: Cilalama',
+    'UI/UX iyileştirmeleri',
+    'Performans optimizasyonu',
+    'Dokümantasyon',
+  ],
+};
+
+// Get outliner content for current language (falls back to en-GB)
+function getOutlinerContent(lang: string): string[] {
+  return OUTLINER_CONTENT[lang] || OUTLINER_CONTENT['en-GB'];
+}
+
 // Helper function to set the app's UI language
 async function setAppLanguage(page: any, lang: string) {
   // Map our language codes to the app's locale codes
@@ -121,7 +448,7 @@ async function setAppLanguage(page: any, lang: string) {
 
 // Helper function to import demo notes via Settings UI
 async function importDemoNotes(page: any, demoFile: string = getDemoNotesFile(LANG)) {
-  const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
+  const demoNotesPath = join(process.cwd(), demoFile);
 
   // Open settings
   const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
@@ -545,21 +872,24 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('# Compound interest');
+    // Get language-specific calculator content
+    const calc = getCalculatorContent(LANG);
+
+    await page.keyboard.type(calc.comment);
     await page.keyboard.press('Enter');
-    await page.keyboard.type('principal = 1000');
+    await page.keyboard.type(`${calc.principal} = 1000`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('rate = 0.05');
+    await page.keyboard.type(`${calc.rate} = 0.05`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('years = 10');
+    await page.keyboard.type(`${calc.years} = 10`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('principal * (1 + rate)^years');
+    await page.keyboard.type(`${calc.principal} * (1 + ${calc.rate})^${calc.years}`);
     await page.waitForTimeout(1000);
 
     await page.screenshot({
@@ -918,21 +1248,24 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('# Compound interest');
+    // Get language-specific calculator content
+    const calc = getCalculatorContent(LANG);
+
+    await page.keyboard.type(calc.comment);
     await page.keyboard.press('Enter');
-    await page.keyboard.type('principal = 1000');
+    await page.keyboard.type(`${calc.principal} = 1000`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('rate = 0.05');
+    await page.keyboard.type(`${calc.rate} = 0.05`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('years = 10');
+    await page.keyboard.type(`${calc.years} = 10`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(400);
 
-    await page.keyboard.type('principal * (1 + rate)^years');
+    await page.keyboard.type(`${calc.principal} * (1 + ${calc.rate})^${calc.years}`);
     await page.waitForTimeout(1000);
 
     await page.screenshot({
@@ -946,7 +1279,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
 // Helper function to import demo notes on mobile (via hamburger menu)
 async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesFile(LANG)) {
-  const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
+  const demoNotesPath = join(process.cwd(), demoFile);
 
   // On mobile, settings is behind the hamburger menu
   const hamburgerMenu = page.locator('button[aria-label="Menu"], button[aria-label="メニュー"], button[aria-label="Menü"], button[aria-label="Menú"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
@@ -1218,17 +1551,20 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('# Budget calc');
+    // Get language-specific mobile calculator content
+    const mobileCalc = getMobileCalculatorContent(LANG);
+
+    await page.keyboard.type(mobileCalc.comment);
     await page.keyboard.press('Enter');
-    await page.keyboard.type('income = 5000');
+    await page.keyboard.type(`${mobileCalc.income} = 5000`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('rent = 1500');
+    await page.keyboard.type(`${mobileCalc.rent} = 1500`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('income - rent');
+    await page.keyboard.type(`${mobileCalc.income} - ${mobileCalc.rent}`);
     await page.waitForTimeout(1000);
 
     // Take screenshot
@@ -1408,17 +1744,20 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('# Budget calc');
+    // Get language-specific mobile calculator content
+    const mobileCalc = getMobileCalculatorContent(LANG);
+
+    await page.keyboard.type(mobileCalc.comment);
     await page.keyboard.press('Enter');
-    await page.keyboard.type('income = 5000');
+    await page.keyboard.type(`${mobileCalc.income} = 5000`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('rent = 1500');
+    await page.keyboard.type(`${mobileCalc.rent} = 1500`);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('income - rent');
+    await page.keyboard.type(`${mobileCalc.income} - ${mobileCalc.rent}`);
     await page.waitForTimeout(1000);
 
     // Take screenshot
@@ -1496,77 +1835,80 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
     await outlinerContent.click();
     await page.waitForTimeout(500);
 
+    // Get language-specific outliner content
+    const outline = getOutlinerContent(LANG);
+
     // Type the first item and create hierarchy using Tab for indentation and Enter for new items
-    await page.keyboard.type('Project Roadmap');
+    await page.keyboard.type(outline[0]); // Project Roadmap
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Phase 1: Foundation');
+    await page.keyboard.type(outline[1]); // Phase 1: Foundation
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab'); // Indent to create child
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Set up project structure');
+    await page.keyboard.type(outline[2]); // Set up project structure
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Configure build tools');
+    await page.keyboard.type(outline[3]); // Configure build tools
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Write initial tests');
+    await page.keyboard.type(outline[4]); // Write initial tests
     await page.keyboard.press('Enter');
     await page.keyboard.press('Shift+Tab'); // Unindent
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Phase 2: Core Features');
+    await page.keyboard.type(outline[5]); // Phase 2: Core Features
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('User authentication');
+    await page.keyboard.type(outline[6]); // User authentication
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Login/logout');
+    await page.keyboard.type(outline[7]); // Login/logout
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Password reset');
+    await page.keyboard.type(outline[8]); // Password reset
     await page.keyboard.press('Enter');
     await page.keyboard.press('Shift+Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Data synchronisation');
+    await page.keyboard.type(outline[9]); // Data synchronisation
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Real-time updates');
+    await page.keyboard.type(outline[10]); // Real-time updates
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Conflict resolution');
+    await page.keyboard.type(outline[11]); // Conflict resolution
     await page.keyboard.press('Enter');
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Shift+Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Phase 3: Polish');
+    await page.keyboard.type(outline[12]); // Phase 3: Polish
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('UI/UX improvements');
+    await page.keyboard.type(outline[13]); // UI/UX improvements
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Performance optimisation');
+    await page.keyboard.type(outline[14]); // Performance optimisation
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Documentation');
+    await page.keyboard.type(outline[15]); // Documentation
     await page.waitForTimeout(1000);
 
     await page.screenshot({
@@ -1649,77 +1991,80 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     await outlinerContent.click();
     await page.waitForTimeout(500);
 
+    // Get language-specific outliner content
+    const outline = getOutlinerContent(LANG);
+
     // Type the first item and create hierarchy using Tab for indentation and Enter for new items
-    await page.keyboard.type('Project Roadmap');
+    await page.keyboard.type(outline[0]); // Project Roadmap
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Phase 1: Foundation');
+    await page.keyboard.type(outline[1]); // Phase 1: Foundation
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab'); // Indent to create child
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Set up project structure');
+    await page.keyboard.type(outline[2]); // Set up project structure
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Configure build tools');
+    await page.keyboard.type(outline[3]); // Configure build tools
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Write initial tests');
+    await page.keyboard.type(outline[4]); // Write initial tests
     await page.keyboard.press('Enter');
     await page.keyboard.press('Shift+Tab'); // Unindent
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Phase 2: Core Features');
+    await page.keyboard.type(outline[5]); // Phase 2: Core Features
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('User authentication');
+    await page.keyboard.type(outline[6]); // User authentication
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Login/logout');
+    await page.keyboard.type(outline[7]); // Login/logout
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Password reset');
+    await page.keyboard.type(outline[8]); // Password reset
     await page.keyboard.press('Enter');
     await page.keyboard.press('Shift+Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Data synchronisation');
+    await page.keyboard.type(outline[9]); // Data synchronisation
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Real-time updates');
+    await page.keyboard.type(outline[10]); // Real-time updates
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Conflict resolution');
+    await page.keyboard.type(outline[11]); // Conflict resolution
     await page.keyboard.press('Enter');
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Shift+Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Phase 3: Polish');
+    await page.keyboard.type(outline[12]); // Phase 3: Polish
     await page.keyboard.press('Enter');
     await page.keyboard.press('Tab');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('UI/UX improvements');
+    await page.keyboard.type(outline[13]); // UI/UX improvements
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Performance optimisation');
+    await page.keyboard.type(outline[14]); // Performance optimisation
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
-    await page.keyboard.type('Documentation');
+    await page.keyboard.type(outline[15]); // Documentation
     await page.waitForTimeout(1000);
 
     await page.screenshot({

@@ -84,6 +84,32 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "ja-calc-demo-note",
+      "createdAt": "2026-02-06T10:00:00Z",
+      "modifiedAt": "2026-02-06T10:00:00Z",
+      "content": "1 + 1\n2 + 2\n10 * 5\n100 / 4\n2^8\nsqrt(144)\n\n# 複利計算\n元金 = 1000\n利率 = 0.05\n年数 = 10\n元金 * (1 + 利率)^年数",
+      "tags": [
+        "計算",
+        "デモ"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "syntaxLanguage": "calc"
+    },
+    {
+      "id": "ja-outliner-demo-note",
+      "createdAt": "2026-02-06T10:05:00Z",
+      "modifiedAt": "2026-02-06T10:05:00Z",
+      "content": "プロジェクト計画\n\tフェーズ1：基盤構築\n\t\tプロジェクト構造の設定\n\t\tビルドツールの構成\n\t\t初期テストの作成\n\tフェーズ2：主要機能\n\t\tユーザー認証\n\t\t\tログイン・ログアウト\n\t\t\tパスワードリセット\n\t\tデータ同期\n\t\t\tリアルタイム更新\n\t\t\t競合解決\n\tフェーズ3：仕上げ\n\t\tUI/UXの改善\n\t\tパフォーマンス最適化\n\t\tドキュメント作成",
+      "tags": [
+        "計画",
+        "デモ"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "syntaxLanguage": "outliner"
     }
   ]
 }
