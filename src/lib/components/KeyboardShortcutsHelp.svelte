@@ -37,16 +37,18 @@
         { keys: formatShortcut($settings.keyboardShortcuts?.lockApp || { key: 'l', alt: true }), description: $_('keyboard.lockApp') },
         { keys: formatShortcut($settings.keyboardShortcuts?.openSettings || { key: ',', ctrl: true }), description: $_('keyboard.openSettings') },
         { keys: formatShortcut($settings.keyboardShortcuts?.showShortcuts || { key: '/', alt: true }), description: $_('keyboard.showShortcuts') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.openRecycleBin || { key: 'r', ctrl: true, shift: true }), description: $_('settings.keyboardTab.openRecycleBin') },
       ]
     },
     {
       category: $_('keyboard.noteList'),
       items: [
-        { keys: ['↑/↓'], description: $_('keyboard.navigateNotes') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.navigateUp || { key: 'ArrowUp' }), description: $_('keyboard.navigateNotes') },
         { keys: ['J/K'], description: $_('keyboard.navigateVim') },
-        { keys: ['Enter'], description: $_('keyboard.openNote') },
-        { keys: ['Delete'], description: $_('keyboard.deleteNote') },
-        { keys: ['P'], description: $_('keyboard.pinNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.openNote || { key: 'Enter' }), description: $_('keyboard.openNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.deleteNote || { key: 'Delete' }), description: $_('keyboard.deleteNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.pinNote || { key: 'p' }), description: $_('keyboard.pinNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.selectAll || { key: 'a', ctrl: true }), description: $_('settings.keyboardTab.selectAll') },
       ]
     },
     {
@@ -54,6 +56,12 @@
       items: [
         { keys: ['Esc'], description: $_('keyboard.closeNote') },
         { keys: formatShortcut($settings.keyboardShortcuts?.copyNote || { key: 'c', alt: true }), description: $_('keyboard.copyNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.toggleWordWrap || { key: 'w', ctrl: true, shift: true }), description: $_('settings.keyboardTab.toggleWordWrap') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.togglePreview || { key: 'p', ctrl: true, shift: true }), description: $_('settings.keyboardTab.togglePreview') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.duplicateNote || { key: 'd', ctrl: true }), description: $_('settings.keyboardTab.duplicateNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.exportNote || { key: 'e', ctrl: true }), description: $_('settings.keyboardTab.exportNote') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.versionHistory || { key: 'h', alt: true }), description: $_('keyboard.versionHistory') },
+        { keys: formatShortcut($settings.keyboardShortcuts?.noteInfo || { key: 'i', alt: true }), description: $_('keyboard.noteInfo') },
         { keys: ['Ctrl/Cmd', 'F'], description: $_('keyboard.findInNote') },
         { keys: ['Ctrl/Cmd', 'H'], description: $_('keyboard.replaceInNote') },
       ]

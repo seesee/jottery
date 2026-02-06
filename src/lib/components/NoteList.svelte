@@ -475,16 +475,6 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const ctrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
-
-    // Ctrl/Cmd+A: Select all filtered notes
-    if (ctrlOrCmd && event.key.toLowerCase() === 'a') {
-      event.preventDefault();
-      selectAllFiltered($filteredNotes);
-      return;
-    }
-
     // Escape: Clear multi-selection
     if (event.key === 'Escape' && $isMultiSelectMode) {
       event.preventDefault();
@@ -492,14 +482,24 @@
       return;
     }
 
-    // Handle delete shortcut when a note is selected
-    if ($selectedNoteId && $settings.keyboardShortcuts) {
-      const deleteShortcut = $settings.keyboardShortcuts.deleteNote;
-      if (matchesShortcut(event, deleteShortcut)) {
-        const selectedNote = $filteredNotes.find(n => n.id === $selectedNoteId);
-        if (selectedNote) {
-          event.preventDefault();
-          requestDelete(selectedNote);
+    // Handle shortcuts when settings are available
+    if ($settings.keyboardShortcuts) {
+      // Select all filtered notes
+      if (matchesShortcut(event, $settings.keyboardShortcuts.selectAll)) {
+        event.preventDefault();
+        selectAllFiltered($filteredNotes);
+        return;
+      }
+
+      // Handle delete shortcut when a note is selected
+      if ($selectedNoteId) {
+        const deleteShortcut = $settings.keyboardShortcuts.deleteNote;
+        if (matchesShortcut(event, deleteShortcut)) {
+          const selectedNote = $filteredNotes.find(n => n.id === $selectedNoteId);
+          if (selectedNote) {
+            event.preventDefault();
+            requestDelete(selectedNote);
+          }
         }
       }
     }

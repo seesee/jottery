@@ -95,17 +95,32 @@ export interface KeyboardShortcut {
  * All available keyboard shortcuts
  */
 export interface KeyboardShortcuts {
+  // Global shortcuts
   focusSearch: KeyboardShortcut;
   newNote: KeyboardShortcut;
-  deleteNote: KeyboardShortcut;
   lockApp: KeyboardShortcut;
   openSettings: KeyboardShortcut;
   showShortcuts: KeyboardShortcut;
+  openRecycleBin: KeyboardShortcut;
+
+  // Note list shortcuts
+  navigateUp: KeyboardShortcut;
+  navigateDown: KeyboardShortcut;
+  openNote: KeyboardShortcut;
+  deleteNote: KeyboardShortcut;
+  pinNote: KeyboardShortcut;
+  selectAll: KeyboardShortcut;
+
+  // Editor shortcuts
   copyNote: KeyboardShortcut;
   undo: KeyboardShortcut;
   redo: KeyboardShortcut;
   versionHistory: KeyboardShortcut;
   noteInfo: KeyboardShortcut;
+  toggleWordWrap: KeyboardShortcut;
+  togglePreview: KeyboardShortcut;
+  duplicateNote: KeyboardShortcut;
+  exportNote: KeyboardShortcut;
 }
 
 /**
@@ -349,17 +364,32 @@ export const DEFAULT_NOTE: Omit<Note, 'id' | 'createdAt' | 'modifiedAt'> = {
  * Default keyboard shortcuts (non-clashing with browser shortcuts)
  */
 export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
+  // Global shortcuts
   focusSearch: { key: 'k', ctrl: true }, // Ctrl/Cmd+K
   newNote: { key: 'n', alt: true }, // Alt+N
-  deleteNote: { key: 'Delete' }, // Delete key (no modifiers)
   lockApp: { key: 'l', alt: true }, // Alt+L
   openSettings: { key: ',', ctrl: true }, // Ctrl/Cmd+,
   showShortcuts: { key: '/', alt: true }, // Alt+/
+  openRecycleBin: { key: 'r', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+R
+
+  // Note list shortcuts
+  navigateUp: { key: 'ArrowUp' }, // Up arrow (or k in vim mode)
+  navigateDown: { key: 'ArrowDown' }, // Down arrow (or j in vim mode)
+  openNote: { key: 'Enter' }, // Enter key
+  deleteNote: { key: 'Delete' }, // Delete key (no modifiers)
+  pinNote: { key: 'p' }, // P key (no modifiers)
+  selectAll: { key: 'a', ctrl: true }, // Ctrl/Cmd+A
+
+  // Editor shortcuts
   copyNote: { key: 'c', alt: true }, // Alt+C
   undo: { key: 'z', ctrl: true }, // Ctrl/Cmd+Z
   redo: { key: 'z', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+Z
   versionHistory: { key: 'h', alt: true }, // Alt+H
   noteInfo: { key: 'i', alt: true }, // Alt+I
+  toggleWordWrap: { key: 'w', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+W
+  togglePreview: { key: 'p', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+P
+  duplicateNote: { key: 'd', ctrl: true }, // Ctrl/Cmd+D
+  exportNote: { key: 'e', ctrl: true }, // Ctrl/Cmd+E
 };
 
 /**

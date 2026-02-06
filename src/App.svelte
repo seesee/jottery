@@ -575,6 +575,7 @@
       onOpenSettings={handleOpenSettings}
       onFocusSearch={handleFocusSearch}
       onOpenShortcutsHelp={handleOpenShortcutsHelp}
+      onOpenRecycleBin={handleOpenRecycleBin}
     />
 
     <!-- Bulk Operations Toolbar -->

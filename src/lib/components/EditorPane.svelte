@@ -972,6 +972,34 @@
       handleShowInfo();
       return;
     }
+
+    // Toggle Word Wrap
+    if (matchesShortcut(event, shortcuts.toggleWordWrap)) {
+      event.preventDefault();
+      handleWordWrapToggle();
+      return;
+    }
+
+    // Toggle Preview
+    if (matchesShortcut(event, shortcuts.togglePreview) && canPreview) {
+      event.preventDefault();
+      handlePreviewToggle();
+      return;
+    }
+
+    // Duplicate Note
+    if (matchesShortcut(event, shortcuts.duplicateNote)) {
+      event.preventDefault();
+      handleDuplicate();
+      return;
+    }
+
+    // Export Note
+    if (matchesShortcut(event, shortcuts.exportNote)) {
+      event.preventDefault();
+      handleExport();
+      return;
+    }
   }
 
   let themeObserver: MutationObserver | null = null;
