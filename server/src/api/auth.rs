@@ -301,9 +301,29 @@ pub async fn clone_device(
 /// Creates a session for admin dashboard access
 pub async fn login(
     State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(StatusCode, Json<LoginResponse>)> {
     tracing::info!("Admin login request: email={}", req.email);
+
+    // Extract client info for audit trail
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    // Extract IP from X-Forwarded-For (first IP in chain) or X-Real-IP
+    let ip_address = headers
+        .get("X-Forwarded-For")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .or_else(|| {
+            headers
+                .get("X-Real-IP")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string())
+        });
 
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
@@ -347,15 +367,15 @@ pub async fn login(
     let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 
-    // Create session
+    // Create session with audit info
     let session = SessionRepository::create(
         &state.pool,
         crate::models::CreateSessionParams {
             user_id: user.id.clone(),
             token: session_token.clone(),
             expires_at: expires_at_str.clone(),
-            user_agent: None, // TODO: Extract from request headers
-            ip_address: None, // TODO: Extract from request
+            user_agent,
+            ip_address,
         },
     )
     .await?;
