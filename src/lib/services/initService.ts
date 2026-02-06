@@ -17,6 +17,8 @@ import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
+import { clearAllStores, deleteDB, initDB } from './db';
+import { syncService } from './syncService';
 
 /**
  * Check if the application has been initialized
@@ -417,6 +419,11 @@ export async function restoreFromBackup(
 ): Promise<void> {
   console.log('[RestoreFromBackup] Starting restore process...');
 
+  // Log backup summary for debugging
+  if ('summary' in backup) {
+    console.log('[RestoreFromBackup] Backup summary:', backup.summary);
+  }
+
   // Step 1: Verify password against backup
   onProgress?.({ phase: 'validating' });
   console.log('[RestoreFromBackup] Verifying password...');
@@ -429,21 +436,63 @@ export async function restoreFromBackup(
 
   console.log('[RestoreFromBackup] Password verified successfully');
 
-  // Step 2: Store the master key BEFORE restoring (repositories need it for encryption)
-  const masterKey: MasterKey = {
-    key: verification.key,
-    keyBytes: verification.keyBytes,
-    derivedAt: Date.now(),
-  };
+  // Disable sync during restore to prevent interference
+  syncService.setRestoreInProgress(true);
 
-  keyManager.setMasterKey(masterKey);
-  console.log('[RestoreFromBackup] Master key stored in keyManager');
+  try {
+    // Step 2: Delete and recreate database to fully free space
+    // Using deleteDB instead of clearAllStores because IndexedDB doesn't
+    // immediately reclaim space after clear() - only after deleteDatabase()
+    console.log('[RestoreFromBackup] Deleting existing database to free space...');
+    try {
+      await deleteDB();
+      console.log('[RestoreFromBackup] Database deleted, recreating...');
+      await initDB();
+      console.log('[RestoreFromBackup] Database recreated');
+    } catch (error) {
+      console.warn('[RestoreFromBackup] Failed to delete/recreate database:', error);
+      // Fallback to clearing stores
+      console.log('[RestoreFromBackup] Falling back to clearing stores...');
+      try {
+        await clearAllStores();
+      } catch (clearError) {
+        console.warn('[RestoreFromBackup] Failed to clear stores:', clearError);
+      }
+    }
 
-  // Step 3: Restore all data from backup (passing the keyBytes for JWE decryption)
-  console.log('[RestoreFromBackup] Restoring data...');
-  await restoreBackupData(backup, verification.keyBytes, onProgress);
+    // Step 3: Store the master key BEFORE restoring (repositories need it for encryption)
+    const masterKey: MasterKey = {
+      key: verification.key,
+      keyBytes: verification.keyBytes,
+      derivedAt: Date.now(),
+    };
 
-  // Step 4: Setup auto-lock based on restored settings
+    keyManager.setMasterKey(masterKey);
+    console.log('[RestoreFromBackup] Master key stored in keyManager');
+
+    // Step 4: Restore all data from backup (passing the keyBytes for JWE decryption)
+    console.log('[RestoreFromBackup] Restoring data...');
+    await restoreBackupData(backup, verification.keyBytes, onProgress);
+
+    // Step 5: Log restored sync configuration for debugging
+    try {
+      const syncMetadata = await syncRepository.getMetadata();
+      if (syncMetadata?.syncEnabled) {
+        console.log('[RestoreFromBackup] Restored sync configuration:');
+        console.log('  - Sync enabled:', syncMetadata.syncEnabled);
+        console.log('  - Sync endpoint:', syncMetadata.syncEndpoint || '(not set)');
+        console.log('  - Client ID:', syncMetadata.clientId || '(not set)');
+        console.log('  - Has API key:', !!syncMetadata.apiKey);
+      }
+    } catch (error) {
+      console.warn('[RestoreFromBackup] Could not read sync metadata:', error);
+    }
+  } finally {
+    // Re-enable sync after restore completes (or fails)
+    syncService.setRestoreInProgress(false);
+  }
+
+  // Step 6: Setup auto-lock based on restored settings
   const settings = await settingsRepository.get();
 
   if (settings.rememberPassword) {

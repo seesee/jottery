@@ -218,6 +218,8 @@
     "creating": "백업 생성 중...",
     "created": "백업이 성공적으로 생성되었습니다",
     "failed": "백업 생성 실패",
+    "loadingAttachments": "첨부 파일 로드 중...",
+    "encrypting": "데이터 암호화 중...",
     "restore": {
       "title": "백업에서 복원",
       "selectFile": "백업 파일 선택",

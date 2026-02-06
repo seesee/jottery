@@ -9,7 +9,7 @@ export { passwordStorageService } from './passwordStorageService';
 export { sessionStorageService } from './sessionStorageService';
 
 // Database
-export { initDB, getDB, closeDB, deleteDB, STORES } from './db';
+export { initDB, getDB, closeDB, deleteDB, clearAllStores, STORES } from './db';
 
 // Repositories
 export { noteRepository } from './noteRepository';
@@ -34,3 +34,5 @@ export { appUpdateService, updateAvailable, newVersionInfo } from './appUpdateSe
 export { backupService, createBackup, validateBackup, verifyBackupPassword, restoreBackup, downloadBackup, getBackupStats } from './backupService';
 export type { BackupData, BackupValidationResult, RestoreProgressCallback } from './backupService';
 export { backupSchedulerService, showBackupReminder, lastBackupDate, isAutoBackingUp } from './backupSchedulerService';
+export { storageCleanupService, getStorageStats, cleanupOrphanedAttachments, findDuplicateAttachments } from './storageCleanupService';
+export type { StorageStats, CleanupResult, DuplicateStats, DuplicateGroup } from './storageCleanupService';

@@ -218,6 +218,8 @@
     "creating": "Creazione backup...",
     "created": "Backup creato con successo",
     "failed": "Impossibile creare il backup",
+    "loadingAttachments": "Caricamento allegati...",
+    "encrypting": "Crittografia dei dati...",
     "restore": {
       "title": "Ripristina da Backup",
       "selectFile": "Seleziona file di backup",

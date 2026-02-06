@@ -277,7 +277,7 @@ function splitIntoBatches<T>(items: T[], batchSize: number): T[][] {
  * Progress callback for backup creation
  */
 export type BackupProgressCallback = (progress: {
-  phase: 'counting' | 'encrypting' | 'complete';
+  phase: 'counting' | 'loading' | 'encrypting' | 'complete';
   current?: number;
   total?: number;
   item?: string;
@@ -469,8 +469,17 @@ export async function createBatchedBackup(
   }
 
   // Process attachments in batches (need to load blob data first)
+  // Report progress during loading since this can be slow for many attachments
   const attachmentRecords: AttachmentRecord[] = [];
-  for (const id of attachmentIds) {
+  for (let idx = 0; idx < attachmentIds.length; idx++) {
+    const id = attachmentIds[idx];
+    onProgress?.({
+      phase: 'loading',
+      current: idx + 1,
+      total: attachmentIds.length,
+      item: 'attachments',
+    });
+
     const blob = await attachmentRepository.getBlob(id);
     const thumbnail = await attachmentRepository.getThumbnail(id);
 
@@ -601,6 +610,245 @@ export async function createBatchedBackup(
 }
 
 /**
+ * Progress callback for backup validation/parsing
+ */
+export type ValidationProgressCallback = (progress: {
+  phase: 'reading' | 'parsing' | 'complete';
+  bytesRead: number;
+  totalBytes: number;
+  percent: number;
+}) => void;
+
+/**
+ * Parse a backup file using streaming for large files
+ * Falls back to full parse for smaller files or legacy formats
+ */
+async function parseBackupFile(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<BackupData | null> {
+  // For files under 100MB, try direct parse
+  if (file.size < 100 * 1024 * 1024) {
+    try {
+      onProgress?.({ phase: 'reading', bytesRead: 0, totalBytes: file.size, percent: 0 });
+      const text = await file.text();
+      onProgress?.({ phase: 'parsing', bytesRead: file.size, totalBytes: file.size, percent: 50 });
+      const result = JSON.parse(text);
+      onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
+      return result;
+    } catch {
+      // Fall through to streaming parse
+    }
+  }
+
+  // For large files, use streaming parse
+  try {
+    // Parse header
+    onProgress?.({ phase: 'reading', bytesRead: 0, totalBytes: file.size, percent: 0 });
+    const header = await parseBackupHeader(file);
+    if (!header || !header.version || !header.type || !header.encryption) {
+      return null;
+    }
+
+    // For v3.0, we can reconstruct the backup from header + streaming batches + summary
+    if (header.version === '3.0') {
+      const summary = await parseBackupSummary(file);
+      if (!summary) return null;
+
+      // Parse batches by reading the file in chunks and extracting JSON objects
+      const batches = await parseBackupBatches(file, onProgress);
+      if (!batches) return null;
+
+      onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
+      return {
+        version: header.version,
+        type: header.type,
+        createdAt: header.createdAt || new Date().toISOString(),
+        encryption: header.encryption,
+        batches,
+        summary,
+      } as BackupDataV3;
+    }
+
+    // For v2.x, parse the data array
+    if (header.version === '2.1' || header.version === '2.0') {
+      const data = await parseBackupV2Data(file, onProgress);
+      if (!data) return null;
+
+      onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
+      return {
+        version: header.version,
+        type: header.type,
+        createdAt: header.createdAt || new Date().toISOString(),
+        encryption: header.encryption,
+        data,
+      } as BackupDataV2;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse batches array from a v3.0 backup file using streaming
+ */
+async function parseBackupBatches(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<BatchRecord[] | null> {
+  const batches: BatchRecord[] = [];
+  const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+  let carryover = ''; // Text carried over when searching for "batches"
+  let inBatchesArray = false;
+  let braceDepth = 0;
+  let currentBatch = ''; // Persists across chunks for partial batches
+
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+    const text = await chunk.text();
+
+    // Report progress
+    const bytesRead = Math.min(offset + chunkSize, file.size);
+    const percent = Math.round((bytesRead / file.size) * 100);
+    onProgress?.({ phase: 'reading', bytesRead, totalBytes: file.size, percent });
+
+    // Find start of batches array if not found yet
+    if (!inBatchesArray) {
+      const searchBuffer = carryover + text;
+      const batchesStart = searchBuffer.indexOf('"batches"');
+      if (batchesStart === -1) {
+        // Keep last 100 chars in case "batches" is split across chunks
+        carryover = searchBuffer.slice(-100);
+        continue;
+      }
+      // Find the opening bracket
+      const bracketPos = searchBuffer.indexOf('[', batchesStart);
+      if (bracketPos === -1) {
+        carryover = searchBuffer.slice(batchesStart);
+        continue;
+      }
+      // Start parsing from after the bracket
+      const startPos = bracketPos + 1;
+      inBatchesArray = true;
+
+      // Process the rest of searchBuffer from startPos
+      for (let i = startPos; i < searchBuffer.length; i++) {
+        const char = searchBuffer[i];
+        if (char === '{') {
+          if (braceDepth === 0) currentBatch = '';
+          braceDepth++;
+          currentBatch += char;
+        } else if (char === '}') {
+          braceDepth--;
+          currentBatch += char;
+          if (braceDepth === 0 && currentBatch) {
+            try {
+              batches.push(JSON.parse(currentBatch));
+            } catch {
+              // Skip malformed batch
+            }
+            currentBatch = '';
+          }
+        } else if (char === ']' && braceDepth === 0) {
+          return batches;
+        } else if (braceDepth > 0) {
+          currentBatch += char;
+        }
+      }
+      carryover = '';
+      continue;
+    }
+
+    // Process the entire chunk (currentBatch persists from previous chunks)
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '{') {
+        if (braceDepth === 0) currentBatch = '';
+        braceDepth++;
+        currentBatch += char;
+      } else if (char === '}') {
+        braceDepth--;
+        currentBatch += char;
+        if (braceDepth === 0 && currentBatch) {
+          try {
+            batches.push(JSON.parse(currentBatch));
+          } catch {
+            // Skip malformed batch
+          }
+          currentBatch = '';
+        }
+      } else if (char === ']' && braceDepth === 0) {
+        return batches;
+      } else if (braceDepth > 0) {
+        currentBatch += char;
+      }
+    }
+    // currentBatch persists to next iteration if braceDepth > 0
+  }
+
+  return batches.length > 0 ? batches : null;
+}
+
+/**
+ * Parse data array from a v2.x backup file using streaming
+ */
+async function parseBackupV2Data(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<string[] | null> {
+  const data: string[] = [];
+  const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+  let buffer = '';
+  let inDataArray = false;
+
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+    const text = await chunk.text();
+    buffer += text;
+
+    // Report progress
+    const bytesRead = Math.min(offset + chunkSize, file.size);
+    const percent = Math.round((bytesRead / file.size) * 100);
+    onProgress?.({ phase: 'reading', bytesRead, totalBytes: file.size, percent });
+
+    // Find start of data array if not found yet
+    if (!inDataArray) {
+      const dataStart = buffer.indexOf('"data"');
+      if (dataStart === -1) {
+        buffer = buffer.slice(-50);
+        continue;
+      }
+      const bracketPos = buffer.indexOf('[', dataStart);
+      if (bracketPos === -1) {
+        buffer = buffer.slice(dataStart);
+        continue;
+      }
+      buffer = buffer.slice(bracketPos + 1);
+      inDataArray = true;
+    }
+
+    // Extract JWE tokens (strings starting with "eyJ")
+    const tokenRegex = /"(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)"/g;
+    let match;
+    while ((match = tokenRegex.exec(buffer)) !== null) {
+      data.push(match[1]);
+    }
+
+    // Check for end of array
+    if (buffer.includes(']}') || buffer.includes(']\n}')) {
+      break;
+    }
+
+    // Keep last part in case token spans chunks
+    buffer = buffer.slice(-1000);
+  }
+
+  return data.length > 0 ? data : null;
+}
+
+/**
  * Validate a backup file structure
  *
  * Checks:
@@ -608,8 +856,13 @@ export async function createBatchedBackup(
  * - Required fields are present
  * - Version is compatible (v2.1 or v3.0)
  * - Data format matches version
+ *
+ * Uses streaming parsing for large files to avoid memory issues.
  */
-export async function validateBackup(file: File): Promise<BackupValidationResult> {
+export async function validateBackup(
+  file: File,
+  onProgress?: ValidationProgressCallback
+): Promise<BackupValidationResult> {
   try {
     // Check file extension
     if (!file.name.endsWith(BACKUP_FILE_EXTENSION) && !file.name.endsWith('.json')) {
@@ -619,13 +872,9 @@ export async function validateBackup(file: File): Promise<BackupValidationResult
       };
     }
 
-    // Read file content
-    const text = await file.text();
-    let backup: BackupData;
-
-    try {
-      backup = JSON.parse(text);
-    } catch {
+    // Parse file (uses streaming for large files)
+    const backup = await parseBackupFile(file, onProgress);
+    if (!backup) {
       return {
         valid: false,
         error: 'Invalid backup file. Could not parse JSON.',
@@ -861,6 +1110,26 @@ export async function restoreBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total });
 
+  // Track skipped items for summary at end (due to quota errors)
+  const skippedItems: Record<string, number> = {};
+
+  // Helper to store item with quota error handling
+  const storeWithQuotaHandling = async (
+    type: string,
+    storeFn: () => Promise<unknown>
+  ): Promise<boolean> => {
+    try {
+      await storeFn();
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        skippedItems[type] = (skippedItems[type] || 0) + 1;
+        return false;
+      }
+      throw error;
+    }
+  };
+
   // 2. Decrypt and restore each record
   for (let i = 0; i < backup.data.length; i++) {
     const jwe = backup.data[i];
@@ -872,40 +1141,52 @@ export async function restoreBackup(
 
       switch (record.type) {
         case 'note':
-          await db.put(STORES.NOTES, record.data as Note);
+          await storeWithQuotaHandling('notes', () => db.put(STORES.NOTES, record.data as Note));
           break;
 
         case 'attachment': {
           const attachment = record.data as AttachmentRecord;
-          const blob = base64ToArrayBuffer(attachment.blob);
-          await attachmentRepository.storeBlob(attachment.id, blob);
+          await storeWithQuotaHandling('attachments', async () => {
+            const blob = base64ToArrayBuffer(attachment.blob);
+            await attachmentRepository.storeBlob(attachment.id, blob);
 
-          if (attachment.thumbnail) {
-            const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-            await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
-          }
+            if (attachment.thumbnail) {
+              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+            }
+          });
           break;
         }
 
         case 'version':
-          await db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion);
+          await storeWithQuotaHandling('versions', () => db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion));
           break;
 
         case 'saved_search':
-          await db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch);
+          await storeWithQuotaHandling('saved_searches', () => db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch));
           break;
 
         case 'settings':
-          await settingsRepository.update(record.data as UserSettings);
+          await storeWithQuotaHandling('settings', () =>
+            settingsRepository.update(record.data as UserSettings)
+          );
           break;
 
         case 'sync_metadata': {
-          // Mark the API key for re-registration so restored device gets a new ID
+          // Log sync metadata for debugging
           const syncMeta = record.data as SyncMetadata;
+          console.log('[backupService] Backup contains sync configuration:');
+          console.log('  - Sync enabled:', syncMeta.syncEnabled);
+          console.log('  - Sync endpoint:', syncMeta.syncEndpoint || '(not set)');
+          console.log('  - Client ID:', syncMeta.clientId || '(not set)');
+          console.log('  - Has API key:', !!syncMeta.apiKey);
+          // Mark the API key for re-registration so restored device gets a new ID
           if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
             syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
           }
-          await syncRepository.updateMetadata(syncMeta);
+          await storeWithQuotaHandling('sync_metadata', () =>
+            syncRepository.updateMetadata(syncMeta)
+          );
           break;
         }
 
@@ -916,6 +1197,16 @@ export async function restoreBackup(
       console.error(`[backupService] Failed to restore record ${i}:`, error);
       throw new Error(`Failed to restore record ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  // Log summary if there were any skipped items
+  const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
+  if (totalSkipped > 0) {
+    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items due to browser storage quota:`);
+    for (const [type, count] of Object.entries(skippedItems)) {
+      console.log(`  - ${type}: ${count} skipped`);
+    }
+    console.log('[backupService] Skipped items may re-sync from server if sync is enabled.');
   }
 
   onProgress?.({ phase: 'complete' });
@@ -939,16 +1230,88 @@ export async function restoreBatchedBackup(
 
   onProgress?.({ phase: 'validating' });
 
+  // Log sync configuration from backup (for debugging)
+  const syncMetadataBatch = backup.batches.find(b => b.type === 'sync_metadata');
+  if (syncMetadataBatch) {
+    try {
+      const syncItems = await decryptBatch<SyncMetadata>(syncMetadataBatch.data, keyBytes);
+      if (syncItems.length > 0) {
+        const syncMeta = syncItems[0];
+        console.log('[backupService] Backup contains sync configuration:');
+        console.log('  - Sync enabled:', syncMeta.syncEnabled);
+        console.log('  - Sync endpoint:', syncMeta.syncEndpoint || '(not set)');
+        console.log('  - Client ID:', syncMeta.clientId || '(not set)');
+        console.log('  - Has API key:', !!syncMeta.apiKey);
+      }
+    } catch (error) {
+      console.warn('[backupService] Could not read sync metadata from backup:', error);
+    }
+  }
+
   // 1. Restore encryption metadata first
-  await encryptionRepository.setMetadata(backup.encryption);
+  console.log('[backupService] Restoring encryption metadata...');
+  try {
+    await encryptionRepository.setMetadata(backup.encryption);
+    console.log('[backupService] Encryption metadata restored');
+  } catch (error) {
+    console.error('[backupService] Failed to restore encryption metadata:', error);
+    throw error; // Can't continue without encryption metadata
+  }
 
   onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
 
-  // 2. Process each batch
+  // Track skipped items for summary at end
+  const skippedItems: Record<string, number> = {};
+
+  // Helper to store item with quota error handling
+  const storeWithQuotaHandling = async (
+    type: string,
+    storeFn: () => Promise<unknown>
+  ): Promise<boolean> => {
+    try {
+      await storeFn();
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        skippedItems[type] = (skippedItems[type] || 0) + 1;
+        return false;
+      }
+      throw error;
+    }
+  };
+
+  // 2. First pass: collect all referenced attachment IDs from notes and versions
+  //    This lets us skip orphaned attachments during restore
+  console.log('[backupService] Scanning batches for referenced attachments...');
+  const referencedAttachmentIds = new Set<string>();
+
+  for (const batch of backup.batches) {
+    if (batch.type === 'notes' || batch.type === 'versions') {
+      try {
+        console.log(`[backupService] Scanning ${batch.type} batch (${batch.count} items)...`);
+        const items = await decryptBatch<Note | NoteVersion>(batch.data, keyBytes);
+        for (const item of items) {
+          if (item.attachments) {
+            for (const att of item.attachments) {
+              referencedAttachmentIds.add(att.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`[backupService] Could not scan ${batch.type} batch for attachment refs:`, error);
+      }
+    }
+  }
+
+  console.log(`[backupService] Found ${referencedAttachmentIds.size} referenced attachment IDs`);
+
+  // 3. Second pass: restore all data, skipping orphaned attachments
+  console.log(`[backupService] Starting restore of ${backup.batches.length} batches...`);
   for (let i = 0; i < backup.batches.length; i++) {
     const batch = backup.batches[i];
 
     try {
+      console.log(`[backupService] Restoring batch ${i + 1}/${backup.batches.length}: ${batch.type} (${batch.count} items)`);
       onProgress?.({ phase: 'decrypting', current: i, total: totalBatches });
 
       // Decrypt and decompress the batch
@@ -960,39 +1323,48 @@ export async function restoreBatchedBackup(
       switch (batch.type) {
         case 'notes':
           for (const note of items) {
-            await db.put(STORES.NOTES, note as Note);
+            await storeWithQuotaHandling('notes', () => db.put(STORES.NOTES, note as Note));
           }
           break;
 
         case 'attachments':
           for (const item of items) {
             const attachment = item as AttachmentRecord;
-            const blob = base64ToArrayBuffer(attachment.blob);
-            await attachmentRepository.storeBlob(attachment.id, blob);
-
-            if (attachment.thumbnail) {
-              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+            // Skip orphaned attachments (not referenced by any note or version)
+            if (!referencedAttachmentIds.has(attachment.id)) {
+              skippedItems['orphaned_attachments'] = (skippedItems['orphaned_attachments'] || 0) + 1;
+              continue;
             }
+            await storeWithQuotaHandling('attachments', async () => {
+              const blob = base64ToArrayBuffer(attachment.blob);
+              await attachmentRepository.storeBlob(attachment.id, blob);
+
+              if (attachment.thumbnail) {
+                const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+                await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+              }
+            });
           }
           break;
 
         case 'versions':
           for (const version of items) {
-            await db.put(STORES.NOTE_VERSIONS, version as NoteVersion);
+            await storeWithQuotaHandling('versions', () => db.put(STORES.NOTE_VERSIONS, version as NoteVersion));
           }
           break;
 
         case 'saved_searches':
           for (const savedSearch of items) {
-            await db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch);
+            await storeWithQuotaHandling('saved_searches', () => db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch));
           }
           break;
 
         case 'settings':
           // Settings batch contains a single item
           if (items.length > 0) {
-            await settingsRepository.update(items[0] as UserSettings);
+            await storeWithQuotaHandling('settings', () =>
+              settingsRepository.update(items[0] as UserSettings)
+            );
           }
           break;
 
@@ -1004,7 +1376,9 @@ export async function restoreBatchedBackup(
             if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
               syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
             }
-            await syncRepository.updateMetadata(syncMeta);
+            await storeWithQuotaHandling('sync_metadata', () =>
+              syncRepository.updateMetadata(syncMeta)
+            );
           }
           break;
 
@@ -1012,10 +1386,24 @@ export async function restoreBatchedBackup(
           console.warn(`[backupService] Unknown batch type: ${batch.type}`);
       }
     } catch (error) {
+      // Only fail on non-quota errors
       console.error(`[backupService] Failed to restore batch ${i} (${batch.type}):`, error);
       throw new Error(
         `Failed to restore batch ${i + 1} (${batch.type}): ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+    }
+  }
+
+  // Log summary if there were any skipped items
+  const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
+  if (totalSkipped > 0) {
+    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items:`);
+    for (const [type, count] of Object.entries(skippedItems)) {
+      if (type === 'orphaned_attachments') {
+        console.log(`  - ${count} orphaned attachments (not referenced by any note)`);
+      } else {
+        console.log(`  - ${type}: ${count} skipped (storage quota)`);
+      }
     }
   }
 
@@ -1052,40 +1440,43 @@ export async function restoreFromBackup(
  */
 export function downloadBackup(backup: BackupData): void {
   // Build JSON in chunks to avoid string length limits
+  // Use newlines between records to enable streaming parsing on import
   const chunks: string[] = [];
 
-  // Opening structure
-  chunks.push('{"version":');
+  // Opening structure (with newlines for readability and streaming)
+  chunks.push('{\n"version":');
   chunks.push(JSON.stringify(backup.version));
-  chunks.push(',"type":');
+  chunks.push(',\n"type":');
   chunks.push(JSON.stringify(backup.type));
-  chunks.push(',"createdAt":');
+  chunks.push(',\n"createdAt":');
   chunks.push(JSON.stringify(backup.createdAt));
-  chunks.push(',"encryption":');
+  chunks.push(',\n"encryption":');
   chunks.push(JSON.stringify(backup.encryption));
 
   if (isBackupV3(backup)) {
     // v3.0 format: batches array and summary
-    chunks.push(',"batches":[');
+    // Each batch on its own line for streaming parsing
+    chunks.push(',\n"batches":[\n');
 
     for (let i = 0; i < backup.batches.length; i++) {
-      if (i > 0) chunks.push(',');
+      if (i > 0) chunks.push(',\n');
       chunks.push(JSON.stringify(backup.batches[i]));
     }
 
-    chunks.push('],"summary":');
+    chunks.push('\n],\n"summary":');
     chunks.push(JSON.stringify(backup.summary));
-    chunks.push('}');
+    chunks.push('\n}');
   } else if (isBackupV2(backup)) {
     // v2.x format: data array
-    chunks.push(',"data":[');
+    // Each record on its own line for streaming parsing
+    chunks.push(',\n"data":[\n');
 
     for (let i = 0; i < backup.data.length; i++) {
-      if (i > 0) chunks.push(',');
+      if (i > 0) chunks.push(',\n');
       chunks.push(JSON.stringify(backup.data[i]));
     }
 
-    chunks.push(']}');
+    chunks.push('\n]\n}');
   }
 
   const blob = new Blob(chunks, { type: 'application/json' });
@@ -1111,10 +1502,95 @@ export function downloadBackup(backup: BackupData): void {
 }
 
 /**
+ * Parse backup header from the beginning of a file
+ * This avoids loading the entire file into memory
+ */
+async function parseBackupHeader(file: File): Promise<{
+  version?: string;
+  type?: string;
+  createdAt?: string;
+  encryption?: EncryptionMetadata;
+} | null> {
+  // Read first 10KB which should contain all header fields
+  const headerSize = Math.min(10 * 1024, file.size);
+  const headerSlice = file.slice(0, headerSize);
+  const headerText = await headerSlice.text();
+
+  try {
+    // Extract individual fields using regex (works on partial JSON)
+    const versionMatch = headerText.match(/"version"\s*:\s*"([^"]+)"/);
+    const typeMatch = headerText.match(/"type"\s*:\s*"([^"]+)"/);
+    const createdAtMatch = headerText.match(/"createdAt"\s*:\s*"([^"]+)"/);
+
+    // Extract encryption object (it's relatively small and near the start)
+    const encryptionMatch = headerText.match(/"encryption"\s*:\s*(\{[^}]+\})/);
+
+    if (!versionMatch || !typeMatch) {
+      return null;
+    }
+
+    return {
+      version: versionMatch[1],
+      type: typeMatch[1],
+      createdAt: createdAtMatch?.[1],
+      encryption: encryptionMatch ? JSON.parse(encryptionMatch[1]) : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse backup summary from the end of a v3.0 file
+ */
+async function parseBackupSummary(file: File): Promise<BackupSummary | null> {
+  // Read last 1KB which should contain the summary
+  const tailSize = Math.min(1024, file.size);
+  const tailSlice = file.slice(file.size - tailSize);
+  const tailText = await tailSlice.text();
+
+  try {
+    // Find the summary object
+    const summaryMatch = tailText.match(/"summary"\s*:\s*(\{[^}]+\})/);
+    if (summaryMatch) {
+      return JSON.parse(summaryMatch[1]);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Count records in a v2.x backup by counting JWE tokens
+ * Uses streaming to avoid loading entire file
+ */
+async function countV2Records(file: File): Promise<number> {
+  // For v2.x, count the JWE tokens in the data array
+  // Each JWE token starts with "eyJ" (base64 of '{"')
+  let count = 0;
+  const chunkSize = 1024 * 1024; // 1MB chunks
+
+  for (let offset = 0; offset < file.size; offset += chunkSize) {
+    const chunk = file.slice(offset, offset + chunkSize);
+    const text = await chunk.text();
+    // Count occurrences of JWE token starts (rough count)
+    const matches = text.match(/"eyJ[A-Za-z0-9_-]+\./g);
+    if (matches) {
+      count += matches.length;
+    }
+  }
+
+  return count;
+}
+
+/**
  * Get backup file stats without full validation
  *
  * For v2.x backups, we can only show record count (types are encrypted).
  * For v3.0 backups, we can show the full summary (notes, attachments, versions, saved searches).
+ *
+ * Uses streaming parsing to handle large files without loading everything into memory.
  */
 export async function getBackupStats(file: File): Promise<{
   valid: boolean;
@@ -1125,35 +1601,41 @@ export async function getBackupStats(file: File): Promise<{
   error?: string;
 }> {
   try {
-    const text = await file.text();
-    const backup: BackupData = JSON.parse(text);
+    // Parse header without loading entire file
+    const header = await parseBackupHeader(file);
 
-    if (backup.type !== BACKUP_TYPE) {
+    if (!header) {
+      return { valid: false, error: 'Could not read backup file header' };
+    }
+
+    if (header.type !== BACKUP_TYPE) {
       return { valid: false, error: 'Not a Jottery backup file' };
     }
 
-    if (isBackupV3(backup)) {
-      // v3.0: return detailed summary
-      return {
-        valid: true,
-        version: backup.version,
-        createdAt: backup.createdAt,
-        summary: backup.summary,
-        recordCount:
-          backup.summary.notes +
-          backup.summary.attachments +
-          backup.summary.versions +
-          backup.summary.savedSearches,
-      };
+    // v3.0: get summary from end of file
+    if (header.version === '3.0') {
+      const summary = await parseBackupSummary(file);
+      if (summary) {
+        return {
+          valid: true,
+          version: header.version,
+          createdAt: header.createdAt,
+          summary,
+          recordCount:
+            summary.notes + summary.attachments + summary.versions + summary.savedSearches,
+        };
+      }
+      return { valid: false, error: 'Could not read backup summary' };
     }
 
-    // v2.x: can only show record count
-    if (isBackupV2(backup)) {
+    // v2.x: count records by scanning file
+    if (header.version === '2.1' || header.version === '2.0') {
+      const recordCount = await countV2Records(file);
       return {
         valid: true,
-        version: backup.version,
-        createdAt: backup.createdAt,
-        recordCount: backup.data.length,
+        version: header.version,
+        createdAt: header.createdAt,
+        recordCount,
       };
     }
 

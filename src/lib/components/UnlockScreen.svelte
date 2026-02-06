@@ -46,8 +46,10 @@
   let showBackupRestore = false;
   let backupFile: File | null = null;
   let backupData: BackupData | null = null;
-  let backupStats: { createdAt?: string; recordCount?: number } | null = null;
+  let backupStats: { createdAt?: string; recordCount?: number; summary?: { notes: number; attachments: number; versions: number } } | null = null;
   let backupPassword = '';
+  let validatingBackup = false;
+  let validationProgress: { percent: number; bytesRead: number; totalBytes: number } | null = null;
   let restoring = false;
   let restoreProgress: { phase: string; current?: number; total?: number } | null = null;
   let backupFileInput: HTMLInputElement;
@@ -387,26 +389,43 @@
     backupFile = file;
     backupData = null;
     backupStats = null;
+    validatingBackup = true;
+    validationProgress = { percent: 0, bytesRead: 0, totalBytes: file.size };
 
-    // Get quick stats first
-    const stats = await getBackupStats(file);
-    if (!stats.valid) {
-      error = stats.error || $_('backup.restore.invalidFile');
-      backupFile = null;
-      return;
+    try {
+      // Get quick stats first (fast, uses streaming)
+      const stats = await getBackupStats(file);
+      if (!stats.valid) {
+        error = stats.error || $_('backup.restore.invalidFile');
+        backupFile = null;
+        validatingBackup = false;
+        validationProgress = null;
+        return;
+      }
+      backupStats = stats;
+
+      // Validate the full backup structure (can be slow for large files)
+      const validation = await validateBackup(file, (progress) => {
+        validationProgress = {
+          percent: progress.percent,
+          bytesRead: progress.bytesRead,
+          totalBytes: progress.totalBytes,
+        };
+      });
+      if (!validation.valid || !validation.backup) {
+        error = validation.error || $_('backup.restore.invalidFile');
+        backupFile = null;
+        backupStats = null;
+        validatingBackup = false;
+        validationProgress = null;
+        return;
+      }
+
+      backupData = validation.backup;
+    } finally {
+      validatingBackup = false;
+      validationProgress = null;
     }
-    backupStats = stats;
-
-    // Validate the full backup structure
-    const validation = await validateBackup(file);
-    if (!validation.valid || !validation.backup) {
-      error = validation.error || $_('backup.restore.invalidFile');
-      backupFile = null;
-      backupStats = null;
-      return;
-    }
-
-    backupData = validation.backup;
   }
 
   async function handleRestoreBackup() {
@@ -555,6 +574,37 @@
                 {backupStats.recordCount ?? 0}
               </p>
             </div>
+          </div>
+        {/if}
+
+        <!-- Validation Progress (shown while parsing large backup files) -->
+        {#if validatingBackup}
+          <div class="mb-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+              <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  {$_('backup.restore.progress.validating')}
+                </p>
+              </div>
+              {#if validationProgress}
+                <span class="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  {validationProgress.percent}%
+                </span>
+              {/if}
+            </div>
+            <!-- Progress bar -->
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style="width: {validationProgress?.percent ?? 0}%"
+              ></div>
+            </div>
+            {#if validationProgress && backupFile}
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {(validationProgress.bytesRead / (1024 * 1024)).toFixed(1)} / {(backupFile.size / (1024 * 1024)).toFixed(1)} MB
+              </p>
+            {/if}
           </div>
         {/if}
 

@@ -58,6 +58,28 @@ class SyncService {
   private savedAutoSyncInterval?: number; // Saved interval when SSE suspends periodic sync
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
+  private restoreInProgress = false; // True during backup restore to prevent sync
+
+  /**
+   * Set restore-in-progress flag to disable sync during backup restore
+   */
+  setRestoreInProgress(inProgress: boolean): void {
+    this.restoreInProgress = inProgress;
+    if (inProgress) {
+      console.log('[SyncService] Restore in progress - sync disabled');
+      // Cancel any pending background sync
+      this.cancelPendingBackgroundSync();
+    } else {
+      console.log('[SyncService] Restore complete - sync re-enabled');
+    }
+  }
+
+  /**
+   * Check if restore is in progress
+   */
+  isRestoreInProgress(): boolean {
+    return this.restoreInProgress;
+  }
 
   /**
    * Check if a sync appears to be stuck (running for too long)
@@ -226,6 +248,12 @@ class SyncService {
       return { success: false, error: 'Sync is disabled' };
     }
 
+    // Skip sync during backup restore
+    if (this.restoreInProgress) {
+      console.log('[SyncService] Skipping sync - restore in progress');
+      return { success: false, error: 'Restore in progress' };
+    }
+
     // Check network availability before attempting sync
     if (!this.isOnline()) {
       console.log('[SyncService] Skipping sync - network offline');
@@ -367,6 +395,11 @@ class SyncService {
     let currentSettings: { syncEnabled?: boolean } | undefined;
     settings.subscribe(s => currentSettings = s)();
     if (!currentSettings?.syncEnabled) {
+      return;
+    }
+
+    // Skip sync during backup restore
+    if (this.restoreInProgress) {
       return;
     }
 

@@ -199,7 +199,13 @@
       await initDB();
 
       // Load settings (merge with defaults to ensure new fields exist)
-      const userSettings = await settingsRepository.get();
+      let userSettings = DEFAULT_SETTINGS;
+      try {
+        userSettings = await settingsRepository.get();
+      } catch (error) {
+        // If settings read fails (e.g., QuotaExceededError), use defaults
+        console.warn('Failed to load settings, using defaults:', error);
+      }
       settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
 
       // Expose app context for E2E testing
@@ -219,10 +225,16 @@
       initI18n(initialLocale);
       locale.set(initialLocale);
 
-      // If language was auto-detected (empty string), save the detected locale
+      // If language was auto-detected (empty string), try to save the detected locale
+      // (wrapped in try-catch to handle QuotaExceededError gracefully)
       if (!userSettings.language || userSettings.language === '') {
-        const updated = await settingsRepository.update({ language: initialLocale });
-        settings.set({ ...DEFAULT_SETTINGS, ...updated });
+        try {
+          const updated = await settingsRepository.update({ language: initialLocale });
+          settings.set({ ...DEFAULT_SETTINGS, ...updated });
+        } catch (error) {
+          // Ignore write failures (e.g., QuotaExceededError) - user can still use the app
+          console.warn('Failed to save language setting:', error);
+        }
       }
 
       // Check for theme override from URL parameter (?theme=light or ?theme=dark)
@@ -242,6 +254,15 @@
       initialized = true;
     } catch (error) {
       console.error('Failed to initialize app:', error);
+      // Even on error, mark as initialized so the UI renders
+      // This allows users to access settings/delete database when quota is exceeded
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        console.warn('Storage quota exceeded. You may need to delete data or clear storage.');
+        settings.set(DEFAULT_SETTINGS);
+        initI18n(getInitialLocale(''));
+        isLocked.set(true);
+        initialized = true;
+      }
     }
   });
 

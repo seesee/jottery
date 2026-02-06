@@ -218,6 +218,8 @@
     "creating": "Creating backup...",
     "created": "Backup created successfully",
     "failed": "Failed to create backup",
+    "loadingAttachments": "Loading attachments...",
+    "encrypting": "Encrypting data...",
     "restore": {
       "title": "Restore from Backup",
       "selectFile": "Select backup file",

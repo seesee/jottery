@@ -218,6 +218,8 @@
     "creating": "Backup wird erstellt...",
     "created": "Backup erfolgreich erstellt",
     "failed": "Backup konnte nicht erstellt werden",
+    "loadingAttachments": "Anhänge werden geladen...",
+    "encrypting": "Daten werden verschlüsselt...",
     "restore": {
       "title": "Aus Backup wiederherstellen",
       "selectFile": "Backup-Datei auswählen",
