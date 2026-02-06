@@ -411,33 +411,17 @@ fn generate_session_token() -> String {
     Uuid::new_v4().to_string()
 }
 
+/// Maximum email length per RFC 5321
+const MAX_EMAIL_LENGTH: usize = 254;
+
 fn is_valid_email(email: &str) -> bool {
-    // Basic email validation: local@domain.tld
-    let parts: Vec<&str> = email.split('@').collect();
-    if parts.len() != 2 {
+    // Check length limit per RFC 5321
+    if email.len() > MAX_EMAIL_LENGTH {
         return false;
     }
 
-    let local = parts[0];
-    let domain = parts[1];
-
-    // Local part must not be empty
-    if local.is_empty() {
-        return false;
-    }
-
-    // Domain must contain a dot and not be empty
-    if domain.is_empty() || !domain.contains('.') {
-        return false;
-    }
-
-    // Domain must have something before and after the dot
-    let domain_parts: Vec<&str> = domain.split('.').collect();
-    if domain_parts.iter().any(|p| p.is_empty()) {
-        return false;
-    }
-
-    true
+    // Use RFC-compliant email validation
+    email_address::EmailAddress::is_valid(email)
 }
 
 #[cfg(test)]
@@ -446,11 +430,26 @@ mod tests {
 
     #[test]
     fn test_email_validation() {
+        // Valid emails
         assert!(is_valid_email("user@example.com"));
         assert!(is_valid_email("test.user@domain.co.uk"));
+        assert!(is_valid_email("user+tag@example.com"));
+        assert!(is_valid_email("user123@sub.domain.example.com"));
+
+        // Invalid emails
         assert!(!is_valid_email("invalid"));
         assert!(!is_valid_email("@example.com"));
         assert!(!is_valid_email("user@"));
+        assert!(!is_valid_email("user@.com"));
+        assert!(!is_valid_email("user@domain..com"));
+        assert!(!is_valid_email(""));
+        assert!(!is_valid_email("   "));
+
+        // RFC length limit (254 chars max)
+        let long_local = "a".repeat(64);
+        let long_domain = format!("{}.example.com", "b".repeat(180));
+        let too_long_email = format!("{}@{}", long_local, long_domain);
+        assert!(!is_valid_email(&too_long_email));
     }
 
     #[test]
