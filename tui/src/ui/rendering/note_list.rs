@@ -10,7 +10,7 @@ use rust_i18n::t;
 use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width};
-use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal};
+use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal, render_input_modal};
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
 use crate::models::SyntaxLanguage;
 
@@ -1100,77 +1100,45 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     // Render bulk add tags input modal if showing
     if matches!(app.input_mode, InputMode::BulkAddTags) {
         let count = app.selected_note_ids.len();
-        let modal_width = 60;
-        let modal_height = 6;
-        let modal_area = centered_rect(modal_width, modal_height, size);
-
-        // Clear the background area
-        frame.render_widget(Clear, modal_area);
-
-        let modal_block = Block::default()
-            .title(format!(" {} ", t!("bulk.enter_tags")))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(app.color_scheme.accent))
-            .style(Style::default().bg(app.color_scheme.background));
-
-        let lines = vec![
-            Line::styled(
-                format!("{} {} {}", t!("bulk.add_tags_to"), count, if count == 1 { t!("sync.note") } else { t!("sync.notes") }),
-                Style::default().fg(app.color_scheme.foreground)
-            ),
-            Line::styled(
-                format!("{}█", app.bulk_tags_input),
-                Style::default().fg(app.color_scheme.accent)
-            ),
-            Line::styled(
-                "Enter: confirm | Esc: cancel",
-                Style::default().fg(app.color_scheme.muted)
-            ),
-        ];
-
-        let modal_paragraph = Paragraph::new(Text::from(lines))
-            .block(modal_block)
-            .style(Style::default().fg(app.color_scheme.foreground));
-
-        frame.render_widget(modal_paragraph, modal_area);
+        let description = format!(
+            "{} {} {}",
+            t!("bulk.add_tags_to"),
+            count,
+            if count == 1 { t!("sync.note") } else { t!("sync.notes") }
+        );
+        render_input_modal(
+            frame,
+            size,
+            &t!("bulk.enter_tags"),
+            &description,
+            &app.bulk_tags_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            60,
+            6,
+        );
     }
 
     // Render bulk export path input modal if showing
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         let count = app.selected_note_ids.len();
-        let modal_width = 70;
-        let modal_height = 6;
-        let modal_area = centered_rect(modal_width, modal_height, size);
-
-        // Clear the background area
-        frame.render_widget(Clear, modal_area);
-
-        let modal_block = Block::default()
-            .title(format!(" {} ", t!("bulk.enter_export_path")))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(app.color_scheme.accent))
-            .style(Style::default().bg(app.color_scheme.background));
-
-        let lines = vec![
-            Line::styled(
-                format!("{} {} {}", t!("bulk.export_notes_to"), count, if count == 1 { t!("sync.note") } else { t!("sync.notes") }),
-                Style::default().fg(app.color_scheme.foreground)
-            ),
-            Line::styled(
-                format!("{}█", app.bulk_export_path_input),
-                Style::default().fg(app.color_scheme.accent)
-            ),
-            Line::styled(
-                "Enter: confirm | Esc: cancel",
-                Style::default().fg(app.color_scheme.muted)
-            ),
-        ];
-
-        let modal_paragraph = Paragraph::new(Text::from(lines))
-            .block(modal_block)
-            .style(Style::default().fg(app.color_scheme.foreground));
-
-        frame.render_widget(modal_paragraph, modal_area);
+        let description = format!(
+            "{} {} {}",
+            t!("bulk.export_notes_to"),
+            count,
+            if count == 1 { t!("sync.note") } else { t!("sync.notes") }
+        );
+        render_input_modal(
+            frame,
+            size,
+            &t!("bulk.enter_export_path"),
+            &description,
+            &app.bulk_export_path_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            70,
+            6,
+        );
     }
 
     // Render conflict resolution modal if showing

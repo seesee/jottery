@@ -157,6 +157,61 @@ pub fn render_modal_frame(
     inner
 }
 
+/// Render an input modal with description, text input field, and help text
+///
+/// This is commonly used for modals that accept user text input (e.g., bulk operations).
+///
+/// # Arguments
+/// * `frame` - The frame to render to
+/// * `area` - The full screen area (modal will be centered within it)
+/// * `title` - The modal title (will be wrapped with spaces)
+/// * `description` - Description line shown above the input field
+/// * `input_text` - Current input text (cursor █ will be appended)
+/// * `help_text` - Help text shown below input (e.g., "Enter: confirm | Esc: cancel")
+/// * `color_scheme` - The app's color scheme
+/// * `width` - Modal width (default 70 is recommended)
+/// * `height` - Modal height (default 6 is recommended for standard input modal)
+#[allow(clippy::too_many_arguments)]
+pub fn render_input_modal(
+    frame: &mut Frame,
+    area: Rect,
+    title: &str,
+    description: &str,
+    input_text: &str,
+    help_text: &str,
+    color_scheme: &ColorScheme,
+    width: u16,
+    height: u16,
+) {
+    let modal_area = centered_rect(width, height, area);
+
+    // Clear background
+    frame.render_widget(Clear, modal_area);
+
+    // Create modal block
+    let modal_block = Block::default()
+        .title(format!(" {} ", title))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(color_scheme.accent))
+        .style(Style::default().bg(color_scheme.background));
+
+    // Build content lines
+    let lines = vec![
+        Line::styled(description, Style::default().fg(color_scheme.foreground)),
+        Line::styled(
+            format!("{}█", input_text),
+            Style::default().fg(color_scheme.accent),
+        ),
+        Line::styled(help_text, Style::default().fg(color_scheme.muted)),
+    ];
+
+    let modal_paragraph = Paragraph::new(lines)
+        .block(modal_block)
+        .style(Style::default().fg(color_scheme.foreground));
+
+    frame.render_widget(modal_paragraph, modal_area);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
