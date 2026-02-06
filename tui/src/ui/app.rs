@@ -243,6 +243,8 @@ pub struct App {
     pub(crate) sync_status_set_at: Option<Instant>,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
+    /// Cached color palette names (for color cycling without allocation)
+    pub(crate) color_palette_cache: Vec<String>,
     /// Selected attachment index in preview pane
     pub selected_attachment: usize,
     /// Which panel is focused in preview pane (content or attachments)
@@ -384,6 +386,7 @@ impl App {
             last_auto_sync: None,
             sync_status_set_at: None,
             color_scheme: crate::ui::ColorScheme::default(),
+            color_palette_cache: Vec::new(), // Populated when settings are loaded
             selected_attachment: 0,
             focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
@@ -550,6 +553,8 @@ impl App {
             self.debug_log(&format!("Unlock - Tag colors present: {}", self.settings.tag_colors.is_some()));
             // Update color scheme from loaded settings
             self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
+            // Update color palette cache
+            self.refresh_color_palette_cache();
             self.debug_log("Unlock - Color scheme updated");
         }
 
@@ -796,6 +801,19 @@ impl App {
     pub fn reset_path_completions(&mut self) {
         self.path_completions.clear();
         self.path_completion_index = 0;
+    }
+
+    /// Refresh the color palette cache from current settings
+    pub fn refresh_color_palette_cache(&mut self) {
+        self.color_palette_cache = self.settings.get_color_palette()
+            .keys()
+            .cloned()
+            .collect();
+    }
+
+    /// Get the cached color palette names
+    pub fn get_color_names(&self) -> &[String] {
+        &self.color_palette_cache
     }
 
     /// Sort notes by pinned status first (pinned at top), then by modified_at descending

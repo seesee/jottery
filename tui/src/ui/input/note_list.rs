@@ -47,16 +47,14 @@ fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
 ///
 /// # Arguments
 /// * `current_color` - The current color, or None if no color is set
-/// * `app` - The app state (for accessing color palette)
+/// * `app` - The app state (for accessing cached color palette)
 /// * `forward` - true to cycle forward, false to cycle backward
 ///
 /// # Returns
 /// The next/previous color, or None to clear the color
 fn cycle_color(current_color: Option<&String>, app: &App, forward: bool) -> Option<String> {
-    let color_names: Vec<String> = app.settings.get_color_palette()
-        .keys()
-        .cloned()
-        .collect();
+    // Use cached color names to avoid allocation on every keypress
+    let color_names = app.get_color_names();
 
     if color_names.is_empty() {
         return None;
