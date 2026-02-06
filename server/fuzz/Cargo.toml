@@ -1,0 +1,34 @@
+[package]
+name = "jottery-server-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+email_address = "0.2"
+
+[dependencies.jottery-server]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz_validation"
+path = "fuzz_targets/fuzz_validation.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_email"
+path = "fuzz_targets/fuzz_email.rs"
+test = false
+doc = false
+bench = false
