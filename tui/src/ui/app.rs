@@ -619,13 +619,7 @@ impl App {
             if let Some(note_id) = &self.selected_note_id.clone() {
                 // Build sorted view like filtered_notes() does
                 let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                sorted_notes.sort_by(|a, b| {
-                    match (a.pinned, b.pinned) {
-                        (true, false) => std::cmp::Ordering::Less,
-                        (false, true) => std::cmp::Ordering::Greater,
-                        _ => b.modified_at.cmp(&a.modified_at),
-                    }
-                });
+                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
 
                 if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
                     self.selected_note = index;
@@ -640,13 +634,7 @@ impl App {
                 self.selected_note = 0;
                 // Get first note from sorted view
                 let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                sorted_notes.sort_by(|a, b| {
-                    match (a.pinned, b.pinned) {
-                        (true, false) => std::cmp::Ordering::Less,
-                        (false, true) => std::cmp::Ordering::Greater,
-                        _ => b.modified_at.cmp(&a.modified_at),
-                    }
-                });
+                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
                 self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
                 self.debug_log("load_notes: no selected_note_id, defaulting to 0");
             }
@@ -720,6 +708,17 @@ impl App {
     pub fn reset_path_completions(&mut self) {
         self.path_completions.clear();
         self.path_completion_index = 0;
+    }
+
+    /// Sort notes by pinned status first (pinned at top), then by modified_at descending
+    pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
+        notes.sort_by(|a, b| {
+            match (a.pinned, b.pinned) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => b.modified_at.cmp(&a.modified_at),
+            }
+        });
     }
 
     /// Filter notes based on search query and sort (pinned first, then by modified date)
@@ -861,13 +860,7 @@ impl App {
         };
 
         // Sort: pinned first, then by modified_at descending
-        notes.sort_by(|a, b| {
-            match (a.pinned, b.pinned) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => b.modified_at.cmp(&a.modified_at),
-            }
-        });
+        Self::sort_notes_by_pinned_and_date(&mut notes);
 
         notes
     }
@@ -1675,5 +1668,44 @@ mod tests {
         assert!(!cleaned.contains("category:important"));
         assert!(cleaned.contains("urgent"));
         assert!(cleaned.contains("task"));
+    }
+
+    #[test]
+    fn test_sort_notes_by_pinned_and_date() {
+        use chrono::{TimeZone, Utc};
+
+        // Create notes with varying pinned status and dates
+        let mut note1 = Note::new("Note 1".to_string());
+        note1.pinned = false;
+        note1.modified_at = Utc.with_ymd_and_hms(2024, 1, 1, 12, 0, 0).unwrap();
+
+        let mut note2 = Note::new("Note 2 - pinned".to_string());
+        note2.pinned = true;
+        note2.modified_at = Utc.with_ymd_and_hms(2024, 1, 2, 12, 0, 0).unwrap();
+
+        let mut note3 = Note::new("Note 3".to_string());
+        note3.pinned = false;
+        note3.modified_at = Utc.with_ymd_and_hms(2024, 1, 3, 12, 0, 0).unwrap();
+
+        let mut note4 = Note::new("Note 4 - pinned older".to_string());
+        note4.pinned = true;
+        note4.modified_at = Utc.with_ymd_and_hms(2024, 1, 1, 10, 0, 0).unwrap();
+
+        let mut notes: Vec<&Note> = vec![&note1, &note2, &note3, &note4];
+        App::sort_notes_by_pinned_and_date(&mut notes);
+
+        // Pinned notes should come first, sorted by date descending
+        assert!(notes[0].pinned);
+        assert!(notes[1].pinned);
+        // Note2 is more recent than Note4, so Note2 should be first
+        assert!(notes[0].content.contains("Note 2"));
+        assert!(notes[1].content.contains("Note 4"));
+
+        // Unpinned notes should come after, sorted by date descending
+        assert!(!notes[2].pinned);
+        assert!(!notes[3].pinned);
+        // Note3 is more recent than Note1
+        assert!(notes[2].content.contains("Note 3"));
+        assert!(notes[3].content.contains("Note 1"));
     }
 }

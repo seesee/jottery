@@ -21,13 +21,7 @@ pub fn load_notes(app: &mut App) -> Result<()> {
         if let Some(note_id) = &app.selected_note_id.clone() {
             // Build sorted view like filtered_notes() does
             let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
-            sorted_notes.sort_by(|a, b| {
-                match (a.pinned, b.pinned) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => b.modified_at.cmp(&a.modified_at),
-                }
-            });
+            App::sort_notes_by_pinned_and_date(&mut sorted_notes);
 
             if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
                 app.selected_note = index;
@@ -40,13 +34,7 @@ pub fn load_notes(app: &mut App) -> Result<()> {
             app.selected_note = 0;
             // Get first note from sorted view
             let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
-            sorted_notes.sort_by(|a, b| {
-                match (a.pinned, b.pinned) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => b.modified_at.cmp(&a.modified_at),
-                }
-            });
+            App::sort_notes_by_pinned_and_date(&mut sorted_notes);
             app.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
         }
     }
