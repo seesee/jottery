@@ -236,7 +236,7 @@ async fn main() {
         .layer(DefaultBodyLimit::max(config.max_payload_size))
         .layer(CompressionLayer::new())
         .layer(build_cors_layer(&config))
-        // Security headers
+        // Security headers (OWASP recommended)
         .layer(SetResponseHeaderLayer::if_not_present(
             axum::http::header::X_FRAME_OPTIONS,
             HeaderValue::from_static("DENY"),
@@ -248,6 +248,21 @@ async fn main() {
         .layer(SetResponseHeaderLayer::if_not_present(
             axum::http::header::REFERRER_POLICY,
             HeaderValue::from_static("strict-origin-when-cross-origin"),
+        ))
+        // Content-Security-Policy for API (restrictive since we only serve JSON)
+        .layer(SetResponseHeaderLayer::if_not_present(
+            axum::http::header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
+        ))
+        // Prevent caching of API responses (contains sensitive data)
+        .layer(SetResponseHeaderLayer::if_not_present(
+            axum::http::header::CACHE_CONTROL,
+            HeaderValue::from_static("no-store, no-cache, must-revalidate, private"),
+        ))
+        // Prevent Adobe cross-domain policy file loading
+        .layer(SetResponseHeaderLayer::if_not_present(
+            HeaderName::from_static("x-permitted-cross-domain-policies"),
+            HeaderValue::from_static("none"),
         ));
 
     // Conditionally add HSTS header (only for HTTPS deployments)

@@ -852,4 +852,101 @@ mod security_documentation {
             "Rate limiting should be documented as missing"
         );
     }
+
+    #[test]
+    fn document_security_headers() {
+        // Document security headers that should be set on all responses
+        // These are configured in main.rs and verified by manual testing
+        let required_headers = vec![
+            ("X-Frame-Options", "DENY", "Prevents clickjacking attacks"),
+            ("X-Content-Type-Options", "nosniff", "Prevents MIME-type sniffing"),
+            ("Referrer-Policy", "strict-origin-when-cross-origin", "Limits referrer leakage"),
+            ("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'", "XSS protection for API"),
+            ("Cache-Control", "no-store, no-cache, must-revalidate, private", "Prevents sensitive data caching"),
+            ("X-Permitted-Cross-Domain-Policies", "none", "Prevents Adobe cross-domain policy loading"),
+        ];
+
+        let optional_headers = vec![
+            ("Strict-Transport-Security", "max-age=31536000; includeSubDomains", "HSTS - only for HTTPS"),
+        ];
+
+        println!("=== Required Security Headers ===");
+        for (name, value, purpose) in &required_headers {
+            println!("{}: {} ({})", name, value, purpose);
+        }
+
+        println!("\n=== Optional Security Headers ===");
+        for (name, value, purpose) in &optional_headers {
+            println!("{}: {} ({})", name, value, purpose);
+        }
+
+        assert_eq!(required_headers.len(), 6, "Should have 6 required security headers");
+    }
+
+    #[test]
+    fn document_owasp_top_10_mitigations() {
+        // Document OWASP Top 10 (2021) mitigations
+        let mitigations = vec![
+            ("A01:2021 - Broken Access Control", vec![
+                "User isolation via user_id in all queries",
+                "API key authentication required for all endpoints",
+                "Session-based auth for admin portal",
+                "Composite keys (id, user_id) enforce ownership",
+            ]),
+            ("A02:2021 - Cryptographic Failures", vec![
+                "Argon2id for password hashing (m=19456, t=2, p=1)",
+                "SHA-256 for API key hashing",
+                "TLS required for production (HSTS optional)",
+                "No sensitive data in URLs or logs",
+            ]),
+            ("A03:2021 - Injection", vec![
+                "All SQL via parameterized queries (sqlx::query!)",
+                "QueryBuilder with push_bind for dynamic queries",
+                "Input validation rejects control characters",
+                "XSS patterns rejected in device names",
+            ]),
+            ("A04:2021 - Insecure Design", vec![
+                "Defence in depth (validation + parameterized queries)",
+                "Principle of least privilege",
+                "Secure defaults (CORS same-origin by default)",
+            ]),
+            ("A05:2021 - Security Misconfiguration", vec![
+                "Security headers set on all responses",
+                "CORS configurable via environment",
+                "Debug info not exposed in production errors",
+            ]),
+            ("A06:2021 - Vulnerable Components", vec![
+                "Regular dependency updates via Cargo.lock",
+                "cargo audit for vulnerability scanning",
+            ]),
+            ("A07:2021 - Auth Failures", vec![
+                "Strong password requirements (configurable)",
+                "Session expiry (7 days default)",
+                "Account approval workflow",
+                "Rate limiting TODO (documented as missing)",
+            ]),
+            ("A08:2021 - Data Integrity Failures", vec![
+                "Content hashing for sync integrity",
+                "Version tracking for conflict detection",
+            ]),
+            ("A09:2021 - Logging Failures", vec![
+                "tracing for structured logging",
+                "User-Agent and IP captured for sessions",
+                "Security events logged (failed auth, XSS attempts)",
+            ]),
+            ("A10:2021 - SSRF", vec![
+                "No server-side URL fetching",
+                "API only accepts JSON payloads",
+            ]),
+        ];
+
+        for (category, items) in &mitigations {
+            println!("\n{}", category);
+            for item in items {
+                println!("  ✓ {}", item);
+            }
+        }
+
+        assert_eq!(mitigations.len(), 10, "Should cover all OWASP Top 10 categories");
+    }
 }

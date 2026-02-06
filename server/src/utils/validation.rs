@@ -1,21 +1,102 @@
 //! Input validation utilities
 //!
-//! Provides validation functions for user input to prevent DoS attacks
-//! and ensure data integrity.
+//! Provides validation functions for user input to prevent:
+//! - DoS attacks (length limits)
+//! - XSS attacks (dangerous character rejection)
+//! - Log injection (control character rejection)
+//! - SQL injection (handled by parameterized queries, but defence in depth)
+//!
+//! Security note: This is a defence-in-depth measure. The primary XSS protection
+//! is that this is a JSON API - clients are responsible for escaping data when
+//! rendering. However, we reject obviously malicious input at the server level.
 
 use crate::{config::Config, error::AppError};
 
-/// Validate device name length
+/// Characters that are never allowed in user-controlled text fields
+/// These could be used for log injection or indicate malicious input
+const FORBIDDEN_CONTROL_CHARS: &[char] = &[
+    '\x00', // Null byte - can truncate strings, bypass filters
+    '\x08', // Backspace - log manipulation
+    '\x7F', // DEL - control character
+];
+
+/// Check if a string contains forbidden control characters
+fn contains_forbidden_chars(s: &str) -> bool {
+    s.chars().any(|c| {
+        FORBIDDEN_CONTROL_CHARS.contains(&c) ||
+        // Reject C0 control characters except tab, newline, carriage return
+        (c.is_control() && c != '\t' && c != '\n' && c != '\r')
+    })
+}
+
+/// Check if a string looks like it contains HTML/script injection attempts
+/// This is defence-in-depth - the API returns JSON, but we reject obvious attacks
+fn contains_html_injection(s: &str) -> bool {
+    let lower = s.to_lowercase();
+
+    // Check for script tags
+    if lower.contains("<script") || lower.contains("</script") {
+        return true;
+    }
+
+    // Check for event handlers (onclick, onerror, onload, etc.)
+    if lower.contains("javascript:") || lower.contains("vbscript:") {
+        return true;
+    }
+
+    // Check for data: URIs that could contain scripts
+    if lower.contains("data:text/html") {
+        return true;
+    }
+
+    // Check for common XSS patterns
+    if lower.contains("<img") && lower.contains("onerror") {
+        return true;
+    }
+
+    if lower.contains("<svg") && lower.contains("onload") {
+        return true;
+    }
+
+    false
+}
+
+/// Validate and sanitize device name
+///
+/// Device names are displayed in admin interfaces and logs, so we apply
+/// strict validation to prevent XSS and log injection attacks.
 pub fn validate_device_name(name: &str, config: &Config) -> Result<(), AppError> {
+    // Check for empty/whitespace-only
     if name.trim().is_empty() {
         return Err(AppError::BadRequest("Device name cannot be empty".to_string()));
     }
+
+    // Check length limit
     if name.len() > config.max_device_name_length {
         return Err(AppError::BadRequest(format!(
             "Device name exceeds maximum length of {} characters",
             config.max_device_name_length
         )));
     }
+
+    // Reject control characters (log injection prevention)
+    if contains_forbidden_chars(name) {
+        return Err(AppError::BadRequest(
+            "Device name contains invalid characters".to_string()
+        ));
+    }
+
+    // Reject HTML/script injection attempts (defence in depth)
+    if contains_html_injection(name) {
+        tracing::warn!(
+            "Rejected device name with potential XSS payload: {:?}",
+            name.chars().take(50).collect::<String>()
+        );
+        return Err(AppError::BadRequest(
+            "Device name contains invalid characters".to_string()
+        ));
+    }
+
     Ok(())
 }
 
@@ -176,6 +257,62 @@ mod tests {
         assert!(validate_device_name("Device (Home)", &config).is_ok());
         assert!(validate_device_name("Device's Name", &config).is_ok());
         assert!(validate_device_name("Device \"Test\"", &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_device_name_xss_prevention() {
+        let config = test_config();
+
+        // Script tags - must be rejected
+        assert!(validate_device_name("<script>alert('xss')</script>", &config).is_err());
+        assert!(validate_device_name("Device<script>alert(1)</script>", &config).is_err());
+        assert!(validate_device_name("<SCRIPT>alert('XSS')</SCRIPT>", &config).is_err());
+
+        // Event handlers - must be rejected
+        assert!(validate_device_name("<img src=x onerror=alert(1)>", &config).is_err());
+        assert!(validate_device_name("<svg onload=alert(1)>", &config).is_err());
+
+        // javascript: URIs - must be rejected
+        assert!(validate_device_name("javascript:alert(1)", &config).is_err());
+        assert!(validate_device_name("JAVASCRIPT:alert(1)", &config).is_err());
+
+        // data: URIs with HTML - must be rejected
+        assert!(validate_device_name("data:text/html,<script>alert(1)</script>", &config).is_err());
+
+        // Benign angle brackets should be allowed (not XSS patterns)
+        assert!(validate_device_name("Device <3", &config).is_ok());
+        assert!(validate_device_name("Value > 5", &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_device_name_control_chars() {
+        let config = test_config();
+
+        // Null byte - must be rejected (string truncation attacks)
+        assert!(validate_device_name("Device\x00Name", &config).is_err());
+
+        // Other control characters - must be rejected
+        assert!(validate_device_name("Device\x08Name", &config).is_err()); // Backspace
+        assert!(validate_device_name("Device\x7FName", &config).is_err()); // DEL
+
+        // Bell character - should be rejected
+        assert!(validate_device_name("Device\x07Name", &config).is_err());
+
+        // Allowed whitespace: tab, newline, carriage return (common in user input)
+        // These are allowed because they're commonly typed by accident
+        assert!(validate_device_name("Device\tName", &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_device_name_log_injection() {
+        let config = test_config();
+
+        // Newlines that could manipulate log output - allowed but logged separately
+        // The validation allows \n because it's common, but logging should handle it
+        assert!(validate_device_name("Device\nName", &config).is_ok());
+
+        // Carriage return - allowed (common in Windows input)
+        assert!(validate_device_name("Device\rName", &config).is_ok());
     }
 
     // =========================================================================
