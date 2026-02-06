@@ -1204,6 +1204,7 @@ fn main() -> Result<()> {
                                 if let Some(tag) = found_tag {
                                     // Click on a tag: search for it
                                     app.search_input = format!("#{}", tag);
+                                    app.invalidate_filter_cache();
                                     app.search_active = true;
                                     app.selected_note = 0;
                                 } else {
@@ -1251,6 +1252,7 @@ fn main() -> Result<()> {
                                 } else {
                                     // Note not in current filter, clear search and try again
                                     app.search_input.clear();
+                                    app.invalidate_filter_cache();
                                     app.search_active = false;
                                     let all_notes = app.filtered_notes();
                                     if let Some(idx) = all_notes.iter().position(|n| n.id == target_note_id) {
