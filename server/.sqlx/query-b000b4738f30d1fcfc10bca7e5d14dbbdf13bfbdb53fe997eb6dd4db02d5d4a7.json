@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            u.inbox_max_items,\n            u.inbox_max_size_mb,\n            CAST(COUNT(i.id) AS INTEGER) as \"item_count!: i64\",\n            CAST(COALESCE(SUM(i.size_bytes), 0) AS INTEGER) as \"total_size!: i64\"\n        FROM users u\n        LEFT JOIN inbox_items i ON u.id = i.user_id\n        WHERE u.id = ?\n        GROUP BY u.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "inbox_max_items",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "inbox_max_size_mb",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "item_count!: i64",
+        "ordinal": 2,
+        "type_info": "Null"
+      },
+      {
+        "name": "total_size!: i64",
+        "ordinal": 3,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "b000b4738f30d1fcfc10bca7e5d14dbbdf13bfbdb53fe997eb6dd4db02d5d4a7"
+}
