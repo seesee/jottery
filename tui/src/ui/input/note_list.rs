@@ -43,73 +43,74 @@ fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
     tags
 }
 
-/// Get the next color in the palette, cycling through available colors
-fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<String> {
-    let color_names = app.settings.get_color_palette()
+/// Cycle through colors in the palette
+///
+/// # Arguments
+/// * `current_color` - The current color, or None if no color is set
+/// * `app` - The app state (for accessing color palette)
+/// * `forward` - true to cycle forward, false to cycle backward
+///
+/// # Returns
+/// The next/previous color, or None to clear the color
+fn cycle_color(current_color: Option<&String>, app: &App, forward: bool) -> Option<String> {
+    let color_names: Vec<String> = app.settings.get_color_palette()
         .keys()
         .cloned()
-        .collect::<Vec<String>>();
+        .collect();
 
     if color_names.is_empty() {
         return None;
     }
 
+    let len = color_names.len();
+
     match current_color {
         None => {
-            // No color set, return first color
-            Some(color_names[0].clone())
+            // No color set - return first (forward) or last (backward)
+            if forward {
+                Some(color_names[0].clone())
+            } else {
+                Some(color_names[len - 1].clone())
+            }
         }
         Some(current) => {
-            // Find current color in list
             if let Some(pos) = color_names.iter().position(|c| c == current) {
-                // Get next color, wrapping around to start
-                let next_pos = (pos + 1) % color_names.len();
-                if next_pos == 0 {
-                    // Wrapped around - return None to clear color
-                    None
+                if forward {
+                    let next_pos = (pos + 1) % len;
+                    if next_pos == 0 {
+                        None // Wrapped around - clear color
+                    } else {
+                        Some(color_names[next_pos].clone())
+                    }
                 } else {
-                    Some(color_names[next_pos].clone())
+                    if pos == 0 {
+                        None // At first color - clear color
+                    } else {
+                        Some(color_names[pos - 1].clone())
+                    }
                 }
             } else {
-                // Current color not found, return first color
-                Some(color_names[0].clone())
+                // Current color not found - return first (forward) or last (backward)
+                if forward {
+                    Some(color_names[0].clone())
+                } else {
+                    Some(color_names[len - 1].clone())
+                }
             }
         }
     }
 }
 
-/// Get the previous color in the palette, cycling through available colors backwards
+/// Get the next color in the palette (convenience wrapper)
+#[inline]
+fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<String> {
+    cycle_color(current_color, app, true)
+}
+
+/// Get the previous color in the palette (convenience wrapper)
+#[inline]
 fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<String> {
-    let color_names = app.settings.get_color_palette()
-        .keys()
-        .cloned()
-        .collect::<Vec<String>>();
-
-    if color_names.is_empty() {
-        return None;
-    }
-
-    match current_color {
-        None => {
-            // No color set, return last color (going backwards)
-            Some(color_names[color_names.len() - 1].clone())
-        }
-        Some(current) => {
-            // Find current color in list
-            if let Some(pos) = color_names.iter().position(|c| c == current) {
-                if pos == 0 {
-                    // At first color - wrap to None
-                    None
-                } else {
-                    // Get previous color
-                    Some(color_names[pos - 1].clone())
-                }
-            } else {
-                // Current color not found, return last color
-                Some(color_names[color_names.len() - 1].clone())
-            }
-        }
-    }
+    cycle_color(current_color, app, false)
 }
 
 /// Handle key events in note list state
