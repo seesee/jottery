@@ -6,6 +6,8 @@ pub mod help;
 pub mod inbox;
 pub mod locked;
 pub mod modal;
+pub mod note_info;
 pub mod note_list;
 pub mod note_view;
 pub mod settings;
+pub mod version_history;

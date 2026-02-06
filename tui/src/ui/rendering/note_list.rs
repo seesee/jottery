@@ -10,7 +10,7 @@ use rust_i18n::t;
 use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width};
-use crate::ui::rendering::modal::render_confirmation_modal;
+use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal, render_input_modal};
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
 use crate::models::SyntaxLanguage;
 
@@ -721,10 +721,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             std::cmp::min(app.path_completions.len() + 1, 12) as u16  // Max 12 lines
         };
         let modal_height = 4 + completions_height;  // Input + completions
-        let x = (size.width.saturating_sub(modal_width)) / 2;
-        let y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect::new(x, y, modal_width, modal_height);
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -802,15 +799,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // Calculate modal size
         let modal_width = 80.min(size.width.saturating_sub(4));
         let modal_height = 10.min(size.height.saturating_sub(4));
-        let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-        let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect {
-            x: modal_x,
-            y: modal_y,
-            width: modal_width,
-            height: modal_height,
-        };
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -903,176 +892,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     }
 
     // Render version history modal if showing
-    if matches!(app.view_mode, ViewMode::VersionHistory) {
-        // Calculate modal size (larger than attachment viewer for content preview)
-        let modal_width = 100.min(size.width.saturating_sub(4));
-        let modal_height = 30.min(size.height.saturating_sub(4));
-        let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-        let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect {
-            x: modal_x,
-            y: modal_y,
-            width: modal_width,
-            height: modal_height,
-        };
-
-        // Clear the background area
-        frame.render_widget(Clear, modal_area);
-
-        if !app.loaded_versions.is_empty() {
-            // Create two-pane layout (version list | preview)
-            let modal_block = Block::default()
-                .title(format!(" Version History ({}) ", app.loaded_versions.len()))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(app.color_scheme.accent))
-                .style(Style::default().bg(app.color_scheme.background));
-
-            // Split into left pane (version list) and right pane (preview)
-            let inner_area = modal_block.inner(modal_area);
-            frame.render_widget(modal_block, modal_area);
-
-            let panes = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Length(30),  // Version list
-                    Constraint::Min(0),      // Preview pane
-                ])
-                .split(inner_area);
-
-            // Left pane: Version list
-            let mut version_lines = vec![];
-            for (i, version) in app.loaded_versions.iter().enumerate() {
-                let created_str = version.created_at.format("%Y-%m-%d %H:%M").to_string();
-                let reason_str = match version.reason {
-                    crate::repository::VersionReason::Sync => "auto",
-                    crate::repository::VersionReason::ManualSync => "manual",
-                };
-
-                let line_text = format!(" v{:<4} │ {} │ {}", version.version, created_str, reason_str);
-
-                let style = if i == app.selected_version {
-                    Style::default()
-                        .fg(app.color_scheme.background)
-                        .bg(app.color_scheme.accent)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(app.color_scheme.foreground)
-                };
-
-                version_lines.push(Line::styled(line_text, style));
-            }
-
-            let version_list_block = Block::default()
-                .title(" Versions ")
-                .borders(Borders::RIGHT);
-
-            let version_list = Paragraph::new(version_lines)
-                .block(version_list_block);
-
-            frame.render_widget(version_list, panes[0]);
-
-            // Right pane: Preview of selected version
-            if app.selected_version < app.loaded_versions.len() {
-                let version = &app.loaded_versions[app.selected_version];
-
-                // Split right pane into content area and help text area
-                let preview_chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([
-                        Constraint::Min(0),      // Content area (scrollable)
-                        Constraint::Length(1),   // Help text (fixed)
-                    ])
-                    .split(panes[1]);
-
-                // Content area with scrollable preview
-                let preview_block = Block::default()
-                    .title(" Preview ")
-                    .borders(Borders::NONE);
-
-                let mut preview_lines = vec![];
-
-                // Metadata section
-                preview_lines.push(Line::styled(
-                    format!("Version: {}", version.version),
-                    Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
-                ));
-                preview_lines.push(Line::styled(
-                    format!("Created: {}", version.created_at.format("%Y-%m-%d %H:%M:%S")),
-                    Style::default().fg(app.color_scheme.foreground)
-                ));
-                preview_lines.push(Line::styled(
-                    format!("Synced:  {}", version.synced_at.format("%Y-%m-%d %H:%M:%S")),
-                    Style::default().fg(app.color_scheme.foreground)
-                ));
-                preview_lines.push(Line::styled(
-                    format!("Characters: {}", version.content.len()),
-                    Style::default().fg(app.color_scheme.foreground)
-                ));
-
-                // Tags section
-                if !version.tags.is_empty() {
-                    let tags_str = version.tags.iter()
-                        .map(|t| format!("#{}", t))
-                        .collect::<Vec<_>>()
-                        .join(" ");
-                    preview_lines.push(Line::styled(
-                        format!("Tags: {}", tags_str),
-                        Style::default().fg(app.color_scheme.accent_secondary)
-                    ));
-                }
-
-                preview_lines.push(Line::from(""));
-                preview_lines.push(Line::styled(
-                    "─".repeat(60),
-                    Style::default().fg(app.color_scheme.muted)
-                ));
-                preview_lines.push(Line::from(""));
-
-                // Full content (no truncation)
-                for line in version.content.lines() {
-                    preview_lines.push(Line::from(line));
-                }
-
-                let preview = Paragraph::new(preview_lines)
-                    .block(preview_block)
-                    .wrap(Wrap { trim: false })
-                    .scroll((app.version_preview_scroll_offset as u16, 0));
-
-                frame.render_widget(preview, preview_chunks[0]);
-
-                // Fixed help text at bottom
-                let help_text = Line::styled(
-                    "↑/↓: versions │ Shift+J/K: scroll │ Enter: restore │ Esc: close",
-                    Style::default().fg(app.color_scheme.muted)
-                );
-                let help_paragraph = Paragraph::new(help_text)
-                    .alignment(Alignment::Center);
-
-                frame.render_widget(help_paragraph, preview_chunks[1]);
-            }
-        } else {
-            // Show error state - no versions
-            let modal_block = Block::default()
-                .title(" Version History ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(app.color_scheme.error))
-                .style(Style::default().bg(app.color_scheme.background));
-
-            let modal_lines = vec![
-                Line::from(""),
-                Line::styled("No version history", Style::default().fg(app.color_scheme.error)),
-                Line::from(""),
-                Line::styled("Press Esc to close", Style::default().fg(app.color_scheme.muted)),
-            ];
-
-            let modal_paragraph = Paragraph::new(modal_lines)
-                .block(modal_block)
-                .alignment(ratatui::layout::Alignment::Center);
-
-            frame.render_widget(modal_paragraph, modal_area);
-        }
-    }
+    super::version_history::render_version_history(app, frame, size);
 
     // Render bulk delete confirmation modal if showing
     if app.show_bulk_delete_confirm {
@@ -1119,83 +939,45 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     // Render bulk add tags input modal if showing
     if matches!(app.input_mode, InputMode::BulkAddTags) {
         let count = app.selected_note_ids.len();
-        let modal_width = 60;
-        let modal_height = 6;
-        let x = (size.width.saturating_sub(modal_width)) / 2;
-        let y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect::new(x, y, modal_width, modal_height);
-
-        // Clear the background area
-        frame.render_widget(Clear, modal_area);
-
-        let modal_block = Block::default()
-            .title(format!(" {} ", t!("bulk.enter_tags")))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(app.color_scheme.accent))
-            .style(Style::default().bg(app.color_scheme.background));
-
-        let lines = vec![
-            Line::styled(
-                format!("{} {} {}", t!("bulk.add_tags_to"), count, if count == 1 { t!("sync.note") } else { t!("sync.notes") }),
-                Style::default().fg(app.color_scheme.foreground)
-            ),
-            Line::styled(
-                format!("{}█", app.bulk_tags_input),
-                Style::default().fg(app.color_scheme.accent)
-            ),
-            Line::styled(
-                "Enter: confirm | Esc: cancel",
-                Style::default().fg(app.color_scheme.muted)
-            ),
-        ];
-
-        let modal_paragraph = Paragraph::new(Text::from(lines))
-            .block(modal_block)
-            .style(Style::default().fg(app.color_scheme.foreground));
-
-        frame.render_widget(modal_paragraph, modal_area);
+        let description = format!(
+            "{} {} {}",
+            t!("bulk.add_tags_to"),
+            count,
+            if count == 1 { t!("sync.note") } else { t!("sync.notes") }
+        );
+        render_input_modal(
+            frame,
+            size,
+            &t!("bulk.enter_tags"),
+            &description,
+            &app.bulk_tags_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            60,
+            6,
+        );
     }
 
     // Render bulk export path input modal if showing
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         let count = app.selected_note_ids.len();
-        let modal_width = 70;
-        let modal_height = 6;
-        let x = (size.width.saturating_sub(modal_width)) / 2;
-        let y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect::new(x, y, modal_width, modal_height);
-
-        // Clear the background area
-        frame.render_widget(Clear, modal_area);
-
-        let modal_block = Block::default()
-            .title(format!(" {} ", t!("bulk.enter_export_path")))
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(app.color_scheme.accent))
-            .style(Style::default().bg(app.color_scheme.background));
-
-        let lines = vec![
-            Line::styled(
-                format!("{} {} {}", t!("bulk.export_notes_to"), count, if count == 1 { t!("sync.note") } else { t!("sync.notes") }),
-                Style::default().fg(app.color_scheme.foreground)
-            ),
-            Line::styled(
-                format!("{}█", app.bulk_export_path_input),
-                Style::default().fg(app.color_scheme.accent)
-            ),
-            Line::styled(
-                "Enter: confirm | Esc: cancel",
-                Style::default().fg(app.color_scheme.muted)
-            ),
-        ];
-
-        let modal_paragraph = Paragraph::new(Text::from(lines))
-            .block(modal_block)
-            .style(Style::default().fg(app.color_scheme.foreground));
-
-        frame.render_widget(modal_paragraph, modal_area);
+        let description = format!(
+            "{} {} {}",
+            t!("bulk.export_notes_to"),
+            count,
+            if count == 1 { t!("sync.note") } else { t!("sync.notes") }
+        );
+        render_input_modal(
+            frame,
+            size,
+            &t!("bulk.enter_export_path"),
+            &description,
+            &app.bulk_export_path_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            70,
+            6,
+        );
     }
 
     // Render conflict resolution modal if showing
@@ -1204,153 +986,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     }
 
     // Render note info modal if showing
-    if app.show_note_info {
-        let filtered = app.filtered_notes();
-        if !filtered.is_empty() && app.selected_note < filtered.len() {
-            let note = filtered[app.selected_note];
-
-            // Calculate modal size
-            let modal_width = 70.min(size.width.saturating_sub(4));
-            let modal_height = 20.min(size.height.saturating_sub(4));
-            let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-            let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-            let modal_area = Rect {
-                x: modal_x,
-                y: modal_y,
-                width: modal_width,
-                height: modal_height,
-            };
-
-            // Clear the background area
-            frame.render_widget(Clear, modal_area);
-
-            let modal_block = Block::default()
-                .title(format!(" {} ", t!("note.info_title")))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(app.color_scheme.accent))
-                .style(Style::default().bg(app.color_scheme.background));
-
-            // Build info lines
-            let mut info_lines = vec![Line::from("")];
-
-            // Note ID (truncated)
-            let id_display = if note.id.len() > 36 { &note.id[..36] } else { &note.id };
-            info_lines.push(Line::from(vec![
-                Span::styled("ID:          ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(id_display, Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            // Created date
-            info_lines.push(Line::from(vec![
-                Span::styled("Created:     ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(
-                    note.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                    Style::default().fg(app.color_scheme.foreground)
-                ),
-            ]));
-
-            // Modified date
-            info_lines.push(Line::from(vec![
-                Span::styled("Modified:    ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(
-                    note.modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                    Style::default().fg(app.color_scheme.foreground)
-                ),
-            ]));
-
-            // Synced date
-            let synced_str = match &note.synced_at {
-                Some(dt) => dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-                None => "Never".to_string(),
-            };
-            info_lines.push(Line::from(vec![
-                Span::styled("Synced:      ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(synced_str, Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            info_lines.push(Line::from(""));
-
-            // Word count / character count
-            let word_count = note.content.split_whitespace().count();
-            let char_count = note.content.chars().count();
-            info_lines.push(Line::from(vec![
-                Span::styled("Words:       ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(format!("{}", word_count), Style::default().fg(app.color_scheme.foreground)),
-                Span::styled("  Characters: ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(format!("{}", char_count), Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            // Syntax language
-            info_lines.push(Line::from(vec![
-                Span::styled("Syntax:      ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(format!("{}", note.syntax_language), Style::default().fg(app.color_scheme.accent_secondary)),
-            ]));
-
-            // Colour
-            let color_str = note.color.as_deref().unwrap_or("None");
-            info_lines.push(Line::from(vec![
-                Span::styled("Colour:      ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(color_str, Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            info_lines.push(Line::from(""));
-
-            // Tags count
-            info_lines.push(Line::from(vec![
-                Span::styled("Tags:        ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(format!("{}", note.tags.len()), Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            // Attachments count
-            info_lines.push(Line::from(vec![
-                Span::styled("Attachments: ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(format!("{}", note.attachments.len()), Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            // Status flags
-            let mut status_parts = Vec::new();
-            if note.pinned { status_parts.push("📌 Pinned"); }
-            if note.archived { status_parts.push("📦 Archived"); }
-            if note.locked { status_parts.push("🔒 Locked"); }
-            let status_str = if status_parts.is_empty() { "None".to_string() } else { status_parts.join("  ") };
-            info_lines.push(Line::from(vec![
-                Span::styled("Status:      ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(status_str, Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            // Locked date (if locked)
-            if note.locked {
-                if let Some(locked_at) = &note.locked_at {
-                    info_lines.push(Line::from(vec![
-                        Span::styled("Locked at:   ", Style::default().fg(app.color_scheme.muted)),
-                        Span::styled(
-                            locked_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-                            Style::default().fg(app.color_scheme.foreground)
-                        ),
-                    ]));
-                }
-            }
-
-            // Version
-            info_lines.push(Line::from(vec![
-                Span::styled("Version:     ", Style::default().fg(app.color_scheme.muted)),
-                Span::styled(format!("{}", note.version), Style::default().fg(app.color_scheme.foreground)),
-            ]));
-
-            info_lines.push(Line::from(""));
-            info_lines.push(Line::styled(
-                "Press Esc or I to close",
-                Style::default().fg(app.color_scheme.muted)
-            ));
-
-            let modal_paragraph = Paragraph::new(info_lines)
-                .block(modal_block)
-                .alignment(Alignment::Left);
-
-            frame.render_widget(modal_paragraph, modal_area);
-        }
-    }
+    super::note_info::render_note_info(app, frame, size);
 
     // Render inbox modal if showing
     if matches!(app.view_mode, ViewMode::Inbox) {

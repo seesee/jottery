@@ -10,11 +10,12 @@ use ratatui::{
 use rust_i18n::t;
 
 use crate::ui::app::App;
+use super::modal::centered_rect_percent;
 
 /// Render the inbox modal overlay
 pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
     // Centre the modal — use 80% of the area
-    let modal_area = centered_rect(80, 90, area);
+    let modal_area = centered_rect_percent(80, 90, area);
 
     // Clear the background
     frame.render_widget(Clear, modal_area);
@@ -131,7 +132,7 @@ pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
 }
 
 fn render_confirm_modal(frame: &mut Frame, area: Rect, title: &str, message: &str) {
-    let modal = centered_rect(50, 30, area);
+    let modal = centered_rect_percent(50, 30, area);
     frame.render_widget(Clear, modal);
 
     let block = Block::default()
@@ -154,25 +155,4 @@ fn render_confirm_modal(frame: &mut Frame, area: Rect, title: &str, message: &st
     ])
     .wrap(Wrap { trim: true });
     frame.render_widget(text, inner);
-}
-
-/// Create a centered rectangle within the given area
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
 }

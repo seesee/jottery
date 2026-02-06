@@ -12,16 +12,39 @@ use ratatui::{
 
 use crate::ui::ColorScheme;
 
-/// Create a centered rectangle within the given area
+/// Create a centered rectangle within the given area (absolute dimensions)
 pub fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
-    let x = (area.width.saturating_sub(width)) / 2;
-    let y = (area.height.saturating_sub(height)) / 2;
+    let x = area.x + (area.width.saturating_sub(width)) / 2;
+    let y = area.y + (area.height.saturating_sub(height)) / 2;
     Rect {
         x,
         y,
         width: width.min(area.width),
         height: height.min(area.height),
     }
+}
+
+/// Create a centered rectangle within the given area (percentage-based)
+pub fn centered_rect_percent(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
+    use ratatui::layout::{Constraint, Direction, Layout};
+
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(area);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
 
 /// Render a confirmation modal with y/n/Esc prompt
@@ -132,4 +155,114 @@ pub fn render_modal_frame(
     frame.render_widget(modal_block, modal_area);
 
     inner
+}
+
+/// Render an input modal with description, text input field, and help text
+///
+/// This is commonly used for modals that accept user text input (e.g., bulk operations).
+///
+/// # Arguments
+/// * `frame` - The frame to render to
+/// * `area` - The full screen area (modal will be centered within it)
+/// * `title` - The modal title (will be wrapped with spaces)
+/// * `description` - Description line shown above the input field
+/// * `input_text` - Current input text (cursor █ will be appended)
+/// * `help_text` - Help text shown below input (e.g., "Enter: confirm | Esc: cancel")
+/// * `color_scheme` - The app's color scheme
+/// * `width` - Modal width (default 70 is recommended)
+/// * `height` - Modal height (default 6 is recommended for standard input modal)
+#[allow(clippy::too_many_arguments)]
+pub fn render_input_modal(
+    frame: &mut Frame,
+    area: Rect,
+    title: &str,
+    description: &str,
+    input_text: &str,
+    help_text: &str,
+    color_scheme: &ColorScheme,
+    width: u16,
+    height: u16,
+) {
+    let modal_area = centered_rect(width, height, area);
+
+    // Clear background
+    frame.render_widget(Clear, modal_area);
+
+    // Create modal block
+    let modal_block = Block::default()
+        .title(format!(" {} ", title))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(color_scheme.accent))
+        .style(Style::default().bg(color_scheme.background));
+
+    // Build content lines
+    let lines = vec![
+        Line::styled(description, Style::default().fg(color_scheme.foreground)),
+        Line::styled(
+            format!("{}█", input_text),
+            Style::default().fg(color_scheme.accent),
+        ),
+        Line::styled(help_text, Style::default().fg(color_scheme.muted)),
+    ];
+
+    let modal_paragraph = Paragraph::new(lines)
+        .block(modal_block)
+        .style(Style::default().fg(color_scheme.foreground));
+
+    frame.render_widget(modal_paragraph, modal_area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_centered_rect_basic() {
+        let area = Rect::new(0, 0, 100, 50);
+        let result = centered_rect(40, 20, area);
+
+        assert_eq!(result.width, 40);
+        assert_eq!(result.height, 20);
+        assert_eq!(result.x, 30); // (100 - 40) / 2
+        assert_eq!(result.y, 15); // (50 - 20) / 2
+    }
+
+    #[test]
+    fn test_centered_rect_with_offset_area() {
+        // Area doesn't start at (0, 0)
+        let area = Rect::new(10, 5, 100, 50);
+        let result = centered_rect(40, 20, area);
+
+        assert_eq!(result.width, 40);
+        assert_eq!(result.height, 20);
+        assert_eq!(result.x, 40); // 10 + (100 - 40) / 2
+        assert_eq!(result.y, 20); // 5 + (50 - 20) / 2
+    }
+
+    #[test]
+    fn test_centered_rect_larger_than_area() {
+        let area = Rect::new(0, 0, 30, 20);
+        let result = centered_rect(50, 30, area);
+
+        // Width/height should be capped to area size
+        assert_eq!(result.width, 30);
+        assert_eq!(result.height, 20);
+        assert_eq!(result.x, 0);
+        assert_eq!(result.y, 0);
+    }
+
+    #[test]
+    fn test_centered_rect_percent_basic() {
+        let area = Rect::new(0, 0, 100, 100);
+        let result = centered_rect_percent(80, 60, area);
+
+        // 80% of 100 = 80
+        assert_eq!(result.width, 80);
+        // 60% of 100 = 60
+        assert_eq!(result.height, 60);
+        // Centered: (100 - 80) / 2 = 10 for margins
+        assert_eq!(result.x, 10);
+        // Centered: (100 - 60) / 2 = 20 for margins
+        assert_eq!(result.y, 20);
+    }
 }

@@ -21,13 +21,7 @@ pub fn load_notes(app: &mut App) -> Result<()> {
         if let Some(note_id) = &app.selected_note_id.clone() {
             // Build sorted view like filtered_notes() does
             let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
-            sorted_notes.sort_by(|a, b| {
-                match (a.pinned, b.pinned) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => b.modified_at.cmp(&a.modified_at),
-                }
-            });
+            App::sort_notes_by_pinned_and_date(&mut sorted_notes);
 
             if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
                 app.selected_note = index;
@@ -40,15 +34,13 @@ pub fn load_notes(app: &mut App) -> Result<()> {
             app.selected_note = 0;
             // Get first note from sorted view
             let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
-            sorted_notes.sort_by(|a, b| {
-                match (a.pinned, b.pinned) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => b.modified_at.cmp(&a.modified_at),
-                }
-            });
+            App::sort_notes_by_pinned_and_date(&mut sorted_notes);
             app.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
         }
+
+        // Refresh caches
+        app.refresh_all_tags_cache();
+        app.invalidate_filter_cache();
     }
     Ok(())
 }
@@ -74,6 +66,8 @@ pub fn save_note(app: &mut App) -> Result<()> {
                 repo.create(&note, key)?;
                 app.notes.insert(0, note);
             }
+            // Invalidate filter cache since notes changed
+            app.invalidate_filter_cache();
         }
     }
     Ok(())
@@ -150,6 +144,7 @@ pub fn delete_note(app: &mut App) -> Result<()> {
             if app.selected_note >= app.notes.len() && app.selected_note > 0 {
                 app.selected_note -= 1;
             }
+            app.invalidate_filter_cache();
         }
     }
     Ok(())
@@ -160,6 +155,7 @@ pub fn load_deleted_notes(app: &mut App) -> Result<()> {
     if let (Some(db), Some(key)) = (&app.db, &app.key) {
         let repo = NoteRepository::new(db.connection());
         app.notes = repo.get_deleted(key)?;
+        app.invalidate_filter_cache();
     }
     Ok(())
 }
@@ -200,6 +196,7 @@ pub fn empty_trash(app: &mut App) -> Result<()> {
         // Clear the notes list
         app.notes.clear();
         app.selected_note = 0;
+        app.invalidate_filter_cache();
 
         // Set success message
         app.sync_status = Some(format!("Permanently deleted {} note{}", count, if count == 1 { "" } else { "s" }));
@@ -209,116 +206,8 @@ pub fn empty_trash(app: &mut App) -> Result<()> {
 
 /// View note content in read-only mode using best available pager
 ///
-/// Pager preference order:
-/// 1. $PAGER environment variable (if set)
-/// 2. bat (syntax highlighting pager)
-/// 3. less
-/// 4. more (fallback)
+/// This is a convenience wrapper around [`super::pager::view_with_pager`].
 pub fn view_note_readonly(app: &mut App, content: &str, syntax: crate::models::SyntaxLanguage) -> Result<()> {
-    use std::io::Write;
-    use crossterm::{
-        execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-                   Clear as TerminalClear, ClearType},
-        cursor::MoveTo,
-    };
-
-    // Map syntax language to file extension for syntax highlighting
-    let extension = match syntax {
-        crate::models::SyntaxLanguage::Plain => "txt",
-        crate::models::SyntaxLanguage::Markdown => "md",
-        crate::models::SyntaxLanguage::Javascript => "js",
-        crate::models::SyntaxLanguage::Python => "py",
-        crate::models::SyntaxLanguage::Html => "html",
-        crate::models::SyntaxLanguage::Css => "css",
-        crate::models::SyntaxLanguage::Json => "json",
-        crate::models::SyntaxLanguage::Sql => "sql",
-        crate::models::SyntaxLanguage::Bash => "sh",
-        crate::models::SyntaxLanguage::Perl => "pl",
-        crate::models::SyntaxLanguage::Calc => "txt",
-        crate::models::SyntaxLanguage::Outliner => "md", // Markdown-compatible format
-    };
-
-    // Create temp file with appropriate extension
-    let mut temp_file = tempfile::Builder::new()
-        .suffix(&format!(".{}", extension))
-        .tempfile()
-        .context("Failed to create temporary file")?;
-
-    // Write content to temp file
-    temp_file.write_all(content.as_bytes())
-        .context("Failed to write to temporary file")?;
-    temp_file.flush()?;
-
-    let temp_path = temp_file.path().to_path_buf();
-
-    // Suspend TUI
-    disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(std::io::stdout(), LeaveAlternateScreen)
-        .context("Failed to leave alternate screen")?;
-
-    // Determine pager to use
-    let pager_result = if let Ok(pager) = std::env::var("PAGER") {
-        // User-specified pager
-        run_pager(&pager, &temp_path, None)
-    } else if is_command_available("bat") {
-        // bat with syntax highlighting (--paging=always forces pager mode)
-        run_pager("bat", &temp_path, Some(&["--paging=always", "--style=plain"]))
-    } else if is_command_available("less") {
-        // less with raw control chars for any escape sequences
-        run_pager("less", &temp_path, Some(&["-R"]))
-    } else {
-        // Fallback to more
-        run_pager("more", &temp_path, None)
-    };
-
-    // Resume TUI
-    execute!(std::io::stdout(), EnterAlternateScreen)
-        .context("Failed to enter alternate screen")?;
-    enable_raw_mode().context("Failed to enable raw mode")?;
-
-    // Clear screen and force redraw
-    execute!(
-        std::io::stdout(),
-        TerminalClear(ClearType::All),
-        TerminalClear(ClearType::Purge),
-        MoveTo(0, 0)
-    )
-    .context("Failed to clear screen")?;
-    std::io::stdout().flush().context("Failed to flush stdout")?;
-    app.need_redraw = true;
-
-    pager_result
-}
-
-/// Check if a command is available in PATH
-fn is_command_available(cmd: &str) -> bool {
-    std::process::Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-/// Run a pager with optional arguments
-fn run_pager(pager: &str, path: &std::path::Path, args: Option<&[&str]>) -> Result<()> {
-    let mut cmd = std::process::Command::new(pager);
-    if let Some(args) = args {
-        cmd.args(args);
-    }
-    cmd.arg(path);
-
-    let status = cmd.status();
-
-    match status {
-        Ok(exit_status) if exit_status.success() => Ok(()),
-        Ok(_) => {
-            // Non-zero exit is usually OK for pagers (user might quit early)
-            Ok(())
-        }
-        Err(e) => {
-            anyhow::bail!("Failed to run pager '{}': {}", pager, e)
-        }
-    }
+    super::pager::view_with_pager(app, content, syntax)
 }
 

@@ -3,7 +3,6 @@
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
-use std::collections::HashSet;
 
 use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
@@ -12,104 +11,72 @@ use crate::ui::input::text_input::{handle_text_input, TextInputResult};
 use crate::ui::operations;
 use crate::ui::state::{AppState, FocusedPanel, InputMode, ViewMode};
 
-/// Get the tag partial from search input (text after the last # that doesn't contain space)
-fn get_search_tag_partial(input: &str) -> Option<(String, usize)> {
-    let last_hash = input.rfind('#')?;
-    let after_hash = &input[last_hash + 1..];
-    // If there's a space after the #, there's no active tag partial
-    if after_hash.contains(' ') {
-        return None;
-    }
-    Some((after_hash.to_string(), last_hash))
-}
-
-/// Get search tag completions matching the current partial
-fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
-    // Require at least one character to start completing
-    if partial.is_empty() {
-        return Vec::new();
-    }
-    let partial_lower = partial.to_lowercase();
-    let mut all_tags: HashSet<String> = HashSet::new();
-    for note in &app.notes {
-        for tag in &note.tags {
-            if tag.to_lowercase().starts_with(&partial_lower) {
-                all_tags.insert(tag.clone());
-            }
-        }
-    }
-    let mut tags: Vec<String> = all_tags.into_iter().collect();
-    tags.sort();
-    tags
-}
-
-/// Get the next color in the palette, cycling through available colors
-fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<String> {
-    let color_names = app.settings.get_color_palette()
-        .keys()
-        .cloned()
-        .collect::<Vec<String>>();
+/// Cycle through colors in the palette
+///
+/// # Arguments
+/// * `current_color` - The current color, or None if no color is set
+/// * `app` - The app state (for accessing cached color palette)
+/// * `forward` - true to cycle forward, false to cycle backward
+///
+/// # Returns
+/// The next/previous color, or None to clear the color
+fn cycle_color(current_color: Option<&String>, app: &App, forward: bool) -> Option<String> {
+    // Use cached color names to avoid allocation on every keypress
+    let color_names = app.get_color_names();
 
     if color_names.is_empty() {
         return None;
     }
 
+    let len = color_names.len();
+
     match current_color {
         None => {
-            // No color set, return first color
-            Some(color_names[0].clone())
-        }
-        Some(current) => {
-            // Find current color in list
-            if let Some(pos) = color_names.iter().position(|c| c == current) {
-                // Get next color, wrapping around to start
-                let next_pos = (pos + 1) % color_names.len();
-                if next_pos == 0 {
-                    // Wrapped around - return None to clear color
-                    None
-                } else {
-                    Some(color_names[next_pos].clone())
-                }
-            } else {
-                // Current color not found, return first color
+            // No color set - return first (forward) or last (backward)
+            if forward {
                 Some(color_names[0].clone())
+            } else {
+                Some(color_names[len - 1].clone())
+            }
+        }
+        Some(current) => {
+            if let Some(pos) = color_names.iter().position(|c| c == current) {
+                if forward {
+                    let next_pos = (pos + 1) % len;
+                    if next_pos == 0 {
+                        None // Wrapped around - clear color
+                    } else {
+                        Some(color_names[next_pos].clone())
+                    }
+                } else {
+                    if pos == 0 {
+                        None // At first color - clear color
+                    } else {
+                        Some(color_names[pos - 1].clone())
+                    }
+                }
+            } else {
+                // Current color not found - return first (forward) or last (backward)
+                if forward {
+                    Some(color_names[0].clone())
+                } else {
+                    Some(color_names[len - 1].clone())
+                }
             }
         }
     }
 }
 
-/// Get the previous color in the palette, cycling through available colors backwards
+/// Get the next color in the palette (convenience wrapper)
+#[inline]
+fn cycle_color_forward(current_color: Option<&String>, app: &App) -> Option<String> {
+    cycle_color(current_color, app, true)
+}
+
+/// Get the previous color in the palette (convenience wrapper)
+#[inline]
 fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<String> {
-    let color_names = app.settings.get_color_palette()
-        .keys()
-        .cloned()
-        .collect::<Vec<String>>();
-
-    if color_names.is_empty() {
-        return None;
-    }
-
-    match current_color {
-        None => {
-            // No color set, return last color (going backwards)
-            Some(color_names[color_names.len() - 1].clone())
-        }
-        Some(current) => {
-            // Find current color in list
-            if let Some(pos) = color_names.iter().position(|c| c == current) {
-                if pos == 0 {
-                    // At first color - wrap to None
-                    None
-                } else {
-                    // Get previous color
-                    Some(color_names[pos - 1].clone())
-                }
-            } else {
-                // Current color not found, return last color
-                Some(color_names[color_names.len() - 1].clone())
-            }
-        }
-    }
+    cycle_color(current_color, app, false)
 }
 
 /// Handle key events in note list state
@@ -198,273 +165,17 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     }
 
     // Handle attachment path input mode
-    if matches!(app.input_mode, InputMode::AttachmentPath) {
-        match key.code {
-            KeyCode::Enter => {
-                // If completions are showing and one is selected, use it
-                if !app.path_completions.is_empty() && app.path_completion_index < app.path_completions.len() {
-                    app.attachment_path_input = app.path_completions[app.path_completion_index].clone();
-                    app.path_completions.clear();
-                    app.path_completion_index = 0;
-                    // If it's a directory, show its contents
-                    if app.attachment_path_input.ends_with('/') {
-                        app.path_completions = operations::attachments::get_path_completions(&app.attachment_path_input);
-                    }
-                } else {
-                    // Add attachment from file path
-                    let path = app.attachment_path_input.clone();
-                    app.attachment_path_input.clear();
-                    app.path_completions.clear();
-                    app.path_completion_index = 0;
-                    app.input_mode = InputMode::Normal;
-
-                    if !path.is_empty() {
-                        if let Err(e) = operations::attachments::add_attachment_to_current_note(app, &path) {
-                            app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
-                        }
-                    }
-                }
-            }
-            KeyCode::Esc => {
-                // Cancel attachment input
-                app.attachment_path_input.clear();
-                app.path_completions.clear();
-                app.path_completion_index = 0;
-                app.input_mode = InputMode::Normal;
-            }
-            KeyCode::Tab => {
-                // Trigger/cycle path completion
-                if app.path_completions.is_empty() {
-                    // Get new completions
-                    app.path_completions = operations::attachments::get_path_completions(&app.attachment_path_input);
-                    app.path_completion_index = 0;
-                } else {
-                    // Cycle to next completion
-                    app.path_completion_index = (app.path_completion_index + 1) % app.path_completions.len();
-                }
-            }
-            KeyCode::BackTab => {
-                // Cycle backwards through completions
-                if !app.path_completions.is_empty() {
-                    if app.path_completion_index == 0 {
-                        app.path_completion_index = app.path_completions.len() - 1;
-                    } else {
-                        app.path_completion_index -= 1;
-                    }
-                }
-            }
-            KeyCode::Down => {
-                // Navigate down in completions
-                if !app.path_completions.is_empty() {
-                    app.path_completion_index = (app.path_completion_index + 1) % app.path_completions.len();
-                }
-            }
-            KeyCode::Up => {
-                // Navigate up in completions
-                if !app.path_completions.is_empty() {
-                    if app.path_completion_index == 0 {
-                        app.path_completion_index = app.path_completions.len() - 1;
-                    } else {
-                        app.path_completion_index -= 1;
-                    }
-                }
-            }
-            KeyCode::Backspace => {
-                app.attachment_path_input.pop();
-                // Clear completions when input changes
-                app.path_completions.clear();
-                app.path_completion_index = 0;
-            }
-            KeyCode::Char(c) => {
-                app.attachment_path_input.push(c);
-                // Clear completions when input changes
-                app.path_completions.clear();
-                app.path_completion_index = 0;
-            }
-            _ => {}
-        }
+    if super::attachment_path::handle_attachment_path_key(app, key)? {
         return Ok(());
     }
 
     // Handle search mode
-    if app.search_active {
-        match key.code {
-            KeyCode::Esc => {
-                app.search_active = false;
-                app.search_input.clear();
-                app.selected_note = 0;
-                // Clear tag completions
-                app.search_tag_completions.clear();
-                app.search_tag_completion_index = 0;
-            }
-            KeyCode::Enter => {
-                // Exit search and view/edit selected note directly
-                if !app.filtered_notes().is_empty() {
-                    let filtered = app.filtered_notes();
-                    if app.selected_note < filtered.len() {
-                        // Clone all data we need before modifying self
-                        let is_locked = filtered[app.selected_note].locked;
-                        let content = filtered[app.selected_note].content.clone();
-                        let note_id = filtered[app.selected_note].id.clone();
-                        let syntax_lang = filtered[app.selected_note].syntax_language;
-                        let tags = filtered[app.selected_note].tags.clone();
+    if super::search::handle_search_key(app, key)? {
+        return Ok(());
+    }
 
-                        // Now we can clear search state
-                        app.search_input.clear();
-                        app.search_active = false;
-
-                        // Check if note has a conflict - open conflict resolution instead of editor
-                        if app.conflict_note_ids.contains(&note_id) {
-                            if let Err(e) = operations::sync::open_conflict_resolution(app, &note_id) {
-                                app.error = Some(format!("{}: {}", t!("conflict.resolve_failed"), e));
-                            }
-                        } else if is_locked {
-                            // View with pager (read-only)
-                            if let Err(e) = operations::notes::view_note_readonly(app, &content, syntax_lang) {
-                                app.error = Some(format!("Failed to view note: {}", e));
-                            }
-                        } else {
-                            // Set up for editing
-                            app.note_input = content;
-                            app.note_syntax = syntax_lang;
-                            app.current_tags = tags;
-                            app.editing_note_id = Some(note_id.clone());
-
-                            // Open external editor immediately
-                            if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                                app.note_input = new_content;
-                                // Save the note
-                                if let Err(e) = operations::notes::save_note(app) {
-                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                                }
-                                // Reload notes to refresh the list
-                                if let Err(e) = operations::notes::load_notes(app) {
-                                    app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                                }
-                            }
-
-                            // Clear editing state
-                            app.editing_note_id = None;
-                        }
-                    }
-                }
-            }
-            // Preview scrolling controls (must come before generic Char(c) pattern)
-            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl-d: scroll preview down half page (10 lines)
-                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(10);
-            }
-            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl-u: scroll preview up half page (10 lines)
-                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(10);
-            }
-            KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl-f: scroll preview down full page (20 lines)
-                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(20);
-            }
-            KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                // Ctrl-b: scroll preview up full page (20 lines)
-                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
-            }
-            KeyCode::Char(c) => {
-                app.search_input.push(c);
-                app.selected_note = 0; // Reset selection when search changes
-                let filtered = app.filtered_notes();
-                app.selected_note_id = filtered.first().map(|n| n.id.clone());
-                // Clear tag completions when input changes
-                app.search_tag_completions.clear();
-                app.search_tag_completion_index = 0;
-            }
-            KeyCode::Backspace => {
-                app.search_input.pop();
-                app.selected_note = 0;
-                let filtered = app.filtered_notes();
-                app.selected_note_id = filtered.first().map(|n| n.id.clone());
-                // Clear tag completions when input changes
-                app.search_tag_completions.clear();
-                app.search_tag_completion_index = 0;
-            }
-            KeyCode::Down => {
-                let filtered_count = app.filtered_notes().len();
-                if filtered_count > 0 && app.selected_note < filtered_count - 1 {
-                    app.selected_note += 1;
-                    // Update selected note ID after index change
-                    let filtered = app.filtered_notes();
-                    app.selected_note_id = filtered.get(app.selected_note).map(|n| n.id.clone());
-                }
-            }
-            KeyCode::Up => {
-                if app.selected_note > 0 {
-                    app.selected_note -= 1;
-                    // Update selected note ID after index change
-                    let filtered = app.filtered_notes();
-                    app.selected_note_id = filtered.get(app.selected_note).map(|n| n.id.clone());
-                }
-            }
-            KeyCode::Tab => {
-                // Check if there's a tag partial to complete
-                if let Some((partial, hash_index)) = get_search_tag_partial(&app.search_input) {
-                    if app.search_tag_completions.is_empty() {
-                        // Get new completions
-                        app.search_tag_completions = get_search_tag_completions(app, &partial);
-                        app.search_tag_completion_index = 0;
-                    } else {
-                        // Cycle to next
-                        app.search_tag_completion_index =
-                            (app.search_tag_completion_index + 1) % app.search_tag_completions.len();
-                    }
-                    // Update input to show current completion
-                    if !app.search_tag_completions.is_empty() {
-                        let completion = &app.search_tag_completions[app.search_tag_completion_index];
-                        // Replace the partial with the full tag
-                        app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
-                        app.selected_note = 0;
-                        let filtered = app.filtered_notes();
-                        app.selected_note_id = filtered.first().map(|n| n.id.clone());
-                    }
-                } else {
-                    // No tag partial - exit search mode and toggle to attachments panel
-                    app.search_active = false;
-                    let filtered = app.filtered_notes();
-                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        let note = &filtered[app.selected_note];
-                        if !note.attachments.is_empty() {
-                            app.focused_panel = FocusedPanel::Attachments;
-                            app.selected_attachment = 0;
-                        }
-                    }
-                }
-            }
-            KeyCode::BackTab => {
-                // Shift+Tab - cycle backward through tag completions
-                if !app.search_tag_completions.is_empty() {
-                    if let Some((_, hash_index)) = get_search_tag_partial(&app.search_input) {
-                        if app.search_tag_completion_index == 0 {
-                            app.search_tag_completion_index = app.search_tag_completions.len() - 1;
-                        } else {
-                            app.search_tag_completion_index -= 1;
-                        }
-                        let completion = &app.search_tag_completions[app.search_tag_completion_index];
-                        app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
-                        app.selected_note = 0;
-                        let filtered = app.filtered_notes();
-                        app.selected_note_id = filtered.first().map(|n| n.id.clone());
-                    }
-                }
-            }
-            KeyCode::PageDown => {
-                // Page Down: scroll preview down full page (20 lines)
-                app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(20);
-            }
-            KeyCode::PageUp => {
-                // Page Up: scroll preview up full page (20 lines)
-                app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(20);
-            }
-            _ => {}
-        }
-    } else {
-        // Normal note list mode
-        match key.code {
+    // Normal note list mode
+    match key.code {
             KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 app.state = AppState::Quit;
             }
@@ -569,6 +280,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     app.search_active = true;
                     app.search_input.clear();
+                    app.invalidate_filter_cache();
                 }
             }
             KeyCode::Char('n') => {
@@ -1020,9 +732,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Shift+A: Toggle archive mode (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     app.archive_mode = !app.archive_mode;
+                    app.invalidate_filter_cache();
                     app.selected_note = 0;
                     app.preview_scroll_offset = 0;
-                    // Note filtering will happen automatically via filtered_notes()
                 }
             }
             KeyCode::Char('a') if app.archive_mode && key.modifiers.is_empty() => {
@@ -1105,6 +817,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 } else if app.archive_mode {
                     // Exit archive mode
                     app.archive_mode = false;
+                    app.invalidate_filter_cache();
                     app.selected_note = 0;
                     app.preview_scroll_offset = 0;
                 } else if matches!(app.view_mode, ViewMode::AttachmentViewer) {
@@ -1325,7 +1038,6 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 app.last_key_was_a = false;
             }
         }
-    }
     Ok(())
 }
 

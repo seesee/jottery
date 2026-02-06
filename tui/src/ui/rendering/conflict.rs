@@ -12,21 +12,14 @@ use rust_i18n::t;
 use crate::ui::app::App;
 use crate::ui::ColorScheme;
 use crate::ui::helpers::truncate_to_width;
+use super::modal::centered_rect;
 
 /// Render conflict resolution modal
 pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
     // Calculate modal size (large for side-by-side comparison)
     let modal_width = 120.min(size.width.saturating_sub(4));
     let modal_height = 35.min(size.height.saturating_sub(4));
-    let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-    let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-    let modal_area = Rect {
-        x: modal_x,
-        y: modal_y,
-        width: modal_width,
-        height: modal_height,
-    };
+    let modal_area = centered_rect(modal_width, modal_height, size);
 
     // Clear the background area
     frame.render_widget(Clear, modal_area);

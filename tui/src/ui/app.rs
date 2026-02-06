@@ -28,6 +28,7 @@ use rust_i18n::t;
 use ratatui::Frame;
 use zeroize::Zeroize;
 use std::{
+    cell::RefCell,
     collections::HashSet,
     fs::File,
     io::Write,
@@ -69,6 +70,94 @@ enum ColorTarget {
     Both,   // Match colors on notes or tags (default)
     Note,   // Match only note colors
     Tag,    // Match only tag colors
+}
+
+/// Check if a note matches search criteria (excluding archive mode)
+///
+/// This is the shared search logic used by both filtered_notes() and count_opposite_mode_matches()
+fn note_matches_search(
+    note: &Note,
+    modifiers: &SearchModifiers,
+    query_parts: &[&str],
+) -> bool {
+    // has:attachment
+    if modifiers.has_attachment && note.attachments.is_empty() {
+        return false;
+    }
+
+    // created:>DATE (created after)
+    if let Some(ref date) = modifiers.created_after {
+        let note_date = note.created_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() < date.as_str() {
+            return false;
+        }
+    }
+
+    // created:<DATE (created before)
+    if let Some(ref date) = modifiers.created_before {
+        let note_date = note.created_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() > date.as_str() {
+            return false;
+        }
+    }
+
+    // modified:>DATE (modified after)
+    if let Some(ref date) = modifiers.modified_after {
+        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() < date.as_str() {
+            return false;
+        }
+    }
+
+    // modified:<DATE (modified before)
+    if let Some(ref date) = modifiers.modified_before {
+        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
+        if note_date.as_str() > date.as_str() {
+            return false;
+        }
+    }
+
+    // words:>N (minimum word count)
+    if let Some(min) = modifiers.word_count_min {
+        let word_count = note.content.split_whitespace().count();
+        if word_count < min {
+            return false;
+        }
+    }
+
+    // words:<N (maximum word count)
+    if let Some(max) = modifiers.word_count_max {
+        let word_count = note.content.split_whitespace().count();
+        if word_count > max {
+            return false;
+        }
+    }
+
+    // Check each remaining query part (text/tag search)
+    let content_lower = note.content.to_lowercase();
+    for part in query_parts {
+        if part.is_empty() {
+            continue;
+        }
+        if let Some(tag) = part.strip_prefix('#') {
+            // Tag search
+            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
+                return false;
+            }
+        } else if let Some(neg_word) = part.strip_prefix('-') {
+            // Negation
+            if content_lower.contains(neg_word) {
+                return false;
+            }
+        } else {
+            // Regular text search
+            if !content_lower.contains(part) {
+                return false;
+            }
+        }
+    }
+
+    true
 }
 
 /// Application state and coordinator
@@ -155,6 +244,13 @@ pub struct App {
     pub(crate) sync_status_set_at: Option<Instant>,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
+    /// Cached color palette names (for color cycling without allocation)
+    pub(crate) color_palette_cache: Vec<String>,
+    /// Cached unique tags from all notes (for fast tag completion)
+    pub(crate) all_tags_cache: Vec<String>,
+    /// Cached filtered note IDs (for avoiding repeated filtering/sorting)
+    /// Uses RefCell for interior mutability so filtered_notes(&self) can update cache
+    filtered_notes_cache: RefCell<Option<Vec<String>>>,
     /// Selected attachment index in preview pane
     pub selected_attachment: usize,
     /// Which panel is focused in preview pane (content or attachments)
@@ -296,6 +392,9 @@ impl App {
             last_auto_sync: None,
             sync_status_set_at: None,
             color_scheme: crate::ui::ColorScheme::default(),
+            color_palette_cache: Vec::new(), // Populated when settings are loaded
+            all_tags_cache: Vec::new(), // Populated when notes are loaded
+            filtered_notes_cache: RefCell::new(None), // Populated on first access, invalidated on changes
             selected_attachment: 0,
             focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
@@ -462,6 +561,8 @@ impl App {
             self.debug_log(&format!("Unlock - Tag colors present: {}", self.settings.tag_colors.is_some()));
             // Update color scheme from loaded settings
             self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
+            // Update color palette cache
+            self.refresh_color_palette_cache();
             self.debug_log("Unlock - Color scheme updated");
         }
 
@@ -619,13 +720,7 @@ impl App {
             if let Some(note_id) = &self.selected_note_id.clone() {
                 // Build sorted view like filtered_notes() does
                 let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                sorted_notes.sort_by(|a, b| {
-                    match (a.pinned, b.pinned) {
-                        (true, false) => std::cmp::Ordering::Less,
-                        (false, true) => std::cmp::Ordering::Greater,
-                        _ => b.modified_at.cmp(&a.modified_at),
-                    }
-                });
+                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
 
                 if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
                     self.selected_note = index;
@@ -640,13 +735,7 @@ impl App {
                 self.selected_note = 0;
                 // Get first note from sorted view
                 let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                sorted_notes.sort_by(|a, b| {
-                    match (a.pinned, b.pinned) {
-                        (true, false) => std::cmp::Ordering::Less,
-                        (false, true) => std::cmp::Ordering::Greater,
-                        _ => b.modified_at.cmp(&a.modified_at),
-                    }
-                });
+                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
                 self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
                 self.debug_log("load_notes: no selected_note_id, defaulting to 0");
             }
@@ -716,8 +805,89 @@ impl App {
         self.last_selected_index = None;
     }
 
+    /// Reset path completions state
+    pub fn reset_path_completions(&mut self) {
+        self.path_completions.clear();
+        self.path_completion_index = 0;
+    }
+
+    /// Refresh the color palette cache from current settings
+    pub fn refresh_color_palette_cache(&mut self) {
+        self.color_palette_cache = self.settings.get_color_palette()
+            .keys()
+            .cloned()
+            .collect();
+    }
+
+    /// Get the cached color palette names
+    pub fn get_color_names(&self) -> &[String] {
+        &self.color_palette_cache
+    }
+
+    /// Refresh the all tags cache from current notes
+    pub fn refresh_all_tags_cache(&mut self) {
+        use std::collections::HashSet;
+        let mut unique_tags: HashSet<String> = HashSet::new();
+        for note in &self.notes {
+            for tag in &note.tags {
+                unique_tags.insert(tag.clone());
+            }
+        }
+        self.all_tags_cache = unique_tags.into_iter().collect();
+        self.all_tags_cache.sort();
+    }
+
+    /// Get tags matching a prefix (case-insensitive) from the cache
+    pub fn get_matching_tags(&self, prefix: &str) -> Vec<String> {
+        if prefix.is_empty() {
+            return Vec::new();
+        }
+        let prefix_lower = prefix.to_lowercase();
+        self.all_tags_cache
+            .iter()
+            .filter(|tag| tag.to_lowercase().starts_with(&prefix_lower))
+            .cloned()
+            .collect()
+    }
+
+    /// Invalidate the filtered notes cache
+    ///
+    /// Call this when any of these change:
+    /// - search_input
+    /// - archive_mode
+    /// - notes (load, add, delete, modify)
+    pub fn invalidate_filter_cache(&self) {
+        *self.filtered_notes_cache.borrow_mut() = None;
+    }
+
+    /// Sort notes by pinned status first (pinned at top), then by modified_at descending
+    pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
+        notes.sort_by(|a, b| {
+            match (a.pinned, b.pinned) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => b.modified_at.cmp(&a.modified_at),
+            }
+        });
+    }
+
     /// Filter notes based on search query and sort (pinned first, then by modified date)
+    ///
+    /// Uses an internal cache to avoid repeated filtering/sorting. The cache is
+    /// automatically invalidated when search_input, archive_mode, or notes change.
     pub fn filtered_notes(&self) -> Vec<&Note> {
+        // Check if we have a valid cache
+        {
+            let cache = self.filtered_notes_cache.borrow();
+            if let Some(cached_ids) = cache.as_ref() {
+                // Rebuild references from cached IDs
+                return cached_ids.iter()
+                    .filter_map(|id| self.notes.iter().find(|n| &n.id == id))
+                    .collect();
+            }
+        }
+
+        // Cache miss - compute filtered notes
         let mut notes: Vec<&Note> = if self.search_input.is_empty() {
             self.notes.iter()
                 .filter(|note| note.archived == self.archive_mode)
@@ -737,87 +907,13 @@ impl App {
                     if note.archived != self.archive_mode {
                         return false;
                     }
-                    let content_lower = note.content.to_lowercase();
 
-                    // Apply advanced modifiers first
-
-                    // has:attachment
-                    if modifiers.has_attachment && note.attachments.is_empty() {
+                    // Apply shared search logic
+                    if !note_matches_search(note, &modifiers, &query_parts) {
                         return false;
                     }
 
-                    // created:>DATE (created after)
-                    if let Some(ref date) = modifiers.created_after {
-                        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() < date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // created:<DATE (created before)
-                    if let Some(ref date) = modifiers.created_before {
-                        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() > date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // modified:>DATE (modified after)
-                    if let Some(ref date) = modifiers.modified_after {
-                        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() < date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // modified:<DATE (modified before)
-                    if let Some(ref date) = modifiers.modified_before {
-                        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                        if note_date.as_str() > date.as_str() {
-                            return false;
-                        }
-                    }
-
-                    // words:>N (minimum word count)
-                    if let Some(min) = modifiers.word_count_min {
-                        let word_count = note.content.split_whitespace().count();
-                        if word_count < min {
-                            return false;
-                        }
-                    }
-
-                    // words:<N (maximum word count)
-                    if let Some(max) = modifiers.word_count_max {
-                        let word_count = note.content.split_whitespace().count();
-                        if word_count > max {
-                            return false;
-                        }
-                    }
-
-                    // Check each remaining query part (text/tag search)
-                    for part in &query_parts {
-                        if part.is_empty() {
-                            continue;
-                        }
-                        if let Some(tag) = part.strip_prefix('#') {
-                            // Tag search
-                            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                                return false;
-                            }
-                        } else if let Some(neg_word) = part.strip_prefix('-') {
-                            // Negation
-                            if content_lower.contains(neg_word) {
-                                return false;
-                            }
-                        } else {
-                            // Regular text search
-                            if !content_lower.contains(part) {
-                                return false;
-                            }
-                        }
-                    }
-
-                    // Color filtering
+                    // Color filtering (only in filtered_notes, not count_opposite_mode_matches)
                     if !modifiers.colors.is_empty() {
                         let note_has_color = modifiers.colors.iter().any(|color_key| {
                             note.color.as_ref().is_some_and(|c| c.to_lowercase() == color_key.to_lowercase())
@@ -855,13 +951,11 @@ impl App {
         };
 
         // Sort: pinned first, then by modified_at descending
-        notes.sort_by(|a, b| {
-            match (a.pinned, b.pinned) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => b.modified_at.cmp(&a.modified_at),
-            }
-        });
+        Self::sort_notes_by_pinned_and_date(&mut notes);
+
+        // Cache the note IDs for future calls
+        let ids: Vec<String> = notes.iter().map(|n| n.id.clone()).collect();
+        *self.filtered_notes_cache.borrow_mut() = Some(ids);
 
         notes
     }
@@ -886,88 +980,8 @@ impl App {
                     return false;
                 }
 
-                let content_lower = note.content.to_lowercase();
-
-                // Apply same search logic as filtered_notes()
-
-                // has:attachment
-                if modifiers.has_attachment && note.attachments.is_empty() {
-                    return false;
-                }
-
-                // created:>DATE (created after)
-                if let Some(ref date) = modifiers.created_after {
-                    let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() < date.as_str() {
-                        return false;
-                    }
-                }
-
-                // created:<DATE (created before)
-                if let Some(ref date) = modifiers.created_before {
-                    let note_date = note.created_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() > date.as_str() {
-                        return false;
-                    }
-                }
-
-                // modified:>DATE (modified after)
-                if let Some(ref date) = modifiers.modified_after {
-                    let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() < date.as_str() {
-                        return false;
-                    }
-                }
-
-                // modified:<DATE (modified before)
-                if let Some(ref date) = modifiers.modified_before {
-                    let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-                    if note_date.as_str() > date.as_str() {
-                        return false;
-                    }
-                }
-
-                // words:>N (minimum word count)
-                if let Some(min) = modifiers.word_count_min {
-                    let word_count = note.content.split_whitespace().count();
-                    if word_count < min {
-                        return false;
-                    }
-                }
-
-                // words:<N (maximum word count)
-                if let Some(max) = modifiers.word_count_max {
-                    let word_count = note.content.split_whitespace().count();
-                    if word_count > max {
-                        return false;
-                    }
-                }
-
-                // Check each remaining query part (text/tag search)
-                for part in &query_parts {
-                    if part.is_empty() {
-                        continue;
-                    }
-
-                    if let Some(tag) = part.strip_prefix('#') {
-                        // Tag search
-                        if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                            return false;
-                        }
-                    } else if let Some(negated) = part.strip_prefix('-') {
-                        // Negation
-                        if content_lower.contains(negated) {
-                            return false;
-                        }
-                    } else {
-                        // Regular text search
-                        if !content_lower.contains(part) {
-                            return false;
-                        }
-                    }
-                }
-
-                true
+                // Apply shared search logic (no color filtering for opposite mode count)
+                note_matches_search(note, &modifiers, &query_parts)
             })
             .count()
     }
@@ -1669,5 +1683,44 @@ mod tests {
         assert!(!cleaned.contains("category:important"));
         assert!(cleaned.contains("urgent"));
         assert!(cleaned.contains("task"));
+    }
+
+    #[test]
+    fn test_sort_notes_by_pinned_and_date() {
+        use chrono::{TimeZone, Utc};
+
+        // Create notes with varying pinned status and dates
+        let mut note1 = Note::new("Note 1".to_string());
+        note1.pinned = false;
+        note1.modified_at = Utc.with_ymd_and_hms(2024, 1, 1, 12, 0, 0).unwrap();
+
+        let mut note2 = Note::new("Note 2 - pinned".to_string());
+        note2.pinned = true;
+        note2.modified_at = Utc.with_ymd_and_hms(2024, 1, 2, 12, 0, 0).unwrap();
+
+        let mut note3 = Note::new("Note 3".to_string());
+        note3.pinned = false;
+        note3.modified_at = Utc.with_ymd_and_hms(2024, 1, 3, 12, 0, 0).unwrap();
+
+        let mut note4 = Note::new("Note 4 - pinned older".to_string());
+        note4.pinned = true;
+        note4.modified_at = Utc.with_ymd_and_hms(2024, 1, 1, 10, 0, 0).unwrap();
+
+        let mut notes: Vec<&Note> = vec![&note1, &note2, &note3, &note4];
+        App::sort_notes_by_pinned_and_date(&mut notes);
+
+        // Pinned notes should come first, sorted by date descending
+        assert!(notes[0].pinned);
+        assert!(notes[1].pinned);
+        // Note2 is more recent than Note4, so Note2 should be first
+        assert!(notes[0].content.contains("Note 2"));
+        assert!(notes[1].content.contains("Note 4"));
+
+        // Unpinned notes should come after, sorted by date descending
+        assert!(!notes[2].pinned);
+        assert!(!notes[3].pinned);
+        // Note3 is more recent than Note1
+        assert!(notes[2].content.contains("Note 3"));
+        assert!(notes[3].content.contains("Note 1"));
     }
 }
