@@ -1,6 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
 use rand::Rng;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -12,7 +11,11 @@ use crate::{
         RegisterDeviceRequest, RegisterDeviceResponse, RegisterUserRequest,
         RegisterUserResponse, UserInfo,
     },
-    utils::password::{hash_password_with_params, validate_password_strength, verify_password},
+    utils::{
+        crypto::hash_sha256,
+        password::{hash_password_with_params, validate_password_strength, verify_password},
+        validation,
+    },
     AppState,
 };
 
@@ -89,6 +92,9 @@ pub async fn register_device(
         req.device_name
     );
 
+    // Validate device name
+    validation::validate_device_name(&req.device_name, &state.config)?;
+
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
         .await
@@ -134,9 +140,7 @@ pub async fn register_device(
     let api_key = generate_api_key();
 
     // Hash API key for storage
-    let mut hasher = Sha256::new();
-    hasher.update(api_key.as_bytes());
-    let hashed_key = format!("{:x}", hasher.finalize());
+    let hashed_key = hash_sha256(&api_key);
 
     // Current timestamp
     let now = chrono::Utc::now().to_rfc3339();
@@ -188,17 +192,11 @@ pub async fn clone_device(
         req.device_type
     );
 
-    // Validate device name is not empty
-    if req.device_name.trim().is_empty() {
-        return Err(crate::error::AppError::BadRequest(
-            "Device name cannot be empty".to_string(),
-        ));
-    }
+    // Validate device name
+    validation::validate_device_name(&req.device_name, &state.config)?;
 
     // Hash the provided API key to look up the source device
-    let mut hasher = Sha256::new();
-    hasher.update(req.api_key.as_bytes());
-    let hashed_key = format!("{:x}", hasher.finalize());
+    let hashed_key = hash_sha256(&req.api_key);
 
     // Find the client by API key
     let source_client = sqlx::query!(
@@ -260,9 +258,7 @@ pub async fn clone_device(
     let api_key = generate_api_key();
 
     // Hash new API key for storage
-    let mut hasher = Sha256::new();
-    hasher.update(api_key.as_bytes());
-    let new_hashed_key = format!("{:x}", hasher.finalize());
+    let new_hashed_key = hash_sha256(&api_key);
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -305,9 +301,29 @@ pub async fn clone_device(
 /// Creates a session for admin dashboard access
 pub async fn login(
     State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(StatusCode, Json<LoginResponse>)> {
     tracing::info!("Admin login request: email={}", req.email);
+
+    // Extract client info for audit trail
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    // Extract IP from X-Forwarded-For (first IP in chain) or X-Real-IP
+    let ip_address = headers
+        .get("X-Forwarded-For")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim().to_string())
+        .or_else(|| {
+            headers
+                .get("X-Real-IP")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string())
+        });
 
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
@@ -351,15 +367,15 @@ pub async fn login(
     let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 
-    // Create session
+    // Create session with audit info
     let session = SessionRepository::create(
         &state.pool,
         crate::models::CreateSessionParams {
             user_id: user.id.clone(),
             token: session_token.clone(),
             expires_at: expires_at_str.clone(),
-            user_agent: None, // TODO: Extract from request headers
-            ip_address: None, // TODO: Extract from request
+            user_agent,
+            ip_address,
         },
     )
     .await?;
@@ -415,30 +431,27 @@ fn generate_session_token() -> String {
     Uuid::new_v4().to_string()
 }
 
+/// Maximum email length per RFC 5321
+const MAX_EMAIL_LENGTH: usize = 254;
+
 fn is_valid_email(email: &str) -> bool {
-    // Basic email validation: local@domain.tld
-    let parts: Vec<&str> = email.split('@').collect();
-    if parts.len() != 2 {
+    // Check length limit per RFC 5321
+    if email.len() > MAX_EMAIL_LENGTH {
         return false;
     }
 
-    let local = parts[0];
-    let domain = parts[1];
-
-    // Local part must not be empty
-    if local.is_empty() {
+    // Use RFC-compliant email validation
+    if !email_address::EmailAddress::is_valid(email) {
         return false;
     }
 
-    // Domain must contain a dot and not be empty
-    if domain.is_empty() || !domain.contains('.') {
-        return false;
-    }
-
-    // Domain must have something before and after the dot
-    let domain_parts: Vec<&str> = domain.split('.').collect();
-    if domain_parts.iter().any(|p| p.is_empty()) {
-        return false;
+    // Additional practical check: require at least one dot in the domain
+    // This rejects technically valid but practically unusable addresses like "user@localhost"
+    if let Some(at_pos) = email.rfind('@') {
+        let domain = &email[at_pos + 1..];
+        if !domain.contains('.') {
+            return false;
+        }
     }
 
     true
@@ -450,11 +463,30 @@ mod tests {
 
     #[test]
     fn test_email_validation() {
+        // Valid emails
         assert!(is_valid_email("user@example.com"));
         assert!(is_valid_email("test.user@domain.co.uk"));
+        assert!(is_valid_email("user+tag@example.com"));
+        assert!(is_valid_email("user123@sub.domain.example.com"));
+
+        // Invalid emails
         assert!(!is_valid_email("invalid"));
         assert!(!is_valid_email("@example.com"));
         assert!(!is_valid_email("user@"));
+        assert!(!is_valid_email("user@.com"));
+        assert!(!is_valid_email("user@domain..com"));
+        assert!(!is_valid_email(""));
+        assert!(!is_valid_email("   "));
+
+        // Require TLD (dot in domain) - reject single-label domains
+        assert!(!is_valid_email("user@localhost"));
+        assert!(!is_valid_email("user@domain"));
+
+        // RFC length limit (254 chars max)
+        let long_local = "a".repeat(64);
+        let long_domain = format!("{}.example.com", "b".repeat(180));
+        let too_long_email = format!("{}@{}", long_local, long_domain);
+        assert!(!is_valid_email(&too_long_email));
     }
 
     #[test]

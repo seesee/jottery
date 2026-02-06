@@ -7,63 +7,14 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
-    api::middleware::{ClientInfo, InboxAuth},
+    api::extractors::{AuthClient, InboxAuthUser},
     error::{AppError, AppResult},
     models::{
         CreateInboxItemRequest, CreateInboxItemResponse, InboxItemResponse, InboxStatusResponse,
     },
+    utils::validation,
     AppState,
 };
-
-// ============================================================================
-// Custom extractors
-// ============================================================================
-
-/// Extractor for inbox token auth (limited scope — POST only)
-pub struct InboxAuthUser(pub InboxAuth);
-
-#[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for InboxAuthUser
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<InboxAuth>()
-            .cloned()
-            .map(InboxAuthUser)
-            .ok_or(AppError::Unauthorized)
-    }
-}
-
-/// Extractor for device API key auth (reuses sync's ClientInfo)
-pub struct AuthClient(pub ClientInfo);
-
-#[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for AuthClient
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<ClientInfo>()
-            .cloned()
-            .map(AuthClient)
-            .ok_or(AppError::Unauthorized)
-    }
-}
 
 // ============================================================================
 // Inbox submission (inbox token auth)
@@ -75,40 +26,40 @@ pub async fn create_item(
     InboxAuthUser(auth): InboxAuthUser,
     Json(req): Json<CreateInboxItemRequest>,
 ) -> AppResult<(StatusCode, Json<CreateInboxItemResponse>)> {
-    // Validate content is not empty
-    if req.content.trim().is_empty() {
-        return Err(AppError::BadRequest("Content must not be empty".to_string()));
+    // Validate content (not empty and within size limits)
+    validation::validate_inbox_content(&req.content, &state.config)?;
+
+    // Validate tags if provided
+    if let Some(tags) = &req.tags {
+        validation::validate_tags(tags, &state.config)?;
     }
 
-    // Get user quota limits
-    let user = sqlx::query!(
-        "SELECT inbox_max_items, inbox_max_size_mb FROM users WHERE id = ?",
+    // Get user quota limits and current usage in a single query
+    let quota_and_usage = sqlx::query!(
+        r#"
+        SELECT
+            u.inbox_max_items,
+            u.inbox_max_size_mb,
+            CAST(COUNT(i.id) AS INTEGER) as "item_count!: i64",
+            CAST(COALESCE(SUM(i.size_bytes), 0) AS INTEGER) as "total_size!: i64"
+        FROM users u
+        LEFT JOIN inbox_items i ON u.id = i.user_id
+        WHERE u.id = ?
+        GROUP BY u.id
+        "#,
         auth.user_id
     )
     .fetch_one(&state.pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to fetch user quota: {}", e);
+        tracing::error!("Failed to fetch quota and usage: {}", e);
         AppError::InternalServerError
     })?;
 
-    let max_items = user.inbox_max_items.unwrap_or(100);
-    let max_size_mb = user.inbox_max_size_mb.unwrap_or(10);
-
-    // Check current usage
-    let usage = sqlx::query!(
-        "SELECT COUNT(*) as count, COALESCE(SUM(size_bytes), 0) as total_size FROM inbox_items WHERE user_id = ?",
-        auth.user_id
-    )
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch inbox usage: {}", e);
-        AppError::InternalServerError
-    })?;
-
-    let current_count = usage.count as i64;
-    let current_size = usage.total_size as i64;
+    let max_items = quota_and_usage.inbox_max_items.unwrap_or(state.config.default_inbox_max_items);
+    let max_size_mb = quota_and_usage.inbox_max_size_mb.unwrap_or(state.config.default_inbox_max_size_mb);
+    let current_count = quota_and_usage.item_count;
+    let current_size = quota_and_usage.total_size;
 
     // Calculate size of new item
     let tags_json = serde_json::to_string(&req.tags.as_deref().unwrap_or(&[]))
@@ -300,7 +251,7 @@ pub async fn get_status(
     Ok(Json(InboxStatusResponse {
         count: usage.count as i64,
         total_size_bytes: usage.total_size as i64,
-        max_items: user.inbox_max_items.unwrap_or(100),
-        max_size_mb: user.inbox_max_size_mb.unwrap_or(10),
+        max_items: user.inbox_max_items.unwrap_or(state.config.default_inbox_max_items),
+        max_size_mb: user.inbox_max_size_mb.unwrap_or(state.config.default_inbox_max_size_mb),
     }))
 }

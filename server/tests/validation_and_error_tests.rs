@@ -102,8 +102,15 @@ async fn test_malformed_json_sync_push() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -159,8 +166,15 @@ async fn test_malformed_json_user_login() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -210,8 +224,15 @@ async fn test_sync_push_missing_notes_field() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -273,8 +294,15 @@ async fn test_sync_push_note_missing_required_fields() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -344,8 +372,15 @@ async fn test_register_user_missing_email() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -399,8 +434,15 @@ async fn test_login_missing_password() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -456,8 +498,15 @@ async fn test_sync_push_wrong_data_type() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -520,8 +569,15 @@ async fn test_sync_push_version_wrong_type() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -602,8 +658,15 @@ async fn test_register_device_wrong_type() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -662,8 +725,15 @@ async fn test_get_user_invalid_uuid() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -754,8 +824,15 @@ async fn test_empty_string_fields() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -812,8 +889,15 @@ async fn test_extremely_large_note_content() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -896,8 +980,15 @@ async fn test_many_tags() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -983,8 +1074,15 @@ async fn test_special_characters_in_content() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1070,8 +1168,15 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1216,8 +1321,15 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);

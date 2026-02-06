@@ -7,7 +7,7 @@ use base64::Engine;
 use std::sync::Arc;
 
 use crate::{
-    api::middleware::ClientInfo,
+    api::extractors::AuthClient,
     error::{AppError, AppResult},
     models::{
         AttachmentRef, SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
@@ -15,29 +15,6 @@ use crate::{
     },
     AppState,
 };
-
-// Custom extractor for authenticated client info (client_id + user_id)
-pub struct AuthClient(pub ClientInfo);
-
-#[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for AuthClient
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<ClientInfo>()
-            .cloned()
-            .map(AuthClient)
-            .ok_or(AppError::Unauthorized)
-    }
-}
 
 pub async fn get_status(
     State(state): State<Arc<AppState>>,
@@ -103,7 +80,7 @@ pub async fn push(
 
     let max_upload_bytes = user
         .map(|u| u.max_upload_size_mb)
-        .unwrap_or(5) as usize * 1024 * 1024;
+        .unwrap_or(state.config.default_max_upload_size_mb) as usize * 1024 * 1024;
 
     // Estimate payload size from attachments (main contributor to size)
     let estimated_size: usize = push_req.attachments.iter()
@@ -708,30 +685,11 @@ pub async fn pull(
         offset
     );
 
-    // Get total count first (for pagination metadata)
-    let total_count: i64 = if let Some(last_sync) = &pull_req.last_sync_at {
-        let count_result = sqlx::query!(
-            "SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND server_modified_at > ?",
-            client_info.user_id,
-            last_sync
-        )
-        .fetch_one(&state.pool)
-        .await?;
-        count_result.count as i64
-    } else {
-        let count_result = sqlx::query!(
-            "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
-            client_info.user_id
-        )
-        .fetch_one(&state.pool)
-        .await?;
-        count_result.count as i64
-    };
-
-    // Get notes with pagination (LIMIT/OFFSET)
-    let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
+    // Get notes with pagination and total count in a single query using window function
+    // COUNT(*) OVER() gives us the total matching rows without a separate query
+    let (db_notes, total_count): (Vec<crate::models::Note>, i64) = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            r#"SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain, COUNT(*) OVER() as "total_count!: i64" FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?"#,
             client_info.user_id,
             last_sync,
             limit,
@@ -740,8 +698,9 @@ pub async fn pull(
         .fetch_all(&state.pool)
         .await?;
 
-        rows.into_iter()
-            .filter_map(|row| Some(crate::models::Note {
+        let total = rows.first().map(|r| r.total_count).unwrap_or(0);
+        let notes = rows.into_iter()
+            .map(|row| crate::models::Note {
                 id: row.id,
                 client_id: row.client_id,
                 created_at: row.created_at,
@@ -765,11 +724,12 @@ pub async fn pull(
                 content_hash: row.content_hash,
                 parent_hash: row.parent_hash,
                 hash_chain: row.hash_chain,
-            }))
-            .collect()
+            })
+            .collect();
+        (notes, total)
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            r#"SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain, COUNT(*) OVER() as "total_count!: i64" FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?"#,
             client_info.user_id,
             limit,
             offset
@@ -777,8 +737,9 @@ pub async fn pull(
         .fetch_all(&state.pool)
         .await?;
 
-        rows.into_iter()
-            .filter_map(|row| Some(crate::models::Note {
+        let total = rows.first().map(|r| r.total_count).unwrap_or(0);
+        let notes = rows.into_iter()
+            .map(|row| crate::models::Note {
                 id: row.id,
                 client_id: row.client_id,
                 created_at: row.created_at,
@@ -802,8 +763,9 @@ pub async fn pull(
                 content_hash: row.content_hash,
                 parent_hash: row.parent_hash,
                 hash_chain: row.hash_chain,
-            }))
-            .collect()
+            })
+            .collect();
+        (notes, total)
     };
 
     // Calculate if there are more pages
@@ -813,27 +775,29 @@ pub async fn pull(
     let note_ids: Vec<&str> = db_notes.iter().map(|n| n.id.as_str()).collect();
 
     // Fetch all attachments for all notes in a single query (avoids N+1 problem)
-    let all_attachments = if !note_ids.is_empty() {
-        // Build placeholders for IN clause
-        let placeholders = note_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-        let query = format!(
-            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id IN ({})",
-            placeholders
+    // Uses QueryBuilder for type-safe dynamic SQL construction
+    let all_attachments: Vec<(Option<String>, Option<String>, String, String, i64, String)> = if !note_ids.is_empty() {
+        let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id IN ("
         );
-
-        // Execute with dynamic binding
-        let mut query_builder = sqlx::query_as::<_, (Option<String>, Option<String>, String, String, i64, String)>(&query);
+        let mut separated = query_builder.separated(", ");
         for note_id in &note_ids {
-            query_builder = query_builder.bind(*note_id);
+            separated.push_bind(*note_id);
         }
-        query_builder.fetch_all(&state.pool).await?
+        separated.push_unseparated(")");
+
+        query_builder
+            .build_query_as()
+            .fetch_all(&state.pool)
+            .await?
     } else {
         Vec::new()
     };
 
     // Group attachments by note_id for O(1) lookup
+    // Pre-allocate capacity based on number of notes to avoid reallocations
     let mut attachments_by_note: std::collections::HashMap<String, Vec<crate::models::AttachmentRef>> =
-        std::collections::HashMap::new();
+        std::collections::HashMap::with_capacity(db_notes.len());
     let mut needed_attachments = Vec::new();
 
     for (id, note_id, filename, mime_type, size, _created_at) in all_attachments {
@@ -897,32 +861,41 @@ pub async fn pull(
     }
 
     // Get attachment data - only for attachments the client doesn't already have
-    let mut attachments_data = Vec::new();
-    for att_id in needed_attachments {
-        // Skip if client already has this attachment
-        if pull_req.known_attachment_ids.contains(&att_id) {
-            tracing::debug!("Skipping attachment {} (client already has it)", att_id);
-            continue;
-        }
+    // Filter out known attachments first, then batch fetch remaining
+    let unknown_attachments: Vec<&str> = needed_attachments
+        .iter()
+        .filter(|att_id| !pull_req.known_attachment_ids.contains(*att_id))
+        .map(|s| s.as_str())
+        .collect();
 
-        if let Some(att_data) = sqlx::query!(
-            "SELECT id, data FROM attachments_data WHERE id = ?",
-            att_id
-        )
-        .fetch_optional(&state.pool)
-        .await?
-        {
-            if let Some(id) = att_data.id {
-                use base64::Engine;
-                let encoded = base64::engine::general_purpose::STANDARD.encode(&att_data.data);
-                tracing::debug!("Sending attachment {} to client", id);
-                attachments_data.push(SyncAttachmentData {
-                    id,
-                    data: encoded,
-                });
-            }
+    let attachments_data: Vec<SyncAttachmentData> = if !unknown_attachments.is_empty() {
+        // Batch fetch all unknown attachments in a single query
+        let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT id, data FROM attachments_data WHERE id IN ("
+        );
+        let mut separated = query_builder.separated(", ");
+        for att_id in &unknown_attachments {
+            separated.push_bind(*att_id);
         }
-    }
+        separated.push_unseparated(")");
+
+        let rows: Vec<(Option<String>, Vec<u8>)> = query_builder
+            .build_query_as()
+            .fetch_all(&state.pool)
+            .await?;
+
+        rows.into_iter()
+            .filter_map(|(id, data)| {
+                id.map(|att_id| {
+                    let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
+                    tracing::debug!("Sending attachment {} to client", att_id);
+                    SyncAttachmentData { id: att_id, data: encoded }
+                })
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
 
     // Get hard deletions that this client needs to apply
     // Query deletions since last sync (or all if no last sync)

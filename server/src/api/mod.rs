@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod auth;
+pub mod extractors;
 pub mod inbox;
 pub mod sse;
 pub mod sync;
@@ -13,10 +14,9 @@ pub mod middleware {
         middleware::Next,
         response::Response,
     };
-    use sha2::{Sha256, Digest};
     use std::sync::Arc;
 
-    use crate::{AppState, db::SessionRepository};
+    use crate::{utils::crypto::hash_sha256, AppState, db::SessionRepository};
 
     /// Client information extracted from API key authentication
     /// Contains both client_id (for audit trail) and user_id (for access control)
@@ -46,9 +46,7 @@ pub mod middleware {
         let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
         // Hash the API key
-        let mut hasher = Sha256::new();
-        hasher.update(api_key.as_bytes());
-        let hashed_key = format!("{:x}", hasher.finalize());
+        let hashed_key = hash_sha256(api_key);
 
         tracing::debug!(
             "API auth attempt: api_key_len={}, hashed_key={}",
@@ -173,9 +171,7 @@ pub mod middleware {
         let token = &auth_header[7..];
 
         // Hash the token
-        let mut hasher = Sha256::new();
-        hasher.update(token.as_bytes());
-        let hashed_token = format!("{:x}", hasher.finalize());
+        let hashed_token = hash_sha256(token);
 
         // Look up user by inbox token hash
         let result = sqlx::query!(

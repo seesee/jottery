@@ -18,8 +18,10 @@ pub struct Config {
     pub argon2_p_cost: u32,  // Parallelism (threads)
 
     // User settings
-    pub default_storage_quota_mb: i32,
-    pub default_max_upload_size_mb: i32,
+    pub default_storage_quota_mb: i64,
+    pub default_max_upload_size_mb: i64,
+    pub default_inbox_max_items: i64,
+    pub default_inbox_max_size_mb: i64,
 
     // Password policy
     // Options: "none" (length only), "basic" (2 of 4 classes), "standard" (3 of 4), "strong" (all 4)
@@ -27,6 +29,13 @@ pub struct Config {
 
     // Security headers
     pub enable_hsts: bool, // Strict-Transport-Security (only enable for HTTPS deployments)
+
+    // Input validation limits
+    pub max_device_name_length: usize,
+    pub max_inbox_content_size: usize,
+    pub max_note_content_size: usize,
+    pub max_tag_length: usize,
+    pub max_tags_per_note: usize,
 }
 
 impl Config {
@@ -90,6 +99,14 @@ impl Config {
                 .unwrap_or_else(|_| "5".to_string())
                 .parse()
                 .unwrap_or(5),
+            default_inbox_max_items: env::var("DEFAULT_INBOX_MAX_ITEMS")
+                .unwrap_or_else(|_| "100".to_string())
+                .parse()
+                .unwrap_or(100),
+            default_inbox_max_size_mb: env::var("DEFAULT_INBOX_MAX_SIZE_MB")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .unwrap_or(10),
 
             // Password complexity: none, basic, standard (default), strong
             password_complexity: env::var("PASSWORD_COMPLEXITY")
@@ -101,6 +118,28 @@ impl Config {
                 .unwrap_or_else(|_| "false".to_string())
                 .to_lowercase()
                 == "true",
+
+            // Input validation limits
+            max_device_name_length: env::var("MAX_DEVICE_NAME_LENGTH")
+                .unwrap_or_else(|_| "255".to_string())
+                .parse()
+                .unwrap_or(255),
+            max_inbox_content_size: env::var("MAX_INBOX_CONTENT_SIZE")
+                .unwrap_or_else(|_| "1048576".to_string()) // 1MB
+                .parse()
+                .unwrap_or(1_048_576),
+            max_note_content_size: env::var("MAX_NOTE_CONTENT_SIZE")
+                .unwrap_or_else(|_| "10485760".to_string()) // 10MB
+                .parse()
+                .unwrap_or(10_485_760),
+            max_tag_length: env::var("MAX_TAG_LENGTH")
+                .unwrap_or_else(|_| "100".to_string())
+                .parse()
+                .unwrap_or(100),
+            max_tags_per_note: env::var("MAX_TAGS_PER_NOTE")
+                .unwrap_or_else(|_| "50".to_string())
+                .parse()
+                .unwrap_or(50),
         })
     }
 }

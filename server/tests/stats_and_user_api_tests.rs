@@ -173,8 +173,15 @@ async fn test_admin_stats_requires_authentication() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -224,8 +231,15 @@ async fn test_admin_stats_success() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -295,8 +309,15 @@ async fn test_user_login_success() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -359,8 +380,15 @@ async fn test_user_login_wrong_password() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -416,8 +444,15 @@ async fn test_user_login_nonexistent_user() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -472,8 +507,15 @@ async fn test_get_account_info_success() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -559,8 +601,15 @@ async fn test_get_account_info_requires_authentication() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -612,8 +661,15 @@ async fn test_delete_all_notes_success() {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
