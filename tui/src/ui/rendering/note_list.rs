@@ -10,7 +10,7 @@ use rust_i18n::t;
 use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width};
-use crate::ui::rendering::modal::render_confirmation_modal;
+use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal};
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
 use crate::models::SyntaxLanguage;
 
@@ -721,10 +721,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             std::cmp::min(app.path_completions.len() + 1, 12) as u16  // Max 12 lines
         };
         let modal_height = 4 + completions_height;  // Input + completions
-        let x = (size.width.saturating_sub(modal_width)) / 2;
-        let y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect::new(x, y, modal_width, modal_height);
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -802,15 +799,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // Calculate modal size
         let modal_width = 80.min(size.width.saturating_sub(4));
         let modal_height = 10.min(size.height.saturating_sub(4));
-        let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-        let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect {
-            x: modal_x,
-            y: modal_y,
-            width: modal_width,
-            height: modal_height,
-        };
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -907,15 +896,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // Calculate modal size (larger than attachment viewer for content preview)
         let modal_width = 100.min(size.width.saturating_sub(4));
         let modal_height = 30.min(size.height.saturating_sub(4));
-        let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-        let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect {
-            x: modal_x,
-            y: modal_y,
-            width: modal_width,
-            height: modal_height,
-        };
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -1121,10 +1102,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let count = app.selected_note_ids.len();
         let modal_width = 60;
         let modal_height = 6;
-        let x = (size.width.saturating_sub(modal_width)) / 2;
-        let y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect::new(x, y, modal_width, modal_height);
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -1162,10 +1140,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let count = app.selected_note_ids.len();
         let modal_width = 70;
         let modal_height = 6;
-        let x = (size.width.saturating_sub(modal_width)) / 2;
-        let y = (size.height.saturating_sub(modal_height)) / 2;
-
-        let modal_area = Rect::new(x, y, modal_width, modal_height);
+        let modal_area = centered_rect(modal_width, modal_height, size);
 
         // Clear the background area
         frame.render_widget(Clear, modal_area);
@@ -1212,15 +1187,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             // Calculate modal size
             let modal_width = 70.min(size.width.saturating_sub(4));
             let modal_height = 20.min(size.height.saturating_sub(4));
-            let modal_x = (size.width.saturating_sub(modal_width)) / 2;
-            let modal_y = (size.height.saturating_sub(modal_height)) / 2;
-
-            let modal_area = Rect {
-                x: modal_x,
-                y: modal_y,
-                width: modal_width,
-                height: modal_height,
-            };
+            let modal_area = centered_rect(modal_width, modal_height, size);
 
             // Clear the background area
             frame.render_widget(Clear, modal_area);
