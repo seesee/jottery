@@ -10,7 +10,10 @@ use crate::{
     db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{CreateSessionParams, Session},
-    utils::password::{hash_password_with_params, validate_password_strength, verify_password},
+    utils::{
+        crypto::hash_sha256,
+        password::{hash_password_with_params, validate_password_strength, verify_password},
+    },
     AppState,
 };
 
@@ -714,10 +717,7 @@ pub async fn generate_inbox_token(
         .collect();
 
     // SHA-256 hash for storage
-    use sha2::{Sha256, Digest};
-    let mut hasher = Sha256::new();
-    hasher.update(token.as_bytes());
-    let token_hash = format!("{:x}", hasher.finalize());
+    let token_hash = hash_sha256(&token);
 
     // Store hash (replaces any existing token)
     sqlx::query!(

@@ -15,12 +15,11 @@ use axum::{
 };
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 use tokio::sync::{broadcast, RwLock};
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
 
-use crate::AppState;
+use crate::{utils::crypto::hash_sha256, AppState};
 
 /// SSE token validity duration (5 minutes)
 const SSE_TOKEN_VALIDITY_SECS: u64 = 300;
@@ -80,9 +79,7 @@ pub async fn get_sse_token(
     let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
     // Hash the API key
-    let mut hasher = Sha256::new();
-    hasher.update(api_key.as_bytes());
-    let hashed_key = format!("{:x}", hasher.finalize());
+    let hashed_key = hash_sha256(api_key);
 
     tracing::debug!(
         "SSE token request: api_key_len={}, hashed_key={}",
@@ -125,9 +122,7 @@ pub async fn get_sse_token(
     let token = uuid::Uuid::new_v4().to_string();
 
     // Hash the token for storage (so tokens in URLs can't be correlated to stored data)
-    let mut hasher = Sha256::new();
-    hasher.update(token.as_bytes());
-    let token_hash = format!("{:x}", hasher.finalize());
+    let token_hash = hash_sha256(&token);
 
     // Calculate expiration
     let now = std::time::SystemTime::now()
@@ -189,9 +184,7 @@ pub async fn sync_events(
     Query(auth): Query<SseAuthQuery>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, StatusCode> {
     // Hash the provided token
-    let mut hasher = Sha256::new();
-    hasher.update(auth.token.as_bytes());
-    let token_hash = format!("{:x}", hasher.finalize());
+    let token_hash = hash_sha256(&auth.token);
 
     // Look up token in store
     let token_info = {

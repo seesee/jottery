@@ -1,8 +1,7 @@
-use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::models::{CreateSessionParams, Session};
+use crate::{models::{CreateSessionParams, Session}, utils::crypto::hash_sha256};
 
 /// Session repository for database operations
 pub struct SessionRepository;
@@ -17,9 +16,7 @@ impl SessionRepository {
         let now = chrono::Utc::now().to_rfc3339();
 
         // Hash the session token for storage
-        let mut hasher = Sha256::new();
-        hasher.update(params.token.as_bytes());
-        let token_hash = format!("{:x}", hasher.finalize());
+        let token_hash = hash_sha256(&params.token);
 
         sqlx::query!(
             r#"
@@ -55,9 +52,7 @@ impl SessionRepository {
     /// Get session by token
     pub async fn get_by_token(pool: &SqlitePool, token: &str) -> Result<Session, sqlx::Error> {
         // Hash the token to look it up
-        let mut hasher = Sha256::new();
-        hasher.update(token.as_bytes());
-        let token_hash = format!("{:x}", hasher.finalize());
+        let token_hash = hash_sha256(token);
 
         sqlx::query_as!(
             Session,

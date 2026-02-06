@@ -1,6 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
 use rand::Rng;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -12,7 +11,10 @@ use crate::{
         RegisterDeviceRequest, RegisterDeviceResponse, RegisterUserRequest,
         RegisterUserResponse, UserInfo,
     },
-    utils::password::{hash_password_with_params, validate_password_strength, verify_password},
+    utils::{
+        crypto::hash_sha256,
+        password::{hash_password_with_params, validate_password_strength, verify_password},
+    },
     AppState,
 };
 
@@ -134,9 +136,7 @@ pub async fn register_device(
     let api_key = generate_api_key();
 
     // Hash API key for storage
-    let mut hasher = Sha256::new();
-    hasher.update(api_key.as_bytes());
-    let hashed_key = format!("{:x}", hasher.finalize());
+    let hashed_key = hash_sha256(&api_key);
 
     // Current timestamp
     let now = chrono::Utc::now().to_rfc3339();
@@ -196,9 +196,7 @@ pub async fn clone_device(
     }
 
     // Hash the provided API key to look up the source device
-    let mut hasher = Sha256::new();
-    hasher.update(req.api_key.as_bytes());
-    let hashed_key = format!("{:x}", hasher.finalize());
+    let hashed_key = hash_sha256(&req.api_key);
 
     // Find the client by API key
     let source_client = sqlx::query!(
@@ -260,9 +258,7 @@ pub async fn clone_device(
     let api_key = generate_api_key();
 
     // Hash new API key for storage
-    let mut hasher = Sha256::new();
-    hasher.update(api_key.as_bytes());
-    let new_hashed_key = format!("{:x}", hasher.finalize());
+    let new_hashed_key = hash_sha256(&api_key);
 
     let now = chrono::Utc::now().to_rfc3339();
 
