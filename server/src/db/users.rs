@@ -1,4 +1,4 @@
-use sqlx::SqlitePool;
+use sqlx::{Sqlite, SqlitePool, Transaction};
 use uuid::Uuid;
 
 use crate::models::User;
@@ -217,5 +217,84 @@ impl UserRepository {
         .await?;
 
         Ok(result.count.into())
+    }
+
+    /// Delete all notes and related data for a user within a transaction
+    ///
+    /// Deletes in the correct order to respect foreign key constraints:
+    /// 1. note_versions
+    /// 2. attachments_data
+    /// 3. attachments_meta
+    /// 4. notes
+    ///
+    /// Returns the number of notes deleted.
+    pub async fn delete_all_notes_data(
+        tx: &mut Transaction<'_, Sqlite>,
+        user_id: &str,
+    ) -> Result<u64, sqlx::Error> {
+        // Delete note versions
+        sqlx::query!(
+            "DELETE FROM note_versions WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
+            user_id
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        // Delete attachment data
+        sqlx::query!(
+            "DELETE FROM attachments_data WHERE id IN
+             (SELECT id FROM attachments_meta WHERE note_id IN
+              (SELECT id FROM notes WHERE user_id = ?))",
+            user_id
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        // Delete attachment metadata
+        sqlx::query!(
+            "DELETE FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
+            user_id
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        // Delete notes
+        let result = sqlx::query!("DELETE FROM notes WHERE user_id = ?", user_id)
+            .execute(&mut **tx)
+            .await?;
+
+        Ok(result.rows_affected())
+    }
+
+    /// Delete all user account data within a transaction
+    ///
+    /// Deletes in the correct order:
+    /// 1. All notes data (via delete_all_notes_data)
+    /// 2. Sessions
+    /// 3. Clients (devices)
+    /// 4. User record
+    pub async fn delete_account_data(
+        tx: &mut Transaction<'_, Sqlite>,
+        user_id: &str,
+    ) -> Result<(), sqlx::Error> {
+        // Delete all notes and related data
+        Self::delete_all_notes_data(tx, user_id).await?;
+
+        // Delete sessions
+        sqlx::query!("DELETE FROM sessions WHERE user_id = ?", user_id)
+            .execute(&mut **tx)
+            .await?;
+
+        // Delete clients (devices)
+        sqlx::query!("DELETE FROM clients WHERE user_id = ?", user_id)
+            .execute(&mut **tx)
+            .await?;
+
+        // Delete the user record
+        sqlx::query!("DELETE FROM users WHERE id = ?", user_id)
+            .execute(&mut **tx)
+            .await?;
+
+        Ok(())
     }
 }

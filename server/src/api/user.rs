@@ -265,50 +265,11 @@ pub async fn delete_all_notes(
             AppError::InternalServerError
         })?;
 
-    // Delete note versions
-    sqlx::query!(
-        "DELETE FROM note_versions WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
-        user_id
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to delete note versions: {}", e);
-        AppError::InternalServerError
-    })?;
-
-    // Delete attachment data
-    sqlx::query!(
-        "DELETE FROM attachments_data WHERE id IN
-         (SELECT id FROM attachments_meta WHERE note_id IN
-          (SELECT id FROM notes WHERE user_id = ?))",
-        user_id
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to delete attachment data: {}", e);
-        AppError::InternalServerError
-    })?;
-
-    // Delete attachment metadata
-    sqlx::query!(
-        "DELETE FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
-        user_id
-    )
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to delete attachment metadata: {}", e);
-        AppError::InternalServerError
-    })?;
-
-    // Delete notes
-    let result = sqlx::query!("DELETE FROM notes WHERE user_id = ?", user_id)
-        .execute(&mut *tx)
+    // Use the helper to delete all notes data
+    let notes_deleted = UserRepository::delete_all_notes_data(&mut tx, &user_id)
         .await
         .map_err(|e| {
-            tracing::error!("Failed to delete notes: {}", e);
+            tracing::error!("Failed to delete notes data: {}", e);
             AppError::InternalServerError
         })?;
 
@@ -319,7 +280,7 @@ pub async fn delete_all_notes(
 
     tracing::info!(
         "Deleted {} notes for user {}",
-        result.rows_affected(),
+        notes_deleted,
         user_id
     );
 
@@ -432,87 +393,16 @@ pub async fn delete_account(
         }
         "delete" => {
             // Hard delete: remove all user data
-            // Due to CASCADE constraints, this will delete:
-            // - sessions
-            // - clients (devices)
-            // - notes (which cascades to note_versions, attachments_meta, attachments_data)
-
             let mut tx = state.pool.begin().await.map_err(|e| {
                 tracing::error!("Failed to start transaction: {}", e);
                 AppError::InternalServerError
             })?;
 
-            // Delete note versions first (may not have CASCADE set up)
-            sqlx::query!(
-                "DELETE FROM note_versions WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
-                user_id
-            )
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to delete note versions: {}", e);
-                AppError::InternalServerError
-            })?;
-
-            // Delete attachment data
-            sqlx::query!(
-                "DELETE FROM attachments_data WHERE id IN
-                 (SELECT id FROM attachments_meta WHERE note_id IN
-                  (SELECT id FROM notes WHERE user_id = ?))",
-                user_id
-            )
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to delete attachment data: {}", e);
-                AppError::InternalServerError
-            })?;
-
-            // Delete attachment metadata
-            sqlx::query!(
-                "DELETE FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
-                user_id
-            )
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to delete attachment metadata: {}", e);
-                AppError::InternalServerError
-            })?;
-
-            // Delete notes
-            sqlx::query!("DELETE FROM notes WHERE user_id = ?", user_id)
-                .execute(&mut *tx)
+            // Use the helper to delete all account data
+            UserRepository::delete_account_data(&mut tx, &user_id)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Failed to delete notes: {}", e);
-                    AppError::InternalServerError
-                })?;
-
-            // Delete sessions
-            sqlx::query!("DELETE FROM sessions WHERE user_id = ?", user_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to delete sessions: {}", e);
-                    AppError::InternalServerError
-                })?;
-
-            // Delete clients (devices)
-            sqlx::query!("DELETE FROM clients WHERE user_id = ?", user_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to delete clients: {}", e);
-                    AppError::InternalServerError
-                })?;
-
-            // Finally delete the user
-            sqlx::query!("DELETE FROM users WHERE id = ?", user_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to delete user: {}", e);
+                    tracing::error!("Failed to delete account data: {}", e);
                     AppError::InternalServerError
                 })?;
 
