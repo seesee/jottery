@@ -861,32 +861,41 @@ pub async fn pull(
     }
 
     // Get attachment data - only for attachments the client doesn't already have
-    let mut attachments_data = Vec::new();
-    for att_id in needed_attachments {
-        // Skip if client already has this attachment
-        if pull_req.known_attachment_ids.contains(&att_id) {
-            tracing::debug!("Skipping attachment {} (client already has it)", att_id);
-            continue;
-        }
+    // Filter out known attachments first, then batch fetch remaining
+    let unknown_attachments: Vec<&str> = needed_attachments
+        .iter()
+        .filter(|att_id| !pull_req.known_attachment_ids.contains(*att_id))
+        .map(|s| s.as_str())
+        .collect();
 
-        if let Some(att_data) = sqlx::query!(
-            "SELECT id, data FROM attachments_data WHERE id = ?",
-            att_id
-        )
-        .fetch_optional(&state.pool)
-        .await?
-        {
-            if let Some(id) = att_data.id {
-                use base64::Engine;
-                let encoded = base64::engine::general_purpose::STANDARD.encode(&att_data.data);
-                tracing::debug!("Sending attachment {} to client", id);
-                attachments_data.push(SyncAttachmentData {
-                    id,
-                    data: encoded,
-                });
-            }
+    let attachments_data: Vec<SyncAttachmentData> = if !unknown_attachments.is_empty() {
+        // Batch fetch all unknown attachments in a single query
+        let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT id, data FROM attachments_data WHERE id IN ("
+        );
+        let mut separated = query_builder.separated(", ");
+        for att_id in &unknown_attachments {
+            separated.push_bind(*att_id);
         }
-    }
+        separated.push_unseparated(")");
+
+        let rows: Vec<(Option<String>, Vec<u8>)> = query_builder
+            .build_query_as()
+            .fetch_all(&state.pool)
+            .await?;
+
+        rows.into_iter()
+            .filter_map(|(id, data)| {
+                id.map(|att_id| {
+                    let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
+                    tracing::debug!("Sending attachment {} to client", att_id);
+                    SyncAttachmentData { id: att_id, data: encoded }
+                })
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
 
     // Get hard deletions that this client needs to apply
     // Query deletions since last sync (or all if no last sync)
