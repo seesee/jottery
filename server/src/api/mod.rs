@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod auth;
+pub mod extractors;
 pub mod inbox;
 pub mod sse;
 pub mod sync;

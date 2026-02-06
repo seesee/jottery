@@ -7,7 +7,7 @@ use base64::Engine;
 use std::sync::Arc;
 
 use crate::{
-    api::middleware::ClientInfo,
+    api::extractors::AuthClient,
     error::{AppError, AppResult},
     models::{
         AttachmentRef, SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
@@ -15,29 +15,6 @@ use crate::{
     },
     AppState,
 };
-
-// Custom extractor for authenticated client info (client_id + user_id)
-pub struct AuthClient(pub ClientInfo);
-
-#[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for AuthClient
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<ClientInfo>()
-            .cloned()
-            .map(AuthClient)
-            .ok_or(AppError::Unauthorized)
-    }
-}
 
 pub async fn get_status(
     State(state): State<Arc<AppState>>,

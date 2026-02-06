@@ -7,63 +7,13 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
-    api::middleware::{ClientInfo, InboxAuth},
+    api::extractors::{AuthClient, InboxAuthUser},
     error::{AppError, AppResult},
     models::{
         CreateInboxItemRequest, CreateInboxItemResponse, InboxItemResponse, InboxStatusResponse,
     },
     AppState,
 };
-
-// ============================================================================
-// Custom extractors
-// ============================================================================
-
-/// Extractor for inbox token auth (limited scope — POST only)
-pub struct InboxAuthUser(pub InboxAuth);
-
-#[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for InboxAuthUser
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<InboxAuth>()
-            .cloned()
-            .map(InboxAuthUser)
-            .ok_or(AppError::Unauthorized)
-    }
-}
-
-/// Extractor for device API key auth (reuses sync's ClientInfo)
-pub struct AuthClient(pub ClientInfo);
-
-#[axum::async_trait]
-impl<S> axum::extract::FromRequestParts<S> for AuthClient
-where
-    S: Send + Sync,
-{
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut axum::http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<ClientInfo>()
-            .cloned()
-            .map(AuthClient)
-            .ok_or(AppError::Unauthorized)
-    }
-}
 
 // ============================================================================
 // Inbox submission (inbox token auth)
