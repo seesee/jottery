@@ -1110,6 +1110,9 @@ export async function restoreBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total });
 
+  // Track quota errors for summary at end
+  let quotaErrorCount = 0;
+
   // 2. Decrypt and restore each record
   for (let i = 0; i < backup.data.length; i++) {
     const jwe = backup.data[i];
@@ -1126,12 +1129,22 @@ export async function restoreBackup(
 
         case 'attachment': {
           const attachment = record.data as AttachmentRecord;
-          const blob = base64ToArrayBuffer(attachment.blob);
-          await attachmentRepository.storeBlob(attachment.id, blob);
+          try {
+            const blob = base64ToArrayBuffer(attachment.blob);
+            await attachmentRepository.storeBlob(attachment.id, blob);
 
-          if (attachment.thumbnail) {
-            const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-            await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+            if (attachment.thumbnail) {
+              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+            }
+          } catch (attachError) {
+            // Don't fail entire restore on quota errors for attachments
+            if (attachError instanceof Error && attachError.name === 'QuotaExceededError') {
+              quotaErrorCount++;
+              console.warn(`[backupService] QuotaExceededError storing attachment ${attachment.id}, skipping`);
+            } else {
+              throw attachError;
+            }
           }
           break;
         }
@@ -1149,8 +1162,14 @@ export async function restoreBackup(
           break;
 
         case 'sync_metadata': {
-          // Mark the API key for re-registration so restored device gets a new ID
+          // Log sync metadata for debugging
           const syncMeta = record.data as SyncMetadata;
+          console.log('[backupService] Backup contains sync configuration:');
+          console.log('  - Sync enabled:', syncMeta.syncEnabled);
+          console.log('  - Sync endpoint:', syncMeta.syncEndpoint || '(not set)');
+          console.log('  - Client ID:', syncMeta.clientId || '(not set)');
+          console.log('  - Has API key:', !!syncMeta.apiKey);
+          // Mark the API key for re-registration so restored device gets a new ID
           if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
             syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
           }
@@ -1165,6 +1184,12 @@ export async function restoreBackup(
       console.error(`[backupService] Failed to restore record ${i}:`, error);
       throw new Error(`Failed to restore record ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  // Log summary if there were quota errors
+  if (quotaErrorCount > 0) {
+    console.warn(`[backupService] Restore completed with ${quotaErrorCount} attachments skipped due to storage quota`);
+    console.warn('[backupService] Notes and other data were restored successfully. Missing attachments may re-sync from server.');
   }
 
   onProgress?.({ phase: 'complete' });
@@ -1188,10 +1213,31 @@ export async function restoreBatchedBackup(
 
   onProgress?.({ phase: 'validating' });
 
+  // Log sync configuration from backup (for debugging)
+  const syncMetadataBatch = backup.batches.find(b => b.type === 'sync_metadata');
+  if (syncMetadataBatch) {
+    try {
+      const syncItems = await decryptBatch<SyncMetadata>(syncMetadataBatch.data, keyBytes);
+      if (syncItems.length > 0) {
+        const syncMeta = syncItems[0];
+        console.log('[backupService] Backup contains sync configuration:');
+        console.log('  - Sync enabled:', syncMeta.syncEnabled);
+        console.log('  - Sync endpoint:', syncMeta.syncEndpoint || '(not set)');
+        console.log('  - Client ID:', syncMeta.clientId || '(not set)');
+        console.log('  - Has API key:', !!syncMeta.apiKey);
+      }
+    } catch (error) {
+      console.warn('[backupService] Could not read sync metadata from backup:', error);
+    }
+  }
+
   // 1. Restore encryption metadata first
   await encryptionRepository.setMetadata(backup.encryption);
 
   onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
+
+  // Track quota errors for summary at end
+  let quotaErrorCount = 0;
 
   // 2. Process each batch
   for (let i = 0; i < backup.batches.length; i++) {
@@ -1216,12 +1262,22 @@ export async function restoreBatchedBackup(
         case 'attachments':
           for (const item of items) {
             const attachment = item as AttachmentRecord;
-            const blob = base64ToArrayBuffer(attachment.blob);
-            await attachmentRepository.storeBlob(attachment.id, blob);
+            try {
+              const blob = base64ToArrayBuffer(attachment.blob);
+              await attachmentRepository.storeBlob(attachment.id, blob);
 
-            if (attachment.thumbnail) {
-              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+              if (attachment.thumbnail) {
+                const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+                await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+              }
+            } catch (attachError) {
+              // Don't fail entire restore on quota errors for attachments
+              if (attachError instanceof Error && attachError.name === 'QuotaExceededError') {
+                quotaErrorCount++;
+                console.warn(`[backupService] QuotaExceededError storing attachment ${attachment.id}, skipping`);
+              } else {
+                throw attachError;
+              }
             }
           }
           break;
@@ -1266,6 +1322,12 @@ export async function restoreBatchedBackup(
         `Failed to restore batch ${i + 1} (${batch.type}): ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  }
+
+  // Log summary if there were quota errors
+  if (quotaErrorCount > 0) {
+    console.warn(`[backupService] Restore completed with ${quotaErrorCount} attachments skipped due to storage quota`);
+    console.warn('[backupService] Notes and other data were restored successfully. Missing attachments may re-sync from server.');
   }
 
   onProgress?.({ phase: 'complete' });
