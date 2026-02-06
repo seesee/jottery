@@ -626,6 +626,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Select language"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "A personal, local-first scratch pad for capturing, organising, and searching notes. Access from web or terminal, with optional sync across devices.",

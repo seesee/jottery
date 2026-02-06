@@ -54,6 +54,7 @@ AVAILABLE_LANGS="de el en-GB en-US es fr it ja ko nl pl pt ru tr zh"
 SPECIFIC_DEMO=""
 SHOW_LIST=false
 ALL_LANGS=false
+ALL_LANGS_TUI=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -73,6 +74,10 @@ while [[ $# -gt 0 ]]; do
       ALL_LANGS=true
       shift
       ;;
+    --all-langs-tui)
+      ALL_LANGS_TUI=true
+      shift
+      ;;
     --help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
@@ -81,6 +86,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --name DEMO_NAME    Generate specific demo only"
       echo "  --lang LANGUAGE     Set language (default: en-GB)"
       echo "  --all-langs         Generate web screenshots for all languages"
+      echo "  --all-langs-tui     Generate TUI demos (VHS) for all languages"
       echo "  --help              Show this help message"
       echo ""
       echo "Available languages: $AVAILABLE_LANGS"
@@ -92,6 +98,7 @@ while [[ $# -gt 0 ]]; do
       echo "  $0 --name web-carousel-light # Generate only light carousel"
       echo "  $0 --lang en-US              # Generate for en-US"
       echo "  $0 --all-langs               # Generate web screenshots for all languages"
+      echo "  $0 --all-langs-tui           # Generate TUI demos for all languages"
       exit 0
       ;;
     *)
@@ -125,7 +132,10 @@ fi
 echo "🎬 Jottery Demo Generation"
 echo "=========================="
 if [ "$ALL_LANGS" = true ]; then
-  echo "Mode: All languages"
+  echo "Mode: All languages (web screenshots)"
+  echo "Languages: $AVAILABLE_LANGS"
+elif [ "$ALL_LANGS_TUI" = true ]; then
+  echo "Mode: All languages (TUI demos)"
   echo "Languages: $AVAILABLE_LANGS"
 else
   echo "Language: $DEMO_LANG"
@@ -194,6 +204,44 @@ if [ "$ALL_LANGS" = true ]; then
   exit 0
 fi
 
+# Handle --all-langs-tui mode
+if [ "$ALL_LANGS_TUI" = true ]; then
+  echo -e "${BLUE}Generating TUI demos for all languages...${NC}"
+  echo ""
+
+  for lang in $AVAILABLE_LANGS; do
+    echo -e "${CYAN}═══════════════════════════════════════${NC}"
+    echo -e "${YELLOW}Generating TUI demos for: $lang${NC}"
+    echo -e "${CYAN}═══════════════════════════════════════${NC}"
+
+    # Set DEMO_LANG for this iteration
+    DEMO_LANG="$lang"
+
+    # Ensure output directory exists
+    mkdir -p "public/screenshots/$lang"
+
+    # Generate all TUI demos for this language
+    for demo in tui-cli tui-piping tui-interface tui-sync; do
+      tape_file="demo-generation/vhs/${demo}.tape"
+      if [ -f "$tape_file" ]; then
+        echo -e "${YELLOW}Generating: $demo for $lang...${NC}"
+        DEMO_LANG="$lang" vhs "$tape_file" || {
+          echo -e "${YELLOW}⚠ Failed to generate $demo for $lang, continuing...${NC}"
+        }
+        echo -e "${GREEN}✓ $demo generated for $lang${NC}"
+      fi
+    done
+
+    echo ""
+  done
+
+  echo ""
+  echo -e "${GREEN}🎉 All language TUI demos generated!${NC}"
+  echo ""
+  echo "Generated files in: public/screenshots/<lang>/"
+  exit 0
+fi
+
 # Function to generate web screenshots
 generate_web_screenshots() {
   local test_filter="$1"
@@ -220,9 +268,13 @@ generate_vhs_demo() {
     return 1
   fi
 
-  echo -e "${YELLOW}Generating: $demo_name...${NC}"
-  vhs "$tape_file"
-  echo -e "${GREEN}✓ $demo_name generated${NC}"
+  # Ensure output directory exists
+  mkdir -p "public/screenshots/$DEMO_LANG"
+
+  echo -e "${YELLOW}Generating: $demo_name for $DEMO_LANG...${NC}"
+  # Pass DEMO_LANG to VHS - this overrides the Env directive default in the tape
+  DEMO_LANG="$DEMO_LANG" vhs "$tape_file"
+  echo -e "${GREEN}✓ $demo_name generated for $DEMO_LANG${NC}"
 }
 
 # Generate based on selection

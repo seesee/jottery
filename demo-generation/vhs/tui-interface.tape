@@ -1,5 +1,7 @@
 # Jottery TUI - Interactive Interface
-Output public/screenshots/en-GB/tui-interface.gif
+# Use DEMO_LANG environment variable to set the output language (default: en-GB)
+Env DEMO_LANG "en-GB"
+Output public/screenshots/${DEMO_LANG}/tui-interface.gif
 
 Set FontSize 18
 Set Width 1400

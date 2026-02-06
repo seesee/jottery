@@ -1,5 +1,7 @@
 # Jottery TUI - Sync Commands
-Output public/screenshots/en-GB/tui-sync.gif
+# Use DEMO_LANG environment variable to set the output language (default: en-GB)
+Env DEMO_LANG "en-GB"
+Output public/screenshots/${DEMO_LANG}/tui-sync.gif
 
 Set FontSize 18
 Set Width 1400
