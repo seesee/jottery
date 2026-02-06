@@ -1110,8 +1110,25 @@ export async function restoreBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total });
 
-  // Track quota errors for summary at end
-  let quotaErrorCount = 0;
+  // Track skipped items for summary at end (due to quota errors)
+  const skippedItems: Record<string, number> = {};
+
+  // Helper to store item with quota error handling
+  const storeWithQuotaHandling = async (
+    type: string,
+    storeFn: () => Promise<unknown>
+  ): Promise<boolean> => {
+    try {
+      await storeFn();
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        skippedItems[type] = (skippedItems[type] || 0) + 1;
+        return false;
+      }
+      throw error;
+    }
+  };
 
   // 2. Decrypt and restore each record
   for (let i = 0; i < backup.data.length; i++) {
@@ -1124,12 +1141,12 @@ export async function restoreBackup(
 
       switch (record.type) {
         case 'note':
-          await db.put(STORES.NOTES, record.data as Note);
+          await storeWithQuotaHandling('notes', () => db.put(STORES.NOTES, record.data as Note));
           break;
 
         case 'attachment': {
           const attachment = record.data as AttachmentRecord;
-          try {
+          await storeWithQuotaHandling('attachments', async () => {
             const blob = base64ToArrayBuffer(attachment.blob);
             await attachmentRepository.storeBlob(attachment.id, blob);
 
@@ -1137,24 +1154,16 @@ export async function restoreBackup(
               const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
               await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
             }
-          } catch (attachError) {
-            // Don't fail entire restore on quota errors for attachments
-            if (attachError instanceof Error && attachError.name === 'QuotaExceededError') {
-              quotaErrorCount++;
-              console.warn(`[backupService] QuotaExceededError storing attachment ${attachment.id}, skipping`);
-            } else {
-              throw attachError;
-            }
-          }
+          });
           break;
         }
 
         case 'version':
-          await db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion);
+          await storeWithQuotaHandling('versions', () => db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion));
           break;
 
         case 'saved_search':
-          await db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch);
+          await storeWithQuotaHandling('saved_searches', () => db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch));
           break;
 
         case 'settings':
@@ -1186,10 +1195,14 @@ export async function restoreBackup(
     }
   }
 
-  // Log summary if there were quota errors
-  if (quotaErrorCount > 0) {
-    console.warn(`[backupService] Restore completed with ${quotaErrorCount} attachments skipped due to storage quota`);
-    console.warn('[backupService] Notes and other data were restored successfully. Missing attachments may re-sync from server.');
+  // Log summary if there were any skipped items
+  const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
+  if (totalSkipped > 0) {
+    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items due to browser storage quota:`);
+    for (const [type, count] of Object.entries(skippedItems)) {
+      console.log(`  - ${type}: ${count} skipped`);
+    }
+    console.log('[backupService] Skipped items may re-sync from server if sync is enabled.');
   }
 
   onProgress?.({ phase: 'complete' });
@@ -1236,8 +1249,25 @@ export async function restoreBatchedBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
 
-  // Track quota errors for summary at end
-  let quotaErrorCount = 0;
+  // Track skipped items for summary at end (due to quota errors)
+  const skippedItems: Record<string, number> = {};
+
+  // Helper to store item with quota error handling
+  const storeWithQuotaHandling = async (
+    type: string,
+    storeFn: () => Promise<unknown>
+  ): Promise<boolean> => {
+    try {
+      await storeFn();
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        skippedItems[type] = (skippedItems[type] || 0) + 1;
+        return false;
+      }
+      throw error;
+    }
+  };
 
   // 2. Process each batch
   for (let i = 0; i < backup.batches.length; i++) {
@@ -1255,14 +1285,14 @@ export async function restoreBatchedBackup(
       switch (batch.type) {
         case 'notes':
           for (const note of items) {
-            await db.put(STORES.NOTES, note as Note);
+            await storeWithQuotaHandling('notes', () => db.put(STORES.NOTES, note as Note));
           }
           break;
 
         case 'attachments':
           for (const item of items) {
             const attachment = item as AttachmentRecord;
-            try {
+            await storeWithQuotaHandling('attachments', async () => {
               const blob = base64ToArrayBuffer(attachment.blob);
               await attachmentRepository.storeBlob(attachment.id, blob);
 
@@ -1270,39 +1300,31 @@ export async function restoreBatchedBackup(
                 const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
                 await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
               }
-            } catch (attachError) {
-              // Don't fail entire restore on quota errors for attachments
-              if (attachError instanceof Error && attachError.name === 'QuotaExceededError') {
-                quotaErrorCount++;
-                console.warn(`[backupService] QuotaExceededError storing attachment ${attachment.id}, skipping`);
-              } else {
-                throw attachError;
-              }
-            }
+            });
           }
           break;
 
         case 'versions':
           for (const version of items) {
-            await db.put(STORES.NOTE_VERSIONS, version as NoteVersion);
+            await storeWithQuotaHandling('versions', () => db.put(STORES.NOTE_VERSIONS, version as NoteVersion));
           }
           break;
 
         case 'saved_searches':
           for (const savedSearch of items) {
-            await db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch);
+            await storeWithQuotaHandling('saved_searches', () => db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch));
           }
           break;
 
         case 'settings':
-          // Settings batch contains a single item
+          // Settings batch contains a single item - this should never fail
           if (items.length > 0) {
             await settingsRepository.update(items[0] as UserSettings);
           }
           break;
 
         case 'sync_metadata':
-          // Sync metadata batch contains a single item
+          // Sync metadata batch contains a single item - this should never fail
           if (items.length > 0) {
             const syncMeta = items[0] as SyncMetadata;
             // Mark the API key for re-registration so restored device gets a new ID
@@ -1317,6 +1339,7 @@ export async function restoreBatchedBackup(
           console.warn(`[backupService] Unknown batch type: ${batch.type}`);
       }
     } catch (error) {
+      // Only fail on non-quota errors
       console.error(`[backupService] Failed to restore batch ${i} (${batch.type}):`, error);
       throw new Error(
         `Failed to restore batch ${i + 1} (${batch.type}): ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -1324,10 +1347,14 @@ export async function restoreBatchedBackup(
     }
   }
 
-  // Log summary if there were quota errors
-  if (quotaErrorCount > 0) {
-    console.warn(`[backupService] Restore completed with ${quotaErrorCount} attachments skipped due to storage quota`);
-    console.warn('[backupService] Notes and other data were restored successfully. Missing attachments may re-sync from server.');
+  // Log summary if there were any skipped items
+  const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
+  if (totalSkipped > 0) {
+    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items due to browser storage quota:`);
+    for (const [type, count] of Object.entries(skippedItems)) {
+      console.log(`  - ${type}: ${count} skipped`);
+    }
+    console.log('[backupService] Skipped items may re-sync from server if sync is enabled.');
   }
 
   onProgress?.({ phase: 'complete' });
