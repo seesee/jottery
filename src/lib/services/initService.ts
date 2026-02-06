@@ -17,7 +17,7 @@ import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
-import { clearAllStores } from './db';
+import { clearAllStores, deleteDB, initDB } from './db';
 import { syncService } from './syncService';
 
 /**
@@ -440,12 +440,24 @@ export async function restoreFromBackup(
   syncService.setRestoreInProgress(true);
 
   try {
-    // Step 2: Clear existing data to make room for restore
-    console.log('[RestoreFromBackup] Clearing existing data...');
+    // Step 2: Delete and recreate database to fully free space
+    // Using deleteDB instead of clearAllStores because IndexedDB doesn't
+    // immediately reclaim space after clear() - only after deleteDatabase()
+    console.log('[RestoreFromBackup] Deleting existing database to free space...');
     try {
-      await clearAllStores();
+      await deleteDB();
+      console.log('[RestoreFromBackup] Database deleted, recreating...');
+      await initDB();
+      console.log('[RestoreFromBackup] Database recreated');
     } catch (error) {
-      console.warn('[RestoreFromBackup] Failed to clear stores (continuing anyway):', error);
+      console.warn('[RestoreFromBackup] Failed to delete/recreate database:', error);
+      // Fallback to clearing stores
+      console.log('[RestoreFromBackup] Falling back to clearing stores...');
+      try {
+        await clearAllStores();
+      } catch (clearError) {
+        console.warn('[RestoreFromBackup] Failed to clear stores:', clearError);
+      }
     }
 
     // Step 3: Store the master key BEFORE restoring (repositories need it for encryption)
