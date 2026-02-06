@@ -238,9 +238,6 @@ pub async fn sync_events(
     let rx = state.sync_broadcast.subscribe();
 
     // Filter notifications: only for this user, not from this client
-    let user_id_clone = user_id.clone();
-    let client_id_clone = client_id.clone();
-
     let stream = BroadcastStream::new(rx)
         .filter_map(move |result| {
             match result {
@@ -248,12 +245,12 @@ pub async fn sync_events(
                     // Only notify if:
                     // 1. Same user (user_id matches)
                     // 2. Different client (not the source of the push)
-                    if notification.user_id == user_id_clone
-                        && notification.source_client_id != client_id_clone
+                    if notification.user_id == user_id
+                        && notification.source_client_id != client_id
                     {
                         tracing::debug!(
                             "Sending sync notification to client {} (from {})",
-                            client_id_clone,
+                            client_id,
                             notification.source_client_id
                         );
                         Some(Ok(Event::default().event("sync").data("pull")))
