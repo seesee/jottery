@@ -67,24 +67,23 @@ function getTagColors(lang: string): Record<string, string> {
 }
 
 // Language-specific calculator content
-// Note: math.js only supports ASCII variable names, so we use universal ASCII variable names
-// with translated comments to make the purpose clear in each language
+// The calculator now supports Unicode variable names through internal ASCII aliasing
 const CALCULATOR_CONTENT: Record<string, { comment: string; principal: string; rate: string; years: string }> = {
   'en-GB': { comment: '# Compound interest', principal: 'principal', rate: 'rate', years: 'years' },
   'en-US': { comment: '# Compound interest', principal: 'principal', rate: 'rate', years: 'years' },
-  'de': { comment: '# Zinseszins', principal: 'principal', rate: 'rate', years: 'years' },
-  'el': { comment: '# Σύνθετος τόκος', principal: 'principal', rate: 'rate', years: 'years' },
-  'es': { comment: '# Interés compuesto', principal: 'principal', rate: 'rate', years: 'years' },
-  'fr': { comment: '# Intérêts composés', principal: 'principal', rate: 'rate', years: 'years' },
-  'it': { comment: '# Interesse composto', principal: 'principal', rate: 'rate', years: 'years' },
-  'ja': { comment: '# 複利計算', principal: 'principal', rate: 'rate', years: 'years' },
-  'ko': { comment: '# 복리 계산', principal: 'principal', rate: 'rate', years: 'years' },
-  'nl': { comment: '# Samengestelde rente', principal: 'principal', rate: 'rate', years: 'years' },
-  'pl': { comment: '# Procent składany', principal: 'principal', rate: 'rate', years: 'years' },
-  'pt': { comment: '# Juros compostos', principal: 'principal', rate: 'rate', years: 'years' },
-  'ru': { comment: '# Сложные проценты', principal: 'principal', rate: 'rate', years: 'years' },
-  'tr': { comment: '# Bileşik faiz', principal: 'principal', rate: 'rate', years: 'years' },
-  'zh': { comment: '# 复利计算', principal: 'principal', rate: 'rate', years: 'years' },
+  'de': { comment: '# Zinseszins', principal: 'Kapital', rate: 'Zinssatz', years: 'Jahre' },
+  'el': { comment: '# Σύνθετος τόκος', principal: 'κεφάλαιο', rate: 'επιτόκιο', years: 'έτη' },
+  'es': { comment: '# Interés compuesto', principal: 'capital', rate: 'tasa', years: 'años' },
+  'fr': { comment: '# Intérêts composés', principal: 'capital', rate: 'taux', years: 'années' },
+  'it': { comment: '# Interesse composto', principal: 'capitale', rate: 'tasso', years: 'anni' },
+  'ja': { comment: '# 複利計算', principal: '元金', rate: '利率', years: '年数' },
+  'ko': { comment: '# 복리 계산', principal: '원금', rate: '이율', years: '연수' },
+  'nl': { comment: '# Samengestelde rente', principal: 'hoofdsom', rate: 'rente', years: 'jaren' },
+  'pl': { comment: '# Procent składany', principal: 'kapitał', rate: 'stopa', years: 'lata' },
+  'pt': { comment: '# Juros compostos', principal: 'capital', rate: 'taxa', years: 'anos' },
+  'ru': { comment: '# Сложные проценты', principal: 'капитал', rate: 'ставка', years: 'лет' },
+  'tr': { comment: '# Bileşik faiz', principal: 'anapara', rate: 'oran', years: 'yıl' },
+  'zh': { comment: '# 复利计算', principal: '本金', rate: '利率', years: '年数' },
 };
 
 // Get calculator content for current language
@@ -93,23 +92,23 @@ function getCalculatorContent(lang: string) {
 }
 
 // Language-specific mobile calculator content (budget example)
-// Note: math.js only supports ASCII variable names, so we use universal ASCII variable names
+// The calculator now supports Unicode variable names through internal ASCII aliasing
 const MOBILE_CALCULATOR_CONTENT: Record<string, { comment: string; income: string; rent: string }> = {
   'en-GB': { comment: '# Budget calc', income: 'income', rent: 'rent' },
   'en-US': { comment: '# Budget calc', income: 'income', rent: 'rent' },
-  'de': { comment: '# Budget', income: 'income', rent: 'rent' },
-  'el': { comment: '# Προϋπολογισμός', income: 'income', rent: 'rent' },
-  'es': { comment: '# Presupuesto', income: 'income', rent: 'rent' },
-  'fr': { comment: '# Budget', income: 'income', rent: 'rent' },
-  'it': { comment: '# Budget', income: 'income', rent: 'rent' },
-  'ja': { comment: '# 予算計算', income: 'income', rent: 'rent' },
-  'ko': { comment: '# 예산 계산', income: 'income', rent: 'rent' },
-  'nl': { comment: '# Budget', income: 'income', rent: 'rent' },
-  'pl': { comment: '# Budżet', income: 'income', rent: 'rent' },
-  'pt': { comment: '# Orçamento', income: 'income', rent: 'rent' },
-  'ru': { comment: '# Бюджет', income: 'income', rent: 'rent' },
-  'tr': { comment: '# Bütçe', income: 'income', rent: 'rent' },
-  'zh': { comment: '# 预算计算', income: 'income', rent: 'rent' },
+  'de': { comment: '# Budget', income: 'Einkommen', rent: 'Miete' },
+  'el': { comment: '# Προϋπολογισμός', income: 'εισόδημα', rent: 'ενοίκιο' },
+  'es': { comment: '# Presupuesto', income: 'ingresos', rent: 'alquiler' },
+  'fr': { comment: '# Budget', income: 'revenus', rent: 'loyer' },
+  'it': { comment: '# Budget', income: 'entrate', rent: 'affitto' },
+  'ja': { comment: '# 予算計算', income: '収入', rent: '家賃' },
+  'ko': { comment: '# 예산 계산', income: '수입', rent: '임대료' },
+  'nl': { comment: '# Budget', income: 'inkomen', rent: 'huur' },
+  'pl': { comment: '# Budżet', income: 'dochód', rent: 'czynsz' },
+  'pt': { comment: '# Orçamento', income: 'renda', rent: 'aluguel' },
+  'ru': { comment: '# Бюджет', income: 'доход', rent: 'аренда' },
+  'tr': { comment: '# Bütçe', income: 'gelir', rent: 'kira' },
+  'zh': { comment: '# 预算计算', income: '收入', rent: '房租' },
 };
 
 // Get mobile calculator content for current language

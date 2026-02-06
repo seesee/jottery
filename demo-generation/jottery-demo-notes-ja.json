@@ -89,7 +89,7 @@
       "id": "ja-calc-demo-note",
       "createdAt": "2026-02-06T10:00:00Z",
       "modifiedAt": "2026-02-06T10:00:00Z",
-      "content": "1 + 1\n2 + 2\n10 * 5\n100 / 4\n2^8\nsqrt(144)\n\n# 複利計算\nprincipal = 1000\nrate = 0.05\nyears = 10\nprincipal * (1 + rate)^years",
+      "content": "1 + 1\n2 + 2\n10 * 5\n100 / 4\n2^8\nsqrt(144)\n\n# 複利計算\n元金 = 1000\n利率 = 0.05\n年数 = 10\n元金 * (1 + 利率)^年数",
       "tags": [
         "計算",
         "デモ"

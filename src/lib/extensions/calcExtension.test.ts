@@ -323,9 +323,7 @@ describe('CalcEvaluator', () => {
 		expect(result.isError).toBe(true); // x should be undefined after reset
 	});
 
-	test('handles compound interest calculation', () => {
-		// Note: math.js only supports ASCII variable names, so we use ASCII names
-		// with translated comments for international screenshots
+	test('handles compound interest calculation with ASCII variables', () => {
 		const lines = [
 			{
 				lineNumber: 1,
@@ -358,6 +356,47 @@ describe('CalcEvaluator', () => {
 
 		// Evaluate all lines
 		lines.forEach((line) => evaluator.evaluateLine(line));
+
+		// The last line should calculate compound interest: 1000 * (1.05)^10 ≈ 1628.89
+		const result = evaluator.evaluateLine(lines[3]);
+		expect(result.isError).toBe(false);
+		expect(result.result).toContain('1628');
+	});
+
+	test('handles Unicode variable names (Japanese compound interest)', () => {
+		// Japanese variable names: 元金 (principal), 利率 (rate), 年数 (years)
+		const lines = [
+			{
+				lineNumber: 1,
+				expression: '元金 = 1000',
+				isComment: false,
+				isAssignment: true,
+				variable: '元金'
+			},
+			{
+				lineNumber: 2,
+				expression: '利率 = 0.05',
+				isComment: false,
+				isAssignment: true,
+				variable: '利率'
+			},
+			{
+				lineNumber: 3,
+				expression: '年数 = 10',
+				isComment: false,
+				isAssignment: true,
+				variable: '年数'
+			},
+			{
+				lineNumber: 4,
+				expression: '元金 * (1 + 利率)^年数',
+				isComment: false,
+				isAssignment: false
+			}
+		];
+
+		// Evaluate all lines in order
+		lines.slice(0, 3).forEach((line) => evaluator.evaluateLine(line));
 
 		// The last line should calculate compound interest: 1000 * (1.05)^10 ≈ 1628.89
 		const result = evaluator.evaluateLine(lines[3]);

@@ -176,9 +176,39 @@ class CalcParser {
 // Evaluator: Process expressions with mathjs
 class CalcEvaluator {
 	private scope: Record<string, any> = {};
+	// Map Unicode variable names to ASCII internal names (math.js only supports ASCII)
+	private unicodeToAscii: Map<string, string> = new Map();
+	private varCounter = 0;
 
 	reset() {
 		this.scope = {};
+		this.unicodeToAscii.clear();
+		this.varCounter = 0;
+	}
+
+	// Check if a variable name contains non-ASCII characters
+	private isUnicodeVar(name: string): boolean {
+		return /[^\x00-\x7F]/.test(name);
+	}
+
+	// Get or create an ASCII alias for a Unicode variable name
+	private getAsciiAlias(unicodeName: string): string {
+		if (!this.unicodeToAscii.has(unicodeName)) {
+			this.unicodeToAscii.set(unicodeName, `_uvar${this.varCounter++}`);
+		}
+		return this.unicodeToAscii.get(unicodeName)!;
+	}
+
+	// Rewrite an expression, replacing Unicode variable names with ASCII aliases
+	private rewriteExpression(expr: string): string {
+		// Match Unicode identifiers: starts with letter or underscore, followed by letters/numbers/underscores
+		// This regex matches any word that contains non-ASCII characters
+		return expr.replace(/[\p{L}_][\p{L}\p{N}_]*/gu, (match) => {
+			if (this.isUnicodeVar(match)) {
+				return this.getAsciiAlias(match);
+			}
+			return match;
+		});
 	}
 
 	evaluateLine(parsedLine: ParsedLine): EvaluationResult {
@@ -192,7 +222,9 @@ class CalcEvaluator {
 		}
 
 		try {
-			const result = math.evaluate(parsedLine.expression, this.scope);
+			// Rewrite expression to replace Unicode variable names with ASCII aliases
+			const rewrittenExpr = this.rewriteExpression(parsedLine.expression);
+			const result = math.evaluate(rewrittenExpr, this.scope);
 
 			// Format and return result (including for assignments)
 			return {
