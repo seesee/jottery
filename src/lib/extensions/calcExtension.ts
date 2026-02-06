@@ -45,7 +45,8 @@ const calcLanguage = StreamLanguage.define({
 		}
 
 		// Words (functions, constants, variables, units)
-		const wordMatch = stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
+		// Support Unicode identifiers (letters from any language) for international variable names
+		const wordMatch = stream.match(/^[\p{L}_][\p{L}\p{N}_]*/u);
 		if (wordMatch && typeof wordMatch !== 'boolean') {
 			const word = wordMatch[0];
 			if (BUILTIN_FUNCTIONS.has(word)) {
@@ -160,7 +161,8 @@ class CalcParser {
 
 	parseAssignment(text: string): { variable: string; expression: string } | null {
 		// Match pattern: identifier = expression
-		const match = text.match(/^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/);
+		// Support Unicode identifiers (letters from any language) using Unicode property escapes
+		const match = text.match(/^\s*([\p{L}_][\p{L}\p{N}_]*)\s*=\s*(.+)$/u);
 		if (match) {
 			return {
 				variable: match[1],
