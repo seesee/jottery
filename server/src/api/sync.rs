@@ -13,6 +13,7 @@ use crate::{
         AttachmentRef, SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
         SyncPullResponse, SyncPushRequest, SyncPushResponse, SyncRejected, SyncStatusResponse,
     },
+    utils::validation,
     AppState,
 };
 
@@ -139,6 +140,9 @@ pub async fn push(
             );
             continue;
         }
+
+        // Validate note content size
+        validation::validate_note_content(&note.content, &state.config)?;
 
         // Check if note exists for this user (across all their devices)
         let existing = sqlx::query!(
