@@ -1102,6 +1102,8 @@
     "pinNote": "Pin/unpin selected note",
     "closeNote": "Close note",
     "copyNote": "Copy note content",
+    "versionHistory": "Version history",
+    "noteInfo": "Note info",
     "findInNote": "Find in note (CodeMirror)",
     "replaceInNote": "Replace in note (CodeMirror)",
     "macNote": "On macOS, use Cmd instead of Ctrl.",

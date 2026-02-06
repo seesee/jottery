@@ -581,6 +581,8 @@
     "pinNote": "PIN/UNPIN SELECTED NOTE",
     "closeNote": "CLOSE NOTE",
     "copyNote": "COPY NOTE CONTENT",
+    "versionHistory": "VERSION HISTORY",
+    "noteInfo": "NOTE INFO",
     "findInNote": "FIND IN NOTE (CODEMIRROR)",
     "replaceInNote": "REPLACE IN NOTE (CODEMIRROR)",
     "macNote": "ON MACOS, USE CMD INSTEAD OF CTRL.",
