@@ -12,6 +12,7 @@ use crate::{
     models::{
         CreateInboxItemRequest, CreateInboxItemResponse, InboxItemResponse, InboxStatusResponse,
     },
+    utils::validation,
     AppState,
 };
 
@@ -25,9 +26,12 @@ pub async fn create_item(
     InboxAuthUser(auth): InboxAuthUser,
     Json(req): Json<CreateInboxItemRequest>,
 ) -> AppResult<(StatusCode, Json<CreateInboxItemResponse>)> {
-    // Validate content is not empty
-    if req.content.trim().is_empty() {
-        return Err(AppError::BadRequest("Content must not be empty".to_string()));
+    // Validate content (not empty and within size limits)
+    validation::validate_inbox_content(&req.content, &state.config)?;
+
+    // Validate tags if provided
+    if let Some(tags) = &req.tags {
+        validation::validate_tags(tags, &state.config)?;
     }
 
     // Get user quota limits

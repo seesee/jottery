@@ -27,6 +27,13 @@ pub struct Config {
 
     // Security headers
     pub enable_hsts: bool, // Strict-Transport-Security (only enable for HTTPS deployments)
+
+    // Input validation limits
+    pub max_device_name_length: usize,
+    pub max_inbox_content_size: usize,
+    pub max_note_content_size: usize,
+    pub max_tag_length: usize,
+    pub max_tags_per_note: usize,
 }
 
 impl Config {
@@ -101,6 +108,28 @@ impl Config {
                 .unwrap_or_else(|_| "false".to_string())
                 .to_lowercase()
                 == "true",
+
+            // Input validation limits
+            max_device_name_length: env::var("MAX_DEVICE_NAME_LENGTH")
+                .unwrap_or_else(|_| "255".to_string())
+                .parse()
+                .unwrap_or(255),
+            max_inbox_content_size: env::var("MAX_INBOX_CONTENT_SIZE")
+                .unwrap_or_else(|_| "1048576".to_string()) // 1MB
+                .parse()
+                .unwrap_or(1_048_576),
+            max_note_content_size: env::var("MAX_NOTE_CONTENT_SIZE")
+                .unwrap_or_else(|_| "10485760".to_string()) // 10MB
+                .parse()
+                .unwrap_or(10_485_760),
+            max_tag_length: env::var("MAX_TAG_LENGTH")
+                .unwrap_or_else(|_| "100".to_string())
+                .parse()
+                .unwrap_or(100),
+            max_tags_per_note: env::var("MAX_TAGS_PER_NOTE")
+                .unwrap_or_else(|_| "50".to_string())
+                .parse()
+                .unwrap_or(50),
         })
     }
 }

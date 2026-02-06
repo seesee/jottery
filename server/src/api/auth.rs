@@ -14,6 +14,7 @@ use crate::{
     utils::{
         crypto::hash_sha256,
         password::{hash_password_with_params, validate_password_strength, verify_password},
+        validation,
     },
     AppState,
 };
@@ -90,6 +91,9 @@ pub async fn register_device(
         req.email,
         req.device_name
     );
+
+    // Validate device name
+    validation::validate_device_name(&req.device_name, &state.config)?;
 
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
@@ -188,12 +192,8 @@ pub async fn clone_device(
         req.device_type
     );
 
-    // Validate device name is not empty
-    if req.device_name.trim().is_empty() {
-        return Err(crate::error::AppError::BadRequest(
-            "Device name cannot be empty".to_string(),
-        ));
-    }
+    // Validate device name
+    validation::validate_device_name(&req.device_name, &state.config)?;
 
     // Hash the provided API key to look up the source device
     let hashed_key = hash_sha256(&req.api_key);
@@ -421,7 +421,20 @@ fn is_valid_email(email: &str) -> bool {
     }
 
     // Use RFC-compliant email validation
-    email_address::EmailAddress::is_valid(email)
+    if !email_address::EmailAddress::is_valid(email) {
+        return false;
+    }
+
+    // Additional practical check: require at least one dot in the domain
+    // This rejects technically valid but practically unusable addresses like "user@localhost"
+    if let Some(at_pos) = email.rfind('@') {
+        let domain = &email[at_pos + 1..];
+        if !domain.contains('.') {
+            return false;
+        }
+    }
+
+    true
 }
 
 #[cfg(test)]
@@ -444,6 +457,10 @@ mod tests {
         assert!(!is_valid_email("user@domain..com"));
         assert!(!is_valid_email(""));
         assert!(!is_valid_email("   "));
+
+        // Require TLD (dot in domain) - reject single-label domains
+        assert!(!is_valid_email("user@localhost"));
+        assert!(!is_valid_email("user@domain"));
 
         // RFC length limit (254 chars max)
         let long_local = "a".repeat(64);

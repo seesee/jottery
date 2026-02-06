@@ -59,6 +59,11 @@ fn test_config() -> jottery_server::config::Config {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     }
 }
 

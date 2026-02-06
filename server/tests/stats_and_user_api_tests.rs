@@ -175,6 +175,11 @@ async fn test_admin_stats_requires_authentication() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -226,6 +231,11 @@ async fn test_admin_stats_success() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -297,6 +307,11 @@ async fn test_user_login_success() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -361,6 +376,11 @@ async fn test_user_login_wrong_password() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -418,6 +438,11 @@ async fn test_user_login_nonexistent_user() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -474,6 +499,11 @@ async fn test_get_account_info_success() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -561,6 +591,11 @@ async fn test_get_account_info_requires_authentication() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -614,6 +649,11 @@ async fn test_delete_all_notes_success() {
         default_max_upload_size_mb: 5,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
