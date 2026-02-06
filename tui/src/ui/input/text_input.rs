@@ -66,35 +66,3 @@ pub fn handle_text_input(key: &KeyEvent, input: &mut String) -> TextInputResult 
     }
 }
 
-/// Handle text input with a callback for input changes.
-///
-/// Same as `handle_text_input` but calls `on_change` when the input is modified.
-/// Useful when you need to update other state when input changes (e.g., clear completions).
-#[allow(dead_code)]
-pub fn handle_text_input_with_callback<F>(
-    key: &KeyEvent,
-    input: &mut String,
-    on_change: F,
-) -> TextInputResult
-where
-    F: FnOnce(),
-{
-    match key.code {
-        KeyCode::Enter => TextInputResult::Submit,
-        KeyCode::Esc => {
-            input.clear();
-            TextInputResult::Cancel
-        }
-        KeyCode::Backspace => {
-            input.pop();
-            on_change();
-            TextInputResult::Continue
-        }
-        KeyCode::Char(c) => {
-            input.push(c);
-            on_change();
-            TextInputResult::Continue
-        }
-        _ => TextInputResult::Unhandled,
-    }
-}

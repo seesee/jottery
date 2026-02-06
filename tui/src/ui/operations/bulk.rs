@@ -72,43 +72,6 @@ pub fn add_tags_to_selected(app: &mut App, tags: &[String]) -> Result<usize> {
     Ok(updated_count)
 }
 
-/// Remove tags from all selected notes
-#[allow(dead_code)]
-pub fn remove_tags_from_selected(app: &mut App, tags: &[String]) -> Result<usize> {
-    if tags.is_empty() || app.selected_note_ids.is_empty() {
-        return Ok(0);
-    }
-
-    let db = app.db.as_ref().context("Database not available")?;
-    let key = app.key.as_ref().context("Key not available")?;
-    let repo = NoteRepository::new(db.connection());
-
-    let selected_ids: Vec<String> = app.selected_note_ids.iter().cloned().collect();
-    let tags_lower: Vec<String> = tags.iter().map(|t| t.to_lowercase()).collect();
-    let mut updated_count = 0;
-
-    for note_id in &selected_ids {
-        if let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) {
-            let original_count = note.tags.len();
-
-            // Remove matching tags (case-insensitive)
-            note.tags.retain(|t| !tags_lower.contains(&t.to_lowercase()));
-
-            if note.tags.len() != original_count {
-                note.modified_at = Utc::now();
-                note.version += 1;
-                repo.update(note, key)?;
-                updated_count += 1;
-            }
-        }
-    }
-
-    // Clear multi-selection
-    app.clear_multi_selection();
-
-    Ok(updated_count)
-}
-
 /// Delete all selected notes (soft delete)
 pub fn delete_selected(app: &mut App) -> Result<usize> {
     if app.selected_note_ids.is_empty() {
@@ -177,24 +140,6 @@ pub fn export_selected(app: &App, path: &Path) -> Result<usize> {
     fs::write(path, json)?;
 
     Ok(count)
-}
-
-/// Get all unique tags from selected notes (for remove tags dialog)
-#[allow(dead_code)]
-pub fn get_tags_from_selected(app: &App) -> Vec<String> {
-    let mut tags = std::collections::HashSet::new();
-
-    for note in &app.notes {
-        if app.selected_note_ids.contains(&note.id) {
-            for tag in &note.tags {
-                tags.insert(tag.clone());
-            }
-        }
-    }
-
-    let mut tags: Vec<String> = tags.into_iter().collect();
-    tags.sort_by_key(|a| a.to_lowercase());
-    tags
 }
 
 /// Build combined content from notes (used by combine_selected)

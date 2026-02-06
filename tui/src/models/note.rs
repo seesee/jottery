@@ -195,13 +195,6 @@ impl Note {
         self.touch();
     }
 
-    /// Toggle pinned status
-    #[allow(dead_code)]
-    pub fn toggle_pin(&mut self) {
-        self.pinned = !self.pinned;
-        self.touch();
-    }
-
     /// Toggle locked status
     pub fn toggle_lock(&mut self) {
         self.locked = !self.locked;
@@ -215,20 +208,6 @@ impl Note {
     }
 }
 
-impl Attachment {
-    /// Create a new attachment reference
-    #[allow(dead_code)]
-    pub fn new(filename: String, mime_type: String, size: i64, data: String) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            filename,
-            mime_type,
-            size,
-            data,
-            thumbnail_data: None,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
