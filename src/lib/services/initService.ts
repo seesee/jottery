@@ -18,6 +18,7 @@ import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
 import { clearAllStores } from './db';
+import { syncService } from './syncService';
 
 /**
  * Check if the application has been initialized
@@ -435,40 +436,48 @@ export async function restoreFromBackup(
 
   console.log('[RestoreFromBackup] Password verified successfully');
 
-  // Step 2: Clear existing data to make room for restore
-  console.log('[RestoreFromBackup] Clearing existing data...');
+  // Disable sync during restore to prevent interference
+  syncService.setRestoreInProgress(true);
+
   try {
-    await clearAllStores();
-  } catch (error) {
-    console.warn('[RestoreFromBackup] Failed to clear stores (continuing anyway):', error);
-  }
-
-  // Step 3: Store the master key BEFORE restoring (repositories need it for encryption)
-  const masterKey: MasterKey = {
-    key: verification.key,
-    keyBytes: verification.keyBytes,
-    derivedAt: Date.now(),
-  };
-
-  keyManager.setMasterKey(masterKey);
-  console.log('[RestoreFromBackup] Master key stored in keyManager');
-
-  // Step 4: Restore all data from backup (passing the keyBytes for JWE decryption)
-  console.log('[RestoreFromBackup] Restoring data...');
-  await restoreBackupData(backup, verification.keyBytes, onProgress);
-
-  // Step 5: Log restored sync configuration for debugging
-  try {
-    const syncMetadata = await syncRepository.getMetadata();
-    if (syncMetadata?.syncEnabled) {
-      console.log('[RestoreFromBackup] Restored sync configuration:');
-      console.log('  - Sync enabled:', syncMetadata.syncEnabled);
-      console.log('  - Sync endpoint:', syncMetadata.syncEndpoint || '(not set)');
-      console.log('  - Client ID:', syncMetadata.clientId || '(not set)');
-      console.log('  - Has API key:', !!syncMetadata.apiKey);
+    // Step 2: Clear existing data to make room for restore
+    console.log('[RestoreFromBackup] Clearing existing data...');
+    try {
+      await clearAllStores();
+    } catch (error) {
+      console.warn('[RestoreFromBackup] Failed to clear stores (continuing anyway):', error);
     }
-  } catch (error) {
-    console.warn('[RestoreFromBackup] Could not read sync metadata:', error);
+
+    // Step 3: Store the master key BEFORE restoring (repositories need it for encryption)
+    const masterKey: MasterKey = {
+      key: verification.key,
+      keyBytes: verification.keyBytes,
+      derivedAt: Date.now(),
+    };
+
+    keyManager.setMasterKey(masterKey);
+    console.log('[RestoreFromBackup] Master key stored in keyManager');
+
+    // Step 4: Restore all data from backup (passing the keyBytes for JWE decryption)
+    console.log('[RestoreFromBackup] Restoring data...');
+    await restoreBackupData(backup, verification.keyBytes, onProgress);
+
+    // Step 5: Log restored sync configuration for debugging
+    try {
+      const syncMetadata = await syncRepository.getMetadata();
+      if (syncMetadata?.syncEnabled) {
+        console.log('[RestoreFromBackup] Restored sync configuration:');
+        console.log('  - Sync enabled:', syncMetadata.syncEnabled);
+        console.log('  - Sync endpoint:', syncMetadata.syncEndpoint || '(not set)');
+        console.log('  - Client ID:', syncMetadata.clientId || '(not set)');
+        console.log('  - Has API key:', !!syncMetadata.apiKey);
+      }
+    } catch (error) {
+      console.warn('[RestoreFromBackup] Could not read sync metadata:', error);
+    }
+  } finally {
+    // Re-enable sync after restore completes (or fails)
+    syncService.setRestoreInProgress(false);
   }
 
   // Step 6: Setup auto-lock based on restored settings
