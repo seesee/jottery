@@ -9,7 +9,7 @@ export { passwordStorageService } from './passwordStorageService';
 export { sessionStorageService } from './sessionStorageService';
 
 // Database
-export { initDB, getDB, closeDB, deleteDB, STORES } from './db';
+export { initDB, getDB, closeDB, deleteDB, clearAllStores, STORES } from './db';
 
 // Repositories
 export { noteRepository } from './noteRepository';

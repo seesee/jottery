@@ -401,6 +401,28 @@ export function closeDB(): void {
 }
 
 /**
+ * Clear all data from all stores (for restore operations)
+ * This is faster than deleting and recreating the database
+ */
+export async function clearAllStores(): Promise<void> {
+  const db = getDB();
+  const storeNames = Object.values(STORES);
+
+  console.log('[DB] Clearing all stores:', storeNames);
+
+  for (const storeName of storeNames) {
+    try {
+      await db.clear(storeName);
+      console.log(`[DB] Cleared store: ${storeName}`);
+    } catch (error) {
+      console.warn(`[DB] Failed to clear store ${storeName}:`, error);
+    }
+  }
+
+  console.log('[DB] All stores cleared');
+}
+
+/**
  * Delete the entire database (for testing or reset)
  */
 export async function deleteDB(): Promise<void> {
