@@ -1245,7 +1245,14 @@ export async function restoreBatchedBackup(
   }
 
   // 1. Restore encryption metadata first
-  await encryptionRepository.setMetadata(backup.encryption);
+  console.log('[backupService] Restoring encryption metadata...');
+  try {
+    await encryptionRepository.setMetadata(backup.encryption);
+    console.log('[backupService] Encryption metadata restored');
+  } catch (error) {
+    console.error('[backupService] Failed to restore encryption metadata:', error);
+    throw error; // Can't continue without encryption metadata
+  }
 
   onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
 
@@ -1271,11 +1278,13 @@ export async function restoreBatchedBackup(
 
   // 2. First pass: collect all referenced attachment IDs from notes and versions
   //    This lets us skip orphaned attachments during restore
+  console.log('[backupService] Scanning batches for referenced attachments...');
   const referencedAttachmentIds = new Set<string>();
 
   for (const batch of backup.batches) {
     if (batch.type === 'notes' || batch.type === 'versions') {
       try {
+        console.log(`[backupService] Scanning ${batch.type} batch (${batch.count} items)...`);
         const items = await decryptBatch<Note | NoteVersion>(batch.data, keyBytes);
         for (const item of items) {
           if (item.attachments) {
@@ -1293,10 +1302,12 @@ export async function restoreBatchedBackup(
   console.log(`[backupService] Found ${referencedAttachmentIds.size} referenced attachment IDs`);
 
   // 3. Second pass: restore all data, skipping orphaned attachments
+  console.log(`[backupService] Starting restore of ${backup.batches.length} batches...`);
   for (let i = 0; i < backup.batches.length; i++) {
     const batch = backup.batches[i];
 
     try {
+      console.log(`[backupService] Restoring batch ${i + 1}/${backup.batches.length}: ${batch.type} (${batch.count} items)`);
       onProgress?.({ phase: 'decrypting', current: i, total: totalBatches });
 
       // Decrypt and decompress the batch
