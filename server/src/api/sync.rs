@@ -795,8 +795,9 @@ pub async fn pull(
     };
 
     // Group attachments by note_id for O(1) lookup
+    // Pre-allocate capacity based on number of notes to avoid reallocations
     let mut attachments_by_note: std::collections::HashMap<String, Vec<crate::models::AttachmentRef>> =
-        std::collections::HashMap::new();
+        std::collections::HashMap::with_capacity(db_notes.len());
     let mut needed_attachments = Vec::new();
 
     for (id, note_id, filename, mime_type, size, _created_at) in all_attachments {
