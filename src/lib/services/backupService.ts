@@ -1249,7 +1249,7 @@ export async function restoreBatchedBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
 
-  // Track skipped items for summary at end (due to quota errors)
+  // Track skipped items for summary at end
   const skippedItems: Record<string, number> = {};
 
   // Helper to store item with quota error handling
@@ -1269,7 +1269,30 @@ export async function restoreBatchedBackup(
     }
   };
 
-  // 2. Process each batch
+  // 2. First pass: collect all referenced attachment IDs from notes and versions
+  //    This lets us skip orphaned attachments during restore
+  const referencedAttachmentIds = new Set<string>();
+
+  for (const batch of backup.batches) {
+    if (batch.type === 'notes' || batch.type === 'versions') {
+      try {
+        const items = await decryptBatch<Note | NoteVersion>(batch.data, keyBytes);
+        for (const item of items) {
+          if (item.attachments) {
+            for (const att of item.attachments) {
+              referencedAttachmentIds.add(att.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`[backupService] Could not scan ${batch.type} batch for attachment refs:`, error);
+      }
+    }
+  }
+
+  console.log(`[backupService] Found ${referencedAttachmentIds.size} referenced attachment IDs`);
+
+  // 3. Second pass: restore all data, skipping orphaned attachments
   for (let i = 0; i < backup.batches.length; i++) {
     const batch = backup.batches[i];
 
@@ -1292,6 +1315,11 @@ export async function restoreBatchedBackup(
         case 'attachments':
           for (const item of items) {
             const attachment = item as AttachmentRecord;
+            // Skip orphaned attachments (not referenced by any note or version)
+            if (!referencedAttachmentIds.has(attachment.id)) {
+              skippedItems['orphaned_attachments'] = (skippedItems['orphaned_attachments'] || 0) + 1;
+              continue;
+            }
             await storeWithQuotaHandling('attachments', async () => {
               const blob = base64ToArrayBuffer(attachment.blob);
               await attachmentRepository.storeBlob(attachment.id, blob);
@@ -1350,11 +1378,14 @@ export async function restoreBatchedBackup(
   // Log summary if there were any skipped items
   const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
   if (totalSkipped > 0) {
-    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items due to browser storage quota:`);
+    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items:`);
     for (const [type, count] of Object.entries(skippedItems)) {
-      console.log(`  - ${type}: ${count} skipped`);
+      if (type === 'orphaned_attachments') {
+        console.log(`  - ${count} orphaned attachments (not referenced by any note)`);
+      } else {
+        console.log(`  - ${type}: ${count} skipped (storage quota)`);
+      }
     }
-    console.log('[backupService] Skipped items may re-sync from server if sync is enabled.');
   }
 
   onProgress?.({ phase: 'complete' });
