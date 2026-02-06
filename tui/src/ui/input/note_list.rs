@@ -204,8 +204,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // If completions are showing and one is selected, use it
                 if !app.path_completions.is_empty() && app.path_completion_index < app.path_completions.len() {
                     app.attachment_path_input = app.path_completions[app.path_completion_index].clone();
-                    app.path_completions.clear();
-                    app.path_completion_index = 0;
+                    app.reset_path_completions();
                     // If it's a directory, show its contents
                     if app.attachment_path_input.ends_with('/') {
                         app.path_completions = operations::attachments::get_path_completions(&app.attachment_path_input);
@@ -214,8 +213,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     // Add attachment from file path
                     let path = app.attachment_path_input.clone();
                     app.attachment_path_input.clear();
-                    app.path_completions.clear();
-                    app.path_completion_index = 0;
+                    app.reset_path_completions();
                     app.input_mode = InputMode::Normal;
 
                     if !path.is_empty() {
@@ -228,8 +226,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Esc => {
                 // Cancel attachment input
                 app.attachment_path_input.clear();
-                app.path_completions.clear();
-                app.path_completion_index = 0;
+                app.reset_path_completions();
                 app.input_mode = InputMode::Normal;
             }
             KeyCode::Tab => {
@@ -272,14 +269,12 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Backspace => {
                 app.attachment_path_input.pop();
                 // Clear completions when input changes
-                app.path_completions.clear();
-                app.path_completion_index = 0;
+                app.reset_path_completions();
             }
             KeyCode::Char(c) => {
                 app.attachment_path_input.push(c);
                 // Clear completions when input changes
-                app.path_completions.clear();
-                app.path_completion_index = 0;
+                app.reset_path_completions();
             }
             _ => {}
         }

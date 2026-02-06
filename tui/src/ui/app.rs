@@ -716,6 +716,12 @@ impl App {
         self.last_selected_index = None;
     }
 
+    /// Reset path completions state
+    pub fn reset_path_completions(&mut self) {
+        self.path_completions.clear();
+        self.path_completion_index = 0;
+    }
+
     /// Filter notes based on search query and sort (pinned first, then by modified date)
     pub fn filtered_notes(&self) -> Vec<&Note> {
         let mut notes: Vec<&Note> = if self.search_input.is_empty() {
