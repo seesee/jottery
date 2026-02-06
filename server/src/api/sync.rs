@@ -685,30 +685,11 @@ pub async fn pull(
         offset
     );
 
-    // Get total count first (for pagination metadata)
-    let total_count: i64 = if let Some(last_sync) = &pull_req.last_sync_at {
-        let count_result = sqlx::query!(
-            "SELECT COUNT(*) as count FROM notes WHERE user_id = ? AND server_modified_at > ?",
-            client_info.user_id,
-            last_sync
-        )
-        .fetch_one(&state.pool)
-        .await?;
-        count_result.count as i64
-    } else {
-        let count_result = sqlx::query!(
-            "SELECT COUNT(*) as count FROM notes WHERE user_id = ?",
-            client_info.user_id
-        )
-        .fetch_one(&state.pool)
-        .await?;
-        count_result.count as i64
-    };
-
-    // Get notes with pagination (LIMIT/OFFSET)
-    let db_notes: Vec<crate::models::Note> = if let Some(last_sync) = &pull_req.last_sync_at {
+    // Get notes with pagination and total count in a single query using window function
+    // COUNT(*) OVER() gives us the total matching rows without a separate query
+    let (db_notes, total_count): (Vec<crate::models::Note>, i64) = if let Some(last_sync) = &pull_req.last_sync_at {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            r#"SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain, COUNT(*) OVER() as "total_count!: i64" FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?"#,
             client_info.user_id,
             last_sync,
             limit,
@@ -717,8 +698,9 @@ pub async fn pull(
         .fetch_all(&state.pool)
         .await?;
 
-        rows.into_iter()
-            .filter_map(|row| Some(crate::models::Note {
+        let total = rows.first().map(|r| r.total_count).unwrap_or(0);
+        let notes = rows.into_iter()
+            .map(|row| crate::models::Note {
                 id: row.id,
                 client_id: row.client_id,
                 created_at: row.created_at,
@@ -742,11 +724,12 @@ pub async fn pull(
                 content_hash: row.content_hash,
                 parent_hash: row.parent_hash,
                 hash_chain: row.hash_chain,
-            }))
-            .collect()
+            })
+            .collect();
+        (notes, total)
     } else {
         let rows = sqlx::query!(
-            "SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?",
+            r#"SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain, COUNT(*) OVER() as "total_count!: i64" FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?"#,
             client_info.user_id,
             limit,
             offset
@@ -754,8 +737,9 @@ pub async fn pull(
         .fetch_all(&state.pool)
         .await?;
 
-        rows.into_iter()
-            .filter_map(|row| Some(crate::models::Note {
+        let total = rows.first().map(|r| r.total_count).unwrap_or(0);
+        let notes = rows.into_iter()
+            .map(|row| crate::models::Note {
                 id: row.id,
                 client_id: row.client_id,
                 created_at: row.created_at,
@@ -779,8 +763,9 @@ pub async fn pull(
                 content_hash: row.content_hash,
                 parent_hash: row.parent_hash,
                 hash_chain: row.hash_chain,
-            }))
-            .collect()
+            })
+            .collect();
+        (notes, total)
     };
 
     // Calculate if there are more pages
