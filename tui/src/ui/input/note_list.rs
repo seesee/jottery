@@ -3,7 +3,6 @@
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
-use std::collections::HashSet;
 
 use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
@@ -25,22 +24,7 @@ fn get_search_tag_partial(input: &str) -> Option<(String, usize)> {
 
 /// Get search tag completions matching the current partial
 fn get_search_tag_completions(app: &App, partial: &str) -> Vec<String> {
-    // Require at least one character to start completing
-    if partial.is_empty() {
-        return Vec::new();
-    }
-    let partial_lower = partial.to_lowercase();
-    let mut all_tags: HashSet<String> = HashSet::new();
-    for note in &app.notes {
-        for tag in &note.tags {
-            if tag.to_lowercase().starts_with(&partial_lower) {
-                all_tags.insert(tag.clone());
-            }
-        }
-    }
-    let mut tags: Vec<String> = all_tags.into_iter().collect();
-    tags.sort();
-    tags
+    app.get_matching_tags(partial)
 }
 
 /// Cycle through colors in the palette
@@ -286,6 +270,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Esc => {
                 app.search_active = false;
                 app.search_input.clear();
+                app.invalidate_filter_cache();
                 app.selected_note = 0;
                 // Clear tag completions
                 app.search_tag_completions.clear();
@@ -362,6 +347,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Char(c) => {
                 app.search_input.push(c);
+                app.invalidate_filter_cache();
                 app.selected_note = 0; // Reset selection when search changes
                 let filtered = app.filtered_notes();
                 app.selected_note_id = filtered.first().map(|n| n.id.clone());
@@ -371,6 +357,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             KeyCode::Backspace => {
                 app.search_input.pop();
+                app.invalidate_filter_cache();
                 app.selected_note = 0;
                 let filtered = app.filtered_notes();
                 app.selected_note_id = filtered.first().map(|n| n.id.clone());
@@ -412,6 +399,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         let completion = &app.search_tag_completions[app.search_tag_completion_index];
                         // Replace the partial with the full tag
                         app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
+                        app.invalidate_filter_cache();
                         app.selected_note = 0;
                         let filtered = app.filtered_notes();
                         app.selected_note_id = filtered.first().map(|n| n.id.clone());
@@ -440,6 +428,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                         let completion = &app.search_tag_completions[app.search_tag_completion_index];
                         app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
+                        app.invalidate_filter_cache();
                         app.selected_note = 0;
                         let filtered = app.filtered_notes();
                         app.selected_note_id = filtered.first().map(|n| n.id.clone());
@@ -563,6 +552,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     app.search_active = true;
                     app.search_input.clear();
+                    app.invalidate_filter_cache();
                 }
             }
             KeyCode::Char('n') => {
@@ -1014,9 +1004,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Shift+A: Toggle archive mode (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     app.archive_mode = !app.archive_mode;
+                    app.invalidate_filter_cache();
                     app.selected_note = 0;
                     app.preview_scroll_offset = 0;
-                    // Note filtering will happen automatically via filtered_notes()
                 }
             }
             KeyCode::Char('a') if app.archive_mode && key.modifiers.is_empty() => {
@@ -1099,6 +1089,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 } else if app.archive_mode {
                     // Exit archive mode
                     app.archive_mode = false;
+                    app.invalidate_filter_cache();
                     app.selected_note = 0;
                     app.preview_scroll_offset = 0;
                 } else if matches!(app.view_mode, ViewMode::AttachmentViewer) {

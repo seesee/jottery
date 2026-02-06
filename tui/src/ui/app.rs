@@ -28,6 +28,7 @@ use rust_i18n::t;
 use ratatui::Frame;
 use zeroize::Zeroize;
 use std::{
+    cell::RefCell,
     collections::HashSet,
     fs::File,
     io::Write,
@@ -245,6 +246,11 @@ pub struct App {
     pub color_scheme: crate::ui::ColorScheme,
     /// Cached color palette names (for color cycling without allocation)
     pub(crate) color_palette_cache: Vec<String>,
+    /// Cached unique tags from all notes (for fast tag completion)
+    pub(crate) all_tags_cache: Vec<String>,
+    /// Cached filtered note IDs (for avoiding repeated filtering/sorting)
+    /// Uses RefCell for interior mutability so filtered_notes(&self) can update cache
+    filtered_notes_cache: RefCell<Option<Vec<String>>>,
     /// Selected attachment index in preview pane
     pub selected_attachment: usize,
     /// Which panel is focused in preview pane (content or attachments)
@@ -387,6 +393,8 @@ impl App {
             sync_status_set_at: None,
             color_scheme: crate::ui::ColorScheme::default(),
             color_palette_cache: Vec::new(), // Populated when settings are loaded
+            all_tags_cache: Vec::new(), // Populated when notes are loaded
+            filtered_notes_cache: RefCell::new(None), // Populated on first access, invalidated on changes
             selected_attachment: 0,
             focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
@@ -816,6 +824,42 @@ impl App {
         &self.color_palette_cache
     }
 
+    /// Refresh the all tags cache from current notes
+    pub fn refresh_all_tags_cache(&mut self) {
+        use std::collections::HashSet;
+        let mut unique_tags: HashSet<String> = HashSet::new();
+        for note in &self.notes {
+            for tag in &note.tags {
+                unique_tags.insert(tag.clone());
+            }
+        }
+        self.all_tags_cache = unique_tags.into_iter().collect();
+        self.all_tags_cache.sort();
+    }
+
+    /// Get tags matching a prefix (case-insensitive) from the cache
+    pub fn get_matching_tags(&self, prefix: &str) -> Vec<String> {
+        if prefix.is_empty() {
+            return Vec::new();
+        }
+        let prefix_lower = prefix.to_lowercase();
+        self.all_tags_cache
+            .iter()
+            .filter(|tag| tag.to_lowercase().starts_with(&prefix_lower))
+            .cloned()
+            .collect()
+    }
+
+    /// Invalidate the filtered notes cache
+    ///
+    /// Call this when any of these change:
+    /// - search_input
+    /// - archive_mode
+    /// - notes (load, add, delete, modify)
+    pub fn invalidate_filter_cache(&self) {
+        *self.filtered_notes_cache.borrow_mut() = None;
+    }
+
     /// Sort notes by pinned status first (pinned at top), then by modified_at descending
     pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
         notes.sort_by(|a, b| {
@@ -828,7 +872,22 @@ impl App {
     }
 
     /// Filter notes based on search query and sort (pinned first, then by modified date)
+    ///
+    /// Uses an internal cache to avoid repeated filtering/sorting. The cache is
+    /// automatically invalidated when search_input, archive_mode, or notes change.
     pub fn filtered_notes(&self) -> Vec<&Note> {
+        // Check if we have a valid cache
+        {
+            let cache = self.filtered_notes_cache.borrow();
+            if let Some(cached_ids) = cache.as_ref() {
+                // Rebuild references from cached IDs
+                return cached_ids.iter()
+                    .filter_map(|id| self.notes.iter().find(|n| &n.id == id))
+                    .collect();
+            }
+        }
+
+        // Cache miss - compute filtered notes
         let mut notes: Vec<&Note> = if self.search_input.is_empty() {
             self.notes.iter()
                 .filter(|note| note.archived == self.archive_mode)
@@ -893,6 +952,10 @@ impl App {
 
         // Sort: pinned first, then by modified_at descending
         Self::sort_notes_by_pinned_and_date(&mut notes);
+
+        // Cache the note IDs for future calls
+        let ids: Vec<String> = notes.iter().map(|n| n.id.clone()).collect();
+        *self.filtered_notes_cache.borrow_mut() = Some(ids);
 
         notes
     }
