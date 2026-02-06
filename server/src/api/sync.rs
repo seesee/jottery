@@ -790,20 +790,21 @@ pub async fn pull(
     let note_ids: Vec<&str> = db_notes.iter().map(|n| n.id.as_str()).collect();
 
     // Fetch all attachments for all notes in a single query (avoids N+1 problem)
-    let all_attachments = if !note_ids.is_empty() {
-        // Build placeholders for IN clause
-        let placeholders = note_ids.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
-        let query = format!(
-            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id IN ({})",
-            placeholders
+    // Uses QueryBuilder for type-safe dynamic SQL construction
+    let all_attachments: Vec<(Option<String>, Option<String>, String, String, i64, String)> = if !note_ids.is_empty() {
+        let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id IN ("
         );
-
-        // Execute with dynamic binding
-        let mut query_builder = sqlx::query_as::<_, (Option<String>, Option<String>, String, String, i64, String)>(&query);
+        let mut separated = query_builder.separated(", ");
         for note_id in &note_ids {
-            query_builder = query_builder.bind(*note_id);
+            separated.push_bind(*note_id);
         }
-        query_builder.fetch_all(&state.pool).await?
+        separated.push_unseparated(")");
+
+        query_builder
+            .build_query_as()
+            .fetch_all(&state.pool)
+            .await?
     } else {
         Vec::new()
     };
