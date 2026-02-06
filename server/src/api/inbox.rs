@@ -34,35 +34,32 @@ pub async fn create_item(
         validation::validate_tags(tags, &state.config)?;
     }
 
-    // Get user quota limits
-    let user = sqlx::query!(
-        "SELECT inbox_max_items, inbox_max_size_mb FROM users WHERE id = ?",
+    // Get user quota limits and current usage in a single query
+    let quota_and_usage = sqlx::query!(
+        r#"
+        SELECT
+            u.inbox_max_items,
+            u.inbox_max_size_mb,
+            CAST(COUNT(i.id) AS INTEGER) as "item_count!: i64",
+            CAST(COALESCE(SUM(i.size_bytes), 0) AS INTEGER) as "total_size!: i64"
+        FROM users u
+        LEFT JOIN inbox_items i ON u.id = i.user_id
+        WHERE u.id = ?
+        GROUP BY u.id
+        "#,
         auth.user_id
     )
     .fetch_one(&state.pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to fetch user quota: {}", e);
+        tracing::error!("Failed to fetch quota and usage: {}", e);
         AppError::InternalServerError
     })?;
 
-    let max_items = user.inbox_max_items.unwrap_or(100);
-    let max_size_mb = user.inbox_max_size_mb.unwrap_or(10);
-
-    // Check current usage
-    let usage = sqlx::query!(
-        "SELECT COUNT(*) as count, COALESCE(SUM(size_bytes), 0) as total_size FROM inbox_items WHERE user_id = ?",
-        auth.user_id
-    )
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to fetch inbox usage: {}", e);
-        AppError::InternalServerError
-    })?;
-
-    let current_count = usage.count as i64;
-    let current_size = usage.total_size as i64;
+    let max_items = quota_and_usage.inbox_max_items.unwrap_or(100);
+    let max_size_mb = quota_and_usage.inbox_max_size_mb.unwrap_or(10);
+    let current_count = quota_and_usage.item_count;
+    let current_size = quota_and_usage.total_size;
 
     // Calculate size of new item
     let tags_json = serde_json::to_string(&req.tags.as_deref().unwrap_or(&[]))
