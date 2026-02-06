@@ -18,8 +18,10 @@ pub struct Config {
     pub argon2_p_cost: u32,  // Parallelism (threads)
 
     // User settings
-    pub default_storage_quota_mb: i32,
-    pub default_max_upload_size_mb: i32,
+    pub default_storage_quota_mb: i64,
+    pub default_max_upload_size_mb: i64,
+    pub default_inbox_max_items: i64,
+    pub default_inbox_max_size_mb: i64,
 
     // Password policy
     // Options: "none" (length only), "basic" (2 of 4 classes), "standard" (3 of 4), "strong" (all 4)
@@ -97,6 +99,14 @@ impl Config {
                 .unwrap_or_else(|_| "5".to_string())
                 .parse()
                 .unwrap_or(5),
+            default_inbox_max_items: env::var("DEFAULT_INBOX_MAX_ITEMS")
+                .unwrap_or_else(|_| "100".to_string())
+                .parse()
+                .unwrap_or(100),
+            default_inbox_max_size_mb: env::var("DEFAULT_INBOX_MAX_SIZE_MB")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .unwrap_or(10),
 
             // Password complexity: none, basic, standard (default), strong
             password_complexity: env::var("PASSWORD_COMPLEXITY")

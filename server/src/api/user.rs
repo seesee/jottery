@@ -233,14 +233,14 @@ pub async fn get_account_info(
         note_count: note_count as i64,
         attachment_count: attachment_count as i64,
         storage_used_bytes: storage_used as i64,
-        storage_quota_mb: user.storage_quota_mb.unwrap_or(1000) as i64,
+        storage_quota_mb: user.storage_quota_mb.unwrap_or(state.config.default_storage_quota_mb) as i64,
         created_at: user.created_at,
         last_sync_at: last_sync,
         inbox: InboxAccountInfo {
             item_count: inbox_stats.count as i64,
             total_size_bytes: inbox_stats.total_size as i64,
-            max_items: user.inbox_max_items.unwrap_or(100),
-            max_size_mb: user.inbox_max_size_mb.unwrap_or(10),
+            max_items: user.inbox_max_items.unwrap_or(state.config.default_inbox_max_items),
+            max_size_mb: user.inbox_max_size_mb.unwrap_or(state.config.default_inbox_max_size_mb),
             has_token: user.inbox_token_hash.is_some(),
         },
     }))

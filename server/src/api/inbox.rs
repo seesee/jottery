@@ -56,8 +56,8 @@ pub async fn create_item(
         AppError::InternalServerError
     })?;
 
-    let max_items = quota_and_usage.inbox_max_items.unwrap_or(100);
-    let max_size_mb = quota_and_usage.inbox_max_size_mb.unwrap_or(10);
+    let max_items = quota_and_usage.inbox_max_items.unwrap_or(state.config.default_inbox_max_items);
+    let max_size_mb = quota_and_usage.inbox_max_size_mb.unwrap_or(state.config.default_inbox_max_size_mb);
     let current_count = quota_and_usage.item_count;
     let current_size = quota_and_usage.total_size;
 
@@ -251,7 +251,7 @@ pub async fn get_status(
     Ok(Json(InboxStatusResponse {
         count: usage.count as i64,
         total_size_bytes: usage.total_size as i64,
-        max_items: user.inbox_max_items.unwrap_or(100),
-        max_size_mb: user.inbox_max_size_mb.unwrap_or(10),
+        max_items: user.inbox_max_items.unwrap_or(state.config.default_inbox_max_items),
+        max_size_mb: user.inbox_max_size_mb.unwrap_or(state.config.default_inbox_max_size_mb),
     }))
 }

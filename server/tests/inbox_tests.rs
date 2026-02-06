@@ -57,6 +57,8 @@ fn test_config() -> jottery_server::config::Config {
         argon2_p_cost: 1,
         default_storage_quota_mb: 1000,
         default_max_upload_size_mb: 5,
+            default_inbox_max_items: 100,
+            default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
         max_device_name_length: 255,

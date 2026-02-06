@@ -80,7 +80,7 @@ pub async fn push(
 
     let max_upload_bytes = user
         .map(|u| u.max_upload_size_mb)
-        .unwrap_or(5) as usize * 1024 * 1024;
+        .unwrap_or(state.config.default_max_upload_size_mb) as usize * 1024 * 1024;
 
     // Estimate payload size from attachments (main contributor to size)
     let estimated_size: usize = push_req.attachments.iter()
