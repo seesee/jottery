@@ -90,7 +90,7 @@ async function setAppLanguage(page: any, lang: string) {
   const locale = localeMap[lang] || 'en-GB';
 
   // Open settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
@@ -124,7 +124,7 @@ async function importDemoNotes(page: any, demoFile: string = getDemoNotesFile(LA
   const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
 
   // Open settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
@@ -283,8 +283,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await firstNote.click();
     await page.waitForTimeout(1000);
 
-    // Click Preview button
-    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    // Click Preview button (handle multiple languages)
+    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -314,8 +314,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await travelNote.click();
     await page.waitForTimeout(1000);
 
-    // Click Preview button
-    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    // Click Preview button (handle multiple languages)
+    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -504,7 +504,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -659,8 +659,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await firstNote.click();
     await page.waitForTimeout(1000);
 
-    // Click Preview button
-    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    // Click Preview button (handle multiple languages)
+    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -689,8 +689,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await travelNote.click();
     await page.waitForTimeout(1000);
 
-    // Click Preview button
-    const previewButton = page.locator('button').filter({ hasText: /Preview/i }).first();
+    // Click Preview button (handle multiple languages)
+    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -877,7 +877,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -949,7 +949,7 @@ async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesF
   const demoNotesPath = join(process.cwd(), 'demo-generation', demoFile);
 
   // On mobile, settings is behind the hamburger menu
-  const hamburgerMenu = page.locator('button[aria-label="Menu"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
+  const hamburgerMenu = page.locator('button[aria-label="Menu"], button[aria-label="メニュー"], button[aria-label="Menü"], button[aria-label="Menú"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
   const isHamburgerVisible = await hamburgerMenu.isVisible().catch(() => false);
 
   if (isHamburgerVisible) {
@@ -958,7 +958,7 @@ async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesF
   }
 
   // Now find and click Settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
@@ -1018,7 +1018,7 @@ async function setAppLanguageMobile(page: any, lang: string) {
   const locale = localeMap[lang] || 'en-GB';
 
   // On mobile, settings is behind the hamburger menu
-  const hamburgerMenu = page.locator('button[aria-label="Menu"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
+  const hamburgerMenu = page.locator('button[aria-label="Menu"], button[aria-label="メニュー"], button[aria-label="Menü"], button[aria-label="Menú"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
   const isHamburgerVisible = await hamburgerMenu.isVisible().catch(() => false);
 
   if (isHamburgerVisible) {
@@ -1027,7 +1027,7 @@ async function setAppLanguageMobile(page: any, lang: string) {
   }
 
   // Open settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
@@ -1175,7 +1175,7 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
 
     // Fallback: find blue button with + or the text version
     if (!newButton) {
-      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New/i }).first();
+      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
     }
 
     await newButton.click();
@@ -1365,7 +1365,7 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
 
     // Fallback: find blue button with + or the text version
     if (!newButton) {
-      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New/i }).first();
+      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
     }
 
     await newButton.click();
@@ -1479,7 +1479,7 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -1632,7 +1632,7 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note/i }).first();
+    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -1783,7 +1783,7 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     await page.waitForTimeout(1000);
 
     // Change language to Greek via settings
-    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
     await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
     await settingsButton.click();
     await page.waitForTimeout(500);
@@ -1883,7 +1883,7 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     await page.waitForTimeout(1000);
 
     // Change language to Greek via settings
-    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️/i }).first();
+    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
     await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
     await settingsButton.click();
     await page.waitForTimeout(500);
