@@ -451,6 +451,7 @@
           <button
             on:click={handleShowVersionHistoryClick}
             class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            data-testid="btn-version-history"
           >
             <span>📜</span>
             <span class="flex-1">{$_('editor.versionHistory')}</span>

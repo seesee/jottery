@@ -553,7 +553,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -682,14 +682,9 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click a content-rich note (Python in original demo, Recipe in language-specific)
+    // Find and click the recipe note (always at index 2 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    // Try to find Python QuickSort first (original demo), fall back to 3rd note (recipe in language-specific demos)
-    let contentNote = noteListItems.filter({ hasText: /Python Quick Sort|QuickSort/i }).first();
-    const hasContentNote = await contentNote.isVisible().catch(() => false);
-    if (!hasContentNote) {
-      contentNote = noteListItems.nth(2); // 3rd note (0-indexed) is the recipe
-    }
+    const contentNote = noteListItems.nth(2);
     await contentNote.waitFor({ state: 'visible' });
     await contentNote.click();
     await page.waitForTimeout(1000);
@@ -800,7 +795,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(500);
 
     // Click Version History option (look for 📜 emoji)
-    const versionHistoryButton = page.locator('button').filter({ hasText: /📜/ }).first();
+    const versionHistoryButton = page.locator('[data-testid="btn-version-history"]');
     await versionHistoryButton.waitFor({ state: 'visible', timeout: 5000 });
     await versionHistoryButton.click();
     await page.waitForTimeout(1000);
@@ -913,7 +908,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -1047,13 +1042,9 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click a content-rich note
+    // Find and click the recipe note (always at index 2 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let contentNote = noteListItems.filter({ hasText: /Python Quick Sort|QuickSort/i }).first();
-    const hasContentNote = await contentNote.isVisible().catch(() => false);
-    if (!hasContentNote) {
-      contentNote = noteListItems.nth(2); // 3rd note is the recipe
-    }
+    const contentNote = noteListItems.nth(2);
     await contentNote.waitFor({ state: 'visible' });
     await contentNote.click();
     await page.waitForTimeout(1000);
@@ -1164,7 +1155,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(500);
 
     // Click Version History option (look for 📜 emoji)
-    const versionHistoryButton = page.locator('button').filter({ hasText: /📜/ }).first();
+    const versionHistoryButton = page.locator('[data-testid="btn-version-history"]');
     await versionHistoryButton.waitFor({ state: 'visible', timeout: 5000 });
     await versionHistoryButton.click();
     await page.waitForTimeout(1000);
@@ -1387,7 +1378,7 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -1551,7 +1542,7 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -1715,7 +1706,7 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -1865,7 +1856,7 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -2021,7 +2012,7 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {
@@ -2121,7 +2112,7 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
-    const tryItButton = page.locator('button').filter({ hasText: /Try It Out|Start using/i }).first();
+    const tryItButton = page.locator('[data-testid="btn-try-it"]').first();
     const isTryItVisible = await tryItButton.isVisible().catch(() => false);
 
     if (isTryItVisible) {

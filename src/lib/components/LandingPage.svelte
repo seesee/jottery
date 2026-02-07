@@ -216,6 +216,7 @@
         </p>
         <button
           class="cta-button"
+          data-testid="btn-try-it"
           on:click={onGetStarted}
         >
           {$_('landing.hero.cta')}
@@ -439,6 +440,7 @@
       <p class="cta-subtitle">{$_('landing.finalCta.subtitle')}</p>
       <button
         class="cta-button cta-button-large"
+        data-testid="btn-try-it"
         on:click={onGetStarted}
       >
         {$_('landing.hero.cta')}
