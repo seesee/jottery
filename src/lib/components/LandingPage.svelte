@@ -180,7 +180,7 @@
   // Mobile screenshots - use dynamic paths
   $: mobileScreenshots = [
     { key: 'list', screenshotLight: `${screenshotBase}/06-mobile-list-light.png`, screenshotDark: `${screenshotBase}/06-mobile-list-dark.png` },
-    { key: 'japan', screenshotLight: `${screenshotBase}/07-mobile-japan-light.png`, screenshotDark: `${screenshotBase}/07-mobile-japan-dark.png` },
+    { key: 'travel', screenshotLight: `${screenshotBase}/07-mobile-travel-light.png`, screenshotDark: `${screenshotBase}/07-mobile-travel-dark.png` },
     { key: 'calculator', screenshotLight: `${screenshotBase}/08-mobile-calculator-light.png`, screenshotDark: `${screenshotBase}/08-mobile-calculator-dark.png` },
   ];
 
