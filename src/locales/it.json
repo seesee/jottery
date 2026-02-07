@@ -1158,14 +1158,14 @@
     "merge": "Merge",
     "resolved": "Conflict resolved",
     "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
+    "noConflict": "Nessun dato di conflitto trovato",
     "indicator": "Sync conflict",
     "bannerText": "This note has a sync conflict that needs to be resolved",
     "resolveButton": "Resolve Conflict",
     "syncNotification": "{count, plural, one {1 nota ha un conflitto di sincronizzazione} other {{count} note hanno conflitti di sincronizzazione}}"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
+    "pull": "Scorri verso il basso per sincronizzare",
     "release": "Release to sync",
     "syncing": "Syncing...",
     "region": "Pull to refresh"
@@ -1189,7 +1189,7 @@
     "accepted": "Note accepted",
     "acceptedAll": "All {count} notes accepted",
     "deleted": "Inbox item deleted",
-    "deletedAll": "All inbox items deleted",
+    "deletedAll": "Tutti gli elementi della posta in arrivo eliminati",
     "source": "Source: {source}",
     "untitled": "Untitled",
     "closeLabel": "Close inbox",

@@ -1158,14 +1158,14 @@
     "merge": "Συγχώνευση",
     "resolved": "Η σύγκρουση επιλύθηκε",
     "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
+    "noConflict": "Δεν βρέθηκαν δεδομένα σύγκρουσης",
     "indicator": "Sync conflict",
     "bannerText": "This note has a sync conflict that needs to be resolved",
     "resolveButton": "Resolve Conflict",
     "syncNotification": "{count, plural, one {1 σημείωση έχει διένεξη συγχρονισμού} other {{count} σημειώσεις έχουν διενέξεις συγχρονισμού}}"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
+    "pull": "Τραβήξτε προς τα κάτω για συγχρονισμό",
     "release": "Release to sync",
     "syncing": "Syncing...",
     "region": "Pull to refresh"

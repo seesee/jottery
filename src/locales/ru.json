@@ -1158,14 +1158,14 @@
     "merge": "Объединить",
     "resolved": "Конфликт разрешен",
     "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
+    "noConflict": "Данные о конфликте не найдены",
     "indicator": "Sync conflict",
     "bannerText": "This note has a sync conflict that needs to be resolved",
     "resolveButton": "Resolve Conflict",
     "syncNotification": "{count, plural, one {1 заметка имеет конфликт синхронизации} few {{count} заметки имеют конфликты синхронизации} other {{count} заметок имеют конфликты синхронизации}}"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
+    "pull": "Потяните вниз для синхронизации",
     "release": "Release to sync",
     "syncing": "Syncing...",
     "region": "Pull to refresh"
