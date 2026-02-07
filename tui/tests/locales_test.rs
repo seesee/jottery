@@ -204,3 +204,225 @@ fn find_empty_values(value: &Value, prefix: &str) -> Vec<String> {
 
     empty
 }
+
+/// Extract all key-value pairs as a flat map
+fn extract_key_values(value: &Value, prefix: &str) -> std::collections::HashMap<String, String> {
+    let mut result = std::collections::HashMap::new();
+
+    if let Value::Mapping(map) = value {
+        for (k, v) in map {
+            if let Value::String(key) = k {
+                let full_key = if prefix.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{}.{}", prefix, key)
+                };
+
+                match v {
+                    Value::Mapping(_) => {
+                        result.extend(extract_key_values(v, &full_key));
+                    }
+                    Value::String(s) => {
+                        result.insert(full_key, s.clone());
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    result
+}
+
+/// Keys that are expected to have the same value across all locales
+/// (product names, technical terms, keyboard shortcuts, etc.)
+fn is_excluded_key(key: &str) -> bool {
+    let excluded_keys = [
+        "app.name",
+        "editor.default_editor",
+        "common.email",           // "Email" is the same in many languages
+        "settings.disabled",      // "disabled" shown as placeholder
+        "backup.records",         // "records" is technical
+        "time.date_format",       // Date format patterns
+        "time.time_format",
+        "time.datetime_format",
+    ];
+
+    let excluded_patterns = [
+        "syntax.",       // Programming language names
+        "color_scheme.", // Theme names
+    ];
+
+    // Keyboard shortcut keys (e.g., help.ctrl_q_key, help.slash_search_key)
+    let excluded_suffixes = [
+        "_key",          // All keyboard shortcut key labels
+    ];
+
+    if excluded_keys.contains(&key) {
+        return true;
+    }
+
+    for pattern in &excluded_patterns {
+        if key.starts_with(pattern) {
+            return true;
+        }
+    }
+
+    for suffix in &excluded_suffixes {
+        if key.ends_with(suffix) {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Values that are intentionally kept as English across all locales
+fn is_excluded_value(value: &str) -> bool {
+    let excluded_values = [
+        "Jottery",
+        "OK",
+        "vi",
+        "Email",
+        "disabled",
+        "records",
+        "minutes",
+        "base64",
+        // Single words that might be the same in some languages
+        "Archived",
+        "Error",
+        "Note",
+        // Programming terms
+        "JavaScript", "Python", "Markdown", "JSON", "HTML", "CSS",
+        "SQL", "Bash", "Perl", "Rust", "Go", "Java", "C", "C++",
+        // Theme names
+        "Monokai", "Nord", "Dracula", "Catppuccin",
+        // Keyboard shortcuts and vim-style commands
+        "Ctrl+Q", "Ctrl+R", "Ctrl+A", "Ctrl+d/u/f/b",
+        "Tab", "Enter", "Esc", "Space", "Backspace",
+        "PgUp", "PgDn", "Shift+V", "Shift+A",
+    ];
+
+    // Very short values (3 chars or less) are often the same
+    if value.len() <= 3 {
+        return true;
+    }
+
+    // Check if value matches excluded list
+    if excluded_values.contains(&value) {
+        return true;
+    }
+
+    // Values that are purely format strings like "%{count}"
+    if value.starts_with("%{") && value.ends_with("}") {
+        return true;
+    }
+
+    // URLs or technical patterns
+    if value.starts_with("http") || value.contains("://") {
+        return true;
+    }
+
+    // Keyboard shortcut patterns (e.g., "j / k", "↑ / ↓", "Shift+j / Shift+k")
+    if value.contains(" / ") && value.len() < 30 {
+        return true;
+    }
+
+    // Vim-style command references
+    if value.starts_with("$EDITOR") || value.contains("$EDITOR") {
+        return true;
+    }
+
+    // Color search patterns (e.g., "color:red note")
+    if value.starts_with("color:") {
+        return true;
+    }
+
+    // Tag search patterns (e.g., "#tag")
+    if value.starts_with("#") && !value.contains(" ") {
+        return true;
+    }
+
+    false
+}
+
+/// Test translation quality - warns about potentially untranslated strings
+/// This test logs warnings for untranslated strings but only fails if more than
+/// 50% of strings in a locale are untranslated (indicating a major issue).
+#[test]
+fn test_translation_quality() {
+    let primary = load_locale(PRIMARY_LOCALE);
+    let primary_values = extract_key_values(&primary, "");
+    let total_translatable = primary_values
+        .iter()
+        .filter(|(k, v)| !is_excluded_key(k) && !is_excluded_value(v))
+        .count();
+
+    let locales = get_locale_files();
+    let mut warnings = Vec::new();
+    let mut critical_failures = Vec::new();
+
+    for locale_name in locales {
+        // Skip primary locale and en-US (intentionally similar to en-GB)
+        if locale_name == PRIMARY_LOCALE || locale_name == "en-US" {
+            continue;
+        }
+
+        let locale = load_locale(&locale_name);
+        let locale_values = extract_key_values(&locale, "");
+
+        let mut untranslated = Vec::new();
+
+        for (key, english_value) in &primary_values {
+            // Skip excluded keys and values
+            if is_excluded_key(key) || is_excluded_value(english_value) {
+                continue;
+            }
+
+            if let Some(locale_value) = locale_values.get(key) {
+                // Check if values are identical (potentially untranslated)
+                if english_value == locale_value {
+                    untranslated.push(format!("{}: \"{}\"", key,
+                        if english_value.len() > 40 {
+                            format!("{}...", &english_value[..40])
+                        } else {
+                            english_value.clone()
+                        }
+                    ));
+                }
+            }
+        }
+
+        if !untranslated.is_empty() {
+            let percentage = (untranslated.len() as f64 / total_translatable as f64) * 100.0;
+
+            let msg = format!(
+                "{}: {} potentially untranslated strings ({:.1}%) (first 5):\n  - {}",
+                locale_name,
+                untranslated.len(),
+                percentage,
+                untranslated.iter().take(5).cloned().collect::<Vec<_>>().join("\n  - ")
+            );
+
+            // Fail if more than 50% untranslated (indicates major issue)
+            if percentage > 50.0 {
+                critical_failures.push(msg);
+            } else {
+                warnings.push(msg);
+            }
+        }
+    }
+
+    // Print warnings (these are tracked but don't fail the test)
+    if !warnings.is_empty() {
+        eprintln!("\n⚠️  Translation quality warnings (non-blocking):\n{}\n",
+            warnings.join("\n\n"));
+    }
+
+    // Fail only on critical issues
+    assert!(
+        critical_failures.is_empty(),
+        "Critical translation issues (>50% untranslated):\n{}",
+        critical_failures.join("\n\n")
+    );
+}
