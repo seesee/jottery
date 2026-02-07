@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Choisir la langue"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Une application de prise de notes puissante et axée sur la confidentialité avec chiffrement de bout en bout, recherche avancée et synchronisation optionnelle. Accédez à vos notes depuis le web ou le terminal.",

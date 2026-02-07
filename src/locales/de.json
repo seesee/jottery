@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Sprache auswählen"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Eine leistungsstarke, datenschutzorientierte Notiz-App mit Ende-zu-Ende-Verschlüsselung, erweiterter Suche und optionaler Synchronisation. Greifen Sie über Web oder Terminal auf Ihre Notizen zu.",

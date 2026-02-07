@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "언어 선택"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "종단간 암호화, 고급 검색 및 선택적 동기화 기능을 갖춘 강력하고 개인정보 보호 중심 노트 앱. 웹 또는 터미널에서 노트에 액세스하세요.",

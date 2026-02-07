@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Dil seçin"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Uçtan uca şifreleme, gelişmiş arama ve isteğe bağlı senkronizasyona sahip güçlü, gizlilik odaklı not alma uygulaması. Notlarınıza web veya terminalden erişin.",

@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Selecionar idioma"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Um aplicativo de notas poderoso e focado em privacidade com criptografia de ponta a ponta, pesquisa avançada e sincronização opcional. Acesse suas notas da web ou terminal.",

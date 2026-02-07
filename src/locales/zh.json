@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "选择语言"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "一款强大的、隐私优先的笔记应用，具有端到端加密、高级搜索和可选同步功能。从网页或终端访问您的笔记。",

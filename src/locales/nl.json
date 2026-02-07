@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Selecteer taal"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Een krachtige, privacy-gerichte notitie-app met end-to-end versleuteling, geavanceerde zoekfunctie en optionele synchronisatie. Toegang tot je notities vanaf web of terminal.",

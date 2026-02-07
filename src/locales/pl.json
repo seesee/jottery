@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Wybierz język"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Potężna, zorientowana na prywatność aplikacja do notatek z szyfrowaniem end-to-end, zaawansowanym wyszukiwaniem i opcjonalną synchronizacją. Dostęp do notatek z przeglądarki lub terminala.",
