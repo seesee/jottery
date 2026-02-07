@@ -6,7 +6,13 @@
 
 import { test, expect } from '@playwright/test';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the directory of this test file for resolving relative paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const DEMO_GENERATION_DIR = dirname(__dirname); // Parent of playwright/ is demo-generation/
 
 // Normalize LANG environment variable to our file naming convention
 function normalizeLang(lang: string | undefined): string {
@@ -30,7 +36,14 @@ function normalizeLang(lang: string | undefined): string {
 }
 
 const LANG = normalizeLang(process.env.LANG);
-const SCREENSHOT_DIR = `screenshots/${LANG}`;
+// Project root is parent of demo-generation
+const PROJECT_ROOT = dirname(DEMO_GENERATION_DIR);
+const SCREENSHOT_DIR = join(PROJECT_ROOT, 'screenshots', LANG);
+
+// Helper to log screenshot save with absolute path
+function logScreenshot(filename: string): void {
+  console.log(`✓ Screenshot saved: ${join(SCREENSHOT_DIR, filename)}`);
+}
 
 // Map language codes to demo note files
 function getDemoNotesFile(lang: string): string {
@@ -418,27 +431,27 @@ async function setAppLanguage(page: any, lang: string) {
 
   const locale = localeMap[lang] || 'en-GB';
 
-  // Open settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
+  // Open settings using stable data-testid
+  const settingsButton = page.locator('[data-testid="btn-settings"]');
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to General tab where language dropdown is (within the modal)
-  const modal = page.locator('[role="dialog"]').first();
-  const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+  // Navigate to General tab using stable ID
+  const generalTab = page.locator('#tab-general');
   await generalTab.waitFor({ state: 'visible' });
   await generalTab.click();
   await page.waitForTimeout(500);
 
   // Find the language dropdown and select the target locale
+  const modal = page.locator('[role="dialog"]').first();
   const languageDropdown = modal.locator('select').filter({ has: page.locator(`option[value="${locale}"]`) }).first();
   await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
   await languageDropdown.selectOption(locale);
   await page.waitForTimeout(500);
 
-  // Save settings to apply the language change
-  const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+  // Save settings using stable data-testid
+  const saveButton = page.locator('[data-testid="btn-settings-save"]');
   await saveButton.waitFor({ state: 'visible' });
   await saveButton.click();
 
@@ -450,28 +463,22 @@ async function setAppLanguage(page: any, lang: string) {
 
 // Helper function to import demo notes via Settings UI
 async function importDemoNotes(page: any, demoFile: string = getDemoNotesFile(LANG)) {
-  const demoNotesPath = join(process.cwd(), demoFile);
+  const demoNotesPath = join(DEMO_GENERATION_DIR, demoFile);
 
-  // Open settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
+  // Open settings using stable data-testid
+  const settingsButton = page.locator('[data-testid="btn-settings"]');
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to Advanced tab (handle multiple languages)
-  // English: Advanced, German: Erweitert, French: Avancé, Spanish: Avanzado, etc.
-  const advancedTab = page.locator('button, [role="tab"]').filter({
-    hasText: /Advanced|Erweitert|Avancé|Avanzado|Avançadas|Avanzate|Geavanceerd|Zaawansowane|Gelişmiş|Расширенные|詳細|고급|高级|Προηγμένα/i
-  }).first();
+  // Navigate to Advanced tab using stable ID
+  const advancedTab = page.locator('#tab-advanced');
   await advancedTab.waitFor({ state: 'visible' });
   await advancedTab.click();
   await page.waitForTimeout(500);
 
-  // Find and click the Import button (which triggers file input)
-  // Handle multiple languages: Import, Importieren, Importer, Importar, Importeren, etc.
-  const importButton = page.locator('button').filter({
-    hasText: /📥.*(Import|Importieren|Importer|Importar|Importeren|Importuj|İçe Aktar|Импортировать|インポート|가져오기|导入|Εισαγωγή)/i
-  }).first();
+  // Find and click the Import button using stable data-testid
+  const importButton = page.locator('[data-testid="btn-import-notes"]');
   await importButton.waitFor({ state: 'visible' });
 
   // Set up file chooser handler before clicking
@@ -480,10 +487,8 @@ async function importDemoNotes(page: any, demoFile: string = getDemoNotesFile(LA
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(demoNotesPath);
 
-  // Wait for import to complete - look for the Done button (handle multiple languages)
-  const doneButton = page.locator('button').filter({
-    hasText: /Done|Close|Fertig|Schließen|Terminé|Fermer|Listo|Cerrar|Fatto|Chiudi|Klaar|Sluiten|Gotowe|Zamknij|Tamam|Kapat|Готово|Закрыть|完了|閉じる|완료|닫기|完成|关闭|Ολοκληρώθηκε|Κλείσιμο/i
-  }).last();
+  // Wait for import to complete - look for the Done button using stable data-testid
+  const doneButton = page.locator('[data-testid="btn-import-done"]');
   await doneButton.waitFor({ state: 'visible', timeout: 15000 });
   await doneButton.click();
   await page.waitForTimeout(500);
@@ -598,7 +603,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light.png');
+    logScreenshot('01-main-interface-light.png');
   });
 
   test('01a-light. Main Interface - Preview Mode', async ({ page }) => {
@@ -613,7 +618,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     // Click Preview button (handle multiple languages)
-    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
+    const previewButton = page.locator('[data-testid="btn-preview"]');
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -624,7 +629,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-preview.png');
+    logScreenshot('01-main-interface-light-preview.png');
   });
 
   test('01b-light. Main Interface - Travel Note Preview', async ({ page }) => {
@@ -644,7 +649,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     // Click Preview button (handle multiple languages)
-    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
+    const previewButton = page.locator('[data-testid="btn-preview"]');
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -655,7 +660,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-travel-preview.png');
+    logScreenshot('01-main-interface-light-travel-preview.png');
   });
 
   test('01c-light. Main Interface - Travel Note', async ({ page }) => {
@@ -680,7 +685,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-light-travel.png');
+    logScreenshot('01-main-interface-light-travel.png');
   });
 
   test('02-light. Rich Editor - Recipe Note', async ({ page }) => {
@@ -704,7 +709,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/02-rich-editor-light.png');
+    logScreenshot('02-rich-editor-light.png');
   });
 
   test('03-light. Multi-Select - Bulk Operations', async ({ page }) => {
@@ -732,7 +737,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/03-multi-select-light.png');
+    logScreenshot('03-multi-select-light.png');
   });
 
   test('04-light. Version History', async ({ page }) => {
@@ -825,7 +830,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/04-version-history-light.png');
+    logScreenshot('04-version-history-light.png');
   });
 
   test('05-light. REPL Calculator', async ({ page }) => {
@@ -833,7 +838,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
+    const newButton = page.locator('[data-testid="btn-new-note"]');
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -899,7 +904,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/05-calculator-light.png');
+    logScreenshot('05-calculator-light.png');
   });
 });
 
@@ -977,7 +982,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark.png');
+    logScreenshot('01-main-interface-dark.png');
   });
 
   test('01a-dark. Main Interface - Preview Mode', async ({ page }) => {
@@ -992,7 +997,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     // Click Preview button (handle multiple languages)
-    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
+    const previewButton = page.locator('[data-testid="btn-preview"]');
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -1003,7 +1008,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-preview.png');
+    logScreenshot('01-main-interface-dark-preview.png');
   });
 
   test('01b-dark. Main Interface - Travel Note Preview', async ({ page }) => {
@@ -1022,7 +1027,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     // Click Preview button (handle multiple languages)
-    const previewButton = page.locator('button').filter({ hasText: /Preview|プレビュー|Vorschau|Aperçu|Vista previa|Anteprima|Voorvertoning|Podgląd|Önizleme|Предпросмотр|預覽|미리보기|Προεπισκόπηση/i }).first();
+    const previewButton = page.locator('[data-testid="btn-preview"]');
     await previewButton.waitFor({ state: 'visible' });
     await previewButton.click();
     await page.waitForTimeout(500);
@@ -1033,7 +1038,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-travel-preview.png');
+    logScreenshot('01-main-interface-dark-travel-preview.png');
   });
 
   test('01c-dark. Main Interface - Travel Note', async ({ page }) => {
@@ -1057,7 +1062,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/01-main-interface-dark-travel.png');
+    logScreenshot('01-main-interface-dark-travel.png');
   });
 
   test('02-dark. Rich Editor - Recipe Note', async ({ page }) => {
@@ -1080,7 +1085,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/02-rich-editor-dark.png');
+    logScreenshot('02-rich-editor-dark.png');
   });
 
   test('03-dark. Multi-Select - Bulk Operations', async ({ page }) => {
@@ -1108,7 +1113,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/03-multi-select-dark.png');
+    logScreenshot('03-multi-select-dark.png');
   });
 
   test('04-dark. Version History', async ({ page }) => {
@@ -1201,7 +1206,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/04-version-history-dark.png');
+    logScreenshot('04-version-history-dark.png');
   });
 
   test('05-dark. REPL Calculator', async ({ page }) => {
@@ -1209,7 +1214,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
+    const newButton = page.locator('[data-testid="btn-new-note"]');
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -1275,16 +1280,16 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/05-calculator-dark.png');
+    logScreenshot('05-calculator-dark.png');
   });
 });
 
 // Helper function to import demo notes on mobile (via hamburger menu)
 async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesFile(LANG)) {
-  const demoNotesPath = join(process.cwd(), demoFile);
+  const demoNotesPath = join(DEMO_GENERATION_DIR, demoFile);
 
   // On mobile, settings is behind the hamburger menu
-  const hamburgerMenu = page.locator('button[aria-label="Menu"], button[aria-label="メニュー"], button[aria-label="Menü"], button[aria-label="Menú"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
+  const hamburgerMenu = page.locator('[data-testid="btn-hamburger-menu"]');
   const isHamburgerVisible = await hamburgerMenu.isVisible().catch(() => false);
 
   if (isHamburgerVisible) {
@@ -1292,26 +1297,20 @@ async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesF
     await page.waitForTimeout(500);
   }
 
-  // Now find and click Settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
+  // Now find and click Settings (mobile menu)
+  const settingsButton = page.locator('[data-testid="btn-settings-mobile"]');
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to Advanced tab (handle multiple languages)
-  // English: Advanced, German: Erweitert, French: Avancé, Spanish: Avanzado, etc.
-  const advancedTab = page.locator('button, [role="tab"]').filter({
-    hasText: /Advanced|Erweitert|Avancé|Avanzado|Avançadas|Avanzate|Geavanceerd|Zaawansowane|Gelişmiş|Расширенные|詳細|고급|高级|Προηγμένα/i
-  }).first();
+  // Navigate to Advanced tab using stable ID
+  const advancedTab = page.locator('#tab-advanced');
   await advancedTab.waitFor({ state: 'visible' });
   await advancedTab.click();
   await page.waitForTimeout(500);
 
-  // Find and click the Import button (which triggers file input)
-  // Handle multiple languages: Import, Importieren, Importer, Importar, Importeren, etc.
-  const importButton = page.locator('button').filter({
-    hasText: /📥.*(Import|Importieren|Importer|Importar|Importeren|Importuj|İçe Aktar|Импортировать|インポート|가져오기|导入|Εισαγωγή)/i
-  }).first();
+  // Find and click the Import button
+  const importButton = page.locator('[data-testid="btn-import-notes"]');
   await importButton.waitFor({ state: 'visible' });
 
   // Set up file chooser handler before clicking
@@ -1320,10 +1319,8 @@ async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesF
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(demoNotesPath);
 
-  // Wait for import to complete - look for the Done button (handle multiple languages)
-  const doneButton = page.locator('button').filter({
-    hasText: /Done|Close|Fertig|Schließen|Terminé|Fermer|Listo|Cerrar|Fatto|Chiudi|Klaar|Sluiten|Gotowe|Zamknij|Tamam|Kapat|Готово|Закрыть|完了|閉じる|완료|닫기|完成|关闭|Ολοκληρώθηκε|Κλείσιμο/i
-  }).last();
+  // Wait for import to complete - look for the Done button
+  const doneButton = page.locator('[data-testid="btn-import-done"]');
   await doneButton.waitFor({ state: 'visible', timeout: 15000 });
   await doneButton.click();
   await page.waitForTimeout(500);
@@ -1353,7 +1350,7 @@ async function setAppLanguageMobile(page: any, lang: string) {
   const locale = localeMap[lang] || 'en-GB';
 
   // On mobile, settings is behind the hamburger menu
-  const hamburgerMenu = page.locator('button[aria-label="Menu"], button[aria-label="メニュー"], button[aria-label="Menü"], button[aria-label="Menú"], button.hamburger-menu, [aria-label="Toggle menu"]').first();
+  const hamburgerMenu = page.locator('[data-testid="btn-hamburger-menu"]');
   const isHamburgerVisible = await hamburgerMenu.isVisible().catch(() => false);
 
   if (isHamburgerVisible) {
@@ -1361,27 +1358,27 @@ async function setAppLanguageMobile(page: any, lang: string) {
     await page.waitForTimeout(500);
   }
 
-  // Open settings
-  const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
+  // Open settings from mobile menu
+  const settingsButton = page.locator('[data-testid="btn-settings-mobile"]');
   await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
   await settingsButton.click();
   await page.waitForTimeout(500);
 
-  // Navigate to General tab
-  const modal = page.locator('[role="dialog"]').first();
-  const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+  // Navigate to General tab using stable ID
+  const generalTab = page.locator('#tab-general');
   await generalTab.waitFor({ state: 'visible' });
   await generalTab.click();
   await page.waitForTimeout(500);
 
   // Find the language dropdown and select the target locale
+  const modal = page.locator('[role="dialog"]').first();
   const languageDropdown = modal.locator('select').filter({ has: page.locator(`option[value="${locale}"]`) }).first();
   await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
   await languageDropdown.selectOption(locale);
   await page.waitForTimeout(500);
 
-  // Save settings
-  const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+  // Save settings using stable data-testid
+  const saveButton = page.locator('[data-testid="btn-settings-save"]');
   await saveButton.waitFor({ state: 'visible' });
   await saveButton.click();
 
@@ -1459,7 +1456,7 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/06-mobile-list-light.png');
+    logScreenshot('06-mobile-list-light.png');
   });
 
   test('07-mobile-light. Travel Itinerary Note', async ({ page }) => {
@@ -1483,35 +1480,15 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-travel-light.png');
+    logScreenshot('07-mobile-travel-light.png');
   });
 
   test('08-mobile-light. Calculator Note', async ({ page }) => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Create a new note - on mobile this is a "+" icon button
-    // Try multiple selectors for the new note button
-    const newButtonSelectors = [
-      'button[aria-label="New note"]',
-      'button[aria-label="Add note"]',
-      'button:has-text("+")',
-      'button.new-note-button',
-    ];
-
-    let newButton = null;
-    for (const selector of newButtonSelectors) {
-      const btn = page.locator(selector).first();
-      if (await btn.isVisible().catch(() => false)) {
-        newButton = btn;
-        break;
-      }
-    }
-
-    // Fallback: find blue button with + or the text version
-    if (!newButton) {
-      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
-    }
+    // Create a new note - on mobile this uses the mobile-specific new button
+    const newButton = page.locator('[data-testid="btn-new-note-mobile"]');
 
     await newButton.click();
     await page.waitForTimeout(1000);
@@ -1575,7 +1552,7 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/08-mobile-calculator-light.png');
+    logScreenshot('08-mobile-calculator-light.png');
   });
 });
 
@@ -1653,7 +1630,7 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/06-mobile-list-dark.png');
+    logScreenshot('06-mobile-list-dark.png');
   });
 
   test('07-mobile-dark. Travel Itinerary Note', async ({ page }) => {
@@ -1677,7 +1654,7 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/07-mobile-travel-dark.png');
+    logScreenshot('07-mobile-travel-dark.png');
   });
 
   test('08-mobile-dark. Calculator Note', async ({ page }) => {
@@ -1685,27 +1662,8 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note - on mobile this is a "+" icon button
-    const newButtonSelectors = [
-      'button[aria-label="New note"]',
-      'button[aria-label="Add note"]',
-      'button:has-text("+")',
-      'button.new-note-button',
-    ];
-
-    let newButton = null;
-    for (const selector of newButtonSelectors) {
-      const btn = page.locator(selector).first();
-      if (await btn.isVisible().catch(() => false)) {
-        newButton = btn;
-        break;
-      }
-    }
-
-    // Fallback: find blue button with + or the text version
-    if (!newButton) {
-      newButton = page.locator('button').filter({ hasText: /^\+$|New Note|\+ New|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
-    }
-
+    const newButton = page.locator('[data-testid="btn-new-note-mobile"]');
+    await newButton.waitFor({ state: 'visible' });
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -1768,7 +1726,7 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/08-mobile-calculator-dark.png');
+    logScreenshot('08-mobile-calculator-dark.png');
   });
 });
 
@@ -1820,7 +1778,7 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
+    const newButton = page.locator('[data-testid="btn-new-note"]');
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -1918,7 +1876,7 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/09-outliner-light.png');
+    logScreenshot('09-outliner-light.png');
   });
 });
 
@@ -1976,7 +1934,7 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     await page.waitForTimeout(1000);
 
     // Create a new note
-    const newButton = page.locator('button').filter({ hasText: /\+ New|New Note|\+ 新規|新規|Neu|Nouveau|Nuevo|Nuovo|Nieuw|Nowy|Yeni|Новый|新建|새 노트|Νέο/i }).first();
+    const newButton = page.locator('[data-testid="btn-new-note"]');
     await newButton.click();
     await page.waitForTimeout(1000);
 
@@ -2074,7 +2032,7 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/09-outliner-dark.png');
+    logScreenshot('09-outliner-dark.png');
   });
 });
 
@@ -2130,26 +2088,26 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     await page.waitForTimeout(1000);
 
     // Change language to Greek via settings
-    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
+    const settingsButton = page.locator('[data-testid="btn-settings"]');
     await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
     await settingsButton.click();
     await page.waitForTimeout(500);
 
-    // Navigate to General tab where language dropdown is (within the modal)
-    const modal = page.locator('[role="dialog"]').first();
-    const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+    // Navigate to General tab where language dropdown is
+    const generalTab = page.locator('#tab-general');
     await generalTab.waitFor({ state: 'visible' });
     await generalTab.click();
     await page.waitForTimeout(500);
 
     // Find the language dropdown and select Greek
+    const modal = page.locator('[role="dialog"]').first();
     const languageDropdown = modal.locator('select').filter({ has: page.locator('option[value="el"]') }).first();
     await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
     await languageDropdown.selectOption('el');
     await page.waitForTimeout(1000);
 
     // Save settings to apply the language change
-    const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+    const saveButton = page.locator('[data-testid="btn-settings-save"]');
     await saveButton.waitFor({ state: 'visible' });
     await saveButton.click();
 
@@ -2174,7 +2132,7 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/10-greek-ui-light.png');
+    logScreenshot('10-greek-ui-light.png');
   });
 });
 
@@ -2230,26 +2188,26 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     await page.waitForTimeout(1000);
 
     // Change language to Greek via settings
-    const settingsButton = page.locator('button').filter({ hasText: /Settings|⚙️|設定|Einstellungen|Paramètres|Configuración|Impostazioni|Instellingen|Ustawienia|Ayarlar|Настройки|设置|설정|Ρυθμίσεις/i }).first();
+    const settingsButton = page.locator('[data-testid="btn-settings"]');
     await settingsButton.waitFor({ state: 'visible', timeout: 10000 });
     await settingsButton.click();
     await page.waitForTimeout(500);
 
-    // Navigate to General tab where language dropdown is (within the modal)
-    const modal = page.locator('[role="dialog"]').first();
-    const generalTab = modal.locator('button, [role="tab"]').filter({ hasText: /^General$/i }).first();
+    // Navigate to General tab where language dropdown is
+    const generalTab = page.locator('#tab-general');
     await generalTab.waitFor({ state: 'visible' });
     await generalTab.click();
     await page.waitForTimeout(500);
 
     // Find the language dropdown and select Greek
+    const modal = page.locator('[role="dialog"]').first();
     const languageDropdown = modal.locator('select').filter({ has: page.locator('option[value="el"]') }).first();
     await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
     await languageDropdown.selectOption('el');
     await page.waitForTimeout(1000);
 
     // Save settings to apply the language change
-    const saveButton = modal.locator('button').filter({ hasText: /Save Settings/i }).first();
+    const saveButton = page.locator('[data-testid="btn-settings-save"]');
     await saveButton.waitFor({ state: 'visible' });
     await saveButton.click();
 
@@ -2280,6 +2238,6 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
       fullPage: false,
     });
 
-    console.log('✓ Screenshot saved: ${SCREENSHOT_DIR}/10-greek-ui-dark.png');
+    logScreenshot('10-greek-ui-dark.png');
   });
 });

@@ -504,6 +504,7 @@
           class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
           title={$_('header.menu')}
           aria-label={$_('header.menu')}
+          data-testid="btn-hamburger-menu"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -516,6 +517,7 @@
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={disableNewNote ? $_('header.creatingNote') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
           aria-label="New note"
+          data-testid="btn-new-note-mobile"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -532,6 +534,7 @@
         disabled={$isDraftMode}
         class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title={$isDraftMode ? $_('header.addContentFirst') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
+        data-testid="btn-new-note"
       >
         + {$_('note.new')}
       </button>
@@ -540,6 +543,7 @@
         on:click={onOpenRecycleBin}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
         title={$_('recycleBin.title')}
+        data-testid="btn-recycle-bin"
       >
         🗑️ {$_('recycleBin.title')}
       </button>
@@ -548,6 +552,7 @@
         on:click={toggleArchiveMode}
         class="px-3 py-1.5 {$archiveMode ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
         title={$archiveMode ? $_('archive.exitMode') : $_('archive.enterMode')}
+        data-testid="btn-archive"
       >
         📦 {$archiveMode ? $_('archive.exitMode') : $_('archive.mode')}
       </button>
@@ -556,6 +561,7 @@
         on:click={onOpenSettings}
         class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors"
         title={openSettingsShortcut ? `${$_('common.settings')} (${openSettingsShortcut})` : $_('common.settings')}
+        data-testid="btn-settings"
       >
         ⚙️ {$_('common.settings')}
       </button>
@@ -566,6 +572,7 @@
         on:click={handleLockRequest}
         class="ml-auto px-3 py-1.5 {rememberPasswordEnabled ? 'opacity-50 cursor-default' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-sm rounded-md transition-colors"
         title={rememberPasswordEnabled ? 'Password remembered - click to disable' : lockAppShortcut ? `${$_('keyboard.lockApp')} (${lockAppShortcut})` : $_('keyboard.lockApp')}
+        data-testid="btn-lock"
       >
         {rememberPasswordEnabled ? '🔓' : '🔒'} {$_('common.lock')}
       </button>
