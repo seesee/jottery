@@ -1210,7 +1210,7 @@
       "accept": "接受收件箱项目失败",
       "delete": "删除收件箱项目失败",
       "acceptAll": "接受收件箱项目失败",
-      "deleteAll": "Failed to delete inbox items"
+      "deleteAll": "无法删除收件箱项目"
     },
     "token": {
       "title": "Inbox API",

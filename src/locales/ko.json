@@ -1210,7 +1210,7 @@
       "accept": "받은 편지함 항목 수락에 실패했습니다",
       "delete": "받은 편지함 항목 삭제에 실패했습니다",
       "acceptAll": "받은 편지함 항목 수락에 실패했습니다",
-      "deleteAll": "Failed to delete inbox items"
+      "deleteAll": "받은편지함 항목 삭제 실패"
     },
     "token": {
       "title": "Inbox API",

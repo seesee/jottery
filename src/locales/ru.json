@@ -1210,7 +1210,7 @@
       "accept": "Не удалось принять элемент входящих",
       "delete": "Не удалось удалить элемент входящих",
       "acceptAll": "Не удалось принять элементы входящих",
-      "deleteAll": "Failed to delete inbox items"
+      "deleteAll": "Не удалось удалить элементы входящих"
     },
     "token": {
       "title": "Inbox API",

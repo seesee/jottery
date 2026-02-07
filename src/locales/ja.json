@@ -1210,7 +1210,7 @@
       "accept": "受信トレイ項目の受け入れに失敗しました",
       "delete": "受信トレイ項目の削除に失敗しました",
       "acceptAll": "受信トレイ項目の受け入れに失敗しました",
-      "deleteAll": "Failed to delete inbox items"
+      "deleteAll": "受信トレイアイテムの削除に失敗しました"
     },
     "token": {
       "title": "Inbox API",
