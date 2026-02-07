@@ -1117,7 +1117,7 @@
     "reloadButton": "Odśwież teraz",
     "dismissLabel": "Odrzuć",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Tworzenie kopii zapasowej..."
   },
   "bulk": {
     "toggleSelect": "Przełącz zaznaczenie",

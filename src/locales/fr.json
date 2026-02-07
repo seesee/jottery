@@ -1117,7 +1117,7 @@
     "reloadButton": "Recharger maintenant",
     "dismissLabel": "Ignorer",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Sauvegarde en cours..."
   },
   "bulk": {
     "toggleSelect": "Basculer la sélection",

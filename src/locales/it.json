@@ -1117,7 +1117,7 @@
     "reloadButton": "Ricarica ora",
     "dismissLabel": "Chiudi",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Creazione backup..."
   },
   "bulk": {
     "toggleSelect": "Attiva/disattiva selezione",

@@ -1117,7 +1117,7 @@
     "reloadButton": "Jetzt neu laden",
     "dismissLabel": "Verwerfen",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Backup wird erstellt..."
   },
   "bulk": {
     "toggleSelect": "Auswahl umschalten",

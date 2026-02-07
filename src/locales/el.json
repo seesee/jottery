@@ -1117,7 +1117,7 @@
     "reloadButton": "Επαναφόρτωση τώρα",
     "dismissLabel": "Απόρριψη",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Δημιουργία αντιγράφου ασφαλείας..."
   },
   "bulk": {
     "toggleSelect": "Εναλλαγή επιλογής",

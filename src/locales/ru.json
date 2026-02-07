@@ -1117,7 +1117,7 @@
     "reloadButton": "Перезагрузить сейчас",
     "dismissLabel": "Закрыть",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Создание резервной копии..."
   },
   "bulk": {
     "toggleSelect": "Переключить выделение",

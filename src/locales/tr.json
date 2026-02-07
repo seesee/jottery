@@ -1117,7 +1117,7 @@
     "reloadButton": "Şimdi yenile",
     "dismissLabel": "Kapat",
     "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backingUp": "Yedekleniyor..."
   },
   "bulk": {
     "toggleSelect": "Seçimi değiştir",
