@@ -118,10 +118,10 @@ describe('Translation Key Structure', () => {
  * Translation Quality Tests
  *
  * Checks that translation values are actually translated and not
- * just copies of the English text.
+ * just copies of the British English (en-GB) text.
  */
 describe('Translation Quality', () => {
-  // Keys that are expected to have English/technical values
+  // Keys that are expected to have en-GB/technical values
   const EXCLUDED_KEYS = new Set([
     'app.name', // Product name "Jottery"
     'landing.tuiClient', // Technical term
@@ -159,7 +159,7 @@ describe('Translation Quality', () => {
     /^jottery\s/, // CLI commands
   ];
 
-  // Values that are intentionally kept in English across all locales
+  // Values that are intentionally kept as en-GB across all locales
   const EXCLUDED_VALUES = new Set([
     'Jottery',
     'TUI Client',
@@ -183,7 +183,7 @@ describe('Translation Quality', () => {
     'Enter',
     'Esc',
     'Space',
-    // Technical UI terms often kept in English
+    // Technical UI terms often kept as en-GB
     'Editor',
     'Global',
     'Menu',
@@ -210,7 +210,7 @@ describe('Translation Quality', () => {
     'notes', // Same in French
     'Error', // Same in Spanish
     'Tags:', // Same in Portuguese/Dutch
-    '1 item', // Same in Portuguese/Dutch (borrowed English)
+    '1 item', // Same in Portuguese/Dutch (borrowed from English)
   ]);
 
   const MAX_LENGTH_TO_IGNORE = 3;
@@ -266,7 +266,7 @@ describe('Translation Quality', () => {
   );
 
   describe.each(LOCALES_TO_CHECK)('%s', (localeFile) => {
-    it('should have translated values (not identical to English)', () => {
+    it('should have translated values (not identical to en-GB)', () => {
       const locale = loadLocale(localeFile);
       const localeValues = flattenWithValues(locale);
 
