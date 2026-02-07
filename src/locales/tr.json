@@ -4,7 +4,7 @@
     "tagline": "Web ve terminal için kişisel notlar"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Ana içeriğe geç"
   },
   "common": {
     "loading": "Yükleniyor...",
@@ -398,18 +398,18 @@
         "button": "🚀 Yeni hesap kaydet"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Mevcut hesabı bağla",
+        "subtitle": "<strong>Zaten bir hesabınız var mı?</strong> Bu cihazı bağla",
+        "benefit1": "✓ Mevcut e-posta/şifrenizi kullanın",
+        "benefit2": "✓ Bu cihazı hesabınıza ekler",
+        "benefit3": "✓ Notları sunucudan bu cihaza senkronize eder",
+        "button": "🔗 Mevcut hesaba bağlan",
+        "formTitle": "Mevcut hesaba bağlan",
+        "infoText": "Senkronizasyon sunucusu kimlik bilgilerinizi girin. Mevcut notlarınız bağlantı sonrası bu cihaza senkronize edilecektir.",
+        "emailLabel": "E-posta adresi",
+        "passwordLabel": "Sunucu şifresi",
+        "connectButton": "Cihazı bağla",
+        "connecting": "Bağlanıyor..."
       },
       "privacyNote": "<strong>🔒 Gizlilik:</strong> Tüm notlarınız uçtan uca şifrelenir. Sunucu yalnızca şifreli verileri saklar ve içeriğinizi okuyamaz.",
       "selfHostNote": "<strong>💡 Kendi sunucunuz?</strong> Kendi sunucunuzu çalıştırın - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">GitHub'a bakın</a>",
@@ -436,7 +436,7 @@
         "successText": "Cihazınız şimdi kayıtlı ve <strong>mevcut tüm notlarınız sunucuya senkronize edildi</strong>. Gelecekteki değişiklikler otomatik olarak senkronize edilecek.",
         "successNextSteps": "📋 Başka bir cihaz eklemek için: Aşağıdaki \"Senkronizasyon kimlik bilgilerini dışa aktar\" seçeneğine tıklayın ve diğer cihazınıza aktarın.",
         "done": "Bitti",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Kullanıcı Portalında onay durumunuzu kontrol edin →"
       },
       "linkAccount": {
         "title": "Hesabı bağla (isteğe bağlı)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Devre dışı bırakıldığında, Jottery senkronizasyon sunucularına ağ istekleri yapmaz. Tüm notlarınız bu cihazda tamamen yerel kalır.",
       "toEnableSync": "Senkronizasyonu etkinleştirmek için: Yukarıdaki anahtarı değiştirin ve senkronizasyon sunucunuzu yapılandırın.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Mevcut hesabı bağla",
+        "subtitle": "<strong>Zaten bir hesabınız var mı?</strong> Bu cihazı bağla",
+        "benefit1": "✓ Mevcut e-posta/şifrenizi kullanın",
+        "benefit2": "✓ Bu cihazı hesabınıza ekler",
+        "benefit3": "✓ Notları sunucudan bu cihaza senkronize eder",
+        "button": "🔗 Mevcut hesaba bağlan",
+        "formTitle": "Mevcut hesaba bağlan",
+        "infoText": "Senkronizasyon sunucusu kimlik bilgilerinizi girin. Mevcut notlarınız bağlantı sonrası bu cihaza senkronize edilecektir.",
+        "emailLabel": "E-posta adresi",
+        "passwordLabel": "Sunucu şifresi",
+        "connectButton": "Cihazı bağla",
+        "connecting": "Bağlanıyor..."
       },
       "privacyNote": "Gizlilik: Etkinleştirildiğinde bile, tüm notlar uçtan uca şifrelenir. Senkronizasyon sunucusu içeriğinizi okuyamaz.",
       "syncEnabled": "Senkronizasyon Etkin",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Token aktif",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Token oluşturuldu — şimdi kaydedin, tekrar gösterilmeyecek.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
+      "copied": "Token panoya kopyalandı",
       "quickStart": "Quick Start",
       "curlExample": "Example: submit a note via curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Gelen Kutusu Tokenını İptal Et",
+          "message": "Gelen kutusu tokenınızı iptal etmek istiyor musunuz? Onu kullanan tüm entegrasyonlar çalışmayı durduracak.",
+          "confirmButton": "İptal Et"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Gelen kutusu tokenı oluşturulamadı",
+        "revoke": "Gelen kutusu tokenı iptal edilemedi"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Öğeler: {used}/{max}",
+      "size": "Boyut: {used}/{max}"
     }
   },
   "archive": {

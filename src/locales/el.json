@@ -4,7 +4,7 @@
     "tagline": "Προσωπικές σημειώσεις για web και terminal"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Μετάβαση στο κύριο περιεχόμενο"
   },
   "common": {
     "loading": "Φόρτωση...",
@@ -398,18 +398,18 @@
         "button": "🚀 Εγγραφή νέου λογαριασμού"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Σύνδεση υπάρχοντος λογαριασμού",
+        "subtitle": "<strong>Έχετε ήδη λογαριασμό;</strong> Συνδέστε αυτήν τη συσκευή",
+        "benefit1": "✓ Χρησιμοποιήστε το υπάρχον email/κωδικό σας",
+        "benefit2": "✓ Προσθέτει αυτήν τη συσκευή στο λογαριασμό σας",
+        "benefit3": "✓ Συγχρονίζει σημειώσεις από τον διακομιστή σε αυτήν τη συσκευή",
+        "button": "🔗 Σύνδεση σε υπάρχοντα λογαριασμό",
+        "formTitle": "Σύνδεση σε υπάρχοντα λογαριασμό",
+        "infoText": "Εισάγετε τα διαπιστευτήρια του διακομιστή συγχρονισμού. Οι υπάρχουσες σημειώσεις σας θα συγχρονιστούν σε αυτήν τη συσκευή μετά τη σύνδεση.",
+        "emailLabel": "Διεύθυνση email",
+        "passwordLabel": "Κωδικός πρόσβασης διακομιστή",
+        "connectButton": "Σύνδεση συσκευής",
+        "connecting": "Σύνδεση..."
       },
       "privacyNote": "<strong>🔒 Ιδιωτικότητα:</strong> Όλες οι σημειώσεις σας είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής αποθηκεύει μόνο κρυπτογραφημένα δεδομένα και δεν μπορεί να διαβάσει το περιεχόμενό σας.",
       "selfHostNote": "<strong>💡 Αυτο-φιλοξένηση;</strong> Εκτελέστε τον δικό σας διακομιστή - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">δείτε το GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Η συσκευή σας είναι τώρα εγγεγραμμένη και <strong>όλες οι υπάρχουσες σημειώσεις σας έχουν συγχρονιστεί στον διακομιστή</strong>. Οποιεσδήποτε μελλοντικές αλλαγές θα συγχρονίζονται αυτόματα.",
         "successNextSteps": "📋 Για να προσθέσετε άλλη συσκευή: Κάντε κλικ στο \"Εξαγωγή διαπιστευτηρίων συγχρονισμού\" παρακάτω και εισαγάγετε τα στην άλλη συσκευή σας.",
         "done": "Ολοκλήρωση",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Ελέγξτε την κατάσταση έγκρισης στην Πύλη Χρήστη →"
       },
       "linkAccount": {
         "title": "Σύνδεση λογαριασμού (προαιρετικό)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Όταν είναι απενεργοποιημένο, το Jottery δεν θα πραγματοποιεί αιτήματα δικτύου προς διακομιστές συγχρονισμού. Όλες οι σημειώσεις σας παραμένουν πλήρως τοπικές σε αυτήν τη συσκευή.",
       "toEnableSync": "Για να ενεργοποιήσετε τον συγχρονισμό: Ενεργοποιήστε τον διακόπτη παραπάνω και ρυθμίστε τον διακομιστή συγχρονισμού σας.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Σύνδεση υπάρχοντος λογαριασμού",
+        "subtitle": "<strong>Έχετε ήδη λογαριασμό;</strong> Συνδέστε αυτήν τη συσκευή",
+        "benefit1": "✓ Χρησιμοποιήστε το υπάρχον email/κωδικό σας",
+        "benefit2": "✓ Προσθέτει αυτήν τη συσκευή στο λογαριασμό σας",
+        "benefit3": "✓ Συγχρονίζει σημειώσεις από τον διακομιστή σε αυτήν τη συσκευή",
+        "button": "🔗 Σύνδεση σε υπάρχοντα λογαριασμό",
+        "formTitle": "Σύνδεση σε υπάρχοντα λογαριασμό",
+        "infoText": "Εισάγετε τα διαπιστευτήρια του διακομιστή συγχρονισμού. Οι υπάρχουσες σημειώσεις σας θα συγχρονιστούν σε αυτήν τη συσκευή μετά τη σύνδεση.",
+        "emailLabel": "Διεύθυνση email",
+        "passwordLabel": "Κωδικός πρόσβασης διακομιστή",
+        "connectButton": "Σύνδεση συσκευής",
+        "connecting": "Σύνδεση..."
       },
       "privacyNote": "Ιδιωτικότητα: Ακόμα και όταν είναι ενεργοποιημένος, όλες οι σημειώσεις είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής συγχρονισμού δεν μπορεί να διαβάσει το περιεχόμενό σας.",
       "syncEnabled": "Ο συγχρονισμός είναι ενεργοποιημένος",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Token ενεργό",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Το token δημιουργήθηκε — αποθηκεύστε το τώρα, δεν θα εμφανιστεί ξανά.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "copied": "Το token αντιγράφηκε στο πρόχειρο",
+      "quickStart": "Γρήγορη Εκκίνηση",
+      "curlExample": "Παράδειγμα: υποβολή σημείωσης μέσω curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Ανάκληση Token Εισερχομένων",
+          "message": "Να ανακληθεί το token εισερχομένων; Όλες οι ενσωματώσεις που το χρησιμοποιούν θα σταματήσουν να λειτουργούν.",
+          "confirmButton": "Ανάκληση"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Αποτυχία δημιουργίας token εισερχομένων",
+        "revoke": "Αποτυχία ανάκλησης token εισερχομένων"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Στοιχεία: {used}/{max}",
+      "size": "Μέγεθος: {used}/{max}"
     }
   },
   "archive": {

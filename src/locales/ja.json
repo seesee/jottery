@@ -4,7 +4,7 @@
     "tagline": "ウェブとターミナルのための個人メモ"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "メインコンテンツへスキップ"
   },
   "common": {
     "loading": "読み込み中...",
@@ -1227,19 +1227,19 @@
       "curlExample": "例：curlでノートを送信",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "受信トレイトークンを取り消す",
+          "message": "受信トレイトークンを取り消しますか？それを使用しているすべての連携が機能しなくなります。",
+          "confirmButton": "取り消す"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "受信トレイトークンの生成に失敗しました",
+        "revoke": "受信トレイトークンの取り消しに失敗しました"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "アイテム: {used}/{max}",
+      "size": "サイズ: {used}/{max}"
     }
   },
   "archive": {

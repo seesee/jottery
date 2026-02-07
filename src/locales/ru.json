@@ -4,7 +4,7 @@
     "tagline": "Личные заметки для веба и терминала"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Перейти к основному содержимому"
   },
   "common": {
     "loading": "Загрузка...",
@@ -398,18 +398,18 @@
         "button": "🚀 Зарегистрировать новую учётную запись"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Подключить существующий аккаунт",
+        "subtitle": "<strong>Уже есть аккаунт?</strong> Подключить это устройство",
+        "benefit1": "✓ Используйте существующий email/пароль",
+        "benefit2": "✓ Добавляет это устройство к вашему аккаунту",
+        "benefit3": "✓ Синхронизирует заметки с сервера на это устройство",
+        "button": "🔗 Подключиться к существующему аккаунту",
+        "formTitle": "Подключиться к существующему аккаунту",
+        "infoText": "Введите учётные данные сервера синхронизации. Ваши существующие заметки будут синхронизированы с этим устройством после подключения.",
+        "emailLabel": "Адрес электронной почты",
+        "passwordLabel": "Пароль сервера",
+        "connectButton": "Подключить устройство",
+        "connecting": "Подключение..."
       },
       "privacyNote": "<strong>🔒 Конфиденциальность:</strong> Все ваши заметки шифруются сквозным шифрованием. Сервер хранит только зашифрованные данные и не может прочитать ваш контент.",
       "selfHostNote": "<strong>💡 Самостоятельное размещение?</strong> Запустите свой собственный сервер - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">см. GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Ваше устройство зарегистрировано и <strong>все существующие заметки синхронизированы с сервером</strong>. Любые будущие изменения будут синхронизироваться автоматически.",
         "successNextSteps": "📋 Чтобы добавить другое устройство: Нажмите \"Экспортировать учётные данные синхронизации\" ниже и импортируйте их на другом устройстве.",
         "done": "Готово",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Проверьте статус одобрения на Портале пользователя →"
       },
       "linkAccount": {
         "title": "Связать учётную запись (необязательно)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Когда отключена, Jottery не будет делать сетевых запросов к серверам синхронизации. Все ваши заметки остаются полностью локальными на этом устройстве.",
       "toEnableSync": "Чтобы включить синхронизацию: переключите выключатель выше и настройте сервер синхронизации.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Подключить существующий аккаунт",
+        "subtitle": "<strong>Уже есть аккаунт?</strong> Подключить это устройство",
+        "benefit1": "✓ Используйте существующий email/пароль",
+        "benefit2": "✓ Добавляет это устройство к вашему аккаунту",
+        "benefit3": "✓ Синхронизирует заметки с сервера на это устройство",
+        "button": "🔗 Подключиться к существующему аккаунту",
+        "formTitle": "Подключиться к существующему аккаунту",
+        "infoText": "Введите учётные данные сервера синхронизации. Ваши существующие заметки будут синхронизированы с этим устройством после подключения.",
+        "emailLabel": "Адрес электронной почты",
+        "passwordLabel": "Пароль сервера",
+        "connectButton": "Подключить устройство",
+        "connecting": "Подключение..."
       },
       "privacyNote": "Конфиденциальность: Даже когда включена, все заметки шифруются сквозным шифрованием. Сервер синхронизации не может прочитать ваш контент.",
       "syncEnabled": "Синхронизация включена",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Токен активен",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Токен создан — сохраните его сейчас, он больше не будет показан.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
+      "copied": "Токен скопирован в буфер обмена",
       "quickStart": "Quick Start",
       "curlExample": "Example: submit a note via curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Отозвать Токен Входящих",
+          "message": "Отозвать токен входящих? Все интеграции, использующие его, перестанут работать.",
+          "confirmButton": "Отозвать"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Не удалось создать токен входящих",
+        "revoke": "Не удалось отозвать токен входящих"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Элементы: {used}/{max}",
+      "size": "Размер: {used}/{max}"
     }
   },
   "archive": {

@@ -4,7 +4,7 @@
     "tagline": "Notas personales para web y terminal"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Ir al contenido principal"
   },
   "common": {
     "loading": "Cargando...",
@@ -398,18 +398,18 @@
         "button": "🚀 Registrar nueva cuenta"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Conectar cuenta existente",
+        "subtitle": "<strong>¿Ya tiene una cuenta?</strong> Conectar este dispositivo",
+        "benefit1": "✓ Use su correo electrónico/contraseña existente",
+        "benefit2": "✓ Añade este dispositivo a su cuenta",
+        "benefit3": "✓ Sincroniza notas del servidor a este dispositivo",
+        "button": "🔗 Conectar a cuenta existente",
+        "formTitle": "Conectar a cuenta existente",
+        "infoText": "Ingrese sus credenciales del servidor de sincronización. Sus notas existentes se sincronizarán con este dispositivo después de conectarse.",
+        "emailLabel": "Dirección de correo electrónico",
+        "passwordLabel": "Contraseña del servidor",
+        "connectButton": "Conectar dispositivo",
+        "connecting": "Conectando..."
       },
       "privacyNote": "<strong>🔒 Privacidad:</strong> Todas sus notas están cifradas de extremo a extremo. El servidor solo almacena datos cifrados y no puede leer su contenido.",
       "selfHostNote": "<strong>💡 ¿Auto-alojar?</strong> Ejecute su propio servidor - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">ver GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Su dispositivo está ahora registrado y <strong>todas sus notas existentes se han sincronizado con el servidor</strong>. Cualquier cambio futuro se sincronizará automáticamente.",
         "successNextSteps": "📋 Para agregar otro dispositivo: Haga clic en \"Exportar credenciales de sincronización\" a continuación e impórtelas en su otro dispositivo.",
         "done": "Hecho",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Verifique su estado de aprobación en el Portal de Usuario →"
       },
       "linkAccount": {
         "title": "Vincular cuenta (opcional)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Cuando está deshabilitada, Jottery no realizará ninguna solicitud de red a servidores de sincronización. Todas sus notas permanecen completamente locales en este dispositivo.",
       "toEnableSync": "Para habilitar sincronización: Active el interruptor arriba y configure su servidor de sincronización.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Conectar cuenta existente",
+        "subtitle": "<strong>¿Ya tiene una cuenta?</strong> Conectar este dispositivo",
+        "benefit1": "✓ Use su correo electrónico/contraseña existente",
+        "benefit2": "✓ Añade este dispositivo a su cuenta",
+        "benefit3": "✓ Sincroniza notas del servidor a este dispositivo",
+        "button": "🔗 Conectar a cuenta existente",
+        "formTitle": "Conectar a cuenta existente",
+        "infoText": "Ingrese sus credenciales del servidor de sincronización. Sus notas existentes se sincronizarán con este dispositivo después de conectarse.",
+        "emailLabel": "Dirección de correo electrónico",
+        "passwordLabel": "Contraseña del servidor",
+        "connectButton": "Conectar dispositivo",
+        "connecting": "Conectando..."
       },
       "privacyNote": "Privacidad: Incluso cuando está habilitada, todas las notas están cifradas de extremo a extremo. El servidor de sincronización no puede leer su contenido.",
       "syncEnabled": "Sincronización habilitada",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Token activo",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Token generado — guárdelo ahora, no se mostrará de nuevo.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "copied": "Token copiado al portapapeles",
+      "quickStart": "Inicio Rápido",
+      "curlExample": "Ejemplo: enviar una nota vía curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Revocar Token de Bandeja de Entrada",
+          "message": "¿Revocar su token de bandeja de entrada? Todas las integraciones que lo usen dejarán de funcionar.",
+          "confirmButton": "Revocar"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Error al generar token de bandeja de entrada",
+        "revoke": "Error al revocar token de bandeja de entrada"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Elementos: {used}/{max}",
+      "size": "Tamaño: {used}/{max}"
     }
   },
   "archive": {

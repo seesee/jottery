@@ -4,7 +4,7 @@
     "tagline": "Note personali per web e terminale"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Vai al contenuto principale"
   },
   "common": {
     "loading": "Caricamento...",
@@ -398,18 +398,18 @@
         "button": "🚀 Registra nuovo account"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Collega account esistente",
+        "subtitle": "<strong>Hai già un account?</strong> Collega questo dispositivo",
+        "benefit1": "✓ Usa la tua email/password esistente",
+        "benefit2": "✓ Aggiunge questo dispositivo al tuo account",
+        "benefit3": "✓ Sincronizza le note dal server a questo dispositivo",
+        "button": "🔗 Collega a account esistente",
+        "formTitle": "Collega a account esistente",
+        "infoText": "Inserisci le credenziali del server di sincronizzazione. Le tue note esistenti saranno sincronizzate su questo dispositivo dopo la connessione.",
+        "emailLabel": "Indirizzo email",
+        "passwordLabel": "Password del server",
+        "connectButton": "Collega dispositivo",
+        "connecting": "Connessione..."
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> Tutte le note sono crittografate end-to-end. Il server memorizza solo dati crittografati e non può leggere il contenuto.",
       "selfHostNote": "<strong>💡 Self-host?</strong> Esegui il tuo server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">vedi GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Il dispositivo è ora registrato e <strong>tutte le note esistenti sono state sincronizzate sul server</strong>. Eventuali modifiche future verranno sincronizzate automaticamente.",
         "successNextSteps": "📋 Per aggiungere un altro dispositivo: Clicca \"Esporta credenziali di sincronizzazione\" sotto e importale sull'altro dispositivo.",
         "done": "Fatto",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Verifica lo stato di approvazione nel Portale Utente →"
       },
       "linkAccount": {
         "title": "Collega account (opzionale)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Quando disabilitata, Jottery non effettuerà richieste di rete ai server di sincronizzazione. Tutte le note rimangono completamente locali su questo dispositivo.",
       "toEnableSync": "Per abilitare la sincronizzazione: Attiva l'interruttore sopra e configura il server di sincronizzazione.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Collega account esistente",
+        "subtitle": "<strong>Hai già un account?</strong> Collega questo dispositivo",
+        "benefit1": "✓ Usa la tua email/password esistente",
+        "benefit2": "✓ Aggiunge questo dispositivo al tuo account",
+        "benefit3": "✓ Sincronizza le note dal server a questo dispositivo",
+        "button": "🔗 Collega a account esistente",
+        "formTitle": "Collega a account esistente",
+        "infoText": "Inserisci le credenziali del server di sincronizzazione. Le tue note esistenti saranno sincronizzate su questo dispositivo dopo la connessione.",
+        "emailLabel": "Indirizzo email",
+        "passwordLabel": "Password del server",
+        "connectButton": "Collega dispositivo",
+        "connecting": "Connessione..."
       },
       "privacyNote": "Privacy: Anche quando abilitata, tutte le note sono crittografate end-to-end. Il server di sincronizzazione non può leggere i contenuti.",
       "syncEnabled": "Sincronizzazione abilitata",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Token attivo",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Token generato — salvalo ora, non verrà mostrato di nuovo.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "copied": "Token copiato negli appunti",
+      "quickStart": "Avvio Rapido",
+      "curlExample": "Esempio: inviare una nota via curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Revoca Token Posta in Arrivo",
+          "message": "Revocare il token della posta in arrivo? Tutte le integrazioni che lo utilizzano smetteranno di funzionare.",
+          "confirmButton": "Revoca"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Impossibile generare il token della posta in arrivo",
+        "revoke": "Impossibile revocare il token della posta in arrivo"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Elementi: {used}/{max}",
+      "size": "Dimensione: {used}/{max}"
     }
   },
   "archive": {

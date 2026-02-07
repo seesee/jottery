@@ -4,7 +4,7 @@
     "tagline": "Osobiste notatki dla web i terminala"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Przejdź do głównej treści"
   },
   "common": {
     "loading": "Ładowanie...",
@@ -398,18 +398,18 @@
         "button": "🚀 Zarejestruj nowe konto"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Połącz istniejące konto",
+        "subtitle": "<strong>Masz już konto?</strong> Połącz to urządzenie",
+        "benefit1": "✓ Użyj istniejącego adresu e-mail/hasła",
+        "benefit2": "✓ Dodaje to urządzenie do Twojego konta",
+        "benefit3": "✓ Synchronizuje notatki z serwera na to urządzenie",
+        "button": "🔗 Połącz z istniejącym kontem",
+        "formTitle": "Połącz z istniejącym kontem",
+        "infoText": "Wprowadź dane logowania do serwera synchronizacji. Twoje istniejące notatki zostaną zsynchronizowane z tym urządzeniem po połączeniu.",
+        "emailLabel": "Adres e-mail",
+        "passwordLabel": "Hasło serwera",
+        "connectButton": "Połącz urządzenie",
+        "connecting": "Łączenie..."
       },
       "privacyNote": "<strong>🔒 Prywatność:</strong> Wszystkie notatki są szyfrowane end-to-end. Serwer przechowuje tylko zaszyfrowane dane i nie może odczytać treści.",
       "selfHostNote": "<strong>💡 Samodzielny hosting?</strong> Uruchom własny serwer - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">zobacz GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Twoje urządzenie jest teraz zarejestrowane i <strong>wszystkie istniejące notatki zostały zsynchronizowane z serwerem</strong>. Przyszłe zmiany będą synchronizowane automatycznie.",
         "successNextSteps": "📋 Aby dodać inne urządzenie: Kliknij poniżej \"Eksportuj dane uwierzytelniające synchronizacji\" i zaimportuj je na drugim urządzeniu.",
         "done": "Gotowe",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Sprawdź status zatwierdzenia w Portalu Użytkownika →"
       },
       "linkAccount": {
         "title": "Połącz konto (opcjonalne)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Gdy jest wyłączona, Jottery nie będzie wykonywał żadnych żądań sieciowych do serwerów synchronizacji. Wszystkie notatki pozostają całkowicie lokalne na tym urządzeniu.",
       "toEnableSync": "Aby włączyć synchronizację: Przełącz powyższy przełącznik i skonfiguruj serwer synchronizacji.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Połącz istniejące konto",
+        "subtitle": "<strong>Masz już konto?</strong> Połącz to urządzenie",
+        "benefit1": "✓ Użyj istniejącego adresu e-mail/hasła",
+        "benefit2": "✓ Dodaje to urządzenie do Twojego konta",
+        "benefit3": "✓ Synchronizuje notatki z serwera na to urządzenie",
+        "button": "🔗 Połącz z istniejącym kontem",
+        "formTitle": "Połącz z istniejącym kontem",
+        "infoText": "Wprowadź dane logowania do serwera synchronizacji. Twoje istniejące notatki zostaną zsynchronizowane z tym urządzeniem po połączeniu.",
+        "emailLabel": "Adres e-mail",
+        "passwordLabel": "Hasło serwera",
+        "connectButton": "Połącz urządzenie",
+        "connecting": "Łączenie..."
       },
       "privacyNote": "Prywatność: Nawet gdy jest włączona, wszystkie notatki są szyfrowane end-to-end. Serwer synchronizacji nie może odczytać treści.",
       "syncEnabled": "Synchronizacja włączona",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Token aktywny",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Token wygenerowany — zapisz go teraz, nie zostanie ponownie wyświetlony.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
+      "copied": "Token skopiowany do schowka",
       "quickStart": "Quick Start",
       "curlExample": "Example: submit a note via curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Unieważnij Token Skrzynki Odbiorczej",
+          "message": "Unieważnić token skrzynki odbiorczej? Wszystkie integracje go używające przestaną działać.",
+          "confirmButton": "Unieważnij"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Nie udało się wygenerować tokena skrzynki odbiorczej",
+        "revoke": "Nie udało się unieważnić tokena skrzynki odbiorczej"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Elementy: {used}/{max}",
+      "size": "Rozmiar: {used}/{max}"
     }
   },
   "archive": {

@@ -4,7 +4,7 @@
     "tagline": "Persoonlijke notities voor web en terminal"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Ga naar hoofdinhoud"
   },
   "common": {
     "loading": "Laden...",
@@ -398,18 +398,18 @@
         "button": "🚀 Nieuw account registreren"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Bestaand account verbinden",
+        "subtitle": "<strong>Heeft u al een account?</strong> Verbind dit apparaat",
+        "benefit1": "✓ Gebruik uw bestaande e-mail/wachtwoord",
+        "benefit2": "✓ Voegt dit apparaat toe aan uw account",
+        "benefit3": "✓ Synchroniseert notities van server naar dit apparaat",
+        "button": "🔗 Verbinden met bestaand account",
+        "formTitle": "Verbinden met bestaand account",
+        "infoText": "Voer uw synchronisatieserverreferenties in. Uw bestaande notities worden na het verbinden met dit apparaat gesynchroniseerd.",
+        "emailLabel": "E-mailadres",
+        "passwordLabel": "Serverwachtwoord",
+        "connectButton": "Apparaat verbinden",
+        "connecting": "Verbinden..."
       },
       "privacyNote": "<strong>🔒 Privacy:</strong> Al uw notities zijn end-to-end versleuteld. De server slaat alleen versleutelde gegevens op en kan uw inhoud niet lezen.",
       "selfHostNote": "<strong>💡 Zelf hosten?</strong> Draai uw eigen server - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">zie GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Uw apparaat is nu geregistreerd en <strong>al uw bestaande notities zijn gesynchroniseerd met de server</strong>. Toekomstige wijzigingen worden automatisch gesynchroniseerd.",
         "successNextSteps": "📋 Om een ander apparaat toe te voegen: Klik hieronder op \"Synchronisatie-inloggegevens exporteren\" en importeer ze op uw andere apparaat.",
         "done": "Klaar",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Controleer uw goedkeuringsstatus in het Gebruikersportaal →"
       },
       "linkAccount": {
         "title": "Account koppelen (optioneel)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Wanneer uitgeschakeld, zal Jottery geen netwerkverzoeken doen aan synchronisatieservers. Al uw notities blijven volledig lokaal op dit apparaat.",
       "toEnableSync": "Om synchronisatie in te schakelen: Schakel de schakelaar hierboven in en configureer uw synchronisatieserver.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Bestaand account verbinden",
+        "subtitle": "<strong>Heeft u al een account?</strong> Verbind dit apparaat",
+        "benefit1": "✓ Gebruik uw bestaande e-mail/wachtwoord",
+        "benefit2": "✓ Voegt dit apparaat toe aan uw account",
+        "benefit3": "✓ Synchroniseert notities van server naar dit apparaat",
+        "button": "🔗 Verbinden met bestaand account",
+        "formTitle": "Verbinden met bestaand account",
+        "infoText": "Voer uw synchronisatieserverreferenties in. Uw bestaande notities worden na het verbinden met dit apparaat gesynchroniseerd.",
+        "emailLabel": "E-mailadres",
+        "passwordLabel": "Serverwachtwoord",
+        "connectButton": "Apparaat verbinden",
+        "connecting": "Verbinden..."
       },
       "privacyNote": "Privacy: Zelfs wanneer ingeschakeld, zijn alle notities end-to-end versleuteld. De synchronisatieserver kan uw inhoud niet lezen.",
       "syncEnabled": "Synchronisatie ingeschakeld",
@@ -1219,27 +1219,27 @@
       "revoke": "Revoke Token",
       "active": "Token actief",
       "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
+      "generated": "Token gegenereerd — sla het nu op, het wordt niet opnieuw getoond.",
       "revoked": "Inbox token revoked",
       "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
+      "copied": "Token gekopieerd naar klembord",
       "quickStart": "Quick Start",
       "curlExample": "Example: submit a note via curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Inbox-token Intrekken",
+          "message": "Inbox-token intrekken? Alle integraties die het gebruiken zullen stoppen met werken.",
+          "confirmButton": "Intrekken"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Inbox-token kon niet worden gegenereerd",
+        "revoke": "Inbox-token kon niet worden ingetrokken"
       }
     },
     "quota": {
       "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "size": "Grootte: {used}/{max}"
     }
   },
   "archive": {

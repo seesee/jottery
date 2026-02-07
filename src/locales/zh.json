@@ -4,7 +4,7 @@
     "tagline": "网页和终端的个人笔记"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "跳到主要内容"
   },
   "common": {
     "loading": "加载中...",
@@ -1227,19 +1227,19 @@
       "curlExample": "示例：通过 curl 提交笔记",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "撤销收件箱令牌",
+          "message": "撤销您的收件箱令牌？所有使用它的集成将停止工作。",
+          "confirmButton": "撤销"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "无法生成收件箱令牌",
+        "revoke": "无法撤销收件箱令牌"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "项目: {used}/{max}",
+      "size": "大小: {used}/{max}"
     }
   },
   "archive": {

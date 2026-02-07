@@ -4,7 +4,7 @@
     "tagline": "웹과 터미널을 위한 개인 메모"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "메인 콘텐츠로 건너뛰기"
   },
   "common": {
     "loading": "로딩 중...",
@@ -1227,19 +1227,19 @@
       "curlExample": "예: curl로 노트 제출",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "받은편지함 토큰 취소",
+          "message": "받은편지함 토큰을 취소하시겠습니까? 이를 사용하는 모든 연동이 작동을 멈춥니다.",
+          "confirmButton": "취소"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "받은편지함 토큰 생성 실패",
+        "revoke": "받은편지함 토큰 취소 실패"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "항목: {used}/{max}",
+      "size": "크기: {used}/{max}"
     }
   },
   "archive": {
