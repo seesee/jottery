@@ -1142,7 +1142,7 @@
     "progress": "{total} nottan {current}.",
     "selectAll": "Tümünü seç",
     "deselectAll": "Tümünün seçimini kaldır",
-    "archive": "Archive"
+    "archive": "Arşivle"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

@@ -1142,7 +1142,7 @@
     "progress": "{current} / {total}",
     "selectAll": "全选",
     "deselectAll": "取消全选",
-    "archive": "Archive"
+    "archive": "归档"
   },
   "conflict": {
     "title": "检测到同步冲突",

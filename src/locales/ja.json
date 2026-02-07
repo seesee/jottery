@@ -1142,7 +1142,7 @@
     "progress": "{total}件中{current}件",
     "selectAll": "すべて選択",
     "deselectAll": "すべて選択解除",
-    "archive": "Archive"
+    "archive": "アーカイブ"
   },
   "conflict": {
     "title": "同期の競合を検出",

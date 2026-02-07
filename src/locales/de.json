@@ -1142,7 +1142,7 @@
     "setColor": "Kategorie festlegen",
     "colorSet": "Kategorie für {count} Notizen festgelegt",
     "selectColorForBulk": "Kategorie für ausgewählte Notizen auswählen",
-    "archive": "Archive"
+    "archive": "Archivieren"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

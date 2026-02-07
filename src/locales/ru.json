@@ -1142,7 +1142,7 @@
     "progress": "{current} из {total}",
     "selectAll": "Выбрать все",
     "deselectAll": "Снять выделение",
-    "archive": "Archive"
+    "archive": "Архивировать"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

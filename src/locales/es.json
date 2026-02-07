@@ -1142,7 +1142,7 @@
     "progress": "{current} de {total}",
     "selectAll": "Seleccionar todo",
     "deselectAll": "Deseleccionar todo",
-    "archive": "Archive"
+    "archive": "Archivar"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

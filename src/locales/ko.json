@@ -1142,7 +1142,7 @@
     "progress": "{total}개 중 {current}개",
     "selectAll": "전체 선택",
     "deselectAll": "전체 선택 해제",
-    "archive": "Archive"
+    "archive": "보관"
   },
   "conflict": {
     "title": "동기화 충돌 감지됨",

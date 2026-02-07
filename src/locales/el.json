@@ -1142,7 +1142,7 @@
     "progress": "{current} από {total}",
     "selectAll": "Επιλογή όλων",
     "deselectAll": "Αποεπιλογή όλων",
-    "archive": "Archive"
+    "archive": "Αρχειοθέτηση"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

@@ -1142,7 +1142,7 @@
     "progress": "{current} van {total}",
     "selectAll": "Alles selecteren",
     "deselectAll": "Alles deselecteren",
-    "archive": "Archive"
+    "archive": "Archiveren"
   },
   "conflict": {
     "title": "Sync Conflict Detected",
