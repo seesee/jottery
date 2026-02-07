@@ -636,14 +636,9 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (4th note in language-specific files, or Japan Trip)
+    // Find and click the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    // Try to find Japan Trip first (original demo), fall back to 4th note (language-specific demos)
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3); // 4th note (0-indexed) is the travel plan
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -667,14 +662,9 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (4th note in language-specific files, or Japan Trip)
+    // Find and click the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    // Try to find Japan Trip first (original demo), fall back to 4th note (language-specific demos)
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3); // 4th note (0-indexed) is the travel plan
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -744,13 +734,9 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the travel note (or Japan Trip in original demo)
+    // Click on the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3); // 4th note is the travel plan
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1015,13 +1001,9 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note
+    // Find and click the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3);
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1045,13 +1027,9 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note
+    // Find and click the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3);
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1120,13 +1098,9 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the travel note
+    // Click on the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3);
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1463,13 +1437,9 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note
+    // Find and click the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3);
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1637,13 +1607,9 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note
+    // Find and click the travel note (always at index 3 in demo data)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    let travelNote = noteListItems.filter({ hasText: /Japan Trip|Trip|Reise|Voyage|Viaje|Viaggio|Viagem|Reis|Podróż|Seyahat|Поездка|旅行|여행/i }).first();
-    const hasTravelNote = await travelNote.isVisible().catch(() => false);
-    if (!hasTravelNote) {
-      travelNote = noteListItems.nth(3);
-    }
+    const travelNote = noteListItems.nth(3);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
