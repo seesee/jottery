@@ -62,8 +62,8 @@
   "search": {
     "placeholder": "Notities zoeken...",
     "clear": "Zoekopdracht wissen",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
+    "resultCount": "Resultaten: overeenkomsten / totaal",
+    "resultsFound": "{matches} van {total} notities",
     "tagSuggestions": "Tagsuggesties",
     "savedSearches": "Opgeslagen Zoekopdrachten",
     "newSavedSearch": "Huidige Zoekopdracht Opslaan",

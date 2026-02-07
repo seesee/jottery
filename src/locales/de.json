@@ -62,8 +62,8 @@
   "search": {
     "placeholder": "Notizen durchsuchen...",
     "clear": "Suche löschen",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
+    "resultCount": "Suchergebnisse: Treffer / Gesamt",
+    "resultsFound": "{matches} von {total} Notizen gefunden",
     "tagSuggestions": "Tag-Vorschläge",
     "savedSearches": "Gespeicherte Suchen",
     "newSavedSearch": "Aktuelle Suche speichern",

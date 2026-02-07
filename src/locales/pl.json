@@ -62,8 +62,8 @@
   "search": {
     "placeholder": "Szukaj notatek...",
     "clear": "Wyczyść wyszukiwanie",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
+    "resultCount": "Wyniki: dopasowania / łącznie",
+    "resultsFound": "{matches} z {total} notatek",
     "tagSuggestions": "Sugestie tagów",
     "savedSearches": "Zapisane Wyszukiwania",
     "newSavedSearch": "Zapisz Bieżące Wyszukiwanie",

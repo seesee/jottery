@@ -62,8 +62,8 @@
   "search": {
     "placeholder": "Pesquisar notas...",
     "clear": "Limpar pesquisa",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
+    "resultCount": "Resultados: correspondências / total",
+    "resultsFound": "{matches} de {total} notas",
     "tagSuggestions": "Sugestões de tags",
     "savedSearches": "Pesquisas Salvas",
     "newSavedSearch": "Salvar Pesquisa Atual",

@@ -62,8 +62,8 @@
   "search": {
     "placeholder": "Notlarda ara...",
     "clear": "Aramayı temizle",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
+    "resultCount": "Sonuçlar: eşleşmeler / toplam",
+    "resultsFound": "{total} nottan {matches} eşleşme",
     "tagSuggestions": "Etiket önerileri",
     "savedSearches": "Kaydedilmiş Aramalar",
     "newSavedSearch": "Mevcut Aramayı Kaydet",
