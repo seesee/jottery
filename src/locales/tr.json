@@ -1192,25 +1192,25 @@
     "deletedAll": "Tüm gelen kutusu öğeleri silindi",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "closeLabel": "Gelen kutusunu kapat",
+    "indicator": "Gelen kutusu ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
+        "title": "Öğeyi Sil",
         "message": "Bu gelen kutusu öğesini silmek istiyor musunuz? Bu işlem geri alınamaz.",
-        "confirmButton": "Delete"
+        "confirmButton": "Sil"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Tüm Öğeleri Sil",
+        "message": "Tüm {count} gelen kutusu öğesini silmek istiyor musunuz? Bu işlem geri alınamaz.",
+        "confirmButton": "Tümünü Sil"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Öğe kabul edilemedi",
+      "delete": "Öğe silinemedi",
+      "acceptAll": "Öğeler kabul edilemedi",
+      "deleteAll": "Öğeler silinemedi"
     },
     "token": {
       "title": "Inbox API",

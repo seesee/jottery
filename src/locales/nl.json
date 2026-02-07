@@ -1192,25 +1192,25 @@
     "deletedAll": "Alle inbox-items verwijderd",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
+    "closeLabel": "Inbox sluiten",
     "indicator": "Inbox ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
+        "title": "Inbox-item Verwijderen",
         "message": "Dit inbox-item verwijderen? Dit kan niet ongedaan worden gemaakt.",
-        "confirmButton": "Delete"
+        "confirmButton": "Verwijderen"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Alle Inbox-items Verwijderen",
+        "message": "Alle {count} inbox-items verwijderen? Dit kan niet ongedaan worden gemaakt.",
+        "confirmButton": "Alles Verwijderen"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Inbox-item kon niet worden geaccepteerd",
+      "delete": "Inbox-item kon niet worden verwijderd",
+      "acceptAll": "Inbox-items konden niet worden geaccepteerd",
+      "deleteAll": "Inbox-items konden niet worden verwijderd"
     },
     "token": {
       "title": "Inbox API",

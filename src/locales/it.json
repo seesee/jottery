@@ -1192,25 +1192,25 @@
     "deletedAll": "Tutti gli elementi della posta in arrivo eliminati",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "closeLabel": "Chiudi posta in arrivo",
+    "indicator": "Posta in arrivo ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
+        "title": "Elimina Elemento",
         "message": "Eliminare questo elemento della posta in arrivo? Questa azione non può essere annullata.",
-        "confirmButton": "Delete"
+        "confirmButton": "Elimina"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Elimina Tutti gli Elementi",
+        "message": "Eliminare tutti i {count} elementi della posta in arrivo? Questa azione non può essere annullata.",
+        "confirmButton": "Elimina Tutti"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Impossibile accettare l'elemento",
+      "delete": "Impossibile eliminare l'elemento",
+      "acceptAll": "Impossibile accettare gli elementi",
+      "deleteAll": "Impossibile eliminare gli elementi"
     },
     "token": {
       "title": "Inbox API",
