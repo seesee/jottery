@@ -64,7 +64,7 @@
     "clear": "検索をクリア",
     "resultCount": "Search results: matches / total",
     "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "tagSuggestions": "タグの候補",
     "savedSearches": "保存された検索",
     "newSavedSearch": "現在の検索を保存",
     "editSearch": "編集",
@@ -1186,13 +1186,13 @@
     "deleteAll": "Delete All",
     "accepting": "Accepting...",
     "deleting": "Deleting...",
-    "accepted": "Note accepted",
+    "accepted": "ノートを受け入れました",
     "acceptedAll": "All {count} notes accepted",
     "deleted": "Inbox item deleted",
     "deletedAll": "All inbox items deleted",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
+    "closeLabel": "受信トレイを閉じる",
     "indicator": "Inbox ({count})",
     "confirm": {
       "delete": {
@@ -1217,7 +1217,7 @@
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
       "generate": "Generate Token",
       "revoke": "Revoke Token",
-      "active": "Token active",
+      "active": "トークン有効",
       "none": "No token configured",
       "generated": "Token generated — save it now, it won't be shown again.",
       "revoked": "Inbox token revoked",
@@ -1279,10 +1279,10 @@
     "collapse": "折りたたむ",
     "expand": "展開",
     "moveUp": "上へ移動",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "下へ移動",
+    "expandAll": "すべて展開",
+    "collapseAll": "すべて折りたたむ",
+    "level": "レベル {n}"
   },
   "progress": {
     "title": "お待ちください",

@@ -64,7 +64,7 @@
     "clear": "검색 지우기",
     "resultCount": "Search results: matches / total",
     "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "tagSuggestions": "태그 제안",
     "savedSearches": "저장된 검색",
     "newSavedSearch": "현재 검색 저장",
     "editSearch": "편집",
@@ -1186,13 +1186,13 @@
     "deleteAll": "Delete All",
     "accepting": "Accepting...",
     "deleting": "Deleting...",
-    "accepted": "Note accepted",
+    "accepted": "노트가 수락되었습니다",
     "acceptedAll": "All {count} notes accepted",
     "deleted": "Inbox item deleted",
     "deletedAll": "All inbox items deleted",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
+    "closeLabel": "받은 편지함 닫기",
     "indicator": "Inbox ({count})",
     "confirm": {
       "delete": {
@@ -1217,7 +1217,7 @@
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
       "generate": "Generate Token",
       "revoke": "Revoke Token",
-      "active": "Token active",
+      "active": "토큰 활성화됨",
       "none": "No token configured",
       "generated": "Token generated — save it now, it won't be shown again.",
       "revoked": "Inbox token revoked",
@@ -1279,10 +1279,10 @@
     "collapse": "접기",
     "expand": "펼치기",
     "moveUp": "위로 이동",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "아래로 이동",
+    "expandAll": "모두 펼치기",
+    "collapseAll": "모두 접기",
+    "level": "레벨 {n}"
   },
   "progress": {
     "title": "잠시만 기다려 주세요",

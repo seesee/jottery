@@ -64,7 +64,7 @@
     "clear": "清除搜索",
     "resultCount": "Search results: matches / total",
     "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "tagSuggestions": "标签建议",
     "savedSearches": "保存的搜索",
     "newSavedSearch": "保存当前搜索",
     "editSearch": "编辑",
@@ -1186,13 +1186,13 @@
     "deleteAll": "Delete All",
     "accepting": "Accepting...",
     "deleting": "Deleting...",
-    "accepted": "Note accepted",
+    "accepted": "笔记已接受",
     "acceptedAll": "All {count} notes accepted",
     "deleted": "Inbox item deleted",
     "deletedAll": "All inbox items deleted",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
+    "closeLabel": "关闭收件箱",
     "indicator": "Inbox ({count})",
     "confirm": {
       "delete": {
@@ -1217,7 +1217,7 @@
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
       "generate": "Generate Token",
       "revoke": "Revoke Token",
-      "active": "Token active",
+      "active": "令牌已激活",
       "none": "No token configured",
       "generated": "Token generated — save it now, it won't be shown again.",
       "revoked": "Inbox token revoked",
@@ -1279,10 +1279,10 @@
     "collapse": "折叠",
     "expand": "展开",
     "moveUp": "上移",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "下移",
+    "expandAll": "全部展开",
+    "collapseAll": "全部折叠",
+    "level": "级别 {n}"
   },
   "progress": {
     "title": "请稍候",
