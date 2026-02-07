@@ -1197,7 +1197,7 @@
     "confirm": {
       "delete": {
         "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
+        "message": "Bu gelen kutusu öğesini silmek istiyor musunuz? Bu işlem geri alınamaz.",
         "confirmButton": "Delete"
       },
       "deleteAll": {
@@ -1215,8 +1215,8 @@
     "token": {
       "title": "Inbox API",
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
+      "generate": "Token Oluştur",
+      "revoke": "Tokenı İptal Et",
       "active": "Token aktif",
       "none": "Token yapılandırılmamış",
       "generated": "Token oluşturuldu — şimdi kaydedin, tekrar gösterilmeyecek.",

@@ -1196,27 +1196,27 @@
     "indicator": "Inbox ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
-        "confirmButton": "Delete"
+        "title": "Posteingang-Element löschen",
+        "message": "Dieses Posteingang-Element löschen? Dies kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Löschen"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Alle Posteingang-Elemente löschen",
+        "message": "Alle {count} Posteingang-Elemente löschen? Dies kann nicht rückgängig gemacht werden.",
+        "confirmButton": "Alle löschen"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Posteingang-Element konnte nicht akzeptiert werden",
+      "delete": "Posteingang-Element konnte nicht gelöscht werden",
+      "acceptAll": "Posteingang-Elemente konnten nicht akzeptiert werden",
+      "deleteAll": "Posteingang-Elemente konnten nicht gelöscht werden"
     },
     "token": {
       "title": "Inbox API",
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
+      "generate": "Token generieren",
+      "revoke": "Token widerrufen",
       "active": "Token aktiv",
       "none": "Kein Token konfiguriert",
       "generated": "Token erstellt — speichern Sie es jetzt, es wird nicht erneut angezeigt.",

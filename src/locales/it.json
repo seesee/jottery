@@ -1197,7 +1197,7 @@
     "confirm": {
       "delete": {
         "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
+        "message": "Eliminare questo elemento della posta in arrivo? Questa azione non può essere annullata.",
         "confirmButton": "Delete"
       },
       "deleteAll": {
@@ -1215,8 +1215,8 @@
     "token": {
       "title": "Inbox API",
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
+      "generate": "Genera Token",
+      "revoke": "Revoca Token",
       "active": "Token attivo",
       "none": "Nessun token configurato",
       "generated": "Token generato — salvalo ora, non verrà mostrato di nuovo.",

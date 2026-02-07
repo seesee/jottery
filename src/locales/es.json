@@ -1192,31 +1192,31 @@
     "deletedAll": "Todos los elementos de la bandeja de entrada eliminados",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "closeLabel": "Cerrar bandeja de entrada",
+    "indicator": "Bandeja de entrada ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
-        "confirmButton": "Delete"
+        "title": "Eliminar Elemento de Bandeja",
+        "message": "¿Eliminar este elemento de la bandeja de entrada? Esta acción no se puede deshacer.",
+        "confirmButton": "Eliminar"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Eliminar Todos los Elementos",
+        "message": "¿Eliminar todos los {count} elementos de la bandeja de entrada? Esta acción no se puede deshacer.",
+        "confirmButton": "Eliminar Todos"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Error al aceptar elemento de bandeja de entrada",
+      "delete": "Error al eliminar elemento de bandeja de entrada",
+      "acceptAll": "Error al aceptar elementos de bandeja de entrada",
+      "deleteAll": "Error al eliminar elementos de bandeja de entrada"
     },
     "token": {
       "title": "Inbox API",
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
+      "generate": "Generar Token",
+      "revoke": "Revocar Token",
       "active": "Token activo",
       "none": "No hay token configurado",
       "generated": "Token generado — guárdelo ahora, no se mostrará de nuevo.",

@@ -1215,8 +1215,8 @@
     "token": {
       "title": "Inbox API",
       "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
+      "generate": "Δημιουργία Token",
+      "revoke": "Ανάκληση Token",
       "active": "Token ενεργό",
       "none": "Δεν έχει ρυθμιστεί token",
       "generated": "Το token δημιουργήθηκε — αποθηκεύστε το τώρα, δεν θα εμφανιστεί ξανά.",
