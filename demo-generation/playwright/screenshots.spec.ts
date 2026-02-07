@@ -572,9 +572,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(2000);
 
     // Set the app's UI language before importing notes
-    if (LANG !== 'en-GB') {
-      await setAppLanguage(page, LANG);
-    }
+    // Always set the app language explicitly (browser may default to different locale)
+    await setAppLanguage(page, LANG);
 
     // Import demo notes
     await importDemoNotes(page);
@@ -927,9 +926,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(2000);
 
     // Set the app's UI language before importing notes
-    if (LANG !== 'en-GB') {
-      await setAppLanguage(page, LANG);
-    }
+    // Always set the app language explicitly (browser may default to different locale)
+    await setAppLanguage(page, LANG);
 
     // Import demo notes
     await importDemoNotes(page);
@@ -1396,10 +1394,8 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Set the app's UI language before importing notes
-    if (LANG !== 'en-GB') {
-      await setAppLanguageMobile(page, LANG);
-    }
+    // Always set the app's UI language explicitly (browser may default to different locale)
+    await setAppLanguageMobile(page, LANG);
 
     // Import demo notes (mobile version - handles hamburger menu)
     await importDemoNotesMobile(page);
@@ -1560,10 +1556,8 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Set the app's UI language before importing notes
-    if (LANG !== 'en-GB') {
-      await setAppLanguageMobile(page, LANG);
-    }
+    // Always set the app's UI language explicitly (browser may default to different locale)
+    await setAppLanguageMobile(page, LANG);
 
     // Import demo notes (mobile version - handles hamburger menu)
     await importDemoNotesMobile(page);
@@ -1724,10 +1718,8 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Set the app's UI language
-    if (LANG !== 'en-GB') {
-      await setAppLanguage(page, LANG);
-    }
+    // Always set the app's UI language explicitly (browser may default to different locale)
+    await setAppLanguage(page, LANG);
   });
 
   test('09-light. Outliner Mode', async ({ page }) => {
@@ -1874,10 +1866,8 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Set the app's UI language
-    if (LANG !== 'en-GB') {
-      await setAppLanguage(page, LANG);
-    }
+    // Always set the app's UI language explicitly (browser may default to different locale)
+    await setAppLanguage(page, LANG);
 
     // Apply dark theme
     await page.evaluate(() => {
