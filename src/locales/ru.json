@@ -1157,29 +1157,29 @@
     "keepBoth": "Оставить обе",
     "merge": "Объединить",
     "resolved": "Конфликт разрешен",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "resolvedBoth": "Конфликт разрешен - создана копия заметки",
     "noConflict": "Данные о конфликте не найдены",
-    "indicator": "Sync conflict",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "indicator": "Конфликт синхронизации",
+    "bannerText": "Эта заметка имеет конфликт синхронизации, который необходимо разрешить",
+    "resolveButton": "Разрешить конфликт",
     "syncNotification": "{count, plural, one {1 заметка имеет конфликт синхронизации} few {{count} заметки имеют конфликты синхронизации} other {{count} заметок имеют конфликты синхронизации}}"
   },
   "pullToRefresh": {
     "pull": "Потяните вниз для синхронизации",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "release": "Отпустите для синхронизации",
+    "syncing": "Синхронизация...",
+    "region": "Потяните для обновления"
   },
   "sync": {
     "syncing": "Синхронизация...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Синхронизация: {percentage}% завершено"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
+    "title": "Входящие",
+    "count": "{count} элементов",
+    "countSingle": "1 элемент",
+    "empty": "Входящие пусты",
+    "emptyDescription": "Заметки, отправленные через Inbox API, появятся здесь для проверки",
     "accept": "Принять",
     "acceptAll": "Принять все",
     "delete": "Удалить",
@@ -1220,7 +1220,7 @@
       "active": "Токен активен",
       "none": "Токен не настроен",
       "generated": "Токен создан — сохраните его сейчас, он больше не будет показан.",
-      "revoked": "Inbox token revoked",
+      "revoked": "Токен входящих отозван",
       "copyToken": "Копировать токен",
       "copied": "Токен скопирован в буфер обмена",
       "quickStart": "Quick Start",

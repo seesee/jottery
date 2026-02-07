@@ -1160,8 +1160,8 @@
     "resolvedBoth": "冲突已解决 - 已创建副本",
     "noConflict": "未找到冲突数据",
     "indicator": "同步冲突",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "bannerText": "此笔记存在需要解决的同步冲突",
+    "resolveButton": "解决冲突",
     "syncNotification": "{count}个笔记有同步冲突"
   },
   "pullToRefresh": {
@@ -1172,14 +1172,14 @@
   },
   "sync": {
     "syncing": "同步中...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "同步中: {percentage}% 已完成"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
+    "title": "收件箱",
+    "count": "{count} 项",
+    "countSingle": "1 项",
+    "empty": "收件箱为空",
+    "emptyDescription": "通过收件箱API提交的笔记将在此处显示以供审核",
     "accept": "接受",
     "acceptAll": "全部接受",
     "delete": "删除",

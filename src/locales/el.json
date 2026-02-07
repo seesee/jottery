@@ -1157,29 +1157,29 @@
     "keepBoth": "Διατήρηση και των δύο",
     "merge": "Συγχώνευση",
     "resolved": "Η σύγκρουση επιλύθηκε",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
+    "resolvedBoth": "Η σύγκρουση επιλύθηκε - δημιουργήθηκε αντίγραφο",
     "noConflict": "Δεν βρέθηκαν δεδομένα σύγκρουσης",
-    "indicator": "Sync conflict",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "indicator": "Σύγκρουση συγχρονισμού",
+    "bannerText": "Αυτή η σημείωση έχει μια σύγκρουση συγχρονισμού που πρέπει να επιλυθεί",
+    "resolveButton": "Επίλυση σύγκρουσης",
     "syncNotification": "{count, plural, one {1 σημείωση έχει διένεξη συγχρονισμού} other {{count} σημειώσεις έχουν διενέξεις συγχρονισμού}}"
   },
   "pullToRefresh": {
     "pull": "Τραβήξτε προς τα κάτω για συγχρονισμό",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "release": "Αφήστε για συγχρονισμό",
+    "syncing": "Συγχρονισμός...",
+    "region": "Τραβήξτε για ανανέωση"
   },
   "sync": {
     "syncing": "Συγχρονισμός...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Συγχρονισμός: {percentage}% ολοκληρώθηκε"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
+    "title": "Εισερχόμενα",
+    "count": "{count} στοιχεία",
+    "countSingle": "1 στοιχείο",
+    "empty": "Τα εισερχόμενα είναι άδεια",
+    "emptyDescription": "Οι σημειώσεις που υποβάλλονται μέσω του Inbox API θα εμφανίζονται εδώ για έλεγχο",
     "accept": "Αποδοχή",
     "acceptAll": "Αποδοχή όλων",
     "delete": "Διαγραφή",
@@ -1220,7 +1220,7 @@
       "active": "Token ενεργό",
       "none": "Δεν έχει ρυθμιστεί token",
       "generated": "Το token δημιουργήθηκε — αποθηκεύστε το τώρα, δεν θα εμφανιστεί ξανά.",
-      "revoked": "Inbox token revoked",
+      "revoked": "Το token εισερχομένων ανακλήθηκε",
       "copyToken": "Αντιγραφή Token",
       "copied": "Το token αντιγράφηκε στο πρόχειρο",
       "quickStart": "Γρήγορη Εκκίνηση",
