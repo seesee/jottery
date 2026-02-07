@@ -6,10 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './playwright',
-  fullyParallel: false, // Run serially for screenshot generation
+  fullyParallel: true, // Run tests in parallel
   forbidOnly: !!process.env.CI,
   retries: 0, // No retries for screenshot generation
-  workers: 1, // Single worker for consistency
+  workers: 4, // 4 parallel workers for faster generation
   reporter: 'list',
   timeout: 35000, // 35 seconds per test - kill if hanging
   use: {
