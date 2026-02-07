@@ -1214,7 +1214,7 @@
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "description": "通过API向您的账户提交笔记 — 无需加密密码。项目将出现在您的收件箱中供审核。",
       "generate": "生成令牌",
       "revoke": "撤销令牌",
       "active": "令牌已激活",

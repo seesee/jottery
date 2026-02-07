@@ -1214,7 +1214,7 @@
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "description": "API를 통해 계정에 노트 제출 — 암호화 비밀번호 불필요. 항목은 검토를 위해 받은편지함에 표시됩니다.",
       "generate": "토큰 생성",
       "revoke": "토큰 취소",
       "active": "토큰 활성화됨",

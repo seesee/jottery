@@ -1214,7 +1214,7 @@
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "description": "Stuur notities naar uw account via API — geen versleutelingswachtwoord nodig. Items verschijnen in uw inbox ter beoordeling.",
       "generate": "Token Genereren",
       "revoke": "Token Intrekken",
       "active": "Token actief",

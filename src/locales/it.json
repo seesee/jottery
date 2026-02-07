@@ -1214,7 +1214,7 @@
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "description": "Invia note al tuo account tramite API — non è necessaria la password di crittografia. Gli elementi appaiono nella tua posta in arrivo per la revisione.",
       "generate": "Genera Token",
       "revoke": "Revoca Token",
       "active": "Token attivo",

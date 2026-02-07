@@ -1192,8 +1192,8 @@
     "deletedAll": "Alle Posteingang-Elemente gelöscht",
     "source": "Source: {source}",
     "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "closeLabel": "Posteingang schließen",
+    "indicator": "Posteingang ({count})",
     "confirm": {
       "delete": {
         "title": "Posteingang-Element löschen",
@@ -1214,7 +1214,7 @@
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "description": "Notizen per API an Ihr Konto senden — kein Verschlüsselungspasswort erforderlich. Elemente erscheinen in Ihrem Posteingang zur Überprüfung.",
       "generate": "Token generieren",
       "revoke": "Token widerrufen",
       "active": "Token aktiv",

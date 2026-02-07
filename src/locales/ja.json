@@ -1214,7 +1214,7 @@
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
+      "description": "API経由でアカウントにノートを送信 — 暗号化パスワード不要。アイテムは確認用に受信トレイに表示されます。",
       "generate": "トークンを生成",
       "revoke": "トークンを取り消す",
       "active": "トークン有効",
