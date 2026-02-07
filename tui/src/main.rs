@@ -216,6 +216,12 @@ enum Commands {
         #[arg(short = 'k', long)]
         key_password: Option<String>,
     },
+    /// Store password for auto-unlock (used for demo/testing automation)
+    StorePassword {
+        /// Password to store
+        #[arg(short, long)]
+        password: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1056,6 +1062,27 @@ fn main() -> Result<()> {
 
             println!();
             println!("✓ {}: {} {}", t!("backup.restored"), restored, t!("menu.notes"));
+            return Ok(());
+        }
+        Some(Commands::StorePassword { password }) => {
+            // Store password for auto-unlock (used for demo/testing automation)
+            // First verify the password works with the database
+            if db_path.exists() {
+                let _db = Database::open(&db_path, &password)
+                    .context("Password verification failed - incorrect password")?;
+            }
+
+            // Get the config directory (same as database directory)
+            let config_dir = db_path.parent()
+                .ok_or_else(|| anyhow::anyhow!("Invalid database path"))?;
+
+            // Store password using file-based storage
+            let storage = password_storage::create_file_storage(config_dir);
+            storage.store(&password)?;
+
+            println!("✓ Password stored for auto-unlock");
+            println!("  Database: {}", db_path.display());
+            println!("  Storage: {}", config_dir.join(".jottery_remember").display());
             return Ok(());
         }
         None => {

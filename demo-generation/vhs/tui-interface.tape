@@ -1,7 +1,13 @@
 # Jottery TUI - Interactive Interface
 # Use DEMO_LANG environment variable to set the output language (default: en-GB)
+#
+# Prerequisites:
+#   1. Run setup-tui-demo.sh to create isolated demo databases
+#   2. Set DEMO_LANG before running: DEMO_LANG=ja vhs tui-interface.tape
+#
 Env DEMO_LANG "en-GB"
-Output public/screenshots/${DEMO_LANG}/tui-interface.gif
+Env DEMO_ROOT ""
+Output ${DEMO_ROOT}public/screenshots/${DEMO_LANG}/tui-interface.gif
 
 Set FontSize 18
 Set Width 1400
@@ -9,8 +15,9 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Start jottery TUI with default database
-Type "jottery"
+# Start jottery TUI with isolated demo database
+# Uses demo database from setup-tui-demo.sh (password stored for auto-unlock)
+Type "jottery --database ${DEMO_ROOT}demo-generation/tui-demo/${DEMO_LANG}/jottery.db"
 Sleep 2s
 Enter
 Sleep 2s
