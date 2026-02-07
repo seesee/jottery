@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Δοκιμάστε διαφορετική αναζήτηση",
     "noNotes": "Δεν υπάρχουν σημειώσεις",
     "somethingWentWrong": "Κάτι πήγε στραβά",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "αποτέλεσμα",
+    "matchPlural": "αποτελέσματα"
   },
   "search": {
     "placeholder": "Αναζήτηση σημειώσεων...",
@@ -1116,7 +1116,7 @@
     "message": "Επαναφορτώστε για να λάβετε τις τελευταίες λειτουργίες και βελτιώσεις",
     "reloadButton": "Επαναφόρτωση τώρα",
     "dismissLabel": "Απόρριψη",
-    "backupButton": "Back up first",
+    "backupButton": "Πρώτα δημιουργήστε αντίγραφο",
     "backingUp": "Δημιουργία αντιγράφου ασφαλείας..."
   },
   "bulk": {
@@ -1279,10 +1279,10 @@
     "collapse": "Σύμπτυξη",
     "expand": "Ανάπτυξη",
     "moveUp": "Μετακίνηση επάνω",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Μετακίνηση κάτω",
+    "expandAll": "Ανάπτυξη όλων",
+    "collapseAll": "Σύμπτυξη όλων",
+    "level": "Επίπεδο {n}"
   },
   "progress": {
     "title": "Παρακαλώ περιμένετε",

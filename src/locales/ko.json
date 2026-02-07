@@ -56,8 +56,8 @@
     "tryDifferentSearch": "다른 검색어를 시도해 보세요",
     "noNotes": "노트 없음",
     "somethingWentWrong": "문제가 발생했습니다",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "개 일치",
+    "matchPlural": "개 일치"
   },
   "search": {
     "placeholder": "노트 검색...",

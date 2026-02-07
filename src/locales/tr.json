@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Farklı bir arama deneyin",
     "noNotes": "Not yok",
     "somethingWentWrong": "Bir şeyler ters gitti",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "eşleşme",
+    "matchPlural": "eşleşme"
   },
   "search": {
     "placeholder": "Notlarda ara...",
@@ -1116,7 +1116,7 @@
     "message": "En son özellikleri ve iyileştirmeleri almak için yenileyin",
     "reloadButton": "Şimdi yenile",
     "dismissLabel": "Kapat",
-    "backupButton": "Back up first",
+    "backupButton": "Önce yedekle",
     "backingUp": "Yedekleniyor..."
   },
   "bulk": {
@@ -1279,10 +1279,10 @@
     "collapse": "Daralt",
     "expand": "Genişlet",
     "moveUp": "Yukarı taşı",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Aşağı taşı",
+    "expandAll": "Tümünü genişlet",
+    "collapseAll": "Tümünü daralt",
+    "level": "Seviye {n}"
   },
   "progress": {
     "title": "Lütfen bekleyin",

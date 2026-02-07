@@ -56,8 +56,8 @@
     "tryDifferentSearch": "別の検索クエリを試してください",
     "noNotes": "ノートがありません",
     "somethingWentWrong": "問題が発生しました",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "件",
+    "matchPlural": "件"
   },
   "search": {
     "placeholder": "ノートを検索...",

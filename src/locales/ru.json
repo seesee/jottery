@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Попробуйте другой поисковый запрос",
     "noNotes": "Нет заметок",
     "somethingWentWrong": "Что-то пошло не так",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "совпадение",
+    "matchPlural": "совпадений"
   },
   "search": {
     "placeholder": "Поиск заметок...",
@@ -1116,7 +1116,7 @@
     "message": "Перезагрузите, чтобы получить последние функции и улучшения",
     "reloadButton": "Перезагрузить сейчас",
     "dismissLabel": "Закрыть",
-    "backupButton": "Back up first",
+    "backupButton": "Сначала создать копию",
     "backingUp": "Создание резервной копии..."
   },
   "bulk": {
@@ -1279,10 +1279,10 @@
     "collapse": "Свернуть",
     "expand": "Развернуть",
     "moveUp": "Переместить вверх",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Переместить вниз",
+    "expandAll": "Развернуть все",
+    "collapseAll": "Свернуть все",
+    "level": "Уровень {n}"
   },
   "progress": {
     "title": "Пожалуйста, подождите",

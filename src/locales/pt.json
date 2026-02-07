@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Tente uma pesquisa diferente",
     "noNotes": "Nenhuma nota",
     "somethingWentWrong": "Algo deu errado",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "resultado",
+    "matchPlural": "resultados"
   },
   "search": {
     "placeholder": "Pesquisar notas...",
@@ -1116,7 +1116,7 @@
     "message": "Recarregue para obter os recursos e melhorias mais recentes",
     "reloadButton": "Recarregar agora",
     "dismissLabel": "Dispensar",
-    "backupButton": "Back up first",
+    "backupButton": "Fazer backup primeiro",
     "backingUp": "Criando backup..."
   },
   "bulk": {
@@ -1279,10 +1279,10 @@
     "collapse": "Recolher",
     "expand": "Expandir",
     "moveUp": "Mover para cima",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Mover para baixo",
+    "expandAll": "Expandir tudo",
+    "collapseAll": "Recolher tudo",
+    "level": "Nível {n}"
   },
   "progress": {
     "title": "Por favor aguarde",

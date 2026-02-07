@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Probeer een andere zoekopdracht",
     "noNotes": "Geen notities",
     "somethingWentWrong": "Er is iets misgegaan",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "resultaat",
+    "matchPlural": "resultaten"
   },
   "search": {
     "placeholder": "Notities zoeken...",
@@ -1116,7 +1116,7 @@
     "message": "Ververs om de nieuwste functies en verbeteringen te krijgen",
     "reloadButton": "Nu verversen",
     "dismissLabel": "Negeren",
-    "backupButton": "Back up first",
+    "backupButton": "Eerst back-up maken",
     "backingUp": "Back-up maken..."
   },
   "bulk": {
@@ -1176,8 +1176,8 @@
   },
   "inbox": {
     "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
+    "count": "{count} onderdelen",
+    "countSingle": "1 onderdeel",
     "empty": "Inbox is leeg",
     "emptyDescription": "Notities ingediend via de Inbox API verschijnen hier ter beoordeling",
     "accept": "Accepteren",
@@ -1193,7 +1193,7 @@
     "source": "Bron: {source}",
     "untitled": "Naamloos",
     "closeLabel": "Inbox sluiten",
-    "indicator": "Inbox ({count})",
+    "indicator": "Postvak IN ({count})",
     "confirm": {
       "delete": {
         "title": "Inbox-item Verwijderen",
@@ -1238,7 +1238,7 @@
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
+      "items": "Onderdelen: {used}/{max}",
       "size": "Grootte: {used}/{max}"
     }
   },
@@ -1279,10 +1279,10 @@
     "collapse": "Inklappen",
     "expand": "Uitklappen",
     "moveUp": "Omhoog",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Omlaag",
+    "expandAll": "Alles uitklappen",
+    "collapseAll": "Alles inklappen",
+    "level": "Niveau {n}"
   },
   "progress": {
     "title": "Even geduld",

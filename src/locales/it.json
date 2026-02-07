@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Prova una query di ricerca diversa",
     "noNotes": "Nessuna nota",
     "somethingWentWrong": "Qualcosa è andato storto",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "risultato",
+    "matchPlural": "risultati"
   },
   "search": {
     "placeholder": "Cerca note...",
@@ -791,7 +791,7 @@
       }
     },
     "mobileFeatures": {
-      "title": "Mobile Friendly",
+      "title": "Ottimizzato per dispositivi mobili",
       "subtitle": "Accedi alle tue note in movimento con un'interfaccia mobile responsive",
       "list": {
         "alt": "Vista elenco note mobile",
@@ -1116,7 +1116,7 @@
     "message": "Ricarica per ottenere le ultime funzionalità e miglioramenti",
     "reloadButton": "Ricarica ora",
     "dismissLabel": "Chiudi",
-    "backupButton": "Back up first",
+    "backupButton": "Prima fai il backup",
     "backingUp": "Creazione backup..."
   },
   "bulk": {
@@ -1279,10 +1279,10 @@
     "collapse": "Comprimi",
     "expand": "Espandi",
     "moveUp": "Sposta su",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Sposta giù",
+    "expandAll": "Espandi tutto",
+    "collapseAll": "Comprimi tutto",
+    "level": "Livello {n}"
   },
   "progress": {
     "title": "Attendere prego",

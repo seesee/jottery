@@ -56,8 +56,8 @@
     "tryDifferentSearch": "Versuchen Sie eine andere Suchanfrage",
     "noNotes": "Keine Notizen",
     "somethingWentWrong": "Etwas ist schiefgelaufen",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "Treffer",
+    "matchPlural": "Treffer"
   },
   "search": {
     "placeholder": "Notizen durchsuchen...",
@@ -1116,7 +1116,7 @@
     "message": "Neu laden, um die neuesten Funktionen und Verbesserungen zu erhalten",
     "reloadButton": "Jetzt neu laden",
     "dismissLabel": "Verwerfen",
-    "backupButton": "Back up first",
+    "backupButton": "Zuerst sichern",
     "backingUp": "Backup wird erstellt..."
   },
   "bulk": {
@@ -1279,10 +1279,10 @@
     "collapse": "Einklappen",
     "expand": "Ausklappen",
     "moveUp": "Nach oben",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Nach unten",
+    "expandAll": "Alle ausklappen",
+    "collapseAll": "Alle einklappen",
+    "level": "Ebene {n}"
   },
   "progress": {
     "title": "Bitte warten",
