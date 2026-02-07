@@ -1034,7 +1034,7 @@
     "description": "Скачайте TUI Jottery для вашей платформы.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "Запуск локально из файловой системы (синхронизация отключена)"
   },
   "fileUpload": {
     "dropHere": "Перетащите файлы сюда",

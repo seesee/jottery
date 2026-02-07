@@ -1034,7 +1034,7 @@
     "description": "Κάντε λήψη του Jottery TUI για την πλατφόρμα σας.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "Εκτέλεση τοπικά από το σύστημα αρχείων (συγχρονισμός απενεργοποιημένος)"
   },
   "fileUpload": {
     "dropHere": "Αποθέστε αρχεία εδώ",

@@ -1034,7 +1034,7 @@
     "description": "Laden Sie die Jottery TUI für Ihre Plattform herunter.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "Lokal vom Dateisystem ausführen (Synchronisierung deaktiviert)"
   },
   "fileUpload": {
     "dropHere": "Dateien hier ablegen",

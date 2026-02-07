@@ -1034,7 +1034,7 @@
     "description": "下载适合您平台的 Jottery TUI。",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "从文件系统本地运行（同步已禁用）"
   },
   "fileUpload": {
     "dropHere": "将文件拖到此处",

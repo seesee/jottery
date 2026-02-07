@@ -1034,7 +1034,7 @@
     "description": "플랫폼에 맞는 Jottery TUI를 다운로드하세요.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "파일 시스템에서 로컬로 실행 (동기화 비활성화)"
   },
   "fileUpload": {
     "dropHere": "파일을 여기에 놓으세요",
