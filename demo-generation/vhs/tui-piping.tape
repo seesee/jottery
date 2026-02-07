@@ -1,14 +1,11 @@
 # Jottery TUI - Piping Content
-# Use DEMO_LANG environment variable to set the output language (default: en-GB)
 #
 # Prerequisites:
 #   1. Run setup-tui-demo.sh to create isolated demo databases
-#   2. Set DEMO_LANG before running: DEMO_LANG=ja vhs tui-piping.tape
+#   2. Run via generate-tui-demo.sh which sets paths correctly
 #
-Env DEMO_LANG "en-GB"
-Env DEMO_ROOT ""
-Env DB_FLAG "--database ${DEMO_ROOT}demo-generation/tui-demo/${DEMO_LANG}/jottery.db"
-Output ${DEMO_ROOT}public/screenshots/${DEMO_LANG}/tui-piping.gif
+# Output path is overridden by --output flag from wrapper script
+Output tui-piping.gif
 
 Set FontSize 18
 Set Width 1400
@@ -18,22 +15,22 @@ Set Shell "bash"
 
 
 # Example 1: Echo a quick note
-Type "echo 'Quick reminder - Update documentation' | jottery ${DB_FLAG} note -t reminder,demo"
+Type@50ms "echo 'Quick reminder - Update documentation' | jottery --database $DB_PATH note -t reminder,demo"
 Enter
 Sleep 2s
 
 # Example 2: Capture command output
-Type "date | jottery ${DB_FLAG} note -t timestamp,demo"
+Type@50ms "date | jottery --database $DB_PATH note -t timestamp,demo"
 Enter
 Sleep 2s
 
 # Example 3: Capture command output
-Type "ls -la | jottery ${DB_FLAG} note -t demo,directory-listing"
+Type@50ms "ls -la | jottery --database $DB_PATH note -t demo,directory-listing"
 Enter
 Sleep 2s
 
 # Show the created notes
-Type "jottery ${DB_FLAG} note -t demo,editor"
+Type@50ms "jottery --database $DB_PATH note -t demo,editor"
 Enter
 Sleep 500ms
 Type "a"
@@ -45,6 +42,6 @@ Enter
 
 Sleep 1s
 
-Type "jottery ${DB_FLAG} list -t demo"
+Type@50ms "jottery --database $DB_PATH list -t demo"
 Enter
 Sleep 5s

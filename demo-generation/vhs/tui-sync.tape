@@ -1,14 +1,11 @@
 # Jottery TUI - Sync Commands
-# Use DEMO_LANG environment variable to set the output language (default: en-GB)
 #
 # Prerequisites:
 #   1. Run setup-tui-demo.sh to create isolated demo databases
-#   2. Set DEMO_LANG before running: DEMO_LANG=ja vhs tui-sync.tape
+#   2. Run via generate-tui-demo.sh which sets paths correctly
 #
-Env DEMO_LANG "en-GB"
-Env DEMO_ROOT ""
-Env DB_FLAG "--database ${DEMO_ROOT}demo-generation/tui-demo/${DEMO_LANG}/jottery.db"
-Output ${DEMO_ROOT}public/screenshots/${DEMO_LANG}/tui-sync.gif
+# Output path is overridden by --output flag from wrapper script
+Output tui-sync.gif
 
 Set FontSize 18
 Set Width 1400
@@ -17,9 +14,9 @@ Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
 # Show sync help
-Type "# Show Jottery Sync help"
+Type@50ms "# Show Jottery Sync help"
 Enter
-Type "jottery sync --help"
+Type@50ms "jottery sync --help"
 Enter
 Sleep 4s
 
@@ -28,9 +25,9 @@ Ctrl+L
 Sleep 500ms
 
 # Show register-device help (shows cross-platform capabilities)
-Type "# Register your client from the CLI"
+Type@50ms "# Register your client from the CLI"
 Enter
-Type "jottery register-device --help"
+Type@50ms "jottery register-device --help"
 Enter
 Sleep 3s
 
@@ -39,9 +36,9 @@ Ctrl+L
 Sleep 500ms
 
 # Show example of checking sync (will fail but shows command)
-Type "# Force a sync from the CLI"
+Type@50ms "# Force a sync from the CLI"
 Enter
 Sleep 500ms
-Type "jottery ${DB_FLAG} sync"
+Type@50ms "jottery --database $DB_PATH sync"
 Enter
 Sleep 3s
