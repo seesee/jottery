@@ -534,21 +534,47 @@ async function setTagColors(page: any, tagColors: Record<string, string>) {
   await page.waitForTimeout(500);
 }
 
+// Helper to robustly clear all storage including IndexedDB
+async function clearAllStorage(page: any) {
+  await page.evaluate(async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    const dbs = await indexedDB.databases();
+    await Promise.all(
+      dbs.map(
+        (db) =>
+          new Promise<void>((resolve) => {
+            if (db.name) {
+              const req = indexedDB.deleteDatabase(db.name);
+              req.onsuccess = () => resolve();
+              req.onerror = () => resolve();
+              req.onblocked = () => {
+                // Force close any open connections and try again
+                console.warn(`Database ${db.name} blocked, resolving anyway`);
+                resolve();
+              };
+            } else {
+              resolve();
+            }
+          })
+      )
+    );
+  });
+}
+
 test.describe('Landing Page Screenshots - Light Mode', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload with theme parameter and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/?theme=light');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
@@ -740,6 +766,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     const welcomeNote = noteListItems.first(); // Use first note (welcome) instead of searching by title
 
     // Edit 1: Add packing list start
+    await editor.waitFor({ state: 'visible' });
     await editor.click();
     await page.keyboard.press('End'); // Go to end of document
     await page.keyboard.press('Enter');
@@ -758,6 +785,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     // Edit 2: Add more items
+    await editor.waitFor({ state: 'visible' });
     await editor.click();
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
@@ -773,6 +801,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(1000);
 
     // Edit 3: Add final items
+    await editor.waitFor({ state: 'visible' });
     await editor.click();
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
@@ -890,19 +919,17 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
 
 test.describe('Landing Page Screenshots - Dark Mode', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/');
 
     // Wait for landing page, then click "Try It Out"
@@ -1099,6 +1126,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     const welcomeNote = noteListItems.first();
 
     // Edit 1: Add packing list start
+    await editor.waitFor({ state: 'visible' });
     await editor.click();
     await page.keyboard.press('End'); // Go to end of document
     await page.keyboard.press('Enter');
@@ -1117,6 +1145,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     // Edit 2: Add more items
+    await editor.waitFor({ state: 'visible' });
     await editor.click();
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
@@ -1132,6 +1161,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(1000);
 
     // Edit 3: Add final items
+    await editor.waitFor({ state: 'visible' });
     await editor.click();
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
@@ -1359,19 +1389,17 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     // Set mobile viewport
     await page.setViewportSize(MOBILE_VIEWPORT);
 
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload with light theme
+    // Reload and clear again to handle any race conditions
+    await page.goto('/?theme=light');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
@@ -1521,19 +1549,17 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     // Set mobile viewport
     await page.setViewportSize(MOBILE_VIEWPORT);
 
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/');
 
     // Wait for landing page, then click "Try It Out"
@@ -1683,19 +1709,17 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
 
 test.describe('Landing Page Screenshots - Outliner Light', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload with theme parameter and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/?theme=light');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
@@ -1831,19 +1855,17 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
 
 test.describe('Landing Page Screenshots - Outliner Dark', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/');
 
     // Wait for landing page, then click "Try It Out"
@@ -1985,19 +2007,17 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
 
 test.describe('Landing Page Screenshots - Greek UI Light', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload with theme parameter and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/?theme=light');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
@@ -2085,19 +2105,17 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
 
 test.describe('Landing Page Screenshots - Greek UI Dark', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear all storage before test
+    // Clear all storage before test - do it twice for robustness
     await page.goto('/');
-    await page.evaluate(() => {
-      localStorage.clear();
-      sessionStorage.clear();
-      indexedDB.databases().then((dbs) => {
-        dbs.forEach((db) => {
-          if (db.name) indexedDB.deleteDatabase(db.name);
-        });
-      });
-    });
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
 
-    // Reload and set up password
+    // Reload and clear again to handle any race conditions
+    await page.goto('/');
+    await clearAllStorage(page);
+    await page.waitForTimeout(300);
+
+    // Final reload to ensure clean state
     await page.goto('/');
 
     // Wait for landing page, then click "Try It Out"
