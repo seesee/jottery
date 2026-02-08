@@ -69,20 +69,20 @@ note:
   info: 노트 정보
   info_title: 노트 정보
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "보관함 보기"
+  title: "보관함"
   mode: "보관 모드"
   enter_mode: "보관 모드로 전환"
   exit_mode: "보관 모드 종료"
   toggle_mode: "보관 모드 전환"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "보관된 노트 없음"
+  archive: "노트 보관"
+  unarchive: "노트 보관 해제"
+  archived: "보관됨"
+  unarchived: "보관 해제됨"
+  failed: "노트 보관 실패: %{error}"
+  unarchive_failed: "노트 보관 해제 실패: %{error}"
+  count: "%{count}개의 보관된 노트"
 
 editor:
   title: 제목
@@ -131,20 +131,20 @@ settings:
   instructions_status: "'R' (Shift+r)을 눌러 등록 승인 상태 확인"
   instructions_register: "'r'을 눌러 동기화 서버에 등록"
   user_portal: 사용자 포털
-  auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  auto_sync_interval: 자동 동기화 간격
+  instructions: 사용 안내
+  instructions_navigation: "↑/↓ 또는 j/k: 필드 간 이동"
+  instructions_edit: Enter, i 또는 Space를 눌러 필드 편집
+  instructions_text: "텍스트 필드: 입력 후 Enter로 저장, Esc로 취소"
+  instructions_toggle: "토글 및 순환: Enter를 눌러 즉시 값 변경"
+  instructions_remember: "비밀번호 기억: Enter로 비밀번호 입력 (활성화 시) 또는 비활성화 (활성화된 경우)"
+  instructions_sync: 'y'를 눌러 동기화 실행
+  instructions_force_sync: 'Y' (Shift+y)를 눌러 전체 동기화 (서버에서 가져오기)
+  instructions_paste: 'p'를 눌러 다른 기기의 동기화 자격 증명 붙여넣기
+  instructions_copy: 'c'를 눌러 동기화 자격 증명 복사하여 다른 기기와 공유
+  press_enter_cycle: Enter를 눌러 순환
+  press_enter_toggle: Enter를 눌러 전환
+  disabled: 비활성화됨
 sync:
   push: 서버로 푸시
   pull: 서버에서 가져오기
@@ -171,47 +171,47 @@ sync:
     approved: 계정이 승인되어 활성화되었습니다. 노트를 동기화할 수 있습니다.
     pending: 계정이 승인 대기 중입니다. 관리자가 등록을 승인할 때까지 기다려 주세요.
     inactive: 계정이 비활성화되었습니다. 관리자에게 문의하세요.
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: 동기화가 활성화되지 않았습니다. 's'를 눌러 설정에서 구성하세요.
+  endpoint_not_configured: 동기화 엔드포인트가 구성되지 않았습니다. 데이터베이스 설정 테이블에서 구성하세요.
+  complete: 동기화 완료! %{count}개 %{unit} 동기화됨
+  force_syncing: 모든 노트 강제 동기화 중...
+  force_complete: 강제 동기화 완료! 서버에서 %{count}개 %{unit} 동기화됨
+  reload_failed: "동기화는 성공했지만 노트를 다시 로드하지 못했습니다: %{error}"
+  note: 노트
+  notes: 노트
+  credentials_title: 동기화 자격 증명 (이 텍스트 복사)
+  credentials_instruction: "아래 텍스트를 복사하여 다른 Jottery 클라이언트에 붙여넣으세요:"
+  paste_title: 동기화 자격 증명 붙여넣기
+  paste_instruction: "다른 Jottery 클라이언트의 base64 자격 증명 텍스트를 붙여넣으세요:"
+  paste_success: 동기화 자격 증명이 성공적으로 구성되었습니다!
+  paste_failed: "자격 증명 붙여넣기 실패: %{error}"
+  salt_sync: Salt가 동기화되었습니다! 새 암호화 salt로 잠금 해제하려면 비밀번호를 다시 입력하세요.
+  import_device_title: 자격 증명 가져오기 - 기기 이름
+  import_enter_device_name: "이 기기의 이름을 입력하세요 (예: 내 노트북):"
+  credentials_empty: 자격 증명이 입력되지 않았습니다
+  import_failed: 자격 증명 가져오기 실패
 
-# Inbox
+# 받은편지함
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "받은편지함"
+  empty: "받은편지함이 비어 있습니다. 받은편지함 API를 통해 제출된 노트가 여기에 표시됩니다."
+  accepted: "노트 수락됨"
+  deleted: "받은편지함 항목 삭제됨"
+  accepted_all: "%{count}개의 받은편지함 항목 모두 수락됨"
+  deleted_all: "모든 받은편지함 항목 삭제됨"
+  confirm_delete_title: "받은편지함 항목 삭제"
+  confirm_delete_message: "이 받은편지함 항목을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다."
+  confirm_delete_all_title: "모든 받은편지함 항목 삭제"
+  confirm_delete_all_message: "%{count}개의 받은편지함 항목을 모두 삭제하시겠습니까? 이 작업은 취소할 수 없습니다."
+  indicator: "받은편지함 (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "로그인 중..."
+    generated_success: "받은편지함 토큰이 성공적으로 생성되었습니다!"
+    save_warning: "이 토큰을 지금 저장하세요 — 다시 표시되지 않습니다."
+    example_title: "빠른 시작"
+    revoked: "받은편지함 토큰 취소됨"
+    active: "받은편지함 토큰이 활성화되어 있습니다"
+    none: "받은편지함 토큰이 구성되지 않았습니다"
 
 register:
   title: 동기화 서버에 등록
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: 애플리케이션 종료
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: 애플리케이션 종료
   type_search_key: 입력
   type_search_desc: 검색 쿼리 입력
   search_tag_key: "#태그"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: 설정 패널 닫기
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: 첨부 파일 패널 포커스 (j/k로 탐색, Enter로 보기, d로 삭제)
   A_add_attachment_key: A
   A_add_attachment_desc: 첨부 파일 추가 (파일 경로 입력)
   a_view_attachment_key: a + 번호
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: 노트 정보 표시
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: 미리보기 스크롤 (전체 페이지)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Vim 스타일 스크롤 (반/전체 페이지)
+  mouse_scroll_key: 마우스 스크롤
+  mouse_scroll_desc: 미리보기 스크롤
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: 선택한 노트 고정 전환
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: 휴지통 보기 전환
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: 버전 히스토리 보기
   b_inbox_key: b
   b_inbox_desc: "받은편지함 열기"
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
+  tab_search_desc: 검색 종료, 첨부 파일 포커스
+  multi_select: 다중 선택 모드
   space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  space_select_desc: 현재 노트 선택 전환
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: 마지막 선택 항목부터 범위 선택
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: 필터된 모든 노트 선택
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: 선택한 노트에 태그 추가
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: 선택한 노트 삭제
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: 선택한 노트 하나로 결합
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: 선택한 노트를 JSON으로 내보내기
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: 선택 해제 / 다중 선택 종료
+  mouse: 마우스
+  click_note_key: 노트 클릭
+  click_note_desc: 목록에서 노트 선택
+  click_tag_key: 태그 클릭
+  click_tag_desc: 해당 태그 검색
+  click_tags_key: "'Tags:' 클릭"
+  click_tags_desc: 태그 편집 모드 진입
+  scroll_key: 스크롤 휠
+  scroll_desc: 미리보기 위/아래 스크롤
 cli:
+  # 기존 (일부 위치에서 사용됨)
   list: 노트 목록
   show: 노트 표시
   new: 새 노트 만들기
@@ -469,6 +470,53 @@ cli:
   import: 노트 가져오기
   sync: 서버와 동기화
   register: 기기 등록
+  # 메인 앱
+  about: "개인정보 보호 중심의 암호화된 노트 TUI"
+  # 전역 옵션
+  database_help: "데이터베이스 파일 경로"
+  debug_help: "디버그 로깅 활성화"
+  debug_log_help: "디버그 로그 파일 경로 (문제 해결용)"
+  reset_help: "재설정: 데이터베이스 삭제 및 새로 시작"
+  # 명령어
+  note_about: "$EDITOR로 빠른 노트 작성"
+  list_about: "모든 노트 목록 표시"
+  search_about: "노트 검색"
+  show_about: "ID로 특정 노트 표시"
+  sync_about: "원격 서버와 노트 동기화"
+  register_user_about: "서버에 새 사용자 계정 등록"
+  register_device_about: "이 기기를 서버에 등록 (승인된 사용자 계정 필요)"
+  export_about: "노트를 JSON 파일로 내보내기"
+  import_about: "JSON 파일에서 노트 가져오기"
+  backup_about: "암호화된 백업 생성 (웹 앱과 호환)"
+  inbox_token_about: "받은편지함 API 토큰 관리"
+  restore_backup_about: "암호화된 백업에서 복원"
+  store_password_about: "자동 잠금 해제용 비밀번호 저장 (데모/테스트 자동화용)"
+  # 공통 인수
+  password_help: "암호화용 비밀번호 (제공하지 않으면 입력 요청)"
+  password_decrypt_help: "복호화용 비밀번호 (제공하지 않으면 입력 요청)"
+  tags_help: "노트의 선택적 태그 (쉼표로 구분)"
+  tag_filter_help: "태그로 필터링"
+  limit_help: "표시할 최대 노트 수"
+  limit_results_help: "표시할 최대 결과 수"
+  query_help: "검색 쿼리"
+  id_help: "노트 ID (부분 일치 지원)"
+  server_help: "서버 엔드포인트 URL"
+  email_help: "사용자 이메일"
+  device_name_help: "기기 이름"
+  key_password_help: "로컬 데이터베이스 암호화 비밀번호"
+  output_help: "출력 파일 경로"
+  input_help: "입력 파일 경로"
+  backup_password_help: "복호화용 비밀번호 (백업 비밀번호)"
+  local_key_help: "로컬 데이터베이스 암호화 비밀번호 (기본값: 백업 비밀번호)"
+  password_store_help: "저장할 비밀번호"
+  # 받은편지함 토큰 하위 명령어
+  inbox_generate_about: "새 받은편지함 토큰 생성 (서버 로그인 필요)"
+  inbox_revoke_about: "현재 받은편지함 토큰 취소"
+  inbox_status_about: "받은편지함 토큰 존재 여부 확인"
+  server_optional_help: "서버 엔드포인트 URL (생략 시 구성된 엔드포인트 사용)"
+  # 출력 메시지
+  notes_count: "%{count}개의 노트"
+  results_count: "'%{query}'에 대한 %{count}개의 결과"
 status:
   locked: 잠김
   unlocked: 잠금 해제됨
@@ -499,17 +547,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%Y년 %m월 %d일 %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: 동기화 충돌
+  your_version: 내 버전
+  server_version: 서버 버전
+  common_ancestor: 공통 조상
+  ancestor_description: 변경 사항이 분기되기 전 양쪽이 시작한 버전
+  resolved_mine: 충돌 해결됨 - 내 버전 유지
+  resolved_server: 충돌 해결됨 - 서버 버전 유지
+  resolved_both: 충돌 해결됨 - 양쪽 버전 모두 유지
+  resolve_failed: 충돌 해결 실패
+  indicator: 동기화 충돌 감지됨
+  no_conflict: 이 노트에는 동기화 충돌이 없습니다
   count_singular: "개 충돌"
   count_plural: "개 충돌"
 
@@ -529,3 +577,69 @@ progress:
   backup: "백업 생성 중..."
   processing: "처리 중"
   export: "내보내기 중..."
+
+# UI 패널 및 제목
+ui:
+  notes: "노트"
+  preview: "미리보기"
+  archive: "보관함"
+  recycle_bin: "휴지통"
+  version_history: "버전 히스토리"
+  attachment_viewer: "첨부 파일 뷰어"
+  conflict_resolution: "충돌 해결"
+  attachments: "첨부 파일"
+  add_attachment: "첨부 파일 추가 (Tab: 자동완성, ↑↓: 선택, Enter: 확인)"
+  search: "검색:"
+  search_archive: "보관된 노트 검색:"
+  type: "유형:"
+  modified: "수정됨:"
+  version: "버전:"
+
+# 상태 표시줄 도움말 텍스트
+status_bar:
+  help: "도움말"
+  search: "검색"
+  select: "선택"
+  pin: "고정"
+  tags: "태그"
+  type: "유형"
+  bin: "휴지통"
+  archive: "보관함"
+  ver: "버전"
+  new: "새로 만들기"
+  toggle: "전환"
+  clear: "해제"
+  add_tags: "태그 추가"
+  delete: "삭제"
+  combine: "결합"
+  export: "내보내기"
+  selected: "선택됨"
+  unarchive: "보관 해제"
+  toggle_mode: "모드 전환"
+  navigate: "탐색"
+  exit_archive: "보관함 나가기"
+  accept: "수락"
+  accept_all: "모두 수락"
+  delete_all: "모두 삭제"
+  close: "닫기"
+  keep_mine: "내 것 유지"
+  keep_server: "서버 것 유지"
+  keep_both: "둘 다 유지"
+  switch: "전환"
+  scroll: "스크롤"
+  cancel: "취소"
+  press_b_open: "b를 눌러 열기"
+  # 검색 모드
+  type_search: "입력: 검색"
+  exit: "나가기"
+  match: "일치"
+  matches: "일치"
+  in_active: "활성 노트"
+  in_archive: "보관함"
+  # 휴지통
+  restore: "복원"
+  empty_bin: "휴지통 비우기"
+  back_to_notes: "노트로 돌아가기"
+  quick_select: "빠른 선택"
+  view: "보기"
+  restore_version: "버전 복원"

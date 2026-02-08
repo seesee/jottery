@@ -69,20 +69,20 @@ note:
   info: Info de note
   info_title: Informations sur la note
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "Voir les archives"
+  title: "Archives"
   mode: "Mode archive"
   enter_mode: "Entrer en mode archive"
   exit_mode: "Quitter le mode archive"
   toggle_mode: "Basculer le mode archive"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "Aucune note archivée"
+  archive: "Archiver la note"
+  unarchive: "Désarchiver la note"
+  archived: "Archivée"
+  unarchived: "Désarchivée"
+  failed: "Échec de l'archivage de la note : %{error}"
+  unarchive_failed: "Échec de la désarchivage de la note : %{error}"
+  count: "%{count} notes archivées"
 
 editor:
   title: Titre
@@ -173,10 +173,10 @@ sync:
   paste_success: Informations de synchronisation configurées avec succès !
   paste_failed: "Échec du collage des informations : %{error}"
   salt_sync: Sel synchronisé ! Veuillez rentrer votre mot de passe pour déverrouiller avec le nouveau sel de chiffrement.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  import_device_title: Importer les identifiants - Nom de l'appareil
+  import_enter_device_name: "Entrez un nom pour cet appareil (ex. Mon Ordinateur) :"
+  credentials_empty: Aucun identifiant saisi
+  import_failed: Échec de l'importation des identifiants
   encrypted_import: Identifiants chiffrés importés. Veuillez entrer votre mot de passe pour déchiffrer et terminer la configuration.
   legacy_format_warning: "Attention : Utilisation du format hérité non chiffré. La clé API est exposée en texte clair."
   disconnected: Déconnecté du serveur de synchronisation. Les notes locales sont conservées.
@@ -191,27 +191,27 @@ sync:
     pending: Votre compte est en attente d'approbation. Veuillez attendre qu'un administrateur approuve votre inscription.
     inactive: Votre compte a été désactivé. Veuillez contacter un administrateur.
 
-# Inbox
+# Boîte de réception
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "Boîte de réception"
+  empty: "La boîte de réception est vide. Les notes soumises via l'API de boîte de réception apparaîtront ici."
+  accepted: "Note acceptée"
+  deleted: "Élément de boîte de réception supprimé"
+  accepted_all: "Tous les %{count} éléments de boîte de réception acceptés"
+  deleted_all: "Tous les éléments de boîte de réception supprimés"
+  confirm_delete_title: "Supprimer l'élément de boîte de réception"
+  confirm_delete_message: "Supprimer cet élément de boîte de réception ? Cette action est irréversible."
+  confirm_delete_all_title: "Supprimer tous les éléments de boîte de réception"
+  confirm_delete_all_message: "Supprimer tous les %{count} éléments de boîte de réception ? Cette action est irréversible."
+  indicator: "Boîte de réception (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "Connexion en cours..."
+    generated_success: "Jeton de boîte de réception généré avec succès !"
+    save_warning: "Enregistrez ce jeton maintenant — il ne sera plus affiché."
+    example_title: "Démarrage rapide"
+    revoked: "Jeton de boîte de réception révoqué"
+    active: "Le jeton de boîte de réception est actif"
+    none: "Aucun jeton de boîte de réception configuré"
 
 register:
   title: S'inscrire auprès du Serveur de Synchronisation
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: Quitter l'application
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: Quitter l'application
   type_search_key: Taper
   type_search_desc: Entrez la requête de recherche
   search_tag_key: "#étiquette"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: Fermer le panneau des paramètres
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: Focuser le panneau des pièces jointes (j/k pour naviguer, Entrée pour afficher, d pour supprimer)
   A_add_attachment_key: A
   A_add_attachment_desc: Ajouter une pièce jointe (entrez le chemin du fichier)
   a_view_attachment_key: a + numéro
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: Afficher les informations de la note
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: Faire défiler l'aperçu (page entière)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Défilement style Vim (demi-page/page entière)
+  mouse_scroll_key: Molette de souris
+  mouse_scroll_desc: Faire défiler l'aperçu
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: Basculer l'épinglage de la note sélectionnée
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: Basculer la vue de la corbeille
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: Voir l'historique des versions
   b_inbox_key: b
   b_inbox_desc: "Ouvrir la boîte de réception"
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
-  space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  tab_search_desc: Quitter la recherche, focuser les pièces jointes
+  multi_select: MODE SÉLECTION MULTIPLE
+  space_select_key: Espace
+  space_select_desc: Basculer la sélection de la note actuelle
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: Sélection de plage depuis la dernière sélection
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: Sélectionner toutes les notes filtrées
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: Ajouter des étiquettes aux notes sélectionnées
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: Supprimer les notes sélectionnées
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: Combiner les notes sélectionnées en une seule
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
-  esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  multi_e_export_desc: Exporter les notes sélectionnées en JSON
+  esc_clear_key: Échap
+  esc_clear_desc: Effacer la sélection / quitter le mode sélection multiple
+  mouse: SOURIS
+  click_note_key: Cliquer sur une note
+  click_note_desc: Sélectionner la note dans la liste
+  click_tag_key: Cliquer sur une étiquette
+  click_tag_desc: Rechercher cette étiquette
+  click_tags_key: "Cliquer sur 'Étiquettes :'"
+  click_tags_desc: Entrer en mode édition d'étiquettes
+  scroll_key: Molette de défilement
+  scroll_desc: Faire défiler l'aperçu haut/bas
 cli:
+  # Alt (utilisé à certains endroits)
   list: Lister les notes
   show: Afficher la note
   new: Créer une nouvelle note
@@ -469,6 +470,53 @@ cli:
   import: Importer des notes
   sync: Synchroniser avec le serveur
   register: Enregistrer l'appareil
+  # Application principale
+  about: "Un TUI de prise de notes chiffré axé sur la confidentialité"
+  # Options globales
+  database_help: "Chemin du fichier de base de données"
+  debug_help: "Activer la journalisation de débogage"
+  debug_log_help: "Chemin du fichier journal de débogage (pour le dépannage)"
+  reset_help: "Réinitialiser : supprimer la base de données et recommencer"
+  # Commandes
+  note_about: "Créer une note rapide avec $EDITOR"
+  list_about: "Lister toutes les notes"
+  search_about: "Rechercher des notes"
+  show_about: "Afficher une note spécifique par ID"
+  sync_about: "Synchroniser les notes avec le serveur distant"
+  register_user_about: "Enregistrer un nouveau compte utilisateur sur le serveur"
+  register_device_about: "Enregistrer cet appareil auprès du serveur (nécessite un compte utilisateur approuvé)"
+  export_about: "Exporter les notes vers un fichier JSON"
+  import_about: "Importer les notes depuis un fichier JSON"
+  backup_about: "Créer une sauvegarde chiffrée (compatible avec l'application web)"
+  inbox_token_about: "Gérer le jeton API de la boîte de réception"
+  restore_backup_about: "Restaurer à partir d'une sauvegarde chiffrée"
+  store_password_about: "Stocker le mot de passe pour le déverrouillage automatique (pour l'automatisation démo/test)"
+  # Arguments généraux
+  password_help: "Mot de passe pour le chiffrement (demandé si non fourni)"
+  password_decrypt_help: "Mot de passe pour le déchiffrement (demandé si non fourni)"
+  tags_help: "Étiquettes optionnelles pour la note (séparées par des virgules)"
+  tag_filter_help: "Filtrer par étiquette"
+  limit_help: "Nombre maximum de notes à afficher"
+  limit_results_help: "Nombre maximum de résultats à afficher"
+  query_help: "Requête de recherche"
+  id_help: "ID de la note (correspondance partielle prise en charge)"
+  server_help: "URL du point de terminaison du serveur"
+  email_help: "E-mail de l'utilisateur"
+  device_name_help: "Nom de l'appareil"
+  key_password_help: "Mot de passe de chiffrement pour la base de données locale"
+  output_help: "Chemin du fichier de sortie"
+  input_help: "Chemin du fichier d'entrée"
+  backup_password_help: "Mot de passe pour le déchiffrement (mot de passe de sauvegarde)"
+  local_key_help: "Mot de passe de chiffrement de la base de données locale (par défaut : mot de passe de sauvegarde)"
+  password_store_help: "Mot de passe à stocker"
+  # Sous-commandes InboxToken
+  inbox_generate_about: "Générer un nouveau jeton de boîte de réception (nécessite une connexion au serveur)"
+  inbox_revoke_about: "Révoquer le jeton de boîte de réception actuel"
+  inbox_status_about: "Vérifier si un jeton de boîte de réception existe"
+  server_optional_help: "URL du point de terminaison du serveur (utilise le point de terminaison configuré si omis)"
+  # Messages de sortie
+  notes_count: "%{count} notes"
+  results_count: "%{count} résultats : '%{query}'"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé
@@ -499,17 +547,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%d/%m/%Y %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: Conflit de synchronisation
+  your_version: Votre version
+  server_version: Version du serveur
+  common_ancestor: Ancêtre commun
+  ancestor_description: La version de départ avant que les modifications ne divergent
+  resolved_mine: Conflit résolu - votre version conservée
+  resolved_server: Conflit résolu - version du serveur conservée
+  resolved_both: Conflit résolu - les deux versions conservées
+  resolve_failed: Échec de la résolution du conflit
+  indicator: Conflit de synchronisation détecté
+  no_conflict: Cette note n'a pas de conflit de synchronisation
   count_singular: "conflit"
   count_plural: "conflits"
 
@@ -529,3 +577,69 @@ progress:
   backup: "Création de la sauvegarde..."
   processing: "Traitement"
   export: "Exportation..."
+
+# Panneaux et titres de l'interface
+ui:
+  notes: "Notes"
+  preview: "Aperçu"
+  archive: "Archives"
+  recycle_bin: "Corbeille"
+  version_history: "Historique des versions"
+  attachment_viewer: "Visionneuse de pièces jointes"
+  conflict_resolution: "Résolution des conflits"
+  attachments: "Pièces jointes"
+  add_attachment: "Ajouter une pièce jointe (Tab : compléter, ↑↓ : sélectionner, Entrée : confirmer)"
+  search: "Recherche :"
+  search_archive: "Rechercher dans les notes archivées :"
+  type: "Type :"
+  modified: "Modifié :"
+  version: "Version :"
+
+# Texte d'aide de la barre de statut
+status_bar:
+  help: "Aide"
+  search: "Rechercher"
+  select: "sélectionner"
+  pin: "épingler"
+  tags: "Étiquettes"
+  type: "Type"
+  bin: "Corbeille"
+  archive: "Archives"
+  ver: "Version"
+  new: "Nouveau"
+  toggle: "basculer"
+  clear: "effacer"
+  add_tags: "Ajouter des étiquettes"
+  delete: "supprimer"
+  combine: "combiner"
+  export: "exporter"
+  selected: "sélectionnées"
+  unarchive: "désarchiver"
+  toggle_mode: "Changer de mode"
+  navigate: "naviguer"
+  exit_archive: "Quitter les archives"
+  accept: "accepter"
+  accept_all: "tout accepter"
+  delete_all: "tout supprimer"
+  close: "fermer"
+  keep_mine: "Garder la mienne"
+  keep_server: "Garder celle du serveur"
+  keep_both: "Garder les deux"
+  switch: "changer"
+  scroll: "défiler"
+  cancel: "annuler"
+  press_b_open: "Appuyez sur b pour ouvrir"
+  # Mode recherche
+  type_search: "Taper : rechercher"
+  exit: "quitter"
+  match: "correspondance"
+  matches: "correspondances"
+  in_active: "dans actives"
+  in_archive: "dans archives"
+  # Corbeille
+  restore: "restaurer"
+  empty_bin: "Vider la corbeille"
+  back_to_notes: "retour aux notes"
+  quick_select: "Sélection rapide"
+  view: "afficher"
+  restore_version: "Restaurer la version"

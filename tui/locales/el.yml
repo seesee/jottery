@@ -69,20 +69,20 @@ note:
   info: Πληροφορίες σημείωσης
   info_title: Πληροφορίες Σημείωσης
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "Προβολή αρχείου"
+  title: "Αρχείο"
   mode: "Λειτουργία αρχειοθέτησης"
   enter_mode: "Είσοδος σε λειτουργία αρχειοθέτησης"
   exit_mode: "Έξοδος από λειτουργία αρχειοθέτησης"
   toggle_mode: "Εναλλαγή λειτουργίας αρχειοθέτησης"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "Δεν υπάρχουν αρχειοθετημένες σημειώσεις"
+  archive: "Αρχειοθέτηση σημείωσης"
+  unarchive: "Επαναφορά από αρχείο"
+  archived: "Αρχειοθετήθηκε"
+  unarchived: "Επαναφέρθηκε από αρχείο"
+  failed: "Αποτυχία αρχειοθέτησης σημείωσης: %{error}"
+  unarchive_failed: "Αποτυχία επαναφοράς σημείωσης: %{error}"
+  count: "%{count} αρχειοθετημένες σημειώσεις"
 
 editor:
   title: Τίτλος
@@ -131,20 +131,20 @@ settings:
   instructions_status: Πατήστε 'R' (Shift+r) για έλεγχο της κατάστασης έγκρισης εγγραφής
   instructions_register: Πατήστε 'r' για εγγραφή σε διακομιστή συγχρονισμού
   user_portal: Πύλη Χρήστη
-  auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  auto_sync_interval: Διάστημα αυτόματου συγχρονισμού
+  instructions: Οδηγίες
+  instructions_navigation: "↑/↓ ή j/k: Πλοήγηση μεταξύ πεδίων"
+  instructions_edit: Πατήστε Enter, i ή Διάστημα για επεξεργασία πεδίου
+  instructions_text: "Πεδία κειμένου: πληκτρολογήστε και πατήστε Enter για αποθήκευση, Esc για ακύρωση"
+  instructions_toggle: "Για εναλλαγές και κύκλους: πατήστε Enter για άμεση αλλαγή τιμής"
+  instructions_remember: "Απομνημόνευση κωδικού: Enter ζητά κωδικό (αν ενεργοποιείται) ή απενεργοποιεί (αν είναι ενεργό)"
+  instructions_sync: Πατήστε 'y' για ενεργοποίηση συγχρονισμού
+  instructions_force_sync: Πατήστε 'Y' (Shift+y) για πλήρη συγχρονισμό (λήψη από διακομιστή)
+  instructions_paste: Πατήστε 'p' για επικόλληση διαπιστευτηρίων συγχρονισμού από άλλη συσκευή
+  instructions_copy: Πατήστε 'c' για αντιγραφή διαπιστευτηρίων συγχρονισμού για κοινοποίηση σε άλλη συσκευή
+  press_enter_cycle: πατήστε Enter για εναλλαγή
+  press_enter_toggle: πατήστε Enter για εναλλαγή
+  disabled: απενεργοποιημένο
 sync:
   push: Αποστολή στον διακομιστή
   pull: Λήψη από τον διακομιστή
@@ -171,47 +171,47 @@ sync:
     approved: Ο λογαριασμός σας είναι εγκεκριμένος και ενεργός. Μπορείτε να συγχρονίσετε τις σημειώσεις σας.
     pending: Ο λογαριασμός σας εκκρεμεί για έγκριση. Παρακαλώ περιμένετε έναν διαχειριστή να εγκρίνει την εγγραφή σας.
     inactive: Ο λογαριασμός σας έχει απενεργοποιηθεί. Επικοινωνήστε με έναν διαχειριστή.
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: Ο συγχρονισμός δεν είναι ενεργοποιημένος. Πατήστε 's' για ρύθμιση στις επιλογές.
+  endpoint_not_configured: Το τελικό σημείο συγχρονισμού δεν έχει ρυθμιστεί. Ρυθμίστε στον πίνακα ρυθμίσεων βάσης δεδομένων.
+  complete: Ο συγχρονισμός ολοκληρώθηκε! %{count} %{unit} συγχρονίστηκαν
+  force_syncing: Αναγκαστικός συγχρονισμός όλων των σημειώσεων...
+  force_complete: Ο αναγκαστικός συγχρονισμός ολοκληρώθηκε! %{count} %{unit} συγχρονίστηκαν από τον διακομιστή
+  reload_failed: "Ο συγχρονισμός πέτυχε αλλά απέτυχε η επαναφόρτωση σημειώσεων: %{error}"
+  note: σημείωση
+  notes: σημειώσεις
+  credentials_title: Διαπιστευτήρια Συγχρονισμού (Αντιγράψτε Αυτό το Κείμενο)
+  credentials_instruction: "Αντιγράψτε το παρακάτω κείμενο και επικολλήστε το σε άλλο πελάτη Jottery:"
+  paste_title: Επικόλληση Διαπιστευτηρίων Συγχρονισμού
+  paste_instruction: "Επικολλήστε το κείμενο διαπιστευτηρίων base64 από άλλο πελάτη Jottery:"
+  paste_success: Τα διαπιστευτήρια συγχρονισμού ρυθμίστηκαν επιτυχώς!
+  paste_failed: "Αποτυχία επικόλλησης διαπιστευτηρίων: %{error}"
+  salt_sync: Το salt συγχρονίστηκε! Παρακαλώ εισάγετε ξανά τον κωδικό σας για ξεκλείδωμα με το νέο salt κρυπτογράφησης.
+  import_device_title: Εισαγωγή Διαπιστευτηρίων - Όνομα Συσκευής
+  import_enter_device_name: "Εισάγετε ένα όνομα για αυτή τη συσκευή (π.χ. Το Laptop Μου):"
+  credentials_empty: Δεν εισήχθησαν διαπιστευτήρια
+  import_failed: Αποτυχία εισαγωγής διαπιστευτηρίων
 
-# Inbox
+# Εισερχόμενα
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "Εισερχόμενα"
+  empty: "Τα εισερχόμενα είναι άδεια. Οι σημειώσεις που υποβάλλονται μέσω του API Εισερχομένων θα εμφανιστούν εδώ."
+  accepted: "Η σημείωση έγινε αποδεκτή"
+  deleted: "Το στοιχείο εισερχομένων διαγράφηκε"
+  accepted_all: "Όλα τα %{count} στοιχεία εισερχομένων έγιναν αποδεκτά"
+  deleted_all: "Όλα τα στοιχεία εισερχομένων διαγράφηκαν"
+  confirm_delete_title: "Διαγραφή Στοιχείου Εισερχομένων"
+  confirm_delete_message: "Διαγραφή αυτού του στοιχείου εισερχομένων; Αυτό δεν μπορεί να αναιρεθεί."
+  confirm_delete_all_title: "Διαγραφή Όλων των Στοιχείων Εισερχομένων"
+  confirm_delete_all_message: "Διαγραφή όλων των %{count} στοιχείων εισερχομένων; Αυτό δεν μπορεί να αναιρεθεί."
+  indicator: "Εισερχόμενα (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "Σύνδεση..."
+    generated_success: "Το token εισερχομένων δημιουργήθηκε επιτυχώς!"
+    save_warning: "Αποθηκεύστε αυτό το token τώρα — δεν θα εμφανιστεί ξανά."
+    example_title: "Γρήγορη Εκκίνηση"
+    revoked: "Το token εισερχομένων ανακλήθηκε"
+    active: "Το token εισερχομένων είναι ενεργό"
+    none: "Δεν έχει ρυθμιστεί token εισερχομένων"
 
 register:
   title: Εγγραφή σε Διακομιστή Συγχρονισμού
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: Έξοδος από την εφαρμογή
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: Έξοδος από την εφαρμογή
   type_search_key: Πληκτρολόγηση
   type_search_desc: Εισαγάγετε ερώτημα αναζήτησης
   search_tag_key: "#ετικέτα"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: Κλείσιμο πίνακα ρυθμίσεων
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: Εστίαση στο πάνελ συνημμένων (j/k για πλοήγηση, Enter για προβολή, d για διαγραφή)
   A_add_attachment_key: A
   A_add_attachment_desc: Προσθήκη συνημμένου (εισαγάγετε διαδρομή αρχείου)
   a_view_attachment_key: a + αριθμός
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: Εμφάνιση πληροφοριών σημείωσης
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: Κύλιση προεπισκόπησης (ολόκληρη σελίδα)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Κύλιση τύπου Vim (μισή/ολόκληρη σελίδα)
+  mouse_scroll_key: Κύλιση ποντικιού
+  mouse_scroll_desc: Κύλιση προεπισκόπησης
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: Εναλλαγή καρφιτσώματος επιλεγμένης σημείωσης
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: Εναλλαγή προβολής κάδου ανακύκλωσης
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: Προβολή ιστορικού εκδόσεων
   b_inbox_key: b
   b_inbox_desc: "Άνοιγμα εισερχομένων"
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
-  space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  tab_search_desc: Έξοδος από αναζήτηση, εστίαση σε συνημμένα
+  multi_select: ΛΕΙΤΟΥΡΓΙΑ ΠΟΛΛΑΠΛΗΣ ΕΠΙΛΟΓΗΣ
+  space_select_key: Διάστημα
+  space_select_desc: Εναλλαγή επιλογής τρέχουσας σημείωσης
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: Επιλογή εύρους από την τελευταία επιλεγμένη
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: Επιλογή όλων των φιλτραρισμένων σημειώσεων
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: Προσθήκη ετικετών στις επιλεγμένες σημειώσεις
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: Διαγραφή επιλεγμένων σημειώσεων
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: Συνδυασμός επιλεγμένων σημειώσεων σε μία
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: Εξαγωγή επιλεγμένων σημειώσεων σε JSON
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: Καθαρισμός επιλογής / έξοδος από πολλαπλή επιλογή
+  mouse: ΠΟΝΤΙΚΙ
+  click_note_key: Κλικ σε σημείωση
+  click_note_desc: Επιλογή σημείωσης στη λίστα
+  click_tag_key: Κλικ σε ετικέτα
+  click_tag_desc: Αναζήτηση για αυτή την ετικέτα
+  click_tags_key: "Κλικ σε 'Ετικέτες:'"
+  click_tags_desc: Είσοδος σε λειτουργία επεξεργασίας ετικετών
+  scroll_key: Τροχός κύλισης
+  scroll_desc: Κύλιση προεπισκόπησης πάνω/κάτω
 cli:
+  # Εναλλακτικό (χρησιμοποιείται σε ορισμένα σημεία)
   list: Λίστα σημειώσεων
   show: Εμφάνιση σημείωσης
   new: Δημιουργία νέας σημείωσης
@@ -469,6 +470,53 @@ cli:
   import: Εισαγωγή σημειώσεων
   sync: Συγχρονισμός με διακομιστή
   register: Εγγραφή συσκευής
+  # Κύρια εφαρμογή
+  about: "Ένα TUI σημειώσεων με κρυπτογράφηση και έμφαση στην ιδιωτικότητα"
+  # Καθολικές επιλογές
+  database_help: "Διαδρομή αρχείου βάσης δεδομένων"
+  debug_help: "Ενεργοποίηση καταγραφής εντοπισμού σφαλμάτων"
+  debug_log_help: "Διαδρομή αρχείου καταγραφής εντοπισμού σφαλμάτων (για αντιμετώπιση προβλημάτων)"
+  reset_help: "Επαναφορά: διαγραφή βάσης δεδομένων και νέα αρχή"
+  # Εντολές
+  note_about: "Δημιουργία γρήγορης σημείωσης με $EDITOR"
+  list_about: "Εμφάνιση όλων των σημειώσεων"
+  search_about: "Αναζήτηση σημειώσεων"
+  show_about: "Εμφάνιση συγκεκριμένης σημείωσης κατά ID"
+  sync_about: "Συγχρονισμός σημειώσεων με απομακρυσμένο διακομιστή"
+  register_user_about: "Εγγραφή νέου λογαριασμού χρήστη στον διακομιστή"
+  register_device_about: "Εγγραφή αυτής της συσκευής στον διακομιστή (απαιτείται εγκεκριμένος λογαριασμός)"
+  export_about: "Εξαγωγή σημειώσεων σε αρχείο JSON"
+  import_about: "Εισαγωγή σημειώσεων από αρχείο JSON"
+  backup_about: "Δημιουργία κρυπτογραφημένου αντιγράφου ασφαλείας (συμβατό με την εφαρμογή web)"
+  inbox_token_about: "Διαχείριση token API εισερχομένων"
+  restore_backup_about: "Επαναφορά από κρυπτογραφημένο αντίγραφο ασφαλείας"
+  store_password_about: "Αποθήκευση κωδικού για αυτόματο ξεκλείδωμα (για αυτοματοποίηση demo/δοκιμών)"
+  # Γενικά ορίσματα
+  password_help: "Κωδικός για κρυπτογράφηση (θα ζητηθεί αν δεν δοθεί)"
+  password_decrypt_help: "Κωδικός για αποκρυπτογράφηση (θα ζητηθεί αν δεν δοθεί)"
+  tags_help: "Προαιρετικές ετικέτες για τη σημείωση (διαχωρισμένες με κόμμα)"
+  tag_filter_help: "Φιλτράρισμα κατά ετικέτα"
+  limit_help: "Μέγιστος αριθμός σημειώσεων προς εμφάνιση"
+  limit_results_help: "Μέγιστος αριθμός αποτελεσμάτων προς εμφάνιση"
+  query_help: "Ερώτημα αναζήτησης"
+  id_help: "ID σημείωσης (υποστηρίζεται μερική αντιστοίχιση)"
+  server_help: "URL τελικού σημείου διακομιστή"
+  email_help: "Email χρήστη"
+  device_name_help: "Όνομα συσκευής"
+  key_password_help: "Κωδικός κρυπτογράφησης για τοπική βάση δεδομένων"
+  output_help: "Διαδρομή αρχείου εξόδου"
+  input_help: "Διαδρομή αρχείου εισόδου"
+  backup_password_help: "Κωδικός για αποκρυπτογράφηση (κωδικός αντιγράφου ασφαλείας)"
+  local_key_help: "Τοπικός κωδικός κρυπτογράφησης βάσης δεδομένων (προεπιλογή: κωδικός αντιγράφου ασφαλείας)"
+  password_store_help: "Κωδικός προς αποθήκευση"
+  # Υποεντολές InboxToken
+  inbox_generate_about: "Δημιουργία νέου token εισερχομένων (απαιτείται σύνδεση στον διακομιστή)"
+  inbox_revoke_about: "Ανάκληση τρέχοντος token εισερχομένων"
+  inbox_status_about: "Έλεγχος αν υπάρχει token εισερχομένων"
+  server_optional_help: "URL τελικού σημείου διακομιστή (χρησιμοποιεί το ρυθμισμένο τελικό σημείο αν παραλειφθεί)"
+  # Μηνύματα εξόδου
+  notes_count: "%{count} σημειώσεις"
+  results_count: "%{count} αποτελέσματα: '%{query}'"
 status:
   locked: Κλειδωμένο
   unlocked: Ξεκλείδωτο
@@ -499,19 +547,19 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%d/%m/%Y %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
-  count_singular: "διένεξη"
-  count_plural: "διενέξεις"
+  title: Σύγκρουση Συγχρονισμού
+  your_version: Η Έκδοσή Σας
+  server_version: Έκδοση Διακομιστή
+  common_ancestor: Κοινός Πρόγονος
+  ancestor_description: Η έκδοση από την οποία ξεκίνησαν και οι δύο πριν αποκλίνουν οι αλλαγές
+  resolved_mine: Η σύγκρουση επιλύθηκε - διατηρήθηκε η δική σας έκδοση
+  resolved_server: Η σύγκρουση επιλύθηκε - διατηρήθηκε η έκδοση του διακομιστή
+  resolved_both: Η σύγκρουση επιλύθηκε - διατηρήθηκαν και οι δύο εκδόσεις
+  resolve_failed: Αποτυχία επίλυσης σύγκρουσης
+  indicator: Ανιχνεύθηκε σύγκρουση συγχρονισμού
+  no_conflict: Αυτή η σημείωση δεν έχει σύγκρουση συγχρονισμού
+  count_singular: "σύγκρουση"
+  count_plural: "συγκρούσεις"
 
 # Backup functionality
 backup:
@@ -529,3 +577,69 @@ progress:
   backup: "Δημιουργία αντιγράφου ασφαλείας..."
   processing: "Επεξεργασία"
   export: "Εξαγωγή..."
+
+# Πάνελ και τίτλοι UI
+ui:
+  notes: "Σημειώσεις"
+  preview: "Προεπισκόπηση"
+  archive: "Αρχείο"
+  recycle_bin: "Κάδος Ανακύκλωσης"
+  version_history: "Ιστορικό Εκδόσεων"
+  attachment_viewer: "Προβολή Συνημμένων"
+  conflict_resolution: "Επίλυση Σύγκρουσης"
+  attachments: "Συνημμένα"
+  add_attachment: "Προσθήκη συνημμένου (Tab: ολοκλήρωση, ↑↓: επιλογή, Enter: επιβεβαίωση)"
+  search: "Αναζήτηση:"
+  search_archive: "Αναζήτηση αρχειοθετημένων σημειώσεων:"
+  type: "Τύπος:"
+  modified: "Τροποποιήθηκε:"
+  version: "Έκδοση:"
+
+# Κείμενο βοήθειας γραμμής κατάστασης
+status_bar:
+  help: "Βοήθεια"
+  search: "Αναζήτηση"
+  select: "επιλογή"
+  pin: "καρφίτσωμα"
+  tags: "Ετικέτες"
+  type: "Τύπος"
+  bin: "Κάδος"
+  archive: "Αρχείο"
+  ver: "Έκδοση"
+  new: "Νέο"
+  toggle: "εναλλαγή"
+  clear: "καθαρισμός"
+  add_tags: "προσθήκη ετικετών"
+  delete: "διαγραφή"
+  combine: "συνδυασμός"
+  export: "εξαγωγή"
+  selected: "επιλεγμένα"
+  unarchive: "επαναφορά"
+  toggle_mode: "εναλλαγή λειτουργίας"
+  navigate: "πλοήγηση"
+  exit_archive: "έξοδος από αρχείο"
+  accept: "αποδοχή"
+  accept_all: "αποδοχή όλων"
+  delete_all: "διαγραφή όλων"
+  close: "κλείσιμο"
+  keep_mine: "Διατήρηση δικής μου"
+  keep_server: "Διατήρηση διακομιστή"
+  keep_both: "Διατήρηση και των δύο"
+  switch: "εναλλαγή"
+  scroll: "κύλιση"
+  cancel: "ακύρωση"
+  press_b_open: "Πατήστε b για άνοιγμα"
+  # Λειτουργία αναζήτησης
+  type_search: "Πληκτρολόγηση: αναζήτηση"
+  exit: "έξοδος"
+  match: "ταίριασμα"
+  matches: "ταιριάσματα"
+  in_active: "σε ενεργά"
+  in_archive: "στο αρχείο"
+  # Κάδος ανακύκλωσης
+  restore: "επαναφορά"
+  empty_bin: "άδειασμα κάδου"
+  back_to_notes: "επιστροφή σε σημειώσεις"
+  quick_select: "Γρήγορη επιλογή"
+  view: "προβολή"
+  restore_version: "επαναφορά έκδοσης"

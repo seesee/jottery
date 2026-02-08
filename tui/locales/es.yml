@@ -69,20 +69,20 @@ note:
   info: Info de nota
   info_title: Información de nota
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "Ver archivo"
+  title: "Archivo"
   mode: "Modo archivo"
   enter_mode: "Entrar en modo archivo"
   exit_mode: "Salir del modo archivo"
   toggle_mode: "Alternar modo archivo"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "No hay notas archivadas"
+  archive: "Archivar nota"
+  unarchive: "Desarchivar nota"
+  archived: "Archivada"
+  unarchived: "Desarchivada"
+  failed: "Error al archivar la nota: %{error}"
+  unarchive_failed: "Error al desarchivar la nota: %{error}"
+  count: "%{count} notas archivadas"
 
 editor:
   title: Título
@@ -131,20 +131,20 @@ settings:
   instructions_status: Presione 'R' (Shift+r) para verificar el estado de aprobación del registro
   instructions_register: Presione 'r' para registrarse con un servidor de sincronización
   user_portal: Portal de Usuario
-  auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  auto_sync_interval: Intervalo de auto-sincronización
+  instructions: Instrucciones
+  instructions_navigation: "↑/↓ o j/k: Navegar entre campos"
+  instructions_edit: Presione Enter, i o Espacio para editar un campo
+  instructions_text: "Campos de texto: escriba y presione Enter para guardar, Esc para cancelar"
+  instructions_toggle: "Para alternar y ciclos: presione Enter para cambiar el valor inmediatamente"
+  instructions_remember: "Recordar contraseña: Enter pide contraseña (si activa) o desactiva (si está activada)"
+  instructions_sync: Presione 'y' para sincronizar
+  instructions_force_sync: Presione 'Y' (Shift+y) para forzar sincronización completa (descargar del servidor)
+  instructions_paste: Presione 'p' para pegar credenciales de sincronización de otro dispositivo
+  instructions_copy: Presione 'c' para copiar credenciales de sincronización para compartir con otro dispositivo
+  press_enter_cycle: presione Enter para alternar
+  press_enter_toggle: presione Enter para cambiar
+  disabled: deshabilitado
 sync:
   push: Enviar al servidor
   pull: Recibir del servidor
@@ -171,47 +171,47 @@ sync:
     approved: Su cuenta está aprobada y activa. Puede sincronizar sus notas.
     pending: Su cuenta está pendiente de aprobación. Por favor espere a que un administrador apruebe su registro.
     inactive: Su cuenta ha sido desactivada. Por favor contacte a un administrador.
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: Sincronización no habilitada. Presione 's' para configurar en ajustes.
+  endpoint_not_configured: Punto final de sincronización no configurado. Configure en la tabla de ajustes de la base de datos.
+  complete: ¡Sincronización completa! %{count} %{unit} sincronizadas
+  force_syncing: Forzando sincronización de todas las notas...
+  force_complete: ¡Sincronización forzada completa! %{count} %{unit} sincronizadas desde el servidor
+  reload_failed: "La sincronización tuvo éxito pero falló al recargar las notas: %{error}"
+  note: nota
+  notes: notas
+  credentials_title: Credenciales de sincronización (Copie este texto)
+  credentials_instruction: "Copie el texto de abajo y péguelo en otro cliente Jottery:"
+  paste_title: Pegar credenciales de sincronización
+  paste_instruction: "Pegue el texto base64 de credenciales de otro cliente Jottery:"
+  paste_success: ¡Credenciales de sincronización configuradas exitosamente!
+  paste_failed: "Error al pegar las credenciales: %{error}"
+  salt_sync: ¡Salt sincronizado! Por favor, vuelva a introducir su contraseña para desbloquear con el nuevo salt de cifrado.
+  import_device_title: Importar credenciales - Nombre del dispositivo
+  import_enter_device_name: "Introduzca un nombre para este dispositivo (ej. Mi portátil):"
+  credentials_empty: No se introdujeron credenciales
+  import_failed: Error al importar las credenciales
 
-# Inbox
+# Bandeja de entrada
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "Bandeja de entrada"
+  empty: "La bandeja de entrada está vacía. Las notas enviadas a través de la API de bandeja de entrada aparecerán aquí."
+  accepted: "Nota aceptada"
+  deleted: "Elemento de bandeja de entrada eliminado"
+  accepted_all: "Todos los %{count} elementos de bandeja de entrada aceptados"
+  deleted_all: "Todos los elementos de bandeja de entrada eliminados"
+  confirm_delete_title: "Eliminar elemento de bandeja de entrada"
+  confirm_delete_message: "¿Eliminar este elemento de bandeja de entrada? Esta acción no se puede deshacer."
+  confirm_delete_all_title: "Eliminar todos los elementos de bandeja de entrada"
+  confirm_delete_all_message: "¿Eliminar todos los %{count} elementos de bandeja de entrada? Esta acción no se puede deshacer."
+  indicator: "Bandeja de entrada (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "Iniciando sesión..."
+    generated_success: "¡Token de bandeja de entrada generado exitosamente!"
+    save_warning: "Guarde este token ahora — no se mostrará de nuevo."
+    example_title: "Inicio rápido"
+    revoked: "Token de bandeja de entrada revocado"
+    active: "Token de bandeja de entrada activo"
+    none: "No hay token de bandeja de entrada configurado"
 
 register:
   title: Registrarse en Servidor de Sincronización
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: Salir de la aplicación
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: Salir de la aplicación
   type_search_key: Escribir
   type_search_desc: Introducir consulta de búsqueda
   search_tag_key: "#etiqueta"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: Cerrar panel de configuración
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: Enfocar panel de adjuntos (j/k para navegar, Enter para ver, d para eliminar)
   A_add_attachment_key: A
   A_add_attachment_desc: Añadir adjunto (introducir ruta del archivo)
   a_view_attachment_key: a + número
@@ -416,49 +416,50 @@ help:
   L_lock_desc: Alternar bloqueo de nota seleccionada
   I_info_key: I
   I_info_desc: Mostrar información de nota
-  pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_key: ReAv / AvPág
+  pageup_pagedown_desc: Desplazar vista previa (página completa)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Desplazamiento estilo Vim (media/página completa)
+  mouse_scroll_key: Rueda del ratón
+  mouse_scroll_desc: Desplazar vista previa
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: Alternar fijación de nota seleccionada
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: Alternar vista de papelera
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: Ver historial de versiones
   b_inbox_key: b
   b_inbox_desc: Abrir bandeja de entrada
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
-  space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  tab_search_desc: Salir de búsqueda, enfocar adjuntos
+  multi_select: MODO SELECCIÓN MÚLTIPLE
+  space_select_key: Espacio
+  space_select_desc: Alternar selección de nota actual
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: Seleccionar rango desde la última selección
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: Seleccionar todas las notas filtradas
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: Añadir etiquetas a notas seleccionadas
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: Eliminar notas seleccionadas
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: Combinar notas seleccionadas en una
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: Exportar notas seleccionadas a JSON
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: Limpiar selección / salir de selección múltiple
+  mouse: RATÓN
+  click_note_key: Clic en nota
+  click_note_desc: Seleccionar nota en la lista
+  click_tag_key: Clic en etiqueta
+  click_tag_desc: Buscar esa etiqueta
+  click_tags_key: "Clic en 'Etiquetas:'"
+  click_tags_desc: Entrar en modo de edición de etiquetas
+  scroll_key: Rueda del ratón
+  scroll_desc: Desplazar vista previa arriba/abajo
 cli:
+  # Alt (usado en algunos lugares)
   list: Listar notas
   show: Mostrar nota
   new: Crear nueva nota
@@ -469,6 +470,53 @@ cli:
   import: Importar notas
   sync: Sincronizar con el servidor
   register: Registrar dispositivo
+  # Aplicación principal
+  about: "Un TUI de toma de notas cifrado centrado en la privacidad"
+  # Opciones globales
+  database_help: "Ruta del archivo de base de datos"
+  debug_help: "Activar registro de depuración"
+  debug_log_help: "Ruta del archivo de registro de depuración (para solución de problemas)"
+  reset_help: "Reiniciar: eliminar base de datos y comenzar de nuevo"
+  # Comandos
+  note_about: "Crear nota rápida con $EDITOR"
+  list_about: "Listar todas las notas"
+  search_about: "Buscar notas"
+  show_about: "Mostrar nota específica por ID"
+  sync_about: "Sincronizar notas con el servidor remoto"
+  register_user_about: "Registrar nueva cuenta de usuario en el servidor"
+  register_device_about: "Registrar este dispositivo con el servidor (requiere cuenta de usuario aprobada)"
+  export_about: "Exportar notas a archivo JSON"
+  import_about: "Importar notas desde archivo JSON"
+  backup_about: "Crear copia de seguridad cifrada (compatible con la aplicación web)"
+  inbox_token_about: "Gestionar token API de bandeja de entrada"
+  restore_backup_about: "Restaurar desde copia de seguridad cifrada"
+  store_password_about: "Almacenar contraseña para desbloqueo automático (para automatización de demostración/pruebas)"
+  # Argumentos generales
+  password_help: "Contraseña para cifrado (se solicitará si no se proporciona)"
+  password_decrypt_help: "Contraseña para descifrado (se solicitará si no se proporciona)"
+  tags_help: "Etiquetas opcionales para la nota (separadas por comas)"
+  tag_filter_help: "Filtrar por etiqueta"
+  limit_help: "Número máximo de notas a mostrar"
+  limit_results_help: "Número máximo de resultados a mostrar"
+  query_help: "Consulta de búsqueda"
+  id_help: "ID de nota (se admite coincidencia parcial)"
+  server_help: "URL del punto final del servidor"
+  email_help: "Correo electrónico del usuario"
+  device_name_help: "Nombre del dispositivo"
+  key_password_help: "Contraseña de cifrado para la base de datos local"
+  output_help: "Ruta del archivo de salida"
+  input_help: "Ruta del archivo de entrada"
+  backup_password_help: "Contraseña para descifrado (contraseña de la copia de seguridad)"
+  local_key_help: "Contraseña de cifrado de base de datos local (por defecto: contraseña de copia de seguridad)"
+  password_store_help: "Contraseña a almacenar"
+  # Subcomandos de InboxToken
+  inbox_generate_about: "Generar nuevo token de bandeja de entrada (requiere inicio de sesión en el servidor)"
+  inbox_revoke_about: "Revocar el token de bandeja de entrada actual"
+  inbox_status_about: "Verificar si existe un token de bandeja de entrada"
+  server_optional_help: "URL del punto final del servidor (usa el punto final configurado si se omite)"
+  # Mensajes de salida
+  notes_count: "%{count} notas"
+  results_count: "%{count} resultados: '%{query}'"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -499,17 +547,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%d/%m/%Y %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: Conflicto de sincronización
+  your_version: Su versión
+  server_version: Versión del servidor
+  common_ancestor: Ancestro común
+  ancestor_description: La versión de la que ambas partieron antes de que los cambios divergieran
+  resolved_mine: Conflicto resuelto - se conservó su versión
+  resolved_server: Conflicto resuelto - se conservó la versión del servidor
+  resolved_both: Conflicto resuelto - se conservaron ambas versiones
+  resolve_failed: Error al resolver el conflicto
+  indicator: Conflicto de sincronización detectado
+  no_conflict: Esta nota no tiene conflicto de sincronización
   count_singular: "conflicto"
   count_plural: "conflictos"
 
@@ -529,3 +577,69 @@ progress:
   backup: "Creando copia de seguridad..."
   processing: "Procesando"
   export: "Exportando..."
+
+# Paneles de UI y títulos
+ui:
+  notes: "Notas"
+  preview: "Vista previa"
+  archive: "Archivo"
+  recycle_bin: "Papelera"
+  version_history: "Historial de versiones"
+  attachment_viewer: "Visor de adjuntos"
+  conflict_resolution: "Resolución de conflictos"
+  attachments: "Adjuntos"
+  add_attachment: "Añadir adjunto (Tab: completar, ↑↓: seleccionar, Enter: confirmar)"
+  search: "Buscar:"
+  search_archive: "Buscar notas archivadas:"
+  type: "Tipo:"
+  modified: "Modificado:"
+  version: "Versión:"
+
+# Texto de ayuda de la barra de estado
+status_bar:
+  help: "Ayuda"
+  search: "Buscar"
+  select: "seleccionar"
+  pin: "fijar"
+  tags: "Etiquetas"
+  type: "Tipo"
+  bin: "Papelera"
+  archive: "Archivo"
+  ver: "Versión"
+  new: "Nueva"
+  toggle: "alternar"
+  clear: "limpiar"
+  add_tags: "Añadir etiquetas"
+  delete: "eliminar"
+  combine: "combinar"
+  export: "exportar"
+  selected: "seleccionadas"
+  unarchive: "desarchivar"
+  toggle_mode: "Alternar modo"
+  navigate: "navegar"
+  exit_archive: "Salir del archivo"
+  accept: "aceptar"
+  accept_all: "aceptar todo"
+  delete_all: "eliminar todo"
+  close: "cerrar"
+  keep_mine: "Conservar mía"
+  keep_server: "Conservar servidor"
+  keep_both: "Conservar ambas"
+  switch: "cambiar"
+  scroll: "desplazar"
+  cancel: "cancelar"
+  press_b_open: "Tecla b para abrir"
+  # Modo de búsqueda
+  type_search: "Escribir: buscar"
+  exit: "salir"
+  match: "Coincidencia"
+  matches: "Coincidencias"
+  in_active: "en activas"
+  in_archive: "en archivo"
+  # Papelera
+  restore: "restaurar"
+  empty_bin: "Vaciar papelera"
+  back_to_notes: "volver a notas"
+  quick_select: "Selección rápida"
+  view: "ver"
+  restore_version: "Restaurar versión"

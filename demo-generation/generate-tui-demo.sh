@@ -124,6 +124,18 @@ get_search_term() {
     esac
 }
 
+# Get note ID prefix for show command (travel note ID prefix)
+get_note_id() {
+    local lang="$1"
+    # All demo notes use format: {lang}-d4e5f6a7-... for the travel note
+    # Use short prefix that jottery's partial match will find
+    case "$lang" in
+        en-GB) echo "en-GB-d4" ;;
+        en-US) echo "en-US-d4" ;;
+        *)     echo "${lang}-d4" ;;
+    esac
+}
+
 # Get sample note text for each language
 get_sample_text() {
     local lang="$1"
@@ -299,6 +311,7 @@ generate_tape() {
     export DEMO_SYNC_HELP="$(get_sync_help_comment "$lang")"
     export DEMO_REGISTER="$(get_register_comment "$lang")"
     export DEMO_FORCE_SYNC="$(get_force_sync_comment "$lang")"
+    export DEMO_NOTE_ID="$(get_note_id "$lang")"
 
     log_info "  Locale: $LANG, Search: $DEMO_SEARCH"
 

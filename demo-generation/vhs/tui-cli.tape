@@ -37,7 +37,7 @@ Type@50ms "jottery search $DEMO_SEARCH"
 Enter
 Sleep 2s
 
-# Show a specific note
-Type@50ms "jottery show d0e1f2a3 | less"
+# Show a specific note (travel note)
+Type@50ms "jottery show $DEMO_NOTE_ID"
 Enter
 Sleep 4s

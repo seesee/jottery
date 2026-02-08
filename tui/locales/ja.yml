@@ -69,20 +69,20 @@ note:
   info: ノート情報
   info_title: ノート情報
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "アーカイブを表示"
+  title: "アーカイブ"
   mode: "アーカイブモード"
   enter_mode: "アーカイブモードに入る"
   exit_mode: "アーカイブモードを終了"
   toggle_mode: "アーカイブモードを切り替え"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "アーカイブされたノートがありません"
+  archive: "ノートをアーカイブ"
+  unarchive: "ノートをアーカイブから復元"
+  archived: "アーカイブ済み"
+  unarchived: "アーカイブから復元済み"
+  failed: "ノートのアーカイブに失敗: %{error}"
+  unarchive_failed: "ノートのアーカイブ復元に失敗: %{error}"
+  count: "%{count} 件のアーカイブ済みノート"
 
 editor:
   title: タイトル
@@ -131,20 +131,20 @@ settings:
   instructions_status: "'R' (Shift+r) を押して登録承認状態を確認"
   instructions_register: "'r' を押して同期サーバーに登録"
   user_portal: ユーザーポータル
-  auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  auto_sync_interval: 自動同期間隔
+  instructions: 操作説明
+  instructions_navigation: "↑/↓ または j/k: フィールド間を移動"
+  instructions_edit: Enter、i、またはSpaceを押してフィールドを編集
+  instructions_text: "テキストフィールド: 入力してEnterで保存、Escでキャンセル"
+  instructions_toggle: "トグルとサイクル: Enterを押すと即座に値を変更"
+  instructions_remember: "パスワードを記憶: Enterでパスワード入力（有効化時）または無効化（有効時）"
+  instructions_sync: "'y'を押して同期を開始"
+  instructions_force_sync: "'Y' (Shift+y)を押して強制完全同期（サーバーからプル）"
+  instructions_paste: "'p'を押して他のデバイスから同期認証情報を貼り付け"
+  instructions_copy: "'c'を押して同期認証情報をコピーして他のデバイスと共有"
+  press_enter_cycle: Enterを押して切り替え
+  press_enter_toggle: Enterを押してトグル
+  disabled: 無効
 sync:
   push: サーバーにプッシュ
   pull: サーバーからプル
@@ -171,47 +171,47 @@ sync:
     approved: アカウントは承認され、有効です。ノートを同期できます。
     pending: アカウントは承認待ちです。管理者が登録を承認するまでお待ちください。
     inactive: アカウントは無効化されています。管理者にお問い合わせください。
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: 同期が有効ではありません。設定で's'を押して設定してください。
+  endpoint_not_configured: 同期エンドポイントが設定されていません。データベース設定テーブルで設定してください。
+  complete: 同期完了！%{count} %{unit}を同期しました
+  force_syncing: すべてのノートを強制同期中...
+  force_complete: 強制同期完了！サーバーから%{count} %{unit}を同期しました
+  reload_failed: "同期は成功しましたがノートの再読み込みに失敗: %{error}"
+  note: 件のノート
+  notes: 件のノート
+  credentials_title: 同期認証情報 (このテキストをコピー)
+  credentials_instruction: "下のテキストをコピーして別のJotteryクライアントに貼り付けてください:"
+  paste_title: 同期認証情報を貼り付け
+  paste_instruction: "別のJotteryクライアントからbase64認証情報テキストを貼り付けてください:"
+  paste_success: 同期認証情報を正常に設定しました！
+  paste_failed: "認証情報の貼り付けに失敗: %{error}"
+  salt_sync: ソルトを同期しました！新しい暗号化ソルトでロック解除するためにパスワードを再入力してください。
+  import_device_title: 認証情報のインポート - デバイス名
+  import_enter_device_name: "このデバイスの名前を入力してください (例: マイラップトップ):"
+  credentials_empty: 認証情報が入力されていません
+  import_failed: 認証情報のインポートに失敗しました
 
-# Inbox
+# 受信トレイ
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "受信トレイ"
+  empty: "受信トレイは空です。受信トレイAPIから送信されたノートはここに表示されます。"
+  accepted: "ノートを承認しました"
+  deleted: "受信トレイアイテムを削除しました"
+  accepted_all: "%{count} 件の受信トレイアイテムをすべて承認しました"
+  deleted_all: "すべての受信トレイアイテムを削除しました"
+  confirm_delete_title: "受信トレイアイテムを削除"
+  confirm_delete_message: "この受信トレイアイテムを削除しますか？この操作は取り消せません。"
+  confirm_delete_all_title: "すべての受信トレイアイテムを削除"
+  confirm_delete_all_message: "%{count} 件の受信トレイアイテムをすべて削除しますか？この操作は取り消せません。"
+  indicator: "受信トレイ (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "ログイン中..."
+    generated_success: "受信トレイトークンを正常に生成しました！"
+    save_warning: "このトークンを今すぐ保存してください — 再度表示されません。"
+    example_title: "クイックスタート"
+    revoked: "受信トレイトークンを無効化しました"
+    active: "受信トレイトークンは有効です"
+    none: "受信トレイトークンが設定されていません"
 
 register:
   title: 同期サーバーに登録
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: アプリケーションを終了
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: アプリケーションを終了
   type_search_key: 入力
   type_search_desc: 検索クエリを入力
   search_tag_key: "#タグ"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: 設定パネルを閉じる
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: 添付ファイルパネルにフォーカス (j/kで移動、Enterで表示、dで削除)
   A_add_attachment_key: A
   A_add_attachment_desc: 添付ファイルを追加 (ファイルパスを入力)
   a_view_attachment_key: a + 番号
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: ノート情報を表示
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: プレビューをスクロール (全ページ)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Vimスタイルスクロール (半ページ/全ページ)
+  mouse_scroll_key: マウススクロール
+  mouse_scroll_desc: プレビューをスクロール
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: 選択したノートの固定を切り替え
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: ごみ箱表示を切り替え
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: バージョン履歴を表示
   b_inbox_key: b
   b_inbox_desc: "受信トレイを開く"
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
+  tab_search_desc: 検索を終了、添付ファイルにフォーカス
+  multi_select: 複数選択モード
   space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  space_select_desc: 現在のノートの選択を切り替え
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: 最後に選択した位置から範囲選択
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: フィルタされたすべてのノートを選択
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: 選択したノートにタグを追加
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: 選択したノートを削除
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: 選択したノートを1つに結合
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: 選択したノートをJSONにエクスポート
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: 選択を解除 / 複数選択を終了
+  mouse: マウス
+  click_note_key: ノートをクリック
+  click_note_desc: リストでノートを選択
+  click_tag_key: タグをクリック
+  click_tag_desc: そのタグで検索
+  click_tags_key: "'タグ:'をクリック"
+  click_tags_desc: タグ編集モードに入る
+  scroll_key: スクロールホイール
+  scroll_desc: プレビューを上下にスクロール
 cli:
+  # 代替 (一部で使用)
   list: ノートを一覧表示
   show: ノートを表示
   new: 新しいノートを作成
@@ -469,6 +470,53 @@ cli:
   import: ノートをインポート
   sync: サーバーと同期
   register: デバイスを登録
+  # メインアプリ
+  about: "プライバシー重視の暗号化メモアプリTUI"
+  # グローバルオプション
+  database_help: "データベースファイルパス"
+  debug_help: "デバッグログを有効にする"
+  debug_log_help: "デバッグログファイルパス (トラブルシューティング用)"
+  reset_help: "リセット: データベースを削除して新規開始"
+  # コマンド
+  note_about: "$EDITORでクイックノートを作成"
+  list_about: "すべてのノートを一覧表示"
+  search_about: "ノートを検索"
+  show_about: "IDで特定のノートを表示"
+  sync_about: "リモートサーバーとノートを同期"
+  register_user_about: "サーバーに新しいユーザーアカウントを登録"
+  register_device_about: "このデバイスをサーバーに登録 (承認済みユーザーアカウントが必要)"
+  export_about: "ノートをJSONファイルにエクスポート"
+  import_about: "JSONファイルからノートをインポート"
+  backup_about: "暗号化バックアップを作成 (Webアプリと互換)"
+  inbox_token_about: "受信トレイAPIトークンを管理"
+  restore_backup_about: "暗号化バックアップから復元"
+  store_password_about: "自動ロック解除用にパスワードを保存 (デモ/テスト自動化用)"
+  # 共通引数
+  password_help: "暗号化用パスワード (指定しない場合は入力を求められます)"
+  password_decrypt_help: "復号化用パスワード (指定しない場合は入力を求められます)"
+  tags_help: "ノートのオプションタグ (カンマ区切り)"
+  tag_filter_help: "タグでフィルタ"
+  limit_help: "表示する最大ノート数"
+  limit_results_help: "表示する最大結果数"
+  query_help: "検索クエリ"
+  id_help: "ノートID (部分一致をサポート)"
+  server_help: "サーバーエンドポイントURL"
+  email_help: "ユーザーメールアドレス"
+  device_name_help: "デバイス名"
+  key_password_help: "ローカルデータベースの暗号化パスワード"
+  output_help: "出力ファイルパス"
+  input_help: "入力ファイルパス"
+  backup_password_help: "復号化用パスワード (バックアップパスワード)"
+  local_key_help: "ローカルデータベース暗号化パスワード (デフォルト: バックアップパスワード)"
+  password_store_help: "保存するパスワード"
+  # InboxTokenサブコマンド
+  inbox_generate_about: "新しい受信トレイトークンを生成 (サーバーログインが必要)"
+  inbox_revoke_about: "現在の受信トレイトークンを無効化"
+  inbox_status_about: "受信トレイトークンが存在するか確認"
+  server_optional_help: "サーバーエンドポイントURL (省略時は設定済みエンドポイントを使用)"
+  # 出力メッセージ
+  notes_count: "%{count} 件のノート"
+  results_count: "%{count} 件の結果: '%{query}'"
 status:
   locked: ロック中
   unlocked: ロック解除
@@ -499,17 +547,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%Y年%m月%d日 %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: 同期競合
+  your_version: あなたのバージョン
+  server_version: サーバーバージョン
+  common_ancestor: 共通の祖先
+  ancestor_description: 変更が分岐する前の両者が共有していたバージョン
+  resolved_mine: 競合を解決しました - あなたのバージョンを保持
+  resolved_server: 競合を解決しました - サーバーバージョンを保持
+  resolved_both: 競合を解決しました - 両方のバージョンを保持
+  resolve_failed: 競合の解決に失敗しました
+  indicator: 同期競合を検出しました
+  no_conflict: このノートには同期競合がありません
   count_singular: "件の競合"
   count_plural: "件の競合"
 
@@ -529,3 +577,69 @@ progress:
   backup: "バックアップを作成中..."
   processing: "処理中"
   export: "エクスポート中..."
+
+# UIパネルとタイトル
+ui:
+  notes: "ノート"
+  preview: "プレビュー"
+  archive: "アーカイブ"
+  recycle_bin: "ごみ箱"
+  version_history: "バージョン履歴"
+  attachment_viewer: "添付ファイルビューア"
+  conflict_resolution: "競合解決"
+  attachments: "添付ファイル"
+  add_attachment: "添付ファイルを追加 (Tab: 補完、↑↓: 選択、Enter: 確定)"
+  search: "検索:"
+  search_archive: "アーカイブされたノートを検索:"
+  type: "タイプ:"
+  modified: "更新日時:"
+  version: "バージョン:"
+
+# ステータスバーヘルプテキスト
+status_bar:
+  help: "ヘルプ"
+  search: "検索"
+  select: "選択"
+  pin: "固定"
+  tags: "タグ"
+  type: "タイプ"
+  bin: "ごみ箱"
+  archive: "アーカイブ"
+  ver: "バージョン"
+  new: "新規"
+  toggle: "切り替え"
+  clear: "解除"
+  add_tags: "タグを追加"
+  delete: "削除"
+  combine: "結合"
+  export: "エクスポート"
+  selected: "選択済み"
+  unarchive: "復元"
+  toggle_mode: "モード切り替え"
+  navigate: "移動"
+  exit_archive: "アーカイブを終了"
+  accept: "承認"
+  accept_all: "すべて承認"
+  delete_all: "すべて削除"
+  close: "閉じる"
+  keep_mine: "自分のを保持"
+  keep_server: "サーバーを保持"
+  keep_both: "両方を保持"
+  switch: "切り替え"
+  scroll: "スクロール"
+  cancel: "キャンセル"
+  press_b_open: "bキーで開く"
+  # 検索モード
+  type_search: "入力: 検索"
+  exit: "終了"
+  match: "件一致"
+  matches: "件一致"
+  in_active: "アクティブ内"
+  in_archive: "アーカイブ内"
+  # ごみ箱
+  restore: "復元"
+  empty_bin: "ごみ箱を空にする"
+  back_to_notes: "ノートに戻る"
+  quick_select: "クイック選択"
+  view: "表示"
+  restore_version: "バージョンを復元"
