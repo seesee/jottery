@@ -3,7 +3,6 @@
   import { onMount } from 'svelte';
   import ScreenshotPlaceholder from './ScreenshotPlaceholder.svelte';
   import LanguagePicker from './LanguagePicker.svelte';
-  import { AVAILABLE_LOCALES } from '../services/i18nService';
 
   /** Feature with light/dark screenshots (paths are relative, base is added dynamically) */
   interface WebFeature {
@@ -53,9 +52,6 @@
   // Get the aspirational language for the multilingual demo
   $: aspirationalLang = ASPIRATIONAL_LANG[currentLocale] || 'el';
   $: aspirationalScreenshotBase = `/screenshots/${AVAILABLE_SCREENSHOT_LOCALES.includes(aspirationalLang) ? aspirationalLang : 'en-GB'}`;
-
-  // Get display name for aspirational language
-  $: aspirationalLangName = AVAILABLE_LOCALES.find(l => l.code === aspirationalLang)?.name || 'Greek';
 
   function openLightbox(src: string, alt: string) {
     lightboxImage = { src, alt };
