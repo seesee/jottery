@@ -69,20 +69,20 @@ note:
   info: Not bilgisi
   info_title: Not Bilgileri
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "Arşivi görüntüle"
+  title: "Arşiv"
   mode: "Arşiv modu"
   enter_mode: "Arşiv moduna gir"
   exit_mode: "Arşiv modundan çık"
   toggle_mode: "Arşiv modunu değiştir"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "Arşivlenmiş not yok"
+  archive: "Notu arşivle"
+  unarchive: "Notu arşivden çıkar"
+  archived: "Arşivlendi"
+  unarchived: "Arşivden çıkarıldı"
+  failed: "Not arşivleme başarısız: %{error}"
+  unarchive_failed: "Notu arşivden çıkarma başarısız: %{error}"
+  count: "%{count} arşivlenmiş not"
 
 editor:
   title: Başlık
@@ -131,20 +131,20 @@ settings:
   instructions_status: Kayıt onay durumunu kontrol etmek için 'R' (Shift+r) tuşuna basın
   instructions_register: Bir senkronizasyon sunucusuna kaydolmak için 'r' tuşuna basın
   user_portal: Kullanıcı Portalı
-  auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  auto_sync_interval: Otomatik senkronizasyon aralığı
+  instructions: Talimatlar
+  instructions_navigation: "↑/↓ veya j/k: Alanlar arasında gezin"
+  instructions_edit: Bir alanı düzenlemek için Enter, i veya Boşluk tuşuna basın
+  instructions_text: "Metin alanları: yazın ve kaydetmek için Enter, iptal etmek için Esc"
+  instructions_toggle: "Değiştirmeler ve döngüler için: değeri hemen değiştirmek için Enter tuşuna basın"
+  instructions_remember: "Şifreyi hatırla: Enter şifre sorar (etkinleştirirken) veya devre dışı bırakır (etkinse)"
+  instructions_sync: Senkronizasyonu tetiklemek için 'y' tuşuna basın
+  instructions_force_sync: Tam senkronizasyonu zorlamak için 'Y' (Shift+y) tuşuna basın (sunucudan çek)
+  instructions_paste: Başka bir cihazdan senkronizasyon kimlik bilgilerini yapıştırmak için 'p' tuşuna basın
+  instructions_copy: Başka bir cihazla paylaşmak için senkronizasyon kimlik bilgilerini kopyalamak için 'c' tuşuna basın
+  press_enter_cycle: değiştirmek için Enter tuşuna basın
+  press_enter_toggle: açıp kapatmak için Enter tuşuna basın
+  disabled: devre dışı
 sync:
   push: Sunucuya gönder
   pull: Sunucudan çek
@@ -171,47 +171,47 @@ sync:
     approved: Hesabınız onaylandı ve aktif. Notlarınızı senkronize edebilirsiniz.
     pending: Hesabınız onay bekliyor. Bir yöneticinin kaydınızı onaylamasını bekleyin.
     inactive: Hesabınız devre dışı bırakıldı. Bir yöneticiyle iletişime geçin.
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: Senkronizasyon etkin değil. Ayarlarda yapılandırmak için 's' tuşuna basın.
+  endpoint_not_configured: Senkronizasyon uç noktası yapılandırılmadı. Veritabanı ayarlar tablosunda yapılandırın.
+  complete: Senkronizasyon tamamlandı! %{count} %{unit} senkronize edildi
+  force_syncing: Tüm notlar zorla senkronize ediliyor...
+  force_complete: Zorunlu senkronizasyon tamamlandı! %{count} %{unit} sunucudan alındı
+  reload_failed: "Senkronizasyon başarılı ancak notlar yeniden yüklenemedi: %{error}"
+  note: not
+  notes: not
+  credentials_title: Senkronizasyon Kimlik Bilgileri (Bu Metni Kopyalayın)
+  credentials_instruction: "Aşağıdaki metni kopyalayın ve başka bir Jottery istemcisine yapıştırın:"
+  paste_title: Senkronizasyon Kimlik Bilgilerini Yapıştır
+  paste_instruction: "Başka bir Jottery istemcisinden base64 kimlik bilgileri metnini yapıştırın:"
+  paste_success: Senkronizasyon kimlik bilgileri başarıyla yapılandırıldı!
+  paste_failed: "Kimlik bilgileri yapıştırma başarısız: %{error}"
+  salt_sync: Tuz senkronize edildi! Yeni şifreleme tuzu ile kilidi açmak için lütfen şifrenizi tekrar girin.
+  import_device_title: Kimlik Bilgilerini İçe Aktar - Cihaz Adı
+  import_enter_device_name: "Bu cihaz için bir ad girin (örn. Dizüstü Bilgisayarım):"
+  credentials_empty: Kimlik bilgisi girilmedi
+  import_failed: Kimlik bilgilerini içe aktarma başarısız
 
-# Inbox
+# Gelen Kutusu
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "Gelen Kutusu"
+  empty: "Gelen kutusu boş. Gelen Kutusu API'si üzerinden gönderilen notlar burada görünecek."
+  accepted: "Not kabul edildi"
+  deleted: "Gelen kutusu öğesi silindi"
+  accepted_all: "Tüm %{count} gelen kutusu öğesi kabul edildi"
+  deleted_all: "Tüm gelen kutusu öğeleri silindi"
+  confirm_delete_title: "Gelen Kutusu Öğesini Sil"
+  confirm_delete_message: "Bu gelen kutusu öğesi silinsin mi? Bu işlem geri alınamaz."
+  confirm_delete_all_title: "Tüm Gelen Kutusu Öğelerini Sil"
+  confirm_delete_all_message: "Tüm %{count} gelen kutusu öğesi silinsin mi? Bu işlem geri alınamaz."
+  indicator: "Gelen Kutusu (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "Giriş yapılıyor..."
+    generated_success: "Gelen kutusu jetonu başarıyla oluşturuldu!"
+    save_warning: "Bu jetonu şimdi kaydedin — tekrar gösterilmeyecek."
+    example_title: "Hızlı Başlangıç"
+    revoked: "Gelen kutusu jetonu iptal edildi"
+    active: "Gelen kutusu jetonu aktif"
+    none: "Gelen kutusu jetonu yapılandırılmadı"
 
 register:
   title: Senkronizasyon Sunucusuna Kayıt Ol
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: Uygulamadan çık
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: Uygulamadan çık
   type_search_key: Yaz
   type_search_desc: Arama sorgusunu girin
   search_tag_key: "#etiket"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: Ayarlar panelini kapat
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: Ek paneline odaklan (j/k ile gezin, Enter ile görüntüle, d ile sil)
   A_add_attachment_key: A
   A_add_attachment_desc: Ek ekle (dosya yolunu girin)
   a_view_attachment_key: a + numara
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: Not bilgilerini göster
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: Önizlemeyi kaydır (tam sayfa)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Vim tarzı kaydırma (yarım/tam sayfa)
+  mouse_scroll_key: Fare kaydırma
+  mouse_scroll_desc: Önizlemeyi kaydır
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: Seçili notu sabitle/sabitlemeyi kaldır
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: Çöp kutusu görünümünü değiştir
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: Sürüm geçmişini görüntüle
   b_inbox_key: b
   b_inbox_desc: "Gelen kutusunu aç"
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
-  space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  tab_search_desc: Aramadan çık, eklere odaklan
+  multi_select: ÇOKLU SEÇİM MODU
+  space_select_key: Boşluk
+  space_select_desc: Mevcut notun seçimini değiştir
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: Son seçilenden itibaren aralık seç
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: Tüm filtrelenmiş notları seç
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: Seçili notlara etiket ekle
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: Seçili notları sil
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: Seçili notları birleştir
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: Seçili notları JSON olarak dışa aktar
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: Seçimi temizle / çoklu seçimden çık
+  mouse: FARE
+  click_note_key: Nota tıkla
+  click_note_desc: Listede notu seç
+  click_tag_key: Etikete tıkla
+  click_tag_desc: Bu etiketi ara
+  click_tags_key: "'Etiketler:'e tıkla"
+  click_tags_desc: Etiket düzenleme moduna gir
+  scroll_key: Kaydırma tekerleği
+  scroll_desc: Önizlemeyi yukarı/aşağı kaydır
 cli:
+  # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
   show: Not göster
   new: Yeni not oluştur
@@ -469,6 +470,57 @@ cli:
   import: Notları içe aktar
   sync: Sunucuyla senkronize et
   register: Cihaz kaydet
+  # Ana uygulama
+  about: "Gizlilik odaklı, şifreli not alma TUI'si"
+  # Genel seçenekler
+  database_help: "Veritabanı dosya yolu"
+  debug_help: "Hata ayıklama günlüğünü etkinleştir"
+  debug_log_help: "Hata ayıklama günlük dosyası yolu (sorun giderme için)"
+  reset_help: "Sıfırla: veritabanını sil ve yeniden başla"
+  # Komutlar
+  note_about: "$EDITOR ile hızlı not oluştur"
+  list_about: "Tüm notları listele"
+  search_about: "Notları ara"
+  show_about: "Belirli bir notu ID'ye göre göster"
+  sync_about: "Notları uzak sunucu ile senkronize et"
+  register_user_about: "Sunucuda yeni kullanıcı hesabı kaydet"
+  register_device_about: "Bu cihazı sunucuya kaydet (onaylı kullanıcı hesabı gerekir)"
+  export_about: "Notları JSON dosyasına dışa aktar"
+  import_about: "Notları JSON dosyasından içe aktar"
+  backup_about: "Şifreli yedek oluştur (web uygulaması ile uyumlu)"
+  inbox_token_about: "Gelen kutusu API jetonunu yönet"
+  restore_backup_about: "Şifreli yedekten geri yükle"
+  store_password_about: "Otomatik kilit açma için şifre kaydet (demo/test otomasyonu için)"
+  # Genel argümanlar
+  password_help: "Şifreleme için şifre (belirtilmezse sorulur)"
+  password_decrypt_help: "Şifre çözme için şifre (belirtilmezse sorulur)"
+  tags_help: "Not için isteğe bağlı etiketler (virgülle ayrılmış)"
+  tag_filter_help: "Etikete göre filtrele"
+  limit_help: "Gösterilecek maksimum not sayısı"
+  limit_results_help: "Gösterilecek maksimum sonuç sayısı"
+  query_help: "Arama sorgusu"
+  id_help: "Not ID'si (kısmi eşleşme desteklenir)"
+  server_help: "Sunucu uç nokta URL'si"
+  email_help: "Kullanıcı e-postası"
+  device_name_help: "Cihaz adı"
+  key_password_help: "Yerel veritabanı şifreleme parolası"
+  output_help: "Çıktı dosyası yolu"
+  input_help: "Girdi dosyası yolu"
+  backup_password_help: "Şifre çözme için parola (yedek parolası)"
+  local_key_help: "Yerel veritabanı şifreleme parolası (varsayılan: yedek parolası)"
+  password_store_help: "Kaydedilecek şifre"
+  # Gelen Kutusu Jetonu alt komutları
+  inbox_generate_about: "Yeni gelen kutusu jetonu oluştur (sunucu girişi gerekir)"
+  inbox_revoke_about: "Mevcut gelen kutusu jetonunu iptal et"
+  inbox_status_about: "Gelen kutusu jetonu olup olmadığını kontrol et"
+  server_optional_help: "Sunucu uç nokta URL'si (belirtilmezse yapılandırılmış uç noktayı kullanır)"
+  # Built-in help/version
+  help_flag: "Yardımı göster"
+  version_flag: "Sürümü göster"
+  help_subcommand: "Bu mesajı veya alt komut yardımını göster"
+  # Çıktı mesajları
+  notes_count: "%{count} not"
+  results_count: "%{count} sonuç: '%{query}'"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -499,17 +551,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%d.%m.%Y %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: Senkronizasyon Çakışması
+  your_version: Sizin Sürümünüz
+  server_version: Sunucu Sürümü
+  common_ancestor: Ortak Ata
+  ancestor_description: Değişiklikler ayrılmadan önce her ikisinin başladığı sürüm
+  resolved_mine: Çakışma çözüldü - sizin sürümünüz korundu
+  resolved_server: Çakışma çözüldü - sunucu sürümü korundu
+  resolved_both: Çakışma çözüldü - her iki sürüm de korundu
+  resolve_failed: Çakışma çözme başarısız
+  indicator: Senkronizasyon çakışması algılandı
+  no_conflict: Bu notun senkronizasyon çakışması yok
   count_singular: "çakışma"
   count_plural: "çakışma"
 
@@ -529,3 +581,69 @@ progress:
   backup: "Yedek oluşturuluyor..."
   processing: "İşleniyor"
   export: "Dışa aktarılıyor..."
+
+# UI panelleri ve başlıklar
+ui:
+  notes: "Notlar"
+  preview: "Önizleme"
+  archive: "Arşiv"
+  recycle_bin: "Çöp Kutusu"
+  version_history: "Sürüm Geçmişi"
+  attachment_viewer: "Ek Görüntüleyici"
+  conflict_resolution: "Çakışma Çözümü"
+  attachments: "Ekler"
+  add_attachment: "Ek ekle (Tab: tamamla, ↑↓: seç, Enter: onayla)"
+  search: "Ara:"
+  search_archive: "Arşivlenmiş notları ara:"
+  type: "Tür:"
+  modified: "Değiştirildi:"
+  version: "Sürüm:"
+
+# Durum çubuğu yardım metni
+status_bar:
+  help: "Yardım"
+  search: "Ara"
+  select: "seç"
+  pin: "sabitle"
+  tags: "Etiketler"
+  type: "Tür"
+  bin: "Çöp Kutusu"
+  archive: "Arşiv"
+  ver: "Sürüm"
+  new: "Yeni"
+  toggle: "değiştir"
+  clear: "temizle"
+  add_tags: "Etiket ekle"
+  delete: "sil"
+  combine: "birleştir"
+  export: "dışa aktar"
+  selected: "seçili"
+  unarchive: "arşivden çıkar"
+  toggle_mode: "Modu değiştir"
+  navigate: "gezin"
+  exit_archive: "Arşivden çık"
+  accept: "kabul et"
+  accept_all: "tümünü kabul et"
+  delete_all: "tümünü sil"
+  close: "kapat"
+  keep_mine: "Benimkini koru"
+  keep_server: "Sunucununkini koru"
+  keep_both: "İkisini de koru"
+  switch: "değiştir"
+  scroll: "kaydır"
+  cancel: "iptal"
+  press_b_open: "Açmak için b tuşuna basın"
+  # Arama modu
+  type_search: "Yazın: ara"
+  exit: "çık"
+  match: "eşleşme"
+  matches: "eşleşme"
+  in_active: "aktif içinde"
+  in_archive: "arşiv içinde"
+  # Çöp kutusu
+  restore: "geri yükle"
+  empty_bin: "Çöp kutusunu boşalt"
+  back_to_notes: "notlara dön"
+  quick_select: "Hızlı seçim"
+  view: "görüntüle"
+  restore_version: "Sürümü geri yükle"

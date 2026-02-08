@@ -4,7 +4,7 @@
     "tagline": "Notes personnelles pour web et terminal"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Aller au contenu principal"
   },
   "common": {
     "loading": "Chargement...",
@@ -56,15 +56,15 @@
     "tryDifferentSearch": "Essayez une recherche différente",
     "noNotes": "Aucune note",
     "somethingWentWrong": "Une erreur s'est produite",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "résultat",
+    "matchPlural": "résultats"
   },
   "search": {
     "placeholder": "Rechercher des notes...",
     "clear": "Effacer la recherche",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "resultCount": "Résultats : correspondances / total",
+    "resultsFound": "{matches} sur {total} notes",
+    "tagSuggestions": "Suggestions d'étiquettes",
     "savedSearches": "Recherches Enregistrées",
     "newSavedSearch": "Enregistrer la Recherche Actuelle",
     "editSearch": "Modifier",
@@ -398,18 +398,18 @@
         "button": "🚀 Créer un nouveau compte"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Connecter un compte existant",
+        "subtitle": "<strong>Vous avez déjà un compte ?</strong> Connecter cet appareil",
+        "benefit1": "✓ Utilisez votre email/mot de passe existant",
+        "benefit2": "✓ Ajoute cet appareil à votre compte",
+        "benefit3": "✓ Synchronise les notes du serveur vers cet appareil",
+        "button": "🔗 Se connecter à un compte existant",
+        "formTitle": "Se connecter à un compte existant",
+        "infoText": "Entrez vos identifiants du serveur de synchronisation. Vos notes existantes seront synchronisées sur cet appareil après la connexion.",
+        "emailLabel": "Adresse e-mail",
+        "passwordLabel": "Mot de passe du serveur",
+        "connectButton": "Connecter l'appareil",
+        "connecting": "Connexion..."
       },
       "privacyNote": "<strong>🔒 Confidentialité :</strong> Toutes vos notes sont chiffrées de bout en bout. Le serveur ne stocke que des données chiffrées et ne peut pas lire votre contenu.",
       "selfHostNote": "<strong>💡 Auto-hébergement ?</strong> Exécutez votre propre serveur - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">voir GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Votre appareil est maintenant enregistré et <strong>toutes vos notes existantes ont été synchronisées avec le serveur</strong>. Tous les changements futurs seront synchronisés automatiquement.",
         "successNextSteps": "📋 Pour ajouter un autre appareil : Cliquez sur \"Exporter les identifiants de synchronisation\" ci-dessous et importez-les sur votre autre appareil.",
         "done": "Terminé",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Vérifiez votre statut d'approbation sur le Portail Utilisateur →"
       },
       "linkAccount": {
         "title": "Lier un compte (facultatif)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Lorsqu'elle est désactivée, Jottery ne fera aucune requête réseau vers les serveurs de synchronisation. Toutes vos notes restent complètement locales sur cet appareil.",
       "toEnableSync": "Pour activer la synchronisation : Activez l'interrupteur ci-dessus et configurez votre serveur de synchronisation.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Connecter un compte existant",
+        "subtitle": "<strong>Vous avez déjà un compte ?</strong> Connecter cet appareil",
+        "benefit1": "✓ Utilisez votre email/mot de passe existant",
+        "benefit2": "✓ Ajoute cet appareil à votre compte",
+        "benefit3": "✓ Synchronise les notes du serveur vers cet appareil",
+        "button": "🔗 Se connecter à un compte existant",
+        "formTitle": "Se connecter à un compte existant",
+        "infoText": "Entrez vos identifiants du serveur de synchronisation. Vos notes existantes seront synchronisées sur cet appareil après la connexion.",
+        "emailLabel": "Adresse e-mail",
+        "passwordLabel": "Mot de passe du serveur",
+        "connectButton": "Connecter l'appareil",
+        "connecting": "Connexion..."
       },
       "privacyNote": "Confidentialité : Même lorsqu'elle est activée, toutes les notes sont chiffrées de bout en bout. Le serveur de synchronisation ne peut pas lire votre contenu.",
       "syncEnabled": "Synchronisation activée",
@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Choisir la langue"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Une application de prise de notes puissante et axée sur la confidentialité avec chiffrement de bout en bout, recherche avancée et synchronisation optionnelle. Accédez à vos notes depuis le web ou le terminal.",
@@ -797,7 +800,7 @@
         "alt": "Vue liste des notes sur mobile",
         "caption": "Liste des notes"
       },
-      "japan": {
+      "travel": {
         "alt": "Vue de note mobile affichant l'itinéraire au Japon",
         "caption": "Vue de note"
       },
@@ -1034,7 +1037,7 @@
     "description": "Téléchargez le TUI Jottery pour votre plateforme.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "Exécuter localement depuis le système de fichiers (synchronisation désactivée)"
   },
   "fileUpload": {
     "dropHere": "Déposez des fichiers ici",
@@ -1116,8 +1119,8 @@
     "message": "Rechargez pour obtenir les dernières fonctionnalités et améliorations",
     "reloadButton": "Recharger maintenant",
     "dismissLabel": "Ignorer",
-    "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backupButton": "Sauvegarder d'abord",
+    "backingUp": "Sauvegarde en cours..."
   },
   "bulk": {
     "toggleSelect": "Basculer la sélection",
@@ -1142,104 +1145,104 @@
     "progress": "{current} sur {total}",
     "selectAll": "Tout sélectionner",
     "deselectAll": "Tout désélectionner",
-    "archive": "Archive"
+    "archive": "Archiver"
   },
   "conflict": {
-    "title": "Sync Conflict Detected",
-    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
-    "yourVersion": "Your version",
-    "serverVersion": "Server version",
+    "title": "Conflit de synchronisation détecté",
+    "description": "Cette note a été modifiée à la fois localement et sur le serveur. Choisissez comment résoudre le conflit.",
+    "yourVersion": "Votre version",
+    "serverVersion": "Version du serveur",
     "commonAncestor": "Ancêtre commun",
     "ancestorDescription": "La version à partir de laquelle vous avez tous les deux commencé",
-    "chooseAction": "Choose how to resolve this conflict:",
-    "keepMine": "Keep mine",
-    "keepServer": "Keep server",
-    "keepBoth": "Keep both",
-    "merge": "Merge",
-    "resolved": "Conflict resolved",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
-    "indicator": "Sync conflict",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "chooseAction": "Choisissez comment résoudre ce conflit :",
+    "keepMine": "Garder la mienne",
+    "keepServer": "Garder celle du serveur",
+    "keepBoth": "Garder les deux",
+    "merge": "Fusionner",
+    "resolved": "Conflit résolu",
+    "resolvedBoth": "Conflit résolu - note en double créée",
+    "noConflict": "Aucune donnée de conflit trouvée",
+    "indicator": "Conflit de synchronisation",
+    "bannerText": "Cette note a un conflit de synchronisation qui doit être résolu",
+    "resolveButton": "Résoudre le conflit",
     "syncNotification": "{count, plural, one {1 note a un conflit de synchronisation} other {{count} notes ont des conflits de synchronisation}}"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "pull": "Tirez vers le bas pour synchroniser",
+    "release": "Relâchez pour synchroniser",
+    "syncing": "Synchronisation...",
+    "region": "Tirer pour actualiser"
   },
   "sync": {
     "syncing": "Synchronisation...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Synchronisation : {percentage}% terminé"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
-    "accept": "Accept",
-    "acceptAll": "Accept All",
-    "delete": "Delete",
-    "deleteAll": "Delete All",
-    "accepting": "Accepting...",
-    "deleting": "Deleting...",
-    "accepted": "Note accepted",
-    "acceptedAll": "All {count} notes accepted",
-    "deleted": "Inbox item deleted",
-    "deletedAll": "All inbox items deleted",
-    "source": "Source: {source}",
-    "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "title": "Boîte de réception",
+    "count": "{count} éléments",
+    "countSingle": "1 élément",
+    "empty": "Boîte de réception vide",
+    "emptyDescription": "Les notes soumises via l'API de boîte de réception apparaîtront ici pour révision",
+    "accept": "Accepter",
+    "acceptAll": "Tout accepter",
+    "delete": "Supprimer",
+    "deleteAll": "Tout supprimer",
+    "accepting": "Acceptation...",
+    "deleting": "Suppression...",
+    "accepted": "Note acceptée",
+    "acceptedAll": "{count} notes acceptées",
+    "deleted": "Élément supprimé",
+    "deletedAll": "Tous les éléments de la boîte de réception supprimés",
+    "source": "Source : {source}",
+    "untitled": "Sans titre",
+    "closeLabel": "Fermer la boîte de réception",
+    "indicator": "Boîte de réception ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
-        "confirmButton": "Delete"
+        "title": "Supprimer l'élément",
+        "message": "Supprimer cet élément de la boîte de réception ? Cette action est irréversible.",
+        "confirmButton": "Supprimer"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Supprimer tous les éléments",
+        "message": "Supprimer les {count} éléments de la boîte de réception ? Cette action est irréversible.",
+        "confirmButton": "Tout supprimer"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Échec de l'acceptation de l'élément",
+      "delete": "Échec de la suppression de l'élément",
+      "acceptAll": "Échec de l'acceptation des éléments",
+      "deleteAll": "Échec de la suppression des éléments"
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
-      "active": "Token active",
-      "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
-      "revoked": "Inbox token revoked",
-      "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "description": "Soumettez des notes à votre compte via API — aucun mot de passe de chiffrement requis. Les éléments apparaissent dans votre boîte de réception pour révision.",
+      "generate": "Générer un Token",
+      "revoke": "Révoquer le Token",
+      "active": "Token actif",
+      "none": "Aucun token configuré",
+      "generated": "Token généré — enregistrez-le maintenant, il ne sera plus affiché.",
+      "revoked": "Token de boîte de réception révoqué",
+      "copyToken": "Copier le Token",
+      "copied": "Token copié dans le presse-papiers",
+      "quickStart": "Démarrage Rapide",
+      "curlExample": "Exemple : soumettre une note via curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Révoquer le Token de Boîte de Réception",
+          "message": "Révoquer votre token de boîte de réception ? Toutes les intégrations l'utilisant cesseront de fonctionner.",
+          "confirmButton": "Révoquer"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Échec de la génération du token de boîte de réception",
+        "revoke": "Échec de la révocation du token de boîte de réception"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Éléments : {used}/{max}",
+      "size": "Taille : {used}/{max}"
     }
   },
   "archive": {
@@ -1279,10 +1282,10 @@
     "collapse": "Réduire",
     "expand": "Développer",
     "moveUp": "Monter",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Descendre",
+    "expandAll": "Tout développer",
+    "collapseAll": "Tout réduire",
+    "level": "Niveau {n}"
   },
   "progress": {
     "title": "Veuillez patienter",

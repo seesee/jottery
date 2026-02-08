@@ -4,7 +4,7 @@
     "tagline": "웹과 터미널을 위한 개인 메모"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "메인 콘텐츠로 건너뛰기"
   },
   "common": {
     "loading": "로딩 중...",
@@ -56,15 +56,15 @@
     "tryDifferentSearch": "다른 검색어를 시도해 보세요",
     "noNotes": "노트 없음",
     "somethingWentWrong": "문제가 발생했습니다",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "개 일치",
+    "matchPlural": "개 일치"
   },
   "search": {
     "placeholder": "노트 검색...",
     "clear": "검색 지우기",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "resultCount": "검색 결과: 일치 / 전체",
+    "resultsFound": "{total}개 중 {matches}개 일치",
+    "tagSuggestions": "태그 제안",
     "savedSearches": "저장된 검색",
     "newSavedSearch": "현재 검색 저장",
     "editSearch": "편집",
@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "언어 선택"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "종단간 암호화, 고급 검색 및 선택적 동기화 기능을 갖춘 강력하고 개인정보 보호 중심 노트 앱. 웹 또는 터미널에서 노트에 액세스하세요.",
@@ -797,7 +800,7 @@
         "alt": "모바일 노트 목록 보기",
         "caption": "노트 목록"
       },
-      "japan": {
+      "travel": {
         "alt": "일본 여행 일정을 보여주는 모바일 노트 보기",
         "caption": "노트 보기"
       },
@@ -1034,7 +1037,7 @@
     "description": "플랫폼에 맞는 Jottery TUI를 다운로드하세요.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "파일 시스템에서 로컬로 실행 (동기화 비활성화)"
   },
   "fileUpload": {
     "dropHere": "파일을 여기에 놓으세요",
@@ -1142,7 +1145,7 @@
     "progress": "{total}개 중 {current}개",
     "selectAll": "전체 선택",
     "deselectAll": "전체 선택 해제",
-    "archive": "Archive"
+    "archive": "보관"
   },
   "conflict": {
     "title": "동기화 충돌 감지됨",
@@ -1160,8 +1163,8 @@
     "resolvedBoth": "충돌 해결됨 - 복제 노트 생성됨",
     "noConflict": "충돌 데이터를 찾을 수 없습니다",
     "indicator": "동기화 충돌",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "bannerText": "이 노트에 해결해야 할 동기화 충돌이 있습니다",
+    "resolveButton": "충돌 해결",
     "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다"
   },
   "pullToRefresh": {
@@ -1172,74 +1175,74 @@
   },
   "sync": {
     "syncing": "동기화 중...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "동기화: {percentage}% 완료"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
-    "accept": "Accept",
-    "acceptAll": "Accept All",
-    "delete": "Delete",
-    "deleteAll": "Delete All",
-    "accepting": "Accepting...",
-    "deleting": "Deleting...",
-    "accepted": "Note accepted",
-    "acceptedAll": "All {count} notes accepted",
-    "deleted": "Inbox item deleted",
-    "deletedAll": "All inbox items deleted",
-    "source": "Source: {source}",
-    "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "title": "받은 편지함",
+    "count": "{count}개 항목",
+    "countSingle": "1개 항목",
+    "empty": "받은 편지함이 비어 있습니다",
+    "emptyDescription": "받은 편지함 API를 통해 제출된 노트가 여기에 표시됩니다",
+    "accept": "수락",
+    "acceptAll": "모두 수락",
+    "delete": "삭제",
+    "deleteAll": "모두 삭제",
+    "accepting": "수락 중...",
+    "deleting": "삭제 중...",
+    "accepted": "노트가 수락되었습니다",
+    "acceptedAll": "{count}개 노트가 모두 수락되었습니다",
+    "deleted": "받은 편지함 항목이 삭제되었습니다",
+    "deletedAll": "모든 받은 편지함 항목이 삭제되었습니다",
+    "source": "출처: {source}",
+    "untitled": "제목 없음",
+    "closeLabel": "받은 편지함 닫기",
+    "indicator": "받은 편지함 ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
-        "confirmButton": "Delete"
+        "title": "받은 편지함 항목 삭제",
+        "message": "이 받은 편지함 항목을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+        "confirmButton": "삭제"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "모든 받은 편지함 항목 삭제",
+        "message": "{count}개의 받은 편지함 항목을 모두 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+        "confirmButton": "모두 삭제"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "받은 편지함 항목 수락에 실패했습니다",
+      "delete": "받은 편지함 항목 삭제에 실패했습니다",
+      "acceptAll": "받은 편지함 항목 수락에 실패했습니다",
+      "deleteAll": "받은편지함 항목 삭제 실패"
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
-      "active": "Token active",
-      "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
-      "revoked": "Inbox token revoked",
-      "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "description": "API를 통해 계정에 노트 제출 — 암호화 비밀번호 불필요. 항목은 검토를 위해 받은편지함에 표시됩니다.",
+      "generate": "토큰 생성",
+      "revoke": "토큰 취소",
+      "active": "토큰 활성화됨",
+      "none": "토큰이 설정되지 않음",
+      "generated": "토큰이 생성되었습니다 — 지금 저장하세요. 다시 표시되지 않습니다.",
+      "revoked": "받은 편지함 토큰이 취소되었습니다",
+      "copyToken": "토큰 복사",
+      "copied": "토큰이 클립보드에 복사되었습니다",
+      "quickStart": "빠른 시작",
+      "curlExample": "예: curl로 노트 제출",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "받은편지함 토큰 취소",
+          "message": "받은편지함 토큰을 취소하시겠습니까? 이를 사용하는 모든 연동이 작동을 멈춥니다.",
+          "confirmButton": "취소"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "받은편지함 토큰 생성 실패",
+        "revoke": "받은편지함 토큰 취소 실패"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "항목: {used}/{max}",
+      "size": "크기: {used}/{max}"
     }
   },
   "archive": {
@@ -1279,10 +1282,10 @@
     "collapse": "접기",
     "expand": "펼치기",
     "moveUp": "위로 이동",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "아래로 이동",
+    "expandAll": "모두 펼치기",
+    "collapseAll": "모두 접기",
+    "level": "레벨 {n}"
   },
   "progress": {
     "title": "잠시만 기다려 주세요",

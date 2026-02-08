@@ -1,5 +1,11 @@
 # Jottery TUI - CLI Commands
-Output public/screenshots/en-GB/tui-cli.gif
+#
+# Prerequisites:
+#   1. Run setup-tui-demo.sh to create isolated demo databases
+#   2. Run via generate-tui-demo.sh which sets environment variables
+#
+# Output path is overridden by --output flag from wrapper script
+Output tui-cli.gif
 
 Set FontSize 18
 Set Width 1400
@@ -7,24 +13,31 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-## Navigate to the executable directory
-#Type "cd tui/target/release"
-#Enter
-#Sleep 500ms
+# Set environment variables (hidden from recording)
+Hide
+Type "export LANG=$LANG LC_ALL=$LANG JOTTERY_DB_PATH=$JOTTERY_DB_PATH"
+Enter
+Type "clear"
+Enter
+Show
+Sleep 500ms
 
 # Run the help command
-Type "jottery --help"
+Type@50ms "jottery --help"
 Enter
 Sleep 2s
 
-Type "jottery list"
+# List notes
+Type@50ms "jottery list"
 Enter
 Sleep 2s
 
-Type "jottery search japan"
+# Search notes
+Type@50ms "jottery search $DEMO_SEARCH"
 Enter
 Sleep 2s
 
-Type "jottery show d0e1f2a3 | less"
+# Show a specific note (travel note)
+Type@50ms "jottery show $DEMO_NOTE_ID"
 Enter
 Sleep 4s

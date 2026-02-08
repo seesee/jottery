@@ -1245,6 +1245,7 @@
         <button
           on:click={onClose}
           class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+          data-testid="btn-settings-cancel"
         >
           {$_('common.cancel')}
         </button>
@@ -1252,6 +1253,7 @@
           on:click={handleSave}
           disabled={saving}
           class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
+          data-testid="btn-settings-save"
         >
           {saving ? $_('settings.saving') : $_('settings.saveSettings')}
         </button>
@@ -1573,6 +1575,7 @@
           <button
             on:click={closeImportModal}
             class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+            data-testid="btn-import-done"
           >
             {$_('settings.importDialog.done')}
           </button>

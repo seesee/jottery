@@ -1,5 +1,11 @@
 # Jottery TUI - Interactive Interface
-Output public/screenshots/en-GB/tui-interface.gif
+#
+# Prerequisites:
+#   1. Run setup-tui-demo.sh to create isolated demo databases
+#   2. Run via generate-tui-demo.sh which sets environment variables
+#
+# Output path is overridden by --output flag from wrapper script
+Output tui-interface.gif
 
 Set FontSize 18
 Set Width 1400
@@ -7,8 +13,17 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Start jottery TUI with default database
-Type "jottery"
+# Set environment variables (hidden from recording)
+Hide
+Type "export LANG=$LANG LC_ALL=$LANG JOTTERY_DB_PATH=$JOTTERY_DB_PATH"
+Enter
+Type "clear"
+Enter
+Show
+Sleep 500ms
+
+# Start jottery TUI
+Type@50ms "jottery"
 Sleep 2s
 Enter
 Sleep 2s
@@ -30,11 +45,11 @@ Down
 Down
 Down
 
-# Insert text
+# Insert text (DEMO_TEXT is set by generate script)
 Type "i"
 Enter
 Sleep 200ms
-Type "- [ ] Hello from $EDITOR!"
+Type "- [ ] $DEMO_TEXT"
 Enter
 Up
 Sleep 2s
@@ -51,9 +66,10 @@ Type ":q!"
 Enter
 Sleep 2s
 
+# Search for travel note (DEMO_SEARCH is set by generate script)
 Type "/"
 Sleep 500ms
-Type "japan"
+Type "$DEMO_SEARCH"
 Sleep 500ms
 Down
 Down

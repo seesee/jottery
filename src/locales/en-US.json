@@ -628,6 +628,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Select language"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "A personal, local-first scratch pad for capturing, organizing, and searching notes. Access from web or terminal, with optional sync across devices.",
@@ -783,8 +786,8 @@
         "alt": "Mobile note list view",
         "caption": "Note List"
       },
-      "japan": {
-        "alt": "Mobile note view showing Japan itinerary",
+      "travel": {
+        "alt": "Mobile note view showing travel itinerary",
         "caption": "Note View"
       },
       "calculator": {

@@ -33,7 +33,9 @@ pub struct ExportNote {
     pub modified_at: String,
     pub content: String,
     pub tags: Vec<String>,
+    #[serde(default)]
     pub pinned: bool,
+    #[serde(default)]
     pub archived: bool,
     #[serde(default)]
     pub locked: bool,

@@ -269,6 +269,7 @@
       on:click={onTogglePreview}
       class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0 flex items-center gap-1.5"
       title={showPreview ? $_('editor.edit') : $_('editor.preview')}
+      data-testid="btn-preview"
     >
       {#if showPreview}
         <span>📝</span>
@@ -450,6 +451,7 @@
           <button
             on:click={handleShowVersionHistoryClick}
             class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            data-testid="btn-version-history"
           >
             <span>📜</span>
             <span class="flex-1">{$_('editor.versionHistory')}</span>

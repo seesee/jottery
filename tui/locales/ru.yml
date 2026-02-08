@@ -69,20 +69,20 @@ note:
   info: Информация о заметке
   info_title: Информация о заметке
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "Просмотр архива"
+  title: "Архив"
   mode: "Режим архива"
   enter_mode: "Войти в режим архива"
   exit_mode: "Выйти из режима архива"
   toggle_mode: "Переключить режим архива"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "Нет архивированных заметок"
+  archive: "Архивировать заметку"
+  unarchive: "Разархивировать заметку"
+  archived: "Архивировано"
+  unarchived: "Разархивировано"
+  failed: "Не удалось архивировать заметку: %{error}"
+  unarchive_failed: "Не удалось разархивировать заметку: %{error}"
+  count: "%{count} архивированных заметок"
 
 editor:
   title: Заголовок
@@ -131,20 +131,20 @@ settings:
   instructions_status: Нажмите 'R' (Shift+r) для проверки статуса одобрения регистрации
   instructions_register: Нажмите 'r' для регистрации на сервере синхронизации
   user_portal: Портал пользователя
-  auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  auto_sync_interval: Интервал автосинхронизации
+  instructions: Инструкции
+  instructions_navigation: "↑/↓ или j/k: Навигация между полями"
+  instructions_edit: Нажмите Enter, i или Пробел для редактирования поля
+  instructions_text: "Текстовые поля: введите текст и нажмите Enter для сохранения, Esc для отмены"
+  instructions_toggle: "Для переключателей и циклов: нажмите Enter для немедленного изменения значения"
+  instructions_remember: "Запомнить пароль: Enter запрашивает пароль (при включении) или отключает (если включено)"
+  instructions_sync: Нажмите 'y' для запуска синхронизации
+  instructions_force_sync: Нажмите 'Y' (Shift+y) для принудительной полной синхронизации (загрузка с сервера)
+  instructions_paste: Нажмите 'p' для вставки учётных данных синхронизации с другого устройства
+  instructions_copy: Нажмите 'c' для копирования учётных данных синхронизации для передачи на другое устройство
+  press_enter_cycle: нажмите Enter для переключения
+  press_enter_toggle: нажмите Enter для переключения
+  disabled: отключено
 sync:
   push: Отправить на сервер
   pull: Получить с сервера
@@ -171,47 +171,47 @@ sync:
     approved: Ваш аккаунт одобрен и активен. Вы можете синхронизировать заметки.
     pending: Ваш аккаунт ожидает одобрения. Подождите, пока администратор одобрит вашу регистрацию.
     inactive: Ваш аккаунт был деактивирован. Свяжитесь с администратором.
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: Синхронизация не включена. Нажмите 's' для настройки в параметрах.
+  endpoint_not_configured: Конечная точка синхронизации не настроена. Настройте в таблице параметров базы данных.
+  complete: Синхронизация завершена! Синхронизировано %{count} %{unit}
+  force_syncing: Принудительная синхронизация всех заметок...
+  force_complete: Принудительная синхронизация завершена! Синхронизировано %{count} %{unit} с сервера
+  reload_failed: "Синхронизация успешна, но не удалось перезагрузить заметки: %{error}"
+  note: заметка
+  notes: заметок
+  credentials_title: Учётные данные синхронизации (скопируйте этот текст)
+  credentials_instruction: "Скопируйте текст ниже и вставьте его в другой клиент Jottery:"
+  paste_title: Вставить учётные данные синхронизации
+  paste_instruction: "Вставьте текст учётных данных base64 из другого клиента Jottery:"
+  paste_success: Учётные данные синхронизации успешно настроены!
+  paste_failed: "Не удалось вставить учётные данные: %{error}"
+  salt_sync: Соль синхронизирована! Пожалуйста, повторно введите пароль для разблокировки с новой солью шифрования.
+  import_device_title: Импорт учётных данных - Имя устройства
+  import_enter_device_name: "Введите имя для этого устройства (напр. Мой ноутбук):"
+  credentials_empty: Учётные данные не введены
+  import_failed: Не удалось импортировать учётные данные
 
-# Inbox
+# Входящие
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "Входящие"
+  empty: "Входящие пусты. Заметки, отправленные через API входящих, появятся здесь."
+  accepted: "Заметка принята"
+  deleted: "Элемент входящих удалён"
+  accepted_all: "Все %{count} элементов входящих приняты"
+  deleted_all: "Все элементы входящих удалены"
+  confirm_delete_title: "Удалить элемент входящих"
+  confirm_delete_message: "Удалить этот элемент входящих? Это действие нельзя отменить."
+  confirm_delete_all_title: "Удалить все элементы входящих"
+  confirm_delete_all_message: "Удалить все %{count} элементов входящих? Это действие нельзя отменить."
+  indicator: "Входящие (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "Выполняется вход..."
+    generated_success: "Токен входящих успешно сгенерирован!"
+    save_warning: "Сохраните этот токен сейчас — он больше не будет показан."
+    example_title: "Быстрый старт"
+    revoked: "Токен входящих отозван"
+    active: "Токен входящих активен"
+    none: "Токен входящих не настроен"
 
 register:
   title: Регистрация на Сервере Синхронизации
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: Выйти из приложения
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: Выйти из приложения
   type_search_key: Ввести
   type_search_desc: Введите запрос поиска
   search_tag_key: "#тег"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: Закрыть панель настроек
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: Переключиться на панель вложений (j/k для навигации, Enter для просмотра, d для удаления)
   A_add_attachment_key: A
   A_add_attachment_desc: Добавить вложение (введите путь к файлу)
   a_view_attachment_key: a + номер
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: Показать информацию о заметке
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: Прокрутка предпросмотра (полная страница)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Прокрутка в стиле Vim (полстраницы/страница)
+  mouse_scroll_key: Прокрутка мышью
+  mouse_scroll_desc: Прокрутка предпросмотра
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: Переключить закрепление выбранной заметки
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: Переключить просмотр корзины
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: Просмотр истории версий
   b_inbox_key: b
   b_inbox_desc: "Открыть входящие"
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
-  space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  tab_search_desc: Выйти из поиска, переключиться на вложения
+  multi_select: РЕЖИМ МНОЖЕСТВЕННОГО ВЫБОРА
+  space_select_key: Пробел
+  space_select_desc: Переключить выбор текущей заметки
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: Выбор диапазона от последней выбранной
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: Выбрать все отфильтрованные заметки
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: Добавить теги к выбранным заметкам
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: Удалить выбранные заметки
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: Объединить выбранные заметки в одну
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: Экспортировать выбранные заметки в JSON
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: Снять выбор / выйти из режима множественного выбора
+  mouse: МЫШЬ
+  click_note_key: Клик по заметке
+  click_note_desc: Выбрать заметку в списке
+  click_tag_key: Клик по тегу
+  click_tag_desc: Искать по этому тегу
+  click_tags_key: "Клик по 'Теги:'"
+  click_tags_desc: Войти в режим редактирования тегов
+  scroll_key: Колесо прокрутки
+  scroll_desc: Прокрутка предпросмотра вверх/вниз
 cli:
+  # Альтернативные (используются в некоторых местах)
   list: Список заметок
   show: Показать заметку
   new: Создать новую заметку
@@ -469,6 +470,57 @@ cli:
   import: Импортировать заметки
   sync: Синхронизировать с сервером
   register: Зарегистрировать устройство
+  # Основное приложение
+  about: "Ориентированный на конфиденциальность зашифрованный TUI для заметок"
+  # Глобальные опции
+  database_help: "Путь к файлу базы данных"
+  debug_help: "Включить отладочное журналирование"
+  debug_log_help: "Путь к файлу журнала отладки (для диагностики)"
+  reset_help: "Сброс: удалить базу данных и начать заново"
+  # Команды
+  note_about: "Быстрое создание заметки с помощью $EDITOR"
+  list_about: "Показать список всех заметок"
+  search_about: "Поиск по заметкам"
+  show_about: "Показать конкретную заметку по ID"
+  sync_about: "Синхронизировать заметки с удалённым сервером"
+  register_user_about: "Зарегистрировать новую учётную запись на сервере"
+  register_device_about: "Зарегистрировать это устройство на сервере (требуется одобренная учётная запись)"
+  export_about: "Экспортировать заметки в JSON-файл"
+  import_about: "Импортировать заметки из JSON-файла"
+  backup_about: "Создать зашифрованную резервную копию (совместима с веб-приложением)"
+  inbox_token_about: "Управление токеном API входящих"
+  restore_backup_about: "Восстановить из зашифрованной резервной копии"
+  store_password_about: "Сохранить пароль для автоматической разблокировки (для демонстрации/тестовой автоматизации)"
+  # Общие аргументы
+  password_help: "Пароль для шифрования (будет запрошен, если не указан)"
+  password_decrypt_help: "Пароль для расшифровки (будет запрошен, если не указан)"
+  tags_help: "Опциональные теги для заметки (через запятую)"
+  tag_filter_help: "Фильтр по тегу"
+  limit_help: "Максимальное количество отображаемых заметок"
+  limit_results_help: "Максимальное количество отображаемых результатов"
+  query_help: "Поисковый запрос"
+  id_help: "ID заметки (поддерживается частичное совпадение)"
+  server_help: "URL конечной точки сервера"
+  email_help: "Email пользователя"
+  device_name_help: "Имя устройства"
+  key_password_help: "Пароль шифрования для локальной базы данных"
+  output_help: "Путь к выходному файлу"
+  input_help: "Путь к входному файлу"
+  backup_password_help: "Пароль для расшифровки (пароль резервной копии)"
+  local_key_help: "Пароль шифрования локальной базы данных (по умолчанию: пароль резервной копии)"
+  password_store_help: "Пароль для сохранения"
+  # Подкоманды InboxToken
+  inbox_generate_about: "Сгенерировать новый токен входящих (требуется вход на сервер)"
+  inbox_revoke_about: "Отозвать текущий токен входящих"
+  inbox_status_about: "Проверить наличие токена входящих"
+  server_optional_help: "URL конечной точки сервера (использует настроенную конечную точку, если не указан)"
+  # Built-in help/version
+  help_flag: "Показать справку"
+  version_flag: "Показать версию"
+  help_subcommand: "Показать это сообщение или справку по подкомандам"
+  # Выходные сообщения
+  notes_count: "%{count} заметок"
+  results_count: "%{count} результатов: '%{query}'"
 status:
   locked: Заблокировано
   unlocked: Разблокировано
@@ -499,17 +551,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%d.%m.%Y %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: Конфликт синхронизации
+  your_version: Ваша версия
+  server_version: Версия сервера
+  common_ancestor: Общий предок
+  ancestor_description: Версия, от которой обе начались до расхождения изменений
+  resolved_mine: Конфликт разрешён — сохранена ваша версия
+  resolved_server: Конфликт разрешён — сохранена версия сервера
+  resolved_both: Конфликт разрешён — сохранены обе версии
+  resolve_failed: Не удалось разрешить конфликт
+  indicator: Обнаружен конфликт синхронизации
+  no_conflict: У этой заметки нет конфликта синхронизации
   count_singular: "конфликт"
   count_plural: "конфликтов"
 
@@ -529,3 +581,69 @@ progress:
   backup: "Создание резервной копии..."
   processing: "Обработка"
   export: "Экспорт..."
+
+# Панели и заголовки UI
+ui:
+  notes: "Заметки"
+  preview: "Предпросмотр"
+  archive: "Архив"
+  recycle_bin: "Корзина"
+  version_history: "История версий"
+  attachment_viewer: "Просмотр вложений"
+  conflict_resolution: "Разрешение конфликтов"
+  attachments: "Вложения"
+  add_attachment: "Добавить вложение (Tab: дополнить, ↑↓: выбрать, Enter: подтвердить)"
+  search: "Поиск:"
+  search_archive: "Поиск архивированных заметок:"
+  type: "Тип:"
+  modified: "Изменено:"
+  version: "Версия:"
+
+# Текст справки в строке состояния
+status_bar:
+  help: "Справка"
+  search: "Поиск"
+  select: "выбрать"
+  pin: "закрепить"
+  tags: "Теги"
+  type: "Тип"
+  bin: "Корзина"
+  archive: "Архив"
+  ver: "Версия"
+  new: "Новая"
+  toggle: "переключить"
+  clear: "снять"
+  add_tags: "добавить теги"
+  delete: "удалить"
+  combine: "объединить"
+  export: "экспорт"
+  selected: "выбрано"
+  unarchive: "разархивировать"
+  toggle_mode: "переключить режим"
+  navigate: "навигация"
+  exit_archive: "выйти из архива"
+  accept: "принять"
+  accept_all: "принять все"
+  delete_all: "удалить все"
+  close: "закрыть"
+  keep_mine: "оставить мою"
+  keep_server: "оставить серверную"
+  keep_both: "оставить обе"
+  switch: "переключить"
+  scroll: "прокрутка"
+  cancel: "отмена"
+  press_b_open: "нажмите b для открытия"
+  # Режим поиска
+  type_search: "Ввод: поиск"
+  exit: "выход"
+  match: "совпадение"
+  matches: "совпадений"
+  in_active: "в активных"
+  in_archive: "в архиве"
+  # Корзина
+  restore: "восстановить"
+  empty_bin: "очистить корзину"
+  back_to_notes: "назад к заметкам"
+  quick_select: "быстрый выбор"
+  view: "просмотр"
+  restore_version: "восстановить версию"

@@ -69,20 +69,20 @@ note:
   info: Notitie-info
   info_title: Notitie-informatie
 archive:
-  view: "View archive"
-  title: "Archive"
+  view: "Archief bekijken"
+  title: "Archief"
   mode: "Archiefmodus"
   enter_mode: "Archiefmodus activeren"
   exit_mode: "Archiefmodus verlaten"
   toggle_mode: "Archiefmodus schakelen"
-  no_notes: "No archived notes"
-  archive: "Archive note"
-  unarchive: "Unarchive note"
-  archived: "Archived"
-  unarchived: "Unarchived"
-  failed: "Failed to archive note: %{error}"
-  unarchive_failed: "Failed to unarchive note: %{error}"
-  count: "%{count} archived notes"
+  no_notes: "Geen gearchiveerde notities"
+  archive: "Notitie archiveren"
+  unarchive: "Notitie uit archief halen"
+  archived: "Gearchiveerd"
+  unarchived: "Uit archief gehaald"
+  failed: "Archiveren notitie mislukt: %{error}"
+  unarchive_failed: "Herstellen notitie uit archief mislukt: %{error}"
+  count: "%{count} gearchiveerde notities"
 
 editor:
   title: Titel
@@ -132,19 +132,19 @@ settings:
   instructions_register: Druk op 'r' om te registreren bij een synchronisatieserver
   user_portal: Gebruikersportaal
   auto_sync_interval: Auto-sync interval
-  instructions: Instructions
-  instructions_navigation: "↑/↓ or j/k: Navigate between fields"
-  instructions_edit: Press Enter, i, or Space to edit a field
-  instructions_text: "Text fields: type and press Enter to save, Esc to cancel"
-  instructions_toggle: "For toggles and cycles: press Enter to change value immediately"
-  instructions_remember: "Remember password: Enter prompts for password (if enabling) or disables (if enabled)"
-  instructions_sync: Press 'y' to trigger sync
-  instructions_force_sync: Press 'Y' (Shift+y) to force full sync (pull from server)
-  instructions_paste: Press 'p' to paste sync credentials from another device
-  instructions_copy: Press 'c' to copy sync credentials to share with another device
-  press_enter_cycle: press Enter to cycle
-  press_enter_toggle: press Enter to toggle
-  disabled: disabled
+  instructions: Instructies
+  instructions_navigation: "↑/↓ of j/k: Tussen velden navigeren"
+  instructions_edit: Druk op Enter, i of Spatie om een veld te bewerken
+  instructions_text: "Tekstvelden: typ en druk op Enter om op te slaan, Esc om te annuleren"
+  instructions_toggle: "Voor schakelaars en cycli: druk op Enter om waarde direct te wijzigen"
+  instructions_remember: "Wachtwoord onthouden: Enter vraagt om wachtwoord (bij inschakelen) of schakelt uit"
+  instructions_sync: Druk op 'y' om te synchroniseren
+  instructions_force_sync: Druk op 'Y' (Shift+y) voor volledige synchronisatie (ophalen van server)
+  instructions_paste: Druk op 'p' om synchronisatie-inloggegevens van een ander apparaat te plakken
+  instructions_copy: Druk op 'c' om synchronisatie-inloggegevens te kopiëren om te delen met een ander apparaat
+  press_enter_cycle: druk op Enter om door te bladeren
+  press_enter_toggle: druk op Enter om te schakelen
+  disabled: uitgeschakeld
 sync:
   push: Naar server pushen
   pull: Van server pullen
@@ -171,47 +171,47 @@ sync:
     approved: Uw account is goedgekeurd en actief. U kunt uw notities synchroniseren.
     pending: Uw account wacht op goedkeuring. Wacht tot een beheerder uw registratie goedkeurt.
     inactive: Uw account is gedeactiveerd. Neem contact op met een beheerder.
-  not_enabled: Sync not enabled. Press 's' to configure in settings.
-  endpoint_not_configured: Sync endpoint not configured. Configure in database settings table.
-  complete: Sync complete! %{count} %{unit} synced
-  force_syncing: Force syncing all notes...
-  force_complete: Force sync complete! %{count} %{unit} synced from server
-  reload_failed: "Sync succeeded but failed to reload notes: %{error}"
-  note: note
-  notes: notes
-  credentials_title: Sync Credentials (Copy This Text)
-  credentials_instruction: "Copy the text below and paste it into another Jottery client:"
-  paste_title: Paste Sync Credentials
-  paste_instruction: "Paste the base64 credentials text from another Jottery client:"
-  paste_success: Sync credentials configured successfully!
-  paste_failed: "Failed to paste credentials: %{error}"
-  salt_sync: Salt synchronised! Please re-enter your password to unlock with the new encryption salt.
-  import_device_title: Import Credentials - Device Name
-  import_enter_device_name: "Enter a name for this device (e.g. My Laptop):"
-  credentials_empty: No credentials entered
-  import_failed: Failed to import credentials
+  not_enabled: Synchronisatie niet ingeschakeld. Druk op 's' om te configureren in instellingen.
+  endpoint_not_configured: Synchronisatie-eindpunt niet geconfigureerd. Configureer in database-instellingen.
+  complete: Synchronisatie voltooid! %{count} %{unit} gesynchroniseerd
+  force_syncing: Geforceerde synchronisatie van alle notities...
+  force_complete: Geforceerde synchronisatie voltooid! %{count} %{unit} opgehaald van server
+  reload_failed: "Synchronisatie geslaagd maar notities opnieuw laden mislukt: %{error}"
+  note: notitie
+  notes: notities
+  credentials_title: Synchronisatie-inloggegevens (Kopieer deze tekst)
+  credentials_instruction: "Kopieer de tekst hieronder en plak deze in een andere Jottery-client:"
+  paste_title: Synchronisatie-inloggegevens plakken
+  paste_instruction: "Plak de base64-inloggegevens van een andere Jottery-client:"
+  paste_success: Synchronisatie-inloggegevens succesvol geconfigureerd!
+  paste_failed: "Inloggegevens plakken mislukt: %{error}"
+  salt_sync: Salt gesynchroniseerd! Voer uw wachtwoord opnieuw in om te ontgrendelen met de nieuwe versleutelingssalt.
+  import_device_title: Inloggegevens importeren - Apparaatnaam
+  import_enter_device_name: "Voer een naam in voor dit apparaat (bijv. Mijn Laptop):"
+  credentials_empty: Geen inloggegevens ingevoerd
+  import_failed: Importeren inloggegevens mislukt
 
-# Inbox
+# Postvak IN
 inbox:
-  title: "Inbox"
-  empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
-  accepted: "Note accepted"
-  deleted: "Inbox item deleted"
-  accepted_all: "All %{count} inbox items accepted"
-  deleted_all: "All inbox items deleted"
-  confirm_delete_title: "Delete Inbox Item"
-  confirm_delete_message: "Delete this inbox item? This cannot be undone."
-  confirm_delete_all_title: "Delete All Inbox Items"
-  confirm_delete_all_message: "Delete all %{count} inbox items? This cannot be undone."
-  indicator: "Inbox (%{count})"
+  title: "Postvak IN"
+  empty: "Postvak IN is leeg. Notities ingediend via de Postvak IN API verschijnen hier."
+  accepted: "Notitie geaccepteerd"
+  deleted: "Postvak IN-item verwijderd"
+  accepted_all: "Alle %{count} postvak IN-items geaccepteerd"
+  deleted_all: "Alle postvak IN-items verwijderd"
+  confirm_delete_title: "Postvak IN-item verwijderen"
+  confirm_delete_message: "Dit postvak IN-item verwijderen? Dit kan niet ongedaan worden gemaakt."
+  confirm_delete_all_title: "Alle postvak IN-items verwijderen"
+  confirm_delete_all_message: "Alle %{count} postvak IN-items verwijderen? Dit kan niet ongedaan worden gemaakt."
+  indicator: "Postvak IN (%{count})"
   token:
-    logging_in: "Logging in..."
-    generated_success: "Inbox token generated successfully!"
-    save_warning: "Save this token now — it will not be shown again."
-    example_title: "Quick Start"
-    revoked: "Inbox token revoked"
-    active: "Inbox token is active"
-    none: "No inbox token configured"
+    logging_in: "Bezig met inloggen..."
+    generated_success: "Postvak IN-token succesvol gegenereerd!"
+    save_warning: "Bewaar dit token nu — het wordt niet opnieuw getoond."
+    example_title: "Snel starten"
+    revoked: "Postvak IN-token ingetrokken"
+    active: "Postvak IN-token is actief"
+    none: "Geen postvak IN-token geconfigureerd"
 
 register:
   title: Registreren bij Synchronisatieserver
@@ -337,7 +337,7 @@ help:
   ctrl_q_quit_key: Ctrl+q
   ctrl_q_quit_desc: Applicatie afsluiten
   q_quit_key: q / Ctrl+q
-  q_quit_desc: Quit application
+  q_quit_desc: Applicatie afsluiten
   type_search_key: Typen
   type_search_desc: Zoekopdracht invoeren
   search_tag_key: "#label"
@@ -393,7 +393,7 @@ help:
   s_q_close_key: s / q
   s_q_close_desc: Instellingenpaneel sluiten
   tab_focus_attachment_key: Tab
-  tab_focus_attachment_desc: Focus attachment panel (j/k to navigate, Enter to view, d to delete)
+  tab_focus_attachment_desc: Bijlagenpaneel focussen (j/k om te navigeren, Enter om te bekijken, d om te verwijderen)
   A_add_attachment_key: A
   A_add_attachment_desc: Bijlage toevoegen (bestandspad invoeren)
   a_view_attachment_key: a + nummer
@@ -417,48 +417,49 @@ help:
   I_info_key: I
   I_info_desc: Toon notitie-informatie
   pageup_pagedown_key: PgUp / PgDn
-  pageup_pagedown_desc: Scroll preview (full page)
+  pageup_pagedown_desc: Voorbeeld scrollen (hele pagina)
   ctrl_scroll_key: Ctrl+d/u/f/b
-  ctrl_scroll_desc: Vim-style scroll (half/full page)
-  mouse_scroll_key: Mouse scroll
-  mouse_scroll_desc: Scroll preview
+  ctrl_scroll_desc: Vim-stijl scrollen (halve/hele pagina)
+  mouse_scroll_key: Muiswiel
+  mouse_scroll_desc: Voorbeeld scrollen
   p_pin_key: p
-  p_pin_desc: Toggle pin on selected note
+  p_pin_desc: Vastmaken van geselecteerde notitie wisselen
   r_recycle_key: r
-  r_recycle_desc: Toggle recycle bin view
+  r_recycle_desc: Prullenbakweergave wisselen
   v_versions_key: v
-  v_versions_desc: View version history
+  v_versions_desc: Versiegeschiedenis bekijken
   b_inbox_key: b
   b_inbox_desc: Postvak openen
   tab_search_key: Tab
-  tab_search_desc: Exit search, focus attachments
-  multi_select: MULTI-SELECT MODE
-  space_select_key: Space
-  space_select_desc: Toggle selection on current note
+  tab_search_desc: Zoeken verlaten, bijlagen focussen
+  multi_select: MEERVOUDIGE SELECTIE
+  space_select_key: Spatie
+  space_select_desc: Selectie van huidige notitie wisselen
   shift_v_range_key: Shift+V
-  shift_v_range_desc: Range select from last selected
+  shift_v_range_desc: Bereik selecteren vanaf laatste selectie
   ctrl_a_all_key: Ctrl+A
-  ctrl_a_all_desc: Select all filtered notes
+  ctrl_a_all_desc: Alle gefilterde notities selecteren
   multi_t_tags_key: t
-  multi_t_tags_desc: Add tags to selected notes
+  multi_t_tags_desc: Labels toevoegen aan geselecteerde notities
   multi_d_delete_key: d
-  multi_d_delete_desc: Delete selected notes
+  multi_d_delete_desc: Geselecteerde notities verwijderen
   multi_c_combine_key: c
-  multi_c_combine_desc: Combine selected notes into one
+  multi_c_combine_desc: Geselecteerde notities samenvoegen
   multi_e_export_key: e
-  multi_e_export_desc: Export selected notes to JSON
+  multi_e_export_desc: Geselecteerde notities exporteren naar JSON
   esc_clear_key: Esc
-  esc_clear_desc: Clear selection / exit multi-select
-  mouse: MOUSE
-  click_note_key: Click note
-  click_note_desc: Select note in list
-  click_tag_key: Click tag
-  click_tag_desc: Search for that tag
-  click_tags_key: Click 'Tags:'
-  click_tags_desc: Enter tag editing mode
-  scroll_key: Scroll wheel
-  scroll_desc: Scroll preview up/down
+  esc_clear_desc: Selectie wissen / meervoudige selectie verlaten
+  mouse: MUIS
+  click_note_key: Klik op notitie
+  click_note_desc: Notitie in lijst selecteren
+  click_tag_key: Klik op label
+  click_tag_desc: Zoeken naar dat label
+  click_tags_key: "Klik op 'Labels:'"
+  click_tags_desc: Labelbewerkmodus activeren
+  scroll_key: Scrollwiel
+  scroll_desc: Voorbeeld omhoog/omlaag scrollen
 cli:
+  # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
   show: Notitie tonen
   new: Nieuwe notitie aanmaken
@@ -469,6 +470,57 @@ cli:
   import: Notities importeren
   sync: Synchroniseren met server
   register: Apparaat registreren
+  # Hoofd-app
+  about: "Een privacygerichte, versleutelde notitie-TUI"
+  # Globale opties
+  database_help: "Databasebestandspad"
+  debug_help: "Debug-logboekregistratie inschakelen"
+  debug_log_help: "Debug-logbestandspad (voor probleemoplossing)"
+  reset_help: "Resetten: database verwijderen en opnieuw beginnen"
+  # Opdrachten
+  note_about: "Snelle notitie maken met $EDITOR"
+  list_about: "Alle notities weergeven"
+  search_about: "Notities doorzoeken"
+  show_about: "Specifieke notitie op ID weergeven"
+  sync_about: "Notities synchroniseren met externe server"
+  register_user_about: "Nieuw gebruikersaccount registreren op server"
+  register_device_about: "Dit apparaat registreren bij server (vereist goedgekeurd gebruikersaccount)"
+  export_about: "Notities exporteren naar JSON-bestand"
+  import_about: "Notities importeren uit JSON-bestand"
+  backup_about: "Versleutelde back-up maken (compatibel met web-app)"
+  inbox_token_about: "Postvak IN API-token beheren"
+  restore_backup_about: "Herstellen uit versleutelde back-up"
+  store_password_about: "Wachtwoord opslaan voor automatisch ontgrendelen (voor demo/testautomatisering)"
+  # Algemene argumenten
+  password_help: "Wachtwoord voor versleuteling (wordt gevraagd indien niet opgegeven)"
+  password_decrypt_help: "Wachtwoord voor ontsleuteling (wordt gevraagd indien niet opgegeven)"
+  tags_help: "Optionele labels voor de notitie (kommagescheiden)"
+  tag_filter_help: "Filteren op label"
+  limit_help: "Maximum aantal notities om te tonen"
+  limit_results_help: "Maximum aantal resultaten om te tonen"
+  query_help: "Zoekopdracht"
+  id_help: "Notitie-ID (gedeeltelijke overeenkomst ondersteund)"
+  server_help: "Server-eindpunt-URL"
+  email_help: "Gebruikers-e-mail"
+  device_name_help: "Apparaatnaam"
+  key_password_help: "Versleutelingswachtwoord voor lokale database"
+  output_help: "Uitvoerbestandspad"
+  input_help: "Invoerbestandspad"
+  backup_password_help: "Wachtwoord voor ontsleuteling (back-upwachtwoord)"
+  local_key_help: "Lokaal database-versleutelingswachtwoord (standaard: back-upwachtwoord)"
+  password_store_help: "Op te slaan wachtwoord"
+  # InboxToken-subopdrachten
+  inbox_generate_about: "Nieuw postvak IN-token genereren (vereist serveraanmelding)"
+  inbox_revoke_about: "Huidig postvak IN-token intrekken"
+  inbox_status_about: "Controleren of een postvak IN-token bestaat"
+  server_optional_help: "Server-eindpunt-URL (gebruikt geconfigureerd eindpunt indien weggelaten)"
+  # Built-in help/version
+  help_flag: "Help weergeven"
+  version_flag: "Versie weergeven"
+  help_subcommand: "Dit bericht of hulp bij subopdrachten weergeven"
+  # Uitvoerberichten
+  notes_count: "%{count} notities"
+  results_count: "%{count} resultaten: '%{query}'"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld
@@ -499,17 +551,17 @@ time:
   time_format: "%H:%M:%S"
   datetime_format: "%d-%m-%Y %H:%M:%S"
 conflict:
-  title: Sync Conflict
-  your_version: Your Version
-  server_version: Server Version
-  common_ancestor: Common Ancestor
-  ancestor_description: The version both started from before changes diverged
-  resolved_mine: Conflict resolved - kept your version
-  resolved_server: Conflict resolved - kept server version
-  resolved_both: Conflict resolved - kept both versions
-  resolve_failed: Failed to resolve conflict
-  indicator: Sync conflict detected
-  no_conflict: This note has no sync conflict
+  title: Synchronisatieconflict
+  your_version: Uw versie
+  server_version: Serverversie
+  common_ancestor: Gemeenschappelijke voorouder
+  ancestor_description: De versie waarvan beide uitgingen voordat wijzigingen uiteen gingen
+  resolved_mine: Conflict opgelost - uw versie behouden
+  resolved_server: Conflict opgelost - serverversie behouden
+  resolved_both: Conflict opgelost - beide versies behouden
+  resolve_failed: Oplossen conflict mislukt
+  indicator: Synchronisatieconflict gedetecteerd
+  no_conflict: Deze notitie heeft geen synchronisatieconflict
   count_singular: "conflict"
   count_plural: "conflicten"
 
@@ -529,3 +581,69 @@ progress:
   backup: "Back-up aanmaken..."
   processing: "Verwerken"
   export: "Exporteren..."
+
+# UI-panelen en titels
+ui:
+  notes: "Notities"
+  preview: "Voorbeeld"
+  archive: "Archief"
+  recycle_bin: "Prullenbak"
+  version_history: "Versiegeschiedenis"
+  attachment_viewer: "Bijlageweergave"
+  conflict_resolution: "Conflictoplossing"
+  attachments: "Bijlagen"
+  add_attachment: "Bijlage toevoegen (Tab: aanvullen, ↑↓: selecteren, Enter: bevestigen)"
+  search: "Zoeken:"
+  search_archive: "Gearchiveerde notities doorzoeken:"
+  type: "Type:"
+  modified: "Gewijzigd:"
+  version: "Versie:"
+
+# Statusbalk hulptekst
+status_bar:
+  help: "Help"
+  search: "Zoeken"
+  select: "selecteren"
+  pin: "vastmaken"
+  tags: "Labels"
+  type: "Type"
+  bin: "Prullenbak"
+  archive: "Archief"
+  ver: "Versie"
+  new: "Nieuw"
+  toggle: "wisselen"
+  clear: "wissen"
+  add_tags: "Labels toevoegen"
+  delete: "verwijderen"
+  combine: "samenvoegen"
+  export: "exporteren"
+  selected: "geselecteerd"
+  unarchive: "herstellen"
+  toggle_mode: "Modus wisselen"
+  navigate: "navigeren"
+  exit_archive: "Archief verlaten"
+  accept: "accepteren"
+  accept_all: "alles accepteren"
+  delete_all: "alles verwijderen"
+  close: "sluiten"
+  keep_mine: "Mijn behouden"
+  keep_server: "Server behouden"
+  keep_both: "Beide behouden"
+  switch: "wisselen"
+  scroll: "scrollen"
+  cancel: "annuleren"
+  press_b_open: "Druk op b om te openen"
+  # Zoekmodus
+  type_search: "Typ: zoeken"
+  exit: "verlaten"
+  match: "Treffer"
+  matches: "Treffers"
+  in_active: "in actief"
+  in_archive: "in archief"
+  # Prullenbak
+  restore: "herstellen"
+  empty_bin: "Prullenbak legen"
+  back_to_notes: "terug naar notities"
+  quick_select: "Snelselectie"
+  view: "bekijken"
+  restore_version: "Versie herstellen"

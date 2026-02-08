@@ -4,7 +4,7 @@
     "tagline": "Προσωπικές σημειώσεις για web και terminal"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Μετάβαση στο κύριο περιεχόμενο"
   },
   "common": {
     "loading": "Φόρτωση...",
@@ -56,15 +56,15 @@
     "tryDifferentSearch": "Δοκιμάστε διαφορετική αναζήτηση",
     "noNotes": "Δεν υπάρχουν σημειώσεις",
     "somethingWentWrong": "Κάτι πήγε στραβά",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "αποτέλεσμα",
+    "matchPlural": "αποτελέσματα"
   },
   "search": {
     "placeholder": "Αναζήτηση σημειώσεων...",
     "clear": "Εκκαθάριση αναζήτησης",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "resultCount": "Αποτελέσματα: αντιστοιχίες / σύνολο",
+    "resultsFound": "{matches} από {total} σημειώσεις",
+    "tagSuggestions": "Προτάσεις ετικετών",
     "savedSearches": "Αποθηκευμένες Αναζητήσεις",
     "newSavedSearch": "Αποθήκευση Τρέχουσας Αναζήτησης",
     "editSearch": "Επεξεργασία",
@@ -398,18 +398,18 @@
         "button": "🚀 Εγγραφή νέου λογαριασμού"
       },
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Σύνδεση υπάρχοντος λογαριασμού",
+        "subtitle": "<strong>Έχετε ήδη λογαριασμό;</strong> Συνδέστε αυτήν τη συσκευή",
+        "benefit1": "✓ Χρησιμοποιήστε το υπάρχον email/κωδικό σας",
+        "benefit2": "✓ Προσθέτει αυτήν τη συσκευή στο λογαριασμό σας",
+        "benefit3": "✓ Συγχρονίζει σημειώσεις από τον διακομιστή σε αυτήν τη συσκευή",
+        "button": "🔗 Σύνδεση σε υπάρχοντα λογαριασμό",
+        "formTitle": "Σύνδεση σε υπάρχοντα λογαριασμό",
+        "infoText": "Εισάγετε τα διαπιστευτήρια του διακομιστή συγχρονισμού. Οι υπάρχουσες σημειώσεις σας θα συγχρονιστούν σε αυτήν τη συσκευή μετά τη σύνδεση.",
+        "emailLabel": "Διεύθυνση email",
+        "passwordLabel": "Κωδικός πρόσβασης διακομιστή",
+        "connectButton": "Σύνδεση συσκευής",
+        "connecting": "Σύνδεση..."
       },
       "privacyNote": "<strong>🔒 Ιδιωτικότητα:</strong> Όλες οι σημειώσεις σας είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής αποθηκεύει μόνο κρυπτογραφημένα δεδομένα και δεν μπορεί να διαβάσει το περιεχόμενό σας.",
       "selfHostNote": "<strong>💡 Αυτο-φιλοξένηση;</strong> Εκτελέστε τον δικό σας διακομιστή - <a href=\"https://github.com/seesee/jottery\" target=\"_blank\" class=\"underline\">δείτε το GitHub</a>",
@@ -436,7 +436,7 @@
         "successText": "Η συσκευή σας είναι τώρα εγγεγραμμένη και <strong>όλες οι υπάρχουσες σημειώσεις σας έχουν συγχρονιστεί στον διακομιστή</strong>. Οποιεσδήποτε μελλοντικές αλλαγές θα συγχρονίζονται αυτόματα.",
         "successNextSteps": "📋 Για να προσθέσετε άλλη συσκευή: Κάντε κλικ στο \"Εξαγωγή διαπιστευτηρίων συγχρονισμού\" παρακάτω και εισαγάγετε τα στην άλλη συσκευή σας.",
         "done": "Ολοκλήρωση",
-        "checkStatusLink": "Check your approval status on the User Portal →"
+        "checkStatusLink": "Ελέγξτε την κατάσταση έγκρισης στην Πύλη Χρήστη →"
       },
       "linkAccount": {
         "title": "Σύνδεση λογαριασμού (προαιρετικό)",
@@ -540,18 +540,18 @@
       "syncDisabledDetails": "Όταν είναι απενεργοποιημένο, το Jottery δεν θα πραγματοποιεί αιτήματα δικτύου προς διακομιστές συγχρονισμού. Όλες οι σημειώσεις σας παραμένουν πλήρως τοπικές σε αυτήν τη συσκευή.",
       "toEnableSync": "Για να ενεργοποιήσετε τον συγχρονισμό: Ενεργοποιήστε τον διακόπτη παραπάνω και ρυθμίστε τον διακομιστή συγχρονισμού σας.",
       "existingAccount": {
-        "title": "Connect existing account",
-        "subtitle": "<strong>Already have an account?</strong> Connect this device",
-        "benefit1": "✓ Use your existing email/password",
-        "benefit2": "✓ Adds this device to your account",
-        "benefit3": "✓ Syncs notes from server to this device",
-        "button": "🔗 Connect to existing account",
-        "formTitle": "Connect to existing account",
-        "infoText": "Enter your sync server credentials. Your existing notes will sync to this device after connecting.",
-        "emailLabel": "Email address",
-        "passwordLabel": "Server password",
-        "connectButton": "Connect device",
-        "connecting": "Connecting..."
+        "title": "Σύνδεση υπάρχοντος λογαριασμού",
+        "subtitle": "<strong>Έχετε ήδη λογαριασμό;</strong> Συνδέστε αυτήν τη συσκευή",
+        "benefit1": "✓ Χρησιμοποιήστε το υπάρχον email/κωδικό σας",
+        "benefit2": "✓ Προσθέτει αυτήν τη συσκευή στο λογαριασμό σας",
+        "benefit3": "✓ Συγχρονίζει σημειώσεις από τον διακομιστή σε αυτήν τη συσκευή",
+        "button": "🔗 Σύνδεση σε υπάρχοντα λογαριασμό",
+        "formTitle": "Σύνδεση σε υπάρχοντα λογαριασμό",
+        "infoText": "Εισάγετε τα διαπιστευτήρια του διακομιστή συγχρονισμού. Οι υπάρχουσες σημειώσεις σας θα συγχρονιστούν σε αυτήν τη συσκευή μετά τη σύνδεση.",
+        "emailLabel": "Διεύθυνση email",
+        "passwordLabel": "Κωδικός πρόσβασης διακομιστή",
+        "connectButton": "Σύνδεση συσκευής",
+        "connecting": "Σύνδεση..."
       },
       "privacyNote": "Ιδιωτικότητα: Ακόμα και όταν είναι ενεργοποιημένος, όλες οι σημειώσεις είναι κρυπτογραφημένες από άκρο σε άκρο. Ο διακομιστής συγχρονισμού δεν μπορεί να διαβάσει το περιεχόμενό σας.",
       "syncEnabled": "Ο συγχρονισμός είναι ενεργοποιημένος",
@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "Επιλέξτε γλώσσα"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "Μια ισχυρή εφαρμογή σημειώσεων με έμφαση στην ιδιωτικότητα, με κρυπτογράφηση από άκρο σε άκρο, προηγμένη αναζήτηση και προαιρετικό συγχρονισμό. Πρόσβαση στις σημειώσεις σας από web ή τερματικό.",
@@ -797,7 +800,7 @@
         "alt": "Προβολή λίστας σημειώσεων σε κινητό",
         "caption": "Λίστα σημειώσεων"
       },
-      "japan": {
+      "travel": {
         "alt": "Προβολή σημείωσης κινητού με δρομολόγιο Ιαπωνίας",
         "caption": "Προβολή σημείωσης"
       },
@@ -1034,7 +1037,7 @@
     "description": "Κάντε λήψη του Jottery TUI για την πλατφόρμα σας.",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "Εκτέλεση τοπικά από το σύστημα αρχείων (συγχρονισμός απενεργοποιημένος)"
   },
   "fileUpload": {
     "dropHere": "Αποθέστε αρχεία εδώ",
@@ -1116,8 +1119,8 @@
     "message": "Επαναφορτώστε για να λάβετε τις τελευταίες λειτουργίες και βελτιώσεις",
     "reloadButton": "Επαναφόρτωση τώρα",
     "dismissLabel": "Απόρριψη",
-    "backupButton": "Back up first",
-    "backingUp": "Backing up..."
+    "backupButton": "Πρώτα δημιουργήστε αντίγραφο",
+    "backingUp": "Δημιουργία αντιγράφου ασφαλείας..."
   },
   "bulk": {
     "toggleSelect": "Εναλλαγή επιλογής",
@@ -1142,104 +1145,104 @@
     "progress": "{current} από {total}",
     "selectAll": "Επιλογή όλων",
     "deselectAll": "Αποεπιλογή όλων",
-    "archive": "Archive"
+    "archive": "Αρχειοθέτηση"
   },
   "conflict": {
-    "title": "Sync Conflict Detected",
-    "description": "This note was modified both locally and on the server. Choose how to resolve the conflict.",
-    "yourVersion": "Your version",
-    "serverVersion": "Server version",
+    "title": "Εντοπίστηκε σύγκρουση συγχρονισμού",
+    "description": "Αυτή η σημείωση τροποποιήθηκε τόσο τοπικά όσο και στον διακομιστή. Επιλέξτε πώς να επιλύσετε τη σύγκρουση.",
+    "yourVersion": "Η έκδοσή σας",
+    "serverVersion": "Έκδοση διακομιστή",
     "commonAncestor": "Κοινός πρόγονος",
     "ancestorDescription": "Η έκδοση από την οποία ξεκινήσατε και οι δύο",
-    "chooseAction": "Choose how to resolve this conflict:",
-    "keepMine": "Keep mine",
-    "keepServer": "Keep server",
-    "keepBoth": "Keep both",
-    "merge": "Merge",
-    "resolved": "Conflict resolved",
-    "resolvedBoth": "Conflict resolved - duplicate note created",
-    "noConflict": "No conflict data found",
-    "indicator": "Sync conflict",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "chooseAction": "Επιλέξτε πώς να επιλύσετε αυτή τη σύγκρουση:",
+    "keepMine": "Διατήρηση δικής μου",
+    "keepServer": "Διατήρηση διακομιστή",
+    "keepBoth": "Διατήρηση και των δύο",
+    "merge": "Συγχώνευση",
+    "resolved": "Η σύγκρουση επιλύθηκε",
+    "resolvedBoth": "Η σύγκρουση επιλύθηκε - δημιουργήθηκε αντίγραφο",
+    "noConflict": "Δεν βρέθηκαν δεδομένα σύγκρουσης",
+    "indicator": "Σύγκρουση συγχρονισμού",
+    "bannerText": "Αυτή η σημείωση έχει μια σύγκρουση συγχρονισμού που πρέπει να επιλυθεί",
+    "resolveButton": "Επίλυση σύγκρουσης",
     "syncNotification": "{count, plural, one {1 σημείωση έχει διένεξη συγχρονισμού} other {{count} σημειώσεις έχουν διενέξεις συγχρονισμού}}"
   },
   "pullToRefresh": {
-    "pull": "Pull down to sync",
-    "release": "Release to sync",
-    "syncing": "Syncing...",
-    "region": "Pull to refresh"
+    "pull": "Τραβήξτε προς τα κάτω για συγχρονισμό",
+    "release": "Αφήστε για συγχρονισμό",
+    "syncing": "Συγχρονισμός...",
+    "region": "Τραβήξτε για ανανέωση"
   },
   "sync": {
     "syncing": "Συγχρονισμός...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Συγχρονισμός: {percentage}% ολοκληρώθηκε"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
-    "accept": "Accept",
-    "acceptAll": "Accept All",
-    "delete": "Delete",
-    "deleteAll": "Delete All",
-    "accepting": "Accepting...",
-    "deleting": "Deleting...",
-    "accepted": "Note accepted",
-    "acceptedAll": "All {count} notes accepted",
-    "deleted": "Inbox item deleted",
-    "deletedAll": "All inbox items deleted",
-    "source": "Source: {source}",
-    "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "title": "Εισερχόμενα",
+    "count": "{count} στοιχεία",
+    "countSingle": "1 στοιχείο",
+    "empty": "Τα εισερχόμενα είναι άδεια",
+    "emptyDescription": "Οι σημειώσεις που υποβάλλονται μέσω του Inbox API θα εμφανίζονται εδώ για έλεγχο",
+    "accept": "Αποδοχή",
+    "acceptAll": "Αποδοχή όλων",
+    "delete": "Διαγραφή",
+    "deleteAll": "Διαγραφή όλων",
+    "accepting": "Αποδοχή...",
+    "deleting": "Διαγραφή...",
+    "accepted": "Η σημείωση έγινε αποδεκτή",
+    "acceptedAll": "Έγιναν αποδεκτές {count} σημειώσεις",
+    "deleted": "Το στοιχείο εισερχομένων διαγράφηκε",
+    "deletedAll": "Όλα τα στοιχεία εισερχομένων διαγράφηκαν",
+    "source": "Πηγή: {source}",
+    "untitled": "Χωρίς τίτλο",
+    "closeLabel": "Κλείσιμο εισερχομένων",
+    "indicator": "Εισερχόμενα ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
-        "confirmButton": "Delete"
+        "title": "Διαγραφή στοιχείου εισερχομένων",
+        "message": "Διαγραφή αυτού του στοιχείου εισερχομένων; Αυτό δεν μπορεί να αναιρεθεί.",
+        "confirmButton": "Διαγραφή"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "Διαγραφή όλων των στοιχείων εισερχομένων",
+        "message": "Διαγραφή όλων των {count} στοιχείων εισερχομένων; Αυτό δεν μπορεί να αναιρεθεί.",
+        "confirmButton": "Διαγραφή όλων"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "Αποτυχία αποδοχής στοιχείου εισερχομένων",
+      "delete": "Αποτυχία διαγραφής στοιχείου εισερχομένων",
+      "acceptAll": "Αποτυχία αποδοχής στοιχείων εισερχομένων",
+      "deleteAll": "Αποτυχία διαγραφής στοιχείων εισερχομένων"
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
-      "active": "Token active",
-      "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
-      "revoked": "Inbox token revoked",
-      "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "description": "Υποβάλετε σημειώσεις στο λογαριασμό σας μέσω API — δεν απαιτείται κωδικός κρυπτογράφησης. Τα στοιχεία εμφανίζονται στα εισερχόμενά σας για έλεγχο.",
+      "generate": "Δημιουργία Token",
+      "revoke": "Ανάκληση Token",
+      "active": "Token ενεργό",
+      "none": "Δεν έχει ρυθμιστεί token",
+      "generated": "Το token δημιουργήθηκε — αποθηκεύστε το τώρα, δεν θα εμφανιστεί ξανά.",
+      "revoked": "Το token εισερχομένων ανακλήθηκε",
+      "copyToken": "Αντιγραφή Token",
+      "copied": "Το token αντιγράφηκε στο πρόχειρο",
+      "quickStart": "Γρήγορη Εκκίνηση",
+      "curlExample": "Παράδειγμα: υποβολή σημείωσης μέσω curl",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "Ανάκληση Token Εισερχομένων",
+          "message": "Να ανακληθεί το token εισερχομένων; Όλες οι ενσωματώσεις που το χρησιμοποιούν θα σταματήσουν να λειτουργούν.",
+          "confirmButton": "Ανάκληση"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "Αποτυχία δημιουργίας token εισερχομένων",
+        "revoke": "Αποτυχία ανάκλησης token εισερχομένων"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "Στοιχεία: {used}/{max}",
+      "size": "Μέγεθος: {used}/{max}"
     }
   },
   "archive": {
@@ -1279,10 +1282,10 @@
     "collapse": "Σύμπτυξη",
     "expand": "Ανάπτυξη",
     "moveUp": "Μετακίνηση επάνω",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "Μετακίνηση κάτω",
+    "expandAll": "Ανάπτυξη όλων",
+    "collapseAll": "Σύμπτυξη όλων",
+    "level": "Επίπεδο {n}"
   },
   "progress": {
     "title": "Παρακαλώ περιμένετε",

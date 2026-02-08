@@ -7,7 +7,11 @@
       "createdAt": "2026-01-23T10:00:00Z",
       "modifiedAt": "2026-01-23T10:00:00Z",
       "content": "# Benvenuto su Jottery!\n\nQuesto è un blocco note dimostrativo che presenta le funzionalità di Jottery.\n\n## Cosa troverai qui\n\nQuesta demo include esempi di:\n- Note organizzate con tag\n- Liste della spesa e cose da fare\n- Ricette di cucina\n- Piani di viaggio\n- Note personali\n\n## Per iniziare\n\n1. **Sfoglia le note** - Clicca sulle note nella lista\n2. **Prova la ricerca** - Usa la barra di ricerca\n3. **Crea le tue** - Premi \"Nuovo\" per iniziare\n4. **Organizza con i tag** - Usa #tag ovunque\n\n## Suggerimenti\n\n- Premi `Ctrl+K` per cercare\n- Premi `Ctrl+N` per una nuova nota\n- Usa i #tag per l'organizzazione\n\nBuona esplorazione!",
-      "tags": ["benvenuto", "demo", "primi-passi"],
+      "tags": [
+        "benvenuto",
+        "demo",
+        "primi-passi"
+      ],
       "attachments": [],
       "pinned": true
     },
@@ -16,34 +20,55 @@
       "createdAt": "2026-01-23T10:05:00Z",
       "modifiedAt": "2026-01-23T10:05:00Z",
       "content": "# Lista della spesa\n\nCose da comprare questa settimana.\n\n## Alimentari\n- [ ] Latte (1 litro)\n- [ ] Uova (12)\n- [ ] Pane casereccio\n- [ ] Parmigiano Reggiano\n- [ ] Burro\n- [ ] Pomodori San Marzano\n- [ ] Cetrioli\n- [ ] Petto di pollo\n- [ ] Riso Arborio\n- [ ] Pasta (spaghetti, penne)\n- [ ] Olio extravergine d'oliva\n\n## Casa\n- [ ] Carta assorbente\n- [ ] Detersivo piatti\n- [ ] Lampadine LED\n\n## Altre commissioni\n- [ ] Ritirare la lavanderia\n- [ ] Posta - spedire pacco\n- [ ] Restituire libri in biblioteca\n\n## Note\n- Esselunga chiude alle 21:00\n- Non dimenticare le borse riutilizzabili!",
-      "tags": ["spesa", "personale", "lista"],
+      "tags": [
+        "spesa",
+        "personale",
+        "lista"
+      ],
       "attachments": [],
-      "pinned": false
+      "pinned": false,
+      "color": "red"
     },
     {
       "id": "it-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
       "createdAt": "2026-01-23T10:10:00Z",
       "modifiedAt": "2026-01-23T10:10:00Z",
       "content": "# Risotto alla Milanese - Ricetta tradizionale\n\n*Il classico della cucina lombarda*\n\n## Ingredienti\n\n### Per il risotto\n- 320g di riso Carnaroli\n- 1 litro di brodo di carne\n- 1 cipolla piccola\n- 80g di burro\n- 50g di midollo di bue\n- 1 bustina di zafferano\n- 100ml di vino bianco secco\n- 80g di Parmigiano Reggiano grattugiato\n- Sale q.b.\n\n## Preparazione\n\n### Il soffritto\n1. Tritare finemente la cipolla\n2. Sciogliere 40g di burro con il midollo\n3. Soffriggere la cipolla fino a doratura\n\n### Tostatura\n1. Aggiungere il riso e tostare 2-3 minuti\n2. Il riso deve diventare traslucido\n3. Sfumare con il vino bianco\n4. Mescolare fino all'evaporazione\n\n### Cottura\n1. Aggiungere il brodo caldo, un mestolo alla volta\n2. Mescolare continuamente\n3. A metà cottura, aggiungere lo zafferano sciolto in poco brodo\n4. Continuare per circa 18 minuti\n5. Il riso deve essere al dente\n\n### Mantecatura\n1. Togliere dal fuoco\n2. Aggiungere il burro freddo rimasto\n3. Aggiungere il Parmigiano\n4. Mantecare vigorosamente\n5. Far riposare 2 minuti coperto\n\n## Consigli\n\n- Il risotto deve fare \"l'onda\" nel piatto\n- Servire immediatamente\n- Abbinare con ossobuco alla milanese\n- Un Bonarda o Barbera per accompagnare\n\nBuon appetito!",
-      "tags": ["ricetta", "cucina", "italiano", "risotto"],
+      "tags": [
+        "ricetta",
+        "cucina",
+        "italiano",
+        "risotto"
+      ],
       "attachments": [],
-      "pinned": false
+      "pinned": false,
+      "color": "orange"
     },
     {
       "id": "it-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
       "createdAt": "2026-01-23T10:15:00Z",
       "modifiedAt": "2026-01-23T10:15:00Z",
       "content": "# Viaggio in Toscana 2026\n\n**Durata**: 5 giorni (15-19 giugno 2026)\n\n## Checklist\n\n- [x] Prenotare alloggio (Firenze, Siena)\n- [x] Biglietti Frecciarossa\n- [ ] Noleggiare auto\n- [ ] Prenotare ristoranti\n- [ ] Biglietti Uffizi\n\n## Itinerario\n\n### Giorno 1: Arrivo a Firenze\n- Frecciarossa da Milano (08:00)\n- Arrivo Firenze SMN (09:45)\n- Check-in hotel\n- Pomeriggio: Passeggiata in centro storico\n- Ponte Vecchio al tramonto\n- Cena: Trattoria tipica\n\n### Giorno 2: Firenze\n- Mattina: Galleria degli Uffizi\n- Piazza della Signoria\n- Pomeriggio: Duomo e Campanile di Giotto\n- Salita sulla cupola del Brunelleschi\n- Sera: Aperitivo in Oltrarno\n\n### Giorno 3: Chianti\n- Noleggio auto\n- Strada del Chianti Classico\n- Degustazione vini a Greve\n- Pranzo a Panzano (bistecca!)\n- Arrivo a Siena nel pomeriggio\n\n### Giorno 4: Siena e dintorni\n- Mattina: Piazza del Campo\n- Duomo di Siena\n- Pomeriggio: San Gimignano\n- Gelato al \"Campione del Mondo\"\n- Cena: Pici al ragù\n\n### Giorno 5: Partenza\n- Mattina: Ultimi acquisti\n- Rientro auto a Firenze\n- Frecciarossa (15:30)\n\n## Ristoranti da prenotare\n\n- **Trattoria Mario** (Firenze) - Cucina casalinga\n- **Dario Cecchini** (Panzano) - Bistecca\n- **Osteria Le Logge** (Siena) - Raffinato\n\n## Budget\n\n- Treni: €90\n- Hotel (4 notti): €400\n- Auto noleggio: €120\n- Pasti: €350\n- Ingressi: €80\n- Vino: €100\n- **Totale**: ~€1.140\n\n## Cosa portare\n\n- Scarpe comode (sampietrini!)\n- Abbigliamento a strati\n- Macchina fotografica\n- Guida turistica\n- Borsa per acquisti\n\nNon vedo l'ora!",
-      "tags": ["viaggio", "toscana", "vacanza", "italia"],
+      "tags": [
+        "viaggio",
+        "toscana",
+        "vacanza",
+        "italia"
+      ],
       "attachments": [],
-      "pinned": false
+      "pinned": false,
+      "color": "blue"
     },
     {
       "id": "it-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
       "createdAt": "2026-01-23T10:20:00Z",
       "modifiedAt": "2026-01-23T10:20:00Z",
       "content": "# Menu settimanale\n\nSettimana dal 20 al 26 gennaio 2026\n\n## Lunedì\n- **Colazione**: Caffè e cornetto\n- **Pranzo**: Insalata di farro\n- **Cena**: Minestrone\n\n## Martedì\n- **Colazione**: Yogurt e muesli\n- **Pranzo**: Pasta al pomodoro\n- **Cena**: Pollo arrosto con patate\n\n## Mercoledì\n- **Colazione**: Pane e marmellata\n- **Pranzo**: Resti del pollo\n- **Cena**: Pesce alla griglia con verdure\n\n## Giovedì\n- **Colazione**: Cappuccino e brioche\n- **Pranzo**: Panino\n- **Cena**: Lasagne (della nonna)\n\n## Venerdì\n- **Colazione**: Spremuta e fette biscottate\n- **Pranzo**: Resti\n- **Cena**: Pizza fatta in casa\n\n## Sabato\n- **Colazione**: Brunch tardivo\n- **Pranzo**: Aperitivo lungo\n- **Cena**: Risotto alla milanese (vedi ricetta)\n\n## Domenica\n- **Colazione**: Maritozzi con panna\n- **Pranzo**: Pranzo domenicale in famiglia\n- **Cena**: Leggera - affettati e formaggi\n\n## Lista della spesa\n\n- Pollo (1 kg)\n- Pesce (2 filetti)\n- Verdure fresche\n- Formaggi misti\n- Uova\n- Pane, cornetti\n- Pasta fresca\n- Riso Carnaroli",
-      "tags": ["menu", "cucina", "organizzazione"],
+      "tags": [
+        "menu",
+        "cucina",
+        "organizzazione"
+      ],
       "attachments": [],
       "pinned": false
     },
@@ -52,7 +77,11 @@
       "createdAt": "2026-01-23T10:25:00Z",
       "modifiedAt": "2026-01-23T10:25:00Z",
       "content": "# Libri da leggere 2026\n\nLa mia lista di lettura per quest'anno.\n\n## Sto leggendo\n\n- [ ] **\"Il nome della rosa\"** - Umberto Eco\n  - Terzo giorno\n  - Affascinante!\n\n## Letteratura italiana\n\n- [ ] \"Se questo è un uomo\" - Primo Levi\n- [x] \"Il Gattopardo\" - Giuseppe Tomasi di Lampedusa\n- [ ] \"I promessi sposi\" - Alessandro Manzoni\n- [ ] \"La coscienza di Zeno\" - Italo Svevo\n\n## Classici\n\n- [ ] \"Delitto e castigo\" - Fëdor Dostoevskij\n- [ ] \"Anna Karenina\" - Lev Tolstoj\n- [x] \"1984\" - George Orwell\n\n## Saggistica\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Il potere delle abitudini\" - Charles Duhigg\n- [ ] \"Pensieri lenti e veloci\" - Daniel Kahneman\n\n## Obiettivo\n\n- **Traguardo**: 18 libri\n- **Progresso**: 2/18\n\n## Note di lettura\n\n### \"Il Gattopardo\"\n- Se vogliamo che tutto rimanga come è, bisogna che tutto cambi\n- La nostalgia per un mondo che scompare\n- La Sicilia come microcosmo dell'Italia",
-      "tags": ["libri", "lettura", "obiettivi"],
+      "tags": [
+        "libri",
+        "lettura",
+        "obiettivi"
+      ],
       "attachments": [],
       "pinned": false
     }

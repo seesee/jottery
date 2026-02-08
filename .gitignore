@@ -21,8 +21,10 @@ playwright-report/
 coverage/
 scripts/test-history.db
 
-# Demo generation intermediates
-screenshots/
+# Demo generation intermediates (not public/screenshots/)
+/screenshots/
+demo-generation/screenshots/
+demo-generation/tui-demo/
 
 # Editor directories and files
 .vscode/*

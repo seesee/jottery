@@ -10,6 +10,10 @@ license = "MIT"
 name = "jottery"
 path = "src/main.rs"
 
+[[bin]]
+name = "find-untranslated"
+path = "scripts/find-untranslated.rs"
+
 [features]
 default = ["sqlite", "keychain"]
 sqlite = ["rusqlite/bundled"]              # normal SQLite
@@ -106,8 +110,10 @@ rust-i18n = "3"
 # Unicode width calculation (for proper emoji/CJK character handling)
 unicode-width = "0.2"
 
-[dev-dependencies]
+# YAML parsing (for translation scripts)
 serde_yaml = "0.9"
+
+[dev-dependencies]
 
 [profile.release]
 opt-level = 3

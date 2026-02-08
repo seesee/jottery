@@ -29,6 +29,35 @@ describe('CalcParser', () => {
 		expect(parser.parseAssignment('123var = 10')).toBeNull(); // Invalid identifier
 	});
 
+	test('parses Unicode variable names (Japanese)', () => {
+		const result1 = parser.parseAssignment('元金 = 1000');
+		expect(result1).toEqual({ variable: '元金', expression: '1000' });
+
+		const result2 = parser.parseAssignment('利率 = 0.05');
+		expect(result2).toEqual({ variable: '利率', expression: '0.05' });
+
+		const result3 = parser.parseAssignment('年数 = 10');
+		expect(result3).toEqual({ variable: '年数', expression: '10' });
+	});
+
+	test('parses Unicode variable names (other languages)', () => {
+		// German
+		const german = parser.parseAssignment('Zinssatz = 0.05');
+		expect(german).toEqual({ variable: 'Zinssatz', expression: '0.05' });
+
+		// Greek
+		const greek = parser.parseAssignment('κεφάλαιο = 1000');
+		expect(greek).toEqual({ variable: 'κεφάλαιο', expression: '1000' });
+
+		// Russian
+		const russian = parser.parseAssignment('капитал = 1000');
+		expect(russian).toEqual({ variable: 'капитал', expression: '1000' });
+
+		// Chinese
+		const chinese = parser.parseAssignment('本金 = 1000');
+		expect(chinese).toEqual({ variable: '本金', expression: '1000' });
+	});
+
 	test('parses document with mixed content', () => {
 		// Create a simple text document mock
 		const lines = [
@@ -292,6 +321,87 @@ describe('CalcEvaluator', () => {
 
 		const result = evaluator.evaluateLine(line2);
 		expect(result.isError).toBe(true); // x should be undefined after reset
+	});
+
+	test('handles compound interest calculation with ASCII variables', () => {
+		const lines = [
+			{
+				lineNumber: 1,
+				expression: 'principal = 1000',
+				isComment: false,
+				isAssignment: true,
+				variable: 'principal'
+			},
+			{
+				lineNumber: 2,
+				expression: 'rate = 0.05',
+				isComment: false,
+				isAssignment: true,
+				variable: 'rate'
+			},
+			{
+				lineNumber: 3,
+				expression: 'years = 10',
+				isComment: false,
+				isAssignment: true,
+				variable: 'years'
+			},
+			{
+				lineNumber: 4,
+				expression: 'principal * (1 + rate)^years',
+				isComment: false,
+				isAssignment: false
+			}
+		];
+
+		// Evaluate all lines
+		lines.forEach((line) => evaluator.evaluateLine(line));
+
+		// The last line should calculate compound interest: 1000 * (1.05)^10 ≈ 1628.89
+		const result = evaluator.evaluateLine(lines[3]);
+		expect(result.isError).toBe(false);
+		expect(result.result).toContain('1628');
+	});
+
+	test('handles Unicode variable names (Japanese compound interest)', () => {
+		// Japanese variable names: 元金 (principal), 利率 (rate), 年数 (years)
+		const lines = [
+			{
+				lineNumber: 1,
+				expression: '元金 = 1000',
+				isComment: false,
+				isAssignment: true,
+				variable: '元金'
+			},
+			{
+				lineNumber: 2,
+				expression: '利率 = 0.05',
+				isComment: false,
+				isAssignment: true,
+				variable: '利率'
+			},
+			{
+				lineNumber: 3,
+				expression: '年数 = 10',
+				isComment: false,
+				isAssignment: true,
+				variable: '年数'
+			},
+			{
+				lineNumber: 4,
+				expression: '元金 * (1 + 利率)^年数',
+				isComment: false,
+				isAssignment: false
+			}
+		];
+
+		// Evaluate all lines in order
+		lines.slice(0, 3).forEach((line) => evaluator.evaluateLine(line));
+
+		// The last line should calculate compound interest: 1000 * (1.05)^10 ≈ 1628.89
+		const result = evaluator.evaluateLine(lines[3]);
+		expect(result.isError).toBe(false);
+		expect(result.result).toContain('1628');
 	});
 
 	test('formats decimal results correctly', () => {

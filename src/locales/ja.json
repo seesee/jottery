@@ -4,7 +4,7 @@
     "tagline": "ウェブとターミナルのための個人メモ"
   },
   "a11y": {
-    "skipToContent": "Skip to main content"
+    "skipToContent": "メインコンテンツへスキップ"
   },
   "common": {
     "loading": "読み込み中...",
@@ -56,15 +56,15 @@
     "tryDifferentSearch": "別の検索クエリを試してください",
     "noNotes": "ノートがありません",
     "somethingWentWrong": "問題が発生しました",
-    "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchSingular": "件",
+    "matchPlural": "件"
   },
   "search": {
     "placeholder": "ノートを検索...",
     "clear": "検索をクリア",
-    "resultCount": "Search results: matches / total",
-    "resultsFound": "{matches} of {total} notes match",
-    "tagSuggestions": "Tag suggestions",
+    "resultCount": "検索結果: 一致 / 全体",
+    "resultsFound": "{total}件中{matches}件一致",
+    "tagSuggestions": "タグの候補",
     "savedSearches": "保存された検索",
     "newSavedSearch": "現在の検索を保存",
     "editSearch": "編集",
@@ -642,6 +642,9 @@
     }
   },
   "landing": {
+    "languagePicker": {
+      "label": "言語を選択"
+    },
     "hero": {
       "title": "Jottery",
       "subtitle": "エンドツーエンド暗号化、高度な検索、オプションの同期機能を備えた、プライバシー重視の強力なノートアプリ。Webまたはターミナルからノートにアクセスできます。",
@@ -797,7 +800,7 @@
         "alt": "モバイルノートリスト表示",
         "caption": "ノートリスト"
       },
-      "japan": {
+      "travel": {
         "alt": "日本旅行の旅程を表示するモバイルノート",
         "caption": "ノート表示"
       },
@@ -1034,7 +1037,7 @@
     "description": "お使いのプラットフォーム用のJottery TUIをダウンロードしてください。",
     "tuiClient": "TUI Client",
     "standaloneWebApp": "Standalone Web App",
-    "webAppNote": "Run locally from filesystem (sync disabled)"
+    "webAppNote": "ファイルシステムからローカル実行（同期無効）"
   },
   "fileUpload": {
     "dropHere": "ここにファイルをドロップ",
@@ -1142,7 +1145,7 @@
     "progress": "{total}件中{current}件",
     "selectAll": "すべて選択",
     "deselectAll": "すべて選択解除",
-    "archive": "Archive"
+    "archive": "アーカイブ"
   },
   "conflict": {
     "title": "同期の競合を検出",
@@ -1160,8 +1163,8 @@
     "resolvedBoth": "競合が解決しました - 複製ノートが作成されました",
     "noConflict": "競合データが見つかりません",
     "indicator": "同期の競合",
-    "bannerText": "This note has a sync conflict that needs to be resolved",
-    "resolveButton": "Resolve Conflict",
+    "bannerText": "このノートには解決が必要な同期の競合があります",
+    "resolveButton": "競合を解決",
     "syncNotification": "{count}件のノートに同期の競合があります"
   },
   "pullToRefresh": {
@@ -1172,74 +1175,74 @@
   },
   "sync": {
     "syncing": "同期中...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "同期中: {percentage}% 完了"
   },
   "inbox": {
-    "title": "Inbox",
-    "count": "{count} items",
-    "countSingle": "1 item",
-    "empty": "Inbox is empty",
-    "emptyDescription": "Notes submitted via the Inbox API will appear here for review",
-    "accept": "Accept",
-    "acceptAll": "Accept All",
-    "delete": "Delete",
-    "deleteAll": "Delete All",
-    "accepting": "Accepting...",
-    "deleting": "Deleting...",
-    "accepted": "Note accepted",
-    "acceptedAll": "All {count} notes accepted",
-    "deleted": "Inbox item deleted",
-    "deletedAll": "All inbox items deleted",
-    "source": "Source: {source}",
-    "untitled": "Untitled",
-    "closeLabel": "Close inbox",
-    "indicator": "Inbox ({count})",
+    "title": "受信トレイ",
+    "count": "{count} 件",
+    "countSingle": "1 件",
+    "empty": "受信トレイは空です",
+    "emptyDescription": "Inbox API経由で送信されたノートはここに表示されレビューできます",
+    "accept": "受け入れる",
+    "acceptAll": "すべて受け入れる",
+    "delete": "削除",
+    "deleteAll": "すべて削除",
+    "accepting": "受け入れ中...",
+    "deleting": "削除中...",
+    "accepted": "ノートを受け入れました",
+    "acceptedAll": "{count}件のノートをすべて受け入れました",
+    "deleted": "受信トレイの項目を削除しました",
+    "deletedAll": "すべての受信トレイ項目を削除しました",
+    "source": "ソース: {source}",
+    "untitled": "無題",
+    "closeLabel": "受信トレイを閉じる",
+    "indicator": "受信トレイ ({count})",
     "confirm": {
       "delete": {
-        "title": "Delete Inbox Item",
-        "message": "Delete this inbox item? This cannot be undone.",
-        "confirmButton": "Delete"
+        "title": "受信トレイ項目を削除",
+        "message": "この受信トレイ項目を削除しますか？この操作は元に戻せません。",
+        "confirmButton": "削除"
       },
       "deleteAll": {
-        "title": "Delete All Inbox Items",
-        "message": "Delete all {count} inbox items? This cannot be undone.",
-        "confirmButton": "Delete All"
+        "title": "すべての受信トレイ項目を削除",
+        "message": "{count}件の受信トレイ項目をすべて削除しますか？この操作は元に戻せません。",
+        "confirmButton": "すべて削除"
       }
     },
     "error": {
-      "accept": "Failed to accept inbox item",
-      "delete": "Failed to delete inbox item",
-      "acceptAll": "Failed to accept inbox items",
-      "deleteAll": "Failed to delete inbox items"
+      "accept": "受信トレイ項目の受け入れに失敗しました",
+      "delete": "受信トレイ項目の削除に失敗しました",
+      "acceptAll": "受信トレイ項目の受け入れに失敗しました",
+      "deleteAll": "受信トレイアイテムの削除に失敗しました"
     },
     "token": {
       "title": "Inbox API",
-      "description": "Submit notes to your account via API — no encryption password needed. Items appear in your inbox for review.",
-      "generate": "Generate Token",
-      "revoke": "Revoke Token",
-      "active": "Token active",
-      "none": "No token configured",
-      "generated": "Token generated — save it now, it won't be shown again.",
-      "revoked": "Inbox token revoked",
-      "copyToken": "Copy Token",
-      "copied": "Token copied to clipboard",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "description": "API経由でアカウントにノートを送信 — 暗号化パスワード不要。アイテムは確認用に受信トレイに表示されます。",
+      "generate": "トークンを生成",
+      "revoke": "トークンを取り消す",
+      "active": "トークン有効",
+      "none": "トークンが設定されていません",
+      "generated": "トークンが生成されました — 今すぐ保存してください。再表示されません。",
+      "revoked": "受信トレイトークンが取り消されました",
+      "copyToken": "トークンをコピー",
+      "copied": "トークンをクリップボードにコピーしました",
+      "quickStart": "クイックスタート",
+      "curlExample": "例：curlでノートを送信",
       "confirm": {
         "revoke": {
-          "title": "Revoke Inbox Token",
-          "message": "Revoke your inbox token? Any integrations using it will stop working.",
-          "confirmButton": "Revoke"
+          "title": "受信トレイトークンを取り消す",
+          "message": "受信トレイトークンを取り消しますか？それを使用しているすべての連携が機能しなくなります。",
+          "confirmButton": "取り消す"
         }
       },
       "error": {
-        "generate": "Failed to generate inbox token",
-        "revoke": "Failed to revoke inbox token"
+        "generate": "受信トレイトークンの生成に失敗しました",
+        "revoke": "受信トレイトークンの取り消しに失敗しました"
       }
     },
     "quota": {
-      "items": "Items: {used}/{max}",
-      "size": "Size: {used}/{max}"
+      "items": "アイテム: {used}/{max}",
+      "size": "サイズ: {used}/{max}"
     }
   },
   "archive": {
@@ -1279,10 +1282,10 @@
     "collapse": "折りたたむ",
     "expand": "展開",
     "moveUp": "上へ移動",
-    "moveDown": "Move down",
-    "expandAll": "Expand all",
-    "collapseAll": "Collapse all",
-    "level": "Level {n}"
+    "moveDown": "下へ移動",
+    "expandAll": "すべて展開",
+    "collapseAll": "すべて折りたたむ",
+    "level": "レベル {n}"
   },
   "progress": {
     "title": "お待ちください",

@@ -6,15 +6,15 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './playwright',
-  fullyParallel: false, // Run serially for screenshot generation
+  fullyParallel: true, // Run tests in parallel
   forbidOnly: !!process.env.CI,
   retries: 0, // No retries for screenshot generation
-  workers: 1, // Single worker for consistency
+  workers: 4, // 4 parallel workers for faster generation
   reporter: 'list',
-  timeout: 120000, // 2 minutes per test
+  timeout: 35000, // 35 seconds per test - kill if hanging
   use: {
     baseURL: 'http://localhost:5173',
-    trace: 'on-first-retry',
+    trace: 'off', // Disable trace for faster runs
     screenshot: 'only-on-failure',
   },
 
@@ -29,6 +29,6 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    timeout: 60000, // 60s to start dev server
   },
 });

@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
   import { onMount } from 'svelte';
   import ScreenshotPlaceholder from './ScreenshotPlaceholder.svelte';
+  import LanguagePicker from './LanguagePicker.svelte';
+  import { AVAILABLE_LOCALES } from '../services/i18nService';
 
-  /** Feature with light/dark screenshots */
+  /** Feature with light/dark screenshots (paths are relative, base is added dynamically) */
   interface WebFeature {
     key: string;
     icon: string;
@@ -17,6 +19,43 @@
   let currentCarouselSlide = 0;
   let carouselInterval: ReturnType<typeof setInterval>;
   let lightboxImage: { src: string; alt: string } | null = null;
+
+  // Aspirational language mapping - shows a different language as a demo
+  // to showcase multilingual capabilities
+  const ASPIRATIONAL_LANG: Record<string, string> = {
+    'en-GB': 'el',  // English shows Greek
+    'en-US': 'el',
+    'ja': 'en-GB',  // Japanese shows English
+    'ko': 'en-GB',
+    'zh': 'en-GB',
+    'de': 'fr',     // German shows French
+    'fr': 'de',
+    'es': 'pt',
+    'pt': 'es',
+    'it': 'fr',
+    'nl': 'de',
+    'pl': 'de',
+    'ru': 'en-GB',
+    'tr': 'en-GB',
+    'el': 'en-GB',
+  };
+
+  // Get the current locale, with fallback to en-GB
+  $: currentLocale = $locale || 'en-GB';
+
+  // Check if screenshots exist for a locale (we have screenshots for these languages)
+  const AVAILABLE_SCREENSHOT_LOCALES = ['en-GB', 'en-US', 'de', 'el', 'es', 'fr', 'it', 'ja', 'ko'];
+
+  // Get the screenshot base path for the current locale (with fallback)
+  $: screenshotLocale = AVAILABLE_SCREENSHOT_LOCALES.includes(currentLocale) ? currentLocale : 'en-GB';
+  $: screenshotBase = `/screenshots/${screenshotLocale}`;
+
+  // Get the aspirational language for the multilingual demo
+  $: aspirationalLang = ASPIRATIONAL_LANG[currentLocale] || 'el';
+  $: aspirationalScreenshotBase = `/screenshots/${AVAILABLE_SCREENSHOT_LOCALES.includes(aspirationalLang) ? aspirationalLang : 'en-GB'}`;
+
+  // Get display name for aspirational language
+  $: aspirationalLangName = AVAILABLE_LOCALES.find(l => l.code === aspirationalLang)?.name || 'Greek';
 
   function openLightbox(src: string, alt: string) {
     lightboxImage = { src, alt };
@@ -34,19 +73,19 @@
     }
   }
 
-  // Carousel screenshots
-  const carouselScreenshots = {
+  // Carousel screenshots - now use dynamic paths
+  $: carouselScreenshots = {
     light: [
-      { src: '/screenshots/en-GB/01-main-interface-light.png', alt: 'Main Interface' },
-      { src: '/screenshots/en-GB/01-main-interface-light-preview.png', alt: 'Preview Mode' },
-      { src: '/screenshots/en-GB/01-main-interface-light-japan-preview.png', alt: 'Japan Itinerary - Preview' },
-      { src: '/screenshots/en-GB/01-main-interface-light-japan.png', alt: 'Japan Itinerary - Edit' },
+      { src: `${screenshotBase}/01-main-interface-light.png`, alt: 'Main Interface' },
+      { src: `${screenshotBase}/01-main-interface-light-preview.png`, alt: 'Preview Mode' },
+      { src: `${screenshotBase}/01-main-interface-light-travel-preview.png`, alt: 'Travel Itinerary - Preview' },
+      { src: `${screenshotBase}/01-main-interface-light-travel.png`, alt: 'Travel Itinerary - Edit' },
     ],
     dark: [
-      { src: '/screenshots/en-GB/01-main-interface-dark.png', alt: 'Main Interface - Dark' },
-      { src: '/screenshots/en-GB/01-main-interface-dark-preview.png', alt: 'Preview Mode - Dark' },
-      { src: '/screenshots/en-GB/01-main-interface-dark-japan-preview.png', alt: 'Japan Itinerary - Preview - Dark' },
-      { src: '/screenshots/en-GB/01-main-interface-dark-japan.png', alt: 'Japan Itinerary - Edit - Dark' },
+      { src: `${screenshotBase}/01-main-interface-dark.png`, alt: 'Main Interface - Dark' },
+      { src: `${screenshotBase}/01-main-interface-dark-preview.png`, alt: 'Preview Mode - Dark' },
+      { src: `${screenshotBase}/01-main-interface-dark-travel-preview.png`, alt: 'Travel Itinerary - Preview - Dark' },
+      { src: `${screenshotBase}/01-main-interface-dark-travel.png`, alt: 'Travel Itinerary - Edit - Dark' },
     ],
   };
 
@@ -97,6 +136,18 @@
     };
   });
 
+  // Toggle between light and dark mode
+  function toggleTheme() {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('jottery-theme', 'light');
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('jottery-theme', 'dark');
+    }
+    isDarkMode = !isDarkMode;
+  }
+
   const features = [
     { icon: '💾', key: 'localFirst' },
     { icon: '🔍', key: 'powerfulSearch' },
@@ -108,56 +159,41 @@
     { icon: '🗂️', key: 'encrypted' },
   ];
 
-  const webFeatures = [
-    {
-      key: 'richEditor',
-      icon: '✏️',
-      screenshotLight: '/screenshots/en-GB/02-rich-editor-light.png',
-      screenshotDark: '/screenshots/en-GB/02-rich-editor-dark.png',
-    },
-    {
-      key: 'multiSelect',
-      icon: '☑️',
-      screenshotLight: '/screenshots/en-GB/03-multi-select-light.png',
-      screenshotDark: '/screenshots/en-GB/03-multi-select-dark.png',
-    },
-    {
-      key: 'versions',
-      icon: '📜',
-      screenshotLight: '/screenshots/en-GB/04-version-history-light.png',
-      screenshotDark: '/screenshots/en-GB/04-version-history-dark.png',
-    },
-    {
-      key: 'calculator',
-      icon: '🧮',
-      screenshotLight: '/screenshots/en-GB/05-calculator-light.png',
-      screenshotDark: '/screenshots/en-GB/05-calculator-dark.png',
-    },
-    {
-      key: 'outliner',
-      icon: '📋',
-      screenshotLight: '/screenshots/en-GB/09-outliner-light.png',
-      screenshotDark: '/screenshots/en-GB/09-outliner-dark.png',
-    },
-    {
-      key: 'multilingual',
-      icon: '🌍',
-      screenshotLight: '/screenshots/en-GB/10-greek-ui-light.png',
-      screenshotDark: '/screenshots/en-GB/10-greek-ui-dark.png',
-    },
+  // Web features - paths are now relative, base is added via getScreenshot
+  const webFeatureKeys = [
+    { key: 'richEditor', icon: '✏️', light: '02-rich-editor-light.png', dark: '02-rich-editor-dark.png' },
+    { key: 'multiSelect', icon: '☑️', light: '03-multi-select-light.png', dark: '03-multi-select-dark.png' },
+    { key: 'versions', icon: '📜', light: '04-version-history-light.png', dark: '04-version-history-dark.png' },
+    { key: 'calculator', icon: '🧮', light: '05-calculator-light.png', dark: '05-calculator-dark.png' },
+    { key: 'outliner', icon: '📋', light: '09-outliner-light.png', dark: '09-outliner-dark.png' },
+    { key: 'multilingual', icon: '🌍', light: '01-main-interface-light.png', dark: '01-main-interface-dark.png', useAspirational: true },
   ];
 
-  const tuiFeatures = [
-    { key: 'terminal', icon: '💻', screenshot: '/screenshots/en-GB/tui-interface.gif' },
-    { key: 'cli', icon: '⚡', screenshot: '/screenshots/en-GB/tui-cli.gif' },
-    { key: 'piping', icon: '🔗', screenshot: '/screenshots/en-GB/tui-piping.gif' },
-    { key: 'crossPlatform', icon: '🌐', screenshot: '/screenshots/en-GB/tui-sync.gif' },
+  // Build webFeatures reactively based on current locale
+  $: webFeatures = webFeatureKeys.map(f => ({
+    key: f.key,
+    icon: f.icon,
+    screenshotLight: f.useAspirational
+      ? `${aspirationalScreenshotBase}/${f.light}`
+      : `${screenshotBase}/${f.light}`,
+    screenshotDark: f.useAspirational
+      ? `${aspirationalScreenshotBase}/${f.dark}`
+      : `${screenshotBase}/${f.dark}`,
+  }));
+
+  // TUI features - use dynamic paths
+  $: tuiFeatures = [
+    { key: 'terminal', icon: '💻', screenshot: `${screenshotBase}/tui-interface.gif` },
+    { key: 'cli', icon: '⚡', screenshot: `${screenshotBase}/tui-cli.gif` },
+    { key: 'piping', icon: '🔗', screenshot: `${screenshotBase}/tui-piping.gif` },
+    { key: 'crossPlatform', icon: '🌐', screenshot: `${screenshotBase}/tui-sync.gif` },
   ];
 
-  const mobileScreenshots = [
-    { key: 'list', screenshotLight: '/screenshots/en-GB/06-mobile-list-light.png', screenshotDark: '/screenshots/en-GB/06-mobile-list-dark.png' },
-    { key: 'japan', screenshotLight: '/screenshots/en-GB/07-mobile-japan-light.png', screenshotDark: '/screenshots/en-GB/07-mobile-japan-dark.png' },
-    { key: 'calculator', screenshotLight: '/screenshots/en-GB/08-mobile-calculator-light.png', screenshotDark: '/screenshots/en-GB/08-mobile-calculator-dark.png' },
+  // Mobile screenshots - use dynamic paths
+  $: mobileScreenshots = [
+    { key: 'list', screenshotLight: `${screenshotBase}/06-mobile-list-light.png`, screenshotDark: `${screenshotBase}/06-mobile-list-dark.png` },
+    { key: 'travel', screenshotLight: `${screenshotBase}/07-mobile-travel-light.png`, screenshotDark: `${screenshotBase}/07-mobile-travel-dark.png` },
+    { key: 'calculator', screenshotLight: `${screenshotBase}/08-mobile-calculator-light.png`, screenshotDark: `${screenshotBase}/08-mobile-calculator-dark.png` },
   ];
 
   // Helper to get the appropriate mobile screenshot based on theme
@@ -175,6 +211,38 @@
 </script>
 
 <div class="landing-page">
+  <!-- Header Controls (language picker and theme toggle) -->
+  <div class="header-controls">
+    <button
+      type="button"
+      class="theme-toggle"
+      on:click={toggleTheme}
+      aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      data-testid="btn-theme-toggle"
+    >
+      {#if isDarkMode}
+        <!-- Sun icon for light mode -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      {:else}
+        <!-- Moon icon for dark mode -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      {/if}
+    </button>
+    <LanguagePicker />
+  </div>
+
   <!-- Hero Section -->
   <section class="hero">
     <div class="container">
@@ -187,6 +255,7 @@
         </p>
         <button
           class="cta-button"
+          data-testid="btn-try-it"
           on:click={onGetStarted}
         >
           {$_('landing.hero.cta')}
@@ -410,6 +479,7 @@
       <p class="cta-subtitle">{$_('landing.finalCta.subtitle')}</p>
       <button
         class="cta-button cta-button-large"
+        data-testid="btn-try-it"
         on:click={onGetStarted}
       >
         {$_('landing.hero.cta')}
@@ -468,10 +538,57 @@
   .landing-page {
     background: #ffffff;
     min-height: 100vh;
+    position: relative;
   }
 
   :global(.dark) .landing-page {
     background: #111827;
+  }
+
+  /* Header Controls (theme toggle + language picker) */
+  .header-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .header-controls {
+      top: 1.5rem;
+      right: 2rem;
+    }
+  }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.2s;
+  }
+
+  .theme-toggle:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  :global(.dark) .theme-toggle {
+    border-color: #374151;
+    color: #d1d5db;
+  }
+
+  :global(.dark) .theme-toggle:hover {
+    background: #1f2937;
+    border-color: #4b5563;
   }
 
   .container {

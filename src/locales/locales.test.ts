@@ -113,3 +113,187 @@ describe('Translation Key Structure', () => {
     expect(primaryLocale).toHaveProperty('settings');
   });
 });
+
+/**
+ * Translation Quality Tests
+ *
+ * Checks that translation values are actually translated and not
+ * just copies of the British English (en-GB) text.
+ */
+describe('Translation Quality', () => {
+  // Keys that are expected to have en-GB/technical values
+  const EXCLUDED_KEYS = new Set([
+    'app.name', // Product name "Jottery"
+    'landing.tuiClient', // Technical term
+    'landing.standaloneWebApp', // Technical term
+    'inbox.token.title', // "Inbox API" - API name
+    'settings.sync.existingAccount.emailPlaceholder',
+    'settings.sync.newAccount.emailPlaceholder',
+    'onboarding.sync.existingAccount.emailPlaceholder',
+    'onboarding.sync.newAccount.emailPlaceholder',
+    'settings.syncSetup.registration.passwordPlaceholder',
+    'settings.syncSetup.registration.confirmPasswordPlaceholder',
+    'landing.tuiFeatures.cli.code',
+    'inbox.token.curlExample',
+  ]);
+
+  // Key patterns to exclude
+  const EXCLUDED_KEY_PATTERNS = [
+    /\.code$/, // Code examples
+    /\.example$/, // Examples
+    /Placeholder$/, // Placeholders
+  ];
+
+  // Value patterns to exclude
+  const EXCLUDED_VALUE_PATTERNS = [
+    /^you@example\.com$/, // Email placeholder
+    /^https?:\/\//, // URLs
+    /^\{[a-z_]+\}$/, // Pure template variables like {count}
+    /^[A-Z]{2,}$/, // Acronyms like "API", "TUI", "PDF"
+    /^v?\d+\.\d+/, // Version numbers
+    /^[a-z]+:\/\//, // Protocol prefixes
+    /^#[a-zA-Z]/, // Tag references like #tag
+    /^\d+$/, // Pure numbers
+    /^[A-Z][a-z]+\s+(API|SDK|CLI|TUI|GUI)$/, // Technical terms
+    /^•+$/, // Password dots
+    /^jottery\s/, // CLI commands
+  ];
+
+  // Values that are intentionally kept as en-GB across all locales
+  const EXCLUDED_VALUES = new Set([
+    'Jottery',
+    'TUI Client',
+    'Standalone Web App',
+    'Inbox API',
+    'Markdown',
+    'JSON',
+    'PDF',
+    'HTML',
+    'CSS',
+    'API',
+    'URL',
+    'UUID',
+    'OK',
+    'ID',
+    // Keyboard keys (universal)
+    'Ctrl',
+    'Alt',
+    'Shift',
+    'Tab',
+    'Enter',
+    'Esc',
+    'Space',
+    // Technical UI terms often kept as en-GB
+    'Editor',
+    'Global',
+    'Menu',
+    'Tags',
+    'Info',
+    'Query',
+    'Format',
+    'Type',
+    'Trigger',
+    'Server',
+    'Password',
+    'Version',
+    'Visual',
+    'General',
+    'Inbox',
+    'Records',
+    'Documentation',
+    'Quick Start',
+    // Words that are identical in multiple languages
+    'Syntax:', // Same in German
+    'Version:', // Same in German
+    'Description', // Same in French
+    'note', // Same in French
+    'notes', // Same in French
+    'Error', // Same in Spanish
+    'Tags:', // Same in Portuguese/Dutch
+    '1 item', // Same in Portuguese/Dutch (borrowed from English)
+  ]);
+
+  const MAX_LENGTH_TO_IGNORE = 3;
+
+  // Flatten nested object to dot-notation keys with values
+  function flattenWithValues(
+    obj: Record<string, unknown>,
+    prefix = ''
+  ): Map<string, string> {
+    const result = new Map<string, string>();
+
+    for (const [key, value] of Object.entries(obj)) {
+      const fullKey = prefix ? `${prefix}.${key}` : key;
+
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        const nested = flattenWithValues(value as Record<string, unknown>, fullKey);
+        nested.forEach((v, k) => result.set(k, v));
+      } else if (typeof value === 'string') {
+        result.set(fullKey, value);
+      }
+    }
+
+    return result;
+  }
+
+  // Check if a key/value pair should be excluded from comparison
+  function shouldExclude(key: string, value: string): boolean {
+    if (EXCLUDED_KEYS.has(key)) return true;
+
+    for (const pattern of EXCLUDED_KEY_PATTERNS) {
+      if (pattern.test(key)) return true;
+    }
+
+    if (value.length <= MAX_LENGTH_TO_IGNORE) return true;
+
+    if (EXCLUDED_VALUES.has(value)) return true;
+
+    for (const pattern of EXCLUDED_VALUE_PATTERNS) {
+      if (pattern.test(value)) return true;
+    }
+
+    return false;
+  }
+
+  const localeFiles = getLocaleFiles();
+  const primaryLocale = loadLocale(`${PRIMARY_LOCALE}.json`);
+  const primaryValues = flattenWithValues(primaryLocale);
+
+  // Exclude en-US from translation quality checks - it's American English,
+  // intentionally very similar to British English (en-GB)
+  const LOCALES_TO_CHECK = localeFiles.filter(
+    (f) => f !== `${PRIMARY_LOCALE}.json` && f !== 'en-US.json'
+  );
+
+  describe.each(LOCALES_TO_CHECK)('%s', (localeFile) => {
+    it('should have translated values (not identical to en-GB)', () => {
+      const locale = loadLocale(localeFile);
+      const localeValues = flattenWithValues(locale);
+
+      const untranslated: string[] = [];
+
+      primaryValues.forEach((englishValue, key) => {
+        const localeValue = localeValues.get(key);
+
+        // Skip if key doesn't exist (covered by other test)
+        if (localeValue === undefined) return;
+
+        // Skip excluded keys/values
+        if (shouldExclude(key, englishValue)) return;
+
+        // Check if values are identical (potentially untranslated)
+        if (englishValue === localeValue) {
+          untranslated.push(`${key}: "${englishValue.substring(0, 50)}${englishValue.length > 50 ? '...' : ''}"`);
+        }
+      });
+
+      if (untranslated.length > 0) {
+        throw new Error(
+          `Found ${untranslated.length} potentially untranslated strings in ${localeFile}:\n  - ${untranslated.slice(0, 10).join('\n  - ')}${untranslated.length > 10 ? `\n  ... and ${untranslated.length - 10} more` : ''}`
+        );
+      }
+
+      expect(untranslated).toHaveLength(0);
+    });
+  });
+});

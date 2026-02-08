@@ -69,6 +69,7 @@
         <button
           on:click={() => handleItemClick(onOpenRecycleBin)}
           class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+          data-testid="btn-recycle-bin-mobile"
         >
           <span class="text-xl">🗑️</span>
           <span class="flex-1 text-sm font-medium">{$_('recycleBin.title')}</span>
@@ -77,6 +78,7 @@
         <button
           on:click={() => handleItemClick(onToggleArchiveMode)}
           class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left rounded-md transition-colors {archiveMode ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'active:bg-gray-100 dark:active:bg-gray-700'}"
+          data-testid="btn-archive-mobile"
         >
           <span class="text-xl">📦</span>
           <span class="flex-1 text-sm font-medium">{archiveMode ? $_('archive.exitMode') : $_('archive.mode')}</span>
@@ -85,6 +87,7 @@
         <button
           on:click={() => handleItemClick(onOpenSettings)}
           class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
+          data-testid="btn-settings-mobile"
         >
           <span class="text-xl">⚙️</span>
           <span class="flex-1 text-sm font-medium">{$_('common.settings')}</span>
@@ -99,6 +102,7 @@
           on:click={() => handleItemClick(onLock)}
           disabled={rememberPasswordEnabled}
           class="w-full flex items-center gap-3 px-4 py-3 min-h-11 text-left {rememberPasswordEnabled ? 'opacity-50 cursor-not-allowed' : 'active:bg-gray-100 dark:active:bg-gray-700'} rounded-md transition-colors"
+          data-testid="btn-lock-mobile"
         >
           <span class="text-xl">{rememberPasswordEnabled ? '🔓' : '🔒'}</span>
           <span class="flex-1 text-sm font-medium">{$_('common.lock')}</span>

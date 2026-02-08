@@ -31,12 +31,14 @@
         <button
           on:click={onExport}
           class="flex-1 px-4 py-2 min-h-11 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+          data-testid="btn-export-notes"
         >
           📤 {$_('settings.exportNotes')}
         </button>
         <button
           on:click={onImport}
           class="flex-1 px-4 py-2 min-h-11 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
+          data-testid="btn-import-notes"
         >
           📥 {$_('settings.importNotes')}
         </button>
