@@ -550,10 +550,14 @@ fn main() -> Result<()> {
         .init();
 
     info!("Jottery TUI v{}", env!("CARGO_PKG_VERSION"));
-    info!("Database: {}", cli.database.display());
 
     // Get absolute path to database
-    let db_path = if cli.database.is_absolute() {
+    // Priority: JOTTERY_DB_PATH env var > --database flag > default
+    let db_path = if let Ok(env_db) = env::var("JOTTERY_DB_PATH") {
+        info!("Using database from JOTTERY_DB_PATH: {}", env_db);
+        PathBuf::from(env_db)
+    } else if cli.database.is_absolute() {
+        info!("Database: {}", cli.database.display());
         cli.database
     } else {
         let config_dir = dirs::config_dir()

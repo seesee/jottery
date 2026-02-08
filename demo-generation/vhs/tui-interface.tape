@@ -2,7 +2,7 @@
 #
 # Prerequisites:
 #   1. Run setup-tui-demo.sh to create isolated demo databases
-#   2. Run via generate-tui-demo.sh which sets paths correctly
+#   2. Run via generate-tui-demo.sh which sets environment variables
 #
 # Output path is overridden by --output flag from wrapper script
 Output tui-interface.gif
@@ -13,9 +13,8 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Start jottery TUI with isolated demo database
-# DB_PATH is set by the wrapper script
-Type@50ms "jottery --database $DB_PATH"
+# Start jottery TUI with locale set inline
+Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH"
 Sleep 2s
 Enter
 Sleep 2s
@@ -37,11 +36,11 @@ Down
 Down
 Down
 
-# Insert text
+# Insert text (DEMO_TEXT is set by generate script)
 Type "i"
 Enter
 Sleep 200ms
-Type "- [ ] Hello from $EDITOR!"
+Type "- [ ] $DEMO_TEXT"
 Enter
 Up
 Sleep 2s
@@ -58,9 +57,10 @@ Type ":q!"
 Enter
 Sleep 2s
 
+# Search for travel note (DEMO_SEARCH is set by generate script)
 Type "/"
 Sleep 500ms
-Type "japan"
+Type "$DEMO_SEARCH"
 Sleep 500ms
 Down
 Down

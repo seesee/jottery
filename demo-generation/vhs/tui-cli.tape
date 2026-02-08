@@ -2,7 +2,7 @@
 #
 # Prerequisites:
 #   1. Run setup-tui-demo.sh to create isolated demo databases
-#   2. Run via generate-tui-demo.sh which sets paths correctly
+#   2. Run via generate-tui-demo.sh which sets environment variables
 #
 # Output path is overridden by --output flag from wrapper script
 Output tui-cli.gif
@@ -13,22 +13,22 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Run the help command
-Type@50ms "jottery --help"
+# Run the help command (with locale)
+Type@50ms "LANG=$LANG jottery --help"
 Enter
 Sleep 2s
 
-# List notes (uses isolated demo database via DB_PATH env var)
-Type@50ms "jottery --database $DB_PATH list"
+# List notes
+Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH list"
 Enter
 Sleep 2s
 
 # Search notes
-Type@50ms "jottery --database $DB_PATH search japan"
+Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH search $DEMO_SEARCH"
 Enter
 Sleep 2s
 
 # Show a specific note
-Type@50ms "jottery --database $DB_PATH show d0e1f2a3 | less"
+Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH show d0e1f2a3 | less"
 Enter
 Sleep 4s
