@@ -54,22 +54,22 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let filtered = app.filtered_notes();
     app.debug_log(&format!("filtered_notes() returned {} notes", filtered.len()));
     let title = match app.view_mode {
-        ViewMode::RecycleBin => "Recycle Bin".to_string(),
-        ViewMode::AttachmentViewer => "Attachment Viewer".to_string(),
-        ViewMode::VersionHistory => "Version History".to_string(),
-        ViewMode::ConflictResolution => "Conflict Resolution".to_string(),
-        ViewMode::Inbox => format!("Inbox ({})", app.inbox_items.len()),
+        ViewMode::RecycleBin => t!("ui.recycle_bin").to_string(),
+        ViewMode::AttachmentViewer => t!("ui.attachment_viewer").to_string(),
+        ViewMode::VersionHistory => t!("ui.version_history").to_string(),
+        ViewMode::ConflictResolution => t!("ui.conflict_resolution").to_string(),
+        ViewMode::Inbox => format!("{} ({})", t!("inbox.title"), app.inbox_items.len()),
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
-                    format!("Jottery v{} - Archive ({}/{})", env!("CARGO_PKG_VERSION"), filtered.len(), app.notes.len())
+                    format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.archive"), filtered.len(), app.notes.len())
                 } else {
-                    format!("Jottery v{} - Archive", env!("CARGO_PKG_VERSION"))
+                    format!("Jottery v{} - {}", env!("CARGO_PKG_VERSION"), t!("ui.archive"))
                 }
             } else if app.search_active && !app.search_input.is_empty() {
-                format!("Jottery v{} - Notes ({}/{})", env!("CARGO_PKG_VERSION"), filtered.len(), app.notes.len())
+                format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.notes"), filtered.len(), app.notes.len())
             } else {
-                format!("Jottery v{} - Notes", env!("CARGO_PKG_VERSION"))
+                format!("Jottery v{} - {}", env!("CARGO_PKG_VERSION"), t!("ui.notes"))
             }
         }
     };
@@ -88,9 +88,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     // Render search bar if active
     let list_chunk = if app.search_active {
         let search_title = if app.archive_mode {
-            "Search archived notes:"
+            t!("ui.search_archive").to_string()
         } else {
-            "Search:"
+            t!("ui.search").to_string()
         };
         let search_bar = Paragraph::new(app.search_input.as_str())
             .style(Style::default().fg(app.color_scheme.accent))
@@ -338,38 +338,57 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // Show count of matching notes in opposite mode (if > 0)
         let opposite_count = app.count_opposite_mode_matches();
         if opposite_count > 0 {
-            let mode_name = if app.archive_mode { "active" } else { "archive" };
-            format!("Type: search | Esc: exit | ↑/↓: navigate | {} {} in {}",
+            let mode_name = if app.archive_mode { t!("status_bar.in_active") } else { t!("status_bar.in_archive") };
+            format!("{} | Esc: {} | ↑/↓: {} | {} {} {}",
+                t!("status_bar.type_search"), t!("status_bar.exit"), t!("status_bar.navigate"),
                 opposite_count,
-                if opposite_count == 1 { "match" } else { "matches" },
+                if opposite_count == 1 { t!("status_bar.match") } else { t!("status_bar.matches") },
                 mode_name)
         } else {
-            "Type: search | Esc: exit | ↑/↓: navigate".to_string()
+            format!("{} | Esc: {} | ↑/↓: {}",
+                t!("status_bar.type_search"), t!("status_bar.exit"), t!("status_bar.navigate"))
         }
     } else {
         match app.view_mode {
             ViewMode::RecycleBin => {
-                "r: restore | E: empty bin | Esc: back to notes | ↑/↓: navigate".to_string()
+                format!("r: {} | E: {} | Esc: {} | ↑/↓: {}",
+                    t!("status_bar.restore"), t!("status_bar.empty_bin"),
+                    t!("status_bar.back_to_notes"), t!("status_bar.navigate"))
             }
             ViewMode::AttachmentViewer => {
-                "↑/↓: navigate | 1-9: quick select | Enter: view | d: delete | Esc: close".to_string()
+                format!("↑/↓: {} | 1-9: {} | Enter: {} | d: {} | Esc: {}",
+                    t!("status_bar.navigate"), t!("status_bar.quick_select"),
+                    t!("status_bar.view"), t!("status_bar.delete"), t!("status_bar.close"))
             }
             ViewMode::VersionHistory => {
-                "↑/↓: navigate | Enter: restore version | Esc: close".to_string()
+                format!("↑/↓: {} | Enter: {} | Esc: {}",
+                    t!("status_bar.navigate"), t!("status_bar.restore_version"), t!("status_bar.close"))
             }
             ViewMode::ConflictResolution => {
-                "1: Keep Mine | 2: Keep Server | 3: Keep Both | Tab: switch | j/k: scroll | Esc: cancel".to_string()
+                format!("1: {} | 2: {} | 3: {} | Tab: {} | j/k: {} | Esc: {}",
+                    t!("status_bar.keep_mine"), t!("status_bar.keep_server"), t!("status_bar.keep_both"),
+                    t!("status_bar.switch"), t!("status_bar.scroll"), t!("status_bar.cancel"))
             }
             ViewMode::Inbox => {
-                "Enter: accept | d: delete | A: accept all | D: delete all | ↑/↓: navigate | Esc: close".to_string()
+                format!("Enter: {} | d: {} | A: {} | D: {} | ↑/↓: {} | Esc: {}",
+                    t!("status_bar.accept"), t!("status_bar.delete"), t!("status_bar.accept_all"),
+                    t!("status_bar.delete_all"), t!("status_bar.navigate"), t!("status_bar.close"))
             }
             ViewMode::NoteList => {
                 if app.archive_mode {
-                    "A: unarchive | Shift+A: toggle mode | ↑/↓: navigate | /: search | Esc: exit archive".to_string()
+                    format!("A: {} | Shift+A: {} | ↑/↓: {} | /: {} | Esc: {}",
+                        t!("status_bar.unarchive"), t!("status_bar.toggle_mode"),
+                        t!("status_bar.navigate"), t!("status_bar.search"), t!("status_bar.exit_archive"))
                 } else if app.is_multi_select_mode {
-                    format!("Space: toggle | Esc: clear | t: add tags | d: delete | c: combine | e: export ({} selected)", app.selected_note_ids.len())
+                    format!("Space: {} | Esc: {} | t: {} | d: {} | c: {} | e: {} ({} {})",
+                        t!("status_bar.toggle"), t!("status_bar.clear"), t!("status_bar.add_tags"),
+                        t!("status_bar.delete"), t!("status_bar.combine"), t!("status_bar.export"),
+                        app.selected_note_ids.len(), t!("status_bar.selected"))
                 } else {
-                    "?: help | /: search | Space: select | p: pin | t: tags | []: type | r: bin | Shift+A: archive | v: ver | n: new".to_string()
+                    format!("?: {} | /: {} | Space: {} | p: {} | t: {} | []: {} | r: {} | Shift+A: {} | v: {} | n: {}",
+                        t!("status_bar.help"), t!("status_bar.search"), t!("status_bar.select"),
+                        t!("status_bar.pin"), t!("status_bar.tags"), t!("status_bar.type"),
+                        t!("status_bar.bin"), t!("status_bar.archive"), t!("status_bar.ver"), t!("status_bar.new"))
                 }
             }
         }
@@ -392,8 +411,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
     // Render inbox indicator bar if inbox has items (only in NoteList mode)
     if let Some(inbox_area) = inbox_area {
-        let inbox_text = format!("▶ {} — press b to open",
-            t!("inbox.indicator", count = app.inbox_items.len()));
+        let inbox_text = format!("▶ {} — {}",
+            t!("inbox.indicator", count = app.inbox_items.len()),
+            t!("status_bar.press_b_open"));
         let inbox_bar = Paragraph::new(inbox_text)
             .style(Style::default()
                 .fg(Color::Yellow)
@@ -413,7 +433,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let timestamp_area = preview_layout[1];
 
     let preview_block = Block::default()
-        .title("Preview")
+        .title(t!("ui.preview").to_string())
         .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT);
 
     // Variables for mouse click detection (assigned inside if block, stored at end)
@@ -501,7 +521,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
         // Add syntax language
         metadata_spans.push(Span::styled(
-            format!("Type: {}", note.syntax_language),
+            format!("{} {}", t!("ui.type"), note.syntax_language),
             Style::default().fg(app.color_scheme.accent_secondary)
         ));
 
@@ -657,8 +677,8 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             ("○", Color::Red)
         };
 
-        let version_label = format!("Version: {}", note.version);
-        let modified_label = format!("Modified: {}", modified_str);
+        let version_label = format!("{} {}", t!("ui.version"), note.version);
+        let modified_label = format!("{} {}", t!("ui.modified"), modified_str);
 
         // Calculate padding between left and right sections
         // -2 for borders, -2 for 1-space padding on each side
@@ -703,9 +723,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         });
     } else {
         let preview_block_empty = Block::default()
-            .title("Preview")
+            .title(t!("ui.preview").to_string())
             .borders(Borders::ALL);
-        let preview = Paragraph::new("No notes")
+        let preview = Paragraph::new(t!("note.no_notes").to_string())
             .block(preview_block_empty)
             .alignment(Alignment::Center);
         frame.render_widget(preview, right_pane);
@@ -728,7 +748,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
         // Render modal background
         let modal_block = Block::default()
-            .title("Add Attachment (Tab: complete, ↑↓: select, Enter: confirm)")
+            .title(t!("ui.add_attachment").to_string())
             .borders(Borders::ALL)
             .style(Style::default().bg(app.color_scheme.background).fg(app.color_scheme.accent));
 
@@ -814,7 +834,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             // Render modal with attachments
             let modal_block = Block::default()
-                .title(format!(" Attachments ({}) ", note.attachments.len()))
+                .title(format!(" {} ({}) ", t!("ui.attachments"), note.attachments.len()))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(app.color_scheme.accent))
                 .style(Style::default().bg(app.color_scheme.background));
@@ -865,7 +885,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         } else {
             // Show error state - no attachments or no note
             let modal_block = Block::default()
-                .title(" Attachments ")
+                .title(format!(" {} ", t!("ui.attachments")))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(app.color_scheme.error))
                 .style(Style::default().bg(app.color_scheme.background));
