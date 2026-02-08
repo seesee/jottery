@@ -14,7 +14,7 @@ rust_i18n::i18n!("locales", fallback = "en-GB");
 
 use anyhow::{Context, Result};
 use rust_i18n::t;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, CommandFactory, FromArgMatches};
 use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
@@ -50,6 +50,122 @@ fn detect_locale() {
 
         rust_i18n::set_locale(locale);
     }
+}
+
+/// Build CLI command with translated help text
+fn build_translated_cli() -> clap::Command {
+
+    // Start with the base command from derive
+    let mut cmd = Cli::command();
+
+    // Update main app description
+    cmd = cmd.about(t!("cli.about").to_string());
+
+    // Update global options
+    cmd = cmd.mut_arg("database", |a| a.help(t!("cli.database_help").to_string()));
+    cmd = cmd.mut_arg("debug", |a| a.help(t!("cli.debug_help").to_string()));
+    cmd = cmd.mut_arg("debug_log", |a| a.help(t!("cli.debug_log_help").to_string()));
+    cmd = cmd.mut_arg("reset", |a| a.help(t!("cli.reset_help").to_string()));
+
+    // Update subcommands
+    cmd = cmd.mut_subcommand("note", |sub| {
+        sub.about(t!("cli.note_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+            .mut_arg("tags", |a| a.help(t!("cli.tags_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("list", |sub| {
+        sub.about(t!("cli.list_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+            .mut_arg("tag", |a| a.help(t!("cli.tag_filter_help").to_string()))
+            .mut_arg("limit", |a| a.help(t!("cli.limit_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("search", |sub| {
+        sub.about(t!("cli.search_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+            .mut_arg("limit", |a| a.help(t!("cli.limit_results_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("show", |sub| {
+        sub.about(t!("cli.show_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("sync", |sub| {
+        sub.about(t!("cli.sync_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("register-user", |sub| {
+        sub.about(t!("cli.register_user_about").to_string())
+            .mut_arg("server", |a| a.help(t!("cli.server_help").to_string()))
+            .mut_arg("email", |a| a.help(t!("cli.email_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("register-device", |sub| {
+        sub.about(t!("cli.register_device_about").to_string())
+            .mut_arg("server", |a| a.help(t!("cli.server_help").to_string()))
+            .mut_arg("email", |a| a.help(t!("cli.email_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+            .mut_arg("device_name", |a| a.help(t!("cli.device_name_help").to_string()))
+            .mut_arg("key_password", |a| a.help(t!("cli.key_password_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("export", |sub| {
+        sub.about(t!("cli.export_about").to_string())
+            .mut_arg("output", |a| a.help(t!("cli.output_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("import", |sub| {
+        sub.about(t!("cli.import_about").to_string())
+            .mut_arg("input", |a| a.help(t!("cli.input_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("backup", |sub| {
+        sub.about(t!("cli.backup_about").to_string())
+            .mut_arg("output", |a| a.help(t!("cli.output_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("inbox-token", |sub| {
+        sub.about(t!("cli.inbox_token_about").to_string())
+            .mut_subcommand("generate", |s| {
+                s.about(t!("cli.inbox_generate_about").to_string())
+                    .mut_arg("server", |a| a.help(t!("cli.server_optional_help").to_string()))
+                    .mut_arg("email", |a| a.help(t!("cli.email_help").to_string()))
+                    .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+            })
+            .mut_subcommand("revoke", |s| {
+                s.about(t!("cli.inbox_revoke_about").to_string())
+                    .mut_arg("server", |a| a.help(t!("cli.server_optional_help").to_string()))
+                    .mut_arg("email", |a| a.help(t!("cli.email_help").to_string()))
+                    .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+            })
+            .mut_subcommand("status", |s| {
+                s.about(t!("cli.inbox_status_about").to_string())
+                    .mut_arg("server", |a| a.help(t!("cli.server_optional_help").to_string()))
+                    .mut_arg("email", |a| a.help(t!("cli.email_help").to_string()))
+                    .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
+            })
+    });
+
+    cmd = cmd.mut_subcommand("restore-backup", |sub| {
+        sub.about(t!("cli.restore_backup_about").to_string())
+            .mut_arg("input", |a| a.help(t!("cli.input_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.backup_password_help").to_string()))
+            .mut_arg("key_password", |a| a.help(t!("cli.local_key_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("store-password", |sub| {
+        sub.about(t!("cli.store_password_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_store_help").to_string()))
+    });
+
+    cmd
 }
 
 #[derive(Parser)]
@@ -534,10 +650,14 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
 }
 
 fn main() -> Result<()> {
-    // Detect and set locale from environment
+    // Detect and set locale from environment BEFORE parsing CLI
+    // This ensures --help output is translated
     detect_locale();
 
-    let cli = Cli::parse();
+    // Build translated CLI and parse arguments
+    let cmd = build_translated_cli();
+    let matches = cmd.get_matches();
+    let cli = Cli::from_arg_matches(&matches)?;
 
     // Initialize logging
     // If debug-log is specified, automatically enable debug level

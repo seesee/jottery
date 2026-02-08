@@ -459,6 +459,7 @@ help:
   scroll_key: Mausrad
   scroll_desc: Vorschau hoch/runter scrollen
 cli:
+  # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten
   show: Notiz anzeigen
   new: Neue Notiz erstellen
@@ -469,6 +470,53 @@ cli:
   import: Notizen importieren
   sync: Mit Server synchronisieren
   register: Gerät registrieren
+  # Haupt-App
+  about: "Ein datenschutzorientiertes, verschlüsseltes Notiz-TUI"
+  # Globale Optionen
+  database_help: "Datenbankdateipfad"
+  debug_help: "Debug-Protokollierung aktivieren"
+  debug_log_help: "Debug-Protokolldateipfad (zur Fehlerbehebung)"
+  reset_help: "Zurücksetzen: Datenbank löschen und neu beginnen"
+  # Befehle
+  note_about: "Schnellnotiz mit $EDITOR erstellen"
+  list_about: "Alle Notizen auflisten"
+  search_about: "Notizen durchsuchen"
+  show_about: "Bestimmte Notiz nach ID anzeigen"
+  sync_about: "Notizen mit Remote-Server synchronisieren"
+  register_user_about: "Neues Benutzerkonto auf dem Server registrieren"
+  register_device_about: "Dieses Gerät beim Server registrieren (erfordert genehmigtes Benutzerkonto)"
+  export_about: "Notizen in JSON-Datei exportieren"
+  import_about: "Notizen aus JSON-Datei importieren"
+  backup_about: "Verschlüsselte Sicherung erstellen (kompatibel mit Web-App)"
+  inbox_token_about: "Posteingang-API-Token verwalten"
+  restore_backup_about: "Aus verschlüsselter Sicherung wiederherstellen"
+  store_password_about: "Passwort für Auto-Unlock speichern (für Demo/Test-Automatisierung)"
+  # Allgemeine Argumente
+  password_help: "Passwort für Verschlüsselung (wird abgefragt, wenn nicht angegeben)"
+  password_decrypt_help: "Passwort für Entschlüsselung (wird abgefragt, wenn nicht angegeben)"
+  tags_help: "Optionale Tags für die Notiz (kommagetrennt)"
+  tag_filter_help: "Nach Tag filtern"
+  limit_help: "Maximale Anzahl anzuzeigender Notizen"
+  limit_results_help: "Maximale Anzahl anzuzeigender Ergebnisse"
+  query_help: "Suchanfrage"
+  id_help: "Notiz-ID (Teilübereinstimmung unterstützt)"
+  server_help: "Server-Endpunkt-URL"
+  email_help: "Benutzer-E-Mail"
+  device_name_help: "Gerätename"
+  key_password_help: "Verschlüsselungspasswort für lokale Datenbank"
+  output_help: "Ausgabedateipfad"
+  input_help: "Eingabedateipfad"
+  backup_password_help: "Passwort für Entschlüsselung (Sicherungspasswort)"
+  local_key_help: "Lokales Datenbank-Verschlüsselungspasswort (Standard: Sicherungspasswort)"
+  password_store_help: "Zu speicherndes Passwort"
+  # InboxToken-Unterbefehle
+  inbox_generate_about: "Neuen Posteingang-Token generieren (erfordert Server-Anmeldung)"
+  inbox_revoke_about: "Aktuellen Posteingang-Token widerrufen"
+  inbox_status_about: "Prüfen, ob ein Posteingang-Token existiert"
+  server_optional_help: "Server-Endpunkt-URL (verwendet konfigurierten Endpunkt, wenn weggelassen)"
+  # Ausgabemeldungen
+  notes_count: "%{count} Notizen"
+  results_count: "%{count} Ergebnisse: '%{query}'"
 status:
   locked: Gesperrt
   unlocked: Entsperrt
