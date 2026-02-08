@@ -13,10 +13,19 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
+# Set environment variables (hidden from recording)
+Hide
+Type "export LANG=$LANG LC_ALL=$LANG JOTTERY_DB_PATH=$JOTTERY_DB_PATH"
+Enter
+Type "clear"
+Enter
+Show
+Sleep 500ms
+
 # Show sync help
 Type@50ms "$DEMO_SYNC_HELP"
 Enter
-Type@50ms "LANG=$LANG jottery sync --help"
+Type@50ms "jottery sync --help"
 Enter
 Sleep 4s
 
@@ -27,7 +36,7 @@ Sleep 500ms
 # Show register-device help
 Type@50ms "$DEMO_REGISTER"
 Enter
-Type@50ms "LANG=$LANG jottery register-device --help"
+Type@50ms "jottery register-device --help"
 Enter
 Sleep 3s
 
@@ -39,6 +48,6 @@ Sleep 500ms
 Type@50ms "$DEMO_FORCE_SYNC"
 Enter
 Sleep 500ms
-Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH sync"
+Type@50ms "jottery sync"
 Enter
 Sleep 3s

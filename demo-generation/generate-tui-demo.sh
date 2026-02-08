@@ -288,8 +288,10 @@ generate_tape() {
     # Set environment variables for jottery and VHS tapes
     # JOTTERY_DB_PATH - database location
     # LANG - locale for UI language
+    # TUI_BIN_DIR - path to jottery binary
     # DEMO_* - language-specific text for demos
     export JOTTERY_DB_PATH="$db_path"
+    export TUI_BIN_DIR="$TUI_BIN_DIR"
     export LANG="$(get_locale_for_lang "$lang")"
     export DEMO_SEARCH="$(get_search_term "$lang")"
     export DEMO_TEXT="$(get_sample_text "$lang")"

@@ -13,8 +13,17 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Start jottery TUI with locale set inline
-Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH"
+# Set environment variables (hidden from recording)
+Hide
+Type "export LANG=$LANG LC_ALL=$LANG JOTTERY_DB_PATH=$JOTTERY_DB_PATH"
+Enter
+Type "clear"
+Enter
+Show
+Sleep 500ms
+
+# Start jottery TUI
+Type@50ms "jottery"
 Sleep 2s
 Enter
 Sleep 2s

@@ -13,22 +13,31 @@ Set Height 900
 Set Theme "Catppuccin Mocha"
 Set Shell "bash"
 
-# Run the help command (with locale)
-Type@50ms "LANG=$LANG jottery --help"
+# Set environment variables (hidden from recording)
+Hide
+Type "export LANG=$LANG LC_ALL=$LANG JOTTERY_DB_PATH=$JOTTERY_DB_PATH"
+Enter
+Type "clear"
+Enter
+Show
+Sleep 500ms
+
+# Run the help command
+Type@50ms "jottery --help"
 Enter
 Sleep 2s
 
 # List notes
-Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH list"
+Type@50ms "jottery list"
 Enter
 Sleep 2s
 
 # Search notes
-Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH search $DEMO_SEARCH"
+Type@50ms "jottery search $DEMO_SEARCH"
 Enter
 Sleep 2s
 
 # Show a specific note
-Type@50ms "LANG=$LANG jottery --database $JOTTERY_DB_PATH show d0e1f2a3 | less"
+Type@50ms "jottery show d0e1f2a3 | less"
 Enter
 Sleep 4s
