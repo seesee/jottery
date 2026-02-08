@@ -231,8 +231,6 @@ mod security_documentation {
 
 #[cfg(test)]
 mod production_scenarios {
-    use super::*;
-
     /// Helper to parse origins like the server does
     fn parse_origins(input: &str) -> Vec<String> {
         input
@@ -413,8 +411,6 @@ mod production_scenarios {
 
 #[cfg(test)]
 mod security_edge_cases {
-    use super::*;
-
     fn parse_origins(input: &str) -> Vec<String> {
         input
             .split(',')
