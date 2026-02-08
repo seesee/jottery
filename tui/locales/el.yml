@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Ανάκληση τρέχοντος token εισερχομένων"
   inbox_status_about: "Έλεγχος αν υπάρχει token εισερχομένων"
   server_optional_help: "URL τελικού σημείου διακομιστή (χρησιμοποιεί το ρυθμισμένο τελικό σημείο αν παραλειφθεί)"
+  # Built-in help/version
+  help_flag: "Εμφάνιση βοήθειας"
+  version_flag: "Εμφάνιση έκδοσης"
+  help_subcommand: "Εμφάνιση αυτού του μηνύματος ή βοήθειας υποεντολών"
   # Μηνύματα εξόδου
   notes_count: "%{count} σημειώσεις"
   results_count: "%{count} αποτελέσματα: '%{query}'"

@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Revogar token de caixa de entrada atual"
   inbox_status_about: "Verificar se existe um token de caixa de entrada"
   server_optional_help: "URL do endpoint do servidor (usa endpoint configurado se omitido)"
+  # Built-in help/version
+  help_flag: "Mostrar ajuda"
+  version_flag: "Mostrar versão"
+  help_subcommand: "Mostrar esta mensagem ou a ajuda dos subcomandos"
   # Mensagens de saída
   notes_count: "%{count} notas"
   results_count: "%{count} resultados: '%{query}'"

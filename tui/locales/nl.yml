@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Huidig postvak IN-token intrekken"
   inbox_status_about: "Controleren of een postvak IN-token bestaat"
   server_optional_help: "Server-eindpunt-URL (gebruikt geconfigureerd eindpunt indien weggelaten)"
+  # Built-in help/version
+  help_flag: "Help weergeven"
+  version_flag: "Versie weergeven"
+  help_subcommand: "Dit bericht of hulp bij subopdrachten weergeven"
   # Uitvoerberichten
   notes_count: "%{count} notities"
   results_count: "%{count} resultaten: '%{query}'"

@@ -165,6 +165,10 @@ fn build_translated_cli() -> clap::Command {
             .mut_arg("password", |a| a.help(t!("cli.password_store_help").to_string()))
     });
 
+    // Note: The built-in help (-h/--help) and version (-V/--version) flags
+    // are special clap flags and cannot be translated via mut_arg.
+    // The "help" subcommand is auto-generated and also cannot be easily customized.
+
     cmd
 }
 

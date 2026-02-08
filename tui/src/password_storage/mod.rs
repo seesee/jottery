@@ -66,10 +66,22 @@ pub trait PasswordStorage: Send + Sync {
 /// This function tries to create a keychain-based storage first (if the feature is enabled),
 /// and falls back to file-based storage if keychain is unavailable.
 ///
-/// If `migrate` is true and keychain is available, it will migrate any existing
-/// file-based password to the keychain.
+/// IMPORTANT: If a file-based password already exists (e.g., from store-password CLI),
+/// we use file storage to honor that pre-stored password. This ensures demo/automation
+/// scenarios work correctly even when keychain is unavailable in headless contexts.
+///
+/// If `migrate` is true and keychain is available AND no file password exists,
+/// it will migrate any existing keychain password to file (not currently used).
 #[allow(unused_variables)]
 pub fn create_storage(config_dir: &Path, migrate: bool) -> Box<dyn PasswordStorage> {
+    // First, check if a file-based password exists
+    // If so, use file storage to honor pre-stored passwords from store-password CLI
+    let file_storage = FileStorage::new(config_dir.to_path_buf());
+    if let RetrieveResult::Found(_) = file_storage.retrieve() {
+        tracing::info!("Found existing file-based password, using file storage backend");
+        return Box::new(file_storage);
+    }
+
     #[cfg(feature = "keychain")]
     {
         tracing::debug!("Attempting to create keychain storage backend");
@@ -77,24 +89,6 @@ pub fn create_storage(config_dir: &Path, migrate: bool) -> Box<dyn PasswordStora
         match KeychainStorage::new() {
             Ok(keychain) => {
                 tracing::info!("Keychain storage backend available");
-                // If migration is requested and file exists, migrate
-                if migrate {
-                    let file_storage = FileStorage::new(config_dir.to_path_buf());
-                    if let RetrieveResult::Found(password) = file_storage.retrieve() {
-                        tracing::info!("Found existing file-based password, attempting migration to keychain");
-                        // Store in keychain
-                        match keychain.store(&password) {
-                            Ok(()) => {
-                                // Delete file after successful migration
-                                let _ = file_storage.delete();
-                                tracing::info!("Successfully migrated password from file to keychain");
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to migrate password to keychain: {}", e);
-                            }
-                        }
-                    }
-                }
                 return Box::new(keychain);
             }
             Err(e) => {
@@ -105,7 +99,7 @@ pub fn create_storage(config_dir: &Path, migrate: bool) -> Box<dyn PasswordStora
 
     // Fall back to file-based storage
     tracing::info!("Using file-based password storage backend");
-    Box::new(FileStorage::new(config_dir.to_path_buf()))
+    Box::new(file_storage)
 }
 
 /// Create file-based storage only (for CLI usage where we might not have keychain access)

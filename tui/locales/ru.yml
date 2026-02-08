@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Отозвать текущий токен входящих"
   inbox_status_about: "Проверить наличие токена входящих"
   server_optional_help: "URL конечной точки сервера (использует настроенную конечную точку, если не указан)"
+  # Built-in help/version
+  help_flag: "Показать справку"
+  version_flag: "Показать версию"
+  help_subcommand: "Показать это сообщение или справку по подкомандам"
   # Выходные сообщения
   notes_count: "%{count} заметок"
   results_count: "%{count} результатов: '%{query}'"

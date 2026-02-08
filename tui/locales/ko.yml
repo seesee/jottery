@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "현재 받은편지함 토큰 취소"
   inbox_status_about: "받은편지함 토큰 존재 여부 확인"
   server_optional_help: "서버 엔드포인트 URL (생략 시 구성된 엔드포인트 사용)"
+  # Built-in help/version
+  help_flag: "도움말 표시"
+  version_flag: "버전 표시"
+  help_subcommand: "이 메시지 또는 하위 명령어 도움말 표시"
   # 출력 메시지
   notes_count: "%{count}개의 노트"
   results_count: "'%{query}'에 대한 %{count}개의 결과"

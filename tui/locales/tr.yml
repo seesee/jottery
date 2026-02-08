@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Mevcut gelen kutusu jetonunu iptal et"
   inbox_status_about: "Gelen kutusu jetonu olup olmadığını kontrol et"
   server_optional_help: "Sunucu uç nokta URL'si (belirtilmezse yapılandırılmış uç noktayı kullanır)"
+  # Built-in help/version
+  help_flag: "Yardımı göster"
+  version_flag: "Sürümü göster"
+  help_subcommand: "Bu mesajı veya alt komut yardımını göster"
   # Çıktı mesajları
   notes_count: "%{count} not"
   results_count: "%{count} sonuç: '%{query}'"

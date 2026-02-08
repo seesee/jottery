@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "現在の受信トレイトークンを無効化"
   inbox_status_about: "受信トレイトークンが存在するか確認"
   server_optional_help: "サーバーエンドポイントURL (省略時は設定済みエンドポイントを使用)"
+  # Built-in help/version
+  help_flag: "ヘルプを表示"
+  version_flag: "バージョンを表示"
+  help_subcommand: "このメッセージまたはサブコマンドのヘルプを表示"
   # 出力メッセージ
   notes_count: "%{count} 件のノート"
   results_count: "%{count} 件の結果: '%{query}'"

@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Aktuellen Posteingang-Token widerrufen"
   inbox_status_about: "Prüfen, ob ein Posteingang-Token existiert"
   server_optional_help: "Server-Endpunkt-URL (verwendet konfigurierten Endpunkt, wenn weggelassen)"
+  # Built-in help/version
+  help_flag: "Hilfe anzeigen"
+  version_flag: "Version anzeigen"
+  help_subcommand: "Diese Nachricht oder Hilfe zu Unterbefehlen anzeigen"
   # Ausgabemeldungen
   notes_count: "%{count} Notizen"
   results_count: "%{count} Ergebnisse: '%{query}'"

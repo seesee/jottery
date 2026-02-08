@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "撤销当前收件箱令牌"
   inbox_status_about: "检查收件箱令牌是否存在"
   server_optional_help: "服务器端点 URL（如省略则使用已配置的端点）"
+  # Built-in help/version
+  help_flag: "显示帮助"
+  version_flag: "显示版本"
+  help_subcommand: "显示此消息或子命令的帮助"
   # 输出消息
   notes_count: "%{count} 条笔记"
   results_count: "%{count} 个结果：'%{query}'"

@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Révoquer le jeton de boîte de réception actuel"
   inbox_status_about: "Vérifier si un jeton de boîte de réception existe"
   server_optional_help: "URL du point de terminaison du serveur (utilise le point de terminaison configuré si omis)"
+  # Built-in help/version
+  help_flag: "Afficher l'aide"
+  version_flag: "Afficher la version"
+  help_subcommand: "Afficher ce message ou l'aide des sous-commandes"
   # Messages de sortie
   notes_count: "%{count} notes"
   results_count: "%{count} résultats : '%{query}'"

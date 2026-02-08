@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Unieważnij bieżący token skrzynki odbiorczej"
   inbox_status_about: "Sprawdź, czy token skrzynki odbiorczej istnieje"
   server_optional_help: "URL punktu końcowego serwera (używa skonfigurowanego punktu końcowego, jeśli pominięto)"
+  # Built-in help/version
+  help_flag: "Wyświetl pomoc"
+  version_flag: "Wyświetl wersję"
+  help_subcommand: "Wyświetl tę wiadomość lub pomoc podpoleceń"
   # Komunikaty wyjściowe
   notes_count: "%{count} notatek"
   results_count: "%{count} wyników: '%{query}'"

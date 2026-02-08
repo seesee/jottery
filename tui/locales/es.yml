@@ -514,6 +514,10 @@ cli:
   inbox_revoke_about: "Revocar el token de bandeja de entrada actual"
   inbox_status_about: "Verificar si existe un token de bandeja de entrada"
   server_optional_help: "URL del punto final del servidor (usa el punto final configurado si se omite)"
+  # Built-in help/version
+  help_flag: "Mostrar ayuda"
+  version_flag: "Mostrar versión"
+  help_subcommand: "Mostrar este mensaje o la ayuda de los subcomandos"
   # Mensajes de salida
   notes_count: "%{count} notas"
   results_count: "%{count} resultados: '%{query}'"

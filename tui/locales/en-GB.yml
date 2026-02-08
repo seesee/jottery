@@ -563,6 +563,10 @@ cli:
   inbox_revoke_about: "Revoke the current inbox token"
   inbox_status_about: "Check if an inbox token exists"
   server_optional_help: "Server endpoint URL (uses configured endpoint if omitted)"
+  # Built-in help/version
+  help_flag: "Print help"
+  version_flag: "Print version"
+  help_subcommand: "Print this message or the help of the given subcommand(s)"
   # Output messages
   notes_count: "%{count} notes"
   results_count: "%{count} results: '%{query}'"
