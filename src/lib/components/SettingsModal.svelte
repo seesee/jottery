@@ -619,15 +619,21 @@
         syncEnabled: enabled,
       });
 
+      // Update sync metadata to keep in sync with settings
+      await syncRepository.updateMetadata({
+        syncEnabled: enabled,
+      });
+
       // Update local state
       settings.update(s => ({
         ...s,
         syncEnabled: enabled,
       }));
 
-      // If disabling and sync is active, stop auto-sync
-      if (!enabled && syncStatus?.isEnabled) {
+      // If disabling, stop auto-sync and disconnect SSE
+      if (!enabled) {
         syncService.disableAutoSync();
+        syncService.disconnectFromSyncEvents();
       }
 
     } catch (error) {

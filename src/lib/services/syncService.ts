@@ -1129,6 +1129,14 @@ class SyncService {
     // Set connecting flag immediately to prevent race conditions
     this.sseConnecting = true;
 
+    // Check user settings first - this is the primary source of truth
+    let currentSettings: { syncEnabled?: boolean } | undefined;
+    settings.subscribe(s => currentSettings = s)();
+    if (!currentSettings?.syncEnabled) {
+      this.sseConnecting = false;
+      return;
+    }
+
     // Check network availability first
     if (!this.isOnline()) {
       console.log('[SyncService] Skipping SSE connection - network offline');
