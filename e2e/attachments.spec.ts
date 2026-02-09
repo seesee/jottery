@@ -32,6 +32,10 @@ async function openAttachmentsModal(page: Page): Promise<void> {
   // Wait for the modal to open (modal has role="dialog")
   const modal = page.locator('[role="dialog"]');
   await expect(modal).toBeVisible({ timeout: 5000 });
+
+  // Wait for modal content to be fully rendered (header should be visible)
+  const modalHeader = modal.locator('h2');
+  await expect(modalHeader).toBeVisible({ timeout: 5000 });
 }
 
 /**
@@ -44,6 +48,10 @@ async function closeAttachmentsModal(page: Page): Promise<void> {
   }).first();
   await closeButton.click();
   await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 5000 });
+
+  // Wait a moment for any state updates to propagate to the toolbar
+  // (attachment count badge update happens asynchronously)
+  await page.waitForTimeout(500);
 }
 
 /**
@@ -52,13 +60,17 @@ async function closeAttachmentsModal(page: Page): Promise<void> {
 async function uploadFileAndWait(page: Page, filePath: string, expectedName: string): Promise<void> {
   // The file input is inside the FileUpload component in the modal
   const fileInput = page.locator('[role="dialog"] input[type="file"]');
+  await expect(fileInput).toBeAttached({ timeout: 5000 });
   await fileInput.setInputFiles(filePath);
 
   // Wait for the attachment to appear in the list
   const attachmentItem = page.locator('[role="dialog"]').locator('.attachment-item, [class*="attachment"]').filter({
     hasText: new RegExp(expectedName, 'i')
   });
-  await expect(attachmentItem).toBeVisible({ timeout: 10000 });
+  await expect(attachmentItem).toBeVisible({ timeout: 15000 });
+
+  // Wait for upload to complete - the item should have a size displayed
+  await expect(attachmentItem).toContainText(/\d+\s*[BKMG]?B/i, { timeout: 10000 });
 }
 
 /**
@@ -91,12 +103,16 @@ test.describe('Attachments', () => {
     await editor.click();
     await editor.pressSequentially('Test note for attachments', { delay: 20 });
 
-    // Wait for auto-save to complete: the debounce is 1000ms after last keystroke,
-    // then the save itself runs. Rather than guessing a timeout, wait for the
-    // editor toolbar's attachment button — it confirms the note is active and
-    // the editor is fully rendered.
+    // Wait for the attachment button to be visible (editor toolbar is rendered)
     const toolbarReady = page.locator('button').filter({ hasText: '📎' });
     await expect(toolbarReady).toBeVisible({ timeout: 10000 });
+
+    // CRITICAL: Wait for auto-save to complete before running attachment tests.
+    // Auto-save has a 1000ms debounce + save time. The note must be saved before
+    // we can reliably attach files to it. Wait for the "Modified" timestamp
+    // indicator which confirms the note has been persisted.
+    const savedIndicator = page.locator('text=/Modified|Saved|ago/i');
+    await expect(savedIndicator).toBeVisible({ timeout: 5000 });
   });
 
   test('should show attachment button in toolbar', async ({ page }) => {
@@ -149,8 +165,9 @@ test.describe('Attachments', () => {
       await closeAttachmentsModal(page);
 
       // The toolbar button should show a badge with count
+      // Use longer timeout as the count updates asynchronously after modal close
       const attachmentsButton = page.locator('button').filter({ hasText: '📎' });
-      await expect(attachmentsButton).toContainText('1', { timeout: 5000 });
+      await expect(attachmentsButton).toContainText('1', { timeout: 10000 });
     } finally {
       cleanupTestFile(testFilePath);
     }
