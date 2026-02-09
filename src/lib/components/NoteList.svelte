@@ -297,7 +297,9 @@
       noteListScrollPosition.set(scrollContainer.scrollTop);
 
       // Detect corrupted state during scroll: if we have many notes but very few visible
-      const expectedMinVisible = Math.min($filteredNotes.length, VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS);
+      // Account for being near the end of the list where fewer items are available
+      const availableItems = $filteredNotes.length - startIndex;
+      const expectedMinVisible = Math.min(availableItems, VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS);
       if ($filteredNotes.length > VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
         console.warn('[NoteList] Detected corrupted virtual scroll state during scroll, forcing full render');
         forceFullRender();
@@ -420,7 +422,9 @@
           updateVisibleRange();
 
           // Detect corrupted state: if we have many notes but very few visible, force full render
-          const expectedMinVisible = Math.min($filteredNotes.length, VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS);
+          // Account for being near the end of the list where fewer items are available
+          const availableItems = $filteredNotes.length - startIndex;
+          const expectedMinVisible = Math.min(availableItems, VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS);
           if ($filteredNotes.length > VIRTUAL_SCROLL_MIN_VISIBLE_ITEMS && visibleNotes.length < expectedMinVisible) {
             console.warn('[NoteList] Detected corrupted virtual scroll state, forcing full render');
             forceFullRender();

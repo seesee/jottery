@@ -409,6 +409,11 @@
 
   async function startAutoSync() {
     try {
+      // Check user settings first - this is the primary source of truth
+      if (!$settings.syncEnabled) {
+        return;
+      }
+
       const syncMetadata = await syncRepository.getMetadata();
       if (syncMetadata?.syncEnabled) {
         const interval = syncMetadata.autoSyncInterval || 5;
