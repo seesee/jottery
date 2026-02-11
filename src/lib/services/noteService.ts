@@ -7,6 +7,7 @@ import type { Note, DecryptedNote, SortOrder, Attachment } from '../types';
 import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
+import { versionRepository } from './versionRepository';
 import { cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
@@ -267,6 +268,17 @@ class NoteService {
     const note = await noteRepository.getById(id);
     if (!note) {
       throw new NotFoundError('Note', id);
+    }
+
+    // Before editing, create a version snapshot if one doesn't exist
+    // This ensures we can revert to the pre-edit state
+    const existingVersion = await versionRepository.getVersion(note.id, note.version);
+    if (!existingVersion) {
+      // No snapshot exists for current version, create one
+      await versionRepository.createVersion(note, {
+        syncedAt: note.syncedAt || new Date().toISOString(),
+        reason: 'manual-sync',
+      });
     }
 
     // Track if actual content changed (not just UI state)
