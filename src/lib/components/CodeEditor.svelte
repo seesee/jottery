@@ -26,6 +26,7 @@
   import { bracketMatching } from '@codemirror/language';
   import { defaultKeymap, indentWithTab } from '@codemirror/commands';
   import { keymap } from '@codemirror/view';
+  import { EditorSelection } from '@codemirror/state';
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
 
@@ -72,6 +73,62 @@
 
   // Compute font size from settings
   $: fontSize = getFontSize($settings.fontSize);
+
+  // Custom selection commands that work correctly at position 0 of wrapped lines
+  // This fixes the issue where Shift+Down at column 0 doesn't extend selection properly
+  // The problem is CodeMirror's "goal column" gets stuck at 0, so we use pixel coordinates instead
+  function selectLineDownFixed(view: EditorView): boolean {
+    const selection = view.state.selection;
+    const range = selection.main;
+
+    // Get visual rect for current head position
+    const headRect = view.coordsAtPos(range.head, -1);
+    if (!headRect) return false;
+
+    // Find position one line below, using a small x offset to avoid edge issues
+    // We use the middle of the character cell rather than the left edge
+    const xPos = Math.max(headRect.left + 4, view.contentDOM.getBoundingClientRect().left + 10);
+    const targetY = headRect.bottom + 4;
+    const newPos = view.posAtCoords({ x: xPos, y: targetY }, false);
+
+    if (newPos === null) return false;
+
+    // Extend selection from anchor to new position
+    view.dispatch({
+      selection: EditorSelection.create([
+        EditorSelection.range(range.anchor, newPos)
+      ]),
+      scrollIntoView: true,
+      userEvent: 'select',
+    });
+    return true;
+  }
+
+  function selectLineUpFixed(view: EditorView): boolean {
+    const selection = view.state.selection;
+    const range = selection.main;
+
+    // Get visual rect for current head position
+    const headRect = view.coordsAtPos(range.head, -1);
+    if (!headRect) return false;
+
+    // Find position one line above
+    const xPos = Math.max(headRect.left + 4, view.contentDOM.getBoundingClientRect().left + 10);
+    const targetY = headRect.top - 4;
+    const newPos = view.posAtCoords({ x: xPos, y: targetY }, false);
+
+    if (newPos === null) return false;
+
+    // Extend selection from anchor to new position
+    view.dispatch({
+      selection: EditorSelection.create([
+        EditorSelection.range(range.anchor, newPos)
+      ]),
+      scrollIntoView: true,
+      userEvent: 'select',
+    });
+    return true;
+  }
 
   // Get mobile keyboard attributes based on language (only for prose, not code)
   function getMobileAttributes() {
@@ -166,6 +223,9 @@
       bracketMatching(),
       highlightSelectionMatches(),
       keymap.of([
+        // Custom selection handlers that work at position 0 of wrapped lines
+        { key: 'Shift-ArrowDown', run: selectLineDownFixed },
+        { key: 'Shift-ArrowUp', run: selectLineUpFixed },
         ...defaultKeymap,
         ...historyKeymap,
         ...searchKeymap,
