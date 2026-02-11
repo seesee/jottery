@@ -54,6 +54,20 @@ pub fn save_note(app: &mut App) -> Result<()> {
             if let Some(note_id) = &app.editing_note_id {
                 // Update existing note
                 if let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) {
+                    // Before editing, create a version snapshot if one doesn't exist
+                    // This ensures we can revert to the pre-edit state
+                    let version_repo = NoteVersionRepository::new(db.connection());
+                    let version_key = format!("{}:{}", note.id, note.version);
+                    if version_repo.get_version_by_key(&version_key)?.is_none() {
+                        // No snapshot exists for current version, create one
+                        version_repo.create_version(
+                            note,
+                            note.synced_at.unwrap_or_else(chrono::Utc::now),
+                            VersionReason::ManualSync,
+                            key,
+                        )?;
+                    }
+
                     note.content = app.note_input.clone();
                     note.tags = app.current_tags.clone();
                     note.touch();
