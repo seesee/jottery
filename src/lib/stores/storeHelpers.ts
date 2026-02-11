@@ -4,25 +4,23 @@
  */
 
 import type { DecryptedNote } from '../types';
+import { get } from 'svelte/store';
 import { notes } from './appStore';
 import { searchService } from '../services/searchService';
 
 /**
  * Update a single note in the notes store
  * Finds the note by ID and replaces it with the updated version
- * Returns a new array reference to ensure proper Svelte reactivity
+ * Uses get/set pattern to ensure proper Svelte reactivity for derived stores
  */
 export function updateNoteInStore(updatedNote: DecryptedNote): void {
-  notes.update(allNotes => {
-    const index = allNotes.findIndex(n => n.id === updatedNote.id);
-    if (index !== -1) {
-      // Create new array to ensure proper reactivity in derived stores
-      const newNotes = [...allNotes];
-      newNotes[index] = updatedNote;
-      return newNotes;
-    }
-    return allNotes;
-  });
+  const allNotes = get(notes);
+  const index = allNotes.findIndex(n => n.id === updatedNote.id);
+  if (index !== -1) {
+    // Create completely new array with new note object to trigger reactivity
+    const newNotes = allNotes.map((n, i) => i === index ? updatedNote : n);
+    notes.set(newNotes);
+  }
 }
 
 /**
