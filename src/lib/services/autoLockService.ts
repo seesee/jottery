@@ -4,6 +4,9 @@
 
 import { isLocked } from '../stores/appStore';
 import { lock } from './initService';
+import { settingsRepository } from './settingsRepository';
+import { hasValidSession } from './sessionStorageService';
+import { hasStoredPassword } from './passwordStorageService';
 
 let lastActivityTime: number = Date.now();
 let autoLockTimeout: number = 15 * 60 * 1000; // 15 minutes in milliseconds
@@ -19,19 +22,44 @@ function updateActivity() {
 /**
  * Check if should auto-lock
  */
-function checkAutoLock() {
+async function checkAutoLock() {
   const now = Date.now();
   const timeSinceActivity = now - lastActivityTime;
 
   if (timeSinceActivity >= autoLockTimeout) {
-    performLock();
+    await performLock();
   }
 }
 
 /**
  * Lock the application
+ * Skips lock if there's a stored password or valid persist session that would auto-unlock
  */
-function performLock() {
+async function performLock() {
+  try {
+    // Check if remember password is enabled - would auto-unlock immediately
+    const hasPassword = await hasStoredPassword();
+    if (hasPassword) {
+      // Reset activity timer instead of locking - no point locking if we'd unlock immediately
+      lastActivityTime = Date.now();
+      return;
+    }
+
+    // Check if persist session is enabled with a valid session - would auto-unlock immediately
+    const settings = await settingsRepository.get();
+    if (settings.persistSession) {
+      const sessionTimeout = settings.persistSessionTimeout ?? 30;
+      if (hasValidSession(sessionTimeout)) {
+        // Reset activity timer instead of locking - no point locking if we'd unlock immediately
+        lastActivityTime = Date.now();
+        return;
+      }
+    }
+  } catch (error) {
+    // If we can't check settings, proceed with lock for safety
+    console.warn('[AutoLock] Failed to check session state, proceeding with lock:', error);
+  }
+
   lock();
   isLocked.set(true);
   stopAutoLock();
