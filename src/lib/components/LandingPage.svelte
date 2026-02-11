@@ -42,8 +42,8 @@
   // Get the current locale, with fallback to en-GB
   $: currentLocale = $locale || 'en-GB';
 
-  // Check if screenshots exist for a locale (we have screenshots for these languages)
-  const AVAILABLE_SCREENSHOT_LOCALES = ['en-GB', 'en-US', 'de', 'el', 'es', 'fr', 'it', 'ja', 'ko'];
+  // Check if screenshots exist for a locale (we have screenshots for all 15 languages)
+  const AVAILABLE_SCREENSHOT_LOCALES = ['en-GB', 'en-US', 'de', 'el', 'es', 'fr', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'tr', 'zh'];
 
   // Get the screenshot base path for the current locale (with fallback)
   $: screenshotLocale = AVAILABLE_SCREENSHOT_LOCALES.includes(currentLocale) ? currentLocale : 'en-GB';

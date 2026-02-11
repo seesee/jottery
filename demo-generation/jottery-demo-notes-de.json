@@ -4,8 +4,8 @@
   "notes": [
     {
       "id": "de-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-      "createdAt": "2026-01-23T10:00:00Z",
-      "modifiedAt": "2026-01-23T10:00:00Z",
+      "createdAt": "2026-01-21T10:00:00Z",
+      "modifiedAt": "2026-01-21T10:00:00Z",
       "content": "# Willkommen bei Jottery!\n\nDies ist ein Demo-Notizbuch, das die Funktionen von Jottery zeigt.\n\n## Was Sie hier finden\n\nDiese Demo enthält Beispiele für:\n- Organisierte Notizen mit Tags\n- Aufgaben- und Einkaufslisten\n- Kochrezepte\n- Reisepläne\n- Persönliche Notizen\n\n## Erste Schritte\n\n1. **Notizen durchsuchen** - Klicken Sie auf Notizen in der Liste\n2. **Suche ausprobieren** - Nutzen Sie die Suchleiste\n3. **Eigene erstellen** - Drücken Sie \"Neu\" zum Starten\n4. **Mit Tags organisieren** - Verwenden Sie #tag überall\n\n## Tipps\n\n- Drücken Sie `Strg+K` zum Suchen\n- Drücken Sie `Strg+N` für neue Notiz\n- Verwenden Sie #Tags zur Organisation\n\nViel Spaß beim Erkunden!",
       "tags": [
         "willkommen",
@@ -16,38 +16,9 @@
       "pinned": true
     },
     {
-      "id": "de-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
-      "createdAt": "2026-01-23T10:05:00Z",
-      "modifiedAt": "2026-01-23T10:05:00Z",
-      "content": "# Einkaufsliste\n\nDinge, die ich diese Woche kaufen muss.\n\n## Lebensmittel\n- [ ] Milch (2 Liter)\n- [ ] Eier (10 Stück)\n- [ ] Vollkornbrot\n- [ ] Gouda-Käse\n- [ ] Butter\n- [ ] Tomaten\n- [ ] Gurken\n- [ ] Hähnchenbrust\n- [ ] Reis\n- [ ] Nudeln\n- [ ] Olivenöl\n\n## Haushalt\n- [ ] Küchenrolle\n- [ ] Spülmittel\n- [ ] LED-Birnen\n\n## Andere Erledigungen\n- [ ] Reinigung abholen\n- [ ] Post - Paket zurücksenden\n- [ ] Bücher in die Bibliothek zurückbringen\n\n## Notizen\n- REWE schließt um 22:00 Uhr\n- Stoffbeutel nicht vergessen!",
-      "tags": [
-        "einkaufen",
-        "persönlich",
-        "liste"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "red"
-    },
-    {
-      "id": "de-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-      "createdAt": "2026-01-23T10:10:00Z",
-      "modifiedAt": "2026-01-23T10:10:00Z",
-      "content": "# Wiener Schnitzel - Traditionelles Rezept\n\n*Das klassische österreichische Gericht*\n\n## Zutaten\n\n### Für die Schnitzel\n- 4 Kalbsschnitzel (je 150g)\n- 100g Mehl\n- 2 Eier\n- 200g Semmelbrösel\n- Salz und Pfeffer\n- Butterschmalz zum Braten\n\n### Beilagen\n- Kartoffelsalat\n- Zitronenspalten\n- Preiselbeeren\n\n## Zubereitung\n\n### Vorbereitung\n1. Schnitzel zwischen Frischhaltefolie klopfen (5mm dünn)\n2. Mit Salz und Pfeffer würzen\n3. Drei Teller vorbereiten: Mehl, verquirlte Eier, Semmelbrösel\n\n### Panieren\n1. Schnitzel im Mehl wenden\n2. Durch das Ei ziehen\n3. In Semmelbröseln wenden\n4. Panade leicht andrücken\n\n### Braten\n1. Butterschmalz in großer Pfanne erhitzen\n2. Schnitzel einlegen (muss schwimmen!)\n3. Bei mittlerer Hitze 3-4 Minuten pro Seite\n4. Pfanne dabei schwenken für wellige Panade\n5. Auf Küchenpapier abtropfen lassen\n\n## Tipps\n\n- Sofort servieren - Schnitzel muss knusprig sein!\n- Niemals mit Sauce servieren\n- Original nur mit Kalb - sonst \"Wiener Art\"\n\nGuten Appetit!",
-      "tags": [
-        "rezept",
-        "kochen",
-        "österreichisch",
-        "schnitzel"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "orange"
-    },
-    {
       "id": "de-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-      "createdAt": "2026-01-23T10:15:00Z",
-      "modifiedAt": "2026-01-23T10:15:00Z",
+      "createdAt": "2026-01-26T10:00:00Z",
+      "modifiedAt": "2026-01-26T10:00:00Z",
       "content": "# Schwarzwald-Reise 2026\n\n**Dauer**: 5 Tage (15.-19. Juni 2026)\n\n## Checkliste\n\n- [x] Unterkunft gebucht (Freiburg)\n- [x] Bahntickets reserviert\n- [ ] Mietwagen buchen\n- [ ] Restaurantreservierungen\n- [ ] Reiseversicherung\n\n## Reiseplan\n\n### Tag 1: Anreise\n- ICE ab München (09:30)\n- Ankunft Freiburg (12:45)\n- Check-in Hotel\n- Nachmittag: Freiburger Altstadt erkunden\n- Bächle und Münster besichtigen\n\n### Tag 2: Natur\n- Fahrt zum Titisee\n- Wanderung um den See\n- Mittagessen: Schwarzwälder Schinken\n- Nachmittag: Feldberg besteigen\n\n### Tag 3: Tradition\n- Triberg: Größte Kuckucksuhr der Welt\n- Triberger Wasserfälle\n- Schwarzwälder Freilichtmuseum\n- Kaffee und Schwarzwälder Kirschtorte\n\n### Tag 4: Genuss\n- Weinprobe in der Kaiserstuhl-Region\n- Besuch in Staufen\n- Abendessen: Badische Küche\n\n### Tag 5: Abreise\n- Letzter Bummel in Freiburg\n- ICE zurück nach München (14:00)\n\n## Restaurants\n\n- **Wolfshöhle** (Freiburg) - Gehobene Küche\n- **Hofgut Sternen** (Höllental) - Traditionell\n- **Zähringer Burg** - Aussicht\n\n## Budget\n\n- Bahntickets: €120\n- Hotel (4 Nächte): €400\n- Mietwagen: €150\n- Essen: €250\n- Aktivitäten: €100\n- **Gesamt**: ~€1.020\n\n## Packliste\n\n- Regenjacke (Schwarzwald!)\n- Wanderschuhe\n- Kamera\n- Fernglas\n- Wanderkarte\n\nIch freue mich!",
       "tags": [
         "reise",
@@ -60,9 +31,37 @@
       "color": "blue"
     },
     {
+      "id": "de-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-24T10:00:00Z",
+      "modifiedAt": "2026-01-24T10:00:00Z",
+      "content": "# Wiener Schnitzel - Traditionelles Rezept\n\n*Das klassische österreichische Gericht*\n\n## Zutaten\n\n### Für die Schnitzel\n- 4 Kalbsschnitzel (je 150g)\n- 100g Mehl\n- 2 Eier\n- 200g Semmelbrösel\n- Salz und Pfeffer\n- Butterschmalz zum Braten\n\n### Beilagen\n- Kartoffelsalat\n- Zitronenspalten\n- Preiselbeeren\n\n## Zubereitung\n\n### Vorbereitung\n1. Schnitzel zwischen Frischhaltefolie klopfen (5mm dünn)\n2. Mit Salz und Pfeffer würzen\n3. Drei Teller vorbereiten: Mehl, verquirlte Eier, Semmelbrösel\n\n### Panieren\n1. Schnitzel im Mehl wenden\n2. Durch das Ei ziehen\n3. In Semmelbröseln wenden\n4. Panade leicht andrücken\n\n### Braten\n1. Butterschmalz in großer Pfanne erhitzen\n2. Schnitzel einlegen (muss schwimmen!)\n3. Bei mittlerer Hitze 3-4 Minuten pro Seite\n4. Pfanne dabei schwenken für wellige Panade\n5. Auf Küchenpapier abtropfen lassen\n\n## Tipps\n\n- Sofort servieren - Schnitzel muss knusprig sein!\n- Niemals mit Sauce servieren\n- Original nur mit Kalb - sonst \"Wiener Art\"\n\nGuten Appetit!",
+      "tags": [
+        "rezept",
+        "kochen",
+        "österreichisch",
+        "schnitzel"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "red"
+    },
+    {
+      "id": "de-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-25T10:00:00Z",
+      "modifiedAt": "2026-01-25T10:00:00Z",
+      "content": "# Einkaufsliste\n\nDinge, die ich diese Woche kaufen muss.\n\n## Lebensmittel\n- [ ] Milch (2 Liter)\n- [ ] Eier (10 Stück)\n- [ ] Vollkornbrot\n- [ ] Gouda-Käse\n- [ ] Butter\n- [ ] Tomaten\n- [ ] Gurken\n- [ ] Hähnchenbrust\n- [ ] Reis\n- [ ] Nudeln\n- [ ] Olivenöl\n\n## Haushalt\n- [ ] Küchenrolle\n- [ ] Spülmittel\n- [ ] LED-Birnen\n\n## Andere Erledigungen\n- [ ] Reinigung abholen\n- [ ] Post - Paket zurücksenden\n- [ ] Bücher in die Bibliothek zurückbringen\n\n## Notizen\n- REWE schließt um 22:00 Uhr\n- Stoffbeutel nicht vergessen!",
+      "tags": [
+        "einkaufen",
+        "persönlich",
+        "liste"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
       "id": "de-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
-      "createdAt": "2026-01-23T10:20:00Z",
-      "modifiedAt": "2026-01-23T10:20:00Z",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
       "content": "# Wochenplan Mahlzeiten\n\nWoche vom 20.-26. Januar 2026\n\n## Montag\n- **Frühstück**: Müsli mit Joghurt und Obst\n- **Mittagessen**: Käsebrot und Salat\n- **Abendessen**: Spaghetti Bolognese\n\n## Dienstag\n- **Frühstück**: Rührei mit Brot\n- **Mittagessen**: Reste vom Vortag\n- **Abendessen**: Hähnchen mit Kartoffeln\n\n## Mittwoch\n- **Frühstück**: Haferbrei\n- **Mittagessen**: Linsensuppe\n- **Abendessen**: Fisch mit Gemüse\n\n## Donnerstag\n- **Frühstück**: Brötchen mit Marmelade\n- **Mittagessen**: Salat mit Thunfisch\n- **Abendessen**: Bratwurst mit Sauerkraut\n\n## Freitag\n- **Frühstück**: Croissant und Kaffee\n- **Mittagessen**: Reste\n- **Abendessen**: Lieferdienst (haben wir uns verdient!)\n\n## Samstag\n- **Frühstück**: Großes Frühstück\n- **Mittagessen**: Brotzeit\n- **Abendessen**: Schnitzel (siehe Rezept)\n\n## Sonntag\n- **Frühstück**: Pfannkuchen\n- **Mittagessen**: Sonntagsbraten\n- **Abendessen**: Leicht - Brot und Suppe\n\n## Einkaufsliste\n\n- Hähnchen (1 kg)\n- Hackfleisch (500g)\n- Fischfilets (2)\n- Frisches Gemüse\n- Käse, Joghurt\n- Eier\n- Brot, Brötchen\n- Nudeln, Reis",
       "tags": [
         "essensplan",
@@ -74,13 +73,54 @@
     },
     {
       "id": "de-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
-      "createdAt": "2026-01-23T10:25:00Z",
-      "modifiedAt": "2026-01-23T10:25:00Z",
+      "createdAt": "2026-01-27T10:00:00Z",
+      "modifiedAt": "2026-01-27T10:00:00Z",
       "content": "# Bücher für 2026\n\nMeine Leseliste für dieses Jahr.\n\n## Aktuell am Lesen\n\n- [ ] **\"Der Zauberberg\"** - Thomas Mann\n  - Kapitel 5 von 7\n  - Anspruchsvoll aber lohnend!\n\n## Deutsche Literatur\n\n- [ ] \"Die Vermessung der Welt\" - Daniel Kehlmann\n- [x] \"Das Parfum\" - Patrick Süskind\n- [ ] \"Buddenbrooks\" - Thomas Mann\n- [ ] \"Der Vorleser\" - Bernhard Schlink\n\n## Klassiker\n\n- [ ] \"Faust\" - Johann Wolfgang von Goethe\n- [ ] \"Die Leiden des jungen Werthers\" - Goethe\n- [x] \"1984\" - George Orwell\n\n## Sachbücher\n\n- [ ] \"Eine kurze Geschichte der Menschheit\" - Yuval Noah Harari\n- [ ] \"Die Macht der Gewohnheit\" - Charles Duhigg\n\n## Ziel\n\n- **Ziel**: 20 Bücher\n- **Fortschritt**: 2/20\n\n## Notizen\n\n### Aus \"Das Parfum\"\n- Die Macht der Gerüche über die Erinnerung\n- Die Suche nach Identität und Zugehörigkeit\n- Kunst und Besessenheit",
       "tags": [
         "bücher",
         "lesen",
         "ziele"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "orange"
+    },
+    {
+      "id": "de-g7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-29T10:00:00Z",
+      "modifiedAt": "2026-01-29T10:00:00Z",
+      "content": "# Projektnotizen: Website-Neugestaltung\n\n**Status**: In Bearbeitung\n**Frist**: 28. Februar 2026\n\n## Ziele\n\n- Benutzeroberfläche modernisieren\n- Mobile Reaktionsfähigkeit verbessern\n- Ladezeiten um 40% reduzieren\n- Markenfarben und Typografie aktualisieren\n\n## Aufgaben\n\n### Phase 1: Recherche (Abgeschlossen)\n- [x] Wettbewerbsanalyse\n- [x] Umfrageergebnisse ausgewertet\n- [x] Stakeholder-Interviews\n\n### Phase 2: Design (Aktuell)\n- [x] Wireframes genehmigt\n- [ ] High-Fidelity-Mockups\n- [ ] Design-System-Dokumentation\n- [ ] Barrierefreiheitsprüfung\n\n### Phase 3: Entwicklung\n- [ ] Frontend-Implementierung\n- [ ] Backend-API-Updates\n- [ ] Performance-Optimierung\n- [ ] Browser-Tests\n\n## Besprechungsnotizen\n\n### 15. Jan - Kickoff\n- Budget bestätigt: €18.000\n- Zeitrahmen: 6 Wochen\n- Hauptansprechpartner: Sarah (Marketing)\n\n### 22. Jan - Design-Review\n- Logo-Platzierung genehmigt\n- Dunklere Fußzeile gewünscht\n- Mobile Navigation überarbeiten",
+      "tags": [
+        "arbeit",
+        "projekt",
+        "website"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "de-h7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-02-01T10:00:00Z",
+      "modifiedAt": "2026-02-01T10:00:00Z",
+      "content": "# Fitnessziele 2026\n\n## Aktuelle Werte\n- Gewicht: 78 kg\n- Ziel: 73 kg\n- Wöchentliches Training: 2x\n\n## Wöchentlicher Trainingsplan\n\n### Montag - Oberkörper\n- Liegestütze: 3 Sätze à 15\n- Kurzhantel-Rudern: 3 Sätze à 12\n- Schulterdrücken: 3 Sätze à 10\n- Plank: 3 x 45 Sekunden\n\n### Mittwoch - Unterkörper\n- Kniebeugen: 3 Sätze à 15\n- Ausfallschritte: 3 Sätze à 12 pro Bein\n- Wadenheben: 3 Sätze à 20\n- Beckenheben: 3 Sätze à 15\n\n### Freitag - Ausdauer\n- 30 Minuten Joggen oder Radfahren\n- Dehnübungen\n\n### Wochenende - Aktive Erholung\n- Spazierengehen\n- Leichtes Yoga\n- Schwimmen (optional)\n\n## Fortschrittstracker\n\n| Woche | Gewicht | Notizen |\n|-------|---------|---------|\n| 1     | 78,0    | Startpunkt |\n| 2     | 77,6    | Guter Start! |\n| 3     | 77,4    | Stabil |\n\n## Erinnerungen\n\n- Täglich 2L Wasser trinken\n- 7-8 Stunden schlafen\n- Sonntags Meal Prep\n- Ruhetage sind wichtig!",
+      "tags": [
+        "fitness",
+        "gesundheit",
+        "ziele"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "green"
+    },
+    {
+      "id": "de-i7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-22T10:00:00Z",
+      "modifiedAt": "2026-01-22T10:00:00Z",
+      "content": "# Filme zum Anschauen\n\nMeine Kino- und Streaming-Watchlist.\n\n## Priorität (Muss sehen)\n- [ ] **Dune: Part Two** - Sci-Fi-Epos\n- [ ] **Poor Things** - Yorgos Lanthimos\n- [ ] **The Holdovers** - Komödie\n- [ ] **Oppenheimer** - Endlich!\n\n## Filmklassiker\n- [ ] \"Casablanca\" (1942)\n- [x] \"2001: Odyssee im Weltraum\" (1968)\n- [ ] \"Der Pate\" (1972)\n- [ ] \"Blade Runner\" (1982)\n\n## Deutsche Filme\n- [ ] \"Das Leben der Anderen\"\n- [x] \"Good Bye, Lenin!\"\n- [ ] \"Der Untergang\"\n- [ ] \"Lola rennt\"\n\n## Dokumentationen\n- [ ] \"Free Solo\"\n- [ ] \"Mein Lehrer, der Krake\"\n- [ ] \"Won't You Be My Neighbor?\"\n\n## Kürzlich gesehen\n\n### Good Bye, Lenin! ⭐⭐⭐⭐⭐\nHerzerwärmend und lustig. Perfekte Mischung aus Komödie und Drama.\n\n### 2001: Odyssee im Weltraum ⭐⭐⭐⭐\nVisuell atemberaubend. Das Ende verwirrt mich immer noch!\n\n## Kinopläne\n- Freitagabend ins Kino\n- Programmkino für Klassiker",
+      "tags": [
+        "filme",
+        "unterhaltung",
+        "watchlist"
       ],
       "attachments": [],
       "pinned": false

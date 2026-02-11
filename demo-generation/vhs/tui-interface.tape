@@ -44,12 +44,14 @@ Down
 Down
 Down
 Down
+Down
+Down
 
 # Insert text (DEMO_TEXT is set by generate script)
 Type "i"
 Enter
 Sleep 200ms
-Type "- [ ] $DEMO_TEXT"
+Type "- $DEMO_TEXT"
 Enter
 Up
 Sleep 2s

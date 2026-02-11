@@ -33,7 +33,7 @@ Enter
 Sleep 2s
 
 # Search notes
-Type@50ms "jottery search $DEMO_SEARCH"
+Type@50ms 'jottery search "$DEMO_SEARCH"'
 Enter
 Sleep 2s
 

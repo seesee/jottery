@@ -5,10 +5,11 @@
 #
 # Usage from project root:
 #   ./demo-generation/generate.sh --lang ja
-#   ./demo-generation/generate.sh --all-langs
+#   ./demo-generation/generate.sh --all
 #
 # Usage from demo-generation directory:
 #   ./generate.sh --lang ja
+#   ./generate.sh --all
 
 set -e  # Exit on error
 
@@ -20,9 +21,6 @@ else
   PROJECT_ROOT="$SCRIPT_DIR"
 fi
 cd "$PROJECT_ROOT"
-
-echo "[DEBUG] Project root: $PROJECT_ROOT"
-echo "[DEBUG] Current dir: $(pwd)"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -45,6 +43,8 @@ SPECIFIC_DEMO=""
 SHOW_LIST=false
 ALL_LANGS=false
 ALL_LANGS_TUI=false
+ALL_EVERYTHING=false
+VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -68,23 +68,35 @@ while [[ $# -gt 0 ]]; do
       ALL_LANGS_TUI=true
       shift
       ;;
+    --all)
+      ALL_EVERYTHING=true
+      shift
+      ;;
+    --verbose|-v)
+      VERBOSE=true
+      shift
+      ;;
     --help)
       echo "Usage: $0 [OPTIONS]"
       echo ""
       echo "Options:"
-      echo "  --list              List all available demos"
-      echo "  --name DEMO_NAME    Generate specific demo only"
-      echo "  --lang LANGUAGE     Set language (default: en-GB)"
+      echo "  --all               Generate EVERYTHING (web + TUI for all languages)"
       echo "  --all-langs         Generate web screenshots for all languages"
       echo "  --all-langs-tui     Generate TUI demos (VHS) for all languages"
+      echo "  --lang LANGUAGE     Set language for single-language mode (default: en-GB)"
+      echo "  --name DEMO_NAME    Generate specific demo only"
+      echo "  --list              List all available demos"
+      echo "  --verbose, -v       Show debug output"
       echo "  --help              Show this help message"
       echo ""
       echo "Available languages: $AVAILABLE_LANGS"
       echo ""
       echo "Examples:"
-      echo "  $0                           # Generate all demos for en-GB"
-      echo "  $0 --lang ja                 # Generate for Japanese"
+      echo "  $0                           # Generate web screenshots for en-GB"
+      echo "  $0 --lang ja                 # Generate web screenshots for Japanese"
       echo "  $0 --all-langs               # Generate web screenshots for all languages"
+      echo "  $0 --all-langs-tui           # Generate TUI demos for all languages"
+      echo "  $0 --all                     # Generate EVERYTHING (web + TUI, all languages)"
       exit 0
       ;;
     *)
@@ -95,15 +107,30 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Debug logging function
+debug() {
+  if [ "$VERBOSE" = true ]; then
+    echo "[DEBUG] $1"
+  fi
+}
+
+debug "Project root: $PROJECT_ROOT"
+debug "Current dir: $(pwd)"
+
+echo ""
 echo "🎬 Jottery Demo Generation"
 echo "=========================="
-if [ "$ALL_LANGS" = true ]; then
+if [ "$ALL_EVERYTHING" = true ]; then
+  echo "Mode: FULL regeneration (web + TUI, all languages)"
+  echo "Languages: $AVAILABLE_LANGS"
+elif [ "$ALL_LANGS" = true ]; then
   echo "Mode: All languages (web screenshots)"
   echo "Languages: $AVAILABLE_LANGS"
 elif [ "$ALL_LANGS_TUI" = true ]; then
   echo "Mode: All languages (TUI demos)"
   echo "Languages: $AVAILABLE_LANGS"
 else
+  echo "Mode: Single language (web screenshots)"
   echo "Language: $DEMO_LANG"
 fi
 echo ""
@@ -111,22 +138,33 @@ echo ""
 # Check dependencies
 echo -e "${BLUE}Checking dependencies...${NC}"
 command -v npm >/dev/null 2>&1 || { echo "❌ npm is required but not installed."; exit 1; }
-echo -e "${GREEN}✓ All dependencies found${NC}"
+echo -e "${GREEN}✓ npm found${NC}"
+
+if [ "$ALL_LANGS_TUI" = true ] || [ "$ALL_EVERYTHING" = true ]; then
+  command -v vhs >/dev/null 2>&1 || { echo "❌ vhs is required for TUI demos. Run: brew install vhs"; exit 1; }
+  echo -e "${GREEN}✓ vhs found${NC}"
+
+  if [ ! -x "$PROJECT_ROOT/tui/target/release/jottery" ]; then
+    echo -e "${RED}❌ jottery TUI binary not found. Build with: cd tui && cargo build --release${NC}"
+    exit 1
+  fi
+  echo -e "${GREEN}✓ jottery TUI binary found${NC}"
+fi
 echo ""
 
 # Output directories (absolute paths for clarity)
 SCREENSHOTS_TEMP="$PROJECT_ROOT/screenshots"
 SCREENSHOTS_PUBLIC="$PROJECT_ROOT/public/screenshots"
 
-echo "[DEBUG] Temp screenshot dir: $SCREENSHOTS_TEMP"
-echo "[DEBUG] Public screenshot dir: $SCREENSHOTS_PUBLIC"
+debug "Temp screenshot dir: $SCREENSHOTS_TEMP"
+debug "Public screenshot dir: $SCREENSHOTS_PUBLIC"
 
 # Function to generate web screenshots for a single language
 generate_lang_screenshots() {
   local lang="$1"
 
   echo -e "${CYAN}═══════════════════════════════════════${NC}"
-  echo -e "${YELLOW}Generating screenshots for: $lang${NC}"
+  echo -e "${YELLOW}📸 Web screenshots: $lang${NC}"
   echo -e "${CYAN}═══════════════════════════════════════${NC}"
 
   # Check if demo notes file exists for this language
@@ -135,19 +173,18 @@ generate_lang_screenshots() {
     echo -e "${RED}❌ Error: $DEMO_FILE not found, skipping${NC}"
     return 1
   fi
-  echo "[DEBUG] Using demo file: $DEMO_FILE"
+  debug "Using demo file: $DEMO_FILE"
 
   # Create output directory
   local LANG_OUTPUT_DIR="$SCREENSHOTS_TEMP/$lang"
   mkdir -p "$LANG_OUTPUT_DIR"
-  echo "[DEBUG] Output directory: $LANG_OUTPUT_DIR"
+  debug "Output directory: $LANG_OUTPUT_DIR"
 
-  # Run playwright tests with LANG env var
-  # The test file reads process.env.LANG to determine language
-  echo "[DEBUG] Running: LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts"
+  # Run playwright tests with DEMO_LANG env var (DEMO_LANG avoids conflict with system LANG)
+  debug "Running: DEMO_LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts"
 
-  if LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts; then
-    echo -e "${GREEN}✓ All tests passed for $lang${NC}"
+  if DEMO_LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts; then
+    echo -e "${GREEN}✓ Playwright tests passed for $lang${NC}"
   else
     local exit_code=$?
     echo -e "${RED}❌ Tests failed for $lang (exit code: $exit_code)${NC}"
@@ -155,14 +192,10 @@ generate_lang_screenshots() {
   fi
 
   # Check what was generated
-  echo "[DEBUG] Checking output directory: $LANG_OUTPUT_DIR"
+  debug "Checking output directory: $LANG_OUTPUT_DIR"
   if [ -d "$LANG_OUTPUT_DIR" ]; then
     local count=$(ls -1 "$LANG_OUTPUT_DIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
-    echo "[DEBUG] Found $count PNG files in $LANG_OUTPUT_DIR"
-    if [ "$count" -gt 0 ]; then
-      ls -la "$LANG_OUTPUT_DIR"/*.png | head -5
-      echo "  ... (showing first 5)"
-    fi
+    debug "Found $count PNG files in $LANG_OUTPUT_DIR"
   else
     echo -e "${RED}❌ Output directory not created: $LANG_OUTPUT_DIR${NC}"
     return 1
@@ -180,19 +213,61 @@ generate_lang_screenshots() {
   echo ""
 }
 
-# Handle --all-langs mode
-if [ "$ALL_LANGS" = true ]; then
-  echo -e "${BLUE}Generating web screenshots for all languages...${NC}"
+# Function to generate TUI demos for a single language
+generate_lang_tui() {
+  local lang="$1"
+
+  echo -e "${CYAN}═══════════════════════════════════════${NC}"
+  echo -e "${YELLOW}🎬 TUI demos: $lang${NC}"
+  echo -e "${CYAN}═══════════════════════════════════════${NC}"
+
+  # Use the dedicated TUI demo generation script
+  if "$PROJECT_ROOT/demo-generation/generate-tui-demo.sh" "$lang"; then
+    echo -e "${GREEN}✓ TUI demos generated for $lang${NC}"
+  else
+    echo -e "${RED}❌ TUI demo generation failed for $lang${NC}"
+    return 1
+  fi
+
+  echo ""
+}
+
+# Track results
+FAILED_WEB=""
+PASSED_WEB=""
+FAILED_TUI=""
+PASSED_TUI=""
+
+# Handle --all mode (everything)
+if [ "$ALL_EVERYTHING" = true ]; then
+  echo -e "${BLUE}═══════════════════════════════════════${NC}"
+  echo -e "${BLUE}  FULL REGENERATION: Web + TUI, All Languages${NC}"
+  echo -e "${BLUE}═══════════════════════════════════════${NC}"
   echo ""
 
-  FAILED_LANGS=""
-  PASSED_LANGS=""
+  # First: Web screenshots for all languages
+  echo -e "${CYAN}Phase 1: Web Screenshots${NC}"
+  echo ""
 
   for lang in $AVAILABLE_LANGS; do
     if generate_lang_screenshots "$lang"; then
-      PASSED_LANGS="$PASSED_LANGS $lang"
+      PASSED_WEB="$PASSED_WEB $lang"
     else
-      FAILED_LANGS="$FAILED_LANGS $lang"
+      FAILED_WEB="$FAILED_WEB $lang"
+      echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
+      echo ""
+    fi
+  done
+
+  # Second: TUI demos for all languages
+  echo -e "${CYAN}Phase 2: TUI Demos${NC}"
+  echo ""
+
+  for lang in $AVAILABLE_LANGS; do
+    if generate_lang_tui "$lang"; then
+      PASSED_TUI="$PASSED_TUI $lang"
+    else
+      FAILED_TUI="$FAILED_TUI $lang"
       echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
       echo ""
     fi
@@ -201,25 +276,55 @@ if [ "$ALL_LANGS" = true ]; then
   echo ""
   echo "═══════════════════════════════════════"
   echo "Summary:"
-  if [ -n "$PASSED_LANGS" ]; then
-    echo -e "${GREEN}✓ Passed:$PASSED_LANGS${NC}"
+  echo ""
+  echo "Web Screenshots:"
+  if [ -n "$PASSED_WEB" ]; then
+    echo -e "${GREEN}  ✓ Passed:$PASSED_WEB${NC}"
   fi
-  if [ -n "$FAILED_LANGS" ]; then
-    echo -e "${RED}❌ Failed:$FAILED_LANGS${NC}"
+  if [ -n "$FAILED_WEB" ]; then
+    echo -e "${RED}  ❌ Failed:$FAILED_WEB${NC}"
+  fi
+  echo ""
+  echo "TUI Demos:"
+  if [ -n "$PASSED_TUI" ]; then
+    echo -e "${GREEN}  ✓ Passed:$PASSED_TUI${NC}"
+  fi
+  if [ -n "$FAILED_TUI" ]; then
+    echo -e "${RED}  ❌ Failed:$FAILED_TUI${NC}"
+  fi
+  echo ""
+  echo "Generated files in: $SCREENSHOTS_PUBLIC/<lang>/"
+  echo -e "${GREEN}🎉 Full regeneration complete!${NC}"
+  exit 0
+fi
+
+# Handle --all-langs mode (web only)
+if [ "$ALL_LANGS" = true ]; then
+  echo -e "${BLUE}Generating web screenshots for all languages...${NC}"
+  echo ""
+
+  for lang in $AVAILABLE_LANGS; do
+    if generate_lang_screenshots "$lang"; then
+      PASSED_WEB="$PASSED_WEB $lang"
+    else
+      FAILED_WEB="$FAILED_WEB $lang"
+      echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
+      echo ""
+    fi
+  done
+
+  echo ""
+  echo "═══════════════════════════════════════"
+  echo "Summary:"
+  if [ -n "$PASSED_WEB" ]; then
+    echo -e "${GREEN}✓ Passed:$PASSED_WEB${NC}"
+  fi
+  if [ -n "$FAILED_WEB" ]; then
+    echo -e "${RED}❌ Failed:$FAILED_WEB${NC}"
   fi
   echo ""
   echo "Generated files in: $SCREENSHOTS_PUBLIC/<lang>/"
   exit 0
-fi
-
-# Handle single language mode
-if [ "$ALL_LANGS" = false ] && [ "$ALL_LANGS_TUI" = false ]; then
-  generate_lang_screenshots "$DEMO_LANG"
-
-  echo ""
-  echo -e "${GREEN}🎉 Demo generation complete!${NC}"
-  echo ""
-  echo "Generated files in: $SCREENSHOTS_PUBLIC/$DEMO_LANG/"
 fi
 
 # Handle --all-langs-tui mode
@@ -227,34 +332,35 @@ if [ "$ALL_LANGS_TUI" = true ]; then
   echo -e "${BLUE}Generating TUI demos for all languages...${NC}"
   echo ""
 
-  command -v vhs >/dev/null 2>&1 || { echo "❌ vhs is required but not installed. Run: brew install vhs"; exit 1; }
-
   for lang in $AVAILABLE_LANGS; do
-    echo -e "${CYAN}═══════════════════════════════════════${NC}"
-    echo -e "${YELLOW}Generating TUI demos for: $lang${NC}"
-    echo -e "${CYAN}═══════════════════════════════════════${NC}"
-
-    # Ensure output directory exists
-    mkdir -p "$SCREENSHOTS_PUBLIC/$lang"
-
-    # Generate all TUI demos for this language
-    for demo in tui-cli tui-piping tui-interface tui-sync; do
-      tape_file="demo-generation/vhs/${demo}.tape"
-      if [ -f "$tape_file" ]; then
-        echo -e "${YELLOW}Generating: $demo for $lang...${NC}"
-        DEMO_LANG="$lang" vhs "$tape_file" || {
-          echo -e "${YELLOW}⚠ Failed to generate $demo for $lang, continuing...${NC}"
-        }
-        echo -e "${GREEN}✓ $demo generated for $lang${NC}"
-      fi
-    done
-
-    echo ""
+    if generate_lang_tui "$lang"; then
+      PASSED_TUI="$PASSED_TUI $lang"
+    else
+      FAILED_TUI="$FAILED_TUI $lang"
+      echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
+      echo ""
+    fi
   done
 
   echo ""
-  echo -e "${GREEN}🎉 All language TUI demos generated!${NC}"
+  echo "═══════════════════════════════════════"
+  echo "Summary:"
+  if [ -n "$PASSED_TUI" ]; then
+    echo -e "${GREEN}✓ Passed:$PASSED_TUI${NC}"
+  fi
+  if [ -n "$FAILED_TUI" ]; then
+    echo -e "${RED}❌ Failed:$FAILED_TUI${NC}"
+  fi
   echo ""
   echo "Generated files in: $SCREENSHOTS_PUBLIC/<lang>/"
+  echo -e "${GREEN}🎉 TUI demo generation complete!${NC}"
   exit 0
 fi
+
+# Handle single language mode (default - web screenshots only)
+generate_lang_screenshots "$DEMO_LANG"
+
+echo ""
+echo -e "${GREEN}🎉 Demo generation complete!${NC}"
+echo ""
+echo "Generated files in: $SCREENSHOTS_PUBLIC/$DEMO_LANG/"

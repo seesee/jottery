@@ -14,7 +14,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const DEMO_GENERATION_DIR = dirname(__dirname); // Parent of playwright/ is demo-generation/
 
-// Normalize LANG environment variable to our file naming convention
+// Normalize language code to our file naming convention
+// Uses DEMO_LANG env var to avoid conflict with system LANG locale
 function normalizeLang(lang: string | undefined): string {
   if (!lang) return 'en-GB';
 
@@ -35,7 +36,8 @@ function normalizeLang(lang: string | undefined): string {
   return 'en-GB';
 }
 
-const LANG = normalizeLang(process.env.LANG);
+// Use DEMO_LANG to avoid conflict with system LANG environment variable
+const LANG = normalizeLang(process.env.DEMO_LANG || process.env.LANG);
 // Project root is parent of demo-generation
 const PROJECT_ROOT = dirname(DEMO_GENERATION_DIR);
 const SCREENSHOT_DIR = join(PROJECT_ROOT, 'screenshots', LANG);

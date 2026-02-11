@@ -4,8 +4,8 @@
   "notes": [
     {
       "id": "en-gb-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-      "createdAt": "2026-01-23T10:00:00Z",
-      "modifiedAt": "2026-01-23T10:00:00Z",
+      "createdAt": "2026-01-21T10:00:00Z",
+      "modifiedAt": "2026-01-21T10:00:00Z",
       "content": "# Welcome to Jottery!\n\nThis is a demo notepad showcasing Jottery's capabilities.\n\n## What you'll find here\n\nThis demo includes examples of:\n- Organised notes with tags\n- To-do and shopping lists\n- Cooking recipes\n- Travel plans\n- Personal notes\n\n## Getting started\n\n1. **Browse the notes** - Click on notes in the list\n2. **Try the search** - Use the search bar\n3. **Create your own** - Press \"New\" to start\n4. **Organise with tags** - Use #tag anywhere\n\n## Tips\n\n- Press `Ctrl+K` to search\n- Press `Ctrl+N` for a new note\n- Use #tags for organisation\n\nHappy exploring!",
       "tags": [
         "welcome",
@@ -16,38 +16,9 @@
       "pinned": true
     },
     {
-      "id": "en-gb-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
-      "createdAt": "2026-01-23T10:05:00Z",
-      "modifiedAt": "2026-01-23T10:05:00Z",
-      "content": "# Shopping List\n\nThings to buy this week.\n\n## Groceries\n- [ ] Milk (2 litres)\n- [ ] Eggs (dozen)\n- [ ] Wholemeal bread\n- [ ] Cheddar cheese\n- [ ] Butter\n- [ ] Tomatoes\n- [ ] Cucumber\n- [ ] Chicken breasts\n- [ ] Rice\n- [ ] Pasta\n- [ ] Olive oil\n\n## Household\n- [ ] Kitchen roll\n- [ ] Washing-up liquid\n- [ ] LED bulbs\n\n## Other errands\n- [ ] Pick up dry cleaning\n- [ ] Post office - return parcel\n- [ ] Return books to the library\n\n## Notes\n- Tesco closes at 10pm\n- Don't forget the reusable bags!",
-      "tags": [
-        "shopping",
-        "personal",
-        "list"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "red"
-    },
-    {
-      "id": "en-gb-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-      "createdAt": "2026-01-23T10:10:00Z",
-      "modifiedAt": "2026-01-23T10:10:00Z",
-      "content": "# Shepherd's Pie - Traditional Recipe\n\n*Classic British comfort food at its finest*\n\n## Ingredients\n\n### For the filling\n- 500g lamb mince\n- 1 onion, diced\n- 2 carrots, diced\n- 2 celery sticks, diced\n- 2 cloves garlic, minced\n- 400ml lamb stock\n- 2 tbsp tomato purée\n- 1 tbsp Worcestershire sauce\n- Fresh thyme and rosemary\n- Salt and pepper\n\n### For the mash\n- 1kg Maris Piper potatoes\n- 50g butter\n- 100ml milk\n- Salt and white pepper\n\n## Instructions\n\n### The filling\n1. Brown the mince in a large pan, then set aside\n2. Sauté onion, carrots and celery until soft\n3. Add garlic and cook for 1 minute\n4. Return the mince to the pan\n5. Add stock, tomato purée and Worcestershire sauce\n6. Simmer for 25-30 minutes until thickened\n7. Season and add herbs\n\n### The mash\n1. Peel and cube the potatoes\n2. Boil until tender (about 15 minutes)\n3. Drain and return to the pan\n4. Add butter and milk, mash until smooth\n5. Season to taste\n\n### Assembly\n1. Pour filling into a baking dish\n2. Top with mashed potato\n3. Rough up the top with a fork\n4. Bake at 200°C for 25 minutes until golden\n\n## Tips\n\n- Let it rest for 10 minutes before serving\n- Serve with garden peas and gravy\n- Keeps in the fridge for 3 days\n\nEnjoy!",
-      "tags": [
-        "recipe",
-        "cooking",
-        "british",
-        "comfort-food"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "orange"
-    },
-    {
       "id": "en-gb-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-      "createdAt": "2026-01-23T10:15:00Z",
-      "modifiedAt": "2026-01-23T10:15:00Z",
+      "createdAt": "2026-01-26T10:00:00Z",
+      "modifiedAt": "2026-01-26T10:00:00Z",
       "content": "# Lake District Trip 2026\n\n**Duration**: 4 days (15-18 June 2026)\n\n## Checklist\n\n- [x] Book accommodation (Windermere)\n- [x] Book train tickets\n- [ ] Hire car\n- [ ] Book restaurant for anniversary dinner\n- [ ] Travel insurance\n\n## Itinerary\n\n### Day 1: Arrival\n- Train from London Euston (09:15)\n- Arrive Oxenholme, collect hire car\n- Check in to hotel\n- Afternoon: Explore Bowness-on-Windermere\n- Evening: Dinner at the hotel\n\n### Day 2: Walks\n- Morning: Climb Catbells (classic fell walk)\n- Lunch: Picnic by Derwentwater\n- Afternoon: Explore Keswick\n\n### Day 3: Lakes & Literature\n- Morning: Boat trip on Windermere\n- Visit Beatrix Potter's Hill Top Farm\n- Afternoon: Wordsworth's Dove Cottage\n- Evening: Anniversary dinner (7pm booking)\n\n### Day 4: Departure\n- Morning: Final walk around Ambleside\n- Return hire car\n- Train back to London (15:30)\n\n## Restaurants to book\n\n- **The Drunken Duck** - Fine dining\n- **Fellpack** (Keswick) - Casual lunch\n- **Homeground** (Windermere) - Coffee and cake\n\n## Budget\n\n- Train tickets: £180\n- Accommodation (3 nights): £450\n- Car hire: £120\n- Food: £250\n- Activities: £80\n- **Total**: ~£1,080\n\n## Packing list\n\n- Waterproof jacket (essential!)\n- Walking boots\n- Layers\n- Binoculars\n- Camera\n- Ordnance Survey maps\n\nCan't wait!",
       "tags": [
         "travel",
@@ -60,9 +31,37 @@
       "color": "blue"
     },
     {
+      "id": "en-gb-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-24T10:00:00Z",
+      "modifiedAt": "2026-01-24T10:00:00Z",
+      "content": "# Shepherd's Pie - Traditional Recipe\n\n*Classic British comfort food at its finest*\n\n## Ingredients\n\n### For the filling\n- 500g lamb mince\n- 1 onion, diced\n- 2 carrots, diced\n- 2 celery sticks, diced\n- 2 cloves garlic, minced\n- 400ml lamb stock\n- 2 tbsp tomato purée\n- 1 tbsp Worcestershire sauce\n- Fresh thyme and rosemary\n- Salt and pepper\n\n### For the mash\n- 1kg Maris Piper potatoes\n- 50g butter\n- 100ml milk\n- Salt and white pepper\n\n## Instructions\n\n### The filling\n1. Brown the mince in a large pan, then set aside\n2. Sauté onion, carrots and celery until soft\n3. Add garlic and cook for 1 minute\n4. Return the mince to the pan\n5. Add stock, tomato purée and Worcestershire sauce\n6. Simmer for 25-30 minutes until thickened\n7. Season and add herbs\n\n### The mash\n1. Peel and cube the potatoes\n2. Boil until tender (about 15 minutes)\n3. Drain and return to the pan\n4. Add butter and milk, mash until smooth\n5. Season to taste\n\n### Assembly\n1. Pour filling into a baking dish\n2. Top with mashed potato\n3. Rough up the top with a fork\n4. Bake at 200°C for 25 minutes until golden\n\n## Tips\n\n- Let it rest for 10 minutes before serving\n- Serve with garden peas and gravy\n- Keeps in the fridge for 3 days\n\nEnjoy!",
+      "tags": [
+        "recipe",
+        "cooking",
+        "british",
+        "comfort-food"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "red"
+    },
+    {
+      "id": "en-gb-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-25T10:00:00Z",
+      "modifiedAt": "2026-01-25T10:00:00Z",
+      "content": "# Shopping List\n\nThings to buy this week.\n\n## Groceries\n- [ ] Milk (2 litres)\n- [ ] Eggs (dozen)\n- [ ] Wholemeal bread\n- [ ] Cheddar cheese\n- [ ] Butter\n- [ ] Tomatoes\n- [ ] Cucumber\n- [ ] Chicken breasts\n- [ ] Rice\n- [ ] Pasta\n- [ ] Olive oil\n\n## Household\n- [ ] Kitchen roll\n- [ ] Washing-up liquid\n- [ ] LED bulbs\n\n## Other errands\n- [ ] Pick up dry cleaning\n- [ ] Post office - return parcel\n- [ ] Return books to the library\n\n## Notes\n- Tesco closes at 10pm\n- Don't forget the reusable bags!",
+      "tags": [
+        "shopping",
+        "personal",
+        "list"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
       "id": "en-gb-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
-      "createdAt": "2026-01-23T10:20:00Z",
-      "modifiedAt": "2026-01-23T10:20:00Z",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
       "content": "# Weekly Meal Plan\n\nWeek of 20-26 January 2026\n\n## Monday\n- **Breakfast**: Porridge with honey and berries\n- **Lunch**: Chicken salad sandwich\n- **Dinner**: Spaghetti Bolognese\n\n## Tuesday\n- **Breakfast**: Scrambled eggs on toast\n- **Lunch**: Soup and crusty bread\n- **Dinner**: Lemon chicken with roast potatoes\n\n## Wednesday\n- **Breakfast**: Overnight oats\n- **Lunch**: Leftover chicken wrap\n- **Dinner**: Fish and chips (homemade)\n\n## Thursday\n- **Breakfast**: Avocado on toast\n- **Lunch**: Jacket potato with beans\n- **Dinner**: Beef stir-fry\n\n## Friday\n- **Breakfast**: Full English (it's Friday!)\n- **Lunch**: Leftovers\n- **Dinner**: Takeaway (we've earned it!)\n\n## Saturday\n- **Breakfast**: Pancakes\n- **Lunch**: Pub lunch\n- **Dinner**: Shepherd's pie (see recipe)\n\n## Sunday\n- **Breakfast**: Bacon sarnie\n- **Lunch**: Sunday roast with all the trimmings\n- **Dinner**: Light - cheese and biscuits\n\n## Shopping list\n\n- Chicken (1kg)\n- Beef mince (500g)\n- Fish fillets (2)\n- Fresh vegetables\n- Cheddar, butter\n- Eggs\n- Bread\n- Pasta, rice",
       "tags": [
         "meal-plan",
@@ -74,13 +73,54 @@
     },
     {
       "id": "en-gb-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
-      "createdAt": "2026-01-23T10:25:00Z",
-      "modifiedAt": "2026-01-23T10:25:00Z",
+      "createdAt": "2026-01-27T10:00:00Z",
+      "modifiedAt": "2026-01-27T10:00:00Z",
       "content": "# Books to Read 2026\n\nMy reading list for this year.\n\n## Currently reading\n\n- [ ] **\"Wolf Hall\"** - Hilary Mantel\n  - Chapter 15 of 38\n  - Brilliant so far!\n\n## British Fiction\n\n- [ ] \"Bring Up the Bodies\" - Hilary Mantel\n- [x] \"Never Let Me Go\" - Kazuo Ishiguro\n- [ ] \"Atonement\" - Ian McEwan\n- [ ] \"White Teeth\" - Zadie Smith\n\n## Classic Literature\n\n- [ ] \"Middlemarch\" - George Eliot\n- [ ] \"Pride and Prejudice\" - Jane Austen\n- [x] \"1984\" - George Orwell\n\n## Non-Fiction\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Atomic Habits\" - James Clear\n- [ ] \"The Body\" - Bill Bryson\n\n## Goal\n\n- **Target**: 24 books\n- **Progress**: 2/24\n\n## Notes\n\n### From \"1984\"\n- Language shapes thought\n- Control of history is control of the future\n- Freedom is the freedom to say that 2+2=4",
       "tags": [
         "books",
         "reading",
         "goals"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "orange"
+    },
+    {
+      "id": "en-gb-g7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-29T10:00:00Z",
+      "modifiedAt": "2026-01-29T10:00:00Z",
+      "content": "# Project Notes: Website Redesign\n\n**Status**: In Progress\n**Deadline**: 28 February 2026\n\n## Objectives\n\n- Modernise the user interface\n- Improve mobile responsiveness\n- Reduce page load times by 40%\n- Update brand colours and typography\n\n## Tasks\n\n### Phase 1: Research (Complete)\n- [x] Competitor analysis\n- [x] User survey results reviewed\n- [x] Stakeholder interviews\n\n### Phase 2: Design (Current)\n- [x] Wireframes approved\n- [ ] High-fidelity mockups\n- [ ] Design system documentation\n- [ ] Accessibility audit\n\n### Phase 3: Development\n- [ ] Front-end implementation\n- [ ] Back-end API updates\n- [ ] Performance optimisation\n- [ ] Browser testing\n\n## Meeting Notes\n\n### 15 Jan - Kickoff\n- Budget confirmed: £15,000\n- Timeline: 6 weeks\n- Key stakeholder: Sarah (Marketing)\n\n### 22 Jan - Design Review\n- Logo placement approved\n- Requested darker footer\n- Mobile navigation needs rework\n\n## Resources\n\n- Figma file: [link]\n- Brand guidelines: [link]\n- Analytics dashboard: [link]",
+      "tags": [
+        "work",
+        "project",
+        "website"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "en-gb-h7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-02-01T10:00:00Z",
+      "modifiedAt": "2026-02-01T10:00:00Z",
+      "content": "# Fitness Goals 2026\n\n## Current Stats\n- Weight: 78 kg\n- Target: 73 kg\n- Weekly exercise: 2x\n\n## Weekly Workout Plan\n\n### Monday - Upper Body\n- Push-ups: 3 sets of 15\n- Dumbbell rows: 3 sets of 12\n- Shoulder press: 3 sets of 10\n- Plank: 3 x 45 seconds\n\n### Wednesday - Lower Body\n- Squats: 3 sets of 15\n- Lunges: 3 sets of 12 each leg\n- Calf raises: 3 sets of 20\n- Glute bridges: 3 sets of 15\n\n### Friday - Cardio\n- 30-minute jog or cycle\n- Cool-down stretches\n\n### Weekend - Active Rest\n- Walking\n- Light yoga\n- Swimming (optional)\n\n## Progress Tracker\n\n| Week | Weight | Notes |\n|------|--------|-------|\n| 1    | 78.0   | Starting point |\n| 2    | 77.6   | Good start! |\n| 3    | 77.4   | Keeping steady |\n\n## Reminders\n\n- Drink 2L water daily\n- Sleep 7-8 hours\n- Meal prep on Sundays\n- Rest days are important!",
+      "tags": [
+        "fitness",
+        "health",
+        "goals"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "green"
+    },
+    {
+      "id": "en-gb-i7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-22T10:00:00Z",
+      "modifiedAt": "2026-01-22T10:00:00Z",
+      "content": "# Films to Watch\n\nMy cinema and streaming watchlist.\n\n## Priority (Must Watch)\n- [ ] **Dune: Part Two** - Sci-fi epic\n- [ ] **Poor Things** - Yorgos Lanthimos\n- [ ] **The Holdovers** - Comedy drama\n- [ ] **Oppenheimer** - Finally!\n\n## Classic Cinema\n- [ ] \"Casablanca\" (1942)\n- [x] \"2001: A Space Odyssey\" (1968)\n- [ ] \"The Godfather\" (1972)\n- [ ] \"Blade Runner\" (1982)\n\n## Foreign Films\n- [ ] \"Parasite\" (Korea)\n- [x] \"Amélie\" (France)\n- [ ] \"Seven Samurai\" (Japan)\n- [ ] \"City of God\" (Brazil)\n\n## Documentaries\n- [ ] \"Free Solo\"\n- [ ] \"My Octopus Teacher\"\n- [ ] \"Won't You Be My Neighbor?\"\n\n## Recently Watched\n\n### Amélie ⭐⭐⭐⭐⭐\nWhimsical and heartwarming. The colour palette is gorgeous. Audrey Tautou is perfect.\n\n### 2001: A Space Odyssey ⭐⭐⭐⭐\nVisually stunning but deliberately paced. The ending still confuses me!\n\n## Cinema Trips Planned\n- Vue (Friday evenings)\n- BFI Southbank (classic screenings)",
+      "tags": [
+        "films",
+        "entertainment",
+        "watchlist"
       ],
       "attachments": [],
       "pinned": false

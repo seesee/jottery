@@ -4,8 +4,8 @@
   "notes": [
     {
       "id": "fr-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-      "createdAt": "2026-01-23T10:00:00Z",
-      "modifiedAt": "2026-01-23T10:00:00Z",
+      "createdAt": "2026-01-21T10:00:00Z",
+      "modifiedAt": "2026-01-21T10:00:00Z",
       "content": "# Bienvenue sur Jottery !\n\nCeci est un bloc-notes de démonstration présentant les fonctionnalités de Jottery.\n\n## Ce que vous trouverez ici\n\nCette démo inclut des exemples de :\n- Notes organisées avec des tags\n- Listes de courses et de tâches\n- Recettes de cuisine\n- Plans de voyage\n- Notes personnelles\n\n## Pour commencer\n\n1. **Parcourez les notes** - Cliquez sur les notes dans la liste\n2. **Essayez la recherche** - Utilisez la barre de recherche\n3. **Créez les vôtres** - Appuyez sur \"Nouveau\" pour commencer\n4. **Organisez avec des tags** - Utilisez #tag n'importe où\n\n## Astuces\n\n- Appuyez sur `Ctrl+K` pour rechercher\n- Appuyez sur `Ctrl+N` pour une nouvelle note\n- Utilisez les #tags pour l'organisation\n\nBonne exploration !",
       "tags": [
         "bienvenue",
@@ -16,38 +16,9 @@
       "pinned": true
     },
     {
-      "id": "fr-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
-      "createdAt": "2026-01-23T10:05:00Z",
-      "modifiedAt": "2026-01-23T10:05:00Z",
-      "content": "# Liste de courses\n\nChoses à acheter cette semaine.\n\n## Épicerie\n- [ ] Lait (1 litre)\n- [ ] Œufs (12)\n- [ ] Pain de campagne\n- [ ] Fromage (Comté, Brie)\n- [ ] Beurre\n- [ ] Tomates\n- [ ] Concombre\n- [ ] Poulet fermier\n- [ ] Riz\n- [ ] Pâtes\n- [ ] Huile d'olive\n\n## Maison\n- [ ] Essuie-tout\n- [ ] Liquide vaisselle\n- [ ] Ampoules LED\n\n## Autres courses\n- [ ] Récupérer le pressing\n- [ ] La Poste - envoyer le colis\n- [ ] Rendre les livres à la bibliothèque\n\n## Notes\n- Carrefour ferme à 21h\n- Ne pas oublier les sacs réutilisables !",
-      "tags": [
-        "courses",
-        "personnel",
-        "liste"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "red"
-    },
-    {
-      "id": "fr-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-      "createdAt": "2026-01-23T10:10:00Z",
-      "modifiedAt": "2026-01-23T10:10:00Z",
-      "content": "# Bœuf Bourguignon - Recette traditionnelle\n\n*Le grand classique de la cuisine française*\n\n## Ingrédients\n\n### Pour le ragoût\n- 1,5 kg de bœuf à braiser (paleron, macreuse)\n- 200g de lardons fumés\n- 2 oignons\n- 3 carottes\n- 2 gousses d'ail\n- 1 bouteille de vin rouge de Bourgogne\n- 500ml de bouillon de bœuf\n- 2 c. à soupe de concentré de tomates\n- Bouquet garni (thym, laurier, persil)\n- Sel et poivre\n\n### Garniture\n- 250g de champignons de Paris\n- 200g de petits oignons grelots\n- Persil frais haché\n\n## Préparation\n\n### Veille\n1. Couper le bœuf en gros cubes\n2. Mariner dans le vin rouge avec oignons, carottes et bouquet garni\n3. Réfrigérer toute la nuit\n\n### Jour J\n1. Égoutter la viande, réserver la marinade\n2. Faire rissoler les lardons, réserver\n3. Saisir la viande dans la même cocotte\n4. Ajouter les légumes de la marinade\n5. Verser la marinade filtrée et le bouillon\n6. Ajouter le concentré de tomates\n7. Mijoter 3 heures à feu doux\n\n### Finition\n1. Faire sauter les champignons\n2. Glacer les oignons grelots\n3. Ajouter au ragoût 30 min avant la fin\n\n## Conseils\n\n- Meilleur réchauffé le lendemain\n- Servir avec des pommes de terre vapeur ou des pâtes fraîches\n- Un bon Bourgogne rouge pour accompagner\n\nBon appétit !",
-      "tags": [
-        "recette",
-        "cuisine",
-        "français",
-        "classique"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "orange"
-    },
-    {
       "id": "fr-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-      "createdAt": "2026-01-23T10:15:00Z",
-      "modifiedAt": "2026-01-23T10:15:00Z",
+      "createdAt": "2026-01-26T10:00:00Z",
+      "modifiedAt": "2026-01-26T10:00:00Z",
       "content": "# Voyage en Provence 2026\n\n**Durée** : 6 jours (15-20 juin 2026)\n\n## Liste de contrôle\n\n- [x] Réserver hébergement (Aix-en-Provence)\n- [x] Billets de train (TGV)\n- [ ] Louer une voiture\n- [ ] Réserver restaurants\n- [ ] Assurance voyage\n\n## Itinéraire\n\n### Jour 1 : Arrivée\n- TGV Paris-Aix (08:30)\n- Arrivée Aix-TGV (11:30)\n- Récupérer voiture de location\n- Installation à l'hôtel\n- Après-midi : Flâner sur le Cours Mirabeau\n- Dîner : Place des Cardeurs\n\n### Jour 2 : Aix-en-Provence\n- Matin : Atelier Cézanne\n- Marché provençal\n- Après-midi : Fondation Vasarely\n- Soirée : Concert au Festival d'Aix\n\n### Jour 3 : Luberon\n- Route des villages perchés\n- Gordes (plus beau village)\n- Abbaye de Sénanque (lavande!)\n- Roussillon (ocres)\n- Déjeuner à Bonnieux\n\n### Jour 4 : Avignon\n- Palais des Papes\n- Pont d'Avignon\n- Déjeuner dans le centre historique\n- Balade dans les ruelles\n\n### Jour 5 : Calanques\n- Parc national des Calanques\n- Randonnée Calanque d'En-Vau\n- Baignade (si beau temps)\n- Dîner de bouillabaisse à Cassis\n\n### Jour 6 : Départ\n- Grasse matinée\n- Derniers achats (savons, lavande)\n- TGV retour (16:00)\n\n## Restaurants à réserver\n\n- **Le Formal** (Aix) - Gastronomique\n- **Chez Thome** (Gordes) - Vue panoramique\n- **La Petite Maison** (Cassis) - Fruits de mer\n\n## Budget\n\n- Train : 180€\n- Hôtel (5 nuits) : 600€\n- Voiture : 200€\n- Repas : 400€\n- Activités : 150€\n- **Total** : ~1 530€\n\n## À emporter\n\n- Chapeau et crème solaire\n- Chaussures de randonnée\n- Maillot de bain\n- Appareil photo\n- Guide du Routard\n\nVivement les vacances !",
       "tags": [
         "voyage",
@@ -60,9 +31,37 @@
       "color": "blue"
     },
     {
+      "id": "fr-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-24T10:00:00Z",
+      "modifiedAt": "2026-01-24T10:00:00Z",
+      "content": "# Bœuf Bourguignon - Recette traditionnelle\n\n*Le grand classique de la cuisine française*\n\n## Ingrédients\n\n### Pour le ragoût\n- 1,5 kg de bœuf à braiser (paleron, macreuse)\n- 200g de lardons fumés\n- 2 oignons\n- 3 carottes\n- 2 gousses d'ail\n- 1 bouteille de vin rouge de Bourgogne\n- 500ml de bouillon de bœuf\n- 2 c. à soupe de concentré de tomates\n- Bouquet garni (thym, laurier, persil)\n- Sel et poivre\n\n### Garniture\n- 250g de champignons de Paris\n- 200g de petits oignons grelots\n- Persil frais haché\n\n## Préparation\n\n### Veille\n1. Couper le bœuf en gros cubes\n2. Mariner dans le vin rouge avec oignons, carottes et bouquet garni\n3. Réfrigérer toute la nuit\n\n### Jour J\n1. Égoutter la viande, réserver la marinade\n2. Faire rissoler les lardons, réserver\n3. Saisir la viande dans la même cocotte\n4. Ajouter les légumes de la marinade\n5. Verser la marinade filtrée et le bouillon\n6. Ajouter le concentré de tomates\n7. Mijoter 3 heures à feu doux\n\n### Finition\n1. Faire sauter les champignons\n2. Glacer les oignons grelots\n3. Ajouter au ragoût 30 min avant la fin\n\n## Conseils\n\n- Meilleur réchauffé le lendemain\n- Servir avec des pommes de terre vapeur ou des pâtes fraîches\n- Un bon Bourgogne rouge pour accompagner\n\nBon appétit !",
+      "tags": [
+        "recette",
+        "cuisine",
+        "français",
+        "classique"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "red"
+    },
+    {
+      "id": "fr-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-25T10:00:00Z",
+      "modifiedAt": "2026-01-25T10:00:00Z",
+      "content": "# Liste de courses\n\nChoses à acheter cette semaine.\n\n## Épicerie\n- [ ] Lait (1 litre)\n- [ ] Œufs (12)\n- [ ] Pain de campagne\n- [ ] Fromage (Comté, Brie)\n- [ ] Beurre\n- [ ] Tomates\n- [ ] Concombre\n- [ ] Poulet fermier\n- [ ] Riz\n- [ ] Pâtes\n- [ ] Huile d'olive\n\n## Maison\n- [ ] Essuie-tout\n- [ ] Liquide vaisselle\n- [ ] Ampoules LED\n\n## Autres courses\n- [ ] Récupérer le pressing\n- [ ] La Poste - envoyer le colis\n- [ ] Rendre les livres à la bibliothèque\n\n## Notes\n- Carrefour ferme à 21h\n- Ne pas oublier les sacs réutilisables !",
+      "tags": [
+        "courses",
+        "personnel",
+        "liste"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
       "id": "fr-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
-      "createdAt": "2026-01-23T10:20:00Z",
-      "modifiedAt": "2026-01-23T10:20:00Z",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
       "content": "# Menu de la semaine\n\nSemaine du 20 au 26 janvier 2026\n\n## Lundi\n- **Petit-déj** : Tartines beurre-confiture, café\n- **Déjeuner** : Salade composée\n- **Dîner** : Soupe de légumes, fromage\n\n## Mardi\n- **Petit-déj** : Croissant, jus d'orange\n- **Déjeuner** : Croque-monsieur\n- **Dîner** : Poulet rôti, haricots verts\n\n## Mercredi\n- **Petit-déj** : Yaourt, muesli\n- **Déjeuner** : Restes du poulet\n- **Dîner** : Quiche lorraine, salade\n\n## Jeudi\n- **Petit-déj** : Œufs brouillés, pain grillé\n- **Déjeuner** : Sandwich jambon-beurre\n- **Dîner** : Pâtes carbonara\n\n## Vendredi\n- **Petit-déj** : Pain au chocolat\n- **Déjeuner** : Restes\n- **Dîner** : Poisson, riz, légumes\n\n## Samedi\n- **Petit-déj** : Brunch tardif\n- **Déjeuner** : Léger (fromage, fruits)\n- **Dîner** : Bœuf bourguignon (voir recette)\n\n## Dimanche\n- **Petit-déj** : Crêpes\n- **Déjeuner** : Rôti du dimanche\n- **Dîner** : Léger - plateau de fromages\n\n## Liste de courses\n\n- Poulet (1,5 kg)\n- Bœuf à braiser (1,5 kg)\n- Poisson (2 filets)\n- Légumes frais\n- Fromages variés\n- Œufs\n- Pain, viennoiseries\n- Pâtes, riz",
       "tags": [
         "menu",
@@ -74,13 +73,54 @@
     },
     {
       "id": "fr-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
-      "createdAt": "2026-01-23T10:25:00Z",
-      "modifiedAt": "2026-01-23T10:25:00Z",
+      "createdAt": "2026-01-27T10:00:00Z",
+      "modifiedAt": "2026-01-27T10:00:00Z",
       "content": "# Livres à lire 2026\n\nMa liste de lecture pour cette année.\n\n## En cours\n\n- [ ] **\"L'Étranger\"** - Albert Camus\n  - Partie 2, chapitre 3\n  - Fascinant !\n\n## Littérature française\n\n- [ ] \"Les Misérables\" - Victor Hugo\n- [x] \"Le Petit Prince\" - Antoine de Saint-Exupéry\n- [ ] \"Madame Bovary\" - Gustave Flaubert\n- [ ] \"À la recherche du temps perdu\" (Tome 1) - Marcel Proust\n\n## Classiques\n\n- [ ] \"Crime et Châtiment\" - Fiodor Dostoïevski\n- [ ] \"Don Quichotte\" - Miguel de Cervantes\n- [x] \"1984\" - George Orwell\n\n## Essais\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Le Pouvoir des habitudes\" - Charles Duhigg\n- [ ] \"Thinking, Fast and Slow\" - Daniel Kahneman\n\n## Objectif\n\n- **But** : 18 livres\n- **Progrès** : 2/18\n\n## Notes de lecture\n\n### \"Le Petit Prince\"\n- On ne voit bien qu'avec le cœur\n- L'essentiel est invisible pour les yeux\n- Tu deviens responsable pour toujours de ce que tu as apprivoisé",
       "tags": [
         "livres",
         "lecture",
         "objectifs"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "orange"
+    },
+    {
+      "id": "fr-g7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-29T10:00:00Z",
+      "modifiedAt": "2026-01-29T10:00:00Z",
+      "content": "# Notes de projet : Refonte du site web\n\n**Statut** : En cours\n**Échéance** : 28 février 2026\n\n## Objectifs\n\n- Moderniser l'interface utilisateur\n- Améliorer la réactivité mobile\n- Réduire les temps de chargement de 40%\n- Mettre à jour les couleurs et la typographie\n\n## Tâches\n\n### Phase 1 : Recherche (Terminée)\n- [x] Analyse concurrentielle\n- [x] Résultats du sondage examinés\n- [x] Entretiens avec les parties prenantes\n\n### Phase 2 : Design (En cours)\n- [x] Wireframes approuvés\n- [ ] Maquettes haute fidélité\n- [ ] Documentation du système de design\n- [ ] Audit d'accessibilité\n\n### Phase 3 : Développement\n- [ ] Implémentation front-end\n- [ ] Mises à jour API back-end\n- [ ] Optimisation des performances\n- [ ] Tests navigateurs\n\n## Notes de réunion\n\n### 15 jan - Lancement\n- Budget confirmé : 18 000 €\n- Délai : 6 semaines\n- Contact principal : Sarah (Marketing)\n\n### 22 jan - Revue design\n- Placement du logo approuvé\n- Pied de page plus sombre demandé\n- Navigation mobile à retravailler",
+      "tags": [
+        "travail",
+        "projet",
+        "site-web"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "fr-h7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-02-01T10:00:00Z",
+      "modifiedAt": "2026-02-01T10:00:00Z",
+      "content": "# Objectifs Fitness 2026\n\n## Stats actuelles\n- Poids : 78 kg\n- Objectif : 73 kg\n- Exercice hebdomadaire : 2x\n\n## Programme d'entraînement\n\n### Lundi - Haut du corps\n- Pompes : 3 séries de 15\n- Rowing haltères : 3 séries de 12\n- Développé épaules : 3 séries de 10\n- Planche : 3 x 45 secondes\n\n### Mercredi - Bas du corps\n- Squats : 3 séries de 15\n- Fentes : 3 séries de 12 chaque jambe\n- Mollets : 3 séries de 20\n- Pont fessier : 3 séries de 15\n\n### Vendredi - Cardio\n- 30 minutes de jogging ou vélo\n- Étirements\n\n### Week-end - Repos actif\n- Marche\n- Yoga léger\n- Natation (optionnel)\n\n## Suivi des progrès\n\n| Semaine | Poids | Notes |\n|---------|-------|-------|\n| 1       | 78,0  | Point de départ |\n| 2       | 77,6  | Bon début ! |\n| 3       | 77,4  | Stable |\n\n## Rappels\n\n- Boire 2L d'eau par jour\n- Dormir 7-8 heures\n- Préparer les repas le dimanche\n- Les jours de repos sont importants !",
+      "tags": [
+        "fitness",
+        "santé",
+        "objectifs"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "green"
+    },
+    {
+      "id": "fr-i7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-22T10:00:00Z",
+      "modifiedAt": "2026-01-22T10:00:00Z",
+      "content": "# Films à voir\n\nMa liste de films à regarder.\n\n## Priorité (À voir absolument)\n- [ ] **Dune : Deuxième partie** - Épopée SF\n- [ ] **Pauvres Créatures** - Yorgos Lanthimos\n- [ ] **The Holdovers** - Comédie dramatique\n- [ ] **Oppenheimer** - Enfin !\n\n## Classiques du cinéma\n- [ ] \"Casablanca\" (1942)\n- [x] \"2001 : L'Odyssée de l'espace\" (1968)\n- [ ] \"Le Parrain\" (1972)\n- [ ] \"Blade Runner\" (1982)\n\n## Cinéma français\n- [ ] \"Le Fabuleux Destin d'Amélie Poulain\"\n- [x] \"Les Intouchables\"\n- [ ] \"La Haine\"\n- [ ] \"Le Dîner de Cons\"\n\n## Documentaires\n- [ ] \"Free Solo\"\n- [ ] \"La Sagesse de la pieuvre\"\n- [ ] \"Demain\"\n\n## Vus récemment\n\n### Les Intouchables ⭐⭐⭐⭐⭐\nTouchant et drôle. Omar Sy est parfait.\n\n### 2001 : L'Odyssée de l'espace ⭐⭐⭐⭐\nVisuellement époustouflant. La fin me laisse toujours perplexe !\n\n## Sorties cinéma prévues\n- Séances du vendredi soir\n- Cinémathèque pour les classiques",
+      "tags": [
+        "films",
+        "divertissement",
+        "watchlist"
       ],
       "attachments": [],
       "pinned": false

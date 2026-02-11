@@ -78,6 +78,40 @@ check_jottery() {
     log_info "Using jottery: $TUI_BIN_DIR/jottery"
 }
 
+# Check if server binary exists
+check_server() {
+    local server_bin="$PROJECT_ROOT/server/target/release/jottery-server"
+    if [[ ! -x "$server_bin" ]]; then
+        log_warn "Server binary not found at: $server_bin"
+        log_info "Build it with: cd $PROJECT_ROOT/server && cargo build --release"
+        log_info "Sync demo tape will be skipped without server"
+        return 1
+    fi
+    return 0
+}
+
+# Start demo sync server
+start_demo_server() {
+    if ! check_server; then
+        return 1
+    fi
+
+    log_info "Starting demo sync server..."
+    "$SCRIPT_DIR/start-demo-server.sh" --bg
+
+    # Give server a moment to fully initialise
+    sleep 2
+    return 0
+}
+
+# Stop demo sync server
+stop_demo_server() {
+    if [[ -f "$SCRIPT_DIR/demo-server/server.pid" ]]; then
+        log_info "Stopping demo sync server..."
+        "$SCRIPT_DIR/start-demo-server.sh" --stop
+    fi
+}
+
 # Map language code to LANG environment variable
 get_locale_for_lang() {
     local lang="$1"
@@ -101,25 +135,26 @@ get_locale_for_lang() {
     esac
 }
 
-# Get search term for each language (matches travel note content)
+# Get search term for each language (matches travel note content in native script)
+# These terms must exist in the travel notes for each language
 get_search_term() {
     local lang="$1"
     case "$lang" in
-        en-GB) echo "lake district" ;;
-        en-US) echo "yosemite" ;;
-        de)    echo "schwarzwald" ;;
-        fr)    echo "provence" ;;
-        es)    echo "andalucia" ;;
-        pt)    echo "algarve" ;;
-        it)    echo "toscana" ;;
-        nl)    echo "amsterdam" ;;
-        pl)    echo "krakow" ;;
-        ru)    echo "baikal" ;;
-        tr)    echo "kapadokya" ;;
-        el)    echo "santorini" ;;
-        ja)    echo "kyoto" ;;
-        ko)    echo "jeju" ;;
-        zh)    echo "guilin" ;;
+        en-GB) echo "Lake District" ;;
+        en-US) echo "Yosemite" ;;
+        de)    echo "Schwarzwald" ;;
+        fr)    echo "Provence" ;;
+        es)    echo "Andalucía" ;;
+        pt)    echo "Algarve" ;;
+        it)    echo "Toscana" ;;
+        nl)    echo "Zeeland" ;;
+        pl)    echo "Kraków" ;;
+        ru)    echo "Петербург" ;;
+        tr)    echo "Kapadokya" ;;
+        el)    echo "Σαντορίνη" ;;
+        ja)    echo "京都" ;;
+        ko)    echo "제주" ;;
+        zh)    echo "杭州" ;;
         *)     echo "travel" ;;
     esac
 }
@@ -129,9 +164,10 @@ get_note_id() {
     local lang="$1"
     # All demo notes use format: {lang}-d4e5f6a7-... for the travel note
     # Use short prefix that jottery's partial match will find
+    # Note: IDs use lowercase language codes
     case "$lang" in
-        en-GB) echo "en-GB-d4" ;;
-        en-US) echo "en-US-d4" ;;
+        en-GB) echo "en-gb-d4" ;;
+        en-US) echo "en-us-d4" ;;
         *)     echo "${lang}-d4" ;;
     esac
 }
@@ -272,6 +308,13 @@ generate_tape() {
     local tape_file="$VHS_DIR/${tape_name}.tape"
     local output_file="$OUTPUT_DIR/$lang/${tape_name}.gif"
     local demo_notes="$SCRIPT_DIR/jottery-demo-notes-${lang}.json"
+    local needs_server=false
+    local server_started=false
+
+    # Check if this tape needs the sync server
+    if [[ "$tape_name" == "tui-sync" ]]; then
+        needs_server=true
+    fi
 
     # Check demo notes file exists
     if [[ ! -f "$demo_notes" ]]; then
@@ -292,6 +335,16 @@ generate_tape() {
         return 1
     fi
 
+    # Start sync server if needed
+    if $needs_server; then
+        if start_demo_server; then
+            server_started=true
+        else
+            log_warn "  Sync server not available, skipping $tape_name"
+            return 1
+        fi
+    fi
+
     # Create output directory
     mkdir -p "$(dirname "$output_file")"
 
@@ -299,12 +352,15 @@ generate_tape() {
 
     # Set environment variables for jottery and VHS tapes
     # JOTTERY_DB_PATH - database location
-    # LANG - locale for UI language
+    # LANG/LC_ALL/LC_TIME - locale for UI language and date formatting
     # TUI_BIN_DIR - path to jottery binary
     # DEMO_* - language-specific text for demos
+    local demo_locale="$(get_locale_for_lang "$lang")"
     export JOTTERY_DB_PATH="$db_path"
     export TUI_BIN_DIR="$TUI_BIN_DIR"
-    export LANG="$(get_locale_for_lang "$lang")"
+    export LANG="$demo_locale"
+    export LC_ALL="$demo_locale"
+    export LC_TIME="$demo_locale"
     export DEMO_SEARCH="$(get_search_term "$lang")"
     export DEMO_TEXT="$(get_sample_text "$lang")"
     export DEMO_NOTE="$(get_quick_note "$lang")"
@@ -319,15 +375,22 @@ generate_tape() {
     local temp_tape=$(mktemp)
     envsubst < "$tape_file" > "$temp_tape"
 
+    local result=0
     if vhs "$temp_tape" --output "$output_file" 2>&1; then
         rm -f "$temp_tape"
         log_success "  Created: $output_file"
-        return 0
     else
         rm -f "$temp_tape"
         log_error "  Failed: $tape_name for $lang"
-        return 1
+        result=1
     fi
+
+    # Stop sync server if we started it
+    if $server_started; then
+        stop_demo_server
+    fi
+
+    return $result
 }
 
 # Generate all tapes for a language

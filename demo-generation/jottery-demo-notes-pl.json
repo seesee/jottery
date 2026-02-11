@@ -4,8 +4,8 @@
   "notes": [
     {
       "id": "pl-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-      "createdAt": "2026-01-23T10:00:00Z",
-      "modifiedAt": "2026-01-23T10:00:00Z",
+      "createdAt": "2026-01-21T10:00:00Z",
+      "modifiedAt": "2026-01-21T10:00:00Z",
       "content": "# Witaj w Jottery!\n\nTo jest demonstracyjny notatnik prezentujący możliwości Jottery.\n\n## Co tutaj znajdziesz\n\nTa demonstracja zawiera przykłady:\n- Uporządkowanych notatek z tagami\n- List zakupów i zadań\n- Przepisów kulinarnych\n- Planów podróży\n- Notatek osobistych\n\n## Jak zacząć\n\n1. **Przeglądaj notatki** - Kliknij na notatkę na liście\n2. **Wypróbuj wyszukiwanie** - Użyj paska wyszukiwania\n3. **Twórz własne** - Naciśnij \"Nowy\" aby zacząć\n4. **Organizuj tagami** - Używaj #tag gdziekolwiek\n\n## Wskazówki\n\n- Naciśnij `Ctrl+K` aby szukać\n- Naciśnij `Ctrl+N` dla nowej notatki\n- Używaj #tagów do organizacji\n\nMiłego odkrywania!",
       "tags": [
         "witaj",
@@ -16,38 +16,9 @@
       "pinned": true
     },
     {
-      "id": "pl-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
-      "createdAt": "2026-01-23T10:05:00Z",
-      "modifiedAt": "2026-01-23T10:05:00Z",
-      "content": "# Lista zakupów\n\nRzeczy do kupienia w tym tygodniu.\n\n## Spożywcze\n- [ ] Mleko (1 litr)\n- [ ] Jajka (10 sztuk)\n- [ ] Chleb razowy\n- [ ] Ser żółty\n- [ ] Masło\n- [ ] Pomidory\n- [ ] Ogórek\n- [ ] Pierś z kurczaka\n- [ ] Ryż\n- [ ] Makaron\n- [ ] Oliwa z oliwek\n\n## Dom\n- [ ] Ręczniki papierowe\n- [ ] Płyn do naczyń\n- [ ] Żarówki LED\n\n## Inne sprawy\n- [ ] Odebrać rzeczy z pralni\n- [ ] Poczta - wysłać paczkę\n- [ ] Oddać książki do biblioteki\n\n## Notatki\n- Biedronka czynna do 22:00\n- Nie zapomnieć toreb wielorazowych!",
-      "tags": [
-        "zakupy",
-        "osobiste",
-        "lista"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "red"
-    },
-    {
-      "id": "pl-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-      "createdAt": "2026-01-23T10:10:00Z",
-      "modifiedAt": "2026-01-23T10:10:00Z",
-      "content": "# Bigos - Tradycyjny przepis\n\n*Polska potrawa narodowa*\n\n## Składniki\n\n### Podstawa\n- 1 kg kapusty kiszonej\n- 500g kapusty białej świeżej\n- 300g kiełbasy myśliwskiej\n- 200g boczku wędzonego\n- 200g schabu\n- 100g suszonych grzybów\n- 2 cebule\n- 3 suszone śliwki\n- 2 łyżki koncentratu pomidorowego\n- 500ml bulionu mięsnego\n- Liść laurowy, ziele angielskie\n- Sól, pieprz, cukier\n\n## Przygotowanie\n\n### Dzień przed\n1. Namoczyć suszone grzyby w wodzie\n2. Jeśli kapusta jest bardzo kwaśna - przepłukać\n\n### Przygotowanie mięs\n1. Pokroić boczek w kostkę i podsmażyć\n2. Pokroić schabu w kostkę\n3. Kiełbasę pokroić w plastry\n4. Podsmażyć mięsa na tłuszczu z boczku\n5. Odstawić\n\n### Gotowanie\n1. W dużym garnku zeszklić cebulę\n2. Dodać obie kapusty, wymieszać\n3. Zalać bulionem i wodą z grzybów\n4. Dodać pokrojone grzyby i śliwki\n5. Gotować na wolnym ogniu 1 godzinę\n6. Dodać mięsa i kiełbasę\n7. Dodać koncentrat, przyprawy\n8. Gotować kolejne 1-2 godziny\n\n### Finalizacja\n1. Doprawić do smaku (sól, pieprz, odrobina cukru)\n2. Najlepiej odstawić na noc\n3. Następnego dnia odgrzać\n\n## Wskazówki\n\n- Bigos jest lepszy z każdym odgrzewaniem\n- Można zamrozić na później\n- Podawać z chlebem na zakwasie\n- Pasuje do niego wódka (na zimę)\n\nSmacznego!",
-      "tags": [
-        "przepis",
-        "gotowanie",
-        "polski",
-        "bigos"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "orange"
-    },
-    {
       "id": "pl-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-      "createdAt": "2026-01-23T10:15:00Z",
-      "modifiedAt": "2026-01-23T10:15:00Z",
+      "createdAt": "2026-01-26T10:00:00Z",
+      "modifiedAt": "2026-01-26T10:00:00Z",
       "content": "# Podróż do Krakowa 2026\n\n**Czas trwania**: 4 dni (15-18 czerwca 2026)\n\n## Lista kontrolna\n\n- [x] Zarezerwować nocleg (Stare Miasto)\n- [x] Bilety kolejowe\n- [ ] Bilety do Kopalni Soli\n- [ ] Rezerwacje restauracji\n- [ ] Ubezpieczenie podróżne\n\n## Plan\n\n### Dzień 1: Przyjazd\n- Pociąg z Warszawy (08:00)\n- Przyjazd do Krakowa (10:30)\n- Zameldowanie w hotelu\n- Popołudnie: Spacer po Starym Mieście\n- Rynek Główny, Sukiennice\n- Kolacja: Tradycyjna kuchnia polska\n\n### Dzień 2: Wawel i Kazimierz\n- Rano: Zamek Królewski na Wawelu\n- Katedra Wawelska\n- Smocza Jama\n- Popołudnie: Kazimierz\n- Synagoga Remuh\n- Kolacja: Żydowska restauracja\n\n### Dzień 3: Wieliczka\n- Wycieczka do Kopalni Soli\n- Trasa turystyczna (3h)\n- Kaplica św. Kingi\n- Powrót do Krakowa\n- Wieczór: Koncert w Filharmonii\n\n### Dzień 4: Odjazd\n- Poranny spacer po Plantach\n- Zakupy pamiątek (obwarzanki!)\n- Pociąg powrotny (14:00)\n\n## Restauracje\n\n- **Pod Aniołami** - Tradycyjna kuchnia\n- **Ariel** (Kazimierz) - Kuchnia żydowska\n- **Wierzynek** - Historyczna restauracja\n\n## Budżet\n\n- Bilety kolejowe: 120 zł\n- Hotel (3 noce): 600 zł\n- Wstępy: 150 zł\n- Jedzenie: 400 zł\n- Inne: 100 zł\n- **Razem**: ~1 370 zł\n\n## Co zabrać\n\n- Wygodne buty (bruk!)\n- Ciepły sweter (kopalnia)\n- Aparat fotograficzny\n- Przewodnik\n- Parasol (na wszelki wypadek)\n\nNie mogę się doczekać!",
       "tags": [
         "podróż",
@@ -60,9 +31,37 @@
       "color": "blue"
     },
     {
+      "id": "pl-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-24T10:00:00Z",
+      "modifiedAt": "2026-01-24T10:00:00Z",
+      "content": "# Bigos - Tradycyjny przepis\n\n*Polska potrawa narodowa*\n\n## Składniki\n\n### Podstawa\n- 1 kg kapusty kiszonej\n- 500g kapusty białej świeżej\n- 300g kiełbasy myśliwskiej\n- 200g boczku wędzonego\n- 200g schabu\n- 100g suszonych grzybów\n- 2 cebule\n- 3 suszone śliwki\n- 2 łyżki koncentratu pomidorowego\n- 500ml bulionu mięsnego\n- Liść laurowy, ziele angielskie\n- Sól, pieprz, cukier\n\n## Przygotowanie\n\n### Dzień przed\n1. Namoczyć suszone grzyby w wodzie\n2. Jeśli kapusta jest bardzo kwaśna - przepłukać\n\n### Przygotowanie mięs\n1. Pokroić boczek w kostkę i podsmażyć\n2. Pokroić schabu w kostkę\n3. Kiełbasę pokroić w plastry\n4. Podsmażyć mięsa na tłuszczu z boczku\n5. Odstawić\n\n### Gotowanie\n1. W dużym garnku zeszklić cebulę\n2. Dodać obie kapusty, wymieszać\n3. Zalać bulionem i wodą z grzybów\n4. Dodać pokrojone grzyby i śliwki\n5. Gotować na wolnym ogniu 1 godzinę\n6. Dodać mięsa i kiełbasę\n7. Dodać koncentrat, przyprawy\n8. Gotować kolejne 1-2 godziny\n\n### Finalizacja\n1. Doprawić do smaku (sól, pieprz, odrobina cukru)\n2. Najlepiej odstawić na noc\n3. Następnego dnia odgrzać\n\n## Wskazówki\n\n- Bigos jest lepszy z każdym odgrzewaniem\n- Można zamrozić na później\n- Podawać z chlebem na zakwasie\n- Pasuje do niego wódka (na zimę)\n\nSmacznego!",
+      "tags": [
+        "przepis",
+        "gotowanie",
+        "polski",
+        "bigos"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "red"
+    },
+    {
+      "id": "pl-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-25T10:00:00Z",
+      "modifiedAt": "2026-01-25T10:00:00Z",
+      "content": "# Lista zakupów\n\nRzeczy do kupienia w tym tygodniu.\n\n## Spożywcze\n- [ ] Mleko (1 litr)\n- [ ] Jajka (10 sztuk)\n- [ ] Chleb razowy\n- [ ] Ser żółty\n- [ ] Masło\n- [ ] Pomidory\n- [ ] Ogórek\n- [ ] Pierś z kurczaka\n- [ ] Ryż\n- [ ] Makaron\n- [ ] Oliwa z oliwek\n\n## Dom\n- [ ] Ręczniki papierowe\n- [ ] Płyn do naczyń\n- [ ] Żarówki LED\n\n## Inne sprawy\n- [ ] Odebrać rzeczy z pralni\n- [ ] Poczta - wysłać paczkę\n- [ ] Oddać książki do biblioteki\n\n## Notatki\n- Biedronka czynna do 22:00\n- Nie zapomnieć toreb wielorazowych!",
+      "tags": [
+        "zakupy",
+        "osobiste",
+        "lista"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
       "id": "pl-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
-      "createdAt": "2026-01-23T10:20:00Z",
-      "modifiedAt": "2026-01-23T10:20:00Z",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
       "content": "# Jadłospis tygodniowy\n\nTydzień 20-26 stycznia 2026\n\n## Poniedziałek\n- **Śniadanie**: Kanapki z serem\n- **Obiad**: Rosół z makaronem\n- **Kolacja**: Jajecznica z chlebem\n\n## Wtorek\n- **Śniadanie**: Jogurt z musli\n- **Obiad**: Schabowy z ziemniakami\n- **Kolacja**: Sałatka z tuńczykiem\n\n## Środa\n- **Śniadanie**: Owsianka z owocami\n- **Obiad**: Pierogi ruskie\n- **Kolacja**: Zupa pomidorowa\n\n## Czwartek\n- **Śniadanie**: Jajka sadzone\n- **Obiad**: Gulasz wołowy\n- **Kolacja**: Kanapki z wędliną\n\n## Piątek\n- **Śniadanie**: Bułka z dżemem\n- **Obiad**: Ryba smażona z frytkami\n- **Kolacja**: Pizza (zasłużona!)\n\n## Sobota\n- **Śniadanie**: Późne śniadanie\n- **Obiad**: Na mieście\n- **Kolacja**: Bigos (patrz przepis)\n\n## Niedziela\n- **Śniadanie**: Naleśniki\n- **Obiad**: Niedzielny obiad rodzinny\n- **Kolacja**: Lekka - chleb z masłem\n\n## Lista zakupów\n\n- Kurczak (1 kg)\n- Schab (500g)\n- Wołowina (500g)\n- Świeże warzywa\n- Ser, masło\n- Jajka\n- Chleb, bułki\n- Makaron, ryż",
       "tags": [
         "jadłospis",
@@ -74,13 +73,54 @@
     },
     {
       "id": "pl-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
-      "createdAt": "2026-01-23T10:25:00Z",
-      "modifiedAt": "2026-01-23T10:25:00Z",
+      "createdAt": "2026-01-27T10:00:00Z",
+      "modifiedAt": "2026-01-27T10:00:00Z",
       "content": "# Książki do przeczytania 2026\n\nMoja lista lektur na ten rok.\n\n## Obecnie czytam\n\n- [ ] **\"Solaris\"** - Stanisław Lem\n  - Rozdział 8\n  - Fascynujące!\n\n## Literatura polska\n\n- [ ] \"Lalka\" - Bolesław Prus\n- [x] \"Wiedźmin - Ostatnie życzenie\" - Andrzej Sapkowski\n- [ ] \"Ferdydurke\" - Witold Gombrowicz\n- [ ] \"Quo Vadis\" - Henryk Sienkiewicz\n\n## Klasyka światowa\n\n- [ ] \"Zbrodnia i kara\" - Fiodor Dostojewski\n- [ ] \"Sto lat samotności\" - Gabriel García Márquez\n- [x] \"Rok 1984\" - George Orwell\n\n## Literatura faktu\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Siła nawyku\" - Charles Duhigg\n- [ ] \"Pułapki myślenia\" - Daniel Kahneman\n\n## Cel\n\n- **Cel**: 18 książek\n- **Postęp**: 2/18\n\n## Notatki z lektury\n\n### \"Wiedźmin\"\n- Relatywizm moralny w świecie fantasy\n- Słowiańskie motywy w nowoczesnym wydaniu\n- Mniejsze zło jako filozoficzny wybór",
       "tags": [
         "książki",
         "czytanie",
         "cele"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "orange"
+    },
+    {
+      "id": "pl-g7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-29T10:00:00Z",
+      "modifiedAt": "2026-01-29T10:00:00Z",
+      "content": "# Notatki projektu: Redesign strony\n\n**Status**: W trakcie\n**Termin**: 28 lutego 2026\n\n## Cele\n\n- Zmodernizować interfejs użytkownika\n- Poprawić responsywność mobilną\n- Zmniejszyć czas ładowania o 40%\n- Zaktualizować kolory marki i typografię\n\n## Zadania\n\n### Faza 1: Badania (Ukończona)\n- [x] Analiza konkurencji\n- [x] Przegląd wyników ankiety\n- [x] Wywiady z interesariuszami\n\n### Faza 2: Projektowanie (Bieżąca)\n- [x] Wireframes zatwierdzone\n- [ ] Makiety wysokiej jakości\n- [ ] Dokumentacja systemu projektowego\n- [ ] Audyt dostępności\n\n### Faza 3: Rozwój\n- [ ] Implementacja frontendu\n- [ ] Aktualizacje API backendu\n- [ ] Optymalizacja wydajności\n- [ ] Testy przeglądarek\n\n## Notatki ze spotkań\n\n### 15 sty - Rozpoczęcie\n- Budżet potwierdzony: 80 000 zł\n- Harmonogram: 6 tygodni\n- Osoba kontaktowa: Sara (Marketing)\n\n### 22 sty - Przegląd projektu\n- Umiejscowienie logo zatwierdzone\n- Prośba o ciemniejszą stopkę\n- Nawigacja mobilna wymaga poprawek",
+      "tags": [
+        "praca",
+        "projekt",
+        "strona"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "pl-h7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-02-01T10:00:00Z",
+      "modifiedAt": "2026-02-01T10:00:00Z",
+      "content": "# Cele fitness 2026\n\n## Aktualne statystyki\n- Waga: 78 kg\n- Cel: 73 kg\n- Ćwiczenia tygodniowo: 2x\n\n## Tygodniowy plan treningowy\n\n### Poniedziałek - Górna część ciała\n- Pompki: 3 serie po 15\n- Wiosłowanie hantlami: 3 serie po 12\n- Wyciskanie na ramiona: 3 serie po 10\n- Plank: 3 x 45 sekund\n\n### Środa - Dolna część ciała\n- Przysiady: 3 serie po 15\n- Wykroki: 3 serie po 12 na nogę\n- Wspięcia na palce: 3 serie po 20\n- Mostek: 3 serie po 15\n\n### Piątek - Cardio\n- 30 minut joggingu lub jazdy na rowerze\n- Rozciąganie\n\n### Weekend - Aktywny odpoczynek\n- Spacery\n- Lekka joga\n- Pływanie (opcjonalnie)\n\n## Śledzenie postępów\n\n| Tydzień | Waga | Uwagi |\n|---------|------|-------|\n| 1       | 78,0 | Punkt startowy |\n| 2       | 77,6 | Dobry początek! |\n| 3       | 77,4 | Stabilnie |\n\n## Przypomnienia\n\n- Pić 2L wody dziennie\n- Spać 7-8 godzin\n- Meal prep w niedzielę\n- Dni odpoczynku są ważne!",
+      "tags": [
+        "fitness",
+        "zdrowie",
+        "cele"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "green"
+    },
+    {
+      "id": "pl-i7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-22T10:00:00Z",
+      "modifiedAt": "2026-01-22T10:00:00Z",
+      "content": "# Filmy do obejrzenia\n\nMoja lista kinowa i streamingowa.\n\n## Priorytet (Must-see)\n- [ ] **Diuna: Część druga** - Epicka sci-fi\n- [ ] **Biedne istoty** - Yorgos Lanthimos\n- [ ] **The Holdovers** - Komediodramat\n- [ ] **Oppenheimer** - Nareszcie!\n\n## Klasyki kina\n- [ ] \"Casablanca\" (1942)\n- [x] \"2001: Odyseja kosmiczna\" (1968)\n- [ ] \"Ojciec chrzestny\" (1972)\n- [ ] \"Łowca androidów\" (1982)\n\n## Kino polskie\n- [ ] \"Ida\"\n- [x] \"Zimna wojna\"\n- [ ] \"Katyń\"\n- [ ] \"Człowiek z marmuru\"\n\n## Dokumenty\n- [ ] \"Free Solo\"\n- [ ] \"Mój przyjaciel ośmiornica\"\n- [ ] \"Państwo strachu\"\n\n## Ostatnio oglądane\n\n### Zimna wojna ⭐⭐⭐⭐⭐\nPiękne i poruszające. Pawlikowski w formie.\n\n### 2001: Odyseja kosmiczna ⭐⭐⭐⭐\nWizualnie oszałamiający. Zakończenie wciąż mnie myli!\n\n## Plany kinowe\n- Piątkowy wieczór\n- Kino studyjne na klasyki",
+      "tags": [
+        "filmy",
+        "rozrywka",
+        "watchlist"
       ],
       "attachments": [],
       "pinned": false

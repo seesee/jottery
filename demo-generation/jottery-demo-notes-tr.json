@@ -4,8 +4,8 @@
   "notes": [
     {
       "id": "tr-a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
-      "createdAt": "2026-01-23T10:00:00Z",
-      "modifiedAt": "2026-01-23T10:00:00Z",
+      "createdAt": "2026-01-21T10:00:00Z",
+      "modifiedAt": "2026-01-21T10:00:00Z",
       "content": "# Jottery'ye Hoş Geldiniz!\n\nBu, Jottery'nin özelliklerini gösteren bir demo not defteridir.\n\n## Burada ne bulacaksınız\n\nBu demo şunları içerir:\n- Etiketlerle düzenlenmiş notlar\n- Yapılacaklar ve alışveriş listeleri\n- Yemek tarifleri\n- Seyahat planları\n- Kişisel notlar\n\n## Başlarken\n\n1. **Notlara göz atın** - Listedeki notlara tıklayın\n2. **Aramayı deneyin** - Arama çubuğunu kullanın\n3. **Kendinizinkini oluşturun** - Başlamak için \"Yeni\"ye basın\n4. **Etiketlerle düzenleyin** - Her yerde #etiket kullanın\n\n## İpuçları\n\n- Aramak için `Ctrl+K` tuşuna basın\n- Yeni not için `Ctrl+N` tuşuna basın\n- Düzenleme için #etiketler kullanın\n\nKeyifli keşifler!",
       "tags": [
         "hoşgeldiniz",
@@ -16,38 +16,9 @@
       "pinned": true
     },
     {
-      "id": "tr-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
-      "createdAt": "2026-01-23T10:05:00Z",
-      "modifiedAt": "2026-01-23T10:05:00Z",
-      "content": "# Alışveriş Listesi\n\nBu hafta alınacaklar.\n\n## Market\n- [ ] Süt (1 litre)\n- [ ] Yumurta (10 adet)\n- [ ] Tam buğday ekmeği\n- [ ] Beyaz peynir\n- [ ] Tereyağı\n- [ ] Domates\n- [ ] Salatalık\n- [ ] Tavuk göğsü\n- [ ] Pirinç\n- [ ] Makarna\n- [ ] Zeytinyağı\n\n## Ev\n- [ ] Kağıt havlu\n- [ ] Bulaşık deterjanı\n- [ ] LED ampul\n\n## Diğer işler\n- [ ] Kuru temizlemeden al\n- [ ] PTT - kargo gönder\n- [ ] Kütüphaneye kitapları iade et\n\n## Notlar\n- Migros 22:00'da kapanıyor\n- Bez torbaları unutma!",
-      "tags": [
-        "alışveriş",
-        "kişisel",
-        "liste"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "red"
-    },
-    {
-      "id": "tr-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
-      "createdAt": "2026-01-23T10:10:00Z",
-      "modifiedAt": "2026-01-23T10:10:00Z",
-      "content": "# İskender Kebap - Geleneksel Tarif\n\n*Türk mutfağının incisi*\n\n## Malzemeler\n\n### Kebap için\n- 500g kuzu eti (but kısmı)\n- 4 adet pide\n- 200g tereyağı\n- 2 yemek kaşığı domates salçası\n- 1 su bardağı et suyu\n- Tuz, karabiber\n- Pul biber\n\n### Yoğurt sosu için\n- 500g süzme yoğurt\n- 2 diş sarımsak\n- Tuz\n\n### Domates sosu için\n- 4 adet domates\n- 1 yemek kaşığı salça\n- Tuz, şeker\n\n## Hazırlanışı\n\n### Eti hazırlama\n1. Eti ince dilimler halinde kesin\n2. Tuz ve karabiberle marine edin\n3. 30 dakika dinlendirin\n4. Izgarada veya tavada pişirin\n\n### Domates sosu\n1. Domatesleri rendeleyin\n2. Salça ekleyip kaynatın\n3. Tuz ve şekerle tatlandırın\n4. 10 dakika pişirin\n\n### Yoğurt sosu\n1. Sarımsakları ezin\n2. Yoğurtla karıştırın\n3. Tuzlayın\n\n### Servis\n1. Pideleri küp küp doğrayın\n2. Tabağın dibine yerleştirin\n3. Üzerine domates sosunu dökün\n4. Etleri dizin\n5. Yoğurt sosu ekleyin\n6. Kızarmış tereyağı gezdirin\n\n## İpuçları\n\n- Tereyağı köpürene kadar kızdırın\n- Pide bayat olmamalı\n- Yanında turşu ve şalgam suyu\n- Hemen sıcak servis edin\n\nAfiyet olsun!",
-      "tags": [
-        "tarif",
-        "yemek",
-        "türk",
-        "kebap"
-      ],
-      "attachments": [],
-      "pinned": false,
-      "color": "orange"
-    },
-    {
       "id": "tr-d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
-      "createdAt": "2026-01-23T10:15:00Z",
-      "modifiedAt": "2026-01-23T10:15:00Z",
+      "createdAt": "2026-01-26T10:00:00Z",
+      "modifiedAt": "2026-01-26T10:00:00Z",
       "content": "# Kapadokya Gezisi 2026\n\n**Süre**: 4 gün (15-18 Haziran 2026)\n\n## Kontrol Listesi\n\n- [x] Konaklama rezervasyonu (Ürgüp)\n- [x] Uçak bileti\n- [ ] Balon turu rezervasyonu\n- [ ] Restoran rezervasyonları\n- [ ] Seyahat sigortası\n\n## Program\n\n### 1. Gün: Varış\n- İstanbul'dan uçuş (08:00)\n- Kayseri'ye varış (09:30)\n- Transfer ile Ürgüp'e\n- Otele yerleşme\n- Öğleden sonra: Ürgüp gezisi\n- Akşam: Mağara restoranda yemek\n\n### 2. Gün: Balon ve Vadiler\n- Sabah 05:00: Balon turu (gün doğumu)\n- Kahvaltı\n- Göreme Açık Hava Müzesi\n- Öğle: Yöresel mutfak\n- Kızılçukur Vadisi yürüyüşü\n- Gün batımı seyri\n\n### 3. Gün: Yeraltı ve Vadiler\n- Derinkuyu Yeraltı Şehri\n- Ihlara Vadisi yürüyüşü\n- Selime Manastırı\n- Güvercinlik Vadisi\n- Akşam: Şarap tadımı\n\n### 4. Gün: Dönüş\n- Avanos ziyareti (çömlekçilik)\n- Hediyelik eşya alışverişi\n- Havalimanına transfer\n- İstanbul'a dönüş (16:00)\n\n## Restoranlar\n\n- **Seki Restaurant** (Ürgüp) - Mağara restoran\n- **Topdeck Cave** (Göreme) - Manzaralı\n- **Ziggy Cafe** (Ürgüp) - Modern Türk\n\n## Bütçe\n\n- Uçak: 1.500 TL\n- Otel (3 gece): 4.500 TL\n- Balon turu: 3.000 TL\n- Yemek: 2.000 TL\n- Aktiviteler: 1.000 TL\n- **Toplam**: ~12.000 TL\n\n## Yanıma Alacaklarım\n\n- Rahat yürüyüş ayakkabısı\n- Sıcak kıyafetler (sabahlar soğuk)\n- Güneş gözlüğü ve krem\n- Fotoğraf makinesi\n- Şarj cihazı\n\nSabırsızlanıyorum!",
       "tags": [
         "seyahat",
@@ -60,9 +31,37 @@
       "color": "blue"
     },
     {
+      "id": "tr-c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "createdAt": "2026-01-24T10:00:00Z",
+      "modifiedAt": "2026-01-24T10:00:00Z",
+      "content": "# İskender Kebap - Geleneksel Tarif\n\n*Türk mutfağının incisi*\n\n## Malzemeler\n\n### Kebap için\n- 500g kuzu eti (but kısmı)\n- 4 adet pide\n- 200g tereyağı\n- 2 yemek kaşığı domates salçası\n- 1 su bardağı et suyu\n- Tuz, karabiber\n- Pul biber\n\n### Yoğurt sosu için\n- 500g süzme yoğurt\n- 2 diş sarımsak\n- Tuz\n\n### Domates sosu için\n- 4 adet domates\n- 1 yemek kaşığı salça\n- Tuz, şeker\n\n## Hazırlanışı\n\n### Eti hazırlama\n1. Eti ince dilimler halinde kesin\n2. Tuz ve karabiberle marine edin\n3. 30 dakika dinlendirin\n4. Izgarada veya tavada pişirin\n\n### Domates sosu\n1. Domatesleri rendeleyin\n2. Salça ekleyip kaynatın\n3. Tuz ve şekerle tatlandırın\n4. 10 dakika pişirin\n\n### Yoğurt sosu\n1. Sarımsakları ezin\n2. Yoğurtla karıştırın\n3. Tuzlayın\n\n### Servis\n1. Pideleri küp küp doğrayın\n2. Tabağın dibine yerleştirin\n3. Üzerine domates sosunu dökün\n4. Etleri dizin\n5. Yoğurt sosu ekleyin\n6. Kızarmış tereyağı gezdirin\n\n## İpuçları\n\n- Tereyağı köpürene kadar kızdırın\n- Pide bayat olmamalı\n- Yanında turşu ve şalgam suyu\n- Hemen sıcak servis edin\n\nAfiyet olsun!",
+      "tags": [
+        "tarif",
+        "yemek",
+        "türk",
+        "kebap"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "red"
+    },
+    {
+      "id": "tr-b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "createdAt": "2026-01-25T10:00:00Z",
+      "modifiedAt": "2026-01-25T10:00:00Z",
+      "content": "# Alışveriş Listesi\n\nBu hafta alınacaklar.\n\n## Market\n- [ ] Süt (1 litre)\n- [ ] Yumurta (10 adet)\n- [ ] Tam buğday ekmeği\n- [ ] Beyaz peynir\n- [ ] Tereyağı\n- [ ] Domates\n- [ ] Salatalık\n- [ ] Tavuk göğsü\n- [ ] Pirinç\n- [ ] Makarna\n- [ ] Zeytinyağı\n\n## Ev\n- [ ] Kağıt havlu\n- [ ] Bulaşık deterjanı\n- [ ] LED ampul\n\n## Diğer işler\n- [ ] Kuru temizlemeden al\n- [ ] PTT - kargo gönder\n- [ ] Kütüphaneye kitapları iade et\n\n## Notlar\n- Migros 22:00'da kapanıyor\n- Bez torbaları unutma!",
+      "tags": [
+        "alışveriş",
+        "kişisel",
+        "liste"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
       "id": "tr-e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
-      "createdAt": "2026-01-23T10:20:00Z",
-      "modifiedAt": "2026-01-23T10:20:00Z",
+      "createdAt": "2026-01-23T10:00:00Z",
+      "modifiedAt": "2026-01-23T10:00:00Z",
       "content": "# Haftalık Yemek Planı\n\n20-26 Ocak 2026 Haftası\n\n## Pazartesi\n- **Kahvaltı**: Peynir, zeytin, domates\n- **Öğle**: Mercimek çorbası\n- **Akşam**: Karnıyarık\n\n## Salı\n- **Kahvaltı**: Yumurta, sucuk\n- **Öğle**: Dünden kalan\n- **Akşam**: Tavuk sote\n\n## Çarşamba\n- **Kahvaltı**: Bal, kaymak, ekmek\n- **Öğle**: Salata\n- **Akşam**: Mantı\n\n## Perşembe\n- **Kahvaltı**: Menemen\n- **Öğle**: Tost\n- **Akşam**: İzmir köfte\n\n## Cuma\n- **Kahvaltı**: Simit, peynir\n- **Öğle**: Dünden kalan\n- **Akşam**: Balık (Cuma günü!)\n\n## Cumartesi\n- **Kahvaltı**: Serpme kahvaltı\n- **Öğle**: Dışarıda\n- **Akşam**: İskender (tarife bak)\n\n## Pazar\n- **Kahvaltı**: Gözleme\n- **Öğle**: Ev yemeği\n- **Akşam**: Hafif - çorba ve ekmek\n\n## Alışveriş Listesi\n\n- Tavuk (1 kg)\n- Kuzu eti (500g)\n- Kıyma (500g)\n- Taze sebzeler\n- Peynir, yoğurt\n- Yumurta\n- Ekmek, simit\n- Pirinç, bulgur",
       "tags": [
         "yemek-planı",
@@ -74,13 +73,54 @@
     },
     {
       "id": "tr-f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
-      "createdAt": "2026-01-23T10:25:00Z",
-      "modifiedAt": "2026-01-23T10:25:00Z",
+      "createdAt": "2026-01-27T10:00:00Z",
+      "modifiedAt": "2026-01-27T10:00:00Z",
       "content": "# 2026 Okunacak Kitaplar\n\nBu yılki okuma listem.\n\n## Şu an okuyorum\n\n- [ ] **\"İnce Memed\"** - Yaşar Kemal\n  - Bölüm 15\n  - Muhteşem!\n\n## Türk Edebiyatı\n\n- [ ] \"Tutunamayanlar\" - Oğuz Atay\n- [x] \"Kürk Mantolu Madonna\" - Sabahattin Ali\n- [ ] \"Huzur\" - Ahmet Hamdi Tanpınar\n- [ ] \"Çalıkuşu\" - Reşat Nuri Güntekin\n\n## Dünya Klasikleri\n\n- [ ] \"Suç ve Ceza\" - Fyodor Dostoyevski\n- [ ] \"Yüzyıllık Yalnızlık\" - Gabriel García Márquez\n- [x] \"1984\" - George Orwell\n\n## Kişisel Gelişim\n\n- [ ] \"Sapiens\" - Yuval Noah Harari\n- [ ] \"Atomik Alışkanlıklar\" - James Clear\n- [ ] \"Hızlı ve Yavaş Düşünme\" - Daniel Kahneman\n\n## Hedef\n\n- **Hedef**: 18 kitap\n- **İlerleme**: 2/18\n\n## Okuma Notları\n\n### \"Kürk Mantolu Madonna\"\n- Aşkın evrenselliği\n- Toplumsal normlar ve bireysel özgürlük\n- Trajedinin kaçınılmazlığı",
       "tags": [
         "kitaplar",
         "okuma",
         "hedefler"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "orange"
+    },
+    {
+      "id": "tr-g7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-29T10:00:00Z",
+      "modifiedAt": "2026-01-29T10:00:00Z",
+      "content": "# Proje Notları: Web Sitesi Yeniden Tasarımı\n\n**Durum**: Devam ediyor\n**Son tarih**: 28 Şubat 2026\n\n## Hedefler\n\n- Kullanıcı arayüzünü modernize etmek\n- Mobil uyumluluğu artırmak\n- Sayfa yüklenme sürelerini %40 azaltmak\n- Marka renklerini ve tipografiyi güncellemek\n\n## Görevler\n\n### Aşama 1: Araştırma (Tamamlandı)\n- [x] Rakip analizi\n- [x] Anket sonuçları incelendi\n- [x] Paydaş görüşmeleri\n\n### Aşama 2: Tasarım (Mevcut)\n- [x] Wireframe'ler onaylandı\n- [ ] Yüksek kaliteli mockup'lar\n- [ ] Tasarım sistemi dokümantasyonu\n- [ ] Erişilebilirlik denetimi\n\n### Aşama 3: Geliştirme\n- [ ] Frontend uygulaması\n- [ ] Backend API güncellemeleri\n- [ ] Performans optimizasyonu\n- [ ] Tarayıcı testleri\n\n## Toplantı Notları\n\n### 15 Oca - Başlangıç\n- Bütçe onaylandı: ₺500.000\n- Süre: 6 hafta\n- İletişim: Sara (Pazarlama)\n\n### 22 Oca - Tasarım İncelemesi\n- Logo yerleşimi onaylandı\n- Daha koyu footer istendi\n- Mobil navigasyon düzenlenmeli",
+      "tags": [
+        "iş",
+        "proje",
+        "web-sitesi"
+      ],
+      "attachments": [],
+      "pinned": false
+    },
+    {
+      "id": "tr-h7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-02-01T10:00:00Z",
+      "modifiedAt": "2026-02-01T10:00:00Z",
+      "content": "# Fitness Hedefleri 2026\n\n## Mevcut Durumum\n- Kilo: 78 kg\n- Hedef: 73 kg\n- Haftalık egzersiz: 2x\n\n## Haftalık Antrenman Planı\n\n### Pazartesi - Üst Vücut\n- Şınav: 3 set 15 tekrar\n- Dumbbell row: 3 set 12 tekrar\n- Omuz press: 3 set 10 tekrar\n- Plank: 3 x 45 saniye\n\n### Çarşamba - Alt Vücut\n- Squat: 3 set 15 tekrar\n- Lunge: Her bacak 3 set 12 tekrar\n- Baldır kaldırma: 3 set 20 tekrar\n- Glute bridge: 3 set 15 tekrar\n\n### Cuma - Kardio\n- 30 dakika koşu veya bisiklet\n- Esneme hareketleri\n\n### Hafta sonu - Aktif Dinlenme\n- Yürüyüş\n- Hafif yoga\n- Yüzme (isteğe bağlı)\n\n## İlerleme Takibi\n\n| Hafta | Kilo | Notlar |\n|-------|------|--------|\n| 1     | 78,0 | Başlangıç |\n| 2     | 77,6 | İyi başlangıç! |\n| 3     | 77,4 | Sabit |\n\n## Hatırlatmalar\n\n- Günde 2L su iç\n- 7-8 saat uyu\n- Pazar günü yemek hazırlığı yap\n- Dinlenme günleri önemli!",
+      "tags": [
+        "fitness",
+        "sağlık",
+        "hedefler"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "green"
+    },
+    {
+      "id": "tr-i7a8b9c0-d1e2-4f3a-4b5c-6d7e8f9a0b1c",
+      "createdAt": "2026-01-22T10:00:00Z",
+      "modifiedAt": "2026-01-22T10:00:00Z",
+      "content": "# İzlenecek Filmler\n\nSinema ve streaming listem.\n\n## Öncelik (Mutlaka İzlenmeli)\n- [ ] **Dune: İkinci Bölüm** - Bilim kurgu destanı\n- [ ] **Zavallı Yaratıklar** - Yorgos Lanthimos\n- [ ] **The Holdovers** - Komedi drama\n- [ ] **Oppenheimer** - Sonunda!\n\n## Sinema Klasikleri\n- [ ] \"Kazablanka\" (1942)\n- [x] \"2001: Uzay Yolu Macerası\" (1968)\n- [ ] \"Baba\" (1972)\n- [ ] \"Bıçak Sırtı\" (1982)\n\n## Türk Sineması\n- [ ] \"Kış Uykusu\"\n- [x] \"Bir Zamanlar Anadolu'da\"\n- [ ] \"Babam ve Oğlum\"\n- [ ] \"Masumiyet\"\n\n## Belgeseller\n- [ ] \"Free Solo\"\n- [ ] \"Ahtapotumla Öğretmenim\"\n- [ ] \"Icarus\"\n\n## Son İzlenenler\n\n### Bir Zamanlar Anadolu'da ⭐⭐⭐⭐⭐\nGörsel şölen ve derin hikaye. Ceylan'ın şaheseri.\n\n### 2001: Uzay Yolu Macerası ⭐⭐⭐⭐\nGörsel olarak çarpıcı. Sonu hala kafamı karıştırıyor!\n\n## Sinema Planları\n- Cuma akşamı\n- Sanat sineması klasikler için",
+      "tags": [
+        "filmler",
+        "eğlence",
+        "izleme-listesi"
       ],
       "attachments": [],
       "pinned": false
