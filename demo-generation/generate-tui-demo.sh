@@ -141,7 +141,7 @@ get_search_term() {
     local lang="$1"
     case "$lang" in
         en-GB) echo "Lake District" ;;
-        en-US) echo "Yosemite" ;;
+        en-US) echo "Big Sur" ;;
         de)    echo "Schwarzwald" ;;
         fr)    echo "Provence" ;;
         es)    echo "Andalucía" ;;
