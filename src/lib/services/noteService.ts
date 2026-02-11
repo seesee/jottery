@@ -279,6 +279,9 @@ class NoteService {
         syncedAt: note.syncedAt || new Date().toISOString(),
         reason: 'manual-sync',
       });
+      // Increment version since we've created a snapshot of the previous state
+      // The edits will be applied to this new version
+      note.version = (note.version || 0) + 1;
     }
 
     // Track if actual content changed (not just UI state)

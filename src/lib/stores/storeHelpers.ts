@@ -10,12 +10,16 @@ import { searchService } from '../services/searchService';
 /**
  * Update a single note in the notes store
  * Finds the note by ID and replaces it with the updated version
+ * Returns a new array reference to ensure proper Svelte reactivity
  */
 export function updateNoteInStore(updatedNote: DecryptedNote): void {
   notes.update(allNotes => {
     const index = allNotes.findIndex(n => n.id === updatedNote.id);
     if (index !== -1) {
-      allNotes[index] = updatedNote;
+      // Create new array to ensure proper reactivity in derived stores
+      const newNotes = [...allNotes];
+      newNotes[index] = updatedNote;
+      return newNotes;
     }
     return allNotes;
   });
