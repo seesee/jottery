@@ -9,7 +9,7 @@ use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
-use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width};
+use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width, format_date_short, format_datetime_full};
 use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal, render_input_modal};
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
 use crate::models::SyntaxLanguage;
@@ -200,8 +200,8 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 String::new()
             };
 
-            // Format date + tags line
-            let date_str = note.modified_at.format("%d/%m/%y").to_string();
+            // Format date + tags line (locale-aware)
+            let date_str = format_date_short(&note.modified_at);
             let tags_str = if !note.tags.is_empty() {
                 let tag_preview: String = note.tags.iter()
                     .take(3)
@@ -662,7 +662,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         frame.render_widget(preview, preview_area);
 
         // Render footer with left-aligned Version + sync indicator and right-aligned Modified
-        let modified_str = note.modified_at.format("%d/%m/%Y, %H:%M:%S").to_string();
+        let modified_str = format_datetime_full(&note.modified_at);
 
         // Determine sync status: synced if synced_at exists and is >= modified_at
         let is_synced = match &note.synced_at {

@@ -7,8 +7,78 @@
 use std::fs::File;
 use std::io::Write;
 use std::sync::{Arc, Mutex};
+use chrono::{DateTime, Local, TimeZone};
 use ratatui::text::Line;
 use unicode_width::UnicodeWidthStr;
+
+/// Get the current locale as a string reference for matching.
+fn get_locale() -> String {
+    rust_i18n::locale().to_string()
+}
+
+/// Format a date according to the current locale.
+///
+/// Returns a short date format (for note list display):
+/// - en-US: MM/DD/YY
+/// - en-GB, most European: DD/MM/YY
+/// - ja, ko, zh: YY/MM/DD
+pub fn format_date_short<Tz: TimeZone>(dt: &DateTime<Tz>) -> String
+where
+    Tz::Offset: std::fmt::Display,
+{
+    let locale = get_locale();
+    match locale.as_str() {
+        "en-US" => dt.format("%m/%d/%y").to_string(),
+        "ja" | "ko" | "zh" => dt.format("%y/%m/%d").to_string(),
+        // Default to British/European format (dd/mm/yy)
+        _ => dt.format("%d/%m/%y").to_string(),
+    }
+}
+
+/// Format a date and time according to the current locale.
+///
+/// Returns a full date+time format (for note footer/preview):
+/// - en-US: MM/DD/YYYY, HH:MM:SS
+/// - en-GB, most European: DD/MM/YYYY, HH:MM:SS
+/// - ja: YYYY年MM月DD日 HH:MM:SS
+/// - ko: YYYY년 MM월 DD일 HH:MM:SS
+/// - zh: YYYY年MM月DD日 HH:MM:SS
+pub fn format_datetime_full<Tz: TimeZone>(dt: &DateTime<Tz>) -> String
+where
+    Tz::Offset: std::fmt::Display,
+{
+    // Convert to local time for display
+    let local_dt: DateTime<Local> = dt.with_timezone(&Local);
+    let locale = get_locale();
+    match locale.as_str() {
+        "en-US" => local_dt.format("%m/%d/%Y, %H:%M:%S").to_string(),
+        "ja" | "zh" => local_dt.format("%Y年%m月%d日 %H:%M:%S").to_string(),
+        "ko" => local_dt.format("%Y년 %m월 %d일 %H:%M:%S").to_string(),
+        // Default to British/European format (dd/mm/yyyy)
+        _ => local_dt.format("%d/%m/%Y, %H:%M:%S").to_string(),
+    }
+}
+
+/// Format a date and time for metadata display (note info modal).
+///
+/// Returns full date+time in ISO-like format with locale-aware date ordering:
+/// - en-US: MM/DD/YYYY HH:MM:SS
+/// - en-GB, most European: DD/MM/YYYY HH:MM:SS
+/// - ja, ko, zh: YYYY/MM/DD HH:MM:SS
+pub fn format_datetime_metadata<Tz: TimeZone>(dt: &DateTime<Tz>) -> String
+where
+    Tz::Offset: std::fmt::Display,
+{
+    // Convert to local time for display
+    let local_dt: DateTime<Local> = dt.with_timezone(&Local);
+    let locale = get_locale();
+    match locale.as_str() {
+        "en-US" => local_dt.format("%m/%d/%Y %H:%M:%S").to_string(),
+        "ja" | "ko" | "zh" => local_dt.format("%Y/%m/%d %H:%M:%S").to_string(),
+        // Default to British/European format
+        _ => local_dt.format("%d/%m/%Y %H:%M:%S").to_string(),
+    }
+}
 
 /// Calculate the display width of a string, accounting for wide characters (emojis, CJK, etc.)
 ///

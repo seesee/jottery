@@ -13,6 +13,7 @@ use rust_i18n::t;
 
 use crate::models::Note;
 use crate::ui::app::App;
+use crate::ui::helpers::format_datetime_metadata;
 use crate::ui::rendering::modal::centered_rect;
 
 /// Render the note info modal
@@ -69,27 +70,27 @@ fn build_info_lines<'a>(note: &Note, app: &App) -> Vec<Line<'a>> {
         Span::styled(id_display, Style::default().fg(app.color_scheme.foreground)),
     ]));
 
-    // Created date
+    // Created date (locale-aware)
     info_lines.push(Line::from(vec![
         Span::styled("Created:     ", Style::default().fg(app.color_scheme.muted)),
         Span::styled(
-            note.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            format_datetime_metadata(&note.created_at),
             Style::default().fg(app.color_scheme.foreground)
         ),
     ]));
 
-    // Modified date
+    // Modified date (locale-aware)
     info_lines.push(Line::from(vec![
         Span::styled("Modified:    ", Style::default().fg(app.color_scheme.muted)),
         Span::styled(
-            note.modified_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            format_datetime_metadata(&note.modified_at),
             Style::default().fg(app.color_scheme.foreground)
         ),
     ]));
 
-    // Synced date
+    // Synced date (locale-aware)
     let synced_str = match &note.synced_at {
-        Some(dt) => dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        Some(dt) => format_datetime_metadata(dt),
         None => "Never".to_string(),
     };
     info_lines.push(Line::from(vec![
@@ -151,13 +152,13 @@ fn build_info_lines<'a>(note: &Note, app: &App) -> Vec<Line<'a>> {
         Span::styled(status_str, Style::default().fg(app.color_scheme.foreground)),
     ]));
 
-    // Locked date (if locked)
+    // Locked date (if locked, locale-aware)
     if note.locked {
         if let Some(locked_at) = &note.locked_at {
             info_lines.push(Line::from(vec![
                 Span::styled("Locked at:   ", Style::default().fg(app.color_scheme.muted)),
                 Span::styled(
-                    locked_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    format_datetime_metadata(locked_at),
                     Style::default().fg(app.color_scheme.foreground)
                 ),
             ]));
