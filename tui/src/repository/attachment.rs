@@ -123,11 +123,14 @@ mod tests {
     use super::*;
     use crate::db::Database;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password";
+
     fn setup_test_db() -> (Database, [u8; 32]) {
-        let db = Database::in_memory("test_password").unwrap();
+        let db = Database::in_memory(TEST_PASSWORD).unwrap();
         let crypto = CryptoService::new();
         let salt = crypto.generate_salt();
-        let key = crypto.derive_key("test_password", &salt, 100_000).unwrap();
+        let key = crypto.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
         (db, key)
     }
 

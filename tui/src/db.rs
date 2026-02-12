@@ -248,9 +248,12 @@ impl Database {
 mod tests {
     use super::*;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password";
+
     #[test]
     fn test_in_memory_database() {
-        let db = Database::in_memory("test_password").unwrap();
+        let db = Database::in_memory(TEST_PASSWORD).unwrap();
         assert!(db.is_initialized().unwrap() == false);
         assert_eq!(db.schema_version().unwrap(), 15);
         assert_eq!(db.count_notes(false).unwrap(), 0);
@@ -264,10 +267,10 @@ mod tests {
 
         // Create database with password
         {
-            let _db = Database::open(&db_path, "correct_password").unwrap();
+            let _db = Database::open(&db_path, TEST_PASSWORD).unwrap();
         }
 
-        // Try to open with wrong password
+        // Try to open with wrong password - intentionally incorrect for test
         let result = Database::open(&db_path, "wrong_password");
         assert!(result.is_err());
     }

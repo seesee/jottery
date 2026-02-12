@@ -2,6 +2,11 @@
 
 Jottery uses semantic versioning (MAJOR.MINOR.PATCH) across all components.
 
+## Release Types
+
+- **Release Candidates**: `vX.Y.Z-rc.N` (e.g., `v1.0.0-rc.1`) - Feature-complete releases for testing
+- **Stable Releases**: `vX.Y.Z` (e.g., `v1.0.0`) - Production-ready releases
+
 ## Version Display
 
 ### Web Client

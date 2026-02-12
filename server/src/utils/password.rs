@@ -161,14 +161,16 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, PasswordError
 mod tests {
     use super::*;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password_123";
+
     #[test]
     fn test_hash_and_verify() {
-        let password = "test_password_123";
-        let hash = hash_password(password).expect("Failed to hash password");
+        let hash = hash_password(TEST_PASSWORD).expect("Failed to hash password");
 
         // Correct password should verify
         assert!(
-            verify_password(password, &hash).expect("Failed to verify"),
+            verify_password(TEST_PASSWORD, &hash).expect("Failed to verify"),
             "Password verification failed"
         );
 

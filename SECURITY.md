@@ -206,6 +206,6 @@ There is **no password recovery mechanism**. If you forget your password:
 
 ## Updates
 
-This security policy was last updated: January 2026
+This security policy was last updated: February 2026
 
 For the latest version, see the repository at: https://github.com/seesee/jottery

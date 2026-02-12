@@ -162,14 +162,17 @@ mod tests {
     use crate::crypto::CryptoService;
     use tempfile::NamedTempFile;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password";
+
     #[test]
     fn test_export_import_roundtrip() {
         let crypto = CryptoService::new();
         let salt = crypto.generate_salt();
-        let key = crypto.derive_key("test_password", &salt, 100_000).unwrap();
+        let key = crypto.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
 
         // Create temporary database
-        let db = Database::in_memory("test_password").unwrap();
+        let db = Database::in_memory(TEST_PASSWORD).unwrap();
         let repo = NoteRepository::new(db.connection());
 
         // Create test notes
@@ -185,7 +188,7 @@ mod tests {
         assert_eq!(count, 2);
 
         // Create new database and import
-        let db2 = Database::in_memory("test_password").unwrap();
+        let db2 = Database::in_memory(TEST_PASSWORD).unwrap();
         let imported = import_notes(&db2, &key, export_file.path()).unwrap();
         assert_eq!(imported, 2);
 

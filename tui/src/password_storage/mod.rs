@@ -112,6 +112,9 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password_123";
+
     #[test]
     fn test_file_storage_round_trip() {
         let temp_dir = TempDir::new().unwrap();
@@ -121,11 +124,11 @@ mod tests {
         assert!(matches!(storage.retrieve(), RetrieveResult::NotFound));
 
         // Store password
-        storage.store("test_password_123").unwrap();
+        storage.store(TEST_PASSWORD).unwrap();
 
         // Retrieve password
         match storage.retrieve() {
-            RetrieveResult::Found(password) => assert_eq!(password, "test_password_123"),
+            RetrieveResult::Found(password) => assert_eq!(password, TEST_PASSWORD),
             other => panic!("Expected Found, got {:?}", other),
         }
 

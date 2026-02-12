@@ -75,9 +75,12 @@ mod tests {
     use super::*;
     use crate::db::Database;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password";
+
     #[test]
     fn test_encryption_metadata_roundtrip() {
-        let db = Database::in_memory("test_password").unwrap();
+        let db = Database::in_memory(TEST_PASSWORD).unwrap();
         let repo = EncryptionRepository::new(db.connection());
 
         // Should be None initially

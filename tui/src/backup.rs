@@ -502,14 +502,17 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password";
+
     #[test]
     fn test_backup_restore_roundtrip() {
         let crypto = CryptoService::new();
         let salt = crypto.generate_salt();
-        let key = crypto.derive_key("test_password", &salt, 100_000).unwrap();
+        let key = crypto.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
 
         // Create temporary database
-        let db = Database::in_memory("test_password").unwrap();
+        let db = Database::in_memory(TEST_PASSWORD).unwrap();
         let note_repo = NoteRepository::new(db.connection());
         let encryption_repo = EncryptionRepository::new(db.connection());
 
@@ -537,11 +540,11 @@ mod tests {
         assert_eq!(validated.version, "2.1");
 
         // Verify password
-        let verified_key = verify_backup_password(&validated, "test_password").unwrap();
+        let verified_key = verify_backup_password(&validated, TEST_PASSWORD).unwrap();
         assert_eq!(verified_key, key);
 
         // Create new database and restore
-        let db2 = Database::in_memory("test_password").unwrap();
+        let db2 = Database::in_memory(TEST_PASSWORD).unwrap();
         let restored = restore_backup(&db2, &validated, &key, None).unwrap();
         assert_eq!(restored, 2);
 

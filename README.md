@@ -16,6 +16,7 @@ Most note-taking apps are either too heavy (designed for long-form documents) or
 *   **Device Management**: Register multiple devices per user, each with its own API key.
 *   **Inbox API**: Submit notes programmatically via a simple REST API — no encryption password needed. Items are held unencrypted on the server until reviewed and accepted through the web or TUI client. See [docs/INBOX-API.md](docs/INBOX-API.md) for full documentation.
 *   **Admin Dashboard**: Web-based interface for managing users, viewing statistics, and monitoring server activity.
+*   **Version History**: Full version history with restore functionality — never lose important changes. Snapshots are created automatically before edits and synced across devices.
 *   **Advanced Search**: Powerful full-text search with modifiers:
     - `has:attachment` - filter notes with attachments
     - `created:>2024-01-01`, `created:<2024-06-30`, `created:2024-01-01..2024-06-30` - date filters
@@ -30,7 +31,11 @@ Most note-taking apps are either too heavy (designed for long-form documents) or
 *   **Code Snippets**: A rich text editor with support for various programming languages.
 *   **Quick Delete**: Delete notes instantly from the list view (hover for delete button, or use configurable keyboard shortcut).
 *   **Keyboard Shortcuts**: Fully customisable keyboard shortcuts for common actions.
-*   **Many handy features**: Export notes, preview HTML, document info, basic versioning, and markdown documents in-editor.
+*   **Dark & Light Themes**: Choose your preferred theme, or let it follow your system preference.
+*   **Auto-Lock**: Configurable inactivity timeout automatically locks your notes for security.
+*   **15 Languages**: Full internationalisation support with locale-aware date formatting (English, German, French, Spanish, Italian, Dutch, Polish, Portuguese, Russian, Turkish, Greek, Japanese, Korean, Chinese).
+*   **Note Colours**: Colour-code your notes for visual organisation.
+*   **Many handy features**: Export notes, preview HTML, document info, markdown preview, pin notes, recycle bin, and more.
 
 ## Getting Started
 
@@ -207,8 +212,8 @@ Jottery works great on mobile devices too.
 ![Mobile Calculator](public/screenshots/en-GB/08-mobile-calculator-dark.png)
 
 ## Caveats
-*   **Sync**: The sync mechanism is quite robust but very basic. Updates are sent periodically and the last version to be received "wins". To mitigate against accidental deletions, the previous version is also stored.
-*   **Security**: Use a strong password -- all data blobs (notes, tags, attachments) are encrypted using it. If you forget your password, there is no recovery process. You will lose all your notes and will need to start over. Because it's handy for development purposes, there is a mechanism to store the password in both web and tui app (this is NOT synced) so you don't need to constantly input your password -- but if you use this, your notes are basically plain text to anyone with access to your device/db files. I suggest using a password manager.
+*   **Sync**: The sync mechanism uses Server-Sent Events (SSE) for real-time updates across devices. Conflicts are resolved using last-write-wins based on modification timestamps. Version history is maintained automatically, allowing you to restore previous versions if needed.
+*   **Security**: Use a strong password — all data (notes, tags, attachments) is encrypted using it. If you forget your password, there is no recovery process; you will lose all your notes and need to start over. For convenience, both web and TUI clients offer optional persistence features in the **Advanced Options** section: the web client can persist your session via a secure cookie, and both clients can store your password locally. These options reduce security in exchange for convenience — anyone with access to your device/browser could access your notes. Use a password manager and only enable persistence on trusted devices.
 *   **Sync Server**: All sync accounts need to be approved by an admin. Admins can see "username" (email address is suggested but does not need to be "real"), the total number of notes and the combined size (in kb) of the notes held by that user. 
 
 ## Components
@@ -218,6 +223,17 @@ Jottery consists of three main components:
 ### 1. Web Client
 
 A modern web application that provides a rich user experience for managing your notes.
+
+**Web Features:**
+- **Rich Editor** - CodeMirror-powered editor with syntax highlighting for 30+ languages
+- **Version History** - Browse and restore previous versions of any note
+- **Markdown Preview** - Live preview with attachment embedding support
+- **Multi-Select** - Bulk operations on multiple notes
+- **PDF Viewer** - Built-in viewer for PDF attachments
+- **Calculator Mode** - REPL-style calculator for quick calculations
+- **Responsive Design** - Works on desktop, tablet, and mobile devices
+- **Offline Support** - Works without internet; syncs when connection is restored
+- **Dark & Light Themes** - Automatic or manual theme switching
 
 ### 2. TUI Client
 
@@ -241,7 +257,15 @@ A lightweight and fast terminal user interface for those who prefer to work in t
 - **Auto-sync** - Notes sync to server automatically after creation (if configured)
 - **Tag support** - Add tags to piped content with `-t tag1,tag2`
 
-**TUI Multi-Select & Bulk Operations:**
+**TUI Features:**
+- **Version History** - Browse and restore previous versions of any note
+- **Multi-Select & Bulk Operations** - Select multiple notes for batch actions
+- **11 Colour Schemes** - Choose from themes including Nord, Dracula, Gruvbox, Tokyo Night, Catppuccin
+- **Locale-Aware Dates** - Dates formatted according to your language preference
+- **Note Pinning** - Pin important notes to the top of the list
+- **Recycle Bin** - Recover accidentally deleted notes
+
+**TUI Multi-Select Shortcuts:**
 - `Space` - Toggle selection of current note
 - `Ctrl+A` - Select all filtered notes
 - `Shift+V` - Range select from last selected to current
@@ -326,11 +350,7 @@ For detailed information about Jottery's security architecture, deployment best 
 
 ### Web Application (Offline Bundle)
 
-Download the standalone web application for local use:
-
-| Version | File | Notes |
-|---------|------|-------|
-| 0.9.21 | [jottery-web-0.9.21-offline.zip](releases/jottery-web-0.9.21-offline.zip) | Single HTML file + assets |
+Download the standalone web application for local use from the [Releases](https://github.com/seesee/jottery/releases) page.
 
 **Usage:** Extract and open `index.html` in any modern browser. All data is stored locally in IndexedDB.
 
@@ -338,7 +358,7 @@ Download the standalone web application for local use:
 
 ### TUI Client
 
-Pre-compiled binaries for the TUI client (Linux, macOS, Windows) are available from the "Releases" section of the web application.
+Pre-compiled binaries for the TUI client (Linux, macOS, Windows) are available from the [Releases](https://github.com/seesee/jottery/releases) page.
 
 ## Import/Export Format
 

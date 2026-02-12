@@ -103,11 +103,13 @@ mod crypto_tests {
     use base64::{engine::general_purpose, Engine};
     use sha2::{Sha256, Digest};
 
+    /// Test-only password for unit tests - not used in production code
+    const TEST_PASSWORD: &str = "test_password_123";
+
     #[test]
     fn test_password_hashing() {
-        let password = "test_password_123";
         let mut hasher = Sha256::new();
-        hasher.update(password.as_bytes());
+        hasher.update(TEST_PASSWORD.as_bytes());
         let hash = hasher.finalize();
 
         // Hash should be 32 bytes (256 bits)
@@ -115,7 +117,7 @@ mod crypto_tests {
 
         // Same password should produce same hash
         let mut hasher2 = Sha256::new();
-        hasher2.update(password.as_bytes());
+        hasher2.update(TEST_PASSWORD.as_bytes());
         let hash2 = hasher2.finalize();
         assert_eq!(hash, hash2, "Same input should produce same hash");
     }

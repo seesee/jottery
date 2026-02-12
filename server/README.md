@@ -716,7 +716,7 @@ sqlite3 /opt/jottery/jottery.db "PRAGMA integrity_check; VACUUM;"
 2. **HTTPS Required**: Always use HTTPS in production (configure via Nginx)
 3. **CORS**: Configured to allow all origins by default - restrict in production if needed
 4. **Rate Limiting**: Not implemented - consider adding Nginx rate limiting
-5. **Firewall**: Only expose port 443 (HTTPS) publicly, keep 3000 internal
+5. **Firewall**: Only expose port 443 (HTTPS) publicly, keep 3030 internal
 6. **Updates**: Keep Rust dependencies updated with `cargo update`
 
 ## Troubleshooting
@@ -843,4 +843,4 @@ MIT License - see LICENSE file in project root
 
 For issues and questions:
 - GitHub: https://github.com/seesee/jottery
-- Spec: See `jottery-spec.md` in project root
+- Sync Protocol: See [docs/SYNC-SPEC.md](../docs/SYNC-SPEC.md)

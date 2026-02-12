@@ -16,6 +16,10 @@ Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking a
 - 🔒 **Auto-lock**: Configurable timeout with optional password storage
 - 🔍 **Advanced Search**: Powerful search with tag filtering and boolean operators
 - 📊 **Split-pane View**: Note list + preview pane for quick navigation
+- 📜 **Version History**: Browse and restore previous versions of any note
+- ✅ **Multi-Select**: Bulk operations on multiple notes (tag, delete, export)
+- 📌 **Note Pinning**: Pin important notes to the top of the list
+- 🌍 **15 Languages**: Full i18n support with locale-aware date formatting
 
 ## Installation
 
@@ -330,9 +334,11 @@ The preview pane renders markdown with full formatting support:
 | `n` | Create new note |
 | `Enter` | Open selected note in external editor |
 | `Space` | Toggle preview pane |
+| `p` | Pin/unpin selected note |
 | `d` | Delete selected note (moves to recycle bin) |
 | `r` | Restore note from recycle bin |
 | `D` | Permanently delete note |
+| `v` | Open version history for selected note |
 | `j`/`↓` | Move down |
 | `k`/`↑` | Move up |
 | `g` | Jump to top |
@@ -367,6 +373,14 @@ The preview pane renders markdown with full formatting support:
 | `p` | Paste sync credentials from clipboard |
 | `Esc`/`q` | Close settings |
 
+### Version History
+| Key | Action |
+|-----|--------|
+| `j`/`↓` | Move to next version |
+| `k`/`↑` | Move to previous version |
+| `Enter` | Restore selected version |
+| `Esc`/`q` | Close version history |
+
 ### Recycle Bin
 | Key | Action |
 |-----|--------|
@@ -400,13 +414,17 @@ The preview pane renders markdown with full formatting support:
 - [x] Keyboard shortcuts help screen
 - [x] Multiple color schemes (11 themes)
 - [x] Vim-style navigation (hjkl, gg, G, Ctrl+d/u)
+- [x] Version history with restore functionality
+- [x] Multi-select operations (bulk tag, delete, export)
+- [x] Note pinning
+- [x] Internationalisation (15 languages)
+- [x] Locale-aware date formatting
 
 ### Future Enhancements
 - [ ] Attachment support (view and download)
 - [ ] Nested tags
 - [ ] Note linking
 - [ ] Full-text search indexing
-- [ ] Multi-select operations
 - [ ] Note templates
 
 ## Architecture
