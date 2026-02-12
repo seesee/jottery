@@ -500,6 +500,7 @@
     if (!$selectedNote) return;
 
     try {
+      console.log(`[handleSave] Before save: $selectedNote.version=${$selectedNote.version}`);
       await noteService.updateNote($selectedNote.id, {
         content,
         tags: tags,
@@ -511,9 +512,11 @@
 
       // Get just the updated note (much faster than reloading all notes)
       const updatedNote = await noteService.getNote($selectedNote.id);
+      console.log(`[handleSave] After getNote: updatedNote.version=${updatedNote?.version}`);
       if (updatedNote) {
         // Update note in store and search index (incremental update)
         updateNoteInStoreAndSearch(updatedNote);
+        console.log(`[handleSave] Store updated with version=${updatedNote.version}`);
       }
 
       // Trigger background sync after saving
