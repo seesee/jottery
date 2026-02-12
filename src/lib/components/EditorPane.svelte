@@ -425,6 +425,11 @@
         // Create version snapshot if requested
         if (createVersion) {
           await createVersionSnapshot(data.noteId);
+          // Re-fetch note to get the updated version number and update store
+          const noteWithVersion = await noteService.getNote(data.noteId);
+          if (noteWithVersion) {
+            updateNoteInStore(noteWithVersion);
+          }
         }
 
         // Trigger sync if requested (flush for navigation, debounce for content changes)
