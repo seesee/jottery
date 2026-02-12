@@ -75,7 +75,7 @@ test.describe('Version History', () => {
     await expect(versionItem.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show no versions message for new note without edits', async ({ page }) => {
+  test('should show initial version for new note', async ({ page }) => {
     // Create a new note
     const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
     await newNoteButton.click();
@@ -83,14 +83,15 @@ test.describe('Version History', () => {
     const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
     await expect(editor).toBeVisible();
     await editor.click();
-    await editor.pressSequentially('New note without version');
+    await editor.pressSequentially('New note with initial version');
     await page.waitForTimeout(2000); // Wait for auto-save
 
     // Open version history
     const versionHistoryModal = await openVersionHistory(page);
 
-    // Should show "no version history" message
-    await expect(versionHistoryModal.getByText(/No version history/i)).toBeVisible({ timeout: 5000 });
+    // Should show initial version (v0 or v1) - new notes now create a version snapshot
+    const versionItem = versionHistoryModal.locator('button').filter({ hasText: /^v\d+/ });
+    await expect(versionItem.first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should create version when closing note after editing', async ({ page }) => {
