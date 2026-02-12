@@ -7,7 +7,7 @@
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
-  import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance } from '../types';
+  import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance, DecryptedNote } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -500,8 +500,8 @@
     if (!$selectedNote) return;
 
     try {
-      console.log(`[handleSave] Before save: $selectedNote.version=${$selectedNote.version}`);
-      await noteService.updateNote($selectedNote.id, {
+      // Save note and get the updated encrypted note with correct version
+      const savedNote = await noteService.updateNote($selectedNote.id, {
         content,
         tags: tags,
         attachments: attachments,
@@ -510,14 +510,17 @@
         showPreview,
       });
 
-      // Get just the updated note (much faster than reloading all notes)
-      const updatedNote = await noteService.getNote($selectedNote.id);
-      console.log(`[handleSave] After getNote: updatedNote.version=${updatedNote?.version}`);
-      if (updatedNote) {
-        // Update note in store and search index (incremental update)
-        updateNoteInStoreAndSearch(updatedNote);
-        console.log(`[handleSave] Store updated with version=${updatedNote.version}`);
-      }
+      // Construct decrypted note using local values and saved note metadata
+      // This ensures we have the correct version without re-reading from DB
+      const updatedNote: DecryptedNote = {
+        ...savedNote,
+        content,
+        tags,
+        decryptedAt: Date.now(),
+      };
+
+      // Update note in store and search index (incremental update)
+      updateNoteInStoreAndSearch(updatedNote);
 
       // Trigger background sync after saving
       triggerBackgroundSync();

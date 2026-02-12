@@ -273,7 +273,6 @@ class NoteService {
     // Before editing, create a version snapshot if one doesn't exist for version 0
     // This ensures we can revert to the original state before any edits
     // Only do this once - when the note has never been edited (version 0)
-    console.log(`[updateNote] Note ${note.id} current version: ${note.version}`);
     if (note.version === 0) {
       const existingVersion = await versionRepository.getVersion(note.id, 0);
       if (!existingVersion) {
@@ -282,12 +281,10 @@ class NoteService {
           syncedAt: note.syncedAt || new Date().toISOString(),
           reason: 'manual-sync',
         });
-        console.log(`[updateNote] Created snapshot for version 0`);
       }
       // Increment version since we've created a snapshot of the original state
       // All subsequent edits will be at version 1+
       note.version = 1;
-      console.log(`[updateNote] Incremented version to 1`);
     }
 
     // Track if actual content changed (not just UI state)
