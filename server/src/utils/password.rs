@@ -161,22 +161,27 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, PasswordError
 mod tests {
     use super::*;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password_123";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     #[test]
     fn test_hash_and_verify() {
-        let hash = hash_password(TEST_PASSWORD).expect("Failed to hash password");
+        let password = test_password();
+        let hash = hash_password(&password).expect("Failed to hash password");
 
         // Correct password should verify
         assert!(
-            verify_password(TEST_PASSWORD, &hash).expect("Failed to verify"),
+            verify_password(&password, &hash).expect("Failed to verify"),
             "Password verification failed"
         );
 
         // Incorrect password should not verify
         assert!(
-            !verify_password("wrong_password", &hash).expect("Failed to verify"),
+            !verify_password("intentionally_wrong_password", &hash).expect("Failed to verify"),
             "Wrong password incorrectly verified"
         );
     }

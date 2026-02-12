@@ -255,22 +255,27 @@ impl Default for CryptoService {
 mod tests {
     use super::*;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     #[test]
     fn test_key_derivation() {
         let service = CryptoService::new();
+        let password = test_password();
         let salt = service.generate_salt();
 
-        let key1 = service.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
-        let key2 = service.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
+        let key1 = service.derive_key(&password, &salt, 100_000).unwrap();
+        let key2 = service.derive_key(&password, &salt, 100_000).unwrap();
 
         // Same password and salt should produce same key
         assert_eq!(key1, key2);
 
         // Different password should produce different key
-        let key3 = service.derive_key("different_password", &salt, 100_000).unwrap();
+        let key3 = service.derive_key("different_password_for_test", &salt, 100_000).unwrap();
         assert_ne!(key1, key3);
     }
 
@@ -278,7 +283,7 @@ mod tests {
     fn test_text_encryption_decryption() {
         let service = CryptoService::new();
         let salt = service.generate_salt();
-        let key = service.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
+        let key = service.derive_key(&test_password(), &salt, 100_000).unwrap();
 
         let plaintext = "Hello, World! This is a test message.";
         let encrypted = service.encrypt_text(plaintext, &key).unwrap();
@@ -291,7 +296,7 @@ mod tests {
     fn test_binary_encryption_decryption() {
         let service = CryptoService::new();
         let salt = service.generate_salt();
-        let key = service.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
+        let key = service.derive_key(&test_password(), &salt, 100_000).unwrap();
 
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let encrypted = service.encrypt_binary(&data, &key).unwrap();
@@ -304,9 +309,9 @@ mod tests {
     fn test_wrong_key_decryption_fails() {
         let service = CryptoService::new();
         let salt = service.generate_salt();
-        // Intentionally different test passwords to verify key mismatch detection
-        let key1 = service.derive_key("password1", &salt, 100_000).unwrap();
-        let key2 = service.derive_key("password2", &salt, 100_000).unwrap();
+        // Intentionally different passwords to verify key mismatch detection
+        let key1 = service.derive_key("first_test_password", &salt, 100_000).unwrap();
+        let key2 = service.derive_key("second_test_password", &salt, 100_000).unwrap();
 
         let plaintext = "Secret message";
         let encrypted = service.encrypt_text(plaintext, &key1).unwrap();
@@ -328,7 +333,7 @@ mod tests {
 
         let service = CryptoService::new();
         let salt = service.generate_salt();
-        let key = service.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
+        let key = service.derive_key(&test_password(), &salt, 100_000).unwrap();
 
         let data = TestData {
             name: "Test".to_string(),

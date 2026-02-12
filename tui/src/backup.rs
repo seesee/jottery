@@ -502,17 +502,22 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     #[test]
     fn test_backup_restore_roundtrip() {
+        let password = test_password();
         let crypto = CryptoService::new();
         let salt = crypto.generate_salt();
-        let key = crypto.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
+        let key = crypto.derive_key(&password, &salt, 100_000).unwrap();
 
         // Create temporary database
-        let db = Database::in_memory(TEST_PASSWORD).unwrap();
+        let db = Database::in_memory(&password).unwrap();
         let note_repo = NoteRepository::new(db.connection());
         let encryption_repo = EncryptionRepository::new(db.connection());
 
@@ -540,11 +545,11 @@ mod tests {
         assert_eq!(validated.version, "2.1");
 
         // Verify password
-        let verified_key = verify_backup_password(&validated, TEST_PASSWORD).unwrap();
+        let verified_key = verify_backup_password(&validated, &password).unwrap();
         assert_eq!(verified_key, key);
 
         // Create new database and restore
-        let db2 = Database::in_memory(TEST_PASSWORD).unwrap();
+        let db2 = Database::in_memory(&password).unwrap();
         let restored = restore_backup(&db2, &validated, &key, None).unwrap();
         assert_eq!(restored, 2);
 

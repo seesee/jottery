@@ -390,14 +390,19 @@ mod tests {
     use crate::models::Note;
     use crate::repository::NoteRepository;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     fn setup_test_db() -> (Database, [u8; 32]) {
-        let db = Database::in_memory(TEST_PASSWORD).unwrap();
+        let password = test_password();
+        let db = Database::in_memory(&password).unwrap();
         let crypto = CryptoService::new();
         let salt = crypto.generate_salt();
-        let key = crypto.derive_key(TEST_PASSWORD, &salt, 100_000).unwrap();
+        let key = crypto.derive_key(&password, &salt, 100_000).unwrap();
         (db, key)
     }
 

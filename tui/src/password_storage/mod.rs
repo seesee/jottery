@@ -112,23 +112,28 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password_123";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     #[test]
     fn test_file_storage_round_trip() {
         let temp_dir = TempDir::new().unwrap();
         let storage = FileStorage::new(temp_dir.path().to_path_buf());
+        let password = test_password();
 
         // Initially no password
         assert!(matches!(storage.retrieve(), RetrieveResult::NotFound));
 
         // Store password
-        storage.store(TEST_PASSWORD).unwrap();
+        storage.store(&password).unwrap();
 
         // Retrieve password
         match storage.retrieve() {
-            RetrieveResult::Found(password) => assert_eq!(password, TEST_PASSWORD),
+            RetrieveResult::Found(retrieved) => assert_eq!(retrieved, password),
             other => panic!("Expected Found, got {:?}", other),
         }
 

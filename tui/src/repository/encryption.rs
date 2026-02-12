@@ -75,12 +75,16 @@ mod tests {
     use super::*;
     use crate::db::Database;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     #[test]
     fn test_encryption_metadata_roundtrip() {
-        let db = Database::in_memory(TEST_PASSWORD).unwrap();
+        let db = Database::in_memory(&test_password()).unwrap();
         let repo = EncryptionRepository::new(db.connection());
 
         // Should be None initially

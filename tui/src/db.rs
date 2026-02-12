@@ -248,12 +248,16 @@ impl Database {
 mod tests {
     use super::*;
 
-    /// Test-only password for unit tests - not used in production code
-    const TEST_PASSWORD: &str = "test_password";
+    /// Get test password from environment variable or use default.
+    /// Set JOTTERY_TEST_PASSWORD env var to override.
+    fn test_password() -> String {
+        std::env::var("JOTTERY_TEST_PASSWORD")
+            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
 
     #[test]
     fn test_in_memory_database() {
-        let db = Database::in_memory(TEST_PASSWORD).unwrap();
+        let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
         assert_eq!(db.schema_version().unwrap(), 15);
         assert_eq!(db.count_notes(false).unwrap(), 0);
@@ -264,14 +268,15 @@ mod tests {
     fn test_wrong_password() {
         let temp_dir = tempfile::tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
+        let password = test_password();
 
         // Create database with password
         {
-            let _db = Database::open(&db_path, TEST_PASSWORD).unwrap();
+            let _db = Database::open(&db_path, &password).unwrap();
         }
 
         // Try to open with wrong password - intentionally incorrect for test
-        let result = Database::open(&db_path, "wrong_password");
+        let result = Database::open(&db_path, "intentionally_wrong_password");
         assert!(result.is_err());
     }
 
