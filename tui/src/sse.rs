@@ -207,9 +207,17 @@ fn connect_and_listen(
 
     debug!("Connecting to SSE endpoint: {}", config.endpoint);
 
-    // Use ureq for simpler streaming (reqwest::blocking has issues with SSE)
-    let response = ureq::get(&url)
-        .timeout(Duration::from_secs(60)) // Initial connection timeout
+    // Build an agent with appropriate timeouts for SSE:
+    // - Short connect timeout (30s) to fail fast if server is unreachable
+    // - Long read timeout (1 hour) to keep connection open for SSE events
+    //   (server sends heartbeats every 30s, so 1 hour allows for transient issues)
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(30))
+        .timeout_read(Duration::from_secs(3600)) // 1 hour - SSE needs long-lived connection
+        .build();
+
+    let response = agent
+        .get(&url)
         .call()
         .map_err(|e| format!("Failed to connect: {}", e))?;
 
@@ -236,16 +244,18 @@ fn connect_and_listen(
         if line.is_empty() {
             // End of event - process it
             if current_event == "sync" {
-                debug!("Received sync notification from server");
+                info!("SSE: Received sync notification from server");
                 let _ = sender.send(SseMessage::SyncNotification);
             }
             current_event.clear();
         } else if let Some(event_type) = line.strip_prefix("event:") {
             current_event = event_type.trim().to_string();
+            debug!("SSE event type: {}", current_event);
         } else if line.starts_with("data:") {
             // We don't need the data for sync events, just the event type
+            debug!("SSE data line: {}", line);
         } else if line.starts_with(":") {
-            // Comment/heartbeat - ignore
+            // Comment/heartbeat - keep connection alive
             debug!("SSE heartbeat received");
         }
     }
