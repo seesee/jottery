@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
-  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing, inboxCount } from '../stores/appStore';
+  import { filteredNotes, notes, searchQuery, selectedNoteId, settings, isMultiSelectMode, selectAllFiltered, clearMultiSelection, noteListScrollPosition, archiveMode, toggleArchiveMode, isSyncing, inboxCount, triggerEditorTagsRefresh } from '../stores/appStore';
   import NoteListItem from './NoteListItem.svelte';
   import PullToRefresh from './PullToRefresh.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
@@ -457,6 +457,8 @@
         const newTags = setTitleTag(note.tags, title);
         await noteService.updateNote(noteId, { tags: newTags });
         await reloadNotes();
+        // Signal EditorPane to refresh its tags if this note is currently open
+        triggerEditorTagsRefresh();
       }
     } catch (error) {
       console.error('Failed to update note title:', error);
