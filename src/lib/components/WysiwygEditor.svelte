@@ -38,6 +38,7 @@
   import { gfm } from 'turndown-plugin-gfm';
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
+  import { attachmentService } from '../services';
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
@@ -213,23 +214,39 @@
   // Track blob URLs for cleanup
   let blobUrls: string[] = [];
 
-  // Create blob URL from base64 data
-  function createBlobUrl(attachment: typeof attachments[0]): string | null {
-    if (!attachment.data) return null;
-    try {
-      const byteCharacters = atob(attachment.data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+  // Resolve attachment images in the editor after content is set
+  // This loads the actual blob data from the attachment service
+  async function resolveAttachmentImages(): Promise<void> {
+    if (!editorElement) return;
+
+    const images = editorElement.querySelectorAll('img[data-attachment-url]');
+    for (const img of images) {
+      // Skip if already loaded
+      if (img.getAttribute('data-loaded') === 'true') continue;
+
+      const attachmentUrl = img.getAttribute('data-attachment-url');
+      if (!attachmentUrl?.startsWith('attachment:')) continue;
+
+      const attachmentRef = attachmentUrl.substring('attachment:'.length);
+      const attachment = findAttachment(attachmentRef);
+
+      if (attachment && attachment.mimeType.startsWith('image/') && attachment.data) {
+        try {
+          // Load and decrypt the blob using attachmentService
+          // Cast to Attachment type since we've verified data exists
+          const blob = await attachmentService.getAttachmentData(attachment as import('../types').Attachment);
+          const blobUrl = URL.createObjectURL(blob);
+          blobUrls.push(blobUrl);
+          img.setAttribute('src', blobUrl);
+          img.setAttribute('data-loaded', 'true');
+          img.classList.remove('attachment-placeholder');
+        } catch (error) {
+          console.error('Failed to load attachment:', error);
+          img.setAttribute('data-loaded', 'true');
+        }
+      } else {
+        img.setAttribute('data-loaded', 'true');
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: attachment.mimeType });
-      const url = URL.createObjectURL(blob);
-      blobUrls.push(url);
-      return url;
-    } catch (e) {
-      console.error('Failed to create blob URL:', e);
-      return null;
     }
   }
 
@@ -252,22 +269,13 @@
             return `<a href="${href}"${titleAttr}>${displayText}</a>`;
           },
           image({ href, title, text }: { href: string; title?: string | null; text: string }) {
-            // Handle attachment: URLs
+            // Handle attachment: URLs - render with placeholder, resolve async
             if (href && href.startsWith('attachment:')) {
               const attachmentRef = href.substring('attachment:'.length);
-              const attachment = findAttachment(attachmentRef);
               const titleAttr = title ? ` title="${title}"` : '';
               // Store original attachment URL in data attribute for turndown to restore
-              const dataAttr = ` data-attachment-url="${href}"`;
-              if (attachment && attachment.mimeType.startsWith('image/')) {
-                const blobUrl = createBlobUrl(attachment);
-                if (blobUrl) {
-                  return `<img src="${blobUrl}" alt="${text || attachment.filename}"${titleAttr}${dataAttr} />`;
-                }
-              }
-              // Attachment not found or not loadable - still render as img with placeholder src
-              // This preserves the attachment URL through roundtrip
-              return `<img src="" alt="${text || attachmentRef}"${titleAttr}${dataAttr} class="attachment-placeholder" />`;
+              // Actual blob URL will be set async by resolveAttachmentImages
+              return `<img src="" alt="${text || attachmentRef}"${titleAttr} data-attachment-url="${href}" class="attachment-placeholder" />`;
             }
             // Default image rendering
             const titleAttr = title ? ` title="${title}"` : '';
@@ -396,6 +404,9 @@
         onChange(markdown);
       },
     });
+
+    // Resolve attachment images after editor is created
+    resolveAttachmentImages();
   });
 
   // Update content when value prop changes
@@ -406,6 +417,8 @@
       isUpdatingFromProp = true;
       editor.commands.setContent(markdownToHtml(value));
       isUpdatingFromProp = false;
+      // Resolve attachment images after content update
+      resolveAttachmentImages();
     }
   }
 
@@ -427,6 +440,8 @@
       blobUrls = [];
       editor.commands.setContent(markdownToHtml(value));
       isUpdatingFromProp = false;
+      // Resolve attachment images after re-render
+      resolveAttachmentImages();
     }
   }
 
