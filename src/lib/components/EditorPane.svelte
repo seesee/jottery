@@ -1151,6 +1151,7 @@
       {previewHtml}
       {useIframePreview}
       rawContent={content}
+      {attachments}
     />
 
     <!-- Attachments Section - Only show if attachments exist or dragging files (hidden on mobile) -->

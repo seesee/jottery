@@ -37,6 +37,9 @@
   export let onImagePaste: ((file: File) => Promise<string | null>) | undefined = undefined;
   export let onNoteLinkClick: ((noteId: string) => void) | undefined = undefined;
 
+  // Attachments for resolving attachment: URLs in WYSIWYG mode
+  export let attachments: Array<{ id: string; filename: string; mimeType: string; size: number; data?: string }> = [];
+
   // Preview HTML
   export let previewHtml: string;
 
@@ -166,7 +169,8 @@
           value={content}
           onChange={handleContentChange}
           {isDark}
-          placeholder={$_('editor.noNoteSelectedHint')}
+          {attachments}
+          {onImagePaste}
           readonly={readOnly}
         />
       </div>

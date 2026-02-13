@@ -14,7 +14,7 @@
   import { Typography } from '@tiptap/extension-typography';
   import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
   import { common, createLowlight } from 'lowlight';
-  import { marked } from 'marked';
+  import { Marked } from 'marked';
   import TurndownService from 'turndown';
   import { gfm } from 'turndown-plugin-gfm';
   import { settings } from '../stores/appStore';
@@ -24,7 +24,8 @@
   export let onChange: (value: string) => void = () => {};
   export let readonly: boolean = false;
   export let isDark: boolean = false;
-  export let placeholder: string = '';
+  export let attachments: Array<{ id: string; filename: string; mimeType: string; size: number; data?: string }> = [];
+  export let onImagePaste: ((file: File) => Promise<string | null>) | undefined = undefined;
 
   let editorElement: HTMLDivElement;
   let editor: Editor | null = null;
@@ -57,6 +58,23 @@
       const trimmedContent = content?.trim() || '';
       const text = (trimmedContent === EMPTY_LINK_PLACEHOLDER) ? '' : trimmedContent;
       return `[${text}](${href})`;
+    }
+  });
+
+  // Custom rule to preserve attachment images (attachment:uuid format)
+  turndownService.addRule('attachmentImage', {
+    filter: (node) => {
+      return node.nodeName === 'IMG' &&
+             ((node as HTMLImageElement).getAttribute('data-attachment-url')?.startsWith('attachment:') ?? false);
+    },
+    replacement: (_content, node) => {
+      const attachmentUrl = (node as HTMLImageElement).getAttribute('data-attachment-url') || '';
+      const alt = (node as HTMLImageElement).getAttribute('alt') || '';
+      const title = (node as HTMLImageElement).getAttribute('title');
+      if (title) {
+        return `![${alt}](${attachmentUrl} "${title}")`;
+      }
+      return `![${alt}](${attachmentUrl})`;
     }
   });
 
@@ -162,25 +180,83 @@
   // Placeholder for empty note links (Tiptap strips empty anchors)
   const EMPTY_LINK_PLACEHOLDER = '🔗';
 
-  // Configure marked to allow note links (link: protocol)
-  // In marked v17+, renderer functions receive a token object
-  marked.use({
-    renderer: {
-      link({ href, title, text }: { href: string; title?: string | null; text: string }) {
-        // Preserve note links with link: protocol
-        const titleAttr = title ? ` title="${title}"` : '';
-        // Add placeholder for empty note links so Tiptap doesn't strip them
-        const displayText = (!text && href.startsWith('link:')) ? EMPTY_LINK_PLACEHOLDER : text;
-        return `<a href="${href}"${titleAttr}>${displayText}</a>`;
+  // Helper to find attachment by reference (supports id, data field, or stripped id)
+  function findAttachment(ref: string): typeof attachments[0] | undefined {
+    if (!ref || !attachments.length) return undefined;
+    const normalizedRef = ref.replace(/-/g, '').toLowerCase();
+    return attachments.find(a => {
+      const normalizedId = a.id.replace(/-/g, '').toLowerCase();
+      const normalizedData = a.data?.replace(/-/g, '').toLowerCase() || '';
+      return a.id === ref || normalizedId === normalizedRef || a.data === ref || normalizedData === normalizedRef;
+    });
+  }
+
+  // Track blob URLs for cleanup
+  let blobUrls: string[] = [];
+
+  // Create blob URL from base64 data
+  function createBlobUrl(attachment: typeof attachments[0]): string | null {
+    if (!attachment.data) return null;
+    try {
+      const byteCharacters = atob(attachment.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: attachment.mimeType });
+      const url = URL.createObjectURL(blob);
+      blobUrls.push(url);
+      return url;
+    } catch (e) {
+      console.error('Failed to create blob URL:', e);
+      return null;
     }
-  });
+  }
 
   // Convert markdown to HTML for Tiptap
+  // Uses a local Marked instance with custom renderers for attachments and note links
   function markdownToHtml(md: string): string {
     if (!md) return '';
     try {
-      return marked.parse(md, { breaks: true, gfm: true }) as string;
+      // Create a new Marked instance with our custom renderers
+      // This ensures we use the current attachments array
+      const marked = new Marked({
+        breaks: true,
+        gfm: true,
+        renderer: {
+          link({ href, title, text }: { href: string; title?: string | null; text: string }) {
+            // Preserve note links with link: protocol
+            const titleAttr = title ? ` title="${title}"` : '';
+            // Add placeholder for empty note links so Tiptap doesn't strip them
+            const displayText = (!text && href.startsWith('link:')) ? EMPTY_LINK_PLACEHOLDER : text;
+            return `<a href="${href}"${titleAttr}>${displayText}</a>`;
+          },
+          image({ href, title, text }: { href: string; title?: string | null; text: string }) {
+            // Handle attachment: URLs
+            if (href && href.startsWith('attachment:')) {
+              const attachmentRef = href.substring('attachment:'.length);
+              const attachment = findAttachment(attachmentRef);
+              const titleAttr = title ? ` title="${title}"` : '';
+              // Store original attachment URL in data attribute for turndown to restore
+              const dataAttr = ` data-attachment-url="${href}"`;
+              if (attachment && attachment.mimeType.startsWith('image/')) {
+                const blobUrl = createBlobUrl(attachment);
+                if (blobUrl) {
+                  return `<img src="${blobUrl}" alt="${text || attachment.filename}"${titleAttr}${dataAttr} />`;
+                }
+              }
+              // Attachment not found or not loadable - still render as img with placeholder src
+              // This preserves the attachment URL through roundtrip
+              return `<img src="" alt="${text || attachmentRef}"${titleAttr}${dataAttr} class="attachment-placeholder" />`;
+            }
+            // Default image rendering
+            const titleAttr = title ? ` title="${title}"` : '';
+            return `<img src="${href}" alt="${text || ''}"${titleAttr} />`;
+          }
+        }
+      });
+      return marked.parse(md) as string;
     } catch (e) {
       console.error('Failed to parse markdown:', e);
       return md;
@@ -234,7 +310,7 @@
           nested: true,
         }),
         Placeholder.configure({
-          placeholder: placeholder || 'Start writing...',
+          placeholder: 'Start writing...',
         }),
         Typography,
       ],
@@ -244,6 +320,40 @@
         attributes: {
           class: 'prose dark:prose-invert max-w-none focus:outline-none min-h-full',
           style: `font-size: ${fontSize}px`,
+        },
+        handlePaste: (_view, event) => {
+          if (!onImagePaste) return false;
+
+          const clipboardData = event.clipboardData;
+          if (!clipboardData) return false;
+
+          // Check for image files in clipboard
+          const items = Array.from(clipboardData.items);
+          const imageItem = items.find(item => item.type.startsWith('image/'));
+
+          if (!imageItem) return false;
+
+          const file = imageItem.getAsFile();
+          if (!file) return false;
+
+          // Prevent default paste behaviour
+          event.preventDefault();
+
+          // Handle the image paste asynchronously
+          (async () => {
+            try {
+              const markdownRef = await onImagePaste(file);
+              if (markdownRef && editor) {
+                // Insert the markdown reference (will be converted to image on next render)
+                // For WYSIWYG, we insert the text which will be re-parsed
+                editor.chain().focus().insertContent(markdownRef).run();
+              }
+            } catch (error) {
+              console.error('Failed to handle image paste:', error);
+            }
+          })();
+
+          return true; // Event handled
         },
       },
       onUpdate: ({ editor }) => {
@@ -271,9 +381,28 @@
     editor.setEditable(!readonly);
   }
 
+  // Re-render content when attachments change (so images can be resolved)
+  // Track previous attachments length to detect changes
+  let prevAttachmentsLength = 0;
+  $: if (editor && attachments.length !== prevAttachmentsLength) {
+    prevAttachmentsLength = attachments.length;
+    // Only re-render if we have content that might contain attachment references
+    if (value && value.includes('attachment:')) {
+      isUpdatingFromProp = true;
+      // Clear old blob URLs before re-rendering
+      blobUrls.forEach(url => URL.revokeObjectURL(url));
+      blobUrls = [];
+      editor.commands.setContent(markdownToHtml(value));
+      isUpdatingFromProp = false;
+    }
+  }
+
   // Cleanup
   onDestroy(() => {
     editor?.destroy();
+    // Revoke blob URLs to free memory
+    blobUrls.forEach(url => URL.revokeObjectURL(url));
+    blobUrls = [];
   });
 
   // Export methods for toolbar
@@ -496,6 +625,20 @@
     max-width: 100%;
     height: auto;
     border-radius: 0.375rem;
+  }
+
+  /* Placeholder for images with missing attachment data */
+  .wysiwyg-editor :global(img.attachment-placeholder) {
+    display: inline-block;
+    min-width: 100px;
+    min-height: 60px;
+    background-color: #f3f4f6;
+    border: 2px dashed #d1d5db;
+  }
+
+  .wysiwyg-editor.dark :global(img.attachment-placeholder) {
+    background-color: #374151;
+    border-color: #4b5563;
   }
 
   /* Horizontal rule */
