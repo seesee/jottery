@@ -12,6 +12,7 @@
   import { syncRepository } from '../services/syncRepository';
   import { searchService } from '../services/searchService';
   import { isMobileTouchDevice } from '../utils/device';
+  import { setTitleTag } from '../utils/noteTitle';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
   import {
     VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT,
@@ -447,6 +448,20 @@
     }
   }
 
+  // Handle title update from NoteListItem
+  async function handleUpdateTitle(noteId: string, title: string) {
+    try {
+      const note = $notes.find(n => n.id === noteId);
+      if (note) {
+        const newTags = setTitleTag(note.tags, title);
+        await noteService.updateNote(noteId, { tags: newTags });
+        await reloadNotes();
+      }
+    } catch (error) {
+      console.error('Failed to update note title:', error);
+    }
+  }
+
   async function requestDelete(note: DecryptedNote) {
     // Pinned notes should not reach here (UI prevents it), but double-check
     if (note.pinned) {
@@ -559,7 +574,7 @@
             <!-- Render only visible items -->
             {#each visibleNotes as note, i (note.id)}
               <div bind:this={itemElements[i]}>
-                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
               </div>
             {/each}
           </div>
@@ -627,7 +642,7 @@
           <!-- Render only visible items -->
           {#each visibleNotes as note, i (note.id)}
             <div bind:this={itemElements[i]}>
-              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
             </div>
           {/each}
         </div>
