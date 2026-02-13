@@ -93,6 +93,7 @@
   let isEditingTitle = false;
   let editingTitleValue = '';
   let titleInputElement: HTMLInputElement;
+  let shouldSaveOnBlur = true; // Track whether blur should save (false when cancelled)
 
   // Strip markdown formatting from the title
   function stripMarkdown(text: string): string {
@@ -272,7 +273,14 @@
   function handleTitleDoubleClick(e: MouseEvent) {
     e.stopPropagation();
     e.preventDefault();
+
+    // Don't allow title editing on pinned or locked notes
+    if (note.pinned || note.locked) {
+      return;
+    }
+
     isEditingTitle = true;
+    shouldSaveOnBlur = true;
     // If note has custom title tag, use that value; otherwise use the extracted title
     const customTitleValue = getTitleTagValue(note.tags);
     editingTitleValue = customTitleValue !== undefined ? customTitleValue : title;
@@ -293,7 +301,15 @@
   }
 
   function handleTitleCancel() {
+    shouldSaveOnBlur = false;
     isEditingTitle = false;
+  }
+
+  function handleTitleBlur() {
+    // Only save on blur if not cancelled (Escape key)
+    if (shouldSaveOnBlur) {
+      handleTitleSave();
+    }
   }
 
   function handleTitleKeydown(e: KeyboardEvent) {
@@ -301,6 +317,7 @@
       e.preventDefault();
       handleTitleSave();
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       handleTitleCancel();
     }
   }
@@ -396,7 +413,7 @@
             <input
               bind:this={titleInputElement}
               bind:value={editingTitleValue}
-              on:blur={handleTitleSave}
+              on:blur={handleTitleBlur}
               on:keydown={handleTitleKeydown}
               on:click={handleTitleInputClick}
               class="font-medium text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-blue-500 outline-none flex-1 min-w-0"
@@ -405,8 +422,8 @@
           {:else}
             <h3
               on:dblclick={handleTitleDoubleClick}
-              class="font-medium text-gray-900 dark:text-gray-100 truncate cursor-text"
-              title={$_('note.editTitleTooltip')}
+              class="font-medium text-gray-900 dark:text-gray-100 truncate {!note.pinned && !note.locked ? 'cursor-text' : ''}"
+              title={!note.pinned && !note.locked ? $_('note.editTitleTooltip') : undefined}
             >
               {title}
             </h3>
@@ -503,7 +520,7 @@
           <input
             bind:this={titleInputElement}
             bind:value={editingTitleValue}
-            on:blur={handleTitleSave}
+            on:blur={handleTitleBlur}
             on:keydown={handleTitleKeydown}
             on:click={handleTitleInputClick}
             class="font-medium text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-blue-500 outline-none flex-1 min-w-0"
@@ -512,8 +529,8 @@
         {:else}
           <h3
             on:dblclick={handleTitleDoubleClick}
-            class="font-medium text-gray-900 dark:text-gray-100 truncate cursor-text"
-            title={$_('note.editTitleTooltip')}
+            class="font-medium text-gray-900 dark:text-gray-100 truncate {!note.pinned && !note.locked ? 'cursor-text' : ''}"
+            title={!note.pinned && !note.locked ? $_('note.editTitleTooltip') : undefined}
           >
             {title}
           </h3>

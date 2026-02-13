@@ -38,8 +38,34 @@ export const VIRTUAL_TAGS: Record<string, VirtualTagConfig> = {
   // Future virtual tags can be added here
 };
 
-/** The prefix for title tags */
+/** The canonical prefix for title tags (used when creating new tags) */
 export const TITLE_TAG_PREFIX = 't:';
+
+/** All valid prefixes for title tags (for matching) */
+export const TITLE_TAG_PREFIXES = ['t:', 'title:'];
+
+/**
+ * Check if a tag is a title tag (matches any title prefix).
+ * @param tag The tag to check
+ * @returns true if the tag is a title tag
+ */
+export function isTitleTag(tag: string): boolean {
+  return TITLE_TAG_PREFIXES.some((prefix) => tag.startsWith(prefix));
+}
+
+/**
+ * Get the title value from a title tag, stripping the prefix.
+ * @param tag The title tag
+ * @returns The title value, or undefined if not a title tag
+ */
+export function getTitleFromTag(tag: string): string | undefined {
+  for (const prefix of TITLE_TAG_PREFIXES) {
+    if (tag.startsWith(prefix)) {
+      return tag.substring(prefix.length);
+    }
+  }
+  return undefined;
+}
 
 /**
  * Check if a tag is a virtual tag (has a known prefix).
@@ -47,7 +73,12 @@ export const TITLE_TAG_PREFIX = 't:';
  * @returns true if the tag is a virtual tag
  */
 export function isVirtualTag(tag: string): boolean {
-  return Object.values(VIRTUAL_TAGS).some((config) => tag.startsWith(config.prefix));
+  // Check title tags (which have multiple valid prefixes)
+  if (isTitleTag(tag)) return true;
+  // Check other virtual tags by their canonical prefix
+  return Object.values(VIRTUAL_TAGS).some(
+    (config) => config.prefix !== 't:' && tag.startsWith(config.prefix)
+  );
 }
 
 /**
@@ -56,7 +87,13 @@ export function isVirtualTag(tag: string): boolean {
  * @returns The config if tag is virtual, undefined otherwise
  */
 export function getVirtualTagConfig(tag: string): VirtualTagConfig | undefined {
-  return Object.values(VIRTUAL_TAGS).find((config) => tag.startsWith(config.prefix));
+  // Handle title tags with multiple prefixes
+  if (isTitleTag(tag)) {
+    return VIRTUAL_TAGS.title;
+  }
+  return Object.values(VIRTUAL_TAGS).find(
+    (config) => config.prefix !== 't:' && tag.startsWith(config.prefix)
+  );
 }
 
 /**
@@ -67,6 +104,15 @@ export function getVirtualTagConfig(tag: string): VirtualTagConfig | undefined {
 export function getVirtualTagDisplay(
   tag: string
 ): { displayKey: string; value: string; style: string } | null {
+  // Handle title tags with multiple prefixes
+  if (isTitleTag(tag)) {
+    const value = getTitleFromTag(tag);
+    return {
+      displayKey: VIRTUAL_TAGS.title.displayKey,
+      value: value || '',
+      style: VIRTUAL_TAGS.title.style,
+    };
+  }
   const config = getVirtualTagConfig(tag);
   if (!config) return null;
   return {
@@ -100,8 +146,12 @@ export function getVirtualTags(tags: string[]): string[] {
  * @returns The type name (e.g., 'title') or undefined if not virtual
  */
 export function getVirtualTagType(tag: string): string | undefined {
+  // Handle title tags with multiple prefixes
+  if (isTitleTag(tag)) {
+    return 'title';
+  }
   for (const [type, config] of Object.entries(VIRTUAL_TAGS)) {
-    if (tag.startsWith(config.prefix)) {
+    if (config.prefix !== 't:' && tag.startsWith(config.prefix)) {
       return type;
     }
   }

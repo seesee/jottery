@@ -31,6 +31,14 @@ describe('noteTitle', () => {
       expect(getNoteTitle(note)).toBe('My Custom Title');
     });
 
+    it('should return custom title from title: tag', () => {
+      const note: NoteTitleData = {
+        content: 'This content is ignored\nAs a title',
+        tags: ['project', 'title:My Custom Title', 'work'],
+      };
+      expect(getNoteTitle(note)).toBe('My Custom Title');
+    });
+
     it('should trim whitespace from custom title', () => {
       const note: NoteTitleData = {
         content: 'Content',
@@ -98,8 +106,13 @@ describe('noteTitle', () => {
   });
 
   describe('getTitleTagValue', () => {
-    it('should return title value when present', () => {
+    it('should return title value for t: prefix', () => {
       const tags = ['project', 't:My Title', 'work'];
+      expect(getTitleTagValue(tags)).toBe('My Title');
+    });
+
+    it('should return title value for title: prefix', () => {
+      const tags = ['project', 'title:My Title', 'work'];
       expect(getTitleTagValue(tags)).toBe('My Title');
     });
 
@@ -124,8 +137,13 @@ describe('noteTitle', () => {
   });
 
   describe('hasCustomTitle', () => {
-    it('should return true when title tag present', () => {
+    it('should return true for t: prefix', () => {
       const tags = ['project', 't:My Title', 'work'];
+      expect(hasCustomTitle(tags)).toBe(true);
+    });
+
+    it('should return true for title: prefix', () => {
+      const tags = ['project', 'title:My Title', 'work'];
       expect(hasCustomTitle(tags)).toBe(true);
     });
 
@@ -156,8 +174,14 @@ describe('noteTitle', () => {
       expect(result).toEqual(['project', 'work', 't:New Title']);
     });
 
-    it('should replace existing title tag', () => {
+    it('should replace existing t: title tag', () => {
       const tags = ['project', 't:Old Title', 'work'];
+      const result = setTitleTag(tags, 'New Title');
+      expect(result).toEqual(['project', 'work', 't:New Title']);
+    });
+
+    it('should replace existing title: title tag with canonical t: prefix', () => {
+      const tags = ['project', 'title:Old Title', 'work'];
       const result = setTitleTag(tags, 'New Title');
       expect(result).toEqual(['project', 'work', 't:New Title']);
     });
@@ -201,8 +225,14 @@ describe('noteTitle', () => {
   });
 
   describe('removeTitleTag', () => {
-    it('should remove title tag', () => {
+    it('should remove t: title tag', () => {
       const tags = ['project', 't:My Title', 'work'];
+      const result = removeTitleTag(tags);
+      expect(result).toEqual(['project', 'work']);
+    });
+
+    it('should remove title: title tag', () => {
+      const tags = ['project', 'title:My Title', 'work'];
       const result = removeTitleTag(tags);
       expect(result).toEqual(['project', 'work']);
     });
@@ -213,9 +243,9 @@ describe('noteTitle', () => {
       expect(result).toEqual(['project', 'work']);
     });
 
-    it('should remove multiple title tags', () => {
+    it('should remove multiple title tags with different prefixes', () => {
       // Shouldn't happen, but handle gracefully
-      const tags = ['t:First', 'project', 't:Second'];
+      const tags = ['t:First', 'project', 'title:Second'];
       const result = removeTitleTag(tags);
       expect(result).toEqual(['project']);
     });

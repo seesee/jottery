@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { getColorHex, getTagColor } from '../services/colorService';
-  import { TITLE_TAG_PREFIX, isVirtualTag } from '../utils/virtualTags';
+  import { isVirtualTag, isTitleTag, getTitleFromTag } from '../utils/virtualTags';
 
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};
@@ -73,9 +73,10 @@
     if (!trimmedTag) return;
 
     // Handle title tags specially - only one allowed, remove existing
-    if (trimmedTag.startsWith(TITLE_TAG_PREFIX)) {
-      // Remove any existing title tags first
-      const filtered = tags.filter(t => !t.startsWith(TITLE_TAG_PREFIX));
+    // Supports both t: and title: prefixes
+    if (isTitleTag(trimmedTag)) {
+      // Remove any existing title tags first (both t: and title: prefixes)
+      const filtered = tags.filter(t => !isTitleTag(t));
       tags = [...filtered, trimmedTag];
       onChange(tags);
       inputValue = '';
@@ -139,10 +140,11 @@
     <!-- Existing tags -->
     {#each tags as tag, index}
       {@const tagBgColor = getTagBackgroundColor(tag)}
-      {@const isTitleTag = tag.startsWith(TITLE_TAG_PREFIX)}
+      {@const isTitle = isTitleTag(tag)}
+      {@const titleValue = isTitle ? getTitleFromTag(tag) : null}
       <span
-        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {isTitleTag ? 'italic bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' : tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300'}"
-        style:background-color={!isTitleTag ? tagBgColor : undefined}
+        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {isTitle ? 'italic bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' : tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300'}"
+        style:background-color={!isTitle ? tagBgColor : undefined}
       >
         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
         <span
@@ -157,8 +159,8 @@
             }
           }}
         >
-          {#if isTitleTag}
-            {$_('tags.virtual.title')}: {tag.substring(TITLE_TAG_PREFIX.length)}
+          {#if isTitle}
+            {$_('tags.virtual.title')}: {titleValue}
           {:else}
             #{tag}
           {/if}
