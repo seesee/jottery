@@ -42,7 +42,7 @@ use crate::{
     db::Database,
     models::{Note, UserSettings, sync::{SyncCredentials, ConflictData}},
     password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
-    repository::{EncryptionRepository, NoteRepository, SettingsRepository, sync::SyncRepository},
+    repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
 };
 
 
@@ -487,110 +487,17 @@ impl App {
 
 
     /// Unlock the database
+    ///
+    /// Delegates to operations::auth::unlock() for the core implementation,
+    /// then refreshes color palette cache which auth.rs doesn't handle.
     fn unlock(&mut self) -> Result<()> {
-        // Open database
-        let db = Database::open(&self.db_path, &self.password_input)
-            .context("Failed to open database")?;
+        // Use the comprehensive unlock implementation from auth module
+        // This handles all credential types (PLAINTEXT:, ENCRYPTED:, clone-device)
+        crate::ui::operations::auth::unlock(self)?;
 
-        let encryption_repo = EncryptionRepository::new(db.connection());
-
-        // Get or create encryption metadata
-        let (salt, iterations) = if let Some(metadata) = encryption_repo.get()? {
-            // Load existing salt from database
-            (metadata.salt, metadata.iterations)
-        } else {
-            // First-time setup: generate new salt and save it
-            let new_salt = self.crypto.generate_salt();
-            let iterations = 256_000;
-            encryption_repo.save(&new_salt, iterations)?;
-            (new_salt.to_vec(), iterations)
-        };
-
-        // Derive encryption key from password and salt
-        self.debug_log(&format!("Unlock - Password length: {} chars", self.password_input.len()));
-        self.debug_log(&format!("Unlock - Password is empty: {}", self.password_input.is_empty()));
-
-        let key = self
-            .crypto
-            .derive_key(&self.password_input, &salt, iterations)?;
-
-        // Debug logging for troubleshooting (key bytes intentionally excluded for security)
-        self.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(&salt)));
-        self.debug_log(&format!("Unlock - Salt length: {} bytes", salt.len()));
-        self.debug_log(&format!("Unlock - Iterations: {}", iterations));
-
-        self.key_manager.set_master_key(key);
-        self.key = Some(key);
-        self.db = Some(db);
-
-        // Check if API key needs encryption (from paste credentials flow)
-        if let Some(db) = &self.db {
-            use crate::repository::sync::SyncRepository;
-            let sync_repo = SyncRepository::new(db.connection());
-
-            if let Ok(Some(mut metadata)) = sync_repo.get_metadata() {
-                if let Some(api_key_str) = &metadata.api_key {
-                    // Check if API key is plaintext (prefixed with "PLAINTEXT:")
-                    if let Some(plaintext_key) = api_key_str.strip_prefix("PLAINTEXT:") {
-                        self.debug_log("Unlock - Detected plaintext API key, encrypting with new key");
-
-                        // Encrypt API key with the newly derived key
-                        let encrypted = self.crypto.encrypt_text(plaintext_key, &key)?;
-                        let encrypted_api_key = serde_json::to_string(&encrypted)?;
-
-                        // Update metadata with encrypted API key
-                        metadata.api_key = Some(encrypted_api_key);
-                        sync_repo.update_metadata(&metadata)?;
-
-                        self.debug_log("Unlock - API key encrypted and saved");
-                    }
-                }
-            }
-        }
-
-        // Load notes
-        self.load_notes()?;
-
-        // Load settings
-        if let Some(db) = &self.db {
-            let settings_repo = SettingsRepository::new(db.connection());
-            self.settings = settings_repo.get()?;
-            self.debug_log(&format!("Unlock - Settings loaded: theme={}", self.settings.theme));
-            self.debug_log(&format!("Unlock - Theme scheme name: {}", self.settings.theme.scheme_name()));
-            self.debug_log(&format!("Unlock - Color palette present: {}", self.settings.color_palette.is_some()));
-            self.debug_log(&format!("Unlock - Tag colors present: {}", self.settings.tag_colors.is_some()));
-            // Update color scheme from loaded settings
-            self.color_scheme = crate::ui::ColorScheme::by_name(self.settings.theme.scheme_name());
-            // Update color palette cache
-            self.refresh_color_palette_cache();
-            self.debug_log("Unlock - Color scheme updated");
-        }
-
-        // Store password if remember checkbox was enabled
-        if self.remember_password_checkbox {
-            // The password is still in self.password_input at this point
-            let password_to_store = self.password_input.clone();
-            if let Err(e) = self.store_password_for_autounlock(&password_to_store) {
-                self.error = Some(format!("Failed to store password: {}", e));
-            } else {
-                // Show different message based on storage backend type
-                let msg = if self.password_storage.backend_type().is_secure() {
-                    t!("password.remember_keychain_enabled")
-                } else {
-                    t!("password.remember_enabled")
-                };
-                self.sync_status = Some(msg.to_string());
-                self.sync_status_set_at = Some(Instant::now());
-            }
-        }
-
-        // Zeroize password fields for security and reset flags
-        self.password_input.zeroize();
-        self.password_confirm.zeroize();
-        self.is_new_database = false;  // Database now exists
-        self.password_confirm_focused = false;  // Reset focus
-        self.remember_password_checkbox = false;  // Reset checkbox
-        self.state = AppState::NoteList;
+        // Refresh color palette cache (not done in auth::unlock)
+        self.refresh_color_palette_cache();
+        self.debug_log("Unlock - Color palette cache refreshed");
 
         Ok(())
     }
@@ -681,6 +588,7 @@ impl App {
     }
 
     /// Store password for auto-unlock (call after successful unlock when user confirms)
+    #[allow(dead_code)]
     pub fn store_password_for_autounlock(&mut self, password: &str) -> Result<()> {
         // Store password using the storage backend (keychain or file)
         self.password_storage.store(password)?;
@@ -703,6 +611,7 @@ impl App {
     }
 
     /// Load notes from database
+    #[allow(dead_code)]
     fn load_notes(&mut self) -> Result<()> {
         if let (Some(db), Some(key)) = (&self.db, &self.key) {
             let old_selected_note = self.selected_note;
@@ -1242,47 +1151,75 @@ impl App {
 
     /// Start SSE connection if sync is enabled
     pub fn start_sse_if_enabled(&mut self) {
+        self.debug_log("SSE: start_sse_if_enabled() called");
+
         // Only start if sync is enabled and we have an endpoint
         if !self.settings.sync_enabled {
+            self.debug_log("SSE: sync not enabled, skipping SSE");
             return;
         }
 
         let endpoint = match &self.settings.sync_endpoint {
             Some(ep) => ep.clone(),
-            None => return,
+            None => {
+                self.debug_log("SSE: no sync endpoint configured, skipping SSE");
+                return;
+            }
         };
 
         // Get the API key (need to decrypt it)
         let db = match &self.db {
             Some(db) => db,
-            None => return,
+            None => {
+                self.debug_log("SSE: no database available, skipping SSE");
+                return;
+            }
         };
 
         let key = match &self.key {
             Some(k) => k,
-            None => return,
+            None => {
+                self.debug_log("SSE: no encryption key available, skipping SSE");
+                return;
+            }
         };
 
         let sync_repo = SyncRepository::new(db.connection());
         let metadata = match sync_repo.get_metadata() {
             Ok(Some(m)) => m,
-            _ => return,
+            Ok(None) => {
+                self.debug_log("SSE: no sync metadata found, skipping SSE");
+                return;
+            }
+            Err(e) => {
+                self.debug_log(&format!("SSE: failed to get sync metadata: {}, skipping SSE", e));
+                return;
+            }
         };
 
         let encrypted_api_key = match &metadata.api_key {
             Some(k) => k,
-            None => return,
+            None => {
+                self.debug_log("SSE: no API key in sync metadata, skipping SSE");
+                return;
+            }
         };
 
         // Decrypt the API key
         let encrypted: crate::crypto::EncryptedData = match serde_json::from_str(encrypted_api_key) {
             Ok(e) => e,
-            Err(_) => return,
+            Err(e) => {
+                self.debug_log(&format!("SSE: failed to parse encrypted API key: {}, skipping SSE", e));
+                return;
+            }
         };
 
         let api_key = match self.crypto.decrypt_text(&encrypted, key) {
             Ok(k) => k,
-            Err(_) => return,
+            Err(e) => {
+                self.debug_log(&format!("SSE: failed to decrypt API key: {}, skipping SSE", e));
+                return;
+            }
         };
 
         // Stop existing SSE connection if any
@@ -1296,6 +1233,7 @@ impl App {
         };
 
         self.sse_handle = Some(crate::sse::start_sse_thread(config));
+        self.debug_log("SSE: SSE thread started");
     }
 
     /// Stop SSE connection
