@@ -57,7 +57,8 @@
     "noNotes": "ノートがありません",
     "somethingWentWrong": "問題が発生しました",
     "matchSingular": "件",
-    "matchPlural": "件"
+    "matchPlural": "件",
+    "editTitleTooltip": "ダブルクリックでタイトルを編集"
   },
   "search": {
     "placeholder": "ノートを検索...",
@@ -1292,5 +1293,10 @@
     "processing": "処理中...",
     "backup": "バックアップを作成中...",
     "export": "ノートをエクスポート中..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "タイトル"
+    }
   }
 }

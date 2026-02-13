@@ -57,7 +57,8 @@
     "noNotes": "노트 없음",
     "somethingWentWrong": "문제가 발생했습니다",
     "matchSingular": "개 일치",
-    "matchPlural": "개 일치"
+    "matchPlural": "개 일치",
+    "editTitleTooltip": "더블클릭하여 제목 편집"
   },
   "search": {
     "placeholder": "노트 검색...",
@@ -1292,5 +1293,10 @@
     "processing": "처리 중...",
     "backup": "백업 생성 중...",
     "export": "노트 내보내는 중..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "제목"
+    }
   }
 }

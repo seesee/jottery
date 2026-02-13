@@ -57,7 +57,8 @@
     "noNotes": "Keine Notizen",
     "somethingWentWrong": "Etwas ist schiefgelaufen",
     "matchSingular": "Treffer",
-    "matchPlural": "Treffer"
+    "matchPlural": "Treffer",
+    "editTitleTooltip": "Doppelklick zum Bearbeiten des Titels"
   },
   "search": {
     "placeholder": "Notizen durchsuchen...",
@@ -1292,5 +1293,10 @@
     "processing": "Verarbeitung...",
     "backup": "Backup wird erstellt...",
     "export": "Notizen werden exportiert..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "Titel"
+    }
   }
 }

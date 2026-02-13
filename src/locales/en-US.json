@@ -57,7 +57,8 @@
     "noNotes": "No notes",
     "somethingWentWrong": "Something went wrong",
     "matchSingular": "match",
-    "matchPlural": "matches"
+    "matchPlural": "matches",
+    "editTitleTooltip": "Double-click to edit title"
   },
   "search": {
     "placeholder": "Search notes...",
@@ -1278,5 +1279,10 @@
     "processing": "Processing...",
     "backup": "Creating backup...",
     "export": "Exporting notes..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "title"
+    }
   }
 }

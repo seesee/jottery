@@ -57,7 +57,8 @@
     "noNotes": "Geen notities",
     "somethingWentWrong": "Er is iets misgegaan",
     "matchSingular": "resultaat",
-    "matchPlural": "resultaten"
+    "matchPlural": "resultaten",
+    "editTitleTooltip": "Dubbelklik om titel te bewerken"
   },
   "search": {
     "placeholder": "Notities zoeken...",
@@ -1292,5 +1293,10 @@
     "processing": "Verwerken...",
     "backup": "Back-up maken...",
     "export": "Notities exporteren..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "titel"
+    }
   }
 }

@@ -57,7 +57,8 @@
     "noNotes": "Нет заметок",
     "somethingWentWrong": "Что-то пошло не так",
     "matchSingular": "совпадение",
-    "matchPlural": "совпадений"
+    "matchPlural": "совпадений",
+    "editTitleTooltip": "Двойной клик для редактирования заголовка"
   },
   "search": {
     "placeholder": "Поиск заметок...",
@@ -1292,5 +1293,10 @@
     "processing": "Обработка...",
     "backup": "Создание резервной копии...",
     "export": "Экспорт заметок..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "заголовок"
+    }
   }
 }

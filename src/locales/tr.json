@@ -57,7 +57,8 @@
     "noNotes": "Not yok",
     "somethingWentWrong": "Bir şeyler ters gitti",
     "matchSingular": "eşleşme",
-    "matchPlural": "eşleşme"
+    "matchPlural": "eşleşme",
+    "editTitleTooltip": "Başlığı düzenlemek için çift tıklayın"
   },
   "search": {
     "placeholder": "Notlarda ara...",
@@ -1292,5 +1293,10 @@
     "processing": "İşleniyor...",
     "backup": "Yedek oluşturuluyor...",
     "export": "Notlar dışa aktarılıyor..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "başlık"
+    }
   }
 }
