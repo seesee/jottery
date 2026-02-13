@@ -5,6 +5,25 @@
   import { Link } from '@tiptap/extension-link';
   import { Image } from '@tiptap/extension-image';
   import { Table } from '@tiptap/extension-table';
+
+  // Custom Image extension that preserves attachment URL attribute
+  const AttachmentImage = Image.extend({
+    addAttributes() {
+      return {
+        ...this.parent?.(),
+        'data-attachment-url': {
+          default: null,
+          parseHTML: element => element.getAttribute('data-attachment-url'),
+          renderHTML: attributes => {
+            if (!attributes['data-attachment-url']) {
+              return {};
+            }
+            return { 'data-attachment-url': attributes['data-attachment-url'] };
+          },
+        },
+      };
+    },
+  });
   import { TableRow } from '@tiptap/extension-table-row';
   import { TableCell } from '@tiptap/extension-table-cell';
   import { TableHeader } from '@tiptap/extension-table-header';
@@ -294,7 +313,7 @@
           protocols: ['http', 'https', 'mailto', 'tel', 'link'],
           validate: (href) => /^(https?:\/\/|mailto:|tel:|link:)/.test(href),
         }),
-        Image.configure({
+        AttachmentImage.configure({
           HTMLAttributes: {
             class: 'max-w-full h-auto rounded',
           },
@@ -342,11 +361,25 @@
           // Handle the image paste asynchronously
           (async () => {
             try {
+              // Create a temporary blob URL for immediate display
+              const tempBlobUrl = URL.createObjectURL(file);
+              blobUrls.push(tempBlobUrl);
+
               const markdownRef = await onImagePaste(file);
               if (markdownRef && editor) {
-                // Insert the markdown reference (will be converted to image on next render)
-                // For WYSIWYG, we insert the text which will be re-parsed
-                editor.chain().focus().insertContent(markdownRef).run();
+                // Parse the markdown reference to extract attachment URL
+                // Format: ![alt](attachment:uuid) or ![](attachment:uuid)
+                const match = markdownRef.match(/^!\[(.*?)\]\((attachment:[^)]+)\)$/);
+                if (match) {
+                  const alt = match[1] || 'image';
+                  const attachmentUrl = match[2];
+                  // Insert as image node with blob URL for display and attachment URL for markdown
+                  editor.chain().focus().setImage({
+                    src: tempBlobUrl,
+                    alt,
+                    'data-attachment-url': attachmentUrl,
+                  } as any).run();
+                }
               }
             } catch (error) {
               console.error('Failed to handle image paste:', error);
