@@ -540,18 +540,23 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                         let note_id = filtered[app.selected_note].id.clone();
                         if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                        note.pinned = !note.pinned;
-                        // Note: Don't update modified_at for UI state changes (pinning)
-                        // Only content/tag modifications should trigger timestamp updates
+                            note.pinned = !note.pinned;
+                            // Note: Don't update modified_at for UI state changes (pinning)
+                            // Only content/tag modifications should trigger timestamp updates
 
-                        // Save to database
-                        if let (Some(db), Some(key)) = (&app.db, &app.key) {
-                            let repo = NoteRepository::new(db.connection());
-                            if let Err(e) = repo.update(note, key) {
-                                app.error = Some(t!("note.pin_failed", error = e.to_string()).to_string());
+                            // Save to database
+                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
+                                let repo = NoteRepository::new(db.connection());
+                                if let Err(e) = repo.update(note, key) {
+                                    app.error = Some(t!("note.pin_failed", error = e.to_string()).to_string());
+                                }
+                            }
+
+                            // Trigger sync to push pin change to server
+                            if app.settings.sync_enabled {
+                                app.trigger_sync();
                             }
                         }
-                    }
                     }
                 }
             }

@@ -69,6 +69,11 @@ pub fn add_tags_to_selected(app: &mut App, tags: &[String]) -> Result<usize> {
     // Clear multi-selection
     app.clear_multi_selection();
 
+    // Trigger sync to push tag changes to server
+    if updated_count > 0 && app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+
     Ok(updated_count)
 }
 
@@ -102,6 +107,11 @@ pub fn delete_selected(app: &mut App) -> Result<usize> {
 
     // Clear multi-selection
     app.clear_multi_selection();
+
+    // Trigger sync to push deletions to server
+    if deleted_count > 0 && app.settings.sync_enabled {
+        app.trigger_sync();
+    }
 
     Ok(deleted_count)
 }

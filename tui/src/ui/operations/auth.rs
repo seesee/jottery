@@ -209,8 +209,13 @@ pub fn unlock(app: &mut App) -> Result<()> {
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
         app.settings = settings_repo.get()?;
+        app.debug_log(&format!("Unlock - Settings loaded: theme={}", app.settings.theme));
+        app.debug_log(&format!("Unlock - Theme scheme name: {}", app.settings.theme.scheme_name()));
+        app.debug_log(&format!("Unlock - Color palette present: {}", app.settings.color_palette.is_some()));
+        app.debug_log(&format!("Unlock - Tag colors present: {}", app.settings.tag_colors.is_some()));
         // Update color scheme from loaded settings
         app.color_scheme = crate::ui::ColorScheme::by_name(app.settings.theme.scheme_name());
+        app.debug_log("Unlock - Color scheme updated");
     }
 
     // Store password if remember checkbox was enabled

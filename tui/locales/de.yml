@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "Warnung: Verwendung des Legacy-Formats ohne Verschlüsselung. API-Schlüssel wird im Klartext angezeigt."
   disconnected: Vom Sync-Server getrennt. Lokale Notizen bleiben erhalten.
   disconnect_failed: Trennung vom Sync-Server fehlgeschlagen
+  sse_connected: "Echtzeit-Synchronisation verbunden"
+  sse_notification: "Sync-Benachrichtigung erhalten"
+  sse_failed: "Echtzeit-Synchronisation fehlgeschlagen"
   status:
     check_title: Registrierungsstatus prüfen
     result_title: Registrierungsstatus

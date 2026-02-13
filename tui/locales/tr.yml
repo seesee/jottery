@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "Uyarı: Şifrelenmemiş eski format kullanılıyor. API anahtarı düz metin olarak görünür."
   disconnected: Senkronizasyon sunucusundan bağlantı kesildi. Yerel notlar korundu.
   disconnect_failed: Senkronizasyon sunucusundan bağlantı kesilmesi başarısız
+  sse_connected: "Gerçek zamanlı senkronizasyon bağlandı"
+  sse_notification: "Senkronizasyon bildirimi alındı"
+  sse_failed: "Gerçek zamanlı senkronizasyon başarısız"
   status:
     check_title: Kayıt Durumunu Kontrol Et
     result_title: Kayıt Durumu

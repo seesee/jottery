@@ -82,6 +82,11 @@ pub fn save_note(app: &mut App) -> Result<()> {
             }
             // Invalidate filter cache since notes changed
             app.invalidate_filter_cache();
+
+            // Trigger sync to push changes to server
+            if app.settings.sync_enabled {
+                app.trigger_sync();
+            }
         }
     }
     Ok(())
@@ -159,6 +164,11 @@ pub fn delete_note(app: &mut App) -> Result<()> {
                 app.selected_note -= 1;
             }
             app.invalidate_filter_cache();
+
+            // Trigger sync to push deletion to server
+            if app.settings.sync_enabled {
+                app.trigger_sync();
+            }
         }
     }
     Ok(())
@@ -195,6 +205,11 @@ pub fn restore_note(app: &mut App) -> Result<()> {
             // Adjust selection after restore
             if app.selected_note >= app.notes.len() && app.selected_note > 0 {
                 app.selected_note -= 1;
+            }
+
+            // Trigger sync to push restore to server
+            if app.settings.sync_enabled {
+                app.trigger_sync();
             }
         }
     }

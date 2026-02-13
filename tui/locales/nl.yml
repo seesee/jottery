@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "Waarschuwing: Legacy-formaat zonder versleuteling gebruikt. API-sleutel is zichtbaar in platte tekst."
   disconnected: Verbinding met synchronisatieserver verbroken. Lokale notities behouden.
   disconnect_failed: Verbinding verbreken met synchronisatieserver mislukt
+  sse_connected: "Realtime synchronisatie verbonden"
+  sse_notification: "Synchronisatiemelding ontvangen"
+  sse_failed: "Realtime synchronisatie mislukt"
   status:
     check_title: Registratiestatus Controleren
     result_title: Registratiestatus

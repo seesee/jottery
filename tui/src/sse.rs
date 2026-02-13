@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 /// Message sent from SSE thread to main thread
 #[derive(Debug, Clone)]
@@ -93,7 +93,7 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
     let mut consecutive_failures = 0;
     let max_failures = 10;
 
-    info!("SSE thread started for endpoint: {}", config.endpoint);
+    debug!("SSE thread started for endpoint: {}", config.endpoint);
 
     while !stop_flag.load(Ordering::SeqCst) {
         match connect_and_listen(&config, &sender, &stop_flag) {
@@ -142,7 +142,7 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
         }
     }
 
-    info!("SSE thread exiting");
+    debug!("SSE thread exiting");
 }
 
 /// Get a short-lived SSE token from the server
@@ -207,9 +207,18 @@ fn connect_and_listen(
 
     debug!("Connecting to SSE endpoint: {}", config.endpoint);
 
-    // Use ureq for simpler streaming (reqwest::blocking has issues with SSE)
-    let response = ureq::get(&url)
-        .timeout(Duration::from_secs(60)) // Initial connection timeout
+    // Build an agent with appropriate timeouts for SSE:
+    // - Short connect timeout (30s) to fail fast if server is unreachable
+    // - 45s read timeout: Server sends heartbeats every 30s, so 45s allows for
+    //   some jitter while still enabling the thread to check stop flag frequently.
+    //   On timeout, the thread will reconnect (after checking stop flag).
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(Duration::from_secs(30))
+        .timeout_read(Duration::from_secs(45))
+        .build();
+
+    let response = agent
+        .get(&url)
         .call()
         .map_err(|e| format!("Failed to connect: {}", e))?;
 
@@ -217,7 +226,7 @@ fn connect_and_listen(
         return Err(format!("HTTP {}: {}", response.status(), response.status_text()));
     }
 
-    info!("SSE connection established");
+    debug!("SSE connection established");
     let _ = sender.send(SseMessage::Connected);
 
     // Read the streaming response line by line
@@ -236,16 +245,18 @@ fn connect_and_listen(
         if line.is_empty() {
             // End of event - process it
             if current_event == "sync" {
-                debug!("Received sync notification from server");
+                debug!("SSE: Received sync notification from server");
                 let _ = sender.send(SseMessage::SyncNotification);
             }
             current_event.clear();
         } else if let Some(event_type) = line.strip_prefix("event:") {
             current_event = event_type.trim().to_string();
+            debug!("SSE event type: {}", current_event);
         } else if line.starts_with("data:") {
             // We don't need the data for sync events, just the event type
+            debug!("SSE data line: {}", line);
         } else if line.starts_with(":") {
-            // Comment/heartbeat - ignore
+            // Comment/heartbeat - keep connection alive
             debug!("SSE heartbeat received");
         }
     }
