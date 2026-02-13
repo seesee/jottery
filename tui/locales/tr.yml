@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Kilitli notun etiketleri değiştirilemez
   info: Not bilgisi
   info_title: Not Bilgileri
+  untitled: "Başlıksız"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Hızlı seçim"
   view: "görüntüle"
   restore_version: "Sürümü geri yükle"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "başlık"

@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Δεν είναι δυνατή η τροποποίηση ετικετών κλειδωμένης σημείωσης
   info: Πληροφορίες σημείωσης
   info_title: Πληροφορίες Σημείωσης
+  untitled: "Χωρίς τίτλο"
 archive:
   view: "Προβολή αρχείου"
   title: "Αρχείο"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Γρήγορη επιλογή"
   view: "προβολή"
   restore_version: "επαναφορά έκδοσης"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "τίτλος"

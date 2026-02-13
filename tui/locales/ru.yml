@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Теги заблокированной заметки нельзя изменить
   info: Информация о заметке
   info_title: Информация о заметке
+  untitled: "Без заголовка"
 archive:
   view: "Просмотр архива"
   title: "Архив"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "быстрый выбор"
   view: "просмотр"
   restore_version: "восстановить версию"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "заголовок"

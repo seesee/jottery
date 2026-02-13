@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: "잠긴 노트의 태그는 수정할 수 없습니다"
   info: "노트 정보"
   info_title: "노트 정보"
+  untitled: "제목 없음"
 archive:
   view: "보관함 보기"
   title: "보관함"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "빠른 선택"
   view: "보기"
   restore_version: "버전 복원"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "제목"

@@ -77,6 +77,7 @@ note:
   locked_cannot_tag: "Cannot modify tags on locked note"
   info: "Note info"
   info_title: "Note Information"
+  untitled: "Untitled"
 
 # Archive operations
 archive:
@@ -688,3 +689,8 @@ status_bar:
   quick_select: "quick select"
   view: "view"
   restore_version: "restore version"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "title"

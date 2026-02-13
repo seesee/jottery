@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Impossible de modifier les étiquettes d'une note verrouillée
   info: Info de note
   info_title: Informations sur la note
+  untitled: "Sans titre"
 archive:
   view: "Voir les archives"
   title: "Archives"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Sélection rapide"
   view: "afficher"
   restore_version: "Restaurer la version"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "titre"
