@@ -57,7 +57,8 @@
     "noNotes": "Nessuna nota",
     "somethingWentWrong": "Qualcosa è andato storto",
     "matchSingular": "risultato",
-    "matchPlural": "risultati"
+    "matchPlural": "risultati",
+    "editTitleTooltip": "Doppio clic per modificare il titolo"
   },
   "search": {
     "placeholder": "Cerca note...",
@@ -1292,5 +1293,10 @@
     "processing": "Elaborazione...",
     "backup": "Creazione backup...",
     "export": "Esportazione note..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "titolo"
+    }
   }
 }

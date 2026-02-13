@@ -8,6 +8,7 @@
   import { settings } from '../stores/appStore';
   import { addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { getColorHex, getTagColor, resolveTheme } from '../services/colorService';
+  import { getNoteTitle } from '../utils/noteTitle';
 
   // Helper to get formatted date synchronously (for use in templates)
   function getFormattedDate(date: string, options: Intl.DateTimeFormatOptions) {
@@ -66,7 +67,8 @@
   }
 
   function getTitle(note: DecryptedNote): string {
-    return note.content.split('\n')[0] || $_('archive.untitled');
+    const title = getNoteTitle(note);
+    return title === 'Untitled' ? $_('archive.untitled') : title;
   }
 
   // Load archived notes when modal opens

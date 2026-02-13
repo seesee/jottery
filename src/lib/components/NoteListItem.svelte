@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { _ } from 'svelte-i18n';
   import type { DecryptedNote } from '../types';
   import {
@@ -15,6 +15,8 @@
   import { getColorHex, getTagColor } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
   import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
+  import { getNoteTitle, getTitleTagValue } from '../utils/noteTitle';
+  import { getRegularTags } from '../utils/virtualTags';
   import {
     shouldShowCheckbox,
     shouldShowDeleteButton,
@@ -39,6 +41,7 @@
   export let hasConflict: boolean = false;
   export let onConflictClick: ((note: DecryptedNote) => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
+  export let onUpdateTitle: ((noteId: string, title: string) => void) | undefined = undefined;
 
   $: isSelected = $selectedNoteId === note.id;
   $: isMultiSelected = $selectedNoteIds.has(note.id);
@@ -86,6 +89,12 @@
   let wasThresholdCrossed = false; // Track for haptic feedback
   let isDeleting = false; // Track delete animation state
 
+  // Inline title editing state
+  let isEditingTitle = false;
+  let editingTitleValue = '';
+  let titleInputElement: HTMLInputElement;
+  let shouldSaveOnBlur = true; // Track whether blur should save (false when cancelled)
+
   // Strip markdown formatting from the title
   function stripMarkdown(text: string): string {
     return text
@@ -102,9 +111,12 @@
       .trim();
   }
 
-  $: title = stripMarkdown(note.content.split('\n')[0] || 'Untitled');
+  $: title = stripMarkdown(getNoteTitle(note));
   // Responsive preview length: shorter on mobile, longer on desktop
   $: previewLength = forceMobileLayout ? 60 : 100;
+
+  // Filter out virtual tags for display
+  $: displayTags = getRegularTags(note.tags);
 
   // Build visibility state for the utility functions
   $: visibilityState = {
@@ -256,6 +268,64 @@
     swipeState = createSwipeState();
     wasThresholdCrossed = false;
   }
+
+  // Inline title editing handlers
+  function handleTitleDoubleClick(e: MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Don't allow title editing on pinned or locked notes
+    if (note.pinned || note.locked) {
+      return;
+    }
+
+    isEditingTitle = true;
+    shouldSaveOnBlur = true;
+    // If note has custom title tag, use that value; otherwise use the extracted title
+    const customTitleValue = getTitleTagValue(note.tags);
+    editingTitleValue = customTitleValue !== undefined ? customTitleValue : title;
+    // Focus input after render
+    tick().then(() => {
+      if (titleInputElement) {
+        titleInputElement.focus();
+        titleInputElement.select();
+      }
+    });
+  }
+
+  function handleTitleSave() {
+    if (onUpdateTitle && editingTitleValue.trim()) {
+      onUpdateTitle(note.id, editingTitleValue.trim());
+    }
+    isEditingTitle = false;
+  }
+
+  function handleTitleCancel() {
+    shouldSaveOnBlur = false;
+    isEditingTitle = false;
+  }
+
+  function handleTitleBlur() {
+    // Only save on blur if not cancelled (Escape key)
+    if (shouldSaveOnBlur) {
+      handleTitleSave();
+    }
+  }
+
+  function handleTitleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleTitleCancel();
+    }
+  }
+
+  function handleTitleInputClick(e: MouseEvent) {
+    // Prevent click from propagating to parent (which would select the note)
+    e.stopPropagation();
+  }
 </script>
 
 <!-- Swipe container wrapper (mobile only) -->
@@ -339,9 +409,25 @@
               </svg>
             </span>
           {/if}
-          <h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">
-            {title}
-          </h3>
+          {#if isEditingTitle}
+            <input
+              bind:this={titleInputElement}
+              bind:value={editingTitleValue}
+              on:blur={handleTitleBlur}
+              on:keydown={handleTitleKeydown}
+              on:click={handleTitleInputClick}
+              class="font-medium text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-blue-500 outline-none flex-1 min-w-0"
+              type="text"
+            />
+          {:else}
+            <h3
+              on:dblclick={handleTitleDoubleClick}
+              class="font-medium text-gray-900 dark:text-gray-100 truncate {!note.pinned && !note.locked ? 'cursor-text' : ''}"
+              title={!note.pinned && !note.locked ? $_('note.editTitleTooltip') : undefined}
+            >
+              {title}
+            </h3>
+          {/if}
         </div>
       </div>
 
@@ -353,9 +439,9 @@
 
       <div class="note-footer flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
         <span class="flex-shrink-0">{$formattedDateStore}</span>
-        {#if note.tags.length > 0}
+        {#if displayTags.length > 0}
           <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
-            {#each note.tags.slice(0, 2) as tag}
+            {#each displayTags.slice(0, 2) as tag}
               {@const tagBgColor = getTagBackgroundColor(tag)}
               <span
                 on:click={(e) => handleTagClick(e, tag)}
@@ -369,8 +455,8 @@
                 #{tag}
               </span>
             {/each}
-            {#if note.tags.length > 2}
-              <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{note.tags.length - 2}</span>
+            {#if displayTags.length > 2}
+              <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{displayTags.length - 2}</span>
             {/if}
           </div>
         {/if}
@@ -430,9 +516,25 @@
             </svg>
           </span>
         {/if}
-        <h3 class="font-medium text-gray-900 dark:text-gray-100 truncate">
-          {title}
-        </h3>
+        {#if isEditingTitle}
+          <input
+            bind:this={titleInputElement}
+            bind:value={editingTitleValue}
+            on:blur={handleTitleBlur}
+            on:keydown={handleTitleKeydown}
+            on:click={handleTitleInputClick}
+            class="font-medium text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-blue-500 outline-none flex-1 min-w-0"
+            type="text"
+          />
+        {:else}
+          <h3
+            on:dblclick={handleTitleDoubleClick}
+            class="font-medium text-gray-900 dark:text-gray-100 truncate {!note.pinned && !note.locked ? 'cursor-text' : ''}"
+            title={!note.pinned && !note.locked ? $_('note.editTitleTooltip') : undefined}
+          >
+            {title}
+          </h3>
+        {/if}
       </div>
       {#if showDeleteBtn}
         <span
@@ -459,9 +561,9 @@
 
     <div class="note-footer flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
       <span class="flex-shrink-0">{$formattedDateStore}</span>
-      {#if note.tags.length > 0}
+      {#if displayTags.length > 0}
         <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
-          {#each note.tags.slice(0, 2) as tag}
+          {#each displayTags.slice(0, 2) as tag}
             {@const tagBgColor = getTagBackgroundColor(tag)}
             <span
               on:click={(e) => handleTagClick(e, tag)}
@@ -475,8 +577,8 @@
               #{tag}
             </span>
           {/each}
-          {#if note.tags.length > 2}
-            <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{note.tags.length - 2}</span>
+          {#if displayTags.length > 2}
+            <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{displayTags.length - 2}</span>
           {/if}
         </div>
       {/if}

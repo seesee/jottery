@@ -12,6 +12,7 @@ import { cryptoService, encryptStringArray, decryptStringArray, updateHashChain 
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
 import { backupSchedulerService } from './backupSchedulerService';
+import { getNoteTitle } from '../utils/noteTitle';
 
 /**
  * Note service class
@@ -713,10 +714,10 @@ class NoteService {
           b.createdAt.localeCompare(a.createdAt);
 
       case 'alpha':
-        // Sort alphabetically by first line of content
+        // Sort alphabetically by title (custom t: tag or first line)
         return (a: DecryptedNote, b: DecryptedNote) => {
-          const aTitle = a.content.split('\n')[0].toLowerCase();
-          const bTitle = b.content.split('\n')[0].toLowerCase();
+          const aTitle = getNoteTitle(a).toLowerCase();
+          const bTitle = getNoteTitle(b).toLowerCase();
           return aTitle.localeCompare(bTitle);
         };
 

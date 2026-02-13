@@ -57,7 +57,8 @@
     "noNotes": "Brak notatek",
     "somethingWentWrong": "Coś poszło nie tak",
     "matchSingular": "wynik",
-    "matchPlural": "wyników"
+    "matchPlural": "wyników",
+    "editTitleTooltip": "Kliknij dwukrotnie, aby edytować tytuł"
   },
   "search": {
     "placeholder": "Szukaj notatek...",
@@ -1292,5 +1293,10 @@
     "processing": "Przetwarzanie...",
     "backup": "Tworzenie kopii zapasowej...",
     "export": "Eksportowanie notatek..."
+  },
+  "tags": {
+    "virtual": {
+      "title": "tytuł"
+    }
   }
 }

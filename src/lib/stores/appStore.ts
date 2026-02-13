@@ -45,6 +45,13 @@ export const syncProgress = writable<{ total: number; completed: number }>({ tot
 // Set this before updating notes store, check it in search reactive block, then reset
 export const isContentOnlyUpdate = writable<boolean>(false);
 
+// Signal to refresh editor tags from external updates (e.g., title edit in note list)
+// Incremented to trigger reactive updates in EditorPane
+export const refreshEditorTagsSignal = writable<number>(0);
+export function triggerEditorTagsRefresh(): void {
+  refreshEditorTagsSignal.update(n => n + 1);
+}
+
 // Note list scroll position - preserved across mobile view transitions
 export const noteListScrollPosition = writable<number>(0);
 

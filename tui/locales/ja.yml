@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: ロックされたノートのタグは変更できません
   info: ノート情報
   info_title: ノート情報
+  untitled: "無題"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "クイック選択"
   view: "表示"
   restore_version: "バージョンを復元"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "タイトル"

@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Tags van vergrendelde notitie kunnen niet worden gewijzigd
   info: Notitie-info
   info_title: Notitie-informatie
+  untitled: "Zonder titel"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Snelselectie"
   view: "bekijken"
   restore_version: "Versie herstellen"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "titel"

@@ -5,19 +5,30 @@
 
 import { marked } from 'marked';
 import type { Attachment, HighlightJsInstance } from '../types';
+import { TITLE_TAG_PREFIX } from './virtualTags';
 
 export interface MarkdownPreviewOptions {
   attachments: Attachment[];
   openLinksInNewTab: boolean;
   hljs?: HighlightJsInstance | null; // highlight.js instance (optional, for code highlighting)
   loadingText?: string;
-  notes?: Array<{ id: string; content: string }>; // For resolving note links by title
+  notes?: Array<{ id: string; content: string; tags?: string[] }>; // For resolving note links by title
 }
 
 /**
- * Extract title from note content (first non-empty line, stripped of markdown formatting)
+ * Extract title from note, checking for t: tag first, then first non-empty line
  */
-function extractNoteTitle(content: string): string {
+function extractNoteTitle(content: string, tags?: string[]): string {
+  // Check for title tag first
+  if (tags) {
+    const titleTag = tags.find(tag => tag.startsWith(TITLE_TAG_PREFIX));
+    if (titleTag) {
+      const title = titleTag.substring(TITLE_TAG_PREFIX.length).trim();
+      if (title) return title;
+    }
+  }
+
+  // Fall back to first non-empty line
   const lines = content.split('\n');
   for (const line of lines) {
     const trimmed = line.trim();
@@ -38,7 +49,7 @@ function extractNoteTitle(content: string): string {
  * Find note by title or UUID
  */
 function findNoteByTitleOrId(
-  notes: Array<{ id: string; content: string }>,
+  notes: Array<{ id: string; content: string; tags?: string[] }>,
   ref: string
 ): { id: string; title: string } | undefined {
   // Check if ref looks like a UUID
@@ -47,7 +58,7 @@ function findNoteByTitleOrId(
   if (isUuid) {
     const note = notes.find(n => n.id === ref);
     if (note) {
-      return { id: note.id, title: extractNoteTitle(note.content) };
+      return { id: note.id, title: extractNoteTitle(note.content, note.tags) };
     }
     return undefined;
   }
@@ -55,7 +66,7 @@ function findNoteByTitleOrId(
   // Search by title (case-insensitive)
   const searchTitle = ref.toLowerCase();
   for (const note of notes) {
-    const noteTitle = extractNoteTitle(note.content);
+    const noteTitle = extractNoteTitle(note.content, note.tags);
     if (noteTitle.toLowerCase() === searchTitle) {
       return { id: note.id, title: noteTitle };
     }
@@ -70,7 +81,7 @@ function findNoteByTitleOrId(
  */
 function parseWikiLinks(
   content: string,
-  notes: Array<{ id: string; content: string }>
+  notes: Array<{ id: string; content: string; tags?: string[] }>
 ): string {
   // Match [[...]] patterns, but not inside code blocks or inline code
   // This regex matches [[content]] where content can include | for display text
@@ -263,7 +274,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         }
 
         // Auto-populate title if link text is empty
-        const displayText = text || extractNoteTitle(foundNote.content);
+        const displayText = text || extractNoteTitle(foundNote.content, foundNote.tags);
 
         // Valid note link - render as clickable
         return `<a href="note:${noteId}" data-note-id="${noteId}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">

@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Não é possível modificar tags de nota bloqueada
   info: Info da nota
   info_title: Informações da nota
+  untitled: "Sem título"
 archive:
   view: "Ver arquivo"
   title: "Arquivo"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Seleção rápida"
   view: "ver"
   restore_version: "Restaurar versão"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "título"

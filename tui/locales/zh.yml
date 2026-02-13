@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: 无法修改已锁定笔记的标签
   info: 笔记信息
   info_title: 笔记信息
+  untitled: "无标题"
 archive:
   view: "查看归档"
   title: "归档"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "快速选择"
   view: "查看"
   restore_version: "恢复版本"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "标题"

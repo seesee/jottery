@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate } from '../stores/appStore';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal } from '../stores/appStore';
   import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository, syncRepository } from '../services';
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
@@ -360,6 +360,16 @@
     showPreview = false;
     isEditing = false;
     hasContentChanged = false; // Reset change tracking
+  }
+
+  // Watch for external tag updates (e.g., title edited from note list)
+  // This refreshes the local tags when the signal is triggered
+  $: if ($refreshEditorTagsSignal && $selectedNote && previousNoteId === $selectedNote.id) {
+    // Only refresh if we're viewing the same note (not switching notes)
+    // and not in draft mode
+    if (!$isDraftMode) {
+      tags = [...$selectedNote.tags];
+    }
   }
 
 

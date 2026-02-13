@@ -12,6 +12,7 @@ use rust_i18n::t;
 use crate::ui::app::App;
 use crate::ui::ColorScheme;
 use crate::ui::helpers::truncate_to_width;
+use crate::models::get_note_title;
 use super::modal::centered_rect;
 
 /// Render conflict resolution modal
@@ -74,11 +75,18 @@ pub fn render_conflict_modal(app: &App, frame: &mut Frame, size: Rect) {
         (None, main_layout[1], main_layout[2])
     };
 
+    // Get note tags for title extraction (if note is available)
+    let note_tags: Vec<String> = app.conflict_note_id.as_ref()
+        .and_then(|id| app.notes.iter().find(|n| &n.id == id))
+        .map(|n| n.tags.clone())
+        .unwrap_or_default();
+
     // Render header
     render_conflict_header(
         frame,
         header_area,
         &app.conflict_local_content,
+        &note_tags,
         conflict_data,
         &app.color_scheme,
     );
@@ -186,13 +194,14 @@ fn render_conflict_header(
     frame: &mut Frame,
     area: Rect,
     local_content: &str,
+    note_tags: &[String],
     conflict_data: &crate::models::sync::ConflictData,
     color_scheme: &ColorScheme,
 ) {
-    // Extract first line as title
-    let title = local_content.lines().next().unwrap_or("Untitled");
+    // Extract title using custom t: tag or first non-empty line
+    let title = get_note_title(local_content, note_tags);
     // Use Unicode-aware truncation to handle emojis and wide characters
-    let title_truncated = truncate_to_width(title, 50);
+    let title_truncated = truncate_to_width(&title, 50);
 
     let local_date = conflict_data.detected_at.format("%Y-%m-%d %H:%M").to_string();
     let server_date = conflict_data.server_modified_at.format("%Y-%m-%d %H:%M").to_string();

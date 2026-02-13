@@ -12,7 +12,7 @@ use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width, format_date_short, format_datetime_full};
 use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal, render_input_modal};
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
-use crate::models::SyntaxLanguage;
+use crate::models::{SyntaxLanguage, get_note_title, get_regular_tags};
 
 /// Render note list (split pane view)
 pub fn render_note_list(app: &mut App, frame: &mut Frame) {
@@ -117,17 +117,18 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             // Line 4: Date + Tags
             // Line 5: Blank separator
 
+            // Extract title using custom t: tag or first non-empty line
+            let title_raw = get_note_title(&note.content, &note.tags);
+            let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
+                strip_markdown(&title_raw)
+            } else {
+                title_raw
+            };
+
+            // Get content lines for preview (excluding first line if no custom title)
             let content_lines: Vec<&str> = note.content.lines()
                 .filter(|line| !line.trim().is_empty())
                 .collect();
-
-            // Extract title (first line)
-            let title_raw = content_lines.first().unwrap_or(&"Untitled");
-            let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
-                strip_markdown(title_raw)
-            } else {
-                title_raw.to_string()
-            };
 
             // Build indicators for pinned, attachments, and multi-select FIRST
             // so we can calculate remaining space for title
@@ -201,15 +202,17 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             };
 
             // Format date + tags line (locale-aware)
+            // Filter out virtual tags (e.g., t: title tags)
             let date_str = format_date_short(&note.modified_at);
-            let tags_str = if !note.tags.is_empty() {
-                let tag_preview: String = note.tags.iter()
+            let regular_tags = get_regular_tags(&note.tags);
+            let tags_str = if !regular_tags.is_empty() {
+                let tag_preview: String = regular_tags.iter()
                     .take(3)
                     .map(|t| format!("#{}", t))
                     .collect::<Vec<_>>()
                     .join(" ");
-                if note.tags.len() > 3 {
-                    format!("{} +{}", tag_preview, note.tags.len() - 3)
+                if regular_tags.len() > 3 {
+                    format!("{} +{}", tag_preview, regular_tags.len() - 3)
                 } else {
                     tag_preview
                 }
@@ -456,17 +459,19 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let theme_name = app.settings.theme.to_string();
         let is_dark = is_dark_theme(&theme_name);
 
-        let tags_spans = if !note.tags.is_empty() {
+        // Filter out virtual tags for display
+        let preview_regular_tags = get_regular_tags(&note.tags);
+        let tags_spans = if !preview_regular_tags.is_empty() {
             let mut x_offset = preview_inner_x + display_width(tags_prefix) as u16;
             let mut spans = vec![Span::raw(tags_prefix)];
 
-            for (i, tag) in note.tags.iter().enumerate() {
+            for (i, tag) in preview_regular_tags.iter().enumerate() {
                 let tag_str = format!("#{}", tag);
                 let tag_display_width = display_width(&tag_str) as u16;
 
                 // Store position only if visible (scroll offset is 0 for tags line)
                 if scroll_offset == 0 {
-                    tag_positions_local.push((tag.clone(), x_offset, x_offset + tag_display_width));
+                    tag_positions_local.push(((*tag).clone(), x_offset, x_offset + tag_display_width));
                 }
                 x_offset += tag_display_width + 1; // +1 for space separator
 
@@ -483,7 +488,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 spans.push(Span::styled(tag_str, tag_style));
 
                 // Add space separator if not the last tag
-                if i < note.tags.len() - 1 {
+                if i < preview_regular_tags.len() - 1 {
                     spans.push(Span::raw(" "));
                 }
             }

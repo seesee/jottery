@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Tags bei gesperrter Notiz können nicht geändert werden
   info: Notiz-Info
   info_title: Notizinformationen
+  untitled: "Ohne Titel"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Schnellauswahl"
   view: "anzeigen"
   restore_version: "Version wiederherstellen"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "Titel"

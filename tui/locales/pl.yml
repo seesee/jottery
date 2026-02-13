@@ -68,6 +68,7 @@ note:
   locked_cannot_tag: Tagów zablokowanej notatki nie można modyfikować
   info: Info o notatce
   info_title: Informacje o notatce
+  untitled: "Bez tytułu"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -647,3 +648,8 @@ status_bar:
   quick_select: "Szybki wybór"
   view: "podgląd"
   restore_version: "Przywróć wersję"
+
+# Virtual tags
+tags:
+  virtual:
+    title: "tytuł"

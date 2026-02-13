@@ -26,7 +26,7 @@ use tracing::info;
 
 use crypto::CryptoService;
 use db::Database;
-use models::Note;
+use models::{Note, get_note_title, get_regular_tags};
 use repository::{NoteRepository, sync::SyncRepository, EncryptionRepository};
 use ui::{App, EventHandler, Tui};
 
@@ -623,16 +623,16 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
 
 /// Format a note for display
 fn format_note_preview(note: &Note, show_content: bool) -> String {
-    let title = if !note.content.is_empty() {
-        note.content.lines().next().unwrap_or("(empty)")
-    } else {
-        "(empty)"
-    };
+    // Use custom title tag or first non-empty line
+    let title = get_note_title(&note.content, &note.tags);
+    let title_str = if title.is_empty() { "(empty)" } else { &title };
 
-    let tags_str = if note.tags.is_empty() {
+    // Filter out virtual tags for display
+    let regular_tags = get_regular_tags(&note.tags);
+    let tags_str = if regular_tags.is_empty() {
         String::new()
     } else {
-        format!(" [{}]", note.tags.join(", "))
+        format!(" [{}]", regular_tags.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", "))
     };
 
     let preview = if show_content {
@@ -647,7 +647,7 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
 
     format!("{} - {}{}{}",
         &note.id[..8],
-        title,
+        title_str,
         tags_str,
         preview
     )

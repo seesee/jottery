@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { getColorHex, getTagColor } from '../services/colorService';
+  import { isVirtualTag, isTitleTag, getTitleFromTag } from '../utils/virtualTags';
 
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};
@@ -54,10 +55,10 @@
 
   function handleInput() {
     if (inputValue.trim()) {
-      // Filter available tags for suggestions
+      // Filter available tags for suggestions (exclude virtual tags from autocomplete)
       const query = inputValue.toLowerCase();
       suggestions = availableTags
-        .filter(tag => !tags.includes(tag) && tag.toLowerCase().includes(query))
+        .filter(tag => !isVirtualTag(tag) && !tags.includes(tag) && tag.toLowerCase().includes(query))
         .slice(0, 5);
       showSuggestions = suggestions.length > 0;
       selectedSuggestionIndex = -1;
@@ -68,8 +69,25 @@
   }
 
   function addTag(tag: string) {
-    if (tag.trim() && !tags.includes(tag.trim())) {
-      tags = [...tags, tag.trim()];
+    const trimmedTag = tag.trim();
+    if (!trimmedTag) return;
+
+    // Handle title tags specially - only one allowed, remove existing
+    // Supports both t: and title: prefixes
+    if (isTitleTag(trimmedTag)) {
+      // Remove any existing title tags first (both t: and title: prefixes)
+      const filtered = tags.filter(t => !isTitleTag(t));
+      tags = [...filtered, trimmedTag];
+      onChange(tags);
+      inputValue = '';
+      showSuggestions = false;
+      suggestions = [];
+      return;
+    }
+
+    // Regular tags - check for duplicates
+    if (!tags.includes(trimmedTag)) {
+      tags = [...tags, trimmedTag];
       onChange(tags);
       inputValue = '';
       showSuggestions = false;
@@ -122,9 +140,11 @@
     <!-- Existing tags -->
     {#each tags as tag, index}
       {@const tagBgColor = getTagBackgroundColor(tag)}
+      {@const isTitle = isTitleTag(tag)}
+      {@const titleValue = isTitle ? getTitleFromTag(tag) : null}
       <span
-        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300'}"
-        style:background-color={tagBgColor}
+        class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {isTitle ? 'italic bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' : tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300'}"
+        style:background-color={!isTitle ? tagBgColor : undefined}
       >
         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
         <span
@@ -139,7 +159,11 @@
             }
           }}
         >
-          #{tag}
+          {#if isTitle}
+            {$_('tags.virtual.title')}: {titleValue}
+          {:else}
+            #{tag}
+          {/if}
         </span>
         {#if !disabled}
           <button
