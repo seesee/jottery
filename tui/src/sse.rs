@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 /// Message sent from SSE thread to main thread
 #[derive(Debug, Clone)]
@@ -93,7 +93,7 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
     let mut consecutive_failures = 0;
     let max_failures = 10;
 
-    info!("SSE thread started for endpoint: {}", config.endpoint);
+    debug!("SSE thread started for endpoint: {}", config.endpoint);
 
     while !stop_flag.load(Ordering::SeqCst) {
         match connect_and_listen(&config, &sender, &stop_flag) {
@@ -142,7 +142,7 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
         }
     }
 
-    info!("SSE thread exiting");
+    debug!("SSE thread exiting");
 }
 
 /// Get a short-lived SSE token from the server
@@ -226,7 +226,7 @@ fn connect_and_listen(
         return Err(format!("HTTP {}: {}", response.status(), response.status_text()));
     }
 
-    info!("SSE connection established");
+    debug!("SSE connection established");
     let _ = sender.send(SseMessage::Connected);
 
     // Read the streaming response line by line
@@ -245,7 +245,7 @@ fn connect_and_listen(
         if line.is_empty() {
             // End of event - process it
             if current_event == "sync" {
-                info!("SSE: Received sync notification from server");
+                debug!("SSE: Received sync notification from server");
                 let _ = sender.send(SseMessage::SyncNotification);
             }
             current_event.clear();
