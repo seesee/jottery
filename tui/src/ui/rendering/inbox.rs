@@ -10,6 +10,7 @@ use ratatui::{
 use rust_i18n::t;
 
 use crate::ui::app::App;
+use crate::models::get_note_title;
 use super::modal::centered_rect_percent;
 
 /// Render the inbox modal overlay
@@ -43,8 +44,9 @@ pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
 
     // Render item list
     let items: Vec<ListItem> = app.inbox_items.iter().enumerate().map(|(i, item)| {
-        let title = item.content.lines().next().unwrap_or("(empty)")
-            .chars().take(40).collect::<String>();
+        // Extract title using custom t: tag or first non-empty line
+        let title_full = get_note_title(&item.content, &item.tags);
+        let title: String = title_full.chars().take(40).collect();
         let tags_str = if item.tags.is_empty() {
             String::new()
         } else {
