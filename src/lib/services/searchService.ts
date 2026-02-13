@@ -6,6 +6,7 @@
 import FlexSearch from 'flexsearch';
 import type { DecryptedNote, SearchQuery, SortOrder, FlexSearchEnrichedResult, FlexSearchResultItem } from '../types';
 import { getTagColor, getColorKeyByDisplayName } from './colorService';
+import { getNoteTitle } from '../utils/noteTitle';
 
 // Create FlexSearch index
 const index = new FlexSearch.Document({
@@ -471,8 +472,8 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
       break;
     case 'alpha':
       sortFn = (a, b) => {
-        const aTitle = a.content.split('\n')[0].toLowerCase();
-        const bTitle = b.content.split('\n')[0].toLowerCase();
+        const aTitle = getNoteTitle(a).toLowerCase();
+        const bTitle = getNoteTitle(b).toLowerCase();
         return aTitle.localeCompare(bTitle);
       };
       break;

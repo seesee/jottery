@@ -15,6 +15,7 @@
   import { getColorHex, getTagColor } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
   import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
+  import { getNoteTitle } from '../utils/noteTitle';
   import {
     shouldShowCheckbox,
     shouldShowDeleteButton,
@@ -102,7 +103,7 @@
       .trim();
   }
 
-  $: title = stripMarkdown(note.content.split('\n')[0] || 'Untitled');
+  $: title = stripMarkdown(getNoteTitle(note));
   // Responsive preview length: shorter on mobile, longer on desktop
   $: previewLength = forceMobileLayout ? 60 : 100;
 
