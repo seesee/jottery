@@ -15,7 +15,7 @@
   import { getColorHex, getTagColor } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
   import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
-  import { getNoteTitle, getTitleTagValue, hasCustomTitle } from '../utils/noteTitle';
+  import { getNoteTitle, getTitleTagValue } from '../utils/noteTitle';
   import { getRegularTags } from '../utils/virtualTags';
   import {
     shouldShowCheckbox,
@@ -111,7 +111,6 @@
   }
 
   $: title = stripMarkdown(getNoteTitle(note));
-  $: noteHasCustomTitle = hasCustomTitle(note.tags);
   // Responsive preview length: shorter on mobile, longer on desktop
   $: previewLength = forceMobileLayout ? 60 : 100;
 
@@ -275,9 +274,8 @@
     e.preventDefault();
     isEditingTitle = true;
     // If note has custom title tag, use that value; otherwise use the extracted title
-    editingTitleValue = hasCustomTitle(note.tags)
-      ? (getTitleTagValue(note.tags) || '')
-      : title;
+    const customTitleValue = getTitleTagValue(note.tags);
+    editingTitleValue = customTitleValue !== undefined ? customTitleValue : title;
     // Focus input after render
     tick().then(() => {
       if (titleInputElement) {
@@ -424,16 +422,9 @@
 
       <div class="note-footer flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
         <span class="flex-shrink-0">{$formattedDateStore}</span>
-        {#if displayTags.length > 0 || noteHasCustomTitle}
+        {#if displayTags.length > 0}
           <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
-            {#if noteHasCustomTitle}
-              <span
-                class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap italic text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700"
-              >
-                {$_('tags.virtual.title')}
-              </span>
-            {/if}
-            {#each displayTags.slice(0, noteHasCustomTitle ? 1 : 2) as tag}
+            {#each displayTags.slice(0, 2) as tag}
               {@const tagBgColor = getTagBackgroundColor(tag)}
               <span
                 on:click={(e) => handleTagClick(e, tag)}
@@ -447,8 +438,8 @@
                 #{tag}
               </span>
             {/each}
-            {#if displayTags.length > (noteHasCustomTitle ? 1 : 2)}
-              <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{displayTags.length - (noteHasCustomTitle ? 1 : 2)}</span>
+            {#if displayTags.length > 2}
+              <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{displayTags.length - 2}</span>
             {/if}
           </div>
         {/if}
@@ -553,16 +544,9 @@
 
     <div class="note-footer flex items-center justify-between text-xs text-gray-500 dark:text-gray-500">
       <span class="flex-shrink-0">{$formattedDateStore}</span>
-      {#if displayTags.length > 0 || noteHasCustomTitle}
+      {#if displayTags.length > 0}
         <div class="note-tags flex gap-1 flex-wrap justify-end ml-2">
-          {#if noteHasCustomTitle}
-            <span
-              class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap italic text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700"
-            >
-              {$_('tags.virtual.title')}
-            </span>
-          {/if}
-          {#each displayTags.slice(0, noteHasCustomTitle ? 1 : 2) as tag}
+          {#each displayTags.slice(0, 2) as tag}
             {@const tagBgColor = getTagBackgroundColor(tag)}
             <span
               on:click={(e) => handleTagClick(e, tag)}
@@ -576,8 +560,8 @@
               #{tag}
             </span>
           {/each}
-          {#if displayTags.length > (noteHasCustomTitle ? 1 : 2)}
-            <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{displayTags.length - (noteHasCustomTitle ? 1 : 2)}</span>
+          {#if displayTags.length > 2}
+            <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">+{displayTags.length - 2}</span>
           {/if}
         </div>
       {/if}

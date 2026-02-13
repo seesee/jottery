@@ -451,7 +451,8 @@
   // Handle title update from NoteListItem
   async function handleUpdateTitle(noteId: string, title: string) {
     try {
-      const note = $notes.find(n => n.id === noteId);
+      // Fetch fresh note data to avoid stale tags from store
+      const note = await noteService.getNote(noteId);
       if (note) {
         const newTags = setTitleTag(note.tags, title);
         await noteService.updateNote(noteId, { tags: newTags });
