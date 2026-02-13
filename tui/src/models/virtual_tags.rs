@@ -14,6 +14,7 @@
 use rust_i18n::t;
 
 /// The canonical prefix for title tags (used when creating new tags)
+#[allow(dead_code)]
 pub const TITLE_TAG_PREFIX: &str = "t:";
 
 /// All valid prefixes for title tags
@@ -45,6 +46,7 @@ pub fn get_regular_tags(tags: &[String]) -> Vec<&String> {
 }
 
 /// Get all virtual tags
+#[allow(dead_code)]
 pub fn get_virtual_tags(tags: &[String]) -> Vec<&String> {
     tags.iter().filter(|t| is_virtual_tag(t)).collect()
 }
@@ -70,11 +72,13 @@ pub fn get_note_title(content: &str, tags: &[String]) -> String {
 }
 
 /// Check if note has custom title tag
+#[allow(dead_code)]
 pub fn has_custom_title(tags: &[String]) -> bool {
     tags.iter().any(|t| is_title_tag(t))
 }
 
 /// Get the title tag value (without prefix), or None
+#[allow(dead_code)]
 pub fn get_title_tag_value(tags: &[String]) -> Option<&str> {
     tags.iter()
         .find(|t| is_title_tag(t))
@@ -83,6 +87,7 @@ pub fn get_title_tag_value(tags: &[String]) -> Option<&str> {
 
 /// Set title tag, removing existing title tags (both t: and title: prefixes).
 /// Returns new tags. Always uses the canonical 't:' prefix for new tags.
+#[allow(dead_code)]
 pub fn set_title_tag(tags: &[String], title: &str) -> Vec<String> {
     let mut filtered: Vec<String> = tags
         .iter()
@@ -98,6 +103,7 @@ pub fn set_title_tag(tags: &[String], title: &str) -> Vec<String> {
 }
 
 /// Remove title tag. Returns new tags.
+#[allow(dead_code)]
 pub fn remove_title_tag(tags: &[String]) -> Vec<String> {
     tags.iter()
         .filter(|t| !is_title_tag(t))
