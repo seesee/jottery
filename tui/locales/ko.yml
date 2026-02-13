@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "경고: 암호화되지 않은 레거시 형식을 사용 중입니다. API 키가 일반 텍스트로 표시됩니다."
   disconnected: "동기화 서버에서 연결 해제됨. 로컬 노트가 보존됩니다."
   disconnect_failed: "동기화 서버에서 연결 해제 실패"
+  sse_connected: "실시간 동기화 연결됨"
+  sse_notification: "동기화 알림 수신"
+  sse_failed: "실시간 동기화 실패"
   status:
     check_title: "등록 상태 확인"
     result_title: "등록 상태"

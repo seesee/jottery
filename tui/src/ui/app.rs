@@ -1256,7 +1256,10 @@ impl App {
                     }
                     msgs
                 }
-                None => return,
+                None => {
+                    // No SSE handle - not started or not configured
+                    return;
+                }
             }
         };
 
@@ -1266,17 +1269,22 @@ impl App {
             match msg {
                 crate::sse::SseMessage::SyncNotification => {
                     self.debug_log("SSE: Received sync notification, triggering sync");
+                    self.sync_status = Some(t!("sync.sse_notification").to_string());
+                    self.sync_status_set_at = Some(Instant::now());
                     should_sync = true;
                 }
                 crate::sse::SseMessage::Connected => {
                     self.debug_log("SSE: Connected to server");
+                    self.sync_status = Some(t!("sync.sse_connected").to_string());
+                    self.sync_status_set_at = Some(Instant::now());
                 }
                 crate::sse::SseMessage::Disconnected => {
                     self.debug_log("SSE: Disconnected from server (will reconnect)");
                 }
                 crate::sse::SseMessage::Failed(err) => {
                     self.debug_log(&format!("SSE: Connection failed: {}", err));
-                    // Don't restart here - the SSE thread handles retries
+                    self.sync_status = Some(t!("sync.sse_failed").to_string());
+                    self.sync_status_set_at = Some(Instant::now());
                 }
             }
         }

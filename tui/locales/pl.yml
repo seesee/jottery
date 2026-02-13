@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "Ostrzeżenie: Używanie starszego formatu bez szyfrowania. Klucz API jest widoczny w postaci zwykłego tekstu."
   disconnected: Rozłączono z serwerem synchronizacji. Lokalne notatki zachowane.
   disconnect_failed: Nie udało się rozłączyć z serwerem synchronizacji
+  sse_connected: "Połączono synchronizację w czasie rzeczywistym"
+  sse_notification: "Otrzymano powiadomienie o synchronizacji"
+  sse_failed: "Synchronizacja w czasie rzeczywistym nie powiodła się"
   status:
     check_title: Sprawdź Status Rejestracji
     result_title: Status Rejestracji

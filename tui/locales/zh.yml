@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: 警告：使用未加密的旧版格式。API密钥以明文显示。
   disconnected: 已断开与同步服务器的连接。本地笔记已保留。
   disconnect_failed: 断开与同步服务器的连接失败
+  sse_connected: "实时同步已连接"
+  sse_notification: "收到同步通知"
+  sse_failed: "实时同步失败"
   status:
     check_title: 检查注册状态
     result_title: 注册状态

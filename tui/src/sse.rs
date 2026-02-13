@@ -209,11 +209,12 @@ fn connect_and_listen(
 
     // Build an agent with appropriate timeouts for SSE:
     // - Short connect timeout (30s) to fail fast if server is unreachable
-    // - Long read timeout (1 hour) to keep connection open for SSE events
-    //   (server sends heartbeats every 30s, so 1 hour allows for transient issues)
+    // - 45s read timeout: Server sends heartbeats every 30s, so 45s allows for
+    //   some jitter while still enabling the thread to check stop flag frequently.
+    //   On timeout, the thread will reconnect (after checking stop flag).
     let agent = ureq::AgentBuilder::new()
         .timeout_connect(Duration::from_secs(30))
-        .timeout_read(Duration::from_secs(3600)) // 1 hour - SSE needs long-lived connection
+        .timeout_read(Duration::from_secs(45))
         .build();
 
     let response = agent

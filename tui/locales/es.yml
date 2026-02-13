@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "Advertencia: Usando formato heredado sin cifrar. La clave API está expuesta en texto plano."
   disconnected: Desconectado del servidor de sincronización. Las notas locales se conservan.
   disconnect_failed: Error al desconectarse del servidor de sincronización
+  sse_connected: "Sincronización en tiempo real conectada"
+  sse_notification: "Notificación de sincronización recibida"
+  sse_failed: "Error en sincronización en tiempo real"
   status:
     check_title: Verificar Estado de Registro
     result_title: Estado de Registro

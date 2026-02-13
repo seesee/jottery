@@ -163,6 +163,9 @@ sync:
   legacy_format_warning: "Attenzione: Utilizzo del formato legacy non crittografato. La chiave API è esposta in testo normale."
   disconnected: Disconnesso dal server di sincronizzazione. Le note locali sono state conservate.
   disconnect_failed: Disconnessione dal server di sincronizzazione non riuscita
+  sse_connected: "Sincronizzazione in tempo reale connessa"
+  sse_notification: "Notifica di sincronizzazione ricevuta"
+  sse_failed: "Sincronizzazione in tempo reale non riuscita"
   status:
     check_title: Verifica Stato Registrazione
     result_title: Stato Registrazione
