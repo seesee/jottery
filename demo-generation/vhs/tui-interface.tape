@@ -17,8 +17,10 @@ Set Shell "bash"
 Hide
 Type "export LANG=$LANG LC_ALL=$LANG JOTTERY_DB_PATH=$JOTTERY_DB_PATH"
 Enter
+Sleep 500ms
 Type "clear"
 Enter
+Sleep 500ms
 Show
 Sleep 500ms
 
