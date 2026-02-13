@@ -1198,9 +1198,14 @@ impl App {
             }
         }
 
-        // Check if auto-sync is enabled
+        // Check for SSE messages (real-time sync notifications)
+        // This must happen BEFORE the early returns below, as SSE should work
+        // even when auto-sync interval is disabled (set to 0)
+        self.check_sse_messages();
+
+        // Check if auto-sync is enabled (interval > 0)
         if self.settings.auto_sync_interval_minutes <= 0 {
-            return; // Auto-sync disabled
+            return; // Auto-sync disabled, but SSE still works above
         }
 
         // Check if sync is configured
@@ -1233,9 +1238,6 @@ impl App {
             // Update last auto-sync time
             self.last_auto_sync = Some(now);
         }
-
-        // Check for SSE messages (real-time sync notifications)
-        self.check_sse_messages();
     }
 
     /// Start SSE connection if sync is enabled
