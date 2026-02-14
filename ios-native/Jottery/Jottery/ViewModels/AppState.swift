@@ -42,6 +42,10 @@ final class AppState {
     var syncClient: SyncClient?
     var syncService: SyncService?
 
+    /// Current unsaved editor state — NoteEditorView keeps this updated so
+    /// `lock()` can flush pending changes before wiping the encryption key.
+    @ObservationIgnored var pendingEditorNote: DecryptedNote?
+
     // Repositories (lazily initialised after DB is ready)
     private(set) var noteRepo: NoteRepository?
     private(set) var encryptionRepo: EncryptionRepository?
@@ -222,6 +226,12 @@ final class AppState {
 
     /// Lock the application.
     func lock() {
+        // Flush any pending editor save while the key is still available
+        if let pending = pendingEditorNote, let noteRepo, let key = keyManager.masterKey {
+            try? noteRepo.update(pending, key: key)
+            pendingEditorNote = nil
+        }
+
         // Stop SSE and release sync objects (releases the SymmetricKey reference)
         if let service = syncService {
             Task { await service.stopSSE() }

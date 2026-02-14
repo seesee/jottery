@@ -118,6 +118,7 @@ struct NoteEditorView: View {
         }
         .onDisappear {
             saveImmediately()
+            appState.pendingEditorNote = nil
         }
     }
 
@@ -126,6 +127,9 @@ struct NoteEditorView: View {
     /// Debounced save — waits 1 second of inactivity before saving.
     private func scheduleSave() {
         appState.keyManager.recordActivity()
+        // Keep AppState updated with current editor state so lock()
+        // can flush pending changes before wiping the encryption key.
+        updatePendingNote()
         saveTask?.cancel()
         saveTask = Task {
             try? await Task.sleep(for: .seconds(1))
@@ -142,6 +146,17 @@ struct NoteEditorView: View {
         color != note.color
     }
 
+    private func updatePendingNote() {
+        guard hasChanges else { return }
+        var updated = note
+        updated.content = content
+        updated.tags = tags
+        updated.syntaxLanguage = syntaxLanguage
+        updated.wordWrap = wordWrap
+        updated.color = color
+        appState.pendingEditorNote = updated
+    }
+
     private func saveImmediately() {
         saveTask?.cancel()
         guard hasChanges else { return }
@@ -152,6 +167,7 @@ struct NoteEditorView: View {
         updated.wordWrap = wordWrap
         updated.color = color
         try? appState.saveNote(updated)
+        appState.pendingEditorNote = nil
     }
 
     private var syntaxLanguages: [String] {
