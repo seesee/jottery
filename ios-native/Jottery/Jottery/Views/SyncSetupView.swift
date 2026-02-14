@@ -281,11 +281,13 @@ private struct LegacyCredentials: Codable {
 enum SyncSetupError: LocalizedError {
     case invalidCredentials
     case needsEndpoint
+    case wrongPassword
 
     var errorDescription: String? {
         switch self {
         case .invalidCredentials: return "Invalid credentials data"
         case .needsEndpoint: return "Server URL is required when importing a raw API key"
+        case .wrongPassword: return "Incorrect password — could not decrypt credentials"
         }
     }
 }

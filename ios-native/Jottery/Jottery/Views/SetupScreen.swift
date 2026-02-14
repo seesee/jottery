@@ -465,23 +465,41 @@ private struct ConnectToServerView: View {
                 // we need to decrypt it first using the password + imported salt.
                 if let encryptedPayload = encryptedCredentialPayload, let salt = importedSalt {
                     syncProgress = "Decrypting credentials…"
-                    let iterations = importedIterations ?? CryptoService.defaultIterations
-                    let key = CryptoService.deriveKey(
-                        password: encryptionPassword,
-                        salt: salt,
-                        iterations: iterations
-                    )
 
                     // The payload is base64(JSON of {"ciphertext":"...","iv":"..."})
                     guard let payloadData = Data(base64Encoded: encryptedPayload),
                           let payloadJSON = String(data: payloadData, encoding: .utf8) else {
                         throw SyncSetupError.invalidCredentials
                     }
-
                     let encrypted = try CryptoService.parseEncryptedJSON(payloadJSON)
-                    let decryptedJSON = try CryptoService.decryptText(encrypted, key: key)
 
-                    guard let credsData = decryptedJSON.data(using: .utf8) else {
+                    // The jottery:v1: format doesn't include the iteration count.
+                    // Try common values — vault creation uses 600k, but the web
+                    // app's credential import path hardcodes 100k for imported vaults.
+                    let iterationCandidates: [UInt32] = [600_000, 100_000]
+                    var decryptedJSON: String?
+                    var matchedIterations: UInt32 = CryptoService.defaultIterations
+
+                    for candidate in iterationCandidates {
+                        let key = CryptoService.deriveKey(
+                            password: encryptionPassword,
+                            salt: salt,
+                            iterations: candidate
+                        )
+                        if let json = try? CryptoService.decryptText(encrypted, key: key) {
+                            decryptedJSON = json
+                            matchedIterations = candidate
+                            break
+                        }
+                    }
+
+                    guard let json = decryptedJSON else {
+                        throw SyncSetupError.wrongPassword
+                    }
+
+                    importedIterations = matchedIterations
+
+                    guard let credsData = json.data(using: .utf8) else {
                         throw SyncSetupError.invalidCredentials
                     }
                     let creds = try JSONDecoder().decode(ImportedCredentials.self, from: credsData)
