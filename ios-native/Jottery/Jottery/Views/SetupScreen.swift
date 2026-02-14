@@ -34,9 +34,6 @@ struct SetupScreen: View {
             Spacer()
         }
         .padding()
-        .onAppear {
-            appState.initialise()
-        }
     }
 }
 

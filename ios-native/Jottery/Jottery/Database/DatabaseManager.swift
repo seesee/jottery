@@ -246,6 +246,10 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE notes ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0")
         }
 
+        migrator.registerMigration("ios_003_add_verification") { db in
+            try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN verification TEXT")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

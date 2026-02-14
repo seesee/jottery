@@ -92,11 +92,21 @@ final class AppState {
 
         let salt = CryptoService.generateSalt()
         let iterations = CryptoService.defaultIterations
-        let metadata = EncryptionMetadata.new(salt: salt, iterations: iterations)
+
+        // Derive key first so we can create the verification token
+        let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)
+
+        // Encrypt a known plaintext to verify the password later
+        let verificationEncrypted = try CryptoService.encryptText(
+            EncryptionMetadata.verificationPlaintext, key: key
+        )
+        let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+        let metadata = EncryptionMetadata.new(
+            salt: salt, iterations: iterations, verification: verificationJSON
+        )
         try encryptionRepo.store(metadata)
 
-        // Derive key and unlock
-        let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)
         isFirstLaunch = false
         isLocked = false
 
@@ -126,18 +136,31 @@ final class AppState {
             iterations: UInt32(metadata.iterations)
         )
 
-        // Verify the key works by trying to load notes
-        do {
-            try loadNotes()
-            isLocked = false
-            setupSync()
-            return true
-        } catch {
-            // Key is wrong — lock again
-            keyManager.lock()
-            isLocked = true
-            throw AppStateError.wrongPassword
+        // Verify password by decrypting the verification token
+        if let verificationJSON = metadata.verification {
+            do {
+                let encrypted = try CryptoService.parseEncryptedJSON(verificationJSON)
+                let plaintext = try CryptoService.decryptText(encrypted, key: key)
+                guard plaintext == EncryptionMetadata.verificationPlaintext else {
+                    keyManager.lock()
+                    throw AppStateError.wrongPassword
+                }
+            } catch is AppStateError {
+                keyManager.lock()
+                isLocked = true
+                throw AppStateError.wrongPassword
+            } catch {
+                // Decryption failed — wrong password
+                keyManager.lock()
+                isLocked = true
+                throw AppStateError.wrongPassword
+            }
         }
+
+        try loadNotes()
+        isLocked = false
+        setupSync()
+        return true
     }
 
     /// Lock the application.

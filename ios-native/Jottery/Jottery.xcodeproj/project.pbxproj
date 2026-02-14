@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -14,21 +14,9 @@
 		A3000001 /* Jottery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jottery.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A4000001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-			);
-			target = A5000001 /* Jottery */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A6000001 /* Jottery */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A4000001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
 			path = Jottery;
 			sourceTree = "<group>";
 		};
@@ -113,7 +101,7 @@
 			mainGroup = A8000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				AF000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				AF000001 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A9000001 /* Products */;
@@ -264,6 +252,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = QA72EA3LC2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Jottery;
@@ -298,6 +287,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = QA72EA3LC2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Jottery;
@@ -327,15 +317,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AE000001 /* Build configuration list for PBXProject "Jottery" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B0000001 /* Debug */,
-				B1000001 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		AA000001 /* Build configuration list for PBXNativeTarget "Jottery" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -345,10 +326,19 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AE000001 /* Build configuration list for PBXProject "Jottery" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0000001 /* Debug */,
+				B1000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		AF000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		AF000001 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -361,11 +351,10 @@
 /* Begin XCSwiftPackageProductDependency section */
 		A2000001 /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AF000001 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = AF000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = AD000001 /* Project object */;
 }

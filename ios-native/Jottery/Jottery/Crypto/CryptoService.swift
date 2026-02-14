@@ -95,7 +95,7 @@ enum CryptoService {
             throw CryptoError.invalidBase64
         }
 
-        guard combinedData.count > 16 else {
+        guard combinedData.count >= 16 else {
             throw CryptoError.ciphertextTooShort
         }
 

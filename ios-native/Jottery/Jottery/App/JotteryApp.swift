@@ -27,6 +27,9 @@ struct ContentView: View {
         }
         .animation(.default, value: appState.isLocked)
         .animation(.default, value: appState.isFirstLaunch)
+        .onAppear {
+            appState.initialise()
+        }
     }
 }
 
