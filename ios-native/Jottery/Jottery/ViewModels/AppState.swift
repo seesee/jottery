@@ -307,6 +307,52 @@ final class AppState {
         }
     }
 
+    // MARK: - Wipe & Re-onboard
+
+    /// Delete everything — database, Keychain, in-memory state — so the user
+    /// can start fresh as if the app was just installed.
+    func wipeAllData() {
+        // Clear Keychain
+        KeychainService.deleteAPIKey()
+        KeychainService.deleteClientId()
+        KeychainService.deleteBiometricKey()
+
+        // Delete database file
+        let fm = FileManager.default
+        if let appSupport = try? fm.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        ) {
+            let dbDir = appSupport.appendingPathComponent("Jottery", isDirectory: true)
+            try? fm.removeItem(at: dbDir)
+        }
+
+        // Reset all in-memory state
+        db = nil
+        noteRepo = nil
+        encryptionRepo = nil
+        settingsRepo = nil
+        syncRepo = nil
+        syncClient = nil
+        syncService = nil
+        notes = []
+        selectedNoteId = nil
+        searchQuery = ""
+        syncEnabled = false
+        isSyncing = false
+        lastSyncAt = nil
+        syncError = nil
+        settings = .defaults
+        keyManager.lock()
+        isLocked = true
+        isFirstLaunch = true
+
+        // Re-initialise so the DB is recreated fresh
+        initialise()
+    }
+
     // MARK: - Settings
 
     func updateSettings(_ newSettings: UserSettings) throws {

@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var settings: UserSettings = .defaults
     @State private var showSyncSetup = false
+    @State private var showWipeConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -77,6 +78,13 @@ struct SettingsView: View {
                     }
                     .foregroundStyle(.red)
                 }
+
+                // Debug
+                Section("Debug") {
+                    Button("Wipe All Data & Re-onboard", role: .destructive) {
+                        showWipeConfirmation = true
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -90,6 +98,15 @@ struct SettingsView: View {
             }
             .onAppear {
                 settings = appState.settings
+            }
+            .alert("Wipe All Data?", isPresented: $showWipeConfirmation) {
+                Button("Wipe Everything", role: .destructive) {
+                    dismiss()
+                    wipeAllData()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This deletes the database, all notes, encryption keys, and sync credentials. You will need to set up a new vault. This cannot be undone.")
             }
             .sheet(isPresented: $showSyncSetup) {
                 SyncSetupView(onComplete: { apiKey in
@@ -165,6 +182,10 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private func wipeAllData() {
+        appState.wipeAllData()
     }
 
     private func disconnectSync() {
