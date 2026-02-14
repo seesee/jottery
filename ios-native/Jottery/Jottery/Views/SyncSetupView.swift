@@ -94,22 +94,34 @@ struct SyncSetupView: View {
         }
     }
 
+    private var credentialsContainEndpoint: Bool {
+        let trimmed = importData.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("jottery:v1:") { return true }
+        if let data = Data(base64Encoded: trimmed),
+           let _ = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
+            return true
+        }
+        return false
+    }
+
     private var importSection: some View {
         Section("Import Credentials") {
             Text("Paste the credentials from another device.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            TextField("Server URL", text: $endpoint)
-                .textContentType(.URL)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-
-            TextField("Device Name", text: $deviceName)
-
             TextField("Credentials", text: $importData, axis: .vertical)
                 .lineLimit(3...6)
                 .font(.system(.body, design: .monospaced))
+
+            if !credentialsContainEndpoint {
+                TextField("Server URL", text: $endpoint)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+            }
+
+            TextField("Device Name", text: $deviceName)
 
             Button(action: importCredentials) {
                 if isWorking {

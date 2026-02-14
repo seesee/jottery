@@ -260,29 +260,42 @@ private struct ConnectToServerView: View {
 
     // MARK: - Import Fields
 
+    /// Whether the credentials field looks like a format that already contains the endpoint.
+    private var credentialsContainEndpoint: Bool {
+        let trimmed = importData.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("jottery:v1:") { return true }
+        if let data = Data(base64Encoded: trimmed),
+           let _ = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
+            return true
+        }
+        return false
+    }
+
     private var importFields: some View {
         Group {
-            Text("Paste the base64 credentials blob from another device, or a raw API key.")
+            Text("Paste the credentials from another device.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 320)
-
-            TextField("Server URL", text: $endpoint)
-                .textFieldStyle(.roundedBorder)
-                .textContentType(.URL)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .frame(maxWidth: 320)
-
-            TextField("Device Name", text: $deviceName)
-                .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 
             TextField("Credentials", text: $importData, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(3...6)
                 .font(.system(.body, design: .monospaced))
+                .frame(maxWidth: 320)
+
+            if !credentialsContainEndpoint {
+                TextField("Server URL", text: $endpoint)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .frame(maxWidth: 320)
+            }
+
+            TextField("Device Name", text: $deviceName)
+                .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
         }
     }
