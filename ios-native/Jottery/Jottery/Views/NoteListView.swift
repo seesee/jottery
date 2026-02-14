@@ -4,6 +4,7 @@ struct NoteListView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @State private var showSettings = false
+    @State private var showRecycleBin = false
 
     var body: some View {
         @Bindable var state = appState
@@ -33,6 +34,7 @@ struct NoteListView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .refreshable { await appState.triggerSync() }
         .searchable(text: $state.searchQuery, prompt: "Search notes")
         .navigationTitle("Notes")
         .toolbar {
@@ -72,6 +74,12 @@ struct NoteListView: View {
 
             ToolbarItemGroup(placement: .secondaryAction) {
                 Button {
+                    showRecycleBin = true
+                } label: {
+                    Label("Recycle Bin", systemImage: "trash")
+                }
+
+                Button {
                     showSettings = true
                 } label: {
                     Label("Settings", systemImage: "gear")
@@ -89,6 +97,9 @@ struct NoteListView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+        }
+        .sheet(isPresented: $showRecycleBin) {
+            RecycleBinView()
         }
         .overlay {
             if appState.notes.isEmpty && !appState.isSyncing {

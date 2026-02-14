@@ -2,10 +2,12 @@ import SwiftUI
 
 struct NoteEditorView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     @State private var content: String
     @State private var tags: [String]
     @State private var syntaxLanguage: String
     @State private var wordWrap: Bool
+    @State private var color: String?
     @State private var saveTask: Task<Void, Never>?
 
     let note: DecryptedNote
@@ -16,6 +18,7 @@ struct NoteEditorView: View {
         _tags = State(initialValue: note.tags)
         _syntaxLanguage = State(initialValue: note.syntaxLanguage)
         _wordWrap = State(initialValue: note.wordWrap)
+        _color = State(initialValue: note.color)
     }
 
     var body: some View {
@@ -66,6 +69,30 @@ struct NoteEditorView: View {
                     Image(systemName: wordWrap ? "text.word.spacing" : "arrow.right.to.line")
                 }
 
+                // Colour picker
+                Menu {
+                    ForEach(Color.noteColorNames, id: \.self) { name in
+                        Button {
+                            color = name
+                            scheduleSave()
+                        } label: {
+                            Label(name.capitalized, systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
+                        }
+                    }
+                    Divider()
+                    Button {
+                        color = nil
+                        scheduleSave()
+                    } label: {
+                        Label("None", systemImage: color == nil ? "checkmark.circle" : "circle.slash")
+                    }
+                } label: {
+                    Image(systemName: "paintbrush")
+                        .foregroundStyle(
+                            color.flatMap({ Color.noteColor(named: $0, scheme: colorScheme) }) ?? .secondary
+                        )
+                }
+
                 // Pin toggle
                 Button {
                     try? appState.togglePin(id: note.id)
@@ -87,6 +114,7 @@ struct NoteEditorView: View {
             tags = note.tags
             syntaxLanguage = note.syntaxLanguage
             wordWrap = note.wordWrap
+            color = note.color
         }
         .onDisappear {
             saveImmediately()
@@ -97,6 +125,7 @@ struct NoteEditorView: View {
 
     /// Debounced save — waits 1 second of inactivity before saving.
     private func scheduleSave() {
+        appState.keyManager.recordActivity()
         saveTask?.cancel()
         saveTask = Task {
             try? await Task.sleep(for: .seconds(1))
@@ -109,7 +138,8 @@ struct NoteEditorView: View {
         content != note.content ||
         tags != note.tags ||
         syntaxLanguage != note.syntaxLanguage ||
-        wordWrap != note.wordWrap
+        wordWrap != note.wordWrap ||
+        color != note.color
     }
 
     private func saveImmediately() {
@@ -120,6 +150,7 @@ struct NoteEditorView: View {
         updated.tags = tags
         updated.syntaxLanguage = syntaxLanguage
         updated.wordWrap = wordWrap
+        updated.color = color
         try? appState.saveNote(updated)
     }
 

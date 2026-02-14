@@ -14,6 +14,7 @@ struct JotteryApp: App {
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -29,6 +30,9 @@ struct ContentView: View {
         .animation(.default, value: appState.isFirstLaunch)
         .onAppear {
             appState.initialise()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            appState.handleScenePhaseChange(newPhase)
         }
     }
 }
@@ -50,6 +54,9 @@ struct MainView: View {
                     description: Text("Select a note from the list or create a new one.")
                 )
             }
+        }
+        .onChange(of: appState.selectedNoteId) { _, _ in
+            appState.keyManager.recordActivity()
         }
     }
 }

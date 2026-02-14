@@ -13,6 +13,7 @@ actor SyncService {
     private(set) var isSyncing = false
     private(set) var lastSyncAt: String?
     private(set) var lastError: String?
+    private var postSyncHandler: (@Sendable () async -> Void)?
 
     init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, key: SymmetricKey) {
         self.syncClient = syncClient
@@ -20,6 +21,11 @@ actor SyncService {
         self.syncRepo = syncRepo
         self.key = key
         self.sseClient = SSEClient(syncClient: syncClient)
+    }
+
+    /// Set a handler called after SSE-triggered syncs complete.
+    func setPostSyncHandler(_ handler: @escaping @Sendable () async -> Void) {
+        postSyncHandler = handler
     }
 
     // MARK: - Full Sync
@@ -36,6 +42,7 @@ actor SyncService {
             try await push()
             try await pull()
             try await finalise()
+            await postSyncHandler?()
         } catch {
             lastError = error.localizedDescription
             throw error

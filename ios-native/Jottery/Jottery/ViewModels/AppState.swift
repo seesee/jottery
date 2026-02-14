@@ -27,6 +27,10 @@ final class AppState {
     var syncEnabled: Bool = false
     var syncStatusMessage: String?
 
+    // MARK: - Lifecycle
+
+    var backgroundedAt: Date?
+
     // MARK: - Settings
 
     var settings: UserSettings = .defaults
@@ -212,6 +216,14 @@ final class AppState {
 
     /// Lock the application.
     func lock() {
+        // Stop SSE and release sync objects (releases the SymmetricKey reference)
+        if let service = syncService {
+            Task { await service.stopSSE() }
+        }
+        syncClient = nil
+        syncService = nil
+        syncEnabled = false
+
         keyManager.lock()
         isLocked = true
         notes = []
@@ -284,14 +296,27 @@ final class AppState {
         }
         let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
         self.syncClient = client
-        self.syncService = SyncService(
+        let service = SyncService(
             syncClient: client,
             noteRepo: noteRepo,
             syncRepo: syncRepo,
             key: key
         )
+        self.syncService = service
         syncEnabled = true
         syncError = nil
+
+        // Start SSE and wire the post-sync handler to reload notes
+        Task { [weak self] in
+            await service.setPostSyncHandler { [weak self] in
+                await MainActor.run {
+                    guard let self else { return }
+                    try? self.loadNotes()
+                    self.lastSyncAt = Date()
+                }
+            }
+            await service.startSSE()
+        }
     }
 
     func triggerSync() async {
@@ -329,6 +354,36 @@ final class AppState {
             syncError = error.localizedDescription
             syncStatusMessage = nil
             isSyncing = false
+        }
+    }
+
+    // MARK: - Lifecycle
+
+    func handleScenePhaseChange(_ phase: ScenePhase) {
+        switch phase {
+        case .background, .inactive:
+            backgroundedAt = Date()
+            Task { await syncService?.stopSSE() }
+        case .active:
+            guard !isLocked else { return }
+            if let bg = backgroundedAt {
+                let elapsed = Date().timeIntervalSince(bg)
+                if elapsed >= keyManager.autoLockTimeout {
+                    lock()
+                    return
+                }
+            }
+            backgroundedAt = nil
+            keyManager.recordActivity()
+            // Restart SSE and trigger a sync on return
+            if syncService != nil {
+                Task {
+                    await syncService?.startSSE()
+                    await triggerSync()
+                }
+            }
+        @unknown default:
+            break
         }
     }
 
