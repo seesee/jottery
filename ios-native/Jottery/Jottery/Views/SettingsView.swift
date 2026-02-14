@@ -92,13 +92,13 @@ struct SettingsView: View {
                 settings = appState.settings
             }
             .sheet(isPresented: $showSyncSetup) {
-                SyncSetupView(onComplete: {
+                SyncSetupView(onComplete: { apiKey in
                     // Reload settings from DB after registration
                     if let loaded = try? appState.settingsRepo?.get() {
                         settings = loaded
                         appState.settings = loaded
                     }
-                    appState.setupSync()
+                    appState.setupSync(apiKey: apiKey)
                     // Trigger initial sync
                     Task { await appState.triggerSync() }
                 })

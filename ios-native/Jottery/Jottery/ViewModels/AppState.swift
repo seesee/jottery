@@ -267,12 +267,18 @@ final class AppState {
 
     // MARK: - Sync
 
-    func setupSync() {
+    /// Set up the sync client. Pass `apiKey` directly after registration
+    /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
+    func setupSync(apiKey providedKey: String? = nil) {
         guard settings.syncEnabled,
               let endpoint = settings.syncEndpoint,
               let noteRepo, let syncRepo, let key = keyManager.masterKey else { return }
 
-        let apiKey = KeychainService.retrieveAPIKey()
+        let apiKey = providedKey ?? KeychainService.retrieveAPIKey()
+        guard let apiKey, !apiKey.isEmpty else {
+            syncError = "No API key found. Please re-register the device."
+            return
+        }
         let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
         self.syncClient = client
         self.syncService = SyncService(
@@ -282,6 +288,7 @@ final class AppState {
             key: key
         )
         syncEnabled = true
+        syncError = nil
     }
 
     func triggerSync() async {

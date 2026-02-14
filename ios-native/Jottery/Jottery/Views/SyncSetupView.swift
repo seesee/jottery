@@ -5,7 +5,8 @@ struct SyncSetupView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    var onComplete: (() -> Void)?
+    /// Called with the API key after successful registration or import.
+    var onComplete: ((_ apiKey: String) -> Void)?
 
     @State private var selectedTab = 0
     @State private var endpoint = ""
@@ -16,6 +17,7 @@ struct SyncSetupView: View {
     @State private var error: String?
     @State private var isWorking = false
     @State private var success = false
+    @State private var registeredApiKey: String?
 
     var body: some View {
         NavigationStack {
@@ -46,7 +48,9 @@ struct SyncSetupView: View {
                             .foregroundStyle(.green)
 
                         Button("Done") {
-                            onComplete?()
+                            if let key = registeredApiKey {
+                                onComplete?(key)
+                            }
                             dismiss()
                         }
                         .buttonStyle(.borderedProminent)
@@ -140,6 +144,7 @@ struct SyncSetupView: View {
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
 
+                registeredApiKey = response.apiKey
                 success = true
                 isWorking = false
             } catch {
@@ -157,6 +162,7 @@ struct SyncSetupView: View {
             do {
                 // Try parsing as a base64 JSON credentials blob
                 let trimmed = importData.trimmingCharacters(in: .whitespacesAndNewlines)
+                var storedKey: String = trimmed
 
                 if let data = Data(base64Encoded: trimmed),
                    let creds = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
@@ -174,6 +180,7 @@ struct SyncSetupView: View {
 
                     appState.settings.syncEnabled = true
                     appState.settings.syncEndpoint = normalised
+                    storedKey = response.apiKey
                 } else {
                     // Try as a raw API key — needs endpoint
                     guard !endpoint.isEmpty else {
@@ -188,6 +195,7 @@ struct SyncSetupView: View {
                     appState.settings.syncEndpoint = normalised
                 }
 
+                registeredApiKey = storedKey
                 success = true
                 isWorking = false
             } catch {
