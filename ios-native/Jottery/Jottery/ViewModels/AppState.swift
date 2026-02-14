@@ -388,6 +388,7 @@ final class AppState {
                 syncStatusMessage = nil
             }
         } catch {
+            print("[Sync] triggerSync: ERROR — \(error)")
             syncError = error.localizedDescription
             syncStatusMessage = nil
             isSyncing = false

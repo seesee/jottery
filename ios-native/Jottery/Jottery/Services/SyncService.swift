@@ -123,7 +123,15 @@ actor SyncService {
             deletions: syncDeletions.isEmpty ? nil : syncDeletions
         )
 
-        let response = try await syncClient.push(request)
+        print("[Sync] push: sending \(syncNotes.count) notes, \(syncDeletions.count) deletions")
+        let response: SyncPushResponse
+        do {
+            response = try await syncClient.push(request)
+        } catch {
+            print("[Sync] push: HTTP error — \(error)")
+            throw error
+        }
+        print("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
         let now = Date().iso8601
 
         // Mark accepted notes as synced
