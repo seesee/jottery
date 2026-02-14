@@ -127,6 +127,11 @@ final class DatabaseManager: Sendable {
                 t.column("auto_sync_interval", .integer).defaults(to: 5)
             }
 
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO sync_metadata (id, sync_enabled)
+                VALUES (1, 0)
+            """)
+
             try db.create(table: "note_sync_metadata", ifNotExists: true) { t in
                 t.column("note_id", .text).primaryKey()
                     .references("notes", column: "id", onDelete: .cascade)

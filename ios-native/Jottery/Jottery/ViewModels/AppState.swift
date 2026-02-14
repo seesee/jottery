@@ -34,8 +34,8 @@ final class AppState {
 
     private(set) var db: DatabaseManager?
     private(set) var keyManager = KeyManager()
-    private(set) var syncClient: SyncClient?
-    private(set) var syncService: SyncService?
+    var syncClient: SyncClient?
+    var syncService: SyncService?
 
     // Repositories (lazily initialised after DB is ready)
     private(set) var noteRepo: NoteRepository?

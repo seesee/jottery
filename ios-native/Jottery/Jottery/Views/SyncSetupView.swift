@@ -5,6 +5,8 @@ struct SyncSetupView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
+    var onComplete: (() -> Void)?
+
     @State private var selectedTab = 0
     @State private var endpoint = ""
     @State private var email = ""
@@ -42,6 +44,12 @@ struct SyncSetupView: View {
                     Section {
                         Label("Device registered successfully", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
+
+                        Button("Done") {
+                            onComplete?()
+                            dismiss()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
             }
@@ -78,7 +86,7 @@ struct SyncSetupView: View {
                     Text("Register")
                 }
             }
-            .disabled(endpoint.isEmpty || email.isEmpty || password.isEmpty || deviceName.isEmpty || isWorking)
+            .disabled(endpoint.isEmpty || email.isEmpty || password.isEmpty || deviceName.isEmpty || isWorking || success)
         }
     }
 
@@ -87,6 +95,13 @@ struct SyncSetupView: View {
             Text("Paste the base64 credentials blob from another device.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            TextField("Server URL", text: $endpoint)
+                .textContentType(.URL)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            TextField("Device Name", text: $deviceName)
 
             TextField("Credentials", text: $importData, axis: .vertical)
                 .lineLimit(3...6)
@@ -99,7 +114,7 @@ struct SyncSetupView: View {
                     Text("Import")
                 }
             }
-            .disabled(importData.isEmpty || isWorking)
+            .disabled(importData.isEmpty || isWorking || success)
         }
     }
 
@@ -109,7 +124,8 @@ struct SyncSetupView: View {
 
         Task {
             do {
-                let client = SyncClient(endpoint: endpoint)
+                let normalised = normaliseEndpoint(endpoint)
+                let client = SyncClient(endpoint: normalised)
                 let response = try await client.registerDevice(
                     email: email,
                     password: password,
@@ -118,13 +134,14 @@ struct SyncSetupView: View {
 
                 try KeychainService.storeAPIKey(response.apiKey)
                 try KeychainService.storeClientId(response.clientId)
-                try appState.settingsRepo?.updateSync(enabled: true, endpoint: endpoint)
+                try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+
+                // Update in-memory settings
+                appState.settings.syncEnabled = true
+                appState.settings.syncEndpoint = normalised
 
                 success = true
                 isWorking = false
-
-                // Trigger initial sync
-                await appState.triggerSync()
             } catch {
                 self.error = error.localizedDescription
                 isWorking = false
@@ -138,32 +155,57 @@ struct SyncSetupView: View {
 
         Task {
             do {
-                // Parse base64 credentials blob
-                guard let data = Data(base64Encoded: importData.trimmingCharacters(in: .whitespacesAndNewlines)),
-                      let json = try? JSONDecoder().decode(ImportedCredentials.self, from: data) else {
-                    throw SyncSetupError.invalidCredentials
+                // Try parsing as a base64 JSON credentials blob
+                let trimmed = importData.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if let data = Data(base64Encoded: trimmed),
+                   let creds = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
+                    // Full credentials blob with endpoint
+                    let normalised = normaliseEndpoint(creds.endpoint)
+                    let client = SyncClient(endpoint: normalised)
+                    let response = try await client.cloneDevice(
+                        apiKey: creds.apiKey,
+                        deviceName: deviceName.isEmpty ? "iOS" : deviceName
+                    )
+
+                    try KeychainService.storeAPIKey(response.apiKey)
+                    try KeychainService.storeClientId(response.clientId)
+                    try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+
+                    appState.settings.syncEnabled = true
+                    appState.settings.syncEndpoint = normalised
+                } else {
+                    // Try as a raw API key — needs endpoint
+                    guard !endpoint.isEmpty else {
+                        throw SyncSetupError.needsEndpoint
+                    }
+                    let normalised = normaliseEndpoint(endpoint)
+
+                    try KeychainService.storeAPIKey(trimmed)
+                    try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+
+                    appState.settings.syncEnabled = true
+                    appState.settings.syncEndpoint = normalised
                 }
-
-                // Clone device with the imported API key
-                let client = SyncClient(endpoint: json.endpoint)
-                let response = try await client.cloneDevice(
-                    apiKey: json.apiKey,
-                    deviceName: deviceName.isEmpty ? "iOS" : deviceName
-                )
-
-                try KeychainService.storeAPIKey(response.apiKey)
-                try KeychainService.storeClientId(response.clientId)
-                try appState.settingsRepo?.updateSync(enabled: true, endpoint: json.endpoint)
 
                 success = true
                 isWorking = false
-
-                await appState.triggerSync()
             } catch {
                 self.error = error.localizedDescription
                 isWorking = false
             }
         }
+    }
+
+    private func normaliseEndpoint(_ raw: String) -> String {
+        var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
+            url = "https://\(url)"
+        }
+        if url.hasSuffix("/") {
+            url = String(url.dropLast())
+        }
+        return url
     }
 }
 
@@ -175,8 +217,12 @@ private struct ImportedCredentials: Codable {
 
 enum SyncSetupError: LocalizedError {
     case invalidCredentials
+    case needsEndpoint
 
     var errorDescription: String? {
-        "Invalid credentials data"
+        switch self {
+        case .invalidCredentials: return "Invalid credentials data"
+        case .needsEndpoint: return "Server URL is required when importing a raw API key"
+        }
     }
 }
