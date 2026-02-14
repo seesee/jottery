@@ -90,11 +90,13 @@ final class AppState {
     // MARK: - Vault Setup
 
     /// Create a new vault with the given password.
-    func createVault(password: String) throws {
+    /// When importing from another device, pass the existing `salt` and `iterations`
+    /// so the same password derives the same encryption key.
+    func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) throws {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
-        let salt = CryptoService.generateSalt()
-        let iterations = CryptoService.defaultIterations
+        let salt = existingSalt ?? CryptoService.generateSalt()
+        let iterations = existingIterations ?? CryptoService.defaultIterations
 
         // Derive key first so we can create the verification token
         let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)

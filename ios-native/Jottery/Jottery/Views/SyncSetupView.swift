@@ -96,7 +96,7 @@ struct SyncSetupView: View {
 
     private var importSection: some View {
         Section("Import Credentials") {
-            Text("Paste the base64 credentials blob from another device.")
+            Text("Paste the credentials from another device.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -140,7 +140,6 @@ struct SyncSetupView: View {
                 try KeychainService.storeClientId(response.clientId)
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
-                // Update in-memory settings
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
 
@@ -160,42 +159,32 @@ struct SyncSetupView: View {
 
         Task {
             do {
-                // Try parsing as a base64 JSON credentials blob
                 let trimmed = importData.trimmingCharacters(in: .whitespacesAndNewlines)
-                var storedKey: String = trimmed
 
-                if let data = Data(base64Encoded: trimmed),
-                   let creds = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
-                    // Full credentials blob with endpoint
-                    let normalised = normaliseEndpoint(creds.endpoint)
-                    let client = SyncClient(endpoint: normalised)
-                    let response = try await client.cloneDevice(
-                        apiKey: creds.apiKey,
-                        deviceName: deviceName.isEmpty ? "iOS" : deviceName
-                    )
-
-                    try KeychainService.storeAPIKey(response.apiKey)
-                    try KeychainService.storeClientId(response.clientId)
-                    try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
-
-                    appState.settings.syncEnabled = true
-                    appState.settings.syncEndpoint = normalised
-                    storedKey = response.apiKey
+                if trimmed.hasPrefix("jottery:v1:") {
+                    // Modern encrypted format — decrypt using current master key
+                    try await handleEncryptedCredentials(trimmed)
+                } else if let data = Data(base64Encoded: trimmed),
+                          let creds = try? JSONDecoder().decode(LegacyCredentials.self, from: data) {
+                    // Legacy format with salt
+                    try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
+                } else if let data = Data(base64Encoded: trimmed),
+                          let creds = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
+                    // Legacy format without salt
+                    try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
                 } else {
-                    // Try as a raw API key — needs endpoint
+                    // Raw API key
                     guard !endpoint.isEmpty else {
                         throw SyncSetupError.needsEndpoint
                     }
                     let normalised = normaliseEndpoint(endpoint)
-
                     try KeychainService.storeAPIKey(trimmed)
                     try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
-
                     appState.settings.syncEnabled = true
                     appState.settings.syncEndpoint = normalised
+                    registeredApiKey = trimmed
                 }
 
-                registeredApiKey = storedKey
                 success = true
                 isWorking = false
             } catch {
@@ -203,6 +192,53 @@ struct SyncSetupView: View {
                 isWorking = false
             }
         }
+    }
+
+    /// Decrypt `jottery:v1:` credentials using the current master key.
+    private func handleEncryptedCredentials(_ input: String) async throws {
+        guard let masterKey = appState.keyManager.masterKey else {
+            throw SyncSetupError.invalidCredentials
+        }
+
+        let payload = String(input.dropFirst("jottery:v1:".count))
+        guard let dotIndex = payload.firstIndex(of: ".") else {
+            throw SyncSetupError.invalidCredentials
+        }
+
+        let encryptedB64 = String(payload[payload.index(after: dotIndex)...])
+
+        guard let payloadData = Data(base64Encoded: encryptedB64),
+              let payloadJSON = String(data: payloadData, encoding: .utf8) else {
+            throw SyncSetupError.invalidCredentials
+        }
+
+        let encrypted = try CryptoService.parseEncryptedJSON(payloadJSON)
+        let decryptedJSON = try CryptoService.decryptText(encrypted, key: masterKey)
+
+        guard let credsData = decryptedJSON.data(using: .utf8) else {
+            throw SyncSetupError.invalidCredentials
+        }
+        let creds = try JSONDecoder().decode(ImportedCredentials.self, from: credsData)
+
+        try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
+    }
+
+    /// Clone device and store credentials.
+    private func handleCredentials(apiKey: String, endpoint: String) async throws {
+        let normalised = normaliseEndpoint(endpoint)
+        let client = SyncClient(endpoint: normalised)
+        let response = try await client.cloneDevice(
+            apiKey: apiKey,
+            deviceName: deviceName.isEmpty ? "iOS" : deviceName
+        )
+
+        try KeychainService.storeAPIKey(response.apiKey)
+        try KeychainService.storeClientId(response.clientId)
+        try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+
+        appState.settings.syncEnabled = true
+        appState.settings.syncEndpoint = normalised
+        registeredApiKey = response.apiKey
     }
 
     private func normaliseEndpoint(_ raw: String) -> String {
@@ -221,6 +257,13 @@ private struct ImportedCredentials: Codable {
     let endpoint: String
     let apiKey: String
     let clientId: String?
+}
+
+private struct LegacyCredentials: Codable {
+    let endpoint: String
+    let apiKey: String
+    let clientId: String?
+    let salt: String
 }
 
 enum SyncSetupError: LocalizedError {
