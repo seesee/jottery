@@ -16,7 +16,22 @@ struct NoteRepository: Sendable {
                 .order(Column("modified_at").desc)
                 .fetchAll(db)
         }
-        return records.compactMap { try? decrypt($0, key: key) }
+        var decrypted: [DecryptedNote] = []
+        var failCount = 0
+        for record in records {
+            do {
+                decrypted.append(try decrypt(record, key: key))
+            } catch {
+                failCount += 1
+                if failCount <= 3 {
+                    print("[NoteRepo] Failed to decrypt note \(record.id): \(error)")
+                    print("[NoteRepo]   content prefix: \(String(record.content.prefix(80)))")
+                    print("[NoteRepo]   tags prefix: \(String(record.tags.prefix(80)))")
+                }
+            }
+        }
+        print("[NoteRepo] Loaded \(decrypted.count)/\(records.count) notes (\(failCount) failed)")
+        return decrypted
     }
 
     /// Fetch all deleted notes, decrypted (recycle bin).
@@ -207,7 +222,18 @@ struct NoteRepository: Sendable {
         let content = try CryptoService.decryptText(encContent, key: key)
 
         let encTags = try CryptoService.parseEncryptedJSON(record.tags)
-        let tags: [String] = try CryptoService.decryptStringArray(encTags, key: key)
+        let tags: [String]
+        let decryptedTagsText = try CryptoService.decryptText(encTags, key: key)
+        if decryptedTagsText.isEmpty {
+            tags = []
+        } else if decryptedTagsText.hasPrefix("[") {
+            tags = (try? JSONDecoder().decode([String].self, from: Data(decryptedTagsText.utf8))) ?? []
+        } else {
+            // Plain string — single tag or comma-separated
+            tags = decryptedTagsText.split(separator: ",")
+                .map { String($0).trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
 
         let attachments: [AttachmentRef]
         if let data = record.attachments.data(using: .utf8) {
