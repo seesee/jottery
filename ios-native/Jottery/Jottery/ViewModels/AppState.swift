@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import GRDB
 import SwiftUI
 
 /// Root application state — drives the entire UI.
@@ -60,6 +61,7 @@ final class AppState {
     // MARK: - Initialisation
 
     func initialise() {
+        guard db == nil else { return }  // Already initialised
         do {
             let database = try DatabaseManager()
             self.db = database
@@ -136,31 +138,73 @@ final class AppState {
             iterations: UInt32(metadata.iterations)
         )
 
-        // Verify password by decrypting the verification token
+        // Verify password
+        let verified: Bool
         if let verificationJSON = metadata.verification {
-            do {
-                let encrypted = try CryptoService.parseEncryptedJSON(verificationJSON)
-                let plaintext = try CryptoService.decryptText(encrypted, key: key)
-                guard plaintext == EncryptionMetadata.verificationPlaintext else {
-                    keyManager.lock()
-                    throw AppStateError.wrongPassword
-                }
-            } catch is AppStateError {
-                keyManager.lock()
-                isLocked = true
-                throw AppStateError.wrongPassword
-            } catch {
-                // Decryption failed — wrong password
-                keyManager.lock()
-                isLocked = true
-                throw AppStateError.wrongPassword
-            }
+            // Use stored verification token
+            verified = verifyWithToken(verificationJSON, key: key)
+        } else {
+            // No token (old vault) — try decrypting a note instead
+            verified = verifyByDecryptingNote(key: key)
+        }
+
+        guard verified else {
+            keyManager.lock()
+            isLocked = true
+            throw AppStateError.wrongPassword
         }
 
         try loadNotes()
         isLocked = false
         setupSync()
+
+        // Upgrade old vaults: store a verification token if missing
+        if metadata.verification == nil {
+            try? upgradeVaultVerification(key: key)
+        }
+
         return true
+    }
+
+    /// Verify the key by decrypting the stored verification token.
+    private func verifyWithToken(_ json: String, key: SymmetricKey) -> Bool {
+        do {
+            let encrypted = try CryptoService.parseEncryptedJSON(json)
+            let plaintext = try CryptoService.decryptText(encrypted, key: key)
+            return plaintext == EncryptionMetadata.verificationPlaintext
+        } catch {
+            return false
+        }
+    }
+
+    /// Verify the key by decrypting one note from the database.
+    /// Returns true if decryption succeeds, or if there are no notes to test against.
+    private func verifyByDecryptingNote(key: SymmetricKey) -> Bool {
+        guard let db else { return false }
+        do {
+            let record = try db.dbPool.read { database in
+                try NoteRecord.filter(Column("deleted") == false).limit(1).fetchOne(database)
+            }
+            guard let record else {
+                // No notes — can't verify, but empty vault is safe to enter
+                return true
+            }
+            let encContent = try CryptoService.parseEncryptedJSON(record.content)
+            _ = try CryptoService.decryptText(encContent, key: key)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Store a verification token on an old vault that doesn't have one.
+    private func upgradeVaultVerification(key: SymmetricKey) throws {
+        guard let encryptionRepo, var metadata = try encryptionRepo.get() else { return }
+        let encrypted = try CryptoService.encryptText(
+            EncryptionMetadata.verificationPlaintext, key: key
+        )
+        metadata.verification = try CryptoService.serializeEncryptedJSON(encrypted)
+        try encryptionRepo.store(metadata)
     }
 
     /// Lock the application.
@@ -223,7 +267,7 @@ final class AppState {
 
     // MARK: - Sync
 
-    private func setupSync() {
+    func setupSync() {
         guard settings.syncEnabled,
               let endpoint = settings.syncEndpoint,
               let noteRepo, let syncRepo, let key = keyManager.masterKey else { return }

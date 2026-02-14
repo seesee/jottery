@@ -5,6 +5,7 @@ struct UnlockScreen: View {
     @State private var password = ""
     @State private var error: String?
     @State private var isUnlocking = false
+    @State private var showBiometricPrompt = false
 
     var body: some View {
         VStack(spacing: 32) {
@@ -50,8 +51,8 @@ struct UnlockScreen: View {
                 Button {
                     biometricUnlock()
                 } label: {
-                    Image(systemName: "faceid")
-                        .font(.title)
+                    Label("Unlock with Face ID", systemImage: "faceid")
+                        .font(.title3)
                 }
                 .buttonStyle(.plain)
             }
@@ -65,6 +66,14 @@ struct UnlockScreen: View {
                 biometricUnlock()
             }
         }
+        .alert("Enable Face ID?", isPresented: $showBiometricPrompt) {
+            Button("Enable") {
+                try? appState.keyManager.enableBiometricUnlock()
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("Unlock Jottery with Face ID instead of typing your password each time.")
+        }
     }
 
     private func unlock() {
@@ -76,6 +85,12 @@ struct UnlockScreen: View {
                 try appState.unlock(password: password)
                 password = ""
                 isUnlocking = false
+
+                // Offer to enable biometrics after first successful password unlock
+                if appState.keyManager.isBiometricAvailable
+                    && !appState.keyManager.isBiometricEnabled {
+                    showBiometricPrompt = true
+                }
             } catch {
                 self.error = "Incorrect password"
                 self.isUnlocking = false
@@ -89,6 +104,7 @@ struct UnlockScreen: View {
             if success {
                 try? appState.loadNotes()
                 appState.isLocked = false
+                appState.setupSync()
             }
         }
     }

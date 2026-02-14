@@ -3,6 +3,7 @@ import SwiftUI
 struct NoteListView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showSettings = false
 
     var body: some View {
         @Bindable var state = appState
@@ -55,6 +56,12 @@ struct NoteListView: View {
 
             ToolbarItemGroup(placement: .secondaryAction) {
                 Button {
+                    showSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gear")
+                }
+
+                Button {
                     appState.lock()
                 } label: {
                     Label("Lock", systemImage: "lock")
@@ -73,6 +80,9 @@ struct NoteListView: View {
                     .disabled(appState.isSyncing)
                 }
             }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
         }
         .overlay {
             if appState.notes.isEmpty {
