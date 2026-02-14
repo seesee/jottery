@@ -126,6 +126,16 @@
 
   /* Keyboard height (set dynamically by capacitorService) */
   --keyboard-height: 0px;
+
+  /* Dynamic Type scale factor (set by capacitorService on iOS).
+     Defaults to 1 so the web build is unaffected. */
+  --text-scale: 1;
+}
+
+/* Apply Dynamic Type scaling to the root font-size.
+   Tailwind utilities use rem, so scaling <html> propagates everywhere. */
+html {
+  font-size: calc(16px * var(--text-scale));
 }
 
 body {
