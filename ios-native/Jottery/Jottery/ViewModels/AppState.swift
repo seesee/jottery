@@ -67,6 +67,12 @@ final class AppState {
 
     func initialise() {
         guard db == nil else { return }  // Already initialised
+
+        // Wire auto-lock so the timer triggers a full app lock (UI + key wipe)
+        keyManager.onAutoLock = { [weak self] in
+            self?.lock()
+        }
+
         do {
             let database = try DatabaseManager()
             self.db = database
@@ -362,14 +368,20 @@ final class AppState {
     func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .background, .inactive:
-            backgroundedAt = Date()
+            // Only record the first transition away — .inactive fires again
+            // on the way *back* from background, which would reset the timestamp.
+            if backgroundedAt == nil {
+                backgroundedAt = Date()
+            }
             Task { await syncService?.stopSSE() }
         case .active:
             guard !isLocked else { return }
-            if let bg = backgroundedAt {
+            // Check auto-lock (timeout 0 means "never")
+            if let bg = backgroundedAt, keyManager.autoLockTimeout > 0 {
                 let elapsed = Date().timeIntervalSince(bg)
                 if elapsed >= keyManager.autoLockTimeout {
                     lock()
+                    backgroundedAt = nil
                     return
                 }
             }

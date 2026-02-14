@@ -18,6 +18,10 @@ final class KeyManager {
     /// Seconds since last user interaction before auto-locking.
     var autoLockTimeout: TimeInterval = 15 * 60  // 15 minutes default
 
+    /// Called when the auto-lock timer fires. AppState should wire this
+    /// to its own `lock()` so the UI transitions to the unlock screen.
+    var onAutoLock: (() -> Void)?
+
     private var lastActivityDate = Date()
     private var autoLockTimer: Timer?
 
@@ -114,7 +118,14 @@ final class KeyManager {
         guard isUnlocked else { return }
         let elapsed = Date().timeIntervalSince(lastActivityDate)
         if elapsed >= autoLockTimeout {
-            lock()
+            // Use the callback so AppState can lock the full app (show unlock screen,
+            // clear notes, stop SSE). The callback calls appState.lock() which in turn
+            // calls keyManager.lock().
+            if let onAutoLock {
+                onAutoLock()
+            } else {
+                lock()
+            }
         }
     }
 
