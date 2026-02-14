@@ -13,6 +13,7 @@ import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
+import { localeIncludes, localeSort } from '../utils/stringUtils';
 
 /**
  * Note service class
@@ -567,12 +568,11 @@ class NoteService {
    */
   async searchNotes(query: string): Promise<DecryptedNote[]> {
     const allNotes = await this.getAllNotes();
-    const lowerQuery = query.toLowerCase();
 
     return allNotes.filter(note => {
-      const contentMatch = note.content.toLowerCase().includes(lowerQuery);
+      const contentMatch = localeIncludes(note.content, query);
       const tagsMatch = note.tags.some(tag =>
-        tag.toLowerCase().includes(lowerQuery)
+        localeIncludes(tag, query)
       );
       return contentMatch || tagsMatch;
     });
@@ -715,11 +715,8 @@ class NoteService {
 
       case 'alpha':
         // Sort alphabetically by title (custom t: tag or first line)
-        return (a: DecryptedNote, b: DecryptedNote) => {
-          const aTitle = getNoteTitle(a).toLowerCase();
-          const bTitle = getNoteTitle(b).toLowerCase();
-          return aTitle.localeCompare(bTitle);
-        };
+        return (a: DecryptedNote, b: DecryptedNote) =>
+          localeSort(getNoteTitle(a), getNoteTitle(b));
 
       default:
         return (a: DecryptedNote, b: DecryptedNote) =>

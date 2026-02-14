@@ -7,6 +7,7 @@
   import ColorPickerModal from './ColorPickerModal.svelte';
   import { get } from 'svelte/store';
   import { modal } from '../actions';
+  import { localeSort } from '../utils/stringUtils';
 
   // Modal states
   let showAddTagsModal = false;
@@ -43,7 +44,7 @@
       }
     }
 
-    return Array.from(tagsSet).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    return Array.from(tagsSet).sort(localeSort);
   }
 
   function openAddTagsModal() {

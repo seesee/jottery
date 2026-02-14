@@ -3,6 +3,7 @@
   import { _ } from 'svelte-i18n';
   import { getColorHex, getTagColor } from '../services/colorService';
   import { isVirtualTag, isTitleTag, getTitleFromTag } from '../utils/virtualTags';
+  import { localeIncludes } from '../utils/stringUtils';
 
   export let tags: string[] = [];
   export let onChange: (tags: string[]) => void = () => {};
@@ -56,9 +57,8 @@
   function handleInput() {
     if (inputValue.trim()) {
       // Filter available tags for suggestions (exclude virtual tags from autocomplete)
-      const query = inputValue.toLowerCase();
       suggestions = availableTags
-        .filter(tag => !isVirtualTag(tag) && !tags.includes(tag) && tag.toLowerCase().includes(query))
+        .filter(tag => !isVirtualTag(tag) && !tags.includes(tag) && localeIncludes(tag, inputValue))
         .slice(0, 5);
       showSuggestions = suggestions.length > 0;
       selectedSuggestionIndex = -1;

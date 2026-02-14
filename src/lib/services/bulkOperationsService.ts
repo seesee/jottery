@@ -8,6 +8,7 @@ import { noteService } from './noteService';
 import { notes, clearMultiSelection, selectNote } from '../stores/appStore';
 import { searchService } from './searchService';
 import { get } from 'svelte/store';
+import { normaliseForComparison } from '../utils/stringUtils';
 
 export interface BulkProgress {
   current: number;
@@ -83,7 +84,7 @@ export async function removeTagsFromNotes(
 ): Promise<void> {
   const allNotes = get(notes);
   const total = noteIds.length;
-  const tagsLower = tagsToRemove.map((t) => t.toLowerCase());
+  const tagsLower = tagsToRemove.map(normaliseForComparison);
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
@@ -93,7 +94,7 @@ export async function removeTagsFromNotes(
     if (note && !note.locked) {
       // Remove matching tags (case-insensitive)
       const newTags = note.tags.filter(
-        (tag) => !tagsLower.includes(tag.toLowerCase())
+        (tag) => !tagsLower.includes(normaliseForComparison(tag))
       );
 
       if (newTags.length !== note.tags.length) {

@@ -6,6 +6,7 @@
 import { DEFAULT_COLOR_PALETTE, type ColorPalette } from '../types/models';
 import { get } from 'svelte/store';
 import { settings } from '../stores/appStore';
+import { normaliseForComparison } from '../utils/stringUtils';
 
 /**
  * Get the hex color code for a semantic color name
@@ -53,8 +54,8 @@ export function getColorNames(): string[] {
  */
 export function getTagColor(tagName: string): string | undefined {
   const userSettings = get(settings);
-  // Normalize tag name to lowercase for case-insensitive lookup
-  const normalizedTag = tagName.toLowerCase().trim();
+  // Normalise tag name for case-insensitive lookup
+  const normalizedTag = normaliseForComparison(tagName.trim());
   return userSettings.tagColors?.[normalizedTag];
 }
 
@@ -86,12 +87,12 @@ export function getColorDisplayName(colorName: string): string {
  */
 export function getColorKeyByDisplayName(displayName: string): string | undefined {
   const palette = getColorPalette();
-  const normalizedSearch = displayName.toLowerCase().trim();
+  const normalizedSearch = normaliseForComparison(displayName.trim());
 
   // Search through palette for matching display name
   for (const [colorKey, colorValue] of Object.entries(palette)) {
     const colorDisplayName = colorValue.displayName || colorKey;
-    if (colorDisplayName.toLowerCase() === normalizedSearch) {
+    if (normaliseForComparison(colorDisplayName) === normalizedSearch) {
       return colorKey;
     }
   }
