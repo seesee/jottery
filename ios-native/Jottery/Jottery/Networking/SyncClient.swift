@@ -97,18 +97,10 @@ actor SyncClient {
         let encoder = JSONEncoder()
         request.httpBody = try encoder.encode(body)
 
-        print("[SyncClient] POST \(url.absoluteString)")
-        do {
-            let (data, response) = try await session.data(for: request)
-            if let http = response as? HTTPURLResponse {
-                print("[SyncClient] Response: \(http.statusCode)")
-            }
-            try validateResponse(response, data: data)
-            return try JSONDecoder().decode(Response.self, from: data)
-        } catch {
-            print("[SyncClient] Error: \(error)")
-            throw error
-        }
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
+
+        return try JSONDecoder().decode(Response.self, from: data)
     }
 
     private func get<Response: Decodable>(url: URL) async throws -> Response {
@@ -118,18 +110,10 @@ actor SyncClient {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
 
-        print("[SyncClient] GET \(url.absoluteString)")
-        do {
-            let (data, response) = try await session.data(for: request)
-            if let http = response as? HTTPURLResponse {
-                print("[SyncClient] Response: \(http.statusCode)")
-            }
-            try validateResponse(response, data: data)
-            return try JSONDecoder().decode(Response.self, from: data)
-        } catch {
-            print("[SyncClient] Error: \(error)")
-            throw error
-        }
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
+
+        return try JSONDecoder().decode(Response.self, from: data)
     }
 
     private func validateResponse(_ response: URLResponse, data: Data) throws {

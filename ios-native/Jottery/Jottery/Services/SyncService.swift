@@ -174,10 +174,8 @@ actor SyncService {
                 offset: offset
             )
 
-            print("[SyncService] Pull request: offset=\(offset), knownIds=\(knownIds.count)")
             let response = try await syncClient.pull(request)
             let now = Date().iso8601
-            print("[SyncService] Pull response: \(response.notes.count) notes, hasMore=\(response.hasMore ?? false), total=\(response.totalCount ?? -1)")
 
             // Process pulled notes
             for syncNote in response.notes {

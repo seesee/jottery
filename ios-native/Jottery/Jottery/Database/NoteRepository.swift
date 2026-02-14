@@ -23,14 +23,11 @@ struct NoteRepository: Sendable {
                 decrypted.append(try decrypt(record, key: key))
             } catch {
                 failCount += 1
-                if failCount <= 3 {
-                    print("[NoteRepo] Failed to decrypt note \(record.id): \(error)")
-                    print("[NoteRepo]   content prefix: \(String(record.content.prefix(80)))")
-                    print("[NoteRepo]   tags prefix: \(String(record.tags.prefix(80)))")
-                }
             }
         }
-        print("[NoteRepo] Loaded \(decrypted.count)/\(records.count) notes (\(failCount) failed)")
+        if failCount > 0 {
+            print("[NoteRepo] \(failCount)/\(records.count) notes failed to decrypt")
+        }
         return decrypted
     }
 

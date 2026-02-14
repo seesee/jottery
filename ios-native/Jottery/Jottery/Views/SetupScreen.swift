@@ -507,9 +507,6 @@ private struct ConnectToServerView: View {
                     // Now clone the device to get a fresh API key
                     syncProgress = "Registering device…"
                     let normalised = normaliseEndpoint(creds.endpoint)
-                    print("[SetupScreen] Endpoint from credentials: \(creds.endpoint)")
-                    print("[SetupScreen] Normalised endpoint: \(normalised)")
-                    print("[SetupScreen] API key length: \(creds.apiKey.count)")
                     let client = SyncClient(endpoint: normalised)
                     let response = try await client.cloneDevice(
                         apiKey: creds.apiKey,
@@ -573,7 +570,6 @@ private struct ConnectToServerView: View {
                 try? await Task.sleep(for: .seconds(4))
                 appState.syncStatusMessage = nil
             } catch {
-                print("[SetupScreen] unlockAndSync error: \(error)")
                 self.error = error.localizedDescription
                 appState.syncError = error.localizedDescription
                 appState.syncStatusMessage = nil
