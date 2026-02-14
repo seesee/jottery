@@ -255,6 +255,7 @@
 				DEVELOPMENT_TEAM = QA72EA3LC2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Jottery;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock Jottery with Face ID";
@@ -290,6 +291,7 @@
 				DEVELOPMENT_TEAM = QA72EA3LC2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Jottery;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Unlock Jottery with Face ID";
