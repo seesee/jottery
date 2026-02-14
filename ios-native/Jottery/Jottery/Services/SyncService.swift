@@ -63,15 +63,11 @@ actor SyncService {
         print("[Sync] push: \(records.count) records need syncing")
         guard !records.isEmpty else { return }
 
-        let syncNotes: [SyncNote] = records.map { record in
-            // Parse tags from encrypted JSON to get the array format the server expects.
-            // Tags are stored as a single encrypted blob; server expects array with one element.
-            let tagsArray: [String]
-            if record.tags.hasPrefix("{") {
-                tagsArray = [record.tags]
-            } else {
-                tagsArray = (try? JSONDecoder().decode([String].self, from: Data(record.tags.utf8))) ?? [record.tags]
-            }
+        var syncNotes: [SyncNote] = []
+        for record in records {
+            // Decrypt tags from single blob, then encrypt each tag individually
+            // for the sync format (web expects individually encrypted tags).
+            let tagsArray: [String] = Self.storageTagsToSyncTags(record.tags, key: key)
 
             let attachments: [AttachmentRef]
             if let data = record.attachments.data(using: .utf8) {
@@ -87,7 +83,7 @@ actor SyncService {
                 hashChain = nil
             }
 
-            return SyncNote(
+            syncNotes.append(SyncNote(
                 id: record.id,
                 createdAt: record.createdAt,
                 modifiedAt: record.modifiedAt,
@@ -109,7 +105,7 @@ actor SyncService {
                 contentHash: record.contentHash,
                 parentHash: record.parentHash,
                 hashChain: hashChain
-            )
+            ))
         }
 
         // Get pending deletions
@@ -150,10 +146,8 @@ actor SyncService {
             if let record = try noteRepo.getRaw(id: rejected.id) {
                 var updated = record
                 updated.content = rejected.serverContent
-                // Server tags are an array with one encrypted element
-                if let firstTag = rejected.serverTags.first {
-                    updated.tags = firstTag
-                }
+                // Convert individually encrypted server tags to storage blob
+                updated.tags = Self.syncTagsToStorageTags(rejected.serverTags, key: key)
                 updated.version = rejected.serverVersion
                 updated.pinned = rejected.serverPinned
                 updated.syntaxLanguage = rejected.serverSyntaxLanguage ?? updated.syntaxLanguage
@@ -215,15 +209,8 @@ actor SyncService {
 
     /// Process a single note from a pull response.
     private func processNote(_ syncNote: SyncNote, syncedAt: String) throws {
-        // Convert tags array back to single encrypted string
-        let tagsString: String
-        if let firstTag = syncNote.tags.first {
-            tagsString = firstTag
-        } else {
-            // Empty tags — encrypt empty array
-            let emptyEncrypted = try CryptoService.encryptStringArray([], key: key)
-            tagsString = try CryptoService.serializeEncryptedJSON(emptyEncrypted)
-        }
+        // Convert individually encrypted sync tags to single storage blob
+        let tagsString = Self.syncTagsToStorageTags(syncNote.tags, key: key)
 
         let attachmentsJSON = try JSONEncoder().encode(syncNote.attachments)
         let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
@@ -262,6 +249,60 @@ actor SyncService {
         )
 
         try noteRepo.insertOrReplace(record)
+    }
+
+    // MARK: - Tag Format Conversion
+
+    /// Convert storage format (single encrypted blob) to sync format (individually encrypted tags).
+    /// Storage: `{"ciphertext":"...","iv":"..."}` → decrypts to `["tag1","tag2"]`
+    /// Sync: `["enc(\"tag1\")","enc(\"tag2\")"]` — each tag JSON-encoded then encrypted separately.
+    private static func storageTagsToSyncTags(_ storageTags: String, key: SymmetricKey) -> [String] {
+        do {
+            let encBlob = try CryptoService.parseEncryptedJSON(storageTags)
+            let plainTags: [String] = try CryptoService.decryptStringArray(encBlob, key: key)
+            return try plainTags.map { tag in
+                // JSON-encode the tag string (wraps in quotes), then encrypt
+                let tagJSON = String(data: try JSONEncoder().encode(tag), encoding: .utf8)!
+                let encrypted = try CryptoService.encryptText(tagJSON, key: key)
+                return try CryptoService.serializeEncryptedJSON(encrypted)
+            }
+        } catch {
+            // Fallback: wrap as single element (will trigger legacy conversion on web)
+            return [storageTags]
+        }
+    }
+
+    /// Convert sync format (individually encrypted tags) to storage format (single encrypted blob).
+    /// Sync: `["enc(\"tag1\")","enc(\"tag2\")"]` → decrypt each → `["tag1","tag2"]` → encrypt as blob.
+    private static func syncTagsToStorageTags(_ syncTags: [String], key: SymmetricKey) -> String {
+        do {
+            if syncTags.isEmpty {
+                let encrypted = try CryptoService.encryptStringArray([], key: key)
+                return try CryptoService.serializeEncryptedJSON(encrypted)
+            }
+            var plainTags: [String] = []
+            for encTagJSON in syncTags {
+                let encrypted = try CryptoService.parseEncryptedJSON(encTagJSON)
+                let decryptedText = try CryptoService.decryptText(encrypted, key: key)
+                // Each tag decrypts to a JSON-encoded string like "\"tag1\""
+                if let data = decryptedText.data(using: .utf8),
+                   let tag = try? JSONDecoder().decode(String.self, from: data) {
+                    plainTags.append(tag)
+                } else if decryptedText.hasPrefix("[") {
+                    // Legacy: entire array encrypted as one blob
+                    if let tags = try? JSONDecoder().decode([String].self, from: Data(decryptedText.utf8)) {
+                        plainTags.append(contentsOf: tags)
+                    }
+                } else if !decryptedText.isEmpty {
+                    plainTags.append(decryptedText)
+                }
+            }
+            let encrypted = try CryptoService.encryptStringArray(plainTags, key: key)
+            return try CryptoService.serializeEncryptedJSON(encrypted)
+        } catch {
+            // Fallback: return first tag as-is (best effort)
+            return syncTags.first ?? "{}"
+        }
     }
 
     // MARK: - SSE

@@ -28,8 +28,15 @@ struct DecryptedNote: Identifiable, Equatable, Hashable {
     var needsSync: Bool
     var decryptedAt: Date              // When this was decrypted (cache management)
 
-    /// Auto-generated title: first non-empty line, truncated.
+    /// Title from virtual tag (`t:` or `title:`) or first non-empty line.
     var title: String {
+        // Check for virtual title tag
+        if let titleTag = tags.first(where: { $0.hasPrefix("t:") || $0.hasPrefix("title:") }) {
+            let prefix = titleTag.hasPrefix("t:") ? "t:" : "title:"
+            let tagTitle = String(titleTag.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+            if !tagTitle.isEmpty { return String(tagTitle.prefix(80)) }
+        }
+        // Fall back to first non-empty line of content
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
         guard let firstLine = lines.first else { return "Untitled" }
         let trimmed = firstLine.trimmingCharacters(in: .whitespaces)
