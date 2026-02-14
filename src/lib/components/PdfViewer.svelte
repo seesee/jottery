@@ -23,7 +23,7 @@
         pdfjsLib = await import('pdfjs-dist') as unknown as PdfJsLib;
 
         // Set worker source to local file (bundled in public directory to avoid CSP issues)
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
         loadingLibrary = false;
       }
 

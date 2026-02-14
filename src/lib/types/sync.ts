@@ -239,7 +239,7 @@ export interface SyncStatusResponse {
 // Authentication/registration types
 export interface AuthRegisterRequest {
   deviceName: string;
-  deviceType: 'web' | 'cli';
+  deviceType: 'web' | 'cli' | 'ios' | 'android';
 }
 
 export interface AuthRegisterResponse {

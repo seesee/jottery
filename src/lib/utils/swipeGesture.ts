@@ -19,6 +19,8 @@
  * - handleTouchEnd: Determine if action should trigger
  */
 
+import { isCapacitor } from './device';
+
 export const SWIPE_THRESHOLD = 80; // Distance to trigger action
 export const SWIPE_CANCEL_Y = 30; // Vertical movement to cancel (user scrolling)
 export const SWIPE_MAX_DISTANCE = 120; // Maximum swipe distance for visual feedback
@@ -169,20 +171,28 @@ export function getActionOpacity(state: SwipeState): number {
 
 /**
  * Triggers haptic feedback if available
- * Uses a short vibration for threshold crossing
+ * Uses Capacitor Haptics on iOS/Android, falls back to navigator.vibrate on web
  */
 export function triggerHapticFeedback(): void {
-  if (navigator.vibrate) {
+  if (isCapacitor()) {
+    import('@capacitor/haptics').then(({ Haptics, ImpactStyle }) => {
+      Haptics.impact({ style: ImpactStyle.Light });
+    });
+  } else if (navigator.vibrate) {
     navigator.vibrate(10);
   }
 }
 
 /**
  * Triggers stronger haptic feedback for destructive actions
- * Uses a double-pulse pattern for delete confirmation
+ * Uses Capacitor Haptics on iOS/Android, falls back to navigator.vibrate on web
  */
 export function triggerDeleteHapticFeedback(): void {
-  if (navigator.vibrate) {
+  if (isCapacitor()) {
+    import('@capacitor/haptics').then(({ Haptics, NotificationType }) => {
+      Haptics.notification({ type: NotificationType.Warning });
+    });
+  } else if (navigator.vibrate) {
     // Double pulse: vibrate-pause-vibrate
     navigator.vibrate([15, 50, 25]);
   }

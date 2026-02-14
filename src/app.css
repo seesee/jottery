@@ -117,6 +117,15 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Safe area insets for notched devices (iPhone X+) */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+
+  /* Keyboard height (set dynamically by capacitorService) */
+  --keyboard-height: 0px;
 }
 
 body {
@@ -130,6 +139,11 @@ body {
   width: 100%;
   min-height: 100vh;
   /* overflow: hidden only applied conditionally via inline styles in App.svelte */
+  /* Safe area padding for Capacitor on notched devices */
+  padding-top: var(--safe-area-inset-top);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
 }
 
 /* Prevent iOS auto-zoom on input focus by ensuring 16px minimum font size */

@@ -31,7 +31,10 @@
     "electron:build": "npm run build && npm run electron:compile && electron-builder",
     "electron:build:mac": "npm run build && npm run electron:compile && electron-builder --mac",
     "electron:build:win": "npm run build && npm run electron:compile && electron-builder --win",
-    "electron:build:linux": "npm run build && npm run electron:compile && electron-builder --linux"
+    "electron:build:linux": "npm run build && npm run electron:compile && electron-builder --linux",
+    "cap:build": "npm run build && npx cap sync",
+    "cap:open:ios": "npx cap open ios",
+    "cap:run:ios": "npx cap run ios"
   },
   "devDependencies": {
     "@codemirror/lang-css": "^6.3.1",
@@ -112,6 +115,14 @@
     "wait-on": "^8.0.0"
   },
   "dependencies": {
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.1.0",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
     "electron-updater": "^6.3.0",
     "pako": "^2.1.0"
   },

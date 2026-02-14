@@ -4,6 +4,8 @@
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
+  import { isCapacitor } from './lib/utils/device';
+  import { initCapacitorService } from './lib/services/capacitorService';
   import { locale, _ } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
   import { DEFAULT_SETTINGS } from './lib/types';
@@ -250,6 +252,11 @@
 
       // Start version checking (only in production)
       appUpdateService.startChecking();
+
+      // Initialise Capacitor lifecycle handlers (native app only)
+      if (isCapacitor()) {
+        initCapacitorService();
+      }
 
       initialized = true;
     } catch (error) {

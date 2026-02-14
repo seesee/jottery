@@ -3,6 +3,8 @@
  * Handles user account creation and device registration
  */
 
+import { getNativePlatform } from '../utils/device';
+
 // User registration types
 export interface RegisterUserRequest {
   email: string;
@@ -112,11 +114,12 @@ class AuthService {
     endpoint = this.normalizeEndpoint(endpoint);
     const url = `${endpoint}/api/v1/auth/register-device`;
 
+    const platform = getNativePlatform();
     const request: RegisterDeviceRequest = {
       email,
       password,
       deviceName,
-      deviceType: 'web',
+      deviceType: platform === 'web' ? 'web' : platform,
     };
 
     const response = await fetch(url, {
@@ -160,10 +163,11 @@ class AuthService {
     endpoint = this.normalizeEndpoint(endpoint);
     const url = `${endpoint}/api/v1/auth/clone-device`;
 
+    const clonePlatform = getNativePlatform();
     const request: CloneDeviceRequest = {
       apiKey,
       deviceName,
-      deviceType: 'web',
+      deviceType: clonePlatform === 'web' ? 'web' : clonePlatform,
     };
 
     const response = await fetch(url, {

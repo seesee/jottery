@@ -2,6 +2,24 @@
  * Device detection utilities for mobile-specific features
  */
 
+import { Capacitor } from '@capacitor/core';
+
+/**
+ * Check if running inside a Capacitor native shell (iOS/Android)
+ * @returns true if running in Capacitor
+ */
+export function isCapacitor(): boolean {
+  return Capacitor.isNativePlatform();
+}
+
+/**
+ * Get the native platform name when running in Capacitor
+ * @returns 'ios', 'android', or 'web'
+ */
+export function getNativePlatform(): 'ios' | 'android' | 'web' {
+  return Capacitor.getPlatform() as 'ios' | 'android' | 'web';
+}
+
 /**
  * Check if running inside Electron desktop app
  * @returns true if running in Electron

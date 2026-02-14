@@ -4,6 +4,7 @@
  */
 
 import { writable } from 'svelte/store';
+import { isCapacitor } from '../utils/device';
 
 interface VersionInfo {
   version: string;
@@ -32,6 +33,12 @@ class AppUpdateService {
     // Don't check in development mode
     if (import.meta.env.DEV) {
       console.log('[AppUpdateService] Skipping version checks in development mode');
+      return;
+    }
+
+    // Don't check in Capacitor — bundled assets can't be updated via /version.json
+    if (isCapacitor()) {
+      console.log('[AppUpdateService] Skipping version checks in Capacitor');
       return;
     }
 

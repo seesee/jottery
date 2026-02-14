@@ -15,6 +15,7 @@ import type {
   AuthRegisterResponse,
 } from '../types';
 import { toast } from '../utils/toast.svelte';
+import { getNativePlatform } from '../utils/device';
 
 const API_VERSION = 'v1';
 const DEFAULT_TIMEOUT_MS = 30000; // 30 second timeout for fetch requests
@@ -81,9 +82,10 @@ export async function registerDevice(
 ): Promise<AuthRegisterResponse> {
   endpoint = normalizeEndpoint(endpoint);
 
+  const platform = getNativePlatform();
   const request: AuthRegisterRequest = {
     deviceName,
-    deviceType: 'web',
+    deviceType: platform === 'web' ? 'web' : platform,
   };
 
   const response = await fetchWithTimeout(`${endpoint}/api/${API_VERSION}/auth/register`, {
