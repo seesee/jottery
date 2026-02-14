@@ -60,6 +60,7 @@ actor SyncService {
 
     func push() async throws {
         let records = try noteRepo.listNeedingSync()
+        print("[Sync] push: \(records.count) records need syncing")
         guard !records.isEmpty else { return }
 
         let syncNotes: [SyncNote] = records.map { record in

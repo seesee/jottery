@@ -104,7 +104,10 @@ struct UnlockScreen: View {
             if success {
                 try? appState.loadNotes()
                 appState.isLocked = false
+                print("[Sync] biometricUnlock: calling setupSync()")
                 appState.setupSync()
+            } else {
+                print("[Sync] biometricUnlock: Face ID failed")
             }
         }
     }

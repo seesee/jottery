@@ -173,6 +173,7 @@ final class AppState {
 
         try loadNotes()
         isLocked = false
+        print("[Sync] unlock: calling setupSync()")
         setupSync()
 
         // Upgrade old vaults: store a verification token if missing
@@ -226,6 +227,7 @@ final class AppState {
 
     /// Lock the application.
     func lock() {
+        print("[Sync] lock: clearing syncService, syncEnabled=false")
         // Flush any pending editor save while the key is still available
         if let pending = pendingEditorNote, let noteRepo, let key = keyManager.masterKey {
             try? noteRepo.update(pending, key: key)
@@ -301,15 +303,30 @@ final class AppState {
     /// Set up the sync client. Pass `apiKey` directly after registration
     /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
     func setupSync(apiKey providedKey: String? = nil) {
-        guard settings.syncEnabled,
-              let endpoint = settings.syncEndpoint,
-              let noteRepo, let syncRepo, let key = keyManager.masterKey else { return }
+        guard settings.syncEnabled else {
+            print("[Sync] setupSync: settings.syncEnabled is false — skipping")
+            return
+        }
+        guard let endpoint = settings.syncEndpoint else {
+            print("[Sync] setupSync: no syncEndpoint — skipping")
+            return
+        }
+        guard let noteRepo, let syncRepo else {
+            print("[Sync] setupSync: repos not initialised — skipping")
+            return
+        }
+        guard let key = keyManager.masterKey else {
+            print("[Sync] setupSync: no masterKey — skipping")
+            return
+        }
 
         let apiKey = providedKey ?? KeychainService.retrieveAPIKey()
         guard let apiKey, !apiKey.isEmpty else {
+            print("[Sync] setupSync: no API key in Keychain")
             syncError = "No API key found. Please re-register the device."
             return
         }
+        print("[Sync] setupSync: OK — endpoint=\(endpoint)")
         let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
         self.syncClient = client
         let service = SyncService(
@@ -336,7 +353,11 @@ final class AppState {
     }
 
     func triggerSync() async {
-        guard let syncService else { return }
+        guard let syncService else {
+            print("[Sync] triggerSync: syncService is nil — aborting")
+            return
+        }
+        print("[Sync] triggerSync: starting sync cycle")
         isSyncing = true
         syncError = nil
         syncStatusMessage = "Pushing changes…"
