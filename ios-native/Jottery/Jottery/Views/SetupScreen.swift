@@ -127,6 +127,7 @@ private struct ConnectToServerView: View {
     @State private var registeredApiKey: String?
     @State private var registeredEndpoint: String?
     @State private var encryptionPassword = ""
+    @State private var syncProgress: String?
 
     var canRegister: Bool {
         !endpoint.isEmpty && !email.isEmpty && !password.isEmpty && !deviceName.isEmpty
@@ -187,6 +188,7 @@ private struct ConnectToServerView: View {
                 SecureField("Encryption Password", text: $encryptionPassword)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
+                    .disabled(isWorking)
 
                 Text("Enter the same encryption password used on your other devices.")
                     .font(.caption)
@@ -198,6 +200,16 @@ private struct ConnectToServerView: View {
                     Text(error)
                         .foregroundStyle(.red)
                         .font(.callout)
+                }
+
+                if let syncProgress {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(syncProgress)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Button(action: unlockAndSync) {
@@ -361,17 +373,40 @@ private struct ConnectToServerView: View {
     private func unlockAndSync() {
         error = nil
         isWorking = true
+        syncProgress = "Creating vault…"
 
         Task {
             do {
                 try appState.createVault(password: encryptionPassword)
+
+                syncProgress = "Setting up sync…"
                 if let apiKey = registeredApiKey {
                     appState.setupSync(apiKey: apiKey)
                 }
-                await appState.triggerSync()
+
+                guard let syncService = appState.syncService else {
+                    syncProgress = nil
+                    isWorking = false
+                    return
+                }
+
+                syncProgress = "Pushing local data…"
+                try await syncService.push()
+
+                syncProgress = "Pulling notes from server…"
+                try await syncService.pull()
+
+                syncProgress = "Finishing…"
+                try await syncService.finalise()
+                try? appState.loadNotes()
+                appState.lastSyncAt = Date()
+
+                let count = appState.notes.count
+                syncProgress = "Done — \(count) note\(count == 1 ? "" : "s") synced"
                 isWorking = false
             } catch {
                 self.error = error.localizedDescription
+                syncProgress = nil
                 isWorking = false
             }
         }

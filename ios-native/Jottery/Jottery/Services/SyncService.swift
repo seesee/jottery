@@ -35,18 +35,23 @@ actor SyncService {
         do {
             try await push()
             try await pull()
-            let now = Date().iso8601
-            try syncRepo.updateLastSync(at: now)
-            lastSyncAt = now
+            try await finalise()
         } catch {
             lastError = error.localizedDescription
             throw error
         }
     }
 
+    /// Record the sync timestamp. Called after push + pull complete.
+    func finalise() async throws {
+        let now = Date().iso8601
+        try syncRepo.updateLastSync(at: now)
+        lastSyncAt = now
+    }
+
     // MARK: - Push
 
-    private func push() async throws {
+    func push() async throws {
         let records = try noteRepo.listNeedingSync()
         guard !records.isEmpty else { return }
 
@@ -149,7 +154,7 @@ actor SyncService {
 
     // MARK: - Pull
 
-    private func pull() async throws {
+    func pull() async throws {
         let metadata = try syncRepo.getMetadata()
         let lastSyncAt = metadata?.lastSyncAt
 

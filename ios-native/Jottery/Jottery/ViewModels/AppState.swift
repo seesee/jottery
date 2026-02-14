@@ -25,6 +25,7 @@ final class AppState {
     var lastSyncAt: Date?
     var syncError: String?
     var syncEnabled: Bool = false
+    var syncStatusMessage: String?
 
     // MARK: - Settings
 
@@ -295,14 +296,36 @@ final class AppState {
         guard let syncService else { return }
         isSyncing = true
         syncError = nil
+        syncStatusMessage = "Pushing changes…"
 
         do {
-            try await syncService.sync()
+            syncStatusMessage = "Pushing…"
+            try await syncService.push()
+            syncStatusMessage = "Pulling…"
+            try await syncService.pull()
+            syncStatusMessage = "Finishing…"
+            try await syncService.finalise()
+            let previousCount = notes.count
             try? loadNotes()
             isSyncing = false
             lastSyncAt = Date()
+
+            let diff = notes.count - previousCount
+            if diff > 0 {
+                syncStatusMessage = "Synced — \(diff) new note\(diff == 1 ? "" : "s")"
+            } else {
+                syncStatusMessage = "Synced — up to date"
+            }
+
+            // Clear the status message after a few seconds
+            let clearMessage = syncStatusMessage
+            try? await Task.sleep(for: .seconds(4))
+            if syncStatusMessage == clearMessage {
+                syncStatusMessage = nil
+            }
         } catch {
             syncError = error.localizedDescription
+            syncStatusMessage = nil
             isSyncing = false
         }
     }
@@ -344,6 +367,7 @@ final class AppState {
         isSyncing = false
         lastSyncAt = nil
         syncError = nil
+        syncStatusMessage = nil
         settings = .defaults
         keyManager.lock()
         isLocked = true
