@@ -507,6 +507,9 @@ private struct ConnectToServerView: View {
                     // Now clone the device to get a fresh API key
                     syncProgress = "Registering device…"
                     let normalised = normaliseEndpoint(creds.endpoint)
+                    print("[SetupScreen] Endpoint from credentials: \(creds.endpoint)")
+                    print("[SetupScreen] Normalised endpoint: \(normalised)")
+                    print("[SetupScreen] API key length: \(creds.apiKey.count)")
                     let client = SyncClient(endpoint: normalised)
                     let response = try await client.cloneDevice(
                         apiKey: creds.apiKey,
@@ -530,33 +533,51 @@ private struct ConnectToServerView: View {
                     existingIterations: importedIterations
                 )
 
+                // createVault() sets isFirstLaunch=false, which transitions
+                // the UI to NoteListView. From here on, update appState
+                // properties so progress is visible on the NoteListView
+                // status bar (this view's @State is about to become invisible).
                 syncProgress = "Setting up sync…"
+                appState.isSyncing = true
+                appState.syncStatusMessage = "Setting up sync…"
+
                 if let apiKey = registeredApiKey {
                     appState.setupSync(apiKey: apiKey)
                 }
 
                 guard let syncService = appState.syncService else {
                     syncProgress = nil
+                    appState.isSyncing = false
+                    appState.syncStatusMessage = nil
                     isWorking = false
                     return
                 }
 
-                syncProgress = "Pushing local data…"
+                appState.syncStatusMessage = "Pushing…"
                 try await syncService.push()
 
-                syncProgress = "Pulling notes from server…"
+                appState.syncStatusMessage = "Pulling notes…"
                 try await syncService.pull()
 
-                syncProgress = "Finishing…"
+                appState.syncStatusMessage = "Finishing…"
                 try await syncService.finalise()
-                try? appState.loadNotes()
+                try appState.loadNotes()
                 appState.lastSyncAt = Date()
+                appState.isSyncing = false
 
                 let count = appState.notes.count
-                syncProgress = "Done — \(count) note\(count == 1 ? "" : "s") synced"
+                appState.syncStatusMessage = "Synced — \(count) note\(count == 1 ? "" : "s")"
                 isWorking = false
+
+                // Clear the status message after a few seconds
+                try? await Task.sleep(for: .seconds(4))
+                appState.syncStatusMessage = nil
             } catch {
+                print("[SetupScreen] unlockAndSync error: \(error)")
                 self.error = error.localizedDescription
+                appState.syncError = error.localizedDescription
+                appState.syncStatusMessage = nil
+                appState.isSyncing = false
                 syncProgress = nil
                 isWorking = false
             }

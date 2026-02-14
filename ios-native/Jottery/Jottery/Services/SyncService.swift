@@ -159,78 +159,95 @@ actor SyncService {
         let lastSyncAt = metadata?.lastSyncAt
 
         // Get known note IDs
-        let activeNotes = try noteRepo.listNeedingSync() // We need all IDs actually
         let allRecords = try noteRepo.listActive(key: key)
-        let knownIds = allRecords.map(\.id)
+        var knownIds = allRecords.map(\.id)
 
-        let request = SyncPullRequest(
-            lastSyncAt: lastSyncAt,
-            knownNoteIds: knownIds,
-            knownAttachmentIds: []
-        )
+        var offset = 0
+        var hasMore = true
 
-        let response = try await syncClient.pull(request)
-        let now = Date().iso8601
-
-        // Process pulled notes
-        for syncNote in response.notes {
-            // Convert tags array back to single encrypted string
-            let tagsString: String
-            if let firstTag = syncNote.tags.first {
-                tagsString = firstTag
-            } else {
-                // Empty tags — encrypt empty array
-                let emptyEncrypted = try CryptoService.encryptStringArray([], key: key)
-                tagsString = try CryptoService.serializeEncryptedJSON(emptyEncrypted)
-            }
-
-            let attachmentsJSON = try JSONEncoder().encode(syncNote.attachments)
-            let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
-
-            let hashChainStr: String?
-            if let chain = syncNote.hashChain {
-                hashChainStr = String(data: try JSONEncoder().encode(chain), encoding: .utf8)
-            } else {
-                hashChainStr = nil
-            }
-
-            let record = NoteRecord(
-                id: syncNote.id,
-                createdAt: syncNote.createdAt,
-                modifiedAt: syncNote.modifiedAt,
-                syncedAt: now,
-                content: syncNote.content,
-                tags: tagsString,
-                attachments: attachmentsString,
-                pinned: syncNote.pinned,
-                archived: syncNote.archived,
-                archivedAt: syncNote.archivedAt,
-                locked: syncNote.locked ?? false,
-                lockedAt: syncNote.lockedAt,
-                deleted: syncNote.deleted,
-                deletedAt: syncNote.deletedAt,
-                version: syncNote.version,
-                wordWrap: syncNote.wordWrap ?? true,
-                syntaxLanguage: syncNote.syntaxLanguage ?? "markdown",
-                showPreview: syncNote.showPreview ?? false,
-                color: syncNote.color,
-                contentHash: syncNote.contentHash,
-                parentHash: syncNote.parentHash,
-                hashChain: hashChainStr,
-                needsSync: false
+        while hasMore {
+            let request = SyncPullRequest(
+                lastSyncAt: lastSyncAt,
+                knownNoteIds: knownIds,
+                knownAttachmentIds: [],
+                limit: 100,
+                offset: offset
             )
 
-            try noteRepo.insertOrReplace(record)
-        }
+            print("[SyncService] Pull request: offset=\(offset), knownIds=\(knownIds.count)")
+            let response = try await syncClient.pull(request)
+            let now = Date().iso8601
+            print("[SyncService] Pull response: \(response.notes.count) notes, hasMore=\(response.hasMore ?? false), total=\(response.totalCount ?? -1)")
 
-        // Process deletions
-        if let deletions = response.deletions {
-            for deletion in deletions {
-                try noteRepo.hardDelete(id: deletion.id)
+            // Process pulled notes
+            for syncNote in response.notes {
+                try processNote(syncNote, syncedAt: now)
+                knownIds.append(syncNote.id)
             }
+
+            // Process deletions
+            if let deletions = response.deletions {
+                for deletion in deletions {
+                    try noteRepo.hardDelete(id: deletion.id)
+                }
+            }
+
+            hasMore = response.hasMore ?? false
+            offset += response.notes.count
         }
 
-        try syncRepo.updateLastPull(at: now)
+        try syncRepo.updateLastPull(at: Date().iso8601)
+    }
+
+    /// Process a single note from a pull response.
+    private func processNote(_ syncNote: SyncNote, syncedAt: String) throws {
+        // Convert tags array back to single encrypted string
+        let tagsString: String
+        if let firstTag = syncNote.tags.first {
+            tagsString = firstTag
+        } else {
+            // Empty tags — encrypt empty array
+            let emptyEncrypted = try CryptoService.encryptStringArray([], key: key)
+            tagsString = try CryptoService.serializeEncryptedJSON(emptyEncrypted)
+        }
+
+        let attachmentsJSON = try JSONEncoder().encode(syncNote.attachments)
+        let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+
+        let hashChainStr: String?
+        if let chain = syncNote.hashChain {
+            hashChainStr = String(data: try JSONEncoder().encode(chain), encoding: .utf8)
+        } else {
+            hashChainStr = nil
+        }
+
+        let record = NoteRecord(
+            id: syncNote.id,
+            createdAt: syncNote.createdAt,
+            modifiedAt: syncNote.modifiedAt,
+            syncedAt: syncedAt,
+            content: syncNote.content,
+            tags: tagsString,
+            attachments: attachmentsString,
+            pinned: syncNote.pinned,
+            archived: syncNote.archived,
+            archivedAt: syncNote.archivedAt,
+            locked: syncNote.locked ?? false,
+            lockedAt: syncNote.lockedAt,
+            deleted: syncNote.deleted,
+            deletedAt: syncNote.deletedAt,
+            version: syncNote.version,
+            wordWrap: syncNote.wordWrap ?? true,
+            syntaxLanguage: syncNote.syntaxLanguage ?? "markdown",
+            showPreview: syncNote.showPreview ?? false,
+            color: syncNote.color,
+            contentHash: syncNote.contentHash,
+            parentHash: syncNote.parentHash,
+            hashChain: hashChainStr,
+            needsSync: false
+        )
+
+        try noteRepo.insertOrReplace(record)
     }
 
     // MARK: - SSE
