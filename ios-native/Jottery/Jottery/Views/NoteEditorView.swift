@@ -105,14 +105,21 @@ struct NoteEditorView: View {
         }
     }
 
+    private var hasChanges: Bool {
+        content != note.content ||
+        tags != note.tags ||
+        syntaxLanguage != note.syntaxLanguage ||
+        wordWrap != note.wordWrap
+    }
+
     private func saveImmediately() {
         saveTask?.cancel()
+        guard hasChanges else { return }
         var updated = note
         updated.content = content
         updated.tags = tags
         updated.syntaxLanguage = syntaxLanguage
         updated.wordWrap = wordWrap
-        updated.modifiedAt = Date()
         try? appState.saveNote(updated)
     }
 
