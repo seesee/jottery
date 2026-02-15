@@ -14,6 +14,7 @@ struct NoteListView: View {
     @State private var bulkExportFile: ExportFile?
     @State private var showSavedSearches = false
     @State private var showConflicts = false
+    @State private var showInbox = false
 
     var body: some View {
         @Bindable var state = appState
@@ -49,6 +50,15 @@ struct NoteListView: View {
                         showSavedSearches = true
                     } label: {
                         Label(L.savedSearchTitle, systemImage: "bookmark")
+                    }
+
+                    if appState.syncEnabled {
+                        Button {
+                            showInbox = true
+                        } label: {
+                            Label(L.inboxTitle, systemImage: "tray.and.arrow.down")
+                        }
+                        .badge(appState.inboxCount)
                     }
 
                     Menu {
@@ -140,6 +150,9 @@ struct NoteListView: View {
         }
         .sheet(isPresented: $showConflicts) {
             ConflictResolutionView()
+        }
+        .sheet(isPresented: $showInbox) {
+            InboxView()
         }
         .sheet(isPresented: $showSavedSearches) {
             SavedSearchesView()

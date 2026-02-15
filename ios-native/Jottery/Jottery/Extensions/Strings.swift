@@ -213,6 +213,15 @@ enum L {
         String(format: String(localized: "savedSearch.saveMessage"), query)
     }
 
+    // MARK: - Inbox
+
+    static var inboxTitle: String { String(localized: "inbox.title") }
+    static var inboxEmpty: String { String(localized: "inbox.empty") }
+    static var inboxEmptyDescription: String { String(localized: "inbox.emptyDescription") }
+    static var inboxAccept: String { String(localized: "inbox.accept") }
+    static var inboxAcceptAll: String { String(localized: "inbox.acceptAll") }
+    static var inboxDeleteAll: String { String(localized: "inbox.deleteAll") }
+
     // MARK: - Conflicts
 
     static var conflictTitle: String { String(localized: "conflict.title") }

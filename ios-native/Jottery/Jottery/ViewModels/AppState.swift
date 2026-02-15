@@ -65,6 +65,11 @@ final class AppState {
 
     var pendingConflicts: [ConflictInfo] = []
 
+    // MARK: - Inbox
+
+    var inboxItems: [InboxItem] = []
+    var inboxCount: Int { inboxItems.count }
+
     // MARK: - Computed
 
     /// Notes displayed in the list — either active or archived depending on mode.
@@ -269,6 +274,7 @@ final class AppState {
         notes = []
         archivedNotes = []
         pendingConflicts = []
+        inboxItems = []
         selectedNoteId = nil
     }
 
@@ -384,6 +390,35 @@ final class AppState {
         try await syncService.resolveConflict(noteId: noteId, strategy: strategy)
         pendingConflicts = await syncService.pendingConflicts
         try? loadNotes()
+    }
+
+    // MARK: - Inbox
+
+    func loadInboxItems() async throws {
+        guard let syncClient else { return }
+        inboxItems = try await syncClient.listInboxItems()
+    }
+
+    func acceptInboxItem(_ item: InboxItem) async throws {
+        guard let noteRepo, let key = keyManager.masterKey, let syncClient else { return }
+        // Create a new encrypted note from the inbox item (showPreview forced false for safety)
+        let note = try noteRepo.create(content: item.content, tags: item.tags, key: key)
+        notes.insert(note, at: 0)
+        // Delete from server
+        try? await syncClient.deleteInboxItem(id: item.id)
+        inboxItems.removeAll { $0.id == item.id }
+    }
+
+    func deleteInboxItem(_ item: InboxItem) async throws {
+        guard let syncClient else { return }
+        try await syncClient.deleteInboxItem(id: item.id)
+        inboxItems.removeAll { $0.id == item.id }
+    }
+
+    func deleteAllInboxItems() async throws {
+        guard let syncClient else { return }
+        try await syncClient.deleteAllInboxItems()
+        inboxItems.removeAll()
     }
 
     /// Restore a note to a previous version. Creates a snapshot of current state first.
@@ -514,6 +549,9 @@ final class AppState {
                 syncStatusMessage = "Synced — up to date"
             }
 
+            // Refresh inbox items after sync
+            try? await loadInboxItems()
+
             // Clear the status message after a few seconds
             let clearMessage = syncStatusMessage
             try? await Task.sleep(for: .seconds(4))
@@ -601,6 +639,7 @@ final class AppState {
         archivedNotes = []
         savedSearches = []
         pendingConflicts = []
+        inboxItems = []
         showArchive = false
         selectedNoteId = nil
         searchQuery = ""
