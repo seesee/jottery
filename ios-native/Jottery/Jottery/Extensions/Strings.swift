@@ -200,6 +200,28 @@ enum L {
     static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
     static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
 
+    // MARK: - Bulk Operations
+
+    static var bulkSelect: String { String(localized: "bulk.select") }
+    static var bulkDone: String { String(localized: "bulk.done") }
+    static func bulkSelected(_ count: Int) -> String {
+        String(format: String(localized: "bulk.selected"), count)
+    }
+    static var bulkSelectAll: String { String(localized: "bulk.selectAll") }
+    static var bulkDeselectAll: String { String(localized: "bulk.deselectAll") }
+    static var bulkAddTags: String { String(localized: "bulk.addTags") }
+    static var bulkRemoveTags: String { String(localized: "bulk.removeTags") }
+    static var bulkSetColour: String { String(localized: "bulk.setColour") }
+    static var bulkExport: String { String(localized: "bulk.export") }
+    static var bulkApply: String { String(localized: "bulk.apply") }
+    static var bulkTagsPlaceholder: String { String(localized: "bulk.tagsPlaceholder") }
+    static var bulkTagsHint: String { String(localized: "bulk.tagsHint") }
+    static var bulkDeleteConfirmTitle: String { String(localized: "bulk.deleteConfirmTitle") }
+    static var bulkDeleteConfirmAction: String { String(localized: "bulk.deleteConfirmAction") }
+    static func bulkDeleteConfirmMessage(_ count: Int) -> String {
+        String(format: String(localized: "bulk.deleteConfirmMessage"), count)
+    }
+
     // MARK: - Settings (Data)
 
     static var settingsData: String { String(localized: "settings.data") }
