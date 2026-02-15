@@ -8,6 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		A1000001 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A2000001 /* GRDB */; };
+		C3000001 /* Runestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000001 /* Runestone */; };
+		C3000002 /* TreeSitterBashRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000002 /* TreeSitterBashRunestone */; };
+		C3000003 /* TreeSitterCSSRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000003 /* TreeSitterCSSRunestone */; };
+		C3000004 /* TreeSitterHTMLRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000004 /* TreeSitterHTMLRunestone */; };
+		C3000005 /* TreeSitterJavaScriptRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000005 /* TreeSitterJavaScriptRunestone */; };
+		C3000006 /* TreeSitterJSONRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000006 /* TreeSitterJSONRunestone */; };
+		C3000007 /* TreeSitterMarkdownRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000007 /* TreeSitterMarkdownRunestone */; };
+		C3000008 /* TreeSitterPerlRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000008 /* TreeSitterPerlRunestone */; };
+		C3000009 /* TreeSitterPythonRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000009 /* TreeSitterPythonRunestone */; };
+		C300000A /* TreeSitterSQLRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C200000A /* TreeSitterSQLRunestone */; };
+		C300000B /* TreeSitterTypeScriptRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C200000B /* TreeSitterTypeScriptRunestone */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +39,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000001 /* GRDB in Frameworks */,
+				C3000001 /* Runestone in Frameworks */,
+				C3000002 /* TreeSitterBashRunestone in Frameworks */,
+				C3000003 /* TreeSitterCSSRunestone in Frameworks */,
+				C3000004 /* TreeSitterHTMLRunestone in Frameworks */,
+				C3000005 /* TreeSitterJavaScriptRunestone in Frameworks */,
+				C3000006 /* TreeSitterJSONRunestone in Frameworks */,
+				C3000007 /* TreeSitterMarkdownRunestone in Frameworks */,
+				C3000008 /* TreeSitterPerlRunestone in Frameworks */,
+				C3000009 /* TreeSitterPythonRunestone in Frameworks */,
+				C300000A /* TreeSitterSQLRunestone in Frameworks */,
+				C300000B /* TreeSitterTypeScriptRunestone in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +93,17 @@
 			name = Jottery;
 			packageProductDependencies = (
 				A2000001 /* GRDB */,
+				C2000001 /* Runestone */,
+				C2000002 /* TreeSitterBashRunestone */,
+				C2000003 /* TreeSitterCSSRunestone */,
+				C2000004 /* TreeSitterHTMLRunestone */,
+				C2000005 /* TreeSitterJavaScriptRunestone */,
+				C2000006 /* TreeSitterJSONRunestone */,
+				C2000007 /* TreeSitterMarkdownRunestone */,
+				C2000008 /* TreeSitterPerlRunestone */,
+				C2000009 /* TreeSitterPythonRunestone */,
+				C200000A /* TreeSitterSQLRunestone */,
+				C200000B /* TreeSitterTypeScriptRunestone */,
 			);
 			productName = Jottery;
 			productReference = A3000001 /* Jottery.app */;
@@ -103,6 +136,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AF000001 /* XCRemoteSwiftPackageReference "GRDB" */,
+				C1000001 /* XCRemoteSwiftPackageReference "Runestone" */,
+				C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A9000001 /* Products */;
@@ -349,6 +384,22 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		C1000001 /* XCRemoteSwiftPackageReference "Runestone" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/simonbs/Runestone";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.5.1;
+			};
+		};
+		C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/simonbs/TreeSitterLanguages";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.10;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -356,6 +407,61 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AF000001 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
+		};
+		C2000001 /* Runestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000001 /* XCRemoteSwiftPackageReference "Runestone" */;
+			productName = Runestone;
+		};
+		C2000002 /* TreeSitterBashRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterBashRunestone;
+		};
+		C2000003 /* TreeSitterCSSRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterCSSRunestone;
+		};
+		C2000004 /* TreeSitterHTMLRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterHTMLRunestone;
+		};
+		C2000005 /* TreeSitterJavaScriptRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterJavaScriptRunestone;
+		};
+		C2000006 /* TreeSitterJSONRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterJSONRunestone;
+		};
+		C2000007 /* TreeSitterMarkdownRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterMarkdownRunestone;
+		};
+		C2000008 /* TreeSitterPerlRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterPerlRunestone;
+		};
+		C2000009 /* TreeSitterPythonRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterPythonRunestone;
+		};
+		C200000A /* TreeSitterSQLRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterSQLRunestone;
+		};
+		C200000B /* TreeSitterTypeScriptRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterTypeScriptRunestone;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

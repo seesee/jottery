@@ -1,18 +1,26 @@
 import SwiftUI
 import UIKit
+import Runestone
+import TreeSitterBashRunestone
+import TreeSitterCSSRunestone
+import TreeSitterHTMLRunestone
+import TreeSitterJavaScriptRunestone
+import TreeSitterJSONRunestone
+import TreeSitterMarkdownRunestone
+import TreeSitterPerlRunestone
+import TreeSitterPythonRunestone
+import TreeSitterSQLRunestone
+import TreeSitterTypeScriptRunestone
 
 // MARK: - Runestone Editor (UIViewRepresentable)
-// This wraps Runestone's UIKit-based TextView in SwiftUI.
-// Requires the Runestone SPM package to be added to the project.
-//
-// For now, this provides a UITextView wrapper that will be upgraded
-// to Runestone once the package dependency is configured in Xcode.
 
+/// Wraps Runestone's UIKit `TextView` in SwiftUI with tree-sitter syntax highlighting.
 struct RunestoneEditorView: UIViewRepresentable {
     @Binding var text: String
     var syntaxLanguage: String
     var wordWrap: Bool
     var isEditable: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     init(
         text: Binding<String>,
@@ -30,67 +38,148 @@ struct RunestoneEditorView: UIViewRepresentable {
         Coordinator(text: $text)
     }
 
-    func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
-        textView.delegate = context.coordinator
-        textView.font = .monospacedSystemFont(ofSize: 15, weight: .regular)
+    func makeUIView(context: Context) -> TextView {
+        let textView = TextView()
+        textView.editorDelegate = context.coordinator
+        textView.showLineNumbers = true
+        textView.isLineWrappingEnabled = wordWrap
+        textView.isEditable = isEditable
         textView.autocorrectionType = .no
         textView.autocapitalizationType = .none
         textView.smartDashesType = .no
         textView.smartQuotesType = .no
         textView.smartInsertDeleteType = .no
-        textView.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
-        textView.isEditable = isEditable
-        textView.isScrollEnabled = true
-        textView.alwaysBounceVertical = true
+        textView.inputAccessoryView = nil
+        textView.showPageGuide = false
+        textView.showTabs = false
+        textView.showSpaces = false
+        textView.showLineBreaks = false
+        textView.characterPairs = Self.characterPairs
         textView.keyboardDismissMode = .interactive
+        textView.contentInset = UIEdgeInsets(top: 4, left: 0, bottom: 4, right: 0)
 
-        // Line wrapping
-        if wordWrap {
-            textView.textContainer.lineBreakMode = .byWordWrapping
-        } else {
-            textView.textContainer.lineBreakMode = .byClipping
-            textView.textContainer.widthTracksTextView = false
-            textView.textContainer.size = CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        // iOS 16+ find/replace
+        if #available(iOS 16.0, *) {
+            textView.isFindInteractionEnabled = true
         }
 
-        textView.text = text
+        let isDark = colorScheme == .dark
+        let theme = EditorTheme(isDark: isDark)
+        textView.backgroundColor = isDark ? .systemBackground : .systemBackground
+
+        applyState(to: textView, theme: theme)
+
+        context.coordinator.currentLanguage = syntaxLanguage
+        context.coordinator.currentIsDark = isDark
+
         return textView
     }
 
-    func updateUIView(_ textView: UITextView, context: Context) {
-        // Only update text if it changed externally (not from user typing)
-        if textView.text != text && !context.coordinator.isEditing {
-            textView.text = text
+    func updateUIView(_ textView: TextView, context: Context) {
+        let isDark = colorScheme == .dark
+        let languageChanged = context.coordinator.currentLanguage != syntaxLanguage
+        let themeChanged = context.coordinator.currentIsDark != isDark
+        let textChanged = textView.text != text && !context.coordinator.isEditing
+
+        if languageChanged || themeChanged || textChanged {
+            let theme = EditorTheme(isDark: isDark)
+            textView.backgroundColor = isDark ? .systemBackground : .systemBackground
+
+            // Only re-apply full state if language or theme changed, or external text change
+            if languageChanged || themeChanged {
+                // Preserve cursor position across re-parse
+                let selectedRange = textView.selectedRange
+                let currentText = textChanged ? text : textView.text
+                applyState(to: textView, text: currentText, theme: theme)
+                // Restore cursor if within bounds
+                if selectedRange.location + selectedRange.length <= currentText.utf16.count {
+                    textView.selectedRange = selectedRange
+                }
+                context.coordinator.currentLanguage = syntaxLanguage
+                context.coordinator.currentIsDark = isDark
+            } else if textChanged {
+                applyState(to: textView, theme: theme)
+            }
         }
 
         textView.isEditable = isEditable
-
-        // Update theme based on current trait collection
-        let isDark = textView.traitCollection.userInterfaceStyle == .dark
-        textView.backgroundColor = isDark ? UIColor.systemBackground : UIColor.systemBackground
-        textView.textColor = isDark ? .white : .black
+        textView.isLineWrappingEnabled = wordWrap
     }
+
+    // MARK: - State Application
+
+    private func applyState(to textView: TextView, text: String? = nil, theme: EditorTheme? = nil) {
+        let resolvedText = text ?? self.text
+        let resolvedTheme = theme ?? EditorTheme(isDark: colorScheme == .dark)
+
+        let state: TextViewState
+        if let language = Self.treeSitterLanguage(for: syntaxLanguage) {
+            state = TextViewState(text: resolvedText, theme: resolvedTheme, language: language)
+        } else {
+            state = TextViewState(text: resolvedText, theme: resolvedTheme)
+        }
+        textView.setState(state)
+    }
+
+    // MARK: - Language Mapping
+
+    static func treeSitterLanguage(for name: String) -> TreeSitterLanguage? {
+        switch name {
+        case "markdown":   return .markdown
+        case "javascript": return .javaScript
+        case "typescript": return .typeScript
+        case "python":     return .python
+        case "perl":       return .perl
+        case "json":       return .json
+        case "xml":        return .html   // closest available grammar
+        case "css":        return .css
+        case "bash":       return .bash
+        case "sql":        return .sql
+        case "plain":      return nil
+        default:           return nil
+        }
+    }
+
+    // MARK: - Character Pairs
+
+    private struct Pair: CharacterPair {
+        let leading: String
+        let trailing: String
+    }
+
+    static let characterPairs: [CharacterPair] = [
+        Pair(leading: "(", trailing: ")"),
+        Pair(leading: "[", trailing: "]"),
+        Pair(leading: "{", trailing: "}"),
+        Pair(leading: "\"", trailing: "\""),
+        Pair(leading: "'", trailing: "'"),
+        Pair(leading: "`", trailing: "`"),
+    ]
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, UITextViewDelegate {
+    class Coordinator: NSObject, @preconcurrency TextViewDelegate {
         var text: Binding<String>
         var isEditing = false
+        var currentLanguage: String = ""
+        var currentIsDark: Bool = false
 
         init(text: Binding<String>) {
             self.text = text
         }
 
-        func textViewDidBeginEditing(_ textView: UITextView) {
+        @MainActor
+        func textViewDidBeginEditing(_ textView: TextView) {
             isEditing = true
         }
 
-        func textViewDidEndEditing(_ textView: UITextView) {
+        @MainActor
+        func textViewDidEndEditing(_ textView: TextView) {
             isEditing = false
         }
 
-        func textViewDidChange(_ textView: UITextView) {
+        @MainActor
+        func textViewDidChange(_ textView: TextView) {
             text.wrappedValue = textView.text
         }
     }

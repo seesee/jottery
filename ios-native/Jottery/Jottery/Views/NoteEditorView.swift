@@ -33,17 +33,18 @@ struct NoteEditorView: View {
                 Divider()
             }
 
-            // Editor — plain TextEditor for now, replaced by Runestone in Phase 4
-            TextEditor(text: $content)
-                .font(.system(.body, design: .monospaced))
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 8)
-                .onChange(of: content) { _, _ in
-                    scheduleSave()
-                }
-                .onChange(of: tags) { _, _ in
-                    scheduleSave()
-                }
+            // Syntax-highlighted editor (Runestone with tree-sitter)
+            RunestoneEditorView(
+                text: $content,
+                syntaxLanguage: syntaxLanguage,
+                wordWrap: wordWrap
+            )
+            .onChange(of: content) { _, _ in
+                scheduleSave()
+            }
+            .onChange(of: tags) { _, _ in
+                scheduleSave()
+            }
 
             // Attachments (read-only display of synced attachments)
             if !note.attachments.isEmpty, let attachmentRepo = appState.attachmentRepo,
