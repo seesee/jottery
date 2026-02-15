@@ -4,6 +4,7 @@
  */
 
 import type { DecryptedNote } from '../types';
+import { normaliseForComparison, localeIncludes, localeSort } from '../utils/stringUtils';
 
 /**
  * Get all unique tags from notes
@@ -19,7 +20,7 @@ export function getAllTags(notes: DecryptedNote[]): string[] {
     });
   });
 
-  return Array.from(tagSet).sort();
+  return Array.from(tagSet).sort(localeSort);
 }
 
 /**
@@ -55,8 +56,9 @@ export function getPopularTags(notes: DecryptedNote[], limit: number = 10): Arra
  * Get notes by tag
  */
 export function getNotesByTag(notes: DecryptedNote[], tag: string): DecryptedNote[] {
+  const normTag = normaliseForComparison(tag);
   return notes.filter(note =>
-    note.tags.some(noteTag => noteTag.toLowerCase() === tag.toLowerCase())
+    note.tags.some(noteTag => normaliseForComparison(noteTag) === normTag)
   );
 }
 
@@ -64,9 +66,10 @@ export function getNotesByTag(notes: DecryptedNote[], tag: string): DecryptedNot
  * Get notes with multiple tags (AND logic)
  */
 export function getNotesByTags(notes: DecryptedNote[], tags: string[]): DecryptedNote[] {
+  const normTags = tags.map(normaliseForComparison);
   return notes.filter(note =>
-    tags.every(tag =>
-      note.tags.some(noteTag => noteTag.toLowerCase() === tag.toLowerCase())
+    normTags.every(normTag =>
+      note.tags.some(noteTag => normaliseForComparison(noteTag) === normTag)
     )
   );
 }
@@ -75,7 +78,7 @@ export function getNotesByTags(notes: DecryptedNote[], tags: string[]): Decrypte
  * Normalize tag (trim, lowercase for comparison)
  */
 export function normalizeTag(tag: string): string {
-  return tag.trim().toLowerCase();
+  return normaliseForComparison(tag.trim());
 }
 
 /**

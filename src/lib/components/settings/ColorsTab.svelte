@@ -6,6 +6,7 @@
   import { tagService } from '../../services';
   import { settings, notes } from '../../stores/appStore';
   import { resolveTheme, getColorDisplayName } from '../../services/colorService';
+  import { localeIncludes, localeSort } from '../../utils/stringUtils';
 
   export let colorPalette: ColorPalette;
   export let tagColors: Record<string, string>;
@@ -31,9 +32,8 @@
   function handleTagInput() {
     if (newTagName.trim()) {
       // Filter available tags for suggestions (case-insensitive)
-      const query = newTagName.toLowerCase().trim();
       tagSuggestions = unassignedTags
-        .filter(tag => tag.toLowerCase().includes(query))
+        .filter(tag => localeIncludes(tag, newTagName.trim()))
         .slice(0, 8); // Show up to 8 suggestions
       showTagSuggestions = tagSuggestions.length > 0;
       selectedTagIndex = -1;
@@ -104,7 +104,7 @@
   $: unassignedTags = allTags.filter(tag => !tagColors[tag]);
 
   // Sort tag colors alphabetically
-  $: sortedTagColors = Object.entries(tagColors).sort(([a], [b]) => a.localeCompare(b));
+  $: sortedTagColors = Object.entries(tagColors).sort(([a], [b]) => localeSort(a, b));
 </script>
 
 <!-- Color Palette Section -->

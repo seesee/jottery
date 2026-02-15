@@ -7,6 +7,7 @@ import FlexSearch from 'flexsearch';
 import type { DecryptedNote, SearchQuery, SortOrder, FlexSearchEnrichedResult, FlexSearchResultItem } from '../types';
 import { getTagColor, getColorKeyByDisplayName } from './colorService';
 import { getNoteTitle } from '../utils/noteTitle';
+import { normaliseForComparison, localeIncludes, localeSort } from '../utils/stringUtils';
 
 // Create FlexSearch index
 const index = new FlexSearch.Document({
@@ -471,11 +472,7 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
       sortFn = (a, b) => b.createdAt.localeCompare(a.createdAt);
       break;
     case 'alpha':
-      sortFn = (a, b) => {
-        const aTitle = getNoteTitle(a).toLowerCase();
-        const bTitle = getNoteTitle(b).toLowerCase();
-        return aTitle.localeCompare(bTitle);
-      };
+      sortFn = (a, b) => localeSort(getNoteTitle(a), getNoteTitle(b));
       break;
     default:
       sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
@@ -522,10 +519,9 @@ async function filterByFullText(
   } catch (error) {
     console.error('FlexSearch search error, falling back to basic filter:', error);
     // Graceful degradation: fall back to basic case-insensitive text matching
-    const lowerSearchText = searchText.toLowerCase();
     return notes.filter((note) =>
-      note.content.toLowerCase().includes(lowerSearchText) ||
-      note.tags.some((tag) => tag.toLowerCase().includes(lowerSearchText))
+      localeIncludes(note.content, searchText) ||
+      note.tags.some((tag) => localeIncludes(tag, searchText))
     );
   }
 }
@@ -537,7 +533,7 @@ function filterByRequiredTags(
 ): DecryptedNote[] {
   return notes.filter((note) =>
     tags.every((tag) =>
-      note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
+      note.tags.some((noteTag) => localeIncludes(noteTag, tag))
     )
   );
 }
@@ -549,7 +545,7 @@ function filterByOptionalTags(
 ): DecryptedNote[] {
   return notes.filter((note) =>
     tags.some((tag) =>
-      note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
+      note.tags.some((noteTag) => localeIncludes(noteTag, tag))
     )
   );
 }
@@ -560,7 +556,7 @@ function filterByExcludedText(
   excludeTerms: string[]
 ): DecryptedNote[] {
   return notes.filter((note) =>
-    excludeTerms.every((term) => !note.content.toLowerCase().includes(term.toLowerCase()))
+    excludeTerms.every((term) => !localeIncludes(note.content, term))
   );
 }
 
@@ -571,7 +567,7 @@ function filterByExcludedTags(
 ): DecryptedNote[] {
   return notes.filter((note) =>
     excludeTags.every((tag) =>
-      !note.tags.some((noteTag) => noteTag.toLowerCase().includes(tag.toLowerCase()))
+      !note.tags.some((noteTag) => localeIncludes(noteTag, tag))
     )
   );
 }
@@ -623,17 +619,16 @@ function noteMatchesColor(
   colors: string[],
   target: 'note' | 'tag' | 'both'
 ): boolean {
-  const noteHasColor = colors.some(
-    color => note.color?.toLowerCase() === color.toLowerCase()
-  );
+  const normColors = colors.map(normaliseForComparison);
+  const noteHasColor = note.color
+    ? normColors.includes(normaliseForComparison(note.color))
+    : false;
 
   let tagHasColor = false;
   if (target === 'tag' || target === 'both') {
     tagHasColor = note.tags.some(tag => {
       const tagColor = getTagColor(tag);
-      return tagColor && colors.some(
-        color => tagColor.toLowerCase() === color.toLowerCase()
-      );
+      return tagColor && normColors.includes(normaliseForComparison(tagColor));
     });
   }
 
@@ -656,16 +651,15 @@ function filterByExcludedColors(
   notes: DecryptedNote[],
   excludeColors: string[]
 ): DecryptedNote[] {
+  const normExcluded = excludeColors.map(normaliseForComparison);
   return notes.filter((note) => {
-    const noteColorExcluded = excludeColors.some(
-      color => note.color?.toLowerCase() === color.toLowerCase()
-    );
+    const noteColorExcluded = note.color
+      ? normExcluded.includes(normaliseForComparison(note.color))
+      : false;
 
     const tagColorExcluded = note.tags.some(tag => {
       const tagColor = getTagColor(tag);
-      return tagColor && excludeColors.some(
-        color => tagColor.toLowerCase() === color.toLowerCase()
-      );
+      return tagColor && normExcluded.includes(normaliseForComparison(tagColor));
     });
 
     return !noteColorExcluded && !tagColorExcluded;
@@ -777,12 +771,12 @@ export function getSearchSuggestions(
 
   // If query starts with #, suggest tags
   if (query.startsWith('#')) {
-    const tagQuery = query.slice(1).toLowerCase();
+    const tagQuery = query.slice(1);
     const allTags = new Set<string>();
 
     allNotes.forEach((note) => {
       note.tags.forEach((tag) => {
-        if (tag.toLowerCase().includes(tagQuery)) {
+        if (localeIncludes(tag, tagQuery)) {
           allTags.add(`#${tag}`);
         }
       });

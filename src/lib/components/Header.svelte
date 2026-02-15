@@ -8,6 +8,7 @@
   import SavedSearchesPanel from './SavedSearchesPanel.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import { getFontSizeCSS } from '../utils/fontSize';
+  import { localeIncludes } from '../utils/stringUtils';
 
   export let onOpenSettings: () => void = () => {};
   export let onNewNote: () => void = () => {};
@@ -140,12 +141,12 @@
     const tagInfo = getTagPartial($searchQuery);
     if (tagInfo && tagInfo.partial.length > 0) {
       // Get suggestions for the partial tag
-      const partial = tagInfo.partial.toLowerCase();
+      const partial = tagInfo.partial;
       const allTags = new Set<string>();
 
       $notes.forEach((note) => {
         note.tags.forEach((tag) => {
-          if (tag.toLowerCase().includes(partial)) {
+          if (localeIncludes(tag, partial)) {
             allTags.add(tag);
           }
         });
