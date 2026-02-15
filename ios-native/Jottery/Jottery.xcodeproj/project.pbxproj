@@ -15,6 +15,7 @@
 		C3000005 /* TreeSitterJavaScriptRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000005 /* TreeSitterJavaScriptRunestone */; };
 		C3000006 /* TreeSitterJSONRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000006 /* TreeSitterJSONRunestone */; };
 		C3000007 /* TreeSitterMarkdownRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000007 /* TreeSitterMarkdownRunestone */; };
+		C3000008 /* TreeSitterMarkdownInlineRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000008 /* TreeSitterMarkdownInlineRunestone */; };
 		C3000009 /* TreeSitterPythonRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000009 /* TreeSitterPythonRunestone */; };
 		C300000A /* TreeSitterSQLRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C200000A /* TreeSitterSQLRunestone */; };
 		C300000B /* TreeSitterTypeScriptRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C200000B /* TreeSitterTypeScriptRunestone */; };
@@ -45,6 +46,7 @@
 				C3000005 /* TreeSitterJavaScriptRunestone in Frameworks */,
 				C3000006 /* TreeSitterJSONRunestone in Frameworks */,
 				C3000007 /* TreeSitterMarkdownRunestone in Frameworks */,
+				C3000008 /* TreeSitterMarkdownInlineRunestone in Frameworks */,
 				C3000009 /* TreeSitterPythonRunestone in Frameworks */,
 				C300000A /* TreeSitterSQLRunestone in Frameworks */,
 				C300000B /* TreeSitterTypeScriptRunestone in Frameworks */,
@@ -98,6 +100,7 @@
 				C2000005 /* TreeSitterJavaScriptRunestone */,
 				C2000006 /* TreeSitterJSONRunestone */,
 				C2000007 /* TreeSitterMarkdownRunestone */,
+				C2000008 /* TreeSitterMarkdownInlineRunestone */,
 				C2000009 /* TreeSitterPythonRunestone */,
 				C200000A /* TreeSitterSQLRunestone */,
 				C200000B /* TreeSitterTypeScriptRunestone */,
@@ -439,6 +442,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
 			productName = TreeSitterMarkdownRunestone;
+		};
+		C2000008 /* TreeSitterMarkdownInlineRunestone */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1000002 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterMarkdownInlineRunestone;
 		};
 		C2000009 /* TreeSitterPythonRunestone */ = {
 			isa = XCSwiftPackageProductDependency;

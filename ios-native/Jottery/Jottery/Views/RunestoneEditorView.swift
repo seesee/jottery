@@ -7,6 +7,7 @@ import TreeSitterHTMLRunestone
 import TreeSitterJavaScriptRunestone
 import TreeSitterJSONRunestone
 import TreeSitterMarkdownRunestone
+import TreeSitterMarkdownInlineRunestone
 import TreeSitterPythonRunestone
 import TreeSitterSQLRunestone
 import TreeSitterTypeScriptRunestone
@@ -113,11 +114,40 @@ struct RunestoneEditorView: UIViewRepresentable {
 
         let state: TextViewState
         if let language = Self.treeSitterLanguage(for: syntaxLanguage) {
-            state = TextViewState(text: resolvedText, theme: resolvedTheme, language: language)
+            state = TextViewState(
+                text: resolvedText,
+                theme: resolvedTheme,
+                language: language,
+                languageProvider: Self.languageProvider
+            )
         } else {
             state = TextViewState(text: resolvedText, theme: resolvedTheme)
         }
         textView.setState(state)
+    }
+
+    // MARK: - Language Provider
+
+    /// Resolves injected language names (e.g. `markdown_inline` inside markdown,
+    /// `css`/`javascript` inside HTML) to their tree-sitter grammars.
+    private static let languageProvider = LanguageProvider()
+
+    private class LanguageProvider: TreeSitterLanguageProvider {
+        func treeSitterLanguage(named name: String) -> TreeSitterLanguage? {
+            switch name {
+            case "markdown_inline":  return .markdownInline
+            case "markdown":         return .markdown
+            case "javascript":       return .javaScript
+            case "typescript":       return .typeScript
+            case "python":           return .python
+            case "json":             return .json
+            case "html":             return .html
+            case "css":              return .css
+            case "bash", "sh":       return .bash
+            case "sql":              return .sql
+            default:                 return nil
+            }
+        }
     }
 
     // MARK: - Language Mapping
@@ -130,7 +160,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         case "python":     return .python
         case "perl":       return nil    // Perl grammar crashes Runestone's RedBlackTree
         case "json":       return .json
-        case "xml":        return .html   // closest available grammar
+        case "xml":        return .html  // closest available grammar
         case "css":        return .css
         case "bash":       return .bash
         case "sql":        return .sql

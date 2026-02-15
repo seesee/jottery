@@ -87,6 +87,9 @@ final class EditorTheme: @unchecked Sendable, Theme {
     func fontTraits(for highlightName: String) -> FontTraits {
         switch highlightName {
         case "keyword", "type": return .bold
+        case "text.title": return .bold
+        case "text.strong": return .bold
+        case "text.emphasis": return .italic
         default: return []
         }
     }
@@ -127,14 +130,24 @@ final class EditorTheme: @unchecked Sendable, Theme {
             return UIColor(red: 0.90, green: 0.45, blue: 0.45, alpha: 1)
         case "attribute":                                   // orange for HTML attributes
             return UIColor(red: 0.85, green: 0.65, blue: 0.35, alpha: 1)
-        case "heading", "title":                            // bold blue for markdown headings
+        case "heading", "title", "text.title":                // bold blue for markdown headings
             return UIColor(red: 0.40, green: 0.65, blue: 0.90, alpha: 1)
-        case "emphasis":
+        case "emphasis", "text.emphasis":
             return UIColor(white: 0.85, alpha: 1)
-        case "strong":
+        case "strong", "text.strong":
             return UIColor(white: 0.95, alpha: 1)
-        case "link", "uri":
+        case "link", "uri", "text.uri":                     // blue for links
             return UIColor(red: 0.40, green: 0.65, blue: 0.90, alpha: 1)
+        case "text.literal":                                // grey-green for code spans / fenced blocks
+            return UIColor(red: 0.55, green: 0.75, blue: 0.55, alpha: 1)
+        case "text.reference":                              // cyan for link text / labels
+            return UIColor(red: 0.40, green: 0.80, blue: 0.80, alpha: 1)
+        case "punctuation.special":                         // dimmed for markdown markers (# - * etc.)
+            return UIColor(white: 0.50, alpha: 1)
+        case "string.escape":                               // orange for escape sequences
+            return UIColor(red: 0.85, green: 0.55, blue: 0.35, alpha: 1)
+        case "none":                                        // tree-sitter @none — keep default
+            return nil
         default:
             return nil
         }
@@ -168,14 +181,24 @@ final class EditorTheme: @unchecked Sendable, Theme {
             return UIColor(red: 0.70, green: 0.15, blue: 0.15, alpha: 1)
         case "attribute":                                   // orange for HTML attributes
             return UIColor(red: 0.75, green: 0.45, blue: 0.10, alpha: 1)
-        case "heading", "title":                            // bold blue for markdown headings
+        case "heading", "title", "text.title":              // bold blue for markdown headings
             return UIColor(red: 0.15, green: 0.40, blue: 0.75, alpha: 1)
-        case "emphasis":
+        case "emphasis", "text.emphasis":
             return UIColor(white: 0.25, alpha: 1)
-        case "strong":
+        case "strong", "text.strong":
             return UIColor(white: 0.05, alpha: 1)
-        case "link", "uri":
+        case "link", "uri", "text.uri":                     // blue for links
             return UIColor(red: 0.15, green: 0.40, blue: 0.75, alpha: 1)
+        case "text.literal":                                // dark green for code spans / fenced blocks
+            return UIColor(red: 0.15, green: 0.50, blue: 0.25, alpha: 1)
+        case "text.reference":                              // teal for link text / labels
+            return UIColor(red: 0.10, green: 0.50, blue: 0.55, alpha: 1)
+        case "punctuation.special":                         // dimmed for markdown markers
+            return UIColor(white: 0.55, alpha: 1)
+        case "string.escape":                               // orange for escape sequences
+            return UIColor(red: 0.75, green: 0.35, blue: 0.10, alpha: 1)
+        case "none":
+            return nil
         default:
             return nil
         }
