@@ -15,6 +15,7 @@ actor SyncService {
     private(set) var isSyncing = false
     private(set) var lastSyncAt: String?
     private(set) var lastError: String?
+    private(set) var pendingConflicts: [ConflictInfo] = []
     private var postSyncHandler: (@Sendable () async -> Void)?
 
     init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, key: SymmetricKey) {
@@ -189,29 +190,40 @@ actor SyncService {
         let clearedDeletionIds = deletions.filter { acceptedIds.contains($0.id) }.map(\.id)
         try syncRepo.clearDeletions(ids: clearedDeletionIds)
 
-        // Handle rejected (conflicts) — last-write-wins for now
+        // Handle rejected (conflicts) — queue for user resolution
         for rejected in response.rejected {
-            // Accept server version (last-write-wins)
             if let record = try noteRepo.getRaw(id: rejected.id) {
-                var updated = record
-                updated.content = rejected.serverContent
-                // Convert individually encrypted server tags to storage blob
-                updated.tags = Self.syncTagsToStorageTags(rejected.serverTags, key: key)
-                updated.version = rejected.serverVersion
-                updated.pinned = rejected.serverPinned
-                updated.syntaxLanguage = rejected.serverSyntaxLanguage ?? updated.syntaxLanguage
-                updated.wordWrap = rejected.serverWordWrap ?? updated.wordWrap
-                updated.showPreview = rejected.serverShowPreview ?? updated.showPreview
-                updated.contentHash = rejected.serverContentHash
-                updated.parentHash = rejected.serverParentHash
-                if let chain = rejected.serverHashChain {
-                    updated.hashChain = String(data: (try? JSONEncoder().encode(chain)) ?? Data("[]".utf8), encoding: .utf8)
-                }
-                updated.needsSync = false
-                updated.syncedAt = now
-                try noteRepo.updateRaw(updated)
-                // Create a version snapshot of the server-accepted state
-                try versionRepo.createVersion(from: updated, reason: "sync")
+                // Decrypt local content for display
+                let (localContent, localTags) = Self.decryptNoteForDisplay(
+                    content: record.content, tags: record.tags, key: key
+                )
+
+                // Decrypt server content for display (tags are in sync format)
+                let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+                    content: rejected.serverContent, syncTags: rejected.serverTags, key: key
+                )
+
+                let conflict = ConflictInfo(
+                    id: rejected.id,
+                    localContent: localContent,
+                    localTags: localTags,
+                    localModifiedAt: record.modifiedAt,
+                    serverContent: serverContent,
+                    serverTags: serverTags,
+                    serverModifiedAt: rejected.serverModifiedAt,
+                    serverEncryptedContent: rejected.serverContent,
+                    serverEncryptedTags: rejected.serverTags,
+                    serverVersion: rejected.serverVersion,
+                    serverAttachments: rejected.serverAttachments,
+                    serverPinned: rejected.serverPinned,
+                    serverSyntaxLanguage: rejected.serverSyntaxLanguage,
+                    serverWordWrap: rejected.serverWordWrap,
+                    serverShowPreview: rejected.serverShowPreview,
+                    serverContentHash: rejected.serverContentHash,
+                    serverParentHash: rejected.serverParentHash,
+                    serverHashChain: rejected.serverHashChain
+                )
+                pendingConflicts.append(conflict)
             }
         }
 
@@ -365,6 +377,132 @@ actor SyncService {
         )
 
         try noteRepo.insertOrReplace(record)
+    }
+
+    // MARK: - Conflict Resolution
+
+    /// Resolve a conflict with the given strategy.
+    func resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) throws {
+        guard let conflictIndex = pendingConflicts.firstIndex(where: { $0.id == noteId }) else { return }
+        let conflict = pendingConflicts[conflictIndex]
+        let now = Date().iso8601
+
+        switch strategy {
+        case .keepLocal:
+            // Mark the local note as needing sync again — it will be pushed on next sync
+            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            var updated = record
+            updated.needsSync = true
+            // Bump version past server to win next push
+            updated.version = conflict.serverVersion + 1
+            try noteRepo.updateRaw(updated)
+
+        case .keepServer:
+            // Apply server version (same as the old auto-accept behaviour)
+            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            var updated = record
+            updated.content = conflict.serverEncryptedContent
+            updated.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
+            updated.version = conflict.serverVersion
+            updated.pinned = conflict.serverPinned
+            updated.syntaxLanguage = conflict.serverSyntaxLanguage ?? updated.syntaxLanguage
+            updated.wordWrap = conflict.serverWordWrap ?? updated.wordWrap
+            updated.showPreview = conflict.serverShowPreview ?? updated.showPreview
+            updated.contentHash = conflict.serverContentHash
+            updated.parentHash = conflict.serverParentHash
+            if let chain = conflict.serverHashChain {
+                updated.hashChain = String(data: (try? JSONEncoder().encode(chain)) ?? Data("[]".utf8), encoding: .utf8)
+            }
+            updated.needsSync = false
+            updated.syncedAt = now
+            try noteRepo.updateRaw(updated)
+            try versionRepo.createVersion(from: updated, reason: "sync-conflict-resolved")
+
+        case .keepBoth:
+            // Accept server version for the existing note
+            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            var serverRecord = record
+            serverRecord.content = conflict.serverEncryptedContent
+            serverRecord.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
+            serverRecord.version = conflict.serverVersion
+            serverRecord.pinned = conflict.serverPinned
+            serverRecord.syntaxLanguage = conflict.serverSyntaxLanguage ?? serverRecord.syntaxLanguage
+            serverRecord.wordWrap = conflict.serverWordWrap ?? serverRecord.wordWrap
+            serverRecord.showPreview = conflict.serverShowPreview ?? serverRecord.showPreview
+            serverRecord.contentHash = conflict.serverContentHash
+            serverRecord.parentHash = conflict.serverParentHash
+            if let chain = conflict.serverHashChain {
+                serverRecord.hashChain = String(data: (try? JSONEncoder().encode(chain)) ?? Data("[]".utf8), encoding: .utf8)
+            }
+            serverRecord.needsSync = false
+            serverRecord.syncedAt = now
+            try noteRepo.updateRaw(serverRecord)
+
+            // Create a duplicate note with the local content
+            let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
+            let encTags = try CryptoService.encryptStringArray(conflict.localTags, key: key)
+            let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
+            let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
+            var duplicate = NoteRecord.new(encryptedContent: contentJSON, encryptedTags: tagsJSON)
+            duplicate.pinned = record.pinned
+            duplicate.syntaxLanguage = record.syntaxLanguage
+            duplicate.wordWrap = record.wordWrap
+            duplicate.showPreview = record.showPreview
+            duplicate.color = record.color
+            try noteRepo.insertOrReplace(duplicate)
+        }
+
+        pendingConflicts.remove(at: conflictIndex)
+    }
+
+    /// Clear all pending conflicts (used when locking the app).
+    func clearConflicts() {
+        pendingConflicts.removeAll()
+    }
+
+    // MARK: - Decryption Helpers
+
+    /// Decrypt storage-format content and tags for display.
+    private static func decryptNoteForDisplay(content: String, tags: String, key: SymmetricKey) -> (String, [String]) {
+        do {
+            let encContent = try CryptoService.parseEncryptedJSON(content)
+            let plainContent = try CryptoService.decryptText(encContent, key: key)
+            let encTags = try CryptoService.parseEncryptedJSON(tags)
+            let tagsText = try CryptoService.decryptText(encTags, key: key)
+            let plainTags: [String]
+            if tagsText.isEmpty {
+                plainTags = []
+            } else if tagsText.hasPrefix("[") {
+                plainTags = (try? JSONDecoder().decode([String].self, from: Data(tagsText.utf8))) ?? []
+            } else {
+                plainTags = tagsText.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            }
+            return (plainContent, plainTags)
+        } catch {
+            return ("", [])
+        }
+    }
+
+    /// Decrypt server content and sync-format tags for display.
+    private static func decryptServerNoteForDisplay(content: String, syncTags: [String], key: SymmetricKey) -> (String, [String]) {
+        do {
+            let encContent = try CryptoService.parseEncryptedJSON(content)
+            let plainContent = try CryptoService.decryptText(encContent, key: key)
+            var tags: [String] = []
+            for encTagJSON in syncTags {
+                let encrypted = try CryptoService.parseEncryptedJSON(encTagJSON)
+                let decryptedText = try CryptoService.decryptText(encrypted, key: key)
+                if let data = decryptedText.data(using: .utf8),
+                   let tag = try? JSONDecoder().decode(String.self, from: data) {
+                    tags.append(tag)
+                } else if !decryptedText.isEmpty {
+                    tags.append(decryptedText)
+                }
+            }
+            return (plainContent, tags)
+        } catch {
+            return ("", [])
+        }
     }
 
     // MARK: - Tag Format Conversion

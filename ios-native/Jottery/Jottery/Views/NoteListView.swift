@@ -13,6 +13,7 @@ struct NoteListView: View {
     @State private var showBulkDeleteConfirm = false
     @State private var bulkExportFile: ExportFile?
     @State private var showSavedSearches = false
+    @State private var showConflicts = false
 
     var body: some View {
         @Bindable var state = appState
@@ -131,8 +132,14 @@ struct NoteListView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 4)
                 }
+                if !appState.pendingConflicts.isEmpty {
+                    conflictBanner
+                }
                 syncStatusBar
             }
+        }
+        .sheet(isPresented: $showConflicts) {
+            ConflictResolutionView()
         }
         .sheet(isPresented: $showSavedSearches) {
             SavedSearchesView()
@@ -363,6 +370,31 @@ struct NoteListView: View {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try? data.write(to: tempURL)
         bulkExportFile = ExportFile(url: tempURL)
+    }
+
+    // MARK: - Conflict Banner
+
+    private var conflictBanner: some View {
+        Button {
+            showConflicts = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+                Text(L.conflictBanner(appState.pendingConflicts.count))
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Sync Status Bar

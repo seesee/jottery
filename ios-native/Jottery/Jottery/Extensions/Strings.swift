@@ -213,6 +213,22 @@ enum L {
         String(format: String(localized: "savedSearch.saveMessage"), query)
     }
 
+    // MARK: - Conflicts
+
+    static var conflictTitle: String { String(localized: "conflict.title") }
+    static var conflictNoConflicts: String { String(localized: "conflict.noConflicts") }
+    static var conflictNoConflictsDescription: String { String(localized: "conflict.noConflictsDescription") }
+    static var conflictResolve: String { String(localized: "conflict.resolve") }
+    static var conflictVersion: String { String(localized: "conflict.version") }
+    static var conflictLocal: String { String(localized: "conflict.local") }
+    static var conflictServer: String { String(localized: "conflict.server") }
+    static var conflictKeepLocal: String { String(localized: "conflict.keepLocal") }
+    static var conflictKeepServer: String { String(localized: "conflict.keepServer") }
+    static var conflictKeepBoth: String { String(localized: "conflict.keepBoth") }
+    static func conflictBanner(_ count: Int) -> String {
+        String(format: String(localized: "conflict.banner"), count)
+    }
+
     // MARK: - Bulk Operations
 
     static var bulkSelect: String { String(localized: "bulk.select") }

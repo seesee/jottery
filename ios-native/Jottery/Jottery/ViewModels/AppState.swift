@@ -61,6 +61,10 @@ final class AppState {
 
     var savedSearches: [SavedSearchRepository.SavedSearch] = []
 
+    // MARK: - Conflicts
+
+    var pendingConflicts: [ConflictInfo] = []
+
     // MARK: - Computed
 
     /// Notes displayed in the list — either active or archived depending on mode.
@@ -263,6 +267,8 @@ final class AppState {
         keyManager.lock()
         isLocked = true
         notes = []
+        archivedNotes = []
+        pendingConflicts = []
         selectedNoteId = nil
     }
 
@@ -369,6 +375,15 @@ final class AppState {
     func applySavedSearch(id: String) {
         guard let search = savedSearches.first(where: { $0.id == id }) else { return }
         searchQuery = search.query
+    }
+
+    // MARK: - Conflict Resolution
+
+    func resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) async throws {
+        guard let syncService else { return }
+        try await syncService.resolveConflict(noteId: noteId, strategy: strategy)
+        pendingConflicts = await syncService.pendingConflicts
+        try? loadNotes()
     }
 
     /// Restore a note to a previous version. Creates a snapshot of current state first.
@@ -489,6 +504,9 @@ final class AppState {
             isSyncing = false
             lastSyncAt = Date()
 
+            // Pull any conflicts detected during push
+            pendingConflicts = await syncService.pendingConflicts
+
             let diff = notes.count - previousCount
             if diff > 0 {
                 syncStatusMessage = "Synced — \(diff) new note\(diff == 1 ? "" : "s")"
@@ -582,6 +600,7 @@ final class AppState {
         notes = []
         archivedNotes = []
         savedSearches = []
+        pendingConflicts = []
         showArchive = false
         selectedNoteId = nil
         searchQuery = ""
