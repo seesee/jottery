@@ -37,7 +37,7 @@ enum CryptoService {
         let passwordData = Array(password.utf8)
 
         var derivedKey = Data(count: keyLength)
-        derivedKey.withUnsafeMutableBytes { derivedKeyPtr in
+        _ = derivedKey.withUnsafeMutableBytes { derivedKeyPtr in
             salt.withUnsafeBytes { saltPtr in
                 CCKeyDerivationPBKDF(
                     CCPBKDFAlgorithm(kCCPBKDF2),

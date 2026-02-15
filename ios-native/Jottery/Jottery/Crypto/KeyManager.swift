@@ -105,7 +105,9 @@ final class KeyManager {
         guard autoLockTimeout > 0 else { return }
 
         autoLockTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            self?.checkAutoLock()
+            Task { @MainActor in
+                self?.checkAutoLock()
+            }
         }
     }
 

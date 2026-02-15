@@ -87,19 +87,19 @@ enum KeychainService {
 
     /// Retrieve the biometric-protected master key. Triggers Face ID / Touch ID.
     static func retrieveBiometricKey() async throws -> Data {
-        let context = LAContext()
-        context.localizedReason = "Unlock Jottery"
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: biometricKeyAccount,
-            kSecReturnData as String: true,
-            kSecUseAuthenticationContext as String: context,
-        ]
-
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
+                let context = LAContext()
+                context.localizedReason = "Unlock Jottery"
+
+                let query: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service,
+                    kSecAttrAccount as String: biometricKeyAccount,
+                    kSecReturnData as String: true,
+                    kSecUseAuthenticationContext as String: context,
+                ]
+
                 var result: AnyObject?
                 let status = SecItemCopyMatching(query as CFDictionary, &result)
 
@@ -114,11 +114,14 @@ enum KeychainService {
 
     /// Check if a biometric key exists.
     static func hasBiometricKey() -> Bool {
+        let context = LAContext()
+        context.interactionNotAllowed = true
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: biometricKeyAccount,
-            kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail,
+            kSecUseAuthenticationContext as String: context,
         ]
 
         let status = SecItemCopyMatching(query as CFDictionary, nil)
