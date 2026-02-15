@@ -59,64 +59,75 @@ struct NoteEditorView: View {
         .navigationTitle(note.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                // Language picker
+            ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    ForEach(syntaxLanguages, id: \.self) { lang in
-                        Button(lang) {
-                            syntaxLanguage = lang
-                            scheduleSave()
-                        }
-                    }
-                } label: {
-                    Text(syntaxLanguage)
-                        .font(.caption)
-                }
-
-                // Word wrap toggle
-                Button {
-                    wordWrap.toggle()
-                    scheduleSave()
-                } label: {
-                    Image(systemName: wordWrap ? "text.word.spacing" : "arrow.right.to.line")
-                }
-
-                // Colour picker
-                Menu {
-                    ForEach(Color.noteColorNames, id: \.self) { name in
-                        Button {
-                            color = name
-                            scheduleSave()
-                        } label: {
-                            Label(name.capitalized, systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
-                        }
-                    }
-                    Divider()
+                    // Pin toggle
                     Button {
-                        color = nil
+                        try? appState.togglePin(id: note.id)
+                    } label: {
+                        Label(note.pinned ? "Unpin" : "Pin", systemImage: note.pinned ? "pin.slash" : "pin")
+                    }
+
+                    // Word wrap toggle
+                    Button {
+                        wordWrap.toggle()
                         scheduleSave()
                     } label: {
-                        Label("None", systemImage: color == nil ? "checkmark.circle" : "circle.slash")
+                        Label(
+                            wordWrap ? "Disable Word Wrap" : "Enable Word Wrap",
+                            systemImage: wordWrap ? "arrow.right.to.line" : "text.word.spacing"
+                        )
+                    }
+
+                    // Language picker
+                    Menu {
+                        ForEach(syntaxLanguages, id: \.self) { lang in
+                            Button {
+                                syntaxLanguage = lang
+                                scheduleSave()
+                            } label: {
+                                if lang == syntaxLanguage {
+                                    Label(lang.capitalized, systemImage: "checkmark")
+                                } else {
+                                    Text(lang.capitalized)
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Language: \(syntaxLanguage.capitalized)", systemImage: "chevron.left.forwardslash.chevron.right")
+                    }
+
+                    // Colour picker
+                    Menu {
+                        ForEach(Color.noteColorNames, id: \.self) { name in
+                            Button {
+                                color = name
+                                scheduleSave()
+                            } label: {
+                                Label(name.capitalized, systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
+                            }
+                        }
+                        Divider()
+                        Button {
+                            color = nil
+                            scheduleSave()
+                        } label: {
+                            Label("None", systemImage: color == nil ? "checkmark.circle" : "circle.slash")
+                        }
+                    } label: {
+                        Label("Colour", systemImage: "paintbrush")
+                    }
+
+                    Divider()
+
+                    // Delete
+                    Button(role: .destructive) {
+                        try? appState.deleteNote(id: note.id)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "paintbrush")
-                        .foregroundStyle(
-                            color.flatMap({ Color.noteColor(named: $0, scheme: colorScheme) }) ?? .secondary
-                        )
-                }
-
-                // Pin toggle
-                Button {
-                    try? appState.togglePin(id: note.id)
-                } label: {
-                    Image(systemName: note.pinned ? "pin.fill" : "pin")
-                }
-
-                // Delete
-                Button(role: .destructive) {
-                    try? appState.deleteNote(id: note.id)
-                } label: {
-                    Image(systemName: "trash")
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
