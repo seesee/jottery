@@ -396,24 +396,3 @@ struct PhotoPickerView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Markdown Preview
-
-struct MarkdownPreviewView: View {
-    let content: String
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                if let attributed = try? AttributedString(markdown: content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-                    Text(attributed)
-                        .textSelection(.enabled)
-                } else {
-                    Text(content)
-                        .textSelection(.enabled)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-        }
-    }
-}
