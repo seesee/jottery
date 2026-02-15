@@ -15,6 +15,8 @@ final class AppState {
     // MARK: - Notes
 
     var notes: [DecryptedNote] = []
+    var archivedNotes: [DecryptedNote] = []
+    var showArchive: Bool = false
     var selectedNoteId: String?
     var searchQuery: String = ""
     var sortOrder: SortOrder = .recent
@@ -53,15 +55,34 @@ final class AppState {
     private(set) var syncRepo: SyncRepository?
     private(set) var versionRepo: VersionRepository?
     private(set) var attachmentRepo: AttachmentRepository?
+    private(set) var savedSearchRepo: SavedSearchRepository?
+
+    // MARK: - Saved Searches
+
+    var savedSearches: [SavedSearchRepository.SavedSearch] = []
+
+    // MARK: - Conflicts
+
+    var pendingConflicts: [ConflictInfo] = []
+
+    // MARK: - Inbox
+
+    var inboxItems: [InboxItem] = []
+    var inboxCount: Int { inboxItems.count }
 
     // MARK: - Computed
 
+    /// Notes displayed in the list — either active or archived depending on mode.
+    var displayedNotes: [DecryptedNote] {
+        showArchive ? archivedNotes : notes
+    }
+
     var filteredNotes: [DecryptedNote] {
-        let filtered = SearchService.filter(notes: notes, query: searchQuery)
+        let filtered = SearchService.filter(notes: displayedNotes, query: searchQuery)
         return SearchService.sort(notes: filtered, order: sortOrder)
     }
 
-    var noteCount: Int { notes.count }
+    var noteCount: Int { displayedNotes.count }
     var filteredCount: Int { filteredNotes.count }
 
     var selectedNote: DecryptedNote? {
@@ -89,6 +110,7 @@ final class AppState {
             self.settingsRepo = SettingsRepository(db: database)
             self.syncRepo = SyncRepository(db: database)
             self.attachmentRepo = AttachmentRepository(db: database)
+            self.savedSearchRepo = SavedSearchRepository(db: database)
 
             // Check if vault exists
             let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
@@ -250,6 +272,9 @@ final class AppState {
         keyManager.lock()
         isLocked = true
         notes = []
+        archivedNotes = []
+        pendingConflicts = []
+        inboxItems = []
         selectedNoteId = nil
     }
 
@@ -258,6 +283,8 @@ final class AppState {
     func loadNotes() throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
         notes = try noteRepo.listActive(key: key)
+        archivedNotes = try noteRepo.listArchived(key: key)
+        savedSearches = (try? savedSearchRepo?.listAll(key: key)) ?? []
     }
 
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
@@ -280,6 +307,14 @@ final class AppState {
         }
     }
 
+    func duplicateNote(id: String) throws {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        guard let original = try noteRepo.get(id: id, key: key) else { return }
+        let duplicate = try noteRepo.create(content: original.content, tags: original.tags, key: key)
+        notes.insert(duplicate, at: 0)
+        selectedNoteId = duplicate.id
+    }
+
     func deleteNote(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.softDelete(id: id)
@@ -300,6 +335,206 @@ final class AppState {
         try noteRepo.togglePin(id: id)
         if let index = notes.firstIndex(where: { $0.id == id }) {
             notes[index].pinned.toggle()
+        }
+    }
+
+    func archiveNote(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.archive(id: id)
+        notes.removeAll { $0.id == id }
+        if selectedNoteId == id { selectedNoteId = nil }
+        try loadArchivedNotes()
+    }
+
+    func unarchiveNote(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.unarchive(id: id)
+        archivedNotes.removeAll { $0.id == id }
+        if selectedNoteId == id { selectedNoteId = nil }
+        try loadNotes()
+    }
+
+    func toggleLock(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.toggleLock(id: id)
+        if let index = notes.firstIndex(where: { $0.id == id }) {
+            notes[index].locked.toggle()
+            notes[index].lockedAt = notes[index].locked ? Date() : nil
+        }
+        if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
+            archivedNotes[index].locked.toggle()
+            archivedNotes[index].lockedAt = archivedNotes[index].locked ? Date() : nil
+        }
+    }
+
+    func loadArchivedNotes() throws {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        archivedNotes = try noteRepo.listArchived(key: key)
+    }
+
+    // MARK: - Saved Searches
+
+    func saveSearch(name: String, query: String) throws {
+        guard let savedSearchRepo, let key = keyManager.masterKey else { return }
+        let search = try savedSearchRepo.create(name: name, query: query, key: key)
+        savedSearches.append(search)
+    }
+
+    func deleteSavedSearch(id: String) throws {
+        guard let savedSearchRepo else { return }
+        try savedSearchRepo.delete(id: id)
+        savedSearches.removeAll { $0.id == id }
+    }
+
+    func applySavedSearch(id: String) {
+        guard let search = savedSearches.first(where: { $0.id == id }) else { return }
+        searchQuery = search.query
+    }
+
+    // MARK: - Conflict Resolution
+
+    func resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) async throws {
+        guard let syncService else { return }
+        try await syncService.resolveConflict(noteId: noteId, strategy: strategy)
+        pendingConflicts = await syncService.pendingConflicts
+        try? loadNotes()
+    }
+
+    // MARK: - Attachments
+
+    func addAttachment(to noteId: String, url: URL, filename: String, mimeType: String) throws {
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        guard let note = try noteRepo.get(id: noteId, key: key) else { return }
+
+        // Read and encrypt the file data
+        let fileData = try Data(contentsOf: url)
+        let encrypted = try CryptoService.encrypt(fileData, key: key)
+        let encryptedJSON = try CryptoService.serializeEncryptedJSON(encrypted)
+        let blobData = Data(encryptedJSON.utf8)
+
+        // Generate IDs
+        let blobId = CryptoService.generateUUID()
+        let attachmentId = CryptoService.generateUUID()
+
+        // Store encrypted blob
+        try attachmentRepo.storeBlob(id: blobId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
+
+        // Encrypt the filename for storage
+        let encFilename = try CryptoService.encryptText(filename, key: key)
+        let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
+
+        // Create attachment ref
+        let ref = AttachmentRef(
+            id: attachmentId,
+            filename: encFilenameJSON,
+            mimeType: mimeType,
+            size: fileData.count,
+            data: blobId
+        )
+
+        // Update note
+        var updated = note
+        updated.attachments.append(AttachmentRef(
+            id: attachmentId,
+            filename: filename,
+            mimeType: mimeType,
+            size: fileData.count,
+            data: blobId
+        ))
+        // Save with encrypted filename in the raw record
+        try noteRepo.addAttachment(noteId: noteId, ref: ref)
+
+        // Update in-memory
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index] = updated
+        }
+    }
+
+    func removeAttachment(from noteId: String, attachmentId: String) throws {
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        guard let note = try noteRepo.get(id: noteId, key: key) else { return }
+
+        // Find the attachment to get its blob ID
+        guard let ref = note.attachments.first(where: { $0.id == attachmentId }) else { return }
+
+        // Remove from note
+        try noteRepo.removeAttachment(noteId: noteId, attachmentId: attachmentId)
+
+        // Delete blob
+        try? attachmentRepo.deleteBlob(id: ref.data)
+
+        // Update in-memory
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].attachments.removeAll { $0.id == attachmentId }
+        }
+    }
+
+    // MARK: - Inbox
+
+    func loadInboxItems() async throws {
+        guard let syncClient else { return }
+        inboxItems = try await syncClient.listInboxItems()
+    }
+
+    func acceptInboxItem(_ item: InboxItem) async throws {
+        guard let noteRepo, let key = keyManager.masterKey, let syncClient else { return }
+        // Create a new encrypted note from the inbox item (showPreview forced false for safety)
+        let note = try noteRepo.create(content: item.content, tags: item.tags, key: key)
+        notes.insert(note, at: 0)
+        // Delete from server
+        try? await syncClient.deleteInboxItem(id: item.id)
+        inboxItems.removeAll { $0.id == item.id }
+    }
+
+    func deleteInboxItem(_ item: InboxItem) async throws {
+        guard let syncClient else { return }
+        try await syncClient.deleteInboxItem(id: item.id)
+        inboxItems.removeAll { $0.id == item.id }
+    }
+
+    func deleteAllInboxItems() async throws {
+        guard let syncClient else { return }
+        try await syncClient.deleteAllInboxItems()
+        inboxItems.removeAll()
+    }
+
+    /// Restore a note to a previous version. Creates a snapshot of current state first.
+    func restoreVersion(noteId: String, version: NoteVersionRecord) throws {
+        guard let noteRepo, let versionRepo, let key = keyManager.masterKey else { return }
+
+        // Snapshot current state before restoring
+        if let currentRecord = try noteRepo.getRaw(id: noteId) {
+            try versionRepo.createVersion(from: currentRecord, reason: "pre-restore")
+        }
+
+        // Decrypt the version's content and tags
+        let encContent = try CryptoService.parseEncryptedJSON(version.content)
+        let content = try CryptoService.decryptText(encContent, key: key)
+
+        let encTags = try CryptoService.parseEncryptedJSON(version.tags)
+        let tagsText = try CryptoService.decryptText(encTags, key: key)
+        let tags: [String]
+        if tagsText.isEmpty {
+            tags = []
+        } else if tagsText.hasPrefix("[") {
+            tags = (try? JSONDecoder().decode([String].self, from: Data(tagsText.utf8))) ?? []
+        } else {
+            tags = tagsText.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+        }
+
+        // Get current decrypted note and update with restored content
+        guard var note = try noteRepo.get(id: noteId, key: key) else { return }
+        note.content = content
+        note.tags = tags
+        note.syntaxLanguage = version.syntaxLanguage ?? note.syntaxLanguage
+        note.wordWrap = version.wordWrap ?? note.wordWrap
+        note.showPreview = version.showPreview ?? note.showPreview
+        note.color = version.color
+        try noteRepo.update(note, key: key)
+
+        // Update in-memory
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index] = try noteRepo.get(id: noteId, key: key) ?? notes[index]
         }
     }
 
@@ -381,12 +616,18 @@ final class AppState {
             isSyncing = false
             lastSyncAt = Date()
 
+            // Pull any conflicts detected during push
+            pendingConflicts = await syncService.pendingConflicts
+
             let diff = notes.count - previousCount
             if diff > 0 {
                 syncStatusMessage = "Synced — \(diff) new note\(diff == 1 ? "" : "s")"
             } else {
                 syncStatusMessage = "Synced — up to date"
             }
+
+            // Refresh inbox items after sync
+            try? await loadInboxItems()
 
             // Clear the status message after a few seconds
             let clearMessage = syncStatusMessage
@@ -468,9 +709,15 @@ final class AppState {
         syncRepo = nil
         versionRepo = nil
         attachmentRepo = nil
+        savedSearchRepo = nil
         syncClient = nil
         syncService = nil
         notes = []
+        archivedNotes = []
+        savedSearches = []
+        pendingConflicts = []
+        inboxItems = []
+        showArchive = false
         selectedNoteId = nil
         searchQuery = ""
         syncEnabled = false

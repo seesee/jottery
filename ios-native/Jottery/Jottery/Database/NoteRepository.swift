@@ -10,10 +10,10 @@ struct NoteRepository: Sendable {
 
     // MARK: - Read
 
-    /// Fetch all active (non-deleted) notes, decrypted.
+    /// Fetch all active (non-deleted, non-archived) notes, decrypted.
     func listActive(key: SymmetricKey) throws -> [DecryptedNote] {
         let records = try db.dbPool.read { db in
-            try NoteRecord.filter(Column("deleted") == false)
+            try NoteRecord.filter(Column("deleted") == false && Column("archived") == false)
                 .order(Column("modified_at").desc)
                 .fetchAll(db)
         }
@@ -244,6 +244,51 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Archive a note.
+    func archive(id: String) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE notes SET archived = 1, archived_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
+            """, arguments: [now, now, id])
+        }
+    }
+
+    /// Unarchive a note.
+    func unarchive(id: String) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE notes SET archived = 0, archived_at = NULL, modified_at = ?, needs_sync = 1 WHERE id = ?
+            """, arguments: [now, id])
+        }
+    }
+
+    /// Fetch all archived notes, decrypted.
+    func listArchived(key: SymmetricKey) throws -> [DecryptedNote] {
+        let records = try db.dbPool.read { db in
+            try NoteRecord.filter(Column("archived") == true && Column("deleted") == false)
+                .order(Column("archived_at").desc)
+                .fetchAll(db)
+        }
+        return records.compactMap { try? decrypt($0, key: key) }
+    }
+
+    /// Toggle lock status.
+    func toggleLock(id: String) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE notes SET
+                    locked = NOT locked,
+                    locked_at = CASE WHEN locked THEN NULL ELSE ? END,
+                    modified_at = ?,
+                    needs_sync = 1
+                WHERE id = ?
+            """, arguments: [now, now, id])
+        }
+    }
+
     /// Toggle pin status.
     func togglePin(id: String) throws {
         try db.dbPool.write { db in
@@ -268,6 +313,38 @@ struct NoteRepository: Sendable {
                 """, arguments: [syncedAt, id])
             }
         }
+    }
+
+    // MARK: - Attachment Management
+
+    /// Add an attachment reference to a note's attachments JSON array.
+    func addAttachment(noteId: String, ref: AttachmentRef) throws {
+        guard var record = try getRaw(id: noteId) else { return }
+        var attachments: [AttachmentRef] = []
+        if let data = record.attachments.data(using: .utf8) {
+            attachments = (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+        }
+        attachments.append(ref)
+        let attachmentsJSON = try JSONEncoder().encode(attachments)
+        record.attachments = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+        record.modifiedAt = Date().iso8601
+        record.needsSync = true
+        try updateRaw(record)
+    }
+
+    /// Remove an attachment reference from a note's attachments JSON array.
+    func removeAttachment(noteId: String, attachmentId: String) throws {
+        guard var record = try getRaw(id: noteId) else { return }
+        var attachments: [AttachmentRef] = []
+        if let data = record.attachments.data(using: .utf8) {
+            attachments = (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+        }
+        attachments.removeAll { $0.id == attachmentId }
+        let attachmentsJSON = try JSONEncoder().encode(attachments)
+        record.attachments = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+        record.modifiedAt = Date().iso8601
+        record.needsSync = true
+        try updateRaw(record)
     }
 
     // MARK: - Insert Raw (for sync pull)

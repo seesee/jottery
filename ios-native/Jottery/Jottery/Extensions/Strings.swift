@@ -64,6 +64,19 @@ enum L {
     static var noteListPin: String { String(localized: "noteList.pin") }
     static var noteListUnpin: String { String(localized: "noteList.unpin") }
 
+    // MARK: - Note List (Archive & Search Count)
+
+    static var noteListArchive: String { String(localized: "noteList.archive") }
+    static var noteListUnarchive: String { String(localized: "noteList.unarchive") }
+    static var noteListArchiveTitle: String { String(localized: "noteList.archiveTitle") }
+    static var noteListShowArchive: String { String(localized: "noteList.showArchive") }
+    static var noteListShowNotes: String { String(localized: "noteList.showNotes") }
+    static var noteListArchiveEmpty: String { String(localized: "noteList.archiveEmpty") }
+    static var noteListArchiveEmptyDescription: String { String(localized: "noteList.archiveEmptyDescription") }
+    static func noteListSearchCount(_ matches: Int, _ total: Int) -> String {
+        String(format: String(localized: "noteList.searchCount"), matches, total)
+    }
+
     // MARK: - Editor
 
     static var editorPin: String { String(localized: "editor.pin") }
@@ -75,9 +88,30 @@ enum L {
     }
     static var editorCategory: String { String(localized: "editor.category") }
     static var editorCategoryNone: String { String(localized: "editor.categoryNone") }
+    static var editorLock: String { String(localized: "editor.lock") }
+    static var editorUnlock: String { String(localized: "editor.unlock") }
+    static var editorArchive: String { String(localized: "editor.archive") }
+    static var editorUnarchive: String { String(localized: "editor.unarchive") }
+    static var editorVersionHistory: String { String(localized: "editor.versionHistory") }
+    static var editorAddAttachment: String { String(localized: "editor.addAttachment") }
+    static var editorAddPhoto: String { String(localized: "editor.addPhoto") }
+    static var editorShowPreview: String { String(localized: "editor.showPreview") }
+    static var editorHidePreview: String { String(localized: "editor.hidePreview") }
+    static var editorDuplicate: String { String(localized: "editor.duplicate") }
     static var editorDelete: String { String(localized: "editor.delete") }
     static var editorNoNoteSelected: String { String(localized: "editor.noNoteSelected") }
     static var editorNoNoteSelectedDescription: String { String(localized: "editor.noNoteSelectedDescription") }
+
+    // MARK: - Version History
+
+    static var versionHistoryTitle: String { String(localized: "versionHistory.title") }
+    static var versionHistoryDone: String { String(localized: "versionHistory.done") }
+    static var versionHistoryRestore: String { String(localized: "versionHistory.restore") }
+    static var versionHistoryNoVersions: String { String(localized: "versionHistory.noVersions") }
+    static var versionHistoryNoVersionsDescription: String { String(localized: "versionHistory.noVersionsDescription") }
+    static func versionHistoryVersion(_ num: Int) -> String {
+        String(format: String(localized: "versionHistory.version"), num)
+    }
 
     // MARK: - Unlock
 
@@ -170,6 +204,95 @@ enum L {
     static var attachmentsDataNotAvailable: String { String(localized: "attachments.dataNotAvailable") }
     static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
     static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
+
+    // MARK: - Saved Searches
+
+    static var savedSearchTitle: String { String(localized: "savedSearch.title") }
+    static var savedSearchSaveCurrent: String { String(localized: "savedSearch.saveCurrent") }
+    static var savedSearchEmpty: String { String(localized: "savedSearch.empty") }
+    static var savedSearchEmptyDescription: String { String(localized: "savedSearch.emptyDescription") }
+    static var savedSearchSaveTitle: String { String(localized: "savedSearch.saveTitle") }
+    static var savedSearchNamePlaceholder: String { String(localized: "savedSearch.namePlaceholder") }
+    static var savedSearchSaveAction: String { String(localized: "savedSearch.saveAction") }
+    static func savedSearchSaveMessage(_ query: String) -> String {
+        String(format: String(localized: "savedSearch.saveMessage"), query)
+    }
+
+    // MARK: - Inbox
+
+    static var inboxTitle: String { String(localized: "inbox.title") }
+    static var inboxEmpty: String { String(localized: "inbox.empty") }
+    static var inboxEmptyDescription: String { String(localized: "inbox.emptyDescription") }
+    static var inboxAccept: String { String(localized: "inbox.accept") }
+    static var inboxAcceptAll: String { String(localized: "inbox.acceptAll") }
+    static var inboxDeleteAll: String { String(localized: "inbox.deleteAll") }
+
+    // MARK: - Conflicts
+
+    static var conflictTitle: String { String(localized: "conflict.title") }
+    static var conflictNoConflicts: String { String(localized: "conflict.noConflicts") }
+    static var conflictNoConflictsDescription: String { String(localized: "conflict.noConflictsDescription") }
+    static var conflictResolve: String { String(localized: "conflict.resolve") }
+    static var conflictVersion: String { String(localized: "conflict.version") }
+    static var conflictLocal: String { String(localized: "conflict.local") }
+    static var conflictServer: String { String(localized: "conflict.server") }
+    static var conflictKeepLocal: String { String(localized: "conflict.keepLocal") }
+    static var conflictKeepServer: String { String(localized: "conflict.keepServer") }
+    static var conflictKeepBoth: String { String(localized: "conflict.keepBoth") }
+    static func conflictBanner(_ count: Int) -> String {
+        String(format: String(localized: "conflict.banner"), count)
+    }
+
+    // MARK: - Bulk Operations
+
+    static var bulkSelect: String { String(localized: "bulk.select") }
+    static var bulkDone: String { String(localized: "bulk.done") }
+    static func bulkSelected(_ count: Int) -> String {
+        String(format: String(localized: "bulk.selected"), count)
+    }
+    static var bulkSelectAll: String { String(localized: "bulk.selectAll") }
+    static var bulkDeselectAll: String { String(localized: "bulk.deselectAll") }
+    static var bulkAddTags: String { String(localized: "bulk.addTags") }
+    static var bulkRemoveTags: String { String(localized: "bulk.removeTags") }
+    static var bulkSetColour: String { String(localized: "bulk.setColour") }
+    static var bulkExport: String { String(localized: "bulk.export") }
+    static var bulkApply: String { String(localized: "bulk.apply") }
+    static var bulkTagsPlaceholder: String { String(localized: "bulk.tagsPlaceholder") }
+    static var bulkTagsHint: String { String(localized: "bulk.tagsHint") }
+    static var bulkDeleteConfirmTitle: String { String(localized: "bulk.deleteConfirmTitle") }
+    static var bulkDeleteConfirmAction: String { String(localized: "bulk.deleteConfirmAction") }
+    static func bulkDeleteConfirmMessage(_ count: Int) -> String {
+        String(format: String(localized: "bulk.deleteConfirmMessage"), count)
+    }
+
+    // MARK: - Settings (Data)
+
+    static var settingsData: String { String(localized: "settings.data") }
+    static var settingsExportAll: String { String(localized: "settings.exportAll") }
+    static var settingsImport: String { String(localized: "settings.import") }
+
+    // MARK: - Import
+
+    static var importTitle: String { String(localized: "import.title") }
+    static var importSelectFile: String { String(localized: "import.selectFile") }
+    static var importFileLoaded: String { String(localized: "import.fileLoaded") }
+    static var importNoteCount: String { String(localized: "import.noteCount") }
+    static var importExportDate: String { String(localized: "import.exportDate") }
+    static var importStrategy: String { String(localized: "import.strategy") }
+    static var importStrategySkip: String { String(localized: "import.strategySkip") }
+    static var importStrategyReplace: String { String(localized: "import.strategyReplace") }
+    static var importStrategyMerge: String { String(localized: "import.strategyMerge") }
+    static var importStrategySkipDescription: String { String(localized: "import.strategySkipDescription") }
+    static var importStrategyReplaceDescription: String { String(localized: "import.strategyReplaceDescription") }
+    static var importStrategyMergeDescription: String { String(localized: "import.strategyMergeDescription") }
+    static var importAction: String { String(localized: "import.action") }
+    static func importProgress(_ current: Int, _ total: Int) -> String {
+        String(format: String(localized: "import.progress"), current, total)
+    }
+    static var importComplete: String { String(localized: "import.complete") }
+    static var importImported: String { String(localized: "import.imported") }
+    static var importSkipped: String { String(localized: "import.skipped") }
+    static var importErrors: String { String(localized: "import.errors") }
 
     // MARK: - Sort Order
 

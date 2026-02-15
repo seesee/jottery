@@ -249,11 +249,8 @@ async fn main() {
             axum::http::header::REFERRER_POLICY,
             HeaderValue::from_static("strict-origin-when-cross-origin"),
         ))
-        // Content-Security-Policy for API (restrictive since we only serve JSON)
-        .layer(SetResponseHeaderLayer::if_not_present(
-            axum::http::header::CONTENT_SECURITY_POLICY,
-            HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
-        ))
+        // Content-Security-Policy — path-aware: permissive for SPA, restrictive for API
+        .layer(axum::middleware::from_fn(csp_middleware))
         // Prevent caching of API responses (contains sensitive data)
         .layer(SetResponseHeaderLayer::if_not_present(
             axum::http::header::CACHE_CONTROL,
@@ -297,6 +294,33 @@ async fn main() {
     axum::serve(listener, app)
         .await
         .expect("Server failed");
+}
+
+/// Sets a path-appropriate Content-Security-Policy header.
+///
+/// - `/admin` and `/user` routes serve a Svelte SPA that needs to load its own
+///   scripts, stylesheets, and make API calls back to the server.
+/// - All other routes (API) only serve JSON, so a restrictive policy is applied.
+async fn csp_middleware(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let path = request.uri().path().to_string();
+    let mut response = next.run(request).await;
+
+    if !response.headers().contains_key(axum::http::header::CONTENT_SECURITY_POLICY) {
+        let csp = if path.starts_with("/admin") || path.starts_with("/user") {
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+        } else {
+            "default-src 'none'; frame-ancestors 'none'"
+        };
+        response.headers_mut().insert(
+            axum::http::header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static(csp),
+        );
+    }
+
+    response
 }
 
 async fn health_check() -> &'static str {

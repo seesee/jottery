@@ -7,6 +7,7 @@ struct AttachmentListView: View {
     let attachments: [AttachmentRef]
     let attachmentRepo: AttachmentRepository
     let encryptionKey: SymmetricKey
+    var onDelete: ((String) -> Void)?
 
     @State private var isExpanded = true
     @State private var previewURL: URL?
@@ -46,7 +47,8 @@ struct AttachmentListView: View {
                     AttachmentRowView(
                         attachment: attachment,
                         onTap: { decryptAndPreview(attachment) },
-                        onShare: { decryptAndShare(attachment) }
+                        onShare: { decryptAndShare(attachment) },
+                        onDelete: onDelete != nil ? { onDelete?(attachment.id) } : nil
                     )
 
                     if attachment.id != attachments.last?.id {
@@ -129,6 +131,7 @@ private struct AttachmentRowView: View {
     let attachment: AttachmentRef
     let onTap: () -> Void
     let onShare: () -> Void
+    var onDelete: (() -> Void)?
 
     var body: some View {
         Button(action: onTap) {
@@ -157,6 +160,15 @@ private struct AttachmentRowView: View {
                         .foregroundStyle(.accent)
                 }
                 .buttonStyle(.plain)
+
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.subheadline)
+                            .foregroundStyle(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal)
             .padding(.vertical, 8)

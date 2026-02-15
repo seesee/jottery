@@ -137,6 +137,32 @@ struct SyncNoteVersion: Codable {
     var parentHash: String?
 }
 
+// MARK: - Inbox
+
+struct InboxItem: Codable, Identifiable {
+    let id: String
+    let content: String
+    let tags: [String]
+    let createdAt: String
+    var source: String?
+    var sizeBytes: Int?
+}
+
+struct InboxStatusResponse: Codable {
+    let count: Int
+    let totalSizeBytes: Int
+    let maxItems: Int
+    let maxSizeMb: Int
+}
+
+struct InboxTokenResponse: Codable {
+    let token: String
+}
+
+struct InboxTokenStatusResponse: Codable {
+    let hasToken: Bool
+}
+
 // MARK: - Sync Status
 
 struct SyncStatusResponse: Codable {

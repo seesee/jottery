@@ -76,6 +76,23 @@ actor SyncClient {
         URL(string: "\(endpoint)/api/\(apiVersion)/sync/events?token=\(token)")
     }
 
+    // MARK: - Inbox
+
+    func listInboxItems() async throws -> [InboxItem] {
+        let url = apiURL("inbox")
+        return try await get(url: url)
+    }
+
+    func deleteInboxItem(id: String) async throws {
+        let url = apiURL("inbox/\(id)")
+        try await delete(url: url)
+    }
+
+    func deleteAllInboxItems() async throws {
+        let url = apiURL("inbox")
+        try await delete(url: url)
+    }
+
     // MARK: - Private
 
     private func apiURL(_ path: String) -> URL {
@@ -114,6 +131,17 @@ actor SyncClient {
         try validateResponse(response, data: data)
 
         return try JSONDecoder().decode(Response.self, from: data)
+    }
+
+    private func delete(url: URL) async throws {
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        if let apiKey {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
     }
 
     private func validateResponse(_ response: URLResponse, data: Data) throws {
