@@ -314,7 +314,7 @@
     </button>
 
     {#if showMoreMenu}
-      <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[calc(100vh-10rem)] overflow-y-auto">
+      <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[calc(100vh-6.75rem)] overflow-y-auto">
         <div class="py-1">
           <button
             on:click={handleUndoClick}
