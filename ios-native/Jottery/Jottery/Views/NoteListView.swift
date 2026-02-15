@@ -12,6 +12,7 @@ struct NoteListView: View {
     @State private var showBulkColorSheet = false
     @State private var showBulkDeleteConfirm = false
     @State private var bulkExportFile: ExportFile?
+    @State private var showSavedSearches = false
 
     var body: some View {
         @Bindable var state = appState
@@ -41,6 +42,12 @@ struct NoteListView: View {
                         } label: {
                             Label(L.noteListNewNote, systemImage: "plus")
                         }
+                    }
+
+                    Button {
+                        showSavedSearches = true
+                    } label: {
+                        Label(L.savedSearchTitle, systemImage: "bookmark")
                     }
 
                     Menu {
@@ -126,6 +133,9 @@ struct NoteListView: View {
                 }
                 syncStatusBar
             }
+        }
+        .sheet(isPresented: $showSavedSearches) {
+            SavedSearchesView()
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()

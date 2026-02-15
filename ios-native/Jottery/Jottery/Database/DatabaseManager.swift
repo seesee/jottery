@@ -260,6 +260,17 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "UPDATE settings SET language = 'system' WHERE language = 'en-GB'")
         }
 
+        migrator.registerMigration("ios_005_add_saved_searches") { db in
+            try db.create(table: "saved_searches", ifNotExists: true) { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()       // Encrypted
+                t.column("query", .text).notNull()       // Encrypted
+                t.column("display_order", .integer).notNull().defaults(to: 0)
+                t.column("created_at", .text).notNull()
+                t.column("modified_at", .text).notNull()
+            }
+        }
+
         try migrator.migrate(dbPool)
     }
 }

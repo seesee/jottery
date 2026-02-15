@@ -55,6 +55,11 @@ final class AppState {
     private(set) var syncRepo: SyncRepository?
     private(set) var versionRepo: VersionRepository?
     private(set) var attachmentRepo: AttachmentRepository?
+    private(set) var savedSearchRepo: SavedSearchRepository?
+
+    // MARK: - Saved Searches
+
+    var savedSearches: [SavedSearchRepository.SavedSearch] = []
 
     // MARK: - Computed
 
@@ -96,6 +101,7 @@ final class AppState {
             self.settingsRepo = SettingsRepository(db: database)
             self.syncRepo = SyncRepository(db: database)
             self.attachmentRepo = AttachmentRepository(db: database)
+            self.savedSearchRepo = SavedSearchRepository(db: database)
 
             // Check if vault exists
             let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
@@ -266,6 +272,7 @@ final class AppState {
         guard let noteRepo, let key = keyManager.masterKey else { return }
         notes = try noteRepo.listActive(key: key)
         archivedNotes = try noteRepo.listArchived(key: key)
+        savedSearches = (try? savedSearchRepo?.listAll(key: key)) ?? []
     }
 
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
@@ -343,6 +350,25 @@ final class AppState {
     func loadArchivedNotes() throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
         archivedNotes = try noteRepo.listArchived(key: key)
+    }
+
+    // MARK: - Saved Searches
+
+    func saveSearch(name: String, query: String) throws {
+        guard let savedSearchRepo, let key = keyManager.masterKey else { return }
+        let search = try savedSearchRepo.create(name: name, query: query, key: key)
+        savedSearches.append(search)
+    }
+
+    func deleteSavedSearch(id: String) throws {
+        guard let savedSearchRepo else { return }
+        try savedSearchRepo.delete(id: id)
+        savedSearches.removeAll { $0.id == id }
+    }
+
+    func applySavedSearch(id: String) {
+        guard let search = savedSearches.first(where: { $0.id == id }) else { return }
+        searchQuery = search.query
     }
 
     /// Restore a note to a previous version. Creates a snapshot of current state first.
@@ -550,10 +576,12 @@ final class AppState {
         syncRepo = nil
         versionRepo = nil
         attachmentRepo = nil
+        savedSearchRepo = nil
         syncClient = nil
         syncService = nil
         notes = []
         archivedNotes = []
+        savedSearches = []
         showArchive = false
         selectedNoteId = nil
         searchQuery = ""

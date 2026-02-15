@@ -934,6 +934,94 @@
         }
       }
     },
+    "savedSearch.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Saved Searches"
+          }
+        }
+      }
+    },
+    "savedSearch.emptyDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search for something, then save it here for quick access."
+          }
+        }
+      }
+    },
+    "savedSearch.namePlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search name"
+          }
+        }
+      }
+    },
+    "savedSearch.saveAction" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "savedSearch.saveCurrent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save Current Search"
+          }
+        }
+      }
+    },
+    "savedSearch.saveMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save the search \"%@\" for quick access."
+          }
+        }
+      }
+    },
+    "savedSearch.saveTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save Search"
+          }
+        }
+      }
+    },
+    "savedSearch.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved Searches"
+          }
+        }
+      }
+    },
     "settings.about" : {
       "extractionState" : "manual",
       "localizations" : {

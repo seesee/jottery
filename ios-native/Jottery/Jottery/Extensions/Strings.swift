@@ -200,6 +200,19 @@ enum L {
     static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
     static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
 
+    // MARK: - Saved Searches
+
+    static var savedSearchTitle: String { String(localized: "savedSearch.title") }
+    static var savedSearchSaveCurrent: String { String(localized: "savedSearch.saveCurrent") }
+    static var savedSearchEmpty: String { String(localized: "savedSearch.empty") }
+    static var savedSearchEmptyDescription: String { String(localized: "savedSearch.emptyDescription") }
+    static var savedSearchSaveTitle: String { String(localized: "savedSearch.saveTitle") }
+    static var savedSearchNamePlaceholder: String { String(localized: "savedSearch.namePlaceholder") }
+    static var savedSearchSaveAction: String { String(localized: "savedSearch.saveAction") }
+    static func savedSearchSaveMessage(_ query: String) -> String {
+        String(format: String(localized: "savedSearch.saveMessage"), query)
+    }
+
     // MARK: - Bulk Operations
 
     static var bulkSelect: String { String(localized: "bulk.select") }
