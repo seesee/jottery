@@ -51,6 +51,7 @@ final class AppState {
     private(set) var encryptionRepo: EncryptionRepository?
     private(set) var settingsRepo: SettingsRepository?
     private(set) var syncRepo: SyncRepository?
+    private(set) var versionRepo: VersionRepository?
 
     // MARK: - Computed
 
@@ -80,7 +81,9 @@ final class AppState {
         do {
             let database = try DatabaseManager()
             self.db = database
-            self.noteRepo = NoteRepository(db: database)
+            let verRepo = VersionRepository(db: database)
+            self.versionRepo = verRepo
+            self.noteRepo = NoteRepository(db: database, versionRepo: verRepo)
             self.encryptionRepo = EncryptionRepository(db: database)
             self.settingsRepo = SettingsRepository(db: database)
             self.syncRepo = SyncRepository(db: database)
@@ -311,7 +314,7 @@ final class AppState {
             print("[Sync] setupSync: no syncEndpoint — skipping")
             return
         }
-        guard let noteRepo, let syncRepo else {
+        guard let noteRepo, let syncRepo, let versionRepo else {
             print("[Sync] setupSync: repos not initialised — skipping")
             return
         }
@@ -333,6 +336,7 @@ final class AppState {
             syncClient: client,
             noteRepo: noteRepo,
             syncRepo: syncRepo,
+            versionRepo: versionRepo,
             key: key
         )
         self.syncService = service
@@ -459,6 +463,7 @@ final class AppState {
         encryptionRepo = nil
         settingsRepo = nil
         syncRepo = nil
+        versionRepo = nil
         syncClient = nil
         syncService = nil
         notes = []

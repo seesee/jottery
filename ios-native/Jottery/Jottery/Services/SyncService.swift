@@ -7,6 +7,7 @@ actor SyncService {
     private let syncClient: SyncClient
     private let noteRepo: NoteRepository
     private let syncRepo: SyncRepository
+    private let versionRepo: VersionRepository
     private let key: SymmetricKey
     private let sseClient: SSEClient
 
@@ -15,10 +16,11 @@ actor SyncService {
     private(set) var lastError: String?
     private var postSyncHandler: (@Sendable () async -> Void)?
 
-    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, key: SymmetricKey) {
+    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, key: SymmetricKey) {
         self.syncClient = syncClient
         self.noteRepo = noteRepo
         self.syncRepo = syncRepo
+        self.versionRepo = versionRepo
         self.key = key
         self.sseClient = SSEClient(syncClient: syncClient)
     }
@@ -108,6 +110,33 @@ actor SyncService {
             ))
         }
 
+        // Gather version snapshots for pushed notes
+        var syncVersions: [SyncNoteVersion] = []
+        for record in records {
+            let versions = try versionRepo.getVersions(noteId: record.id)
+            for ver in versions {
+                // Convert storage-format tags to sync-format for the version
+                let verSyncTags = Self.storageTagsToSyncTags(ver.tags, key: key)
+                syncVersions.append(SyncNoteVersion(
+                    versionKey: ver.versionKey,
+                    noteId: ver.noteId,
+                    version: ver.version,
+                    createdAt: ver.createdAt,
+                    syncedAt: ver.syncedAt,
+                    content: ver.content,
+                    tags: verSyncTags,
+                    attachments: (try? JSONDecoder().decode([AttachmentRef].self, from: Data(ver.attachments.utf8))) ?? [],
+                    syntaxLanguage: ver.syntaxLanguage,
+                    wordWrap: ver.wordWrap,
+                    showPreview: ver.showPreview,
+                    color: ver.color,
+                    reason: ver.reason,
+                    contentHash: ver.contentHash,
+                    parentHash: ver.parentHash
+                ))
+            }
+        }
+
         // Get pending deletions
         let deletions = try syncRepo.getPendingDeletions()
         let syncDeletions = deletions.map { SyncDeletion(id: $0.id, deletedAt: $0.deletedAt) }
@@ -115,7 +144,7 @@ actor SyncService {
         let request = SyncPushRequest(
             notes: syncNotes,
             attachments: [],
-            versions: [],
+            versions: syncVersions,
             deletions: syncDeletions.isEmpty ? nil : syncDeletions
         )
 
@@ -130,9 +159,13 @@ actor SyncService {
         print("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
         let now = Date().iso8601
 
-        // Mark accepted notes as synced
+        // Mark accepted notes as synced and create version snapshots
         for accepted in response.accepted {
-            try noteRepo.markSynced(id: accepted.id, syncedAt: accepted.syncedAt ?? now)
+            try noteRepo.markSynced(id: accepted.id, syncedAt: accepted.syncedAt ?? now, serverVersion: accepted.serverVersion)
+            // Create a version snapshot of the accepted state
+            if let record = try noteRepo.getRaw(id: accepted.id) {
+                try versionRepo.createVersion(from: record, reason: "sync")
+            }
         }
 
         // Clear successful deletions
@@ -153,9 +186,16 @@ actor SyncService {
                 updated.syntaxLanguage = rejected.serverSyntaxLanguage ?? updated.syntaxLanguage
                 updated.wordWrap = rejected.serverWordWrap ?? updated.wordWrap
                 updated.showPreview = rejected.serverShowPreview ?? updated.showPreview
+                updated.contentHash = rejected.serverContentHash
+                updated.parentHash = rejected.serverParentHash
+                if let chain = rejected.serverHashChain {
+                    updated.hashChain = String(data: (try? JSONEncoder().encode(chain)) ?? Data("[]".utf8), encoding: .utf8)
+                }
                 updated.needsSync = false
                 updated.syncedAt = now
                 try noteRepo.updateRaw(updated)
+                // Create a version snapshot of the server-accepted state
+                try versionRepo.createVersion(from: updated, reason: "sync")
             }
         }
 
@@ -198,6 +238,30 @@ actor SyncService {
                 for deletion in deletions {
                     try noteRepo.hardDelete(id: deletion.id)
                 }
+            }
+
+            // Store pulled version snapshots
+            for syncVersion in response.versions {
+                let storageTags = Self.syncTagsToStorageTags(syncVersion.tags, key: key)
+                let attachmentsStr = String(data: (try? JSONEncoder().encode(syncVersion.attachments)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
+                let versionRecord = NoteVersionRecord(
+                    versionKey: syncVersion.versionKey,
+                    noteId: syncVersion.noteId,
+                    version: syncVersion.version,
+                    createdAt: syncVersion.createdAt,
+                    syncedAt: syncVersion.syncedAt,
+                    content: syncVersion.content,
+                    tags: storageTags,
+                    attachments: attachmentsStr,
+                    syntaxLanguage: syncVersion.syntaxLanguage,
+                    wordWrap: syncVersion.wordWrap,
+                    showPreview: syncVersion.showPreview,
+                    color: syncVersion.color,
+                    reason: syncVersion.reason,
+                    contentHash: syncVersion.contentHash,
+                    parentHash: syncVersion.parentHash
+                )
+                try versionRepo.insertOrReplace(versionRecord)
             }
 
             hasMore = response.hasMore ?? false

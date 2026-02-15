@@ -108,7 +108,7 @@ struct NoteRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
             lockedAt: nil,
             deleted: false,
             deletedAt: nil,
-            version: 1,
+            version: 0,
             wordWrap: true,
             syntaxLanguage: "markdown",
             showPreview: false,

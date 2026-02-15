@@ -6,6 +6,7 @@ import GRDB
 struct NoteRepository: Sendable {
 
     let db: DatabaseManager
+    let versionRepo: VersionRepository
 
     // MARK: - Read
 
@@ -82,6 +83,25 @@ struct NoteRepository: Sendable {
 
         var record = NoteRecord.new(encryptedContent: contentJSON, encryptedTags: tagsJSON)
 
+        // Compute content hash using sync-format tags
+        let syncTags = try encryptTagsToSyncFormat(tags, key: key)
+        let contentHash = HashChainService.computeContentHash(
+            encryptedContent: contentJSON,
+            encryptedTags: syncTags,
+            attachmentIds: [],
+            pinned: record.pinned,
+            archived: record.archived,
+            locked: record.locked,
+            syntaxLanguage: record.syntaxLanguage,
+            wordWrap: record.wordWrap,
+            showPreview: record.showPreview,
+            color: record.color
+        )
+        record.contentHash = contentHash
+        record.parentHash = nil
+        let hashChain = HashChainService.updateHashChain(currentHash: contentHash, parentChain: [])
+        record.hashChain = String(data: try JSONEncoder().encode(hashChain), encoding: .utf8)
+
         try db.dbPool.write { db in
             try record.insert(db)
         }
@@ -103,6 +123,45 @@ struct NoteRepository: Sendable {
         let attachmentsJSON = try JSONEncoder().encode(note.attachments)
         let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
 
+        // Fetch the current DB record so we can read the previous hash and version
+        let currentRecord = try getRaw(id: note.id)
+        let previousHash = currentRecord?.contentHash
+        let previousChain: [String]
+        if let chainStr = currentRecord?.hashChain, let data = chainStr.data(using: .utf8) {
+            previousChain = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        } else {
+            previousChain = []
+        }
+
+        // Compute content hash using sync-format tags
+        let syncTags = try encryptTagsToSyncFormat(note.tags, key: key)
+        let contentHash = HashChainService.computeContentHash(
+            encryptedContent: contentJSON,
+            encryptedTags: syncTags,
+            attachmentIds: note.attachments.map(\.id).sorted(),
+            pinned: note.pinned,
+            archived: note.archived,
+            locked: note.locked,
+            syntaxLanguage: note.syntaxLanguage,
+            wordWrap: note.wordWrap,
+            showPreview: note.showPreview,
+            color: note.color
+        )
+        let parentHash = previousHash
+        let hashChain = HashChainService.updateHashChain(currentHash: contentHash, parentChain: previousChain)
+        let hashChainStr = String(data: try JSONEncoder().encode(hashChain), encoding: .utf8)
+
+        // First-edit snapshot: when version is 0, create a snapshot of the original state
+        // then advance version to 1
+        let currentVersion = currentRecord?.version ?? note.version
+        let newVersion: Int
+        if currentVersion == 0, let currentRecord {
+            try versionRepo.createVersion(from: currentRecord, reason: "manual-sync")
+            newVersion = 1
+        } else {
+            newVersion = currentVersion
+        }
+
         try db.dbPool.write { db in
             try db.execute(sql: """
                 UPDATE notes SET
@@ -117,7 +176,7 @@ struct NoteRepository: Sendable {
                     locked_at = ?,
                     deleted = ?,
                     deleted_at = ?,
-                    version = version + 1,
+                    version = ?,
                     word_wrap = ?,
                     syntax_language = ?,
                     show_preview = ?,
@@ -139,13 +198,14 @@ struct NoteRepository: Sendable {
                 note.lockedAt?.iso8601,
                 note.deleted,
                 note.deletedAt?.iso8601,
+                newVersion,
                 note.wordWrap,
                 note.syntaxLanguage,
                 note.showPreview,
                 note.color,
-                note.contentHash,
-                note.parentHash,
-                note.hashChain.isEmpty ? nil : try? String(data: JSONEncoder().encode(note.hashChain), encoding: .utf8),
+                contentHash,
+                parentHash,
+                hashChainStr,
                 note.id,
             ])
         }
@@ -193,12 +253,20 @@ struct NoteRepository: Sendable {
         }
     }
 
-    /// Mark note as synced.
-    func markSynced(id: String, syncedAt: String) throws {
-        try db.dbPool.write { db in
-            try db.execute(sql: """
-                UPDATE notes SET needs_sync = 0, synced_at = ? WHERE id = ?
-            """, arguments: [syncedAt, id])
+    /// Mark note as synced, optionally updating version from server.
+    func markSynced(id: String, syncedAt: String, serverVersion: Int? = nil) throws {
+        if let serverVersion {
+            try db.dbPool.write { db in
+                try db.execute(sql: """
+                    UPDATE notes SET needs_sync = 0, synced_at = ?, version = ? WHERE id = ?
+                """, arguments: [syncedAt, serverVersion, id])
+            }
+        } else {
+            try db.dbPool.write { db in
+                try db.execute(sql: """
+                    UPDATE notes SET needs_sync = 0, synced_at = ? WHERE id = ?
+                """, arguments: [syncedAt, id])
+            }
         }
     }
 
@@ -212,6 +280,16 @@ struct NoteRepository: Sendable {
     }
 
     // MARK: - Private
+
+    /// Encrypt plaintext tags to sync format (each tag JSON-encoded then individually encrypted).
+    /// This is needed for content hash computation to match the web client.
+    private func encryptTagsToSyncFormat(_ tags: [String], key: SymmetricKey) throws -> [String] {
+        try tags.map { tag in
+            let tagJSON = String(data: try JSONEncoder().encode(tag), encoding: .utf8)!
+            let encrypted = try CryptoService.encryptText(tagJSON, key: key)
+            return try CryptoService.serializeEncryptedJSON(encrypted)
+        }
+    }
 
     /// Decrypt a `NoteRecord` to a `DecryptedNote`.
     private func decrypt(_ record: NoteRecord, key: SymmetricKey) throws -> DecryptedNote {
