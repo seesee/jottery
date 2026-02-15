@@ -12,15 +12,15 @@ struct SetupScreen: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.accent)
 
-            Text("Welcome to Jottery")
+            Text(L.setupWelcome)
                 .font(.largeTitle.bold())
 
-            Text("Private, encrypted notes")
+            Text(L.setupSubtitle)
                 .foregroundStyle(.secondary)
 
-            Picker("Setup Mode", selection: $selectedTab) {
-                Text("New Vault").tag(0)
-                Text("Connect to Server").tag(1)
+            Picker(L.setupModePicker, selection: $selectedTab) {
+                Text(L.setupNewVault).tag(0)
+                Text(L.setupConnectToServer).tag(1)
             }
             .pickerStyle(.segmented)
             .frame(maxWidth: 400)
@@ -52,16 +52,16 @@ private struct NewVaultView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            SecureField("Password", text: $password)
+            SecureField(L.setupPassword, text: $password)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 
-            SecureField("Confirm Password", text: $confirmPassword)
+            SecureField(L.setupConfirmPassword, text: $confirmPassword)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 
             if !confirmPassword.isEmpty && !passwordsMatch {
-                Text("Passwords do not match")
+                Text(L.setupPasswordsDoNotMatch)
                     .foregroundStyle(.red)
                     .font(.callout)
             }
@@ -72,7 +72,7 @@ private struct NewVaultView: View {
                     .font(.callout)
             }
 
-            Text("This password encrypts your notes. If lost, data cannot be recovered.")
+            Text(L.setupPasswordWarning)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -83,7 +83,7 @@ private struct NewVaultView: View {
                     ProgressView()
                         .controlSize(.small)
                 } else {
-                    Text("Create Vault")
+                    Text(L.setupCreateVault)
                 }
             }
             .buttonStyle(.borderedProminent)
@@ -145,9 +145,9 @@ private struct ConnectToServerView: View {
     var body: some View {
         VStack(spacing: 16) {
             if !isRegistered {
-                Picker("Method", selection: $method) {
-                    Text("Register").tag(0)
-                    Text("Import").tag(1)
+                Picker(L.setupMethod, selection: $method) {
+                    Text(L.setupRegister).tag(0)
+                    Text(L.setupImport).tag(1)
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 320)
@@ -170,7 +170,7 @@ private struct ConnectToServerView: View {
                         if isWorking {
                             ProgressView().controlSize(.small)
                         } else {
-                            Text("Register Device")
+                            Text(L.setupRegisterDevice)
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -180,22 +180,22 @@ private struct ConnectToServerView: View {
                         if isWorking {
                             ProgressView().controlSize(.small)
                         } else {
-                            Text("Import")
+                            Text(L.setupImport)
                         }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(!canImport || isWorking)
                 }
             } else {
-                Label("Connected", systemImage: "checkmark.circle.fill")
+                Label(L.setupConnected, systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
 
-                SecureField("Encryption Password", text: $encryptionPassword)
+                SecureField(L.setupEncryptionPassword, text: $encryptionPassword)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .disabled(isWorking)
 
-                Text("Enter the same encryption password used on your other devices.")
+                Text(L.setupEncryptionPasswordHint)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -221,7 +221,7 @@ private struct ConnectToServerView: View {
                     if isWorking {
                         ProgressView().controlSize(.small)
                     } else {
-                        Text("Unlock & Sync")
+                        Text(L.setupUnlockAndSync)
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -234,25 +234,25 @@ private struct ConnectToServerView: View {
 
     private var registerFields: some View {
         Group {
-            TextField("Server URL", text: $endpoint)
+            TextField(L.setupServerUrl, text: $endpoint)
                 .textFieldStyle(.roundedBorder)
                 .textContentType(.URL)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .frame(maxWidth: 320)
 
-            TextField("Email", text: $email)
+            TextField(L.setupEmail, text: $email)
                 .textFieldStyle(.roundedBorder)
                 .textContentType(.emailAddress)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .frame(maxWidth: 320)
 
-            SecureField("Server Password", text: $password)
+            SecureField(L.setupServerPassword, text: $password)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 
-            TextField("Device Name", text: $deviceName)
+            TextField(L.setupDeviceName, text: $deviceName)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
         }
@@ -273,20 +273,20 @@ private struct ConnectToServerView: View {
 
     private var importFields: some View {
         Group {
-            Text("Paste the credentials from another device.")
+            Text(L.setupImportCredentials)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
 
-            TextField("Credentials", text: $importData, axis: .vertical)
+            TextField(L.setupCredentials, text: $importData, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(3...6)
                 .font(.system(.body, design: .monospaced))
                 .frame(maxWidth: 320)
 
             if !credentialsContainEndpoint {
-                TextField("Server URL", text: $endpoint)
+                TextField(L.setupServerUrl, text: $endpoint)
                     .textFieldStyle(.roundedBorder)
                     .textContentType(.URL)
                     .autocorrectionDisabled()
@@ -294,7 +294,7 @@ private struct ConnectToServerView: View {
                     .frame(maxWidth: 320)
             }
 
-            TextField("Device Name", text: $deviceName)
+            TextField(L.setupDeviceName, text: $deviceName)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
         }
@@ -457,14 +457,14 @@ private struct ConnectToServerView: View {
     private func unlockAndSync() {
         error = nil
         isWorking = true
-        syncProgress = "Creating vault…"
+        syncProgress = L.setupProgressCreatingVault
 
         Task {
             do {
                 // If we have an encrypted credential payload (jottery:v1: format),
                 // we need to decrypt it first using the password + imported salt.
                 if let encryptedPayload = encryptedCredentialPayload, let salt = importedSalt {
-                    syncProgress = "Decrypting credentials…"
+                    syncProgress = L.setupProgressDecrypting
 
                     // The payload is base64(JSON of {"ciphertext":"...","iv":"..."})
                     guard let payloadData = Data(base64Encoded: encryptedPayload),
@@ -505,7 +505,7 @@ private struct ConnectToServerView: View {
                     let creds = try JSONDecoder().decode(ImportedCredentials.self, from: credsData)
 
                     // Now clone the device to get a fresh API key
-                    syncProgress = "Registering device…"
+                    syncProgress = L.setupProgressRegistering
                     let normalised = normaliseEndpoint(creds.endpoint)
                     let client = SyncClient(endpoint: normalised)
                     let response = try await client.cloneDevice(
@@ -523,7 +523,7 @@ private struct ConnectToServerView: View {
                     registeredEndpoint = normalised
                 }
 
-                syncProgress = "Creating vault…"
+                syncProgress = L.setupProgressCreatingVault
                 try appState.createVault(
                     password: encryptionPassword,
                     existingSalt: importedSalt,
@@ -534,9 +534,9 @@ private struct ConnectToServerView: View {
                 // the UI to NoteListView. From here on, update appState
                 // properties so progress is visible on the NoteListView
                 // status bar (this view's @State is about to become invisible).
-                syncProgress = "Setting up sync…"
+                syncProgress = L.setupProgressSettingUp
                 appState.isSyncing = true
-                appState.syncStatusMessage = "Setting up sync…"
+                appState.syncStatusMessage = L.setupProgressSettingUp
 
                 if let apiKey = registeredApiKey {
                     appState.setupSync(apiKey: apiKey)
@@ -550,13 +550,13 @@ private struct ConnectToServerView: View {
                     return
                 }
 
-                appState.syncStatusMessage = "Pushing…"
+                appState.syncStatusMessage = L.setupProgressPushing
                 try await syncService.push()
 
-                appState.syncStatusMessage = "Pulling notes…"
+                appState.syncStatusMessage = L.setupProgressPulling
                 try await syncService.pull()
 
-                appState.syncStatusMessage = "Finishing…"
+                appState.syncStatusMessage = L.setupProgressFinishing
                 try await syncService.finalise()
                 try appState.loadNotes()
                 appState.lastSyncAt = Date()

@@ -15,14 +15,14 @@ struct UnlockScreen: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
-            Text("Jottery")
+            Text(L.unlockTitle)
                 .font(.largeTitle.bold())
 
-            Text("Enter your password to unlock")
+            Text(L.unlockPrompt)
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 16) {
-                SecureField("Password", text: $password)
+                SecureField(L.unlockPassword, text: $password)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .onSubmit { unlock() }
@@ -39,7 +39,7 @@ struct UnlockScreen: View {
                         ProgressView()
                             .controlSize(.small)
                     } else {
-                        Text("Unlock")
+                        Text(L.unlockAction)
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -51,7 +51,7 @@ struct UnlockScreen: View {
                 Button {
                     biometricUnlock()
                 } label: {
-                    Label("Unlock with Face ID", systemImage: "faceid")
+                    Label(L.unlockFaceId, systemImage: "faceid")
                         .font(.title3)
                 }
                 .buttonStyle(.plain)
@@ -66,13 +66,13 @@ struct UnlockScreen: View {
                 biometricUnlock()
             }
         }
-        .alert("Enable Face ID?", isPresented: $showBiometricPrompt) {
-            Button("Enable") {
+        .alert(L.unlockEnableFaceIdTitle, isPresented: $showBiometricPrompt) {
+            Button(L.unlockEnableFaceIdAction) {
                 try? appState.keyManager.enableBiometricUnlock()
             }
-            Button("Not Now", role: .cancel) {}
+            Button(L.unlockEnableFaceIdLater, role: .cancel) {}
         } message: {
-            Text("Unlock Jottery with Face ID instead of typing your password each time.")
+            Text(L.unlockEnableFaceIdMessage)
         }
     }
 
@@ -92,7 +92,7 @@ struct UnlockScreen: View {
                     showBiometricPrompt = true
                 }
             } catch {
-                self.error = "Incorrect password"
+                self.error = L.unlockIncorrectPassword
                 self.isUnlocking = false
             }
         }

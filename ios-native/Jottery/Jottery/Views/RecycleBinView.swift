@@ -31,7 +31,7 @@ struct RecycleBinView: View {
                         Button {
                             restoreNote(id: note.id)
                         } label: {
-                            Label("Restore", systemImage: "arrow.uturn.backward")
+                            Label(L.recycleBinRestore, systemImage: "arrow.uturn.backward")
                         }
                         .tint(.green)
                     }
@@ -39,40 +39,40 @@ struct RecycleBinView: View {
                         Button(role: .destructive) {
                             permanentlyDelete(id: note.id)
                         } label: {
-                            Label("Delete Forever", systemImage: "trash.slash")
+                            Label(L.recycleBinDeleteForever, systemImage: "trash.slash")
                         }
                     }
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Recycle Bin")
+            .navigationTitle(L.recycleBinTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.recycleBinDone) { dismiss() }
                 }
                 if !deletedNotes.isEmpty {
                     ToolbarItem(placement: .destructiveAction) {
-                        Button("Empty Bin", role: .destructive) {
+                        Button(L.recycleBinEmptyBin, role: .destructive) {
                             showEmptyConfirmation = true
                         }
                     }
                 }
             }
-            .alert("Empty Recycle Bin?", isPresented: $showEmptyConfirmation) {
-                Button("Delete All", role: .destructive) {
+            .alert(L.recycleBinEmptyConfirmTitle, isPresented: $showEmptyConfirmation) {
+                Button(L.recycleBinEmptyConfirmAction, role: .destructive) {
                     emptyBin()
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(L.commonCancel, role: .cancel) {}
             } message: {
                 Text("This will permanently delete \(deletedNotes.count) note\(deletedNotes.count == 1 ? "" : "s"). This cannot be undone.")
             }
             .overlay {
                 if deletedNotes.isEmpty {
                     ContentUnavailableView(
-                        "Recycle Bin Empty",
+                        L.recycleBinEmpty,
                         systemImage: "trash",
-                        description: Text("Deleted notes will appear here.")
+                        description: Text(L.recycleBinEmptyDescription)
                     )
                 }
             }

@@ -25,7 +25,7 @@ struct AttachmentListView: View {
                 HStack {
                     Image(systemName: "paperclip")
                         .font(.subheadline)
-                    Text("Attachments (\(attachments.count))")
+                    Text(L.attachmentsHeader(attachments.count))
                         .font(.subheadline.weight(.medium))
                     Spacer()
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
@@ -94,13 +94,13 @@ struct AttachmentListView: View {
         do {
             // Fetch the encrypted blob from the database
             guard let blobData = try attachmentRepo.getBlob(id: attachment.data) else {
-                errorMessage = "Attachment data not available"
+                errorMessage = L.attachmentsDataNotAvailable
                 return nil
             }
 
             // The blob is UTF-8 of {"ciphertext":"...","iv":"..."}
             guard let blobString = String(data: blobData, encoding: .utf8) else {
-                errorMessage = "Invalid attachment data"
+                errorMessage = L.attachmentsInvalidData
                 return nil
             }
 
@@ -117,7 +117,7 @@ struct AttachmentListView: View {
 
             return fileURL
         } catch {
-            errorMessage = "Could not decrypt attachment"
+            errorMessage = L.attachmentsDecryptFailed
             return nil
         }
     }

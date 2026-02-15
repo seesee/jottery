@@ -8,6 +8,15 @@ struct JotteryApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
+                .environment(\.locale, resolvedLocale)
+        }
+    }
+
+    private var resolvedLocale: Locale {
+        switch appState.settings.language {
+        case "en-US": return Locale(identifier: "en_US")
+        case "en-GB": return Locale(identifier: "en_GB")
+        default: return .current  // "system"
         }
     }
 }
@@ -49,9 +58,9 @@ struct MainView: View {
                 NoteEditorView(note: note)
             } else {
                 ContentUnavailableView(
-                    "No Note Selected",
+                    L.editorNoNoteSelected,
                     systemImage: "doc.text",
-                    description: Text("Select a note from the list or create a new one.")
+                    description: Text(L.editorNoNoteSelectedDescription)
                 )
             }
         }

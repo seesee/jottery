@@ -11,33 +11,39 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 // General
-                Section("General") {
-                    Picker("Theme", selection: $settings.theme) {
-                        Text("System").tag("auto")
-                        Text("Light").tag("light")
-                        Text("Dark").tag("dark")
+                Section(L.settingsGeneral) {
+                    Picker(L.settingsTheme, selection: $settings.theme) {
+                        Text(L.settingsThemeSystem).tag("auto")
+                        Text(L.settingsThemeLight).tag("light")
+                        Text(L.settingsThemeDark).tag("dark")
                     }
 
-                    Picker("Sort Order", selection: $settings.sortOrder) {
+                    Picker(L.settingsSortOrder, selection: $settings.sortOrder) {
                         ForEach(SortOrder.allCases, id: \.rawValue) { order in
                             Text(order.displayName).tag(order.rawValue)
                         }
                     }
 
-                    Picker("Auto-lock", selection: $settings.autoLockTimeout) {
-                        Text("1 minute").tag(1)
-                        Text("5 minutes").tag(5)
-                        Text("15 minutes").tag(15)
-                        Text("30 minutes").tag(30)
-                        Text("1 hour").tag(60)
-                        Text("Never").tag(0)
+                    Picker(L.settingsAutoLock, selection: $settings.autoLockTimeout) {
+                        Text(L.settingsAutoLock1Min).tag(1)
+                        Text(L.settingsAutoLock5Min).tag(5)
+                        Text(L.settingsAutoLock15Min).tag(15)
+                        Text(L.settingsAutoLock30Min).tag(30)
+                        Text(L.settingsAutoLock1Hour).tag(60)
+                        Text(L.settingsAutoLockNever).tag(0)
+                    }
+
+                    Picker(L.settingsLanguage, selection: $settings.language) {
+                        Text(L.settingsLanguageSystem).tag("system")
+                        Text(L.settingsLanguageEnGB).tag("en-GB")
+                        Text(L.settingsLanguageEnUS).tag("en-US")
                     }
                 }
 
                 // Biometrics
                 if appState.keyManager.isBiometricAvailable {
-                    Section("Security") {
-                        Toggle("Face ID / Touch ID", isOn: Binding(
+                    Section(L.settingsSecurity) {
+                        Toggle(L.settingsBiometric, isOn: Binding(
                             get: { appState.keyManager.isBiometricEnabled },
                             set: { enabled in
                                 if enabled {
@@ -54,16 +60,16 @@ struct SettingsView: View {
                 syncSection
 
                 // About
-                Section("About") {
+                Section(L.settingsAbout) {
                     HStack {
-                        Text("Notes")
+                        Text(L.settingsNotes)
                         Spacer()
                         Text("\(appState.noteCount)")
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Text("Version")
+                        Text(L.settingsVersion)
                         Spacer()
                         Text("1.0.0")
                             .foregroundStyle(.secondary)
@@ -72,7 +78,7 @@ struct SettingsView: View {
 
                 // Lock
                 Section {
-                    Button("Lock Now") {
+                    Button(L.settingsLockNow) {
                         dismiss()
                         appState.lock()
                     }
@@ -80,17 +86,17 @@ struct SettingsView: View {
                 }
 
                 // Debug
-                Section("Debug") {
-                    Button("Wipe All Data & Re-onboard", role: .destructive) {
+                Section(L.settingsDebug) {
+                    Button(L.settingsWipeAllData, role: .destructive) {
                         showWipeConfirmation = true
                     }
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(L.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(L.settingsDone) {
                         try? appState.updateSettings(settings)
                         dismiss()
                     }
@@ -99,14 +105,14 @@ struct SettingsView: View {
             .onAppear {
                 settings = appState.settings
             }
-            .alert("Wipe All Data?", isPresented: $showWipeConfirmation) {
-                Button("Wipe Everything", role: .destructive) {
+            .alert(L.settingsWipeConfirmTitle, isPresented: $showWipeConfirmation) {
+                Button(L.settingsWipeConfirmAction, role: .destructive) {
                     dismiss()
                     wipeAllData()
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(L.commonCancel, role: .cancel) {}
             } message: {
-                Text("This deletes the database, all notes, encryption keys, and sync credentials. You will need to set up a new vault. This cannot be undone.")
+                Text(L.settingsWipeConfirmMessage)
             }
             .sheet(isPresented: $showSyncSetup) {
                 SyncSetupView(onComplete: { apiKey in
@@ -129,9 +135,9 @@ struct SettingsView: View {
     private var syncSection: some View {
         if appState.syncEnabled {
             // Sync is configured — show status and controls
-            Section("Sync") {
+            Section(L.settingsSync) {
                 HStack {
-                    Text("Server")
+                    Text(L.settingsSyncServer)
                     Spacer()
                     Text(appState.settings.syncEndpoint ?? "")
                         .foregroundStyle(.secondary)
@@ -141,7 +147,7 @@ struct SettingsView: View {
 
                 if let lastSync = appState.lastSyncAt {
                     HStack {
-                        Text("Last Sync")
+                        Text(L.settingsSyncLastSync)
                         Spacer()
                         Text(lastSync.relativeDescription)
                             .foregroundStyle(.secondary)
@@ -158,7 +164,7 @@ struct SettingsView: View {
                     Task { @MainActor in await appState.triggerSync() }
                 } label: {
                     HStack {
-                        Text("Sync Now")
+                        Text(L.settingsSyncNow)
                         Spacer()
                         if appState.isSyncing {
                             ProgressView()
@@ -168,17 +174,17 @@ struct SettingsView: View {
                 }
                 .disabled(appState.isSyncing)
 
-                Button("Disconnect", role: .destructive) {
+                Button(L.settingsSyncDisconnect, role: .destructive) {
                     disconnectSync()
                 }
             }
         } else {
             // Sync is not configured — show setup button
-            Section("Sync") {
+            Section(L.settingsSync) {
                 Button {
                     showSyncSetup = true
                 } label: {
-                    Label("Set Up Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Label(L.settingsSyncSetUp, systemImage: "arrow.triangle.2.circlepath")
                 }
             }
         }

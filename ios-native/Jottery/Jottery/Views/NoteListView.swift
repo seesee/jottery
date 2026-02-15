@@ -17,7 +17,7 @@ struct NoteListView: View {
                         Button(role: .destructive) {
                             try? appState.deleteNote(id: note.id)
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L.noteListDelete, systemImage: "trash")
                         }
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -25,7 +25,7 @@ struct NoteListView: View {
                             try? appState.togglePin(id: note.id)
                         } label: {
                             Label(
-                                note.pinned ? "Unpin" : "Pin",
+                                note.pinned ? L.noteListUnpin : L.noteListPin,
                                 systemImage: note.pinned ? "pin.slash" : "pin"
                             )
                         }
@@ -35,24 +35,24 @@ struct NoteListView: View {
         }
         .listStyle(.insetGrouped)
         .refreshable { await appState.triggerSync() }
-        .searchable(text: $state.searchQuery, prompt: "Search notes")
-        .navigationTitle("Notes")
+        .searchable(text: $state.searchQuery, prompt: L.noteListSearch)
+        .navigationTitle(L.noteListTitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
                     let _ = try? appState.createNote()
                 } label: {
-                    Label("New Note", systemImage: "plus")
+                    Label(L.noteListNewNote, systemImage: "plus")
                 }
 
                 Menu {
-                    Picker("Sort", selection: $state.sortOrder) {
+                    Picker(L.noteListSort, selection: $state.sortOrder) {
                         ForEach(SortOrder.allCases, id: \.self) { order in
                             Text(order.displayName).tag(order)
                         }
                     }
                 } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                    Label(L.noteListSort, systemImage: "arrow.up.arrow.down")
                 }
             }
 
@@ -76,19 +76,19 @@ struct NoteListView: View {
                 Button {
                     showRecycleBin = true
                 } label: {
-                    Label("Recycle Bin", systemImage: "trash")
+                    Label(L.noteListRecycleBin, systemImage: "trash")
                 }
 
                 Button {
                     showSettings = true
                 } label: {
-                    Label("Settings", systemImage: "gear")
+                    Label(L.noteListSettings, systemImage: "gear")
                 }
 
                 Button {
                     appState.lock()
                 } label: {
-                    Label("Lock", systemImage: "lock")
+                    Label(L.noteListLock, systemImage: "lock")
                 }
             }
         }
@@ -104,9 +104,9 @@ struct NoteListView: View {
         .overlay {
             if appState.notes.isEmpty && !appState.isSyncing {
                 ContentUnavailableView(
-                    "No Notes",
+                    L.noteListNoNotes,
                     systemImage: "doc.text",
-                    description: Text("Tap + to create your first note.")
+                    description: Text(L.noteListNoNotesDescription)
                 )
             } else if appState.filteredNotes.isEmpty && !appState.searchQuery.isEmpty {
                 ContentUnavailableView.search(text: appState.searchQuery)

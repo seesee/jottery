@@ -24,7 +24,7 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
     }
 
     static let defaults = UserSettings(
-        language: "en-GB",
+        language: "system",
         theme: "auto",
         sortOrder: "recent",
         autoLockTimeout: 15,
@@ -52,10 +52,10 @@ enum SortOrder: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .recent: return "Recently Modified"
-        case .oldest: return "Oldest Modified"
-        case .alpha: return "Alphabetical"
-        case .created: return "Date Created"
+        case .recent: return L.sortRecentlyModified
+        case .oldest: return L.sortOldestModified
+        case .alpha: return L.sortAlphabetical
+        case .created: return L.sortDateCreated
         }
     }
 }

@@ -255,6 +255,11 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN verification TEXT")
         }
 
+        // Migrate existing "en-GB" default to "system" so the app follows the OS locale.
+        migrator.registerMigration("ios_004_language_default") { db in
+            try db.execute(sql: "UPDATE settings SET language = 'system' WHERE language = 'en-GB'")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

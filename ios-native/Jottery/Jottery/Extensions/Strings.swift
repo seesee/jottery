@@ -1,0 +1,180 @@
+import SwiftUI
+
+/// Centralised localised string accessors.
+///
+/// Usage: `L.settingsTitle` instead of hardcoded `"Settings"`.
+/// All keys correspond to entries in `Localizable.xcstrings`.
+enum L {
+
+    // MARK: - Settings
+
+    static var settingsTitle: String { String(localized: "settings.title") }
+    static var settingsGeneral: String { String(localized: "settings.general") }
+    static var settingsTheme: String { String(localized: "settings.theme") }
+    static var settingsThemeSystem: String { String(localized: "settings.themeSystem") }
+    static var settingsThemeLight: String { String(localized: "settings.themeLight") }
+    static var settingsThemeDark: String { String(localized: "settings.themeDark") }
+    static var settingsSortOrder: String { String(localized: "settings.sortOrder") }
+    static var settingsAutoLock: String { String(localized: "settings.autoLock") }
+    static var settingsAutoLock1Min: String { String(localized: "settings.autoLock1Min") }
+    static var settingsAutoLock5Min: String { String(localized: "settings.autoLock5Min") }
+    static var settingsAutoLock15Min: String { String(localized: "settings.autoLock15Min") }
+    static var settingsAutoLock30Min: String { String(localized: "settings.autoLock30Min") }
+    static var settingsAutoLock1Hour: String { String(localized: "settings.autoLock1Hour") }
+    static var settingsAutoLockNever: String { String(localized: "settings.autoLockNever") }
+    static var settingsSecurity: String { String(localized: "settings.security") }
+    static var settingsBiometric: String { String(localized: "settings.biometric") }
+    static var settingsLanguage: String { String(localized: "settings.language") }
+    static var settingsLanguageSystem: String { String(localized: "settings.languageSystem") }
+    static var settingsLanguageEnGB: String { String(localized: "settings.languageEnGB") }
+    static var settingsLanguageEnUS: String { String(localized: "settings.languageEnUS") }
+    static var settingsAbout: String { String(localized: "settings.about") }
+    static var settingsNotes: String { String(localized: "settings.notes") }
+    static var settingsVersion: String { String(localized: "settings.version") }
+    static var settingsLockNow: String { String(localized: "settings.lockNow") }
+    static var settingsDebug: String { String(localized: "settings.debug") }
+    static var settingsWipeAllData: String { String(localized: "settings.wipeAllData") }
+    static var settingsDone: String { String(localized: "settings.done") }
+    static var settingsWipeConfirmTitle: String { String(localized: "settings.wipeConfirmTitle") }
+    static var settingsWipeConfirmAction: String { String(localized: "settings.wipeConfirmAction") }
+    static var settingsWipeConfirmMessage: String { String(localized: "settings.wipeConfirmMessage") }
+    static var settingsSync: String { String(localized: "settings.sync") }
+    static var settingsSyncServer: String { String(localized: "settings.syncServer") }
+    static var settingsSyncLastSync: String { String(localized: "settings.syncLastSync") }
+    static var settingsSyncNow: String { String(localized: "settings.syncNow") }
+    static var settingsSyncDisconnect: String { String(localized: "settings.syncDisconnect") }
+    static var settingsSyncSetUp: String { String(localized: "settings.syncSetUp") }
+
+    // MARK: - Common
+
+    static var commonCancel: String { String(localized: "common.cancel") }
+
+    // MARK: - Note List
+
+    static var noteListTitle: String { String(localized: "noteList.title") }
+    static var noteListSearch: String { String(localized: "noteList.search") }
+    static var noteListNewNote: String { String(localized: "noteList.newNote") }
+    static var noteListSort: String { String(localized: "noteList.sort") }
+    static var noteListRecycleBin: String { String(localized: "noteList.recycleBin") }
+    static var noteListSettings: String { String(localized: "noteList.settings") }
+    static var noteListLock: String { String(localized: "noteList.lock") }
+    static var noteListNoNotes: String { String(localized: "noteList.noNotes") }
+    static var noteListNoNotesDescription: String { String(localized: "noteList.noNotesDescription") }
+    static var noteListDelete: String { String(localized: "noteList.delete") }
+    static var noteListPin: String { String(localized: "noteList.pin") }
+    static var noteListUnpin: String { String(localized: "noteList.unpin") }
+
+    // MARK: - Editor
+
+    static var editorPin: String { String(localized: "editor.pin") }
+    static var editorUnpin: String { String(localized: "editor.unpin") }
+    static var editorEnableWordWrap: String { String(localized: "editor.enableWordWrap") }
+    static var editorDisableWordWrap: String { String(localized: "editor.disableWordWrap") }
+    static func editorLanguage(_ name: String) -> String {
+        String(format: String(localized: "editor.language"), name)
+    }
+    static var editorCategory: String { String(localized: "editor.category") }
+    static var editorCategoryNone: String { String(localized: "editor.categoryNone") }
+    static var editorDelete: String { String(localized: "editor.delete") }
+    static var editorNoNoteSelected: String { String(localized: "editor.noNoteSelected") }
+    static var editorNoNoteSelectedDescription: String { String(localized: "editor.noNoteSelectedDescription") }
+
+    // MARK: - Unlock
+
+    static var unlockTitle: String { String(localized: "unlock.title") }
+    static var unlockPrompt: String { String(localized: "unlock.prompt") }
+    static var unlockPassword: String { String(localized: "unlock.password") }
+    static var unlockAction: String { String(localized: "unlock.action") }
+    static var unlockIncorrectPassword: String { String(localized: "unlock.incorrectPassword") }
+    static var unlockFaceId: String { String(localized: "unlock.faceId") }
+    static var unlockEnableFaceIdTitle: String { String(localized: "unlock.enableFaceIdTitle") }
+    static var unlockEnableFaceIdAction: String { String(localized: "unlock.enableFaceIdAction") }
+    static var unlockEnableFaceIdLater: String { String(localized: "unlock.enableFaceIdLater") }
+    static var unlockEnableFaceIdMessage: String { String(localized: "unlock.enableFaceIdMessage") }
+
+    // MARK: - Setup
+
+    static var setupWelcome: String { String(localized: "setup.welcome") }
+    static var setupSubtitle: String { String(localized: "setup.subtitle") }
+    static var setupModePicker: String { String(localized: "setup.modePicker") }
+    static var setupNewVault: String { String(localized: "setup.newVault") }
+    static var setupConnectToServer: String { String(localized: "setup.connectToServer") }
+    static var setupPassword: String { String(localized: "setup.password") }
+    static var setupConfirmPassword: String { String(localized: "setup.confirmPassword") }
+    static var setupPasswordsDoNotMatch: String { String(localized: "setup.passwordsDoNotMatch") }
+    static var setupPasswordWarning: String { String(localized: "setup.passwordWarning") }
+    static var setupCreateVault: String { String(localized: "setup.createVault") }
+    static var setupMethod: String { String(localized: "setup.method") }
+    static var setupRegister: String { String(localized: "setup.register") }
+    static var setupImport: String { String(localized: "setup.import") }
+    static var setupServerUrl: String { String(localized: "setup.serverUrl") }
+    static var setupEmail: String { String(localized: "setup.email") }
+    static var setupServerPassword: String { String(localized: "setup.serverPassword") }
+    static var setupDeviceName: String { String(localized: "setup.deviceName") }
+    static var setupRegisterDevice: String { String(localized: "setup.registerDevice") }
+    static var setupImportCredentials: String { String(localized: "setup.importCredentials") }
+    static var setupCredentials: String { String(localized: "setup.credentials") }
+    static var setupConnected: String { String(localized: "setup.connected") }
+    static var setupEncryptionPassword: String { String(localized: "setup.encryptionPassword") }
+    static var setupEncryptionPasswordHint: String { String(localized: "setup.encryptionPasswordHint") }
+    static var setupUnlockAndSync: String { String(localized: "setup.unlockAndSync") }
+    static var setupProgressCreatingVault: String { String(localized: "setup.progressCreatingVault") }
+    static var setupProgressDecrypting: String { String(localized: "setup.progressDecrypting") }
+    static var setupProgressRegistering: String { String(localized: "setup.progressRegistering") }
+    static var setupProgressSettingUp: String { String(localized: "setup.progressSettingUp") }
+    static var setupProgressPushing: String { String(localized: "setup.progressPushing") }
+    static var setupProgressPulling: String { String(localized: "setup.progressPulling") }
+    static var setupProgressFinishing: String { String(localized: "setup.progressFinishing") }
+
+    // MARK: - Recycle Bin
+
+    static var recycleBinTitle: String { String(localized: "recycleBin.title") }
+    static var recycleBinDone: String { String(localized: "recycleBin.done") }
+    static var recycleBinEmptyBin: String { String(localized: "recycleBin.emptyBin") }
+    static var recycleBinRestore: String { String(localized: "recycleBin.restore") }
+    static var recycleBinDeleteForever: String { String(localized: "recycleBin.deleteForever") }
+    static var recycleBinEmptyConfirmTitle: String { String(localized: "recycleBin.emptyConfirmTitle") }
+    static var recycleBinEmptyConfirmAction: String { String(localized: "recycleBin.emptyConfirmAction") }
+    static var recycleBinEmpty: String { String(localized: "recycleBin.empty") }
+    static var recycleBinEmptyDescription: String { String(localized: "recycleBin.emptyDescription") }
+
+    // MARK: - Sync Setup
+
+    static var syncSetupTitle: String { String(localized: "syncSetup.title") }
+    static var syncSetupMethod: String { String(localized: "syncSetup.method") }
+    static var syncSetupRegister: String { String(localized: "syncSetup.register") }
+    static var syncSetupImport: String { String(localized: "syncSetup.import") }
+    static var syncSetupRegisterDevice: String { String(localized: "syncSetup.registerDevice") }
+    static var syncSetupServerUrl: String { String(localized: "syncSetup.serverUrl") }
+    static var syncSetupEmail: String { String(localized: "syncSetup.email") }
+    static var syncSetupServerPassword: String { String(localized: "syncSetup.serverPassword") }
+    static var syncSetupDeviceName: String { String(localized: "syncSetup.deviceName") }
+    static var syncSetupRegisterAction: String { String(localized: "syncSetup.registerAction") }
+    static var syncSetupImportCredentials: String { String(localized: "syncSetup.importCredentials") }
+    static var syncSetupImportHint: String { String(localized: "syncSetup.importHint") }
+    static var syncSetupCredentials: String { String(localized: "syncSetup.credentials") }
+    static var syncSetupImportAction: String { String(localized: "syncSetup.importAction") }
+    static var syncSetupSuccess: String { String(localized: "syncSetup.success") }
+    static var syncSetupDone: String { String(localized: "syncSetup.done") }
+    static var syncSetupCancel: String { String(localized: "syncSetup.cancel") }
+
+    // MARK: - Tags
+
+    static var tagsAddTag: String { String(localized: "tags.addTag") }
+
+    // MARK: - Attachments
+
+    static func attachmentsHeader(_ count: Int) -> String {
+        String(format: String(localized: "attachments.header"), count)
+    }
+    static var attachmentsDataNotAvailable: String { String(localized: "attachments.dataNotAvailable") }
+    static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
+    static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
+
+    // MARK: - Sort Order
+
+    static var sortRecentlyModified: String { String(localized: "sort.recentlyModified") }
+    static var sortOldestModified: String { String(localized: "sort.oldestModified") }
+    static var sortAlphabetical: String { String(localized: "sort.alphabetical") }
+    static var sortDateCreated: String { String(localized: "sort.dateCreated") }
+}

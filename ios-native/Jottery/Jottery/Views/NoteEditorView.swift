@@ -65,7 +65,7 @@ struct NoteEditorView: View {
                     Button {
                         try? appState.togglePin(id: note.id)
                     } label: {
-                        Label(note.pinned ? "Unpin" : "Pin", systemImage: note.pinned ? "pin.slash" : "pin")
+                        Label(note.pinned ? L.editorUnpin : L.editorPin, systemImage: note.pinned ? "pin.slash" : "pin")
                     }
 
                     // Word wrap toggle
@@ -74,7 +74,7 @@ struct NoteEditorView: View {
                         scheduleSave()
                     } label: {
                         Label(
-                            wordWrap ? "Disable Word Wrap" : "Enable Word Wrap",
+                            wordWrap ? L.editorDisableWordWrap : L.editorEnableWordWrap,
                             systemImage: wordWrap ? "arrow.right.to.line" : "text.word.spacing"
                         )
                     }
@@ -94,7 +94,7 @@ struct NoteEditorView: View {
                             }
                         }
                     } label: {
-                        Label("Language: \(syntaxLanguage.capitalized)", systemImage: "chevron.left.forwardslash.chevron.right")
+                        Label(L.editorLanguage(syntaxLanguage.capitalized), systemImage: "chevron.left.forwardslash.chevron.right")
                     }
 
                     // Colour picker
@@ -112,10 +112,10 @@ struct NoteEditorView: View {
                             color = nil
                             scheduleSave()
                         } label: {
-                            Label("None", systemImage: color == nil ? "checkmark.circle" : "circle.slash")
+                            Label(L.editorCategoryNone, systemImage: color == nil ? "checkmark.circle" : "circle.slash")
                         }
                     } label: {
-                        Label("Category", systemImage: "paintbrush")
+                        Label(L.editorCategory, systemImage: "paintbrush")
                     }
 
                     Divider()
@@ -124,7 +124,7 @@ struct NoteEditorView: View {
                     Button(role: .destructive) {
                         try? appState.deleteNote(id: note.id)
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label(L.editorDelete, systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")

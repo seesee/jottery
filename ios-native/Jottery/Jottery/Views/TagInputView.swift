@@ -15,7 +15,7 @@ struct TagInputView: View {
                     }
                 }
 
-                TextField("Add tag...", text: $newTag)
+                TextField(L.tagsAddTag, text: $newTag)
                     .font(.callout)
                     .frame(minWidth: 80, maxWidth: 150)
                     .focused($isInputFocused)

@@ -22,9 +22,9 @@ struct SyncSetupView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("Method", selection: $selectedTab) {
-                    Text("Register").tag(0)
-                    Text("Import").tag(1)
+                Picker(L.syncSetupMethod, selection: $selectedTab) {
+                    Text(L.syncSetupRegister).tag(0)
+                    Text(L.syncSetupImport).tag(1)
                 }
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
@@ -44,10 +44,10 @@ struct SyncSetupView: View {
 
                 if success {
                     Section {
-                        Label("Device registered successfully", systemImage: "checkmark.circle.fill")
+                        Label(L.syncSetupSuccess, systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
 
-                        Button("Done") {
+                        Button(L.syncSetupDone) {
                             if let key = registeredApiKey {
                                 onComplete?(key)
                             }
@@ -57,37 +57,37 @@ struct SyncSetupView: View {
                     }
                 }
             }
-            .navigationTitle("Sync Setup")
+            .navigationTitle(L.syncSetupTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.syncSetupCancel) { dismiss() }
                 }
             }
         }
     }
 
     private var registerSection: some View {
-        Section("Register Device") {
-            TextField("Server URL", text: $endpoint)
+        Section(L.syncSetupRegisterDevice) {
+            TextField(L.syncSetupServerUrl, text: $endpoint)
                 .textContentType(.URL)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
-            TextField("Email", text: $email)
+            TextField(L.syncSetupEmail, text: $email)
                 .textContentType(.emailAddress)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
-            SecureField("Server Password", text: $password)
+            SecureField(L.syncSetupServerPassword, text: $password)
 
-            TextField("Device Name", text: $deviceName)
+            TextField(L.syncSetupDeviceName, text: $deviceName)
 
             Button(action: registerDevice) {
                 if isWorking {
                     ProgressView()
                 } else {
-                    Text("Register")
+                    Text(L.syncSetupRegisterAction)
                 }
             }
             .disabled(endpoint.isEmpty || email.isEmpty || password.isEmpty || deviceName.isEmpty || isWorking || success)
@@ -105,29 +105,29 @@ struct SyncSetupView: View {
     }
 
     private var importSection: some View {
-        Section("Import Credentials") {
-            Text("Paste the credentials from another device.")
+        Section(L.syncSetupImportCredentials) {
+            Text(L.syncSetupImportHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            TextField("Credentials", text: $importData, axis: .vertical)
+            TextField(L.syncSetupCredentials, text: $importData, axis: .vertical)
                 .lineLimit(3...6)
                 .font(.system(.body, design: .monospaced))
 
             if !credentialsContainEndpoint {
-                TextField("Server URL", text: $endpoint)
+                TextField(L.syncSetupServerUrl, text: $endpoint)
                     .textContentType(.URL)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
             }
 
-            TextField("Device Name", text: $deviceName)
+            TextField(L.syncSetupDeviceName, text: $deviceName)
 
             Button(action: importCredentials) {
                 if isWorking {
                     ProgressView()
                 } else {
-                    Text("Import")
+                    Text(L.syncSetupImportAction)
                 }
             }
             .disabled(importData.isEmpty || isWorking || success)

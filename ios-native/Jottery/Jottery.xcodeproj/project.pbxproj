@@ -92,10 +92,11 @@
 				};
 			};
 			buildConfigurationList = AE000001 /* Build configuration list for PBXProject "Jottery" */;
-			developmentRegion = en;
+			developmentRegion = "en-GB";
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				"en-GB",
+				"en-US",
 				Base,
 			);
 			mainGroup = A8000001;
