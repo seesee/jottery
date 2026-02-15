@@ -9,6 +9,7 @@ struct NoteEditorView: View {
     @State private var wordWrap: Bool
     @State private var color: String?
     @State private var saveTask: Task<Void, Never>?
+    @State private var didSaveDuringSession = false
 
     let note: DecryptedNote
 
@@ -115,13 +116,13 @@ struct NoteEditorView: View {
             syntaxLanguage = note.syntaxLanguage
             wordWrap = note.wordWrap
             color = note.color
+            didSaveDuringSession = false
         }
         .onDisappear {
-            let hadChanges = hasChanges
             saveImmediately()
             appState.pendingEditorNote = nil
-            // Trigger a background sync push after saving
-            if hadChanges && appState.syncEnabled {
+            // Trigger a background sync if any save happened during this editing session
+            if didSaveDuringSession && appState.syncEnabled {
                 Task { await appState.triggerSync() }
             }
         }
@@ -173,6 +174,7 @@ struct NoteEditorView: View {
         updated.color = color
         try? appState.saveNote(updated)
         appState.pendingEditorNote = nil
+        didSaveDuringSession = true
     }
 
     private var syntaxLanguages: [String] {
