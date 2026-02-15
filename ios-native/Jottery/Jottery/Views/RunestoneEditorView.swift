@@ -7,7 +7,6 @@ import TreeSitterHTMLRunestone
 import TreeSitterJavaScriptRunestone
 import TreeSitterJSONRunestone
 import TreeSitterMarkdownRunestone
-import TreeSitterPerlRunestone
 import TreeSitterPythonRunestone
 import TreeSitterSQLRunestone
 import TreeSitterTypeScriptRunestone
@@ -129,7 +128,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         case "javascript": return .javaScript
         case "typescript": return .typeScript
         case "python":     return .python
-        case "perl":       return .perl
+        case "perl":       return nil    // Perl grammar crashes Runestone's RedBlackTree
         case "json":       return .json
         case "xml":        return .html   // closest available grammar
         case "css":        return .css
