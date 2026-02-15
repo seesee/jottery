@@ -44,6 +44,17 @@ struct NoteEditorView: View {
                 .onChange(of: tags) { _, _ in
                     scheduleSave()
                 }
+
+            // Attachments (read-only display of synced attachments)
+            if !note.attachments.isEmpty, let attachmentRepo = appState.attachmentRepo,
+               let key = appState.keyManager.masterKey {
+                Divider()
+                AttachmentListView(
+                    attachments: note.attachments,
+                    attachmentRepo: attachmentRepo,
+                    encryptionKey: key
+                )
+            }
         }
         .navigationTitle(note.title)
         .navigationBarTitleDisplayMode(.inline)

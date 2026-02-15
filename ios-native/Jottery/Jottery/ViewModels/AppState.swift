@@ -52,6 +52,7 @@ final class AppState {
     private(set) var settingsRepo: SettingsRepository?
     private(set) var syncRepo: SyncRepository?
     private(set) var versionRepo: VersionRepository?
+    private(set) var attachmentRepo: AttachmentRepository?
 
     // MARK: - Computed
 
@@ -87,6 +88,7 @@ final class AppState {
             self.encryptionRepo = EncryptionRepository(db: database)
             self.settingsRepo = SettingsRepository(db: database)
             self.syncRepo = SyncRepository(db: database)
+            self.attachmentRepo = AttachmentRepository(db: database)
 
             // Check if vault exists
             let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
@@ -314,7 +316,7 @@ final class AppState {
             print("[Sync] setupSync: no syncEndpoint — skipping")
             return
         }
-        guard let noteRepo, let syncRepo, let versionRepo else {
+        guard let noteRepo, let syncRepo, let versionRepo, let attachmentRepo else {
             print("[Sync] setupSync: repos not initialised — skipping")
             return
         }
@@ -337,6 +339,7 @@ final class AppState {
             noteRepo: noteRepo,
             syncRepo: syncRepo,
             versionRepo: versionRepo,
+            attachmentRepo: attachmentRepo,
             key: key
         )
         self.syncService = service
@@ -464,6 +467,7 @@ final class AppState {
         settingsRepo = nil
         syncRepo = nil
         versionRepo = nil
+        attachmentRepo = nil
         syncClient = nil
         syncService = nil
         notes = []

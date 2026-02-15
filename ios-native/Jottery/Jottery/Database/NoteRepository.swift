@@ -310,11 +310,20 @@ struct NoteRepository: Sendable {
                 .filter { !$0.isEmpty }
         }
 
-        let attachments: [AttachmentRef]
+        let rawAttachments: [AttachmentRef]
         if let data = record.attachments.data(using: .utf8) {
-            attachments = (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+            rawAttachments = (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
         } else {
-            attachments = []
+            rawAttachments = []
+        }
+
+        // Decrypt attachment filenames (stored as encrypted JSON strings)
+        let attachments = rawAttachments.map { ref -> AttachmentRef in
+            var decrypted = ref
+            if let enc = try? CryptoService.parseEncryptedJSON(ref.filename) {
+                decrypted.filename = (try? CryptoService.decryptText(enc, key: key)) ?? ref.filename
+            }
+            return decrypted
         }
 
         let hashChain: [String]

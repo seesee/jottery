@@ -8,6 +8,7 @@ actor SyncService {
     private let noteRepo: NoteRepository
     private let syncRepo: SyncRepository
     private let versionRepo: VersionRepository
+    private let attachmentRepo: AttachmentRepository
     private let key: SymmetricKey
     private let sseClient: SSEClient
 
@@ -16,11 +17,12 @@ actor SyncService {
     private(set) var lastError: String?
     private var postSyncHandler: (@Sendable () async -> Void)?
 
-    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, key: SymmetricKey) {
+    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, key: SymmetricKey) {
         self.syncClient = syncClient
         self.noteRepo = noteRepo
         self.syncRepo = syncRepo
         self.versionRepo = versionRepo
+        self.attachmentRepo = attachmentRepo
         self.key = key
         self.sseClient = SSEClient(syncClient: syncClient)
     }
@@ -137,13 +139,27 @@ actor SyncService {
             }
         }
 
+        // Gather attachment blobs for pushed notes
+        var syncAttachments: [SyncAttachment] = []
+        for note in syncNotes {
+            for ref in note.attachments {
+                // ref.data is the blob store ID
+                if let blobData = try? attachmentRepo.getBlob(id: ref.data) {
+                    syncAttachments.append(SyncAttachment(
+                        id: ref.data,
+                        data: blobData.base64EncodedString()
+                    ))
+                }
+            }
+        }
+
         // Get pending deletions
         let deletions = try syncRepo.getPendingDeletions()
         let syncDeletions = deletions.map { SyncDeletion(id: $0.id, deletedAt: $0.deletedAt) }
 
         let request = SyncPushRequest(
             notes: syncNotes,
-            attachments: [],
+            attachments: syncAttachments,
             versions: syncVersions,
             deletions: syncDeletions.isEmpty ? nil : syncDeletions
         )
@@ -227,10 +243,28 @@ actor SyncService {
             let response = try await syncClient.pull(request)
             let now = Date().iso8601
 
-            // Process pulled notes
+            // Process pulled notes and build attachment metadata lookup
+            var attachmentMetadata: [String: AttachmentRef] = [:]
             for syncNote in response.notes {
                 try processNote(syncNote, syncedAt: now)
                 knownIds.append(syncNote.id)
+                // Index attachment refs by their blob ID (ref.data)
+                for ref in syncNote.attachments {
+                    attachmentMetadata[ref.data] = ref
+                }
+            }
+
+            // Store pulled attachment blobs
+            for syncAttachment in response.attachments {
+                guard let blobData = Data(base64Encoded: syncAttachment.data) else { continue }
+                let ref = attachmentMetadata[syncAttachment.id]
+                try attachmentRepo.storeBlob(
+                    id: syncAttachment.id,
+                    filename: ref?.filename ?? "",
+                    mimeType: ref?.mimeType ?? "application/octet-stream",
+                    size: ref?.size ?? blobData.count,
+                    data: blobData
+                )
             }
 
             // Process deletions
