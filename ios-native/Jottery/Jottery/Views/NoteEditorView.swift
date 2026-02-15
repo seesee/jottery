@@ -115,7 +115,7 @@ struct NoteEditorView: View {
                             Label("None", systemImage: color == nil ? "checkmark.circle" : "circle.slash")
                         }
                     } label: {
-                        Label("Colour", systemImage: "paintbrush")
+                        Label("Category", systemImage: "paintbrush")
                     }
 
                     Divider()
