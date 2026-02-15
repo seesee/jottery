@@ -224,9 +224,18 @@ actor SyncService {
         let metadata = try syncRepo.getMetadata()
         let lastSyncAt = metadata?.lastSyncAt
 
-        // Get known note IDs
+        // Get known note IDs, but exclude notes with missing attachment blobs
+        // so the server re-sends them along with their attachment data.
         let allRecords = try noteRepo.listActive(key: key)
-        var knownIds = allRecords.map(\.id)
+        let storedBlobIds = Set(try attachmentRepo.listBlobIds())
+        var knownIds: [String] = []
+        for note in allRecords {
+            if note.attachments.isEmpty || note.attachments.allSatisfy({ storedBlobIds.contains($0.data) }) {
+                knownIds.append(note.id)
+            } else {
+                print("[Sync] pull: note \(note.id) has missing attachment blobs — requesting re-sync")
+            }
+        }
 
         var offset = 0
         var hasMore = true
@@ -235,7 +244,7 @@ actor SyncService {
             let request = SyncPullRequest(
                 lastSyncAt: lastSyncAt,
                 knownNoteIds: knownIds,
-                knownAttachmentIds: [],
+                knownAttachmentIds: Array(storedBlobIds),
                 limit: 100,
                 offset: offset
             )
