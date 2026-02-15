@@ -271,6 +271,14 @@ final class DatabaseManager: Sendable {
             }
         }
 
+        migrator.registerMigration("ios_006_saved_searches_sync") { db in
+            try db.execute(sql: "ALTER TABLE saved_searches ADD COLUMN synced_at TEXT")
+            try db.execute(sql: "ALTER TABLE saved_searches ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "ALTER TABLE saved_searches ADD COLUMN deleted_at TEXT")
+            try db.execute(sql: "ALTER TABLE saved_searches ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
+            try db.execute(sql: "ALTER TABLE saved_searches ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

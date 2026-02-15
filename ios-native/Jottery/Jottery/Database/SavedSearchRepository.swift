@@ -18,6 +18,11 @@ struct SavedSearchRepository: Sendable {
         var displayOrder: Int
         var createdAt: String
         var modifiedAt: String
+        var syncedAt: String?
+        var deleted: Bool
+        var deletedAt: String?
+        var version: Int
+        var needsSync: Bool
 
         enum CodingKeys: String, CodingKey {
             case id
@@ -26,6 +31,11 @@ struct SavedSearchRepository: Sendable {
             case displayOrder = "display_order"
             case createdAt = "created_at"
             case modifiedAt = "modified_at"
+            case syncedAt = "synced_at"
+            case deleted
+            case deletedAt = "deleted_at"
+            case version
+            case needsSync = "needs_sync"
         }
     }
 
@@ -37,6 +47,10 @@ struct SavedSearchRepository: Sendable {
         var displayOrder: Int
         var createdAt: Date
         var modifiedAt: Date
+        var syncedAt: Date?
+        var deleted: Bool
+        var deletedAt: Date?
+        var version: Int
     }
 
     // MARK: - Read
@@ -44,10 +58,27 @@ struct SavedSearchRepository: Sendable {
     func listAll(key: SymmetricKey) throws -> [SavedSearch] {
         let records = try db.dbPool.read { db in
             try SavedSearchRecord
+                .filter(Column("deleted") == false)
                 .order(Column("display_order").asc)
                 .fetchAll(db)
         }
         return records.compactMap { decrypt($0, key: key) }
+    }
+
+    /// Return records that need syncing (for push).
+    func listNeedingSync() throws -> [SavedSearchRecord] {
+        try db.dbPool.read { db in
+            try SavedSearchRecord
+                .filter(Column("needs_sync") == true)
+                .fetchAll(db)
+        }
+    }
+
+    /// Fetch a single raw record by ID.
+    func getRaw(id: String) throws -> SavedSearchRecord? {
+        try db.dbPool.read { db in
+            try SavedSearchRecord.fetchOne(db, key: id)
+        }
     }
 
     // MARK: - Create
@@ -71,7 +102,12 @@ struct SavedSearchRepository: Sendable {
             query: try CryptoService.serializeEncryptedJSON(encQuery),
             displayOrder: maxOrder + 1,
             createdAt: nowStr,
-            modifiedAt: nowStr
+            modifiedAt: nowStr,
+            syncedAt: nil,
+            deleted: false,
+            deletedAt: nil,
+            version: 1,
+            needsSync: true
         )
         try db.dbPool.write { db in
             try record.insert(db)
@@ -83,7 +119,11 @@ struct SavedSearchRepository: Sendable {
             query: query,
             displayOrder: maxOrder + 1,
             createdAt: now,
-            modifiedAt: now
+            modifiedAt: now,
+            syncedAt: nil,
+            deleted: false,
+            deletedAt: nil,
+            version: 1
         )
     }
 
@@ -98,16 +138,48 @@ struct SavedSearchRepository: Sendable {
 
         try db.dbPool.write { db in
             try db.execute(sql: """
-                UPDATE saved_searches SET name = ?, query = ?, modified_at = ? WHERE id = ?
+                UPDATE saved_searches
+                SET name = ?, query = ?, modified_at = ?, needs_sync = 1, version = version + 1
+                WHERE id = ?
             """, arguments: [nameJSON, queryJSON, now, id])
         }
     }
 
-    // MARK: - Delete
+    // MARK: - Delete (soft)
 
     func delete(id: String) throws {
+        let now = Date().iso8601
         try db.dbPool.write { db in
-            try db.execute(sql: "DELETE FROM saved_searches WHERE id = ?", arguments: [id])
+            try db.execute(sql: """
+                UPDATE saved_searches
+                SET deleted = 1, deleted_at = ?, modified_at = ?, needs_sync = 1, version = version + 1
+                WHERE id = ?
+            """, arguments: [now, now, id])
+        }
+    }
+
+    // MARK: - Sync Helpers
+
+    /// Mark a saved search as synced after successful push.
+    func markSynced(id: String, syncedAt: String) throws {
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE saved_searches SET needs_sync = 0, synced_at = ? WHERE id = ?
+            """, arguments: [syncedAt, id])
+        }
+    }
+
+    /// Upsert a record from a pull response using last-write-wins on modifiedAt.
+    func insertOrReplace(record: SavedSearchRecord) throws {
+        try db.dbPool.write { db in
+            if let existing = try SavedSearchRecord.fetchOne(db, key: record.id) {
+                // LWW: only overwrite if remote is newer
+                if record.modifiedAt > existing.modifiedAt {
+                    try record.update(db)
+                }
+            } else {
+                try record.insert(db)
+            }
         }
     }
 
@@ -125,7 +197,11 @@ struct SavedSearchRepository: Sendable {
                 query: query,
                 displayOrder: record.displayOrder,
                 createdAt: Date(iso8601: record.createdAt) ?? Date(),
-                modifiedAt: Date(iso8601: record.modifiedAt) ?? Date()
+                modifiedAt: Date(iso8601: record.modifiedAt) ?? Date(),
+                syncedAt: record.syncedAt.flatMap { Date(iso8601: $0) },
+                deleted: record.deleted,
+                deletedAt: record.deletedAt.flatMap { Date(iso8601: $0) },
+                version: record.version
             )
         } catch {
             return nil

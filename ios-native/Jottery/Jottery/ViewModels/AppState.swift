@@ -582,7 +582,7 @@ final class AppState {
             print("[Sync] setupSync: no syncEndpoint — skipping")
             return
         }
-        guard let noteRepo, let syncRepo, let versionRepo, let attachmentRepo else {
+        guard let noteRepo, let syncRepo, let versionRepo, let attachmentRepo, let savedSearchRepo else {
             print("[Sync] setupSync: repos not initialised — skipping")
             return
         }
@@ -606,6 +606,7 @@ final class AppState {
             syncRepo: syncRepo,
             versionRepo: versionRepo,
             attachmentRepo: attachmentRepo,
+            savedSearchRepo: savedSearchRepo,
             key: key
         )
         self.syncService = service

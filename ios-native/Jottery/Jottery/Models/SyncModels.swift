@@ -29,6 +29,7 @@ struct SyncPushRequest: Codable {
     let attachments: [SyncAttachment]
     let versions: [SyncNoteVersion]
     var deletions: [SyncDeletion]?
+    var savedSearches: [SyncSavedSearch]?
 }
 
 struct SyncPushResponse: Codable {
@@ -78,6 +79,7 @@ struct SyncPullResponse: Codable {
     var deletions: [SyncDeletion]?
     let attachments: [SyncAttachment]
     let versions: [SyncNoteVersion]
+    var savedSearches: [SyncSavedSearch]?
     var syncedAt: String?
     var totalCount: Int?
     var hasMore: Bool?
@@ -178,4 +180,18 @@ struct SyncStatusResponse: Codable {
 struct SSETokenResponse: Codable {
     let token: String
     let expiresAt: String
+}
+
+// MARK: - Sync Saved Search
+
+struct SyncSavedSearch: Codable {
+    let id: String
+    let name: String          // Encrypted JSON string
+    let query: String         // Encrypted JSON string
+    let order: Int
+    let createdAt: String
+    let modifiedAt: String
+    let deleted: Bool
+    var deletedAt: String?
+    let version: Int
 }
