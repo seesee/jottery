@@ -200,6 +200,35 @@ enum L {
     static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
     static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
 
+    // MARK: - Settings (Data)
+
+    static var settingsData: String { String(localized: "settings.data") }
+    static var settingsExportAll: String { String(localized: "settings.exportAll") }
+    static var settingsImport: String { String(localized: "settings.import") }
+
+    // MARK: - Import
+
+    static var importTitle: String { String(localized: "import.title") }
+    static var importSelectFile: String { String(localized: "import.selectFile") }
+    static var importFileLoaded: String { String(localized: "import.fileLoaded") }
+    static var importNoteCount: String { String(localized: "import.noteCount") }
+    static var importExportDate: String { String(localized: "import.exportDate") }
+    static var importStrategy: String { String(localized: "import.strategy") }
+    static var importStrategySkip: String { String(localized: "import.strategySkip") }
+    static var importStrategyReplace: String { String(localized: "import.strategyReplace") }
+    static var importStrategyMerge: String { String(localized: "import.strategyMerge") }
+    static var importStrategySkipDescription: String { String(localized: "import.strategySkipDescription") }
+    static var importStrategyReplaceDescription: String { String(localized: "import.strategyReplaceDescription") }
+    static var importStrategyMergeDescription: String { String(localized: "import.strategyMergeDescription") }
+    static var importAction: String { String(localized: "import.action") }
+    static func importProgress(_ current: Int, _ total: Int) -> String {
+        String(format: String(localized: "import.progress"), current, total)
+    }
+    static var importComplete: String { String(localized: "import.complete") }
+    static var importImported: String { String(localized: "import.imported") }
+    static var importSkipped: String { String(localized: "import.skipped") }
+    static var importErrors: String { String(localized: "import.errors") }
+
     // MARK: - Sort Order
 
     static var sortRecentlyModified: String { String(localized: "sort.recentlyModified") }

@@ -6,6 +6,8 @@ struct SettingsView: View {
     @State private var settings: UserSettings = .defaults
     @State private var showSyncSetup = false
     @State private var showWipeConfirmation = false
+    @State private var showImport = false
+    @State private var exportFile: ExportFile?
 
     var body: some View {
         NavigationStack {
@@ -58,6 +60,21 @@ struct SettingsView: View {
 
                 // Sync
                 syncSection
+
+                // Data
+                Section(L.settingsData) {
+                    Button {
+                        exportAllNotes()
+                    } label: {
+                        Label(L.settingsExportAll, systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        showImport = true
+                    } label: {
+                        Label(L.settingsImport, systemImage: "square.and.arrow.down")
+                    }
+                }
 
                 // About
                 Section(L.settingsAbout) {
@@ -113,6 +130,12 @@ struct SettingsView: View {
                 Button(L.commonCancel, role: .cancel) {}
             } message: {
                 Text(L.settingsWipeConfirmMessage)
+            }
+            .sheet(isPresented: $showImport) {
+                ImportView()
+            }
+            .sheet(item: $exportFile) { file in
+                ActivityView(activityItems: [file.url])
             }
             .sheet(isPresented: $showSyncSetup) {
                 SyncSetupView(onComplete: { apiKey in
@@ -194,6 +217,21 @@ struct SettingsView: View {
         appState.wipeAllData()
     }
 
+    private func exportAllNotes() {
+        guard let key = appState.keyManager.masterKey else { return }
+        let allNotes = appState.notes + appState.archivedNotes
+        guard let data = try? ExportService.exportAll(
+            notes: allNotes,
+            attachmentRepo: appState.attachmentRepo,
+            key: key
+        ) else { return }
+
+        let filename = ExportService.defaultFilename()
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try? data.write(to: tempURL)
+        exportFile = ExportFile(url: tempURL)
+    }
+
     private func disconnectSync() {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
@@ -207,4 +245,23 @@ struct SettingsView: View {
         appState.syncClient = nil
         appState.syncService = nil
     }
+}
+
+// MARK: - Export File Wrapper
+
+struct ExportFile: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+// MARK: - Activity View (Share Sheet)
+
+struct ActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
