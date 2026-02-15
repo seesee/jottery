@@ -53,6 +53,26 @@ struct DecryptedNote: Identifiable, Equatable, Hashable {
         return String(line.prefix(120))
     }
 
+    /// Tags excluding virtual tags (e.g. title tags).
+    var regularTags: [String] {
+        tags.filter { !Self.isTitleTag($0) }
+    }
+
+    /// Whether a tag is a virtual title tag (`t:` or `title:` prefix).
+    static func isTitleTag(_ tag: String) -> Bool {
+        tag.hasPrefix("t:") || tag.hasPrefix("title:")
+    }
+
+    /// Extract the value from a title tag, or nil if not a title tag.
+    static func titleTagValue(_ tag: String) -> String? {
+        for prefix in ["t:", "title:"] {
+            if tag.hasPrefix(prefix) {
+                return String(tag.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        return nil
+    }
+
     /// Word count for the note.
     var wordCount: Int {
         content.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).count

@@ -47,15 +47,15 @@ struct NoteRowView: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
 
-                    if !note.tags.isEmpty {
+                    if !note.regularTags.isEmpty {
                         HStack(spacing: 4) {
-                            ForEach(note.tags.prefix(3), id: \.self) { tag in
+                            ForEach(note.regularTags.prefix(3), id: \.self) { tag in
                                 Text("#\(tag)")
                                     .font(.caption)
                                     .foregroundStyle(.accent)
                             }
-                            if note.tags.count > 3 {
-                                Text("+\(note.tags.count - 3)")
+                            if note.regularTags.count > 3 {
+                                Text("+\(note.regularTags.count - 3)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

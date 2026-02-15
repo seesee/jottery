@@ -50,10 +50,19 @@ private struct TagChip: View {
     let tag: String
     let onRemove: () -> Void
 
+    private var isTitle: Bool { DecryptedNote.isTitleTag(tag) }
+    private var titleValue: String? { DecryptedNote.titleTagValue(tag) }
+
     var body: some View {
         HStack(spacing: 4) {
-            Text("#\(tag)")
-                .font(.callout)
+            if isTitle, let value = titleValue {
+                Text("title: \(value)")
+                    .font(.callout)
+                    .italic()
+            } else {
+                Text("#\(tag)")
+                    .font(.callout)
+            }
 
             Button(action: onRemove) {
                 Image(systemName: "xmark")
@@ -63,7 +72,7 @@ private struct TagChip: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(.accent.opacity(0.15))
+        .background(isTitle ? Color.secondary.opacity(0.15) : Color.accentColor.opacity(0.15))
         .clipShape(Capsule())
     }
 }
