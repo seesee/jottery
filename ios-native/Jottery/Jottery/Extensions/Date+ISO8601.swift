@@ -1,4 +1,16 @@
 import Foundation
+import UIKit
+
+extension RelativeDateTimeFormatter {
+    /// Shared formatter — creating `RelativeDateTimeFormatter` is expensive
+    /// on first use (ICU locale data loading). A shared instance avoids
+    /// per-row allocation in note lists and amortises the cold-start cost.
+    nonisolated(unsafe) static let shared: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+}
 
 extension ISO8601DateFormatter {
     /// Shared formatter matching Jottery's ISO 8601 format with timezone.
@@ -34,8 +46,27 @@ extension Date {
 
     /// Relative time description (e.g. "2 hours ago", "Yesterday").
     var relativeDescription: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: self, relativeTo: Date())
+        RelativeDateTimeFormatter.shared.localizedString(for: self, relativeTo: Date())
+    }
+
+    /// Pre-warm expensive subsystems so the first search-bar tap feels instant.
+    /// Call once after unlock on the main thread — the heavy work (ICU locale
+    /// loading, keyboard framework init) is done before the user interacts.
+    @MainActor static func warmUpForSearch() {
+        // 1. Trigger RelativeDateTimeFormatter ICU locale loading
+        _ = RelativeDateTimeFormatter.shared.localizedString(for: Date(), relativeTo: Date())
+
+        // 2. Pre-warm the iOS keyboard subsystem.
+        //    When the user unlocks via Face ID the keyboard has never been loaded
+        //    in this process. Briefly making a hidden field first responder forces
+        //    the system to initialise the input stack without showing the keyboard.
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first else { return }
+        let field = UITextField(frame: CGRect(x: -1, y: -1, width: 1, height: 1))
+        field.autocorrectionType = .no
+        window.addSubview(field)
+        field.becomeFirstResponder()
+        field.resignFirstResponder()
+        field.removeFromSuperview()
     }
 }

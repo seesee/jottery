@@ -106,6 +106,7 @@ struct UnlockScreen: View {
                 appState.isLocked = false
                 print("[Sync] biometricUnlock: calling setupSync()")
                 appState.setupSync()
+                appState.scheduleSearchWarmUp()
             } else {
                 print("[Sync] biometricUnlock: Face ID failed")
             }

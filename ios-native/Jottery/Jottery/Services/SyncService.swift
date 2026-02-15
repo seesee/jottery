@@ -9,6 +9,7 @@ actor SyncService {
     private let syncRepo: SyncRepository
     private let versionRepo: VersionRepository
     private let attachmentRepo: AttachmentRepository
+    private let savedSearchRepo: SavedSearchRepository
     private let key: SymmetricKey
     private let sseClient: SSEClient
 
@@ -18,12 +19,13 @@ actor SyncService {
     private(set) var pendingConflicts: [ConflictInfo] = []
     private var postSyncHandler: (@Sendable () async -> Void)?
 
-    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, key: SymmetricKey) {
+    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey) {
         self.syncClient = syncClient
         self.noteRepo = noteRepo
         self.syncRepo = syncRepo
         self.versionRepo = versionRepo
         self.attachmentRepo = attachmentRepo
+        self.savedSearchRepo = savedSearchRepo
         self.key = key
         self.sseClient = SSEClient(syncClient: syncClient)
     }
@@ -161,14 +163,31 @@ actor SyncService {
         let deletions = try syncRepo.getPendingDeletions()
         let syncDeletions = deletions.map { SyncDeletion(id: $0.id, deletedAt: $0.deletedAt) }
 
+        // Collect saved searches needing sync
+        let savedSearchRecords = try savedSearchRepo.listNeedingSync()
+        let syncSavedSearches: [SyncSavedSearch] = savedSearchRecords.map { record in
+            SyncSavedSearch(
+                id: record.id,
+                name: record.name,
+                query: record.query,
+                order: record.displayOrder,
+                createdAt: record.createdAt,
+                modifiedAt: record.modifiedAt,
+                deleted: record.deleted,
+                deletedAt: record.deletedAt,
+                version: record.version
+            )
+        }
+
         let request = SyncPushRequest(
             notes: syncNotes,
             attachments: syncAttachments,
             versions: syncVersions,
-            deletions: syncDeletions.isEmpty ? nil : syncDeletions
+            deletions: syncDeletions.isEmpty ? nil : syncDeletions,
+            savedSearches: syncSavedSearches.isEmpty ? nil : syncSavedSearches
         )
 
-        print("[Sync] push: sending \(syncNotes.count) notes, \(syncDeletions.count) deletions")
+        print("[Sync] push: sending \(syncNotes.count) notes, \(syncDeletions.count) deletions, \(syncSavedSearches.count) saved searches")
         let response: SyncPushResponse
         do {
             response = try await syncClient.push(request)
@@ -192,6 +211,11 @@ actor SyncService {
         let acceptedIds = Set(response.accepted.map(\.id))
         let clearedDeletionIds = deletions.filter { acceptedIds.contains($0.id) }.map(\.id)
         try syncRepo.clearDeletions(ids: clearedDeletionIds)
+
+        // Mark pushed saved searches as synced
+        for record in savedSearchRecords {
+            try savedSearchRepo.markSynced(id: record.id, syncedAt: now)
+        }
 
         // Handle rejected (conflicts) — queue for user resolution
         for rejected in response.rejected {
@@ -329,6 +353,27 @@ actor SyncService {
                     parentHash: syncVersion.parentHash
                 )
                 try versionRepo.insertOrReplace(versionRecord)
+            }
+
+            // Process pulled saved searches
+            if let savedSearches = response.savedSearches {
+                for remote in savedSearches {
+                    let record = SavedSearchRepository.SavedSearchRecord(
+                        id: remote.id,
+                        name: remote.name,
+                        query: remote.query,
+                        displayOrder: remote.order,
+                        createdAt: remote.createdAt,
+                        modifiedAt: remote.modifiedAt,
+                        syncedAt: now,
+                        deleted: remote.deleted,
+                        deletedAt: remote.deletedAt,
+                        version: remote.version,
+                        needsSync: false
+                    )
+                    try savedSearchRepo.insertOrReplace(record: record)
+                }
+                print("[Sync] pull: processed \(savedSearches.count) saved searches")
             }
 
             hasMore = response.hasMore ?? false
