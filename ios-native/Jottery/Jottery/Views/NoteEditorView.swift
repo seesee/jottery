@@ -117,8 +117,13 @@ struct NoteEditorView: View {
             color = note.color
         }
         .onDisappear {
+            let hadChanges = hasChanges
             saveImmediately()
             appState.pendingEditorNote = nil
+            // Trigger a background sync push after saving
+            if hadChanges && appState.syncEnabled {
+                Task { await appState.triggerSync() }
+            }
         }
     }
 
