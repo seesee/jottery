@@ -64,6 +64,19 @@ enum L {
     static var noteListPin: String { String(localized: "noteList.pin") }
     static var noteListUnpin: String { String(localized: "noteList.unpin") }
 
+    // MARK: - Note List (Archive & Search Count)
+
+    static var noteListArchive: String { String(localized: "noteList.archive") }
+    static var noteListUnarchive: String { String(localized: "noteList.unarchive") }
+    static var noteListArchiveTitle: String { String(localized: "noteList.archiveTitle") }
+    static var noteListShowArchive: String { String(localized: "noteList.showArchive") }
+    static var noteListShowNotes: String { String(localized: "noteList.showNotes") }
+    static var noteListArchiveEmpty: String { String(localized: "noteList.archiveEmpty") }
+    static var noteListArchiveEmptyDescription: String { String(localized: "noteList.archiveEmptyDescription") }
+    static func noteListSearchCount(_ matches: Int, _ total: Int) -> String {
+        String(format: String(localized: "noteList.searchCount"), matches, total)
+    }
+
     // MARK: - Editor
 
     static var editorPin: String { String(localized: "editor.pin") }
@@ -75,9 +88,25 @@ enum L {
     }
     static var editorCategory: String { String(localized: "editor.category") }
     static var editorCategoryNone: String { String(localized: "editor.categoryNone") }
+    static var editorLock: String { String(localized: "editor.lock") }
+    static var editorUnlock: String { String(localized: "editor.unlock") }
+    static var editorArchive: String { String(localized: "editor.archive") }
+    static var editorUnarchive: String { String(localized: "editor.unarchive") }
+    static var editorVersionHistory: String { String(localized: "editor.versionHistory") }
     static var editorDelete: String { String(localized: "editor.delete") }
     static var editorNoNoteSelected: String { String(localized: "editor.noNoteSelected") }
     static var editorNoNoteSelectedDescription: String { String(localized: "editor.noNoteSelectedDescription") }
+
+    // MARK: - Version History
+
+    static var versionHistoryTitle: String { String(localized: "versionHistory.title") }
+    static var versionHistoryDone: String { String(localized: "versionHistory.done") }
+    static var versionHistoryRestore: String { String(localized: "versionHistory.restore") }
+    static var versionHistoryNoVersions: String { String(localized: "versionHistory.noVersions") }
+    static var versionHistoryNoVersionsDescription: String { String(localized: "versionHistory.noVersionsDescription") }
+    static func versionHistoryVersion(_ num: Int) -> String {
+        String(format: String(localized: "versionHistory.version"), num)
+    }
 
     // MARK: - Unlock
 

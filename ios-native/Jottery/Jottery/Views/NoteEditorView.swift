@@ -10,6 +10,7 @@ struct NoteEditorView: View {
     @State private var color: String?
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
+    @State private var showVersionHistory = false
 
     let note: DecryptedNote
 
@@ -22,11 +23,17 @@ struct NoteEditorView: View {
         _color = State(initialValue: note.color)
     }
 
+    /// Whether the note is read-only (locked or archived).
+    private var isReadOnly: Bool {
+        note.locked || note.archived
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Tags
-            if !tags.isEmpty || true {
-                TagInputView(tags: $tags)
+            if !tags.isEmpty || !isReadOnly {
+                TagInputView(tags: isReadOnly ? .constant(tags) : $tags)
+                    .disabled(isReadOnly)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
 
@@ -37,7 +44,8 @@ struct NoteEditorView: View {
             RunestoneEditorView(
                 text: $content,
                 syntaxLanguage: syntaxLanguage,
-                wordWrap: wordWrap
+                wordWrap: wordWrap,
+                isEditable: !isReadOnly
             )
             .onChange(of: content) { _, _ in
                 scheduleSave()
@@ -121,6 +129,42 @@ struct NoteEditorView: View {
 
                     Divider()
 
+                    // Lock toggle
+                    Button {
+                        try? appState.toggleLock(id: note.id)
+                    } label: {
+                        Label(
+                            note.locked ? L.editorUnlock : L.editorLock,
+                            systemImage: note.locked ? "lock.open" : "lock"
+                        )
+                    }
+
+                    // Archive toggle
+                    if note.archived {
+                        Button {
+                            try? appState.unarchiveNote(id: note.id)
+                        } label: {
+                            Label(L.editorUnarchive, systemImage: "tray.and.arrow.up")
+                        }
+                    } else {
+                        Button {
+                            try? appState.archiveNote(id: note.id)
+                        } label: {
+                            Label(L.editorArchive, systemImage: "archivebox")
+                        }
+                    }
+
+                    // Version history
+                    if note.version > 0 {
+                        Button {
+                            showVersionHistory = true
+                        } label: {
+                            Label(L.editorVersionHistory, systemImage: "clock.arrow.circlepath")
+                        }
+                    }
+
+                    Divider()
+
                     // Delete
                     Button(role: .destructive) {
                         try? appState.deleteNote(id: note.id)
@@ -140,6 +184,9 @@ struct NoteEditorView: View {
             wordWrap = note.wordWrap
             color = note.color
             didSaveDuringSession = false
+        }
+        .sheet(isPresented: $showVersionHistory) {
+            VersionHistoryView(note: note)
         }
         .onDisappear {
             saveImmediately()

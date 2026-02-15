@@ -14,35 +14,57 @@ struct NoteListView: View {
                 NoteRowView(note: note)
                     .tag(note.id)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            try? appState.deleteNote(id: note.id)
-                        } label: {
-                            Label(L.noteListDelete, systemImage: "trash")
+                        if appState.showArchive {
+                            Button {
+                                try? appState.unarchiveNote(id: note.id)
+                            } label: {
+                                Label(L.noteListUnarchive, systemImage: "tray.and.arrow.up")
+                            }
+                            .tint(.blue)
+                        } else {
+                            Button(role: .destructive) {
+                                try? appState.deleteNote(id: note.id)
+                            } label: {
+                                Label(L.noteListDelete, systemImage: "trash")
+                            }
                         }
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            try? appState.togglePin(id: note.id)
-                        } label: {
-                            Label(
-                                note.pinned ? L.noteListUnpin : L.noteListPin,
-                                systemImage: note.pinned ? "pin.slash" : "pin"
-                            )
+                        if appState.showArchive {
+                            // No pin action in archive mode
+                        } else {
+                            Button {
+                                try? appState.togglePin(id: note.id)
+                            } label: {
+                                Label(
+                                    note.pinned ? L.noteListUnpin : L.noteListPin,
+                                    systemImage: note.pinned ? "pin.slash" : "pin"
+                                )
+                            }
+                            .tint(.orange)
+
+                            Button {
+                                try? appState.archiveNote(id: note.id)
+                            } label: {
+                                Label(L.noteListArchive, systemImage: "archivebox")
+                            }
+                            .tint(.indigo)
                         }
-                        .tint(.orange)
                     }
             }
         }
         .listStyle(.insetGrouped)
         .refreshable { await appState.triggerSync() }
         .searchable(text: $state.searchQuery, prompt: L.noteListSearch)
-        .navigationTitle(L.noteListTitle)
+        .navigationTitle(appState.showArchive ? L.noteListArchiveTitle : L.noteListTitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    let _ = try? appState.createNote()
-                } label: {
-                    Label(L.noteListNewNote, systemImage: "plus")
+                if !appState.showArchive {
+                    Button {
+                        let _ = try? appState.createNote()
+                    } label: {
+                        Label(L.noteListNewNote, systemImage: "plus")
+                    }
                 }
 
                 Menu {
@@ -74,6 +96,16 @@ struct NoteListView: View {
 
             ToolbarItemGroup(placement: .secondaryAction) {
                 Button {
+                    appState.showArchive.toggle()
+                    appState.selectedNoteId = nil
+                } label: {
+                    Label(
+                        appState.showArchive ? L.noteListShowNotes : L.noteListShowArchive,
+                        systemImage: appState.showArchive ? "tray.full" : "archivebox"
+                    )
+                }
+
+                Button {
                     showRecycleBin = true
                 } label: {
                     Label(L.noteListRecycleBin, systemImage: "trash")
@@ -93,7 +125,16 @@ struct NoteListView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            syncStatusBar
+            VStack(spacing: 0) {
+                if !appState.searchQuery.isEmpty && !appState.displayedNotes.isEmpty {
+                    Text(L.noteListSearchCount(appState.filteredCount, appState.noteCount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                syncStatusBar
+            }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
@@ -102,7 +143,13 @@ struct NoteListView: View {
             RecycleBinView()
         }
         .overlay {
-            if appState.notes.isEmpty && !appState.isSyncing {
+            if appState.showArchive && appState.archivedNotes.isEmpty {
+                ContentUnavailableView(
+                    L.noteListArchiveEmpty,
+                    systemImage: "archivebox",
+                    description: Text(L.noteListArchiveEmptyDescription)
+                )
+            } else if appState.displayedNotes.isEmpty && !appState.isSyncing {
                 ContentUnavailableView(
                     L.noteListNoNotes,
                     systemImage: "doc.text",

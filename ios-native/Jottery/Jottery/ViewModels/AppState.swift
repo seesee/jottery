@@ -15,6 +15,8 @@ final class AppState {
     // MARK: - Notes
 
     var notes: [DecryptedNote] = []
+    var archivedNotes: [DecryptedNote] = []
+    var showArchive: Bool = false
     var selectedNoteId: String?
     var searchQuery: String = ""
     var sortOrder: SortOrder = .recent
@@ -56,12 +58,17 @@ final class AppState {
 
     // MARK: - Computed
 
+    /// Notes displayed in the list — either active or archived depending on mode.
+    var displayedNotes: [DecryptedNote] {
+        showArchive ? archivedNotes : notes
+    }
+
     var filteredNotes: [DecryptedNote] {
-        let filtered = SearchService.filter(notes: notes, query: searchQuery)
+        let filtered = SearchService.filter(notes: displayedNotes, query: searchQuery)
         return SearchService.sort(notes: filtered, order: sortOrder)
     }
 
-    var noteCount: Int { notes.count }
+    var noteCount: Int { displayedNotes.count }
     var filteredCount: Int { filteredNotes.count }
 
     var selectedNote: DecryptedNote? {
@@ -258,6 +265,7 @@ final class AppState {
     func loadNotes() throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
         notes = try noteRepo.listActive(key: key)
+        archivedNotes = try noteRepo.listArchived(key: key)
     }
 
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
@@ -300,6 +308,80 @@ final class AppState {
         try noteRepo.togglePin(id: id)
         if let index = notes.firstIndex(where: { $0.id == id }) {
             notes[index].pinned.toggle()
+        }
+    }
+
+    func archiveNote(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.archive(id: id)
+        notes.removeAll { $0.id == id }
+        if selectedNoteId == id { selectedNoteId = nil }
+        try loadArchivedNotes()
+    }
+
+    func unarchiveNote(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.unarchive(id: id)
+        archivedNotes.removeAll { $0.id == id }
+        if selectedNoteId == id { selectedNoteId = nil }
+        try loadNotes()
+    }
+
+    func toggleLock(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.toggleLock(id: id)
+        if let index = notes.firstIndex(where: { $0.id == id }) {
+            notes[index].locked.toggle()
+            notes[index].lockedAt = notes[index].locked ? Date() : nil
+        }
+        if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
+            archivedNotes[index].locked.toggle()
+            archivedNotes[index].lockedAt = archivedNotes[index].locked ? Date() : nil
+        }
+    }
+
+    func loadArchivedNotes() throws {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        archivedNotes = try noteRepo.listArchived(key: key)
+    }
+
+    /// Restore a note to a previous version. Creates a snapshot of current state first.
+    func restoreVersion(noteId: String, version: NoteVersionRecord) throws {
+        guard let noteRepo, let versionRepo, let key = keyManager.masterKey else { return }
+
+        // Snapshot current state before restoring
+        if let currentRecord = try noteRepo.getRaw(id: noteId) {
+            try versionRepo.createVersion(from: currentRecord, reason: "pre-restore")
+        }
+
+        // Decrypt the version's content and tags
+        let encContent = try CryptoService.parseEncryptedJSON(version.content)
+        let content = try CryptoService.decryptText(encContent, key: key)
+
+        let encTags = try CryptoService.parseEncryptedJSON(version.tags)
+        let tagsText = try CryptoService.decryptText(encTags, key: key)
+        let tags: [String]
+        if tagsText.isEmpty {
+            tags = []
+        } else if tagsText.hasPrefix("[") {
+            tags = (try? JSONDecoder().decode([String].self, from: Data(tagsText.utf8))) ?? []
+        } else {
+            tags = tagsText.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+        }
+
+        // Get current decrypted note and update with restored content
+        guard var note = try noteRepo.get(id: noteId, key: key) else { return }
+        note.content = content
+        note.tags = tags
+        note.syntaxLanguage = version.syntaxLanguage ?? note.syntaxLanguage
+        note.wordWrap = version.wordWrap ?? note.wordWrap
+        note.showPreview = version.showPreview ?? note.showPreview
+        note.color = version.color
+        try noteRepo.update(note, key: key)
+
+        // Update in-memory
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index] = try noteRepo.get(id: noteId, key: key) ?? notes[index]
         }
     }
 
@@ -471,6 +553,8 @@ final class AppState {
         syncClient = nil
         syncService = nil
         notes = []
+        archivedNotes = []
+        showArchive = false
         selectedNoteId = nil
         searchQuery = ""
         syncEnabled = false
