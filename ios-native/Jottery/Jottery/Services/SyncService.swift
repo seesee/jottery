@@ -224,25 +224,34 @@ actor SyncService {
         let metadata = try syncRepo.getMetadata()
         let lastSyncAt = metadata?.lastSyncAt
 
-        // Get known note IDs, but exclude notes with missing attachment blobs
-        // so the server re-sends them along with their attachment data.
+        // Check for notes with missing attachment blobs.
+        // The server only returns notes modified after lastSyncAt for incremental
+        // pulls, and only includes attachment blobs for notes in the response.
+        // So if we have notes whose attachment blobs were never stored, we must
+        // do a full pull (lastSyncAt = nil) to get those notes re-delivered.
         let allRecords = try noteRepo.listActive(key: key)
         let storedBlobIds = Set(try attachmentRepo.listBlobIds())
+        var hasMissingBlobs = false
         var knownIds: [String] = []
         for note in allRecords {
             if note.attachments.isEmpty || note.attachments.allSatisfy({ storedBlobIds.contains($0.data) }) {
                 knownIds.append(note.id)
             } else {
-                print("[Sync] pull: note \(note.id) has missing attachment blobs — requesting re-sync")
+                hasMissingBlobs = true
+                print("[Sync] pull: note \(note.id) has missing attachment blobs — will do full pull")
             }
         }
+
+        // If any blobs are missing, force a full pull so the server re-sends
+        // those notes and their attachment data.
+        let effectiveLastSyncAt = hasMissingBlobs ? nil : lastSyncAt
 
         var offset = 0
         var hasMore = true
 
         while hasMore {
             let request = SyncPullRequest(
-                lastSyncAt: lastSyncAt,
+                lastSyncAt: effectiveLastSyncAt,
                 knownNoteIds: knownIds,
                 knownAttachmentIds: Array(storedBlobIds),
                 limit: 100,
