@@ -115,6 +115,15 @@ final class AppState {
         }
     }
 
+    /// Pre-warm formatters and the keyboard subsystem so the first
+    /// search-bar tap doesn't stall. Runs after the UI has transitioned.
+    func scheduleSearchWarmUp() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            Date.warmUpForSearch()
+        }
+    }
+
     var selectedNote: DecryptedNote? {
         guard let id = selectedNoteId else { return nil }
         return notes.first { $0.id == id }
@@ -232,6 +241,7 @@ final class AppState {
         isLocked = false
         print("[Sync] unlock: calling setupSync()")
         setupSync()
+        scheduleSearchWarmUp()
 
         // Upgrade old vaults: store a verification token if missing
         if metadata.verification == nil {
