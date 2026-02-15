@@ -63,15 +63,11 @@ struct RunestoneEditorView: UIViewRepresentable {
             textView.isFindInteractionEnabled = true
         }
 
-        let isDark = colorScheme == .dark
-        let theme = EditorTheme(isDark: isDark)
-        textView.backgroundColor = isDark ? .systemBackground : .systemBackground
+        textView.backgroundColor = colorScheme == .dark ? .systemBackground : .systemBackground
 
-        applyState(to: textView, theme: theme)
-
-        // Don't set coordinator.currentLanguage / currentIsDark here —
-        // leave them as defaults so updateUIView detects a "change" on its
-        // first call and re-applies state after the view is in the hierarchy.
+        // Don't call applyState here — Runestone's setState doesn't
+        // render reliably before the view is in the window hierarchy.
+        // updateUIView will handle the initial state application.
 
         return textView
     }
@@ -91,13 +87,27 @@ struct RunestoneEditorView: UIViewRepresentable {
                 // Preserve cursor position across re-parse
                 let selectedRange = textView.selectedRange
                 let currentText = textChanged ? text : textView.text
-                applyState(to: textView, text: currentText, theme: theme)
-                // Restore cursor if within bounds
-                if selectedRange.location + selectedRange.length <= currentText.utf16.count {
-                    textView.selectedRange = selectedRange
-                }
+
+                // Update coordinator tracking immediately to prevent re-entry
                 context.coordinator.currentLanguage = syntaxLanguage
                 context.coordinator.currentIsDark = isDark
+
+                if textView.window != nil {
+                    // View is in the hierarchy — apply state synchronously
+                    applyState(to: textView, text: currentText, theme: theme)
+                    if selectedRange.location + selectedRange.length <= currentText.utf16.count {
+                        textView.selectedRange = selectedRange
+                    }
+                } else {
+                    // View isn't in the hierarchy yet — defer to next run loop
+                    // so Runestone can render once it has a window
+                    DispatchQueue.main.async {
+                        self.applyState(to: textView, text: currentText, theme: theme)
+                        if selectedRange.location + selectedRange.length <= currentText.utf16.count {
+                            textView.selectedRange = selectedRange
+                        }
+                    }
+                }
             } else if textChanged {
                 applyState(to: textView, theme: theme)
             }
