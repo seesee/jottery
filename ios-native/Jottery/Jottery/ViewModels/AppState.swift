@@ -392,6 +392,75 @@ final class AppState {
         try? loadNotes()
     }
 
+    // MARK: - Attachments
+
+    func addAttachment(to noteId: String, url: URL, filename: String, mimeType: String) throws {
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        guard let note = try noteRepo.get(id: noteId, key: key) else { return }
+
+        // Read and encrypt the file data
+        let fileData = try Data(contentsOf: url)
+        let encrypted = try CryptoService.encrypt(fileData, key: key)
+        let encryptedJSON = try CryptoService.serializeEncryptedJSON(encrypted)
+        let blobData = Data(encryptedJSON.utf8)
+
+        // Generate IDs
+        let blobId = CryptoService.generateUUID()
+        let attachmentId = CryptoService.generateUUID()
+
+        // Store encrypted blob
+        try attachmentRepo.storeBlob(id: blobId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
+
+        // Encrypt the filename for storage
+        let encFilename = try CryptoService.encryptText(filename, key: key)
+        let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
+
+        // Create attachment ref
+        let ref = AttachmentRef(
+            id: attachmentId,
+            filename: encFilenameJSON,
+            mimeType: mimeType,
+            size: fileData.count,
+            data: blobId
+        )
+
+        // Update note
+        var updated = note
+        updated.attachments.append(AttachmentRef(
+            id: attachmentId,
+            filename: filename,
+            mimeType: mimeType,
+            size: fileData.count,
+            data: blobId
+        ))
+        // Save with encrypted filename in the raw record
+        try noteRepo.addAttachment(noteId: noteId, ref: ref)
+
+        // Update in-memory
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index] = updated
+        }
+    }
+
+    func removeAttachment(from noteId: String, attachmentId: String) throws {
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        guard let note = try noteRepo.get(id: noteId, key: key) else { return }
+
+        // Find the attachment to get its blob ID
+        guard let ref = note.attachments.first(where: { $0.id == attachmentId }) else { return }
+
+        // Remove from note
+        try noteRepo.removeAttachment(noteId: noteId, attachmentId: attachmentId)
+
+        // Delete blob
+        try? attachmentRepo.deleteBlob(id: ref.data)
+
+        // Update in-memory
+        if let index = notes.firstIndex(where: { $0.id == noteId }) {
+            notes[index].attachments.removeAll { $0.id == attachmentId }
+        }
+    }
+
     // MARK: - Inbox
 
     func loadInboxItems() async throws {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct NoteEditorView: View {
     @Environment(AppState.self) private var appState
@@ -11,6 +12,8 @@ struct NoteEditorView: View {
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
     @State private var showVersionHistory = false
+    @State private var showAttachmentPicker = false
+    @State private var showPhotoPicker = false
 
     let note: DecryptedNote
 
@@ -54,14 +57,17 @@ struct NoteEditorView: View {
                 scheduleSave()
             }
 
-            // Attachments (read-only display of synced attachments)
+            // Attachments
             if !note.attachments.isEmpty, let attachmentRepo = appState.attachmentRepo,
                let key = appState.keyManager.masterKey {
                 Divider()
                 AttachmentListView(
                     attachments: note.attachments,
                     attachmentRepo: attachmentRepo,
-                    encryptionKey: key
+                    encryptionKey: key,
+                    onDelete: isReadOnly ? nil : { attachmentId in
+                        try? appState.removeAttachment(from: note.id, attachmentId: attachmentId)
+                    }
                 )
             }
         }
@@ -127,6 +133,21 @@ struct NoteEditorView: View {
                         Label(L.editorCategory, systemImage: "paintbrush")
                     }
 
+                    // Add attachment
+                    if !isReadOnly {
+                        Button {
+                            showAttachmentPicker = true
+                        } label: {
+                            Label(L.editorAddAttachment, systemImage: "paperclip")
+                        }
+
+                        Button {
+                            showPhotoPicker = true
+                        } label: {
+                            Label(L.editorAddPhoto, systemImage: "photo")
+                        }
+                    }
+
                     Divider()
 
                     // Lock toggle
@@ -187,6 +208,18 @@ struct NoteEditorView: View {
         }
         .sheet(isPresented: $showVersionHistory) {
             VersionHistoryView(note: note)
+        }
+        .fileImporter(
+            isPresented: $showAttachmentPicker,
+            allowedContentTypes: [.data],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFileImport(result)
+        }
+        .sheet(isPresented: $showPhotoPicker) {
+            PhotoPickerView { url, filename, mimeType in
+                try? appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+            }
         }
         .onDisappear {
             saveImmediately()
@@ -249,5 +282,88 @@ struct NoteEditorView: View {
 
     private var syntaxLanguages: [String] {
         ["markdown", "javascript", "typescript", "python", "perl", "json", "xml", "css", "bash", "sql", "plain"]
+    }
+
+    // MARK: - Attachment Import
+
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result, let url = urls.first else { return }
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+
+        let filename = url.lastPathComponent
+        let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        try? appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+    }
+}
+
+// MARK: - Photo Picker
+
+import PhotosUI
+
+struct PhotoPickerView: UIViewControllerRepresentable {
+    let onPick: (URL, String, String) -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.selectionLimit = 1
+        config.filter = .any(of: [.images, .videos])
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+
+    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onPick: (URL, String, String) -> Void
+
+        init(onPick: @escaping (URL, String, String) -> Void) {
+            self.onPick = onPick
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard let result = results.first else { return }
+
+            let itemProvider = result.itemProvider
+
+            // Try to load as file URL
+            if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { [weak self] url, error in
+                    guard let url, error == nil else { return }
+                    let tempDir = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("jottery-import", isDirectory: true)
+                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    let dest = tempDir.appendingPathComponent(url.lastPathComponent)
+                    try? FileManager.default.removeItem(at: dest)
+                    try? FileManager.default.copyItem(at: url, to: dest)
+                    let filename = url.lastPathComponent
+                    let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "image/jpeg"
+                    DispatchQueue.main.async {
+                        self?.onPick(dest, filename, mimeType)
+                    }
+                }
+            } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { [weak self] url, error in
+                    guard let url, error == nil else { return }
+                    let tempDir = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("jottery-import", isDirectory: true)
+                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    let dest = tempDir.appendingPathComponent(url.lastPathComponent)
+                    try? FileManager.default.removeItem(at: dest)
+                    try? FileManager.default.copyItem(at: url, to: dest)
+                    let filename = url.lastPathComponent
+                    let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "video/mp4"
+                    DispatchQueue.main.async {
+                        self?.onPick(dest, filename, mimeType)
+                    }
+                }
+            }
+        }
     }
 }

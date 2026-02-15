@@ -93,6 +93,8 @@ enum L {
     static var editorArchive: String { String(localized: "editor.archive") }
     static var editorUnarchive: String { String(localized: "editor.unarchive") }
     static var editorVersionHistory: String { String(localized: "editor.versionHistory") }
+    static var editorAddAttachment: String { String(localized: "editor.addAttachment") }
+    static var editorAddPhoto: String { String(localized: "editor.addPhoto") }
     static var editorDelete: String { String(localized: "editor.delete") }
     static var editorNoNoteSelected: String { String(localized: "editor.noNoteSelected") }
     static var editorNoNoteSelectedDescription: String { String(localized: "editor.noNoteSelectedDescription") }

@@ -315,6 +315,38 @@ struct NoteRepository: Sendable {
         }
     }
 
+    // MARK: - Attachment Management
+
+    /// Add an attachment reference to a note's attachments JSON array.
+    func addAttachment(noteId: String, ref: AttachmentRef) throws {
+        guard var record = try getRaw(id: noteId) else { return }
+        var attachments: [AttachmentRef] = []
+        if let data = record.attachments.data(using: .utf8) {
+            attachments = (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+        }
+        attachments.append(ref)
+        let attachmentsJSON = try JSONEncoder().encode(attachments)
+        record.attachments = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+        record.modifiedAt = Date().iso8601
+        record.needsSync = true
+        try updateRaw(record)
+    }
+
+    /// Remove an attachment reference from a note's attachments JSON array.
+    func removeAttachment(noteId: String, attachmentId: String) throws {
+        guard var record = try getRaw(id: noteId) else { return }
+        var attachments: [AttachmentRef] = []
+        if let data = record.attachments.data(using: .utf8) {
+            attachments = (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+        }
+        attachments.removeAll { $0.id == attachmentId }
+        let attachmentsJSON = try JSONEncoder().encode(attachments)
+        record.attachments = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+        record.modifiedAt = Date().iso8601
+        record.needsSync = true
+        try updateRaw(record)
+    }
+
     // MARK: - Insert Raw (for sync pull)
 
     /// Insert or replace a raw record (from server).
