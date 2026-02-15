@@ -307,6 +307,14 @@ final class AppState {
         }
     }
 
+    func duplicateNote(id: String) throws {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        guard let original = try noteRepo.get(id: id, key: key) else { return }
+        let duplicate = try noteRepo.create(content: original.content, tags: original.tags, key: key)
+        notes.insert(duplicate, at: 0)
+        selectedNoteId = duplicate.id
+    }
+
     func deleteNote(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.softDelete(id: id)

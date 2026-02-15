@@ -10,6 +10,20 @@ struct JotteryApp: App {
                 .environment(appState)
                 .environment(\.locale, resolvedLocale)
         }
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button(L.noteListNewNote) {
+                    guard !appState.isLocked else { return }
+                    let _ = try? appState.createNote()
+                }
+                .keyboardShortcut("n", modifiers: .command)
+
+                Button(L.noteListLock) {
+                    appState.lock()
+                }
+                .keyboardShortcut("l", modifiers: .command)
+            }
+        }
     }
 
     private var resolvedLocale: Locale {

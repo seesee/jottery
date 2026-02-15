@@ -439,6 +439,17 @@
         }
       }
     },
+    "editor.duplicate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duplicate"
+          }
+        }
+      }
+    },
     "editor.enableWordWrap" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -446,6 +457,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enable Word Wrap"
+          }
+        }
+      }
+    },
+    "editor.hidePreview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Preview"
           }
         }
       }
@@ -501,6 +523,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pin"
+          }
+        }
+      }
+    },
+    "editor.showPreview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Preview"
           }
         }
       }

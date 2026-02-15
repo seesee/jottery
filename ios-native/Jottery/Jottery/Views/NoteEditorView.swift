@@ -9,6 +9,7 @@ struct NoteEditorView: View {
     @State private var syntaxLanguage: String
     @State private var wordWrap: Bool
     @State private var color: String?
+    @State private var showPreview: Bool
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
     @State private var showVersionHistory = false
@@ -24,6 +25,7 @@ struct NoteEditorView: View {
         _syntaxLanguage = State(initialValue: note.syntaxLanguage)
         _wordWrap = State(initialValue: note.wordWrap)
         _color = State(initialValue: note.color)
+        _showPreview = State(initialValue: note.showPreview)
     }
 
     /// Whether the note is read-only (locked or archived).
@@ -43,18 +45,22 @@ struct NoteEditorView: View {
                 Divider()
             }
 
-            // Syntax-highlighted editor (Runestone with tree-sitter)
-            RunestoneEditorView(
-                text: $content,
-                syntaxLanguage: syntaxLanguage,
-                wordWrap: wordWrap,
-                isEditable: !isReadOnly
-            )
-            .onChange(of: content) { _, _ in
-                scheduleSave()
-            }
-            .onChange(of: tags) { _, _ in
-                scheduleSave()
+            // Editor or Markdown Preview
+            if showPreview {
+                MarkdownPreviewView(content: content)
+            } else {
+                RunestoneEditorView(
+                    text: $content,
+                    syntaxLanguage: syntaxLanguage,
+                    wordWrap: wordWrap,
+                    isEditable: !isReadOnly
+                )
+                .onChange(of: content) { _, _ in
+                    scheduleSave()
+                }
+                .onChange(of: tags) { _, _ in
+                    scheduleSave()
+                }
             }
 
             // Attachments
@@ -91,6 +97,17 @@ struct NoteEditorView: View {
                         Label(
                             wordWrap ? L.editorDisableWordWrap : L.editorEnableWordWrap,
                             systemImage: wordWrap ? "arrow.right.to.line" : "text.word.spacing"
+                        )
+                    }
+
+                    // Preview toggle
+                    Button {
+                        showPreview.toggle()
+                        scheduleSave()
+                    } label: {
+                        Label(
+                            showPreview ? L.editorHidePreview : L.editorShowPreview,
+                            systemImage: showPreview ? "eye.slash" : "eye"
                         )
                     }
 
@@ -184,6 +201,13 @@ struct NoteEditorView: View {
                         }
                     }
 
+                    // Duplicate
+                    Button {
+                        try? appState.duplicateNote(id: note.id)
+                    } label: {
+                        Label(L.editorDuplicate, systemImage: "doc.on.doc")
+                    }
+
                     Divider()
 
                     // Delete
@@ -204,6 +228,7 @@ struct NoteEditorView: View {
             syntaxLanguage = note.syntaxLanguage
             wordWrap = note.wordWrap
             color = note.color
+            showPreview = note.showPreview
             didSaveDuringSession = false
         }
         .sheet(isPresented: $showVersionHistory) {
@@ -252,7 +277,8 @@ struct NoteEditorView: View {
         tags != note.tags ||
         syntaxLanguage != note.syntaxLanguage ||
         wordWrap != note.wordWrap ||
-        color != note.color
+        color != note.color ||
+        showPreview != note.showPreview
     }
 
     private func updatePendingNote() {
@@ -263,6 +289,7 @@ struct NoteEditorView: View {
         updated.syntaxLanguage = syntaxLanguage
         updated.wordWrap = wordWrap
         updated.color = color
+        updated.showPreview = showPreview
         appState.pendingEditorNote = updated
     }
 
@@ -275,6 +302,7 @@ struct NoteEditorView: View {
         updated.syntaxLanguage = syntaxLanguage
         updated.wordWrap = wordWrap
         updated.color = color
+        updated.showPreview = showPreview
         try? appState.saveNote(updated)
         appState.pendingEditorNote = nil
         didSaveDuringSession = true
@@ -364,6 +392,28 @@ struct PhotoPickerView: UIViewControllerRepresentable {
                     }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Markdown Preview
+
+struct MarkdownPreviewView: View {
+    let content: String
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                if let attributed = try? AttributedString(markdown: content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+                    Text(attributed)
+                        .textSelection(.enabled)
+                } else {
+                    Text(content)
+                        .textSelection(.enabled)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
         }
     }
 }
