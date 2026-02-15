@@ -196,6 +196,11 @@ struct NoteListView: View {
         } message: {
             Text(L.bulkDeleteConfirmMessage(selectedIds.count))
         }
+        .onChange(of: appState.searchQuery) { _, _ in appState.scheduleSearch() }
+        .onChange(of: appState.sortOrder) { _, _ in appState.scheduleSearch() }
+        .onChange(of: appState.showArchive) { _, _ in appState.scheduleSearch() }
+        .onChange(of: appState.notes.count) { _, _ in appState.scheduleSearch() }
+        .onChange(of: appState.archivedNotes.count) { _, _ in appState.scheduleSearch() }
         .overlay {
             if appState.showArchive && appState.archivedNotes.isEmpty {
                 ContentUnavailableView(

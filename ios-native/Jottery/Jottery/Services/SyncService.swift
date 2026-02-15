@@ -140,14 +140,17 @@ actor SyncService {
             }
         }
 
-        // Gather attachment blobs for pushed notes
+        // Gather attachment blobs for pushed notes.
+        // Use ref.id as the SyncAttachment ID — the server's attachments_data.id
+        // is a FK to attachments_meta.id, so they must match.
         var syncAttachments: [SyncAttachment] = []
+        var seenAttachmentIds = Set<String>()
         for note in syncNotes {
             for ref in note.attachments {
-                // ref.data is the blob store ID
+                guard seenAttachmentIds.insert(ref.id).inserted else { continue }
                 if let blobData = try? attachmentRepo.getBlob(id: ref.data) {
                     syncAttachments.append(SyncAttachment(
-                        id: ref.data,
+                        id: ref.id,
                         data: blobData.base64EncodedString()
                     ))
                 }

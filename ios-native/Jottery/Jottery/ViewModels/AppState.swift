@@ -70,20 +70,50 @@ final class AppState {
     var inboxItems: [InboxItem] = []
     var inboxCount: Int { inboxItems.count }
 
-    // MARK: - Computed
+    // MARK: - Search (background-threaded, debounced)
+
+    /// Filtered + sorted notes, updated asynchronously to avoid blocking the main thread.
+    var filteredNotes: [DecryptedNote] = []
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
 
     /// Notes displayed in the list — either active or archived depending on mode.
     var displayedNotes: [DecryptedNote] {
         showArchive ? archivedNotes : notes
     }
 
-    var filteredNotes: [DecryptedNote] {
-        let filtered = SearchService.filter(notes: displayedNotes, query: searchQuery)
-        return SearchService.sort(notes: filtered, order: sortOrder)
-    }
-
     var noteCount: Int { displayedNotes.count }
     var filteredCount: Int { filteredNotes.count }
+
+    /// Call whenever `searchQuery`, `notes`, `archivedNotes`, `showArchive`,
+    /// or `sortOrder` changes to recompute `filteredNotes` off the main thread.
+    /// Debounces by 150 ms when a search query is active; immediate otherwise.
+    func scheduleSearch() {
+        searchTask?.cancel()
+        let query = searchQuery
+        let source = displayedNotes
+        let order = sortOrder
+
+        // No debounce needed when query is empty — just sort (cheap).
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+            filteredNotes = SearchService.sort(notes: source, order: order)
+            return
+        }
+
+        searchTask = Task {
+            // Debounce while typing
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+
+            // Run expensive filter + sort off the main thread
+            let results = await Task.detached(priority: .userInitiated) {
+                let filtered = SearchService.filter(notes: source, query: query)
+                return SearchService.sort(notes: filtered, order: order)
+            }.value
+
+            guard !Task.isCancelled else { return }
+            self.filteredNotes = results
+        }
+    }
 
     var selectedNote: DecryptedNote? {
         guard let id = selectedNoteId else { return nil }
@@ -285,6 +315,7 @@ final class AppState {
         notes = try noteRepo.listActive(key: key)
         archivedNotes = try noteRepo.listArchived(key: key)
         savedSearches = (try? savedSearchRepo?.listAll(key: key)) ?? []
+        scheduleSearch()
     }
 
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
@@ -412,34 +443,34 @@ final class AppState {
         let encryptedJSON = try CryptoService.serializeEncryptedJSON(encrypted)
         let blobData = Data(encryptedJSON.utf8)
 
-        // Generate IDs
-        let blobId = CryptoService.generateUUID()
+        // Single ID for both metadata and blob — the server's attachments_data.id
+        // is a FK to attachments_meta.id, so they must match.
         let attachmentId = CryptoService.generateUUID()
 
-        // Store encrypted blob
-        try attachmentRepo.storeBlob(id: blobId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
+        // Store encrypted blob with the same ID used for the attachment ref
+        try attachmentRepo.storeBlob(id: attachmentId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
 
         // Encrypt the filename for storage
         let encFilename = try CryptoService.encryptText(filename, key: key)
         let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
 
-        // Create attachment ref
+        // Create attachment ref (data = attachmentId so blob lookup matches)
         let ref = AttachmentRef(
             id: attachmentId,
             filename: encFilenameJSON,
             mimeType: mimeType,
             size: fileData.count,
-            data: blobId
+            data: attachmentId
         )
 
-        // Update note
+        // Update note (in-memory copy uses plaintext filename for display)
         var updated = note
         updated.attachments.append(AttachmentRef(
             id: attachmentId,
             filename: filename,
             mimeType: mimeType,
             size: fileData.count,
-            data: blobId
+            data: attachmentId
         ))
         // Save with encrypted filename in the raw record
         try noteRepo.addAttachment(noteId: noteId, ref: ref)
@@ -714,6 +745,7 @@ final class AppState {
         syncService = nil
         notes = []
         archivedNotes = []
+        filteredNotes = []
         savedSearches = []
         pendingConflicts = []
         inboxItems = []
