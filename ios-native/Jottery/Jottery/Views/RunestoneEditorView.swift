@@ -69,8 +69,9 @@ struct RunestoneEditorView: UIViewRepresentable {
 
         applyState(to: textView, theme: theme)
 
-        context.coordinator.currentLanguage = syntaxLanguage
-        context.coordinator.currentIsDark = isDark
+        // Don't set coordinator.currentLanguage / currentIsDark here —
+        // leave them as defaults so updateUIView detects a "change" on its
+        // first call and re-applies state after the view is in the hierarchy.
 
         return textView
     }
