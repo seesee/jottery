@@ -377,6 +377,26 @@ struct NoteRepository: Sendable {
         }
     }
 
+    // MARK: - Purge
+
+    /// Permanently delete notes that have been in the recycle bin longer than the given interval.
+    /// Returns the number of notes purged.
+    @discardableResult
+    func purgeOldDeletedNotes(olderThan interval: TimeInterval = 30 * 24 * 60 * 60) throws -> Int {
+        let cutoff = Date().addingTimeInterval(-interval).iso8601
+        return try db.dbPool.write { db in
+            let count = try NoteRecord
+                .filter(Column("deleted") == true)
+                .filter(Column("deleted_at") != nil)
+                .filter(Column("deleted_at") < cutoff)
+                .fetchCount(db)
+            try db.execute(sql: """
+                DELETE FROM notes WHERE deleted = 1 AND deleted_at IS NOT NULL AND deleted_at < ?
+            """, arguments: [cutoff])
+            return count
+        }
+    }
+
     // MARK: - Private
 
     /// Encrypt plaintext tags to sync format (each tag JSON-encoded then individually encrypted).

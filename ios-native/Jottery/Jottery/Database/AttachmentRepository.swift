@@ -39,6 +39,13 @@ struct AttachmentRepository: Sendable {
         }
     }
 
+    /// Update the raw blob data for an existing attachment (e.g. during password change re-encryption).
+    func updateBlobData(id: String, data: Data) throws {
+        try db.dbPool.write { db in
+            try db.execute(sql: "UPDATE attachments SET data = ? WHERE id = ?", arguments: [data, id])
+        }
+    }
+
     /// Delete a blob by ID.
     func deleteBlob(id: String) throws {
         try db.dbPool.write { db in

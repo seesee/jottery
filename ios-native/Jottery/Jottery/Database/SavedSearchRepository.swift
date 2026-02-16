@@ -158,6 +158,15 @@ struct SavedSearchRepository: Sendable {
         }
     }
 
+    /// Update the encrypted name and query fields directly (used during password change re-encryption).
+    func updateEncrypted(id: String, name: String, query: String) throws {
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE saved_searches SET name = ?, query = ?, needs_sync = 1 WHERE id = ?
+            """, arguments: [name, query, id])
+        }
+    }
+
     // MARK: - Sync Helpers
 
     /// Mark a saved search as synced after successful push.

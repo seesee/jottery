@@ -726,6 +726,116 @@ actor SyncService {
         }
     }
 
+    // MARK: - Force Full Sync
+
+    /// Run a full sync with no incremental state — re-downloads all notes from the server.
+    func forceFullSync() async throws {
+        guard !isSyncing else { return }
+        isSyncing = true
+        lastError = nil
+        defer { isSyncing = false }
+
+        do {
+            // Push local changes first
+            try await push()
+
+            // Pull everything: no lastSyncAt, no knownNoteIds
+            var offset = 0
+            var hasMore = true
+
+            while hasMore {
+                let request = SyncPullRequest(
+                    lastSyncAt: nil,
+                    knownNoteIds: [],
+                    knownAttachmentIds: [],
+                    limit: 100,
+                    offset: offset
+                )
+
+                let response = try await syncClient.pull(request)
+                let now = Date().iso8601
+
+                var attachmentMetadata: [String: AttachmentRef] = [:]
+                for syncNote in response.notes {
+                    try processNote(syncNote, syncedAt: now)
+                    for ref in syncNote.attachments {
+                        attachmentMetadata[ref.data] = ref
+                    }
+                }
+
+                for syncAttachment in response.attachments {
+                    guard let blobData = Data(base64Encoded: syncAttachment.data) else { continue }
+                    let ref = attachmentMetadata[syncAttachment.id]
+                    try attachmentRepo.storeBlob(
+                        id: syncAttachment.id,
+                        filename: ref?.filename ?? "",
+                        mimeType: ref?.mimeType ?? "application/octet-stream",
+                        size: ref?.size ?? blobData.count,
+                        data: blobData
+                    )
+                }
+
+                if let deletions = response.deletions {
+                    for deletion in deletions {
+                        try noteRepo.hardDelete(id: deletion.id)
+                    }
+                }
+
+                for syncVersion in response.versions {
+                    let storageTags = Self.syncTagsToStorageTags(syncVersion.tags, key: key)
+                    let attachmentsStr = String(data: (try? JSONEncoder().encode(syncVersion.attachments)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
+                    let versionRecord = NoteVersionRecord(
+                        versionKey: syncVersion.versionKey,
+                        noteId: syncVersion.noteId,
+                        version: syncVersion.version,
+                        createdAt: syncVersion.createdAt,
+                        syncedAt: syncVersion.syncedAt,
+                        content: syncVersion.content,
+                        tags: storageTags,
+                        attachments: attachmentsStr,
+                        syntaxLanguage: syncVersion.syntaxLanguage,
+                        wordWrap: syncVersion.wordWrap,
+                        showPreview: syncVersion.showPreview,
+                        color: syncVersion.color,
+                        reason: syncVersion.reason,
+                        contentHash: syncVersion.contentHash,
+                        parentHash: syncVersion.parentHash
+                    )
+                    try versionRepo.insertOrReplace(versionRecord)
+                }
+
+                if let savedSearches = response.savedSearches {
+                    for remote in savedSearches {
+                        let record = SavedSearchRepository.SavedSearchRecord(
+                            id: remote.id,
+                            name: remote.name,
+                            query: remote.query,
+                            displayOrder: remote.order,
+                            createdAt: remote.createdAt,
+                            modifiedAt: remote.modifiedAt,
+                            syncedAt: now,
+                            deleted: remote.deleted,
+                            deletedAt: remote.deletedAt,
+                            version: remote.version,
+                            needsSync: false
+                        )
+                        try savedSearchRepo.insertOrReplace(record: record)
+                    }
+                }
+
+                hasMore = response.hasMore ?? false
+                offset += response.notes.count
+                if hasMore && response.notes.isEmpty { break }
+            }
+
+            try await finalise()
+            await postSyncHandler?()
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
+    }
+
     // MARK: - SSE
 
     /// Start listening for real-time sync events.

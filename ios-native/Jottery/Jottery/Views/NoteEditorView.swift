@@ -13,6 +13,7 @@ struct NoteEditorView: View {
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
     @State private var showVersionHistory = false
+    @State private var showNoteInfo = false
     @State private var showAttachmentPicker = false
     @State private var showPhotoPicker = false
 
@@ -222,6 +223,13 @@ struct NoteEditorView: View {
                         }
                     }
 
+                    // Note info
+                    Button {
+                        showNoteInfo = true
+                    } label: {
+                        Label(L.noteInfoTitle, systemImage: "info.circle")
+                    }
+
                     // Duplicate
                     Button {
                         try? appState.duplicateNote(id: note.id)
@@ -254,6 +262,9 @@ struct NoteEditorView: View {
         }
         .sheet(isPresented: $showVersionHistory) {
             VersionHistoryView(note: note)
+        }
+        .sheet(isPresented: $showNoteInfo) {
+            NoteInfoView(note: note)
         }
         .fileImporter(
             isPresented: $showAttachmentPicker,

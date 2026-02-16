@@ -294,6 +294,57 @@ enum L {
     static var importSkipped: String { String(localized: "import.skipped") }
     static var importErrors: String { String(localized: "import.errors") }
 
+    // MARK: - Change Password
+
+    static var changePasswordTitle: String { String(localized: "changePassword.title") }
+    static var changePasswordCurrent: String { String(localized: "changePassword.current") }
+    static var changePasswordNew: String { String(localized: "changePassword.new") }
+    static var changePasswordConfirm: String { String(localized: "changePassword.confirm") }
+    static var changePasswordAction: String { String(localized: "changePassword.action") }
+    static var changePasswordWarning: String { String(localized: "changePassword.warning") }
+    static var changePasswordSuccessTitle: String { String(localized: "changePassword.successTitle") }
+    static var changePasswordSuccessMessage: String { String(localized: "changePassword.successMessage") }
+
+    // MARK: - Note Info
+
+    static var noteInfoTitle: String { String(localized: "noteInfo.title") }
+    static var noteInfoNoteId: String { String(localized: "noteInfo.noteId") }
+    static var noteInfoCreated: String { String(localized: "noteInfo.created") }
+    static var noteInfoModified: String { String(localized: "noteInfo.modified") }
+    static var noteInfoSyncedAt: String { String(localized: "noteInfo.syncedAt") }
+    static var noteInfoVersion: String { String(localized: "noteInfo.version") }
+    static var noteInfoContentHash: String { String(localized: "noteInfo.contentHash") }
+    static var noteInfoWordCount: String { String(localized: "noteInfo.wordCount") }
+    static var noteInfoCharacterCount: String { String(localized: "noteInfo.characterCount") }
+    static var noteInfoAttachmentCount: String { String(localized: "noteInfo.attachmentCount") }
+    static var noteInfoSyncStatus: String { String(localized: "noteInfo.syncStatus") }
+    static var noteInfoSynced: String { String(localized: "noteInfo.synced") }
+    static var noteInfoPendingSync: String { String(localized: "noteInfo.pendingSync") }
+    static var noteInfoNeverSynced: String { String(localized: "noteInfo.neverSynced") }
+
+    // MARK: - Backup
+
+    static var backupTitle: String { String(localized: "backup.title") }
+    static var backupCreate: String { String(localized: "backup.create") }
+    static var backupCreateDescription: String { String(localized: "backup.createDescription") }
+    static var backupRestore: String { String(localized: "backup.restore") }
+    static var backupRestoreDescription: String { String(localized: "backup.restoreDescription") }
+    static var backupCreating: String { String(localized: "backup.creating") }
+    static var backupRestoring: String { String(localized: "backup.restoring") }
+    static var backupSuccessTitle: String { String(localized: "backup.successTitle") }
+    static var backupSuccessMessage: String { String(localized: "backup.successMessage") }
+    static var backupRestoreSuccessTitle: String { String(localized: "backup.restoreSuccessTitle") }
+    static var backupRestoreSuccessMessage: String { String(localized: "backup.restoreSuccessMessage") }
+    static var backupRestoreWarning: String { String(localized: "backup.restoreWarning") }
+    static var backupPassword: String { String(localized: "backup.password") }
+    static var backupPasswordHint: String { String(localized: "backup.passwordHint") }
+
+    // MARK: - Force Sync
+
+    static var forceSyncTitle: String { String(localized: "forceSync.title") }
+    static var forceSyncMessage: String { String(localized: "forceSync.message") }
+    static var forceSyncAction: String { String(localized: "forceSync.action") }
+
     // MARK: - Sort Order
 
     static var sortRecentlyModified: String { String(localized: "sort.recentlyModified") }

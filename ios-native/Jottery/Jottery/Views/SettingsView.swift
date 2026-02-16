@@ -7,6 +7,9 @@ struct SettingsView: View {
     @State private var showSyncSetup = false
     @State private var showWipeConfirmation = false
     @State private var showImport = false
+    @State private var showChangePassword = false
+    @State private var showBackup = false
+    @State private var showForceSyncConfirmation = false
     @State private var exportFile: ExportFile?
 
     var body: some View {
@@ -42,9 +45,9 @@ struct SettingsView: View {
                     }
                 }
 
-                // Biometrics
-                if appState.keyManager.isBiometricAvailable {
-                    Section(L.settingsSecurity) {
+                // Security
+                Section(L.settingsSecurity) {
+                    if appState.keyManager.isBiometricAvailable {
                         Toggle(L.settingsBiometric, isOn: Binding(
                             get: { appState.keyManager.isBiometricEnabled },
                             set: { enabled in
@@ -56,6 +59,12 @@ struct SettingsView: View {
                             }
                         ))
                     }
+
+                    Button {
+                        showChangePassword = true
+                    } label: {
+                        Label(L.changePasswordTitle, systemImage: "key")
+                    }
                 }
 
                 // Sync
@@ -63,6 +72,12 @@ struct SettingsView: View {
 
                 // Data
                 Section(L.settingsData) {
+                    Button {
+                        showBackup = true
+                    } label: {
+                        Label(L.backupTitle, systemImage: "externaldrive.badge.shield")
+                    }
+
                     Button {
                         exportAllNotes()
                     } label: {
@@ -131,11 +146,25 @@ struct SettingsView: View {
             } message: {
                 Text(L.settingsWipeConfirmMessage)
             }
+            .alert(L.forceSyncTitle, isPresented: $showForceSyncConfirmation) {
+                Button(L.forceSyncAction, role: .destructive) {
+                    Task { @MainActor in await appState.forceFullSync() }
+                }
+                Button(L.commonCancel, role: .cancel) {}
+            } message: {
+                Text(L.forceSyncMessage)
+            }
             .sheet(isPresented: $showImport) {
                 ImportView()
             }
             .sheet(item: $exportFile) { file in
                 ActivityView(activityItems: [file.url])
+            }
+            .sheet(isPresented: $showChangePassword) {
+                ChangePasswordView()
+            }
+            .sheet(isPresented: $showBackup) {
+                BackupView()
             }
             .sheet(isPresented: $showSyncSetup) {
                 SyncSetupView(onComplete: { apiKey in
@@ -194,6 +223,13 @@ struct SettingsView: View {
                                 .controlSize(.small)
                         }
                     }
+                }
+                .disabled(appState.isSyncing)
+
+                Button {
+                    showForceSyncConfirmation = true
+                } label: {
+                    Text(L.forceSyncTitle)
                 }
                 .disabled(appState.isSyncing)
 
