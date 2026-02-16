@@ -83,6 +83,7 @@ enum L {
     static var editorUnpin: String { String(localized: "editor.unpin") }
     static var editorEnableWordWrap: String { String(localized: "editor.enableWordWrap") }
     static var editorDisableWordWrap: String { String(localized: "editor.disableWordWrap") }
+    static var editorResetTextSize: String { String(localized: "editor.resetTextSize") }
     static func editorLanguage(_ name: String) -> String {
         String(format: String(localized: "editor.language"), name)
     }

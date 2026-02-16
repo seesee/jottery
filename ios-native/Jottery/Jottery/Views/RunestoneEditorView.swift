@@ -20,18 +20,21 @@ struct RunestoneEditorView: UIViewRepresentable {
     var syntaxLanguage: String
     var wordWrap: Bool
     var isEditable: Bool
+    var fontSize: CGFloat
     @Environment(\.colorScheme) private var colorScheme
 
     init(
         text: Binding<String>,
         syntaxLanguage: String = "markdown",
         wordWrap: Bool = true,
-        isEditable: Bool = true
+        isEditable: Bool = true,
+        fontSize: CGFloat = EditorTheme.defaultFontSize
     ) {
         _text = text
         self.syntaxLanguage = syntaxLanguage
         self.wordWrap = wordWrap
         self.isEditable = isEditable
+        self.fontSize = fontSize
     }
 
     func makeCoordinator() -> Coordinator {
@@ -76,14 +79,16 @@ struct RunestoneEditorView: UIViewRepresentable {
         let isDark = colorScheme == .dark
         let languageChanged = context.coordinator.currentLanguage != syntaxLanguage
         let themeChanged = context.coordinator.currentIsDark != isDark
+        let fontSizeChanged = context.coordinator.currentFontSize != fontSize
         let textChanged = textView.text != text && !context.coordinator.isEditing
 
-        if languageChanged || themeChanged || textChanged {
-            let theme = EditorTheme(isDark: isDark)
+        if languageChanged || themeChanged || fontSizeChanged || textChanged {
+            let theme = EditorTheme(isDark: isDark, fontSize: fontSize)
+            context.coordinator.currentFontSize = fontSize
             textView.backgroundColor = isDark ? .systemBackground : .systemBackground
 
-            // Only re-apply full state if language or theme changed, or external text change
-            if languageChanged || themeChanged {
+            // Only re-apply full state if language, theme, or font size changed, or external text change
+            if languageChanged || themeChanged || fontSizeChanged {
                 // Preserve cursor position across re-parse
                 let selectedRange = textView.selectedRange
                 let currentText = textChanged ? text : textView.text
@@ -203,6 +208,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         var isEditing = false
         var currentLanguage: String = ""
         var currentIsDark: Bool = false
+        var currentFontSize: CGFloat = 0
 
         init(text: Binding<String>) {
             self.text = text

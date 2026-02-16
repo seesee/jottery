@@ -10,6 +10,7 @@ import WebKit
 struct WebEditorView: UIViewRepresentable {
     let bundleName: String
     @Binding var content: String
+    var fontSize: CGFloat = EditorTheme.defaultFontSize
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -52,6 +53,14 @@ struct WebEditorView: UIViewRepresentable {
             }
         }
 
+        // Update font size if changed
+        if coordinator.currentFontSize != fontSize {
+            coordinator.currentFontSize = fontSize
+            if coordinator.isReady {
+                callJS(webView, "bridge.setFontSize(\(fontSize))")
+            }
+        }
+
         // Update content if changed externally (not from JS callback)
         if !coordinator.isUpdatingFromJS && content != coordinator.lastSentContent {
             coordinator.lastSentContent = content
@@ -70,6 +79,7 @@ struct WebEditorView: UIViewRepresentable {
         var isReady = false
         var isUpdatingFromJS = false
         var currentIsDark: Bool?
+        var currentFontSize: CGFloat = 0
         var lastSentContent: String?
 
         init(parent: WebEditorView) {
@@ -89,9 +99,11 @@ struct WebEditorView: UIViewRepresentable {
                 // Send initial content now that JS is ready
                 let isDark = parent.colorScheme == .dark
                 currentIsDark = isDark
+                currentFontSize = parent.fontSize
                 lastSentContent = parent.content
-                let escaped = escapeForJS(parent.content)
                 if let webView {
+                    callJS(webView, "bridge.setFontSize(\(parent.fontSize))")
+                    let escaped = escapeForJS(parent.content)
                     callJS(webView, "bridge.setContent(\(escaped), \(isDark))")
                 }
 

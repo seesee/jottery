@@ -16,6 +16,7 @@ struct NoteEditorView: View {
     @State private var showNoteInfo = false
     @State private var showAttachmentPicker = false
     @State private var showPhotoPicker = false
+    @State private var pinchBaseScale: Double = 1.0
 
     let note: DecryptedNote
 
@@ -50,12 +51,13 @@ struct NoteEditorView: View {
             if showPreview && syntaxLanguage != "calc" && syntaxLanguage != "outliner" {
                 MarkdownPreviewView(
                     content: content,
+                    fontSize: appState.editorFontSize,
                     attachments: note.attachments,
                     attachmentRepo: appState.attachmentRepo,
                     encryptionKey: appState.keyManager.masterKey
                 )
             } else if syntaxLanguage == "calc" {
-                WebCalcEditorView(content: $content)
+                WebCalcEditorView(content: $content, fontSize: appState.editorFontSize)
                     .onChange(of: content) { _, _ in
                         scheduleSave()
                     }
@@ -63,7 +65,7 @@ struct NoteEditorView: View {
                         scheduleSave()
                     }
             } else if syntaxLanguage == "outliner" {
-                WebOutlinerEditorView(content: $content)
+                WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize)
                     .onChange(of: content) { _, _ in
                         scheduleSave()
                     }
@@ -75,7 +77,8 @@ struct NoteEditorView: View {
                     text: $content,
                     syntaxLanguage: syntaxLanguage,
                     wordWrap: wordWrap,
-                    isEditable: !isReadOnly
+                    isEditable: !isReadOnly,
+                    fontSize: appState.editorFontSize
                 )
                 .onChange(of: content) { _, _ in
                     scheduleSave()
@@ -99,6 +102,17 @@ struct NoteEditorView: View {
                 )
             }
         }
+        .overlay {
+            PinchGestureOverlay { scale in
+                let newScale = pinchBaseScale * scale
+                appState.editorFontScale = max(0.5, min(3.0, newScale))
+            } onEnded: {
+                pinchBaseScale = appState.editorFontScale
+            }
+        }
+        .onAppear {
+            pinchBaseScale = appState.editorFontScale
+        }
         .navigationTitle(note.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -120,6 +134,16 @@ struct NoteEditorView: View {
                             wordWrap ? L.editorDisableWordWrap : L.editorEnableWordWrap,
                             systemImage: wordWrap ? "arrow.right.to.line" : "text.word.spacing"
                         )
+                    }
+
+                    // Reset text size
+                    if appState.editorFontScale != 1.0 {
+                        Button {
+                            appState.editorFontScale = 1.0
+                            pinchBaseScale = 1.0
+                        } label: {
+                            Label(L.editorResetTextSize, systemImage: "textformat.size")
+                        }
                     }
 
                     // Preview toggle
@@ -424,6 +448,69 @@ struct PhotoPickerView: UIViewControllerRepresentable {
                     }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Pinch Gesture Overlay
+
+/// Transparent UIKit-based pinch gesture overlay that doesn't interfere with
+/// the underlying text editor's touch handling.
+struct PinchGestureOverlay: UIViewRepresentable {
+    var onChanged: (CGFloat) -> Void
+    var onEnded: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChanged: onChanged, onEnded: onEnded)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = true
+
+        let pinch = UIPinchGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handlePinch(_:))
+        )
+        pinch.delegate = context.coordinator
+        view.addGestureRecognizer(pinch)
+
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+    }
+
+    class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onChanged: (CGFloat) -> Void
+        var onEnded: () -> Void
+
+        init(onChanged: @escaping (CGFloat) -> Void, onEnded: @escaping () -> Void) {
+            self.onChanged = onChanged
+            self.onEnded = onEnded
+        }
+
+        @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+            switch gesture.state {
+            case .changed:
+                onChanged(gesture.scale)
+            case .ended, .cancelled:
+                onEnded()
+            default:
+                break
+            }
+        }
+
+        /// Allow simultaneous recognition so the pinch doesn't block
+        /// scrolling or text selection gestures underneath.
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
         }
     }
 }

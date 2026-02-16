@@ -343,6 +343,7 @@ const calcTheme = EditorView.baseTheme({
 // ---- State ----
 
 let isDark = false;
+let currentFontSize = 15;
 let editorView: EditorView | null = null;
 
 // ---- Theme application ----
@@ -379,7 +380,7 @@ function createEditor(content: string, dark: boolean): void {
         EditorView.theme({
           '&': {
             height: '100%',
-            fontSize: '15px',
+            fontSize: `${currentFontSize}px`,
           },
           '.cm-scroller': {
             fontFamily: "'SF Mono', Menlo, monospace",
@@ -426,6 +427,15 @@ window.bridge = {
     if (editorView) {
       const content = editorView.state.doc.toString();
       createEditor(content, dark);
+    }
+  },
+
+  setFontSize(px: number): void {
+    currentFontSize = px;
+    // Recreate editor to apply new font size
+    if (editorView) {
+      const content = editorView.state.doc.toString();
+      createEditor(content, isDark);
     }
   },
 

@@ -39,6 +39,23 @@ final class AppState {
 
     var backgroundedAt: Date?
 
+    // MARK: - Editor Font
+
+    /// Multiplier applied to the system body font size.
+    /// Persisted in UserDefaults so it survives app restarts.
+    var editorFontScale: Double = {
+        let saved = UserDefaults.standard.double(forKey: "editorFontScale")
+        return saved > 0 ? saved : 1.0
+    }() {
+        didSet { UserDefaults.standard.set(editorFontScale, forKey: "editorFontScale") }
+    }
+
+    /// Effective font size in points (system body size * scale).
+    var editorFontSize: CGFloat {
+        let base = UIFont.preferredFont(forTextStyle: .body).pointSize
+        return max(9, base * editorFontScale)
+    }
+
     // MARK: - Settings
 
     var settings: UserSettings = .defaults

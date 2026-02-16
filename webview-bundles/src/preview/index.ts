@@ -220,6 +220,9 @@ function setContent(content: string, dark: boolean): void {
 window.bridge = {
   setContent,
   setTheme: applyTheme,
+  setFontSize(px: number): void {
+    document.body.style.fontSize = `${px}px`;
+  },
   resolveAttachment(id: string, dataUrl: string): void {
     const elements = pendingAttachments.get(id);
     if (!elements) return;

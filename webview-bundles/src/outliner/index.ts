@@ -490,6 +490,10 @@ window.bridge = {
     applyTheme(dark);
   },
 
+  setFontSize(px: number): void {
+    document.body.style.fontSize = `${px}px`;
+  },
+
   resolveAttachment(): void {
     // Not used by outliner
   },

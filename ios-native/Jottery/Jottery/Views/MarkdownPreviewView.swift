@@ -8,6 +8,7 @@ import WebKit
 /// Supports syntax-highlighted code blocks, GFM tables, task lists, and inline attachment resolution.
 struct MarkdownPreviewView: UIViewRepresentable {
     let content: String
+    var fontSize: CGFloat = EditorTheme.defaultFontSize
     var attachments: [AttachmentRef] = []
     var attachmentRepo: AttachmentRepository?
     var encryptionKey: SymmetricKey?
@@ -53,6 +54,14 @@ struct MarkdownPreviewView: UIViewRepresentable {
             }
         }
 
+        // Update font size if changed
+        if coordinator.currentFontSize != fontSize {
+            coordinator.currentFontSize = fontSize
+            if coordinator.isReady {
+                callJS(webView, "bridge.setFontSize(\(fontSize))")
+            }
+        }
+
         // Update content if changed
         if content != coordinator.lastSentContent {
             coordinator.lastSentContent = content
@@ -76,6 +85,7 @@ struct MarkdownPreviewView: UIViewRepresentable {
         weak var webView: WKWebView?
         var isReady = false
         var currentIsDark: Bool?
+        var currentFontSize: CGFloat = 0
         var lastSentContent: String?
         var parentContent: String
         var attachments: [AttachmentRef]
@@ -102,9 +112,11 @@ struct MarkdownPreviewView: UIViewRepresentable {
                 isReady = true
                 let isDark = parent.colorScheme == .dark
                 currentIsDark = isDark
+                currentFontSize = parent.fontSize
                 lastSentContent = parentContent
-                let escaped = escapeForJS(parentContent)
                 if let webView {
+                    callJS(webView, "bridge.setFontSize(\(parent.fontSize))")
+                    let escaped = escapeForJS(parentContent)
                     callJS(webView, "bridge.setContent(\(escaped), \(isDark))")
                 }
 

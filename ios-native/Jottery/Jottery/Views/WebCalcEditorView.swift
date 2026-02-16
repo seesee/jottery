@@ -6,8 +6,9 @@ import SwiftUI
 /// Results are displayed inline next to each expression.
 struct WebCalcEditorView: View {
     @Binding var content: String
+    var fontSize: CGFloat = EditorTheme.defaultFontSize
 
     var body: some View {
-        WebEditorView(bundleName: "calc", content: $content)
+        WebEditorView(bundleName: "calc", content: $content, fontSize: fontSize)
     }
 }

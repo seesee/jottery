@@ -7,8 +7,9 @@ import SwiftUI
 /// and serialises to the markdown-compatible format (- expanded / + collapsed).
 struct WebOutlinerEditorView: View {
     @Binding var content: String
+    var fontSize: CGFloat = EditorTheme.defaultFontSize
 
     var body: some View {
-        WebEditorView(bundleName: "outliner", content: $content)
+        WebEditorView(bundleName: "outliner", content: $content, fontSize: fontSize)
     }
 }

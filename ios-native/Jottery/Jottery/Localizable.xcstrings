@@ -692,6 +692,17 @@
         }
       }
     },
+    "editor.resetTextSize" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en-GB" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset Text Size"
+          }
+        }
+      }
+    },
     "editor.enableWordWrap" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -9,14 +9,21 @@ import Runestone
 final class EditorTheme: @unchecked Sendable, Theme {
 
     let isDark: Bool
+    let fontSize: CGFloat
 
-    init(isDark: Bool) {
+    init(isDark: Bool, fontSize: CGFloat = EditorTheme.defaultFontSize) {
         self.isDark = isDark
+        self.fontSize = fontSize
+    }
+
+    /// System body font size — respects Dynamic Type.
+    static var defaultFontSize: CGFloat {
+        UIFont.preferredFont(forTextStyle: .body).pointSize
     }
 
     // MARK: - Typography
 
-    var font: UIFont { .monospacedSystemFont(ofSize: 15, weight: .regular) }
+    var font: UIFont { .monospacedSystemFont(ofSize: fontSize, weight: .regular) }
 
     var textColor: UIColor {
         isDark ? UIColor(white: 0.92, alpha: 1) : UIColor(white: 0.10, alpha: 1)
@@ -38,7 +45,7 @@ final class EditorTheme: @unchecked Sendable, Theme {
         isDark ? UIColor(white: 0.45, alpha: 1) : UIColor(white: 0.55, alpha: 1)
     }
 
-    var lineNumberFont: UIFont { .monospacedSystemFont(ofSize: 12, weight: .regular) }
+    var lineNumberFont: UIFont { .monospacedSystemFont(ofSize: max(9, fontSize * 0.8), weight: .regular) }
 
     // MARK: - Selected Line
 

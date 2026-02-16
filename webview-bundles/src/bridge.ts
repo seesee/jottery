@@ -22,6 +22,7 @@ declare global {
     bridge: {
       setContent(content: string, isDark: boolean): void;
       setTheme(isDark: boolean): void;
+      setFontSize(px: number): void;
       resolveAttachment(id: string, dataUrl: string): void;
     };
   }
