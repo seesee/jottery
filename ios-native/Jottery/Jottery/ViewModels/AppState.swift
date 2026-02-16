@@ -29,6 +29,11 @@ final class AppState {
     var syncEnabled: Bool = false
     var syncStatusMessage: String?
 
+    // MARK: - Quick Actions
+
+    var pendingQuickAction: String?
+    var searchFocused: Bool = false
+
     // MARK: - Lifecycle
 
     var backgroundedAt: Date?

@@ -15,6 +15,7 @@ struct NoteListView: View {
     @State private var showSavedSearches = false
     @State private var showConflicts = false
     @State private var showInbox = false
+    @State private var searchIsActive = false
 
     var body: some View {
         @Bindable var state = appState
@@ -28,7 +29,7 @@ struct NoteListView: View {
         }
         .listStyle(.insetGrouped)
         .refreshable { await appState.triggerSync() }
-        .searchable(text: $state.searchQuery, prompt: L.noteListSearch)
+        .searchable(text: $state.searchQuery, isPresented: $searchIsActive, prompt: L.noteListSearch)
         .navigationTitle(appState.showArchive ? L.noteListArchiveTitle : L.noteListTitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -195,6 +196,21 @@ struct NoteListView: View {
             Button(L.commonCancel, role: .cancel) {}
         } message: {
             Text(L.bulkDeleteConfirmMessage(selectedIds.count))
+        }
+        .onChange(of: appState.searchFocused) { _, focused in
+            if focused {
+                searchIsActive = true
+                appState.searchFocused = false
+            }
+        }
+        .onAppear {
+            if appState.searchFocused {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(300))
+                    searchIsActive = true
+                    appState.searchFocused = false
+                }
+            }
         }
         .onChange(of: appState.searchQuery) { _, _ in appState.scheduleSearch() }
         .onChange(of: appState.sortOrder) { _, _ in appState.scheduleSearch() }
