@@ -26,9 +26,9 @@
 
 /* Begin PBXFileReference section */
 		A3000001 /* Jottery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jottery.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D1000001 /* preview.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = preview.html; path = ../../webview-bundles/dist/preview.html; sourceTree = "<group>"; };
-		D1000002 /* calc.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = calc.html; path = ../../webview-bundles/dist/calc.html; sourceTree = "<group>"; };
-		D1000003 /* outliner.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = outliner.html; path = ../../webview-bundles/dist/outliner.html; sourceTree = "<group>"; };
+		D1000001 /* preview.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = preview.html; path = "../../webview-bundles/dist/preview.html"; sourceTree = "<group>"; };
+		D1000002 /* calc.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = calc.html; path = "../../webview-bundles/dist/calc.html"; sourceTree = "<group>"; };
+		D1000003 /* outliner.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = outliner.html; path = "../../webview-bundles/dist/outliner.html"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
