@@ -6,6 +6,9 @@ struct SavedSearchesView: View {
 
     @State private var showSaveSheet = false
     @State private var newSearchName = ""
+    @State private var showAddSheet = false
+    @State private var addSearchName = ""
+    @State private var addSearchQuery = ""
 
     var body: some View {
         NavigationStack {
@@ -62,6 +65,11 @@ struct SavedSearchesView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.versionHistoryDone) { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showAddSheet = true } label: {
+                        Image(systemName: "plus")
+                    }
+                }
             }
             .alert(L.savedSearchSaveTitle, isPresented: $showSaveSheet) {
                 TextField(L.savedSearchNamePlaceholder, text: $newSearchName)
@@ -75,6 +83,20 @@ struct SavedSearchesView: View {
                 }
             } message: {
                 Text(L.savedSearchSaveMessage(appState.searchQuery))
+            }
+            .alert(L.savedSearchAddTitle, isPresented: $showAddSheet) {
+                TextField(L.savedSearchNamePlaceholder, text: $addSearchName)
+                TextField(L.savedSearchQueryPlaceholder, text: $addSearchQuery)
+                Button(L.savedSearchSaveAction) {
+                    guard !addSearchName.isEmpty, !addSearchQuery.isEmpty else { return }
+                    try? appState.saveSearch(name: addSearchName, query: addSearchQuery)
+                    addSearchName = ""
+                    addSearchQuery = ""
+                }
+                Button(L.commonCancel, role: .cancel) {
+                    addSearchName = ""
+                    addSearchQuery = ""
+                }
             }
         }
     }

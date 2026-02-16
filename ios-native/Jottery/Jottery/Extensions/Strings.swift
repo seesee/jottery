@@ -218,6 +218,8 @@ enum L {
     static func savedSearchSaveMessage(_ query: String) -> String {
         String(format: String(localized: "savedSearch.saveMessage"), query)
     }
+    static var savedSearchAddTitle: String { String(localized: "savedSearch.addTitle") }
+    static var savedSearchQueryPlaceholder: String { String(localized: "savedSearch.queryPlaceholder") }
 
     // MARK: - Inbox
 

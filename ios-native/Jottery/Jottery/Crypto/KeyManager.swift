@@ -13,7 +13,7 @@ final class KeyManager {
     // MARK: - State
 
     /// The in-memory master key. Internal setter to allow password change flow.
-    internal(set) var masterKey: SymmetricKey?
+    var masterKey: SymmetricKey?
     private(set) var isUnlocked: Bool = false
 
     /// Seconds since last user interaction before auto-locking.
