@@ -632,7 +632,7 @@ final class AppState {
         syncEnabled = true
         syncError = nil
 
-        // Start SSE and wire the post-sync handler to reload notes
+        // Wire the post-sync handler, start SSE, and run the initial sync
         Task { [weak self] in
             await service.setPostSyncHandler { [weak self] in
                 await MainActor.run {
@@ -642,6 +642,7 @@ final class AppState {
                 }
             }
             await service.startSSE()
+            await self?.triggerSync()
         }
 
         // Restart SSE immediately when the network recovers
@@ -734,13 +735,17 @@ final class AppState {
 
     func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
-        case .background, .inactive:
-            // Only record the first transition away — .inactive fires again
-            // on the way *back* from background, which would reset the timestamp.
+        case .background:
+            // Genuinely backgrounded — stop SSE and record timestamp for auto-lock.
             if backgroundedAt == nil {
                 backgroundedAt = Date()
             }
             Task { await syncService?.stopSSE() }
+        case .inactive:
+            // Transient inactivity (Face ID prompt, notification centre, share sheet).
+            // Don't stop SSE or set backgroundedAt — avoid triggering a redundant
+            // SSE restart and full sync when the app returns to .active.
+            break
         case .active:
             guard !isLocked else { return }
             // Check auto-lock (timeout 0 means "never")
@@ -752,10 +757,11 @@ final class AppState {
                     return
                 }
             }
+            let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
             keyManager.recordActivity()
-            // Restart SSE and trigger a sync on return
-            if syncService != nil {
+            // Only restart SSE and sync when returning from genuine background
+            if wasBackgrounded, syncService != nil {
                 Task {
                     await syncService?.startSSE()
                     await triggerSync()

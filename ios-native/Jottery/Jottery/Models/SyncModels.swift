@@ -179,7 +179,12 @@ struct SyncStatusResponse: Codable {
 
 struct SSETokenResponse: Codable {
     let token: String
-    let expiresAt: String
+    let expiresIn: Int
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case expiresIn = "expires_in"
+    }
 }
 
 // MARK: - Sync Saved Search
