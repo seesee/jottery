@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NoteRowView: View {
     let note: DecryptedNote
+    var hasConflict: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -16,6 +17,12 @@ struct NoteRowView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
+                    if hasConflict {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+
                     if note.pinned {
                         Image(systemName: "pin.fill")
                             .font(.caption)
