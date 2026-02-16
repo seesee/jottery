@@ -150,6 +150,20 @@ else
     echo "✓ Updated admin/package.json (using sed)"
 fi
 
+# Update Xcode project (iOS client)
+IOS_PBXPROJ="ios-native/Jottery/Jottery.xcodeproj/project.pbxproj"
+if [ -f "$IOS_PBXPROJ" ]; then
+    # Derive build number: major×10000 + minor×100 + patch
+    IFS='.' read -r V_MAJOR V_MINOR V_PATCH <<< "$VERSION"
+    BUILD_NUMBER=$(( V_MAJOR * 10000 + V_MINOR * 100 + V_PATCH ))
+
+    sed -i.bak "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/" "$IOS_PBXPROJ" && rm "$IOS_PBXPROJ.bak"
+    sed -i.bak "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/" "$IOS_PBXPROJ" && rm "$IOS_PBXPROJ.bak"
+    echo "✓ Updated $IOS_PBXPROJ (version=$VERSION, build=$BUILD_NUMBER)"
+else
+    echo "⚠ iOS project not found at $IOS_PBXPROJ — skipping"
+fi
+
 echo ""
 echo "Regenerating SQLx query cache after version update..."
 if ! (cd server && cargo sqlx prepare); then
@@ -164,6 +178,7 @@ echo "  - package.json (web client)"
 echo "  - tui/Cargo.toml (TUI client)"
 echo "  - server/Cargo.toml (server)"
 echo "  - admin/package.json (admin dashboard)"
+echo "  - ios-native/Jottery/Jottery.xcodeproj (iOS client)"
 echo ""
 echo "SQLx query cache updated for Docker builds"
 echo ""
