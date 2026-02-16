@@ -19,10 +19,16 @@
 		C3000009 /* TreeSitterPythonRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C2000009 /* TreeSitterPythonRunestone */; };
 		C300000A /* TreeSitterSQLRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C200000A /* TreeSitterSQLRunestone */; };
 		C300000B /* TreeSitterTypeScriptRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = C200000B /* TreeSitterTypeScriptRunestone */; };
+		D2000001 /* preview.html in Resources */ = {isa = PBXBuildFile; fileRef = D1000001 /* preview.html */; };
+		D2000002 /* calc.html in Resources */ = {isa = PBXBuildFile; fileRef = D1000002 /* calc.html */; };
+		D2000003 /* outliner.html in Resources */ = {isa = PBXBuildFile; fileRef = D1000003 /* outliner.html */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A3000001 /* Jottery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jottery.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D1000001 /* preview.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = preview.html; path = ../../webview-bundles/dist/preview.html; sourceTree = "<group>"; };
+		D1000002 /* calc.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = calc.html; path = ../../webview-bundles/dist/calc.html; sourceTree = "<group>"; };
+		D1000003 /* outliner.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = outliner.html; path = ../../webview-bundles/dist/outliner.html; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +66,7 @@
 			isa = PBXGroup;
 			children = (
 				A6000001 /* Jottery */,
+				D3000001 /* WebViewBundles */,
 				A9000001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,6 +77,16 @@
 				A3000001 /* Jottery.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D3000001 /* WebViewBundles */ = {
+			isa = PBXGroup;
+			children = (
+				D1000001 /* preview.html */,
+				D1000002 /* calc.html */,
+				D1000003 /* outliner.html */,
+			);
+			name = WebViewBundles;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -154,6 +171,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D2000001 /* preview.html in Resources */,
+				D2000002 /* calc.html in Resources */,
+				D2000003 /* outliner.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
