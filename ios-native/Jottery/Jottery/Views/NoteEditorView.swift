@@ -46,8 +46,29 @@ struct NoteEditorView: View {
             }
 
             // Editor or Markdown Preview
-            if showPreview {
-                MarkdownPreviewView(content: content)
+            if showPreview && syntaxLanguage != "calc" && syntaxLanguage != "outliner" {
+                MarkdownPreviewView(
+                    content: content,
+                    attachments: note.attachments,
+                    attachmentRepo: appState.attachmentRepo,
+                    encryptionKey: appState.keyManager.masterKey
+                )
+            } else if syntaxLanguage == "calc" {
+                WebCalcEditorView(content: $content)
+                    .onChange(of: content) { _, _ in
+                        scheduleSave()
+                    }
+                    .onChange(of: tags) { _, _ in
+                        scheduleSave()
+                    }
+            } else if syntaxLanguage == "outliner" {
+                WebOutlinerEditorView(content: $content)
+                    .onChange(of: content) { _, _ in
+                        scheduleSave()
+                    }
+                    .onChange(of: tags) { _, _ in
+                        scheduleSave()
+                    }
             } else {
                 RunestoneEditorView(
                     text: $content,
@@ -309,7 +330,7 @@ struct NoteEditorView: View {
     }
 
     private var syntaxLanguages: [String] {
-        ["markdown", "javascript", "typescript", "python", "perl", "json", "xml", "css", "bash", "sql", "plain"]
+        ["markdown", "calc", "outliner", "javascript", "typescript", "python", "perl", "json", "xml", "css", "bash", "sql", "plain"]
     }
 
     // MARK: - Attachment Import

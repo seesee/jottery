@@ -2,6 +2,7 @@ name: "CodeQL Config"
 
 paths-ignore:
   - 'public/pdf.worker.min.mjs'  # Vendored third-party library (PDF.js)
+  - 'webview-bundles/dist/**'    # Built bundles — third-party library code (CodeMirror, highlight.js, math.js)
   - '**/*.test.ts'               # Unit test files contain test fixtures
   - '**/*.spec.ts'               # E2E test files contain test fixtures
   - 'e2e/**'                     # E2E test directory
