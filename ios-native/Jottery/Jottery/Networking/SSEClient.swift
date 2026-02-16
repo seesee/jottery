@@ -2,13 +2,22 @@ import Foundation
 
 /// Server-Sent Events client using URLSession bytes streaming.
 /// Listens for `event: sync` / `data: pull` messages to trigger sync pulls.
+/// Retries indefinitely with capped exponential backoff.
 actor SSEClient {
 
     private var task: Task<Void, Never>?
     private let syncClient: SyncClient
     private var reconnectAttempts = 0
-    private let maxReconnectAttempts = 10
     private let maxBackoffSeconds: Double = 30
+
+    /// Dedicated session for SSE — long timeouts, no caching.
+    private let sseSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 45   // Must receive data within 45 s (heartbeat is 30 s)
+        config.timeoutIntervalForResource = 0   // No overall resource timeout
+        config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        return URLSession(configuration: config)
+    }()
 
     var onSyncEvent: (@Sendable () async -> Void)?
 
@@ -33,15 +42,17 @@ actor SSEClient {
     // MARK: - Private
 
     private func connectLoop() async {
-        while !Task.isCancelled && reconnectAttempts < maxReconnectAttempts {
+        while !Task.isCancelled {
             do {
                 try await connect()
-                // Connection ended normally — reset backoff
+                // Connection ended normally (server closed) — reconnect immediately
+                print("[SSE] stream ended normally, reconnecting")
                 reconnectAttempts = 0
             } catch {
                 if Task.isCancelled { return }
                 reconnectAttempts += 1
-                let delay = min(pow(2.0, Double(reconnectAttempts)), maxBackoffSeconds)
+                let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
+                print("[SSE] connection error (attempt \(reconnectAttempts)): \(error) — retrying in \(delay)s")
                 try? await Task.sleep(for: .seconds(delay))
             }
         }
@@ -56,32 +67,59 @@ actor SSEClient {
 
         var request = URLRequest(url: url)
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 300 // 5 minute timeout for long-lived connection
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
 
-        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        print("[SSE] connecting to \(url.host ?? "?")")
+        let (bytes, response) = try await sseSession.bytes(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            print("[SSE] connection failed with status \(status)")
             throw SSEError.connectionFailed
         }
 
+        let headers = http.allHeaderFields
+        print("[SSE] connected — status=\(http.statusCode), content-type=\(headers["Content-Type"] ?? "?"), transfer-encoding=\(headers["Transfer-Encoding"] ?? "?")")
+        reconnectAttempts = 0
+
         var currentEvent = ""
         var currentData = ""
+        var lineCount = 0
 
         for try await line in bytes.lines {
             if Task.isCancelled { return }
+            lineCount += 1
 
-            if line.hasPrefix("event: ") {
+            if line.hasPrefix(":") {
+                // SSE comment / heartbeat
+                print("[SSE] heartbeat (line #\(lineCount))")
+            } else if line.hasPrefix("event: ") {
                 currentEvent = String(line.dropFirst(7))
             } else if line.hasPrefix("data: ") {
                 currentData = String(line.dropFirst(6))
-            } else if line.isEmpty {
-                // End of event — process it
+                // Process immediately once we have both event + data.
+                // The SSE spec says to wait for a blank line, but HTTP/2
+                // may buffer the trailing \n so it arrives with the next
+                // heartbeat (~30 s later). Since our protocol only uses
+                // single event+data pairs, this is safe.
                 if currentEvent == "sync" && currentData == "pull" {
-                    await onSyncEvent?()
+                    print("[SSE] sync event received — triggering pull")
+                    if let handler = onSyncEvent {
+                        Task { await handler() }
+                    }
+                    currentEvent = ""
+                    currentData = ""
                 }
+            } else if line.isEmpty {
+                // Blank line — reset state (also handles late-arriving
+                // terminators so we don't re-fire).
                 currentEvent = ""
                 currentData = ""
+            } else {
+                print("[SSE] unknown line #\(lineCount): \(line.prefix(80))")
             }
         }
+
+        print("[SSE] stream iterator ended after \(lineCount) lines")
     }
 }
 

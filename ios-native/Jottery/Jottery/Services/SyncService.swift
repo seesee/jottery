@@ -263,34 +263,31 @@ actor SyncService {
         let metadata = try syncRepo.getMetadata()
         let lastSyncAt = metadata?.lastSyncAt
 
-        // Check for notes with missing attachment blobs.
-        // The server only returns notes modified after lastSyncAt for incremental
-        // pulls, and only includes attachment blobs for notes in the response.
-        // So if we have notes whose attachment blobs were never stored, we must
-        // do a full pull (lastSyncAt = nil) to get those notes re-delivered.
-        let allRecords = try noteRepo.listActive(key: key)
+        // Check for notes with missing attachment blobs using a raw DB query
+        // (no decryption needed — just parse the attachments JSON for blob IDs).
+        // Notes with missing blobs are excluded from knownIds so the server
+        // re-sends them on the next incremental pull. We never force a full pull
+        // for missing blobs — if the server had the blob we'd already have it.
+        let noteAttachments = try noteRepo.listIdsAndAttachmentBlobIds()
         let storedBlobIds = Set(try attachmentRepo.listBlobIds())
-        var hasMissingBlobs = false
         var knownIds: [String] = []
-        for note in allRecords {
-            if note.attachments.isEmpty || note.attachments.allSatisfy({ storedBlobIds.contains($0.data) }) {
-                knownIds.append(note.id)
+        for (id, blobIds) in noteAttachments {
+            if blobIds.isEmpty || blobIds.allSatisfy({ storedBlobIds.contains($0) }) {
+                knownIds.append(id)
             } else {
-                hasMissingBlobs = true
-                print("[Sync] pull: note \(note.id) has missing attachment blobs — will do full pull")
+                let missing = blobIds.filter { !storedBlobIds.contains($0) }
+                print("[Sync] pull: note \(id) has \(missing.count) missing blob(s): \(missing) — excluded from knownIds")
             }
         }
 
-        // If any blobs are missing, force a full pull so the server re-sends
-        // those notes and their attachment data.
-        let effectiveLastSyncAt = hasMissingBlobs ? nil : lastSyncAt
+        print("[Sync] pull: \(knownIds.count) known notes, lastSyncAt=\(lastSyncAt ?? "nil")")
 
         var offset = 0
         var hasMore = true
 
         while hasMore {
             let request = SyncPullRequest(
-                lastSyncAt: effectiveLastSyncAt,
+                lastSyncAt: lastSyncAt,
                 knownNoteIds: knownIds,
                 knownAttachmentIds: Array(storedBlobIds),
                 limit: 100,
@@ -299,6 +296,7 @@ actor SyncService {
 
             let response = try await syncClient.pull(request)
             let now = Date().iso8601
+            print("[Sync] pull: page offset=\(offset) — got \(response.notes.count) notes, \(response.attachments.count) blobs, hasMore=\(response.hasMore ?? false)")
 
             // Process pulled notes and build attachment metadata lookup
             var attachmentMetadata: [String: AttachmentRef] = [:]
@@ -378,6 +376,12 @@ actor SyncService {
 
             hasMore = response.hasMore ?? false
             offset += response.notes.count
+
+            // If the server says there's more but returned zero notes this page,
+            // break to avoid an infinite loop (offset would never advance).
+            if hasMore && response.notes.isEmpty {
+                break
+            }
         }
 
         try syncRepo.updateLastPull(at: Date().iso8601)
@@ -611,12 +615,12 @@ actor SyncService {
 
     /// Start listening for real-time sync events.
     func startSSE() async {
-        await sseClient.start()
-        // Wire up the callback to trigger a pull
+        // Wire up the callback BEFORE starting so no early events are missed
         let syncService = self
         await sseClient.setOnSyncEvent {
             try? await syncService.sync()
         }
+        await sseClient.start()
     }
 
     /// Stop SSE listener.

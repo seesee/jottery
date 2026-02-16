@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import GRDB
+import Network
 import SwiftUI
 
 /// Root application state — drives the entire UI.
@@ -52,6 +53,8 @@ final class AppState {
     /// Current unsaved editor state — NoteEditorView keeps this updated so
     /// `lock()` can flush pending changes before wiping the encryption key.
     @ObservationIgnored var pendingEditorNote: DecryptedNote?
+    @ObservationIgnored private var networkMonitor: NWPathMonitor?
+    @ObservationIgnored private var networkWasSatisfied = true
 
     // Repositories (lazily initialised after DB is ready)
     private(set) var noteRepo: NoteRepository?
@@ -306,7 +309,8 @@ final class AppState {
             pendingEditorNote = nil
         }
 
-        // Stop SSE and release sync objects (releases the SymmetricKey reference)
+        // Stop SSE, network monitor, and release sync objects
+        stopNetworkMonitor()
         if let service = syncService {
             Task { await service.stopSSE() }
         }
@@ -628,7 +632,7 @@ final class AppState {
         syncEnabled = true
         syncError = nil
 
-        // Start SSE and wire the post-sync handler to reload notes
+        // Wire the post-sync handler, start SSE, and run the initial sync
         Task { [weak self] in
             await service.setPostSyncHandler { [weak self] in
                 await MainActor.run {
@@ -638,7 +642,11 @@ final class AppState {
                 }
             }
             await service.startSSE()
+            await self?.triggerSync()
         }
+
+        // Restart SSE immediately when the network recovers
+        startNetworkMonitor()
     }
 
     func triggerSync() async {
@@ -673,14 +681,16 @@ final class AppState {
                 syncStatusMessage = "Synced — up to date"
             }
 
-            // Refresh inbox items after sync
-            try? await loadInboxItems()
+            // Refresh inbox items in the background (don't block sync completion)
+            Task { [weak self] in try? await self?.loadInboxItems() }
 
-            // Clear the status message after a few seconds
+            // Clear the status message after a few seconds (non-blocking)
             let clearMessage = syncStatusMessage
-            try? await Task.sleep(for: .seconds(4))
-            if syncStatusMessage == clearMessage {
-                syncStatusMessage = nil
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(4))
+                if self?.syncStatusMessage == clearMessage {
+                    self?.syncStatusMessage = nil
+                }
             }
         } catch {
             print("[Sync] triggerSync: ERROR — \(error)")
@@ -690,17 +700,52 @@ final class AppState {
         }
     }
 
+    // MARK: - Network Monitoring
+
+    /// Observe network path changes and restart SSE only when transitioning
+    /// from no-connectivity to connectivity (not on every path fluctuation).
+    private func startNetworkMonitor() {
+        stopNetworkMonitor()
+        networkWasSatisfied = true // assume connected at start
+        let monitor = NWPathMonitor()
+        networkMonitor = monitor
+        monitor.pathUpdateHandler = { [weak self] path in
+            let satisfied = path.status == .satisfied
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let wasDown = !self.networkWasSatisfied
+                self.networkWasSatisfied = satisfied
+                // Only restart SSE on actual recovery: unsatisfied → satisfied
+                guard satisfied && wasDown else { return }
+                guard !self.isLocked,
+                      self.backgroundedAt == nil,
+                      let service = self.syncService else { return }
+                await service.startSSE()
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "jottery.network"))
+    }
+
+    private func stopNetworkMonitor() {
+        networkMonitor?.cancel()
+        networkMonitor = nil
+    }
+
     // MARK: - Lifecycle
 
     func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
-        case .background, .inactive:
-            // Only record the first transition away — .inactive fires again
-            // on the way *back* from background, which would reset the timestamp.
+        case .background:
+            // Genuinely backgrounded — stop SSE and record timestamp for auto-lock.
             if backgroundedAt == nil {
                 backgroundedAt = Date()
             }
             Task { await syncService?.stopSSE() }
+        case .inactive:
+            // Transient inactivity (Face ID prompt, notification centre, share sheet).
+            // Don't stop SSE or set backgroundedAt — avoid triggering a redundant
+            // SSE restart and full sync when the app returns to .active.
+            break
         case .active:
             guard !isLocked else { return }
             // Check auto-lock (timeout 0 means "never")
@@ -712,10 +757,11 @@ final class AppState {
                     return
                 }
             }
+            let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
             keyManager.recordActivity()
-            // Restart SSE and trigger a sync on return
-            if syncService != nil {
+            // Only restart SSE and sync when returning from genuine background
+            if wasBackgrounded, syncService != nil {
                 Task {
                     await syncService?.startSSE()
                     await triggerSync()
