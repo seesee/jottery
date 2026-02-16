@@ -275,12 +275,9 @@ actor SyncService {
             if blobIds.isEmpty || blobIds.allSatisfy({ storedBlobIds.contains($0) }) {
                 knownIds.append(id)
             } else {
-                let missing = blobIds.filter { !storedBlobIds.contains($0) }
-                print("[Sync] pull: note \(id) has \(missing.count) missing blob(s): \(missing) — excluded from knownIds")
+                // Exclude from knownIds so server re-sends if modified
             }
         }
-
-        print("[Sync] pull: \(knownIds.count) known notes, lastSyncAt=\(lastSyncAt ?? "nil")")
 
         var offset = 0
         var hasMore = true
@@ -296,7 +293,6 @@ actor SyncService {
 
             let response = try await syncClient.pull(request)
             let now = Date().iso8601
-            print("[Sync] pull: page offset=\(offset) — got \(response.notes.count) notes, \(response.attachments.count) blobs, hasMore=\(response.hasMore ?? false)")
 
             // Process pulled notes and build attachment metadata lookup
             var attachmentMetadata: [String: AttachmentRef] = [:]
@@ -371,7 +367,6 @@ actor SyncService {
                     )
                     try savedSearchRepo.insertOrReplace(record: record)
                 }
-                print("[Sync] pull: processed \(savedSearches.count) saved searches")
             }
 
             hasMore = response.hasMore ?? false
