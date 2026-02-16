@@ -2,12 +2,12 @@ import Foundation
 
 /// Server-Sent Events client using URLSession bytes streaming.
 /// Listens for `event: sync` / `data: pull` messages to trigger sync pulls.
+/// Retries indefinitely with capped exponential backoff.
 actor SSEClient {
 
     private var task: Task<Void, Never>?
     private let syncClient: SyncClient
     private var reconnectAttempts = 0
-    private let maxReconnectAttempts = 10
     private let maxBackoffSeconds: Double = 30
 
     var onSyncEvent: (@Sendable () async -> Void)?
@@ -33,7 +33,7 @@ actor SSEClient {
     // MARK: - Private
 
     private func connectLoop() async {
-        while !Task.isCancelled && reconnectAttempts < maxReconnectAttempts {
+        while !Task.isCancelled {
             do {
                 try await connect()
                 // Connection ended normally — reset backoff
@@ -41,7 +41,8 @@ actor SSEClient {
             } catch {
                 if Task.isCancelled { return }
                 reconnectAttempts += 1
-                let delay = min(pow(2.0, Double(reconnectAttempts)), maxBackoffSeconds)
+                // Cap exponent at 5 (2^5 = 32) to stabilise backoff quickly
+                let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
                 try? await Task.sleep(for: .seconds(delay))
             }
         }

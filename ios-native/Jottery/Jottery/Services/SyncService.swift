@@ -263,21 +263,20 @@ actor SyncService {
         let metadata = try syncRepo.getMetadata()
         let lastSyncAt = metadata?.lastSyncAt
 
-        // Check for notes with missing attachment blobs.
-        // The server only returns notes modified after lastSyncAt for incremental
-        // pulls, and only includes attachment blobs for notes in the response.
-        // So if we have notes whose attachment blobs were never stored, we must
-        // do a full pull (lastSyncAt = nil) to get those notes re-delivered.
-        let allRecords = try noteRepo.listActive(key: key)
+        // Check for notes with missing attachment blobs using a raw DB query
+        // (no decryption needed — just parse the attachments JSON for blob IDs).
+        // If any blobs are missing we force a full pull so the server re-sends
+        // those notes with their attachment data.
+        let noteAttachments = try noteRepo.listIdsAndAttachmentBlobIds()
         let storedBlobIds = Set(try attachmentRepo.listBlobIds())
         var hasMissingBlobs = false
         var knownIds: [String] = []
-        for note in allRecords {
-            if note.attachments.isEmpty || note.attachments.allSatisfy({ storedBlobIds.contains($0.data) }) {
-                knownIds.append(note.id)
+        for (id, blobIds) in noteAttachments {
+            if blobIds.isEmpty || blobIds.allSatisfy({ storedBlobIds.contains($0) }) {
+                knownIds.append(id)
             } else {
                 hasMissingBlobs = true
-                print("[Sync] pull: note \(note.id) has missing attachment blobs — will do full pull")
+                print("[Sync] pull: note \(id) has missing attachment blobs — will do full pull")
             }
         }
 
@@ -611,12 +610,12 @@ actor SyncService {
 
     /// Start listening for real-time sync events.
     func startSSE() async {
-        await sseClient.start()
-        // Wire up the callback to trigger a pull
+        // Wire up the callback BEFORE starting so no early events are missed
         let syncService = self
         await sseClient.setOnSyncEvent {
             try? await syncService.sync()
         }
+        await sseClient.start()
     }
 
     /// Stop SSE listener.

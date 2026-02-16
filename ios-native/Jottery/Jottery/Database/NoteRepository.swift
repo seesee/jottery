@@ -64,6 +64,27 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Return note IDs and their referenced attachment blob IDs for all non-deleted
+    /// notes. Uses raw DB access — no decryption required.
+    func listIdsAndAttachmentBlobIds() throws -> [(id: String, blobIds: [String])] {
+        try db.dbPool.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, attachments FROM notes WHERE deleted = 0
+            """)
+            return rows.map { row in
+                let id: String = row["id"]
+                let json: String = row["attachments"]
+                if json != "[]",
+                   let data = json.data(using: .utf8),
+                   let refs = try? JSONDecoder().decode([AttachmentRef].self, from: data),
+                   !refs.isEmpty {
+                    return (id, refs.map(\.data))
+                }
+                return (id, [])
+            }
+        }
+    }
+
     /// Count of active notes.
     func countActive() throws -> Int {
         try db.dbPool.read { db in
