@@ -45,21 +45,18 @@ actor SSEClient {
         while !Task.isCancelled {
             do {
                 try await connect()
-                // Connection ended normally (server closed) — reconnect immediately
-                print("[SSE] stream ended normally, reconnecting")
                 reconnectAttempts = 0
             } catch {
                 if Task.isCancelled { return }
                 reconnectAttempts += 1
                 let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
-                print("[SSE] connection error (attempt \(reconnectAttempts)): \(error) — retrying in \(delay)s")
+                print("[SSE] connection error (attempt \(reconnectAttempts)), retrying in \(delay)s")
                 try? await Task.sleep(for: .seconds(delay))
             }
         }
     }
 
     private func connect() async throws {
-        // Get a short-lived token
         let tokenResponse = try await syncClient.getSSEToken()
         guard let url = await syncClient.sseURL(token: tokenResponse.token) else {
             throw SSEError.invalidURL
@@ -69,29 +66,21 @@ actor SSEClient {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
 
-        print("[SSE] connecting to \(url.host ?? "?")")
         let (bytes, response) = try await sseSession.bytes(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            print("[SSE] connection failed with status \(status)")
             throw SSEError.connectionFailed
         }
 
-        let headers = http.allHeaderFields
-        print("[SSE] connected — status=\(http.statusCode), content-type=\(headers["Content-Type"] ?? "?"), transfer-encoding=\(headers["Transfer-Encoding"] ?? "?")")
         reconnectAttempts = 0
 
         var currentEvent = ""
         var currentData = ""
-        var lineCount = 0
 
         for try await line in bytes.lines {
             if Task.isCancelled { return }
-            lineCount += 1
 
             if line.hasPrefix(":") {
-                // SSE comment / heartbeat
-                print("[SSE] heartbeat (line #\(lineCount))")
+                // SSE comment / heartbeat — ignore
             } else if line.hasPrefix("event: ") {
                 currentEvent = String(line.dropFirst(7))
             } else if line.hasPrefix("data: ") {
@@ -102,7 +91,6 @@ actor SSEClient {
                 // heartbeat (~30 s later). Since our protocol only uses
                 // single event+data pairs, this is safe.
                 if currentEvent == "sync" && currentData == "pull" {
-                    print("[SSE] sync event received — triggering pull")
                     if let handler = onSyncEvent {
                         Task { await handler() }
                     }
@@ -114,12 +102,8 @@ actor SSEClient {
                 // terminators so we don't re-fire).
                 currentEvent = ""
                 currentData = ""
-            } else {
-                print("[SSE] unknown line #\(lineCount): \(line.prefix(80))")
             }
         }
-
-        print("[SSE] stream iterator ended after \(lineCount) lines")
     }
 }
 
