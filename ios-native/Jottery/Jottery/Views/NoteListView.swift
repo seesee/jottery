@@ -39,14 +39,6 @@ struct NoteListView: View {
                         selectedIds.removeAll()
                     }
                 } else {
-                    if !appState.showArchive {
-                        Button {
-                            let _ = try? appState.createNote()
-                        } label: {
-                            Label(L.noteListNewNote, systemImage: "plus")
-                        }
-                    }
-
                     Button {
                         showSavedSearches = true
                     } label: {
@@ -71,22 +63,6 @@ struct NoteListView: View {
                     } label: {
                         Label(L.noteListSort, systemImage: "arrow.up.arrow.down")
                     }
-                }
-            }
-
-            if appState.syncEnabled && !isSelectMode {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        Task { @MainActor in await appState.triggerSync() }
-                    } label: {
-                        if appState.isSyncing {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                        }
-                    }
-                    .disabled(appState.isSyncing)
                 }
             }
 
@@ -217,6 +193,23 @@ struct NoteListView: View {
         .onChange(of: appState.showArchive) { _, _ in appState.scheduleSearch() }
         .onChange(of: appState.notes.count) { _, _ in appState.scheduleSearch() }
         .onChange(of: appState.archivedNotes.count) { _, _ in appState.scheduleSearch() }
+        .overlay(alignment: .bottomTrailing) {
+            if !appState.showArchive && !isSelectMode {
+                Button {
+                    let _ = try? appState.createNote()
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color.accentColor, in: Circle())
+                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
+                .accessibilityLabel(L.noteListNewNote)
+            }
+        }
         .overlay {
             if appState.showArchive && appState.archivedNotes.isEmpty {
                 ContentUnavailableView(
