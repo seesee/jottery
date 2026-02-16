@@ -150,9 +150,18 @@ struct MainView: View {
         NavigationSplitView {
             NoteListView()
         } detail: {
-            if let noteId = appState.selectedNoteId,
-               let note = appState.notes.first(where: { $0.id == noteId }) {
-                NoteEditorView(note: note)
+            if let noteId = appState.selectedNoteId {
+                if let conflict = appState.pendingConflicts.first(where: { $0.id == noteId }) {
+                    ConflictDetailView(conflict: conflict)
+                } else if let note = appState.notes.first(where: { $0.id == noteId }) {
+                    NoteEditorView(note: note)
+                } else {
+                    ContentUnavailableView(
+                        L.editorNoNoteSelected,
+                        systemImage: "doc.text",
+                        description: Text(L.editorNoNoteSelectedDescription)
+                    )
+                }
             } else {
                 ContentUnavailableView(
                     L.editorNoNoteSelected,

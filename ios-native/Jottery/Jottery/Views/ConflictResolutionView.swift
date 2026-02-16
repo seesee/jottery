@@ -96,7 +96,7 @@ private struct ConflictRowView: View {
 
 // MARK: - Conflict Detail
 
-private struct ConflictDetailView: View {
+struct ConflictDetailView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     let conflict: ConflictInfo

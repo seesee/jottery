@@ -448,6 +448,9 @@ final class AppState {
         try await syncService.resolveConflict(noteId: noteId, strategy: strategy)
         pendingConflicts = await syncService.pendingConflicts
         try? loadNotes()
+        // Sync immediately so keepLocal pushes the resolved note and keepBoth
+        // pushes the duplicate — no manual refresh needed.
+        await triggerSync()
     }
 
     // MARK: - Attachments

@@ -259,7 +259,10 @@ struct NoteListView: View {
     @ViewBuilder
     private var noteRows: some View {
         ForEach(appState.filteredNotes) { note in
-            NoteRowView(note: note)
+            NoteRowView(
+                note: note,
+                hasConflict: appState.pendingConflicts.contains { $0.id == note.id }
+            )
                 .tag(note.id)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if appState.showArchive {

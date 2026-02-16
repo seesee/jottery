@@ -382,11 +382,9 @@ actor SyncService {
         try syncRepo.updateLastPull(at: Date().iso8601)
     }
 
-    /// Process a single note from a pull response.
-    private func processNote(_ syncNote: SyncNote, syncedAt: String) throws {
-        // Convert individually encrypted sync tags to single storage blob
+    /// Build a NoteRecord from a SyncNote for local storage.
+    private func buildNoteRecord(from syncNote: SyncNote, syncedAt: String) throws -> NoteRecord {
         let tagsString = Self.syncTagsToStorageTags(syncNote.tags, key: key)
-
         let attachmentsJSON = try JSONEncoder().encode(syncNote.attachments)
         let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
 
@@ -397,7 +395,7 @@ actor SyncService {
             hashChainStr = nil
         }
 
-        let record = NoteRecord(
+        return NoteRecord(
             id: syncNote.id,
             createdAt: syncNote.createdAt,
             modifiedAt: syncNote.modifiedAt,
@@ -422,7 +420,111 @@ actor SyncService {
             hashChain: hashChainStr,
             needsSync: false
         )
+    }
 
+    /// Build a ConflictInfo for a pull-side conflict.
+    private func buildPullConflictInfo(localRecord: NoteRecord, syncNote: SyncNote) -> ConflictInfo {
+        let (localContent, localTags) = Self.decryptNoteForDisplay(
+            content: localRecord.content, tags: localRecord.tags, key: key
+        )
+        let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+            content: syncNote.content, syncTags: syncNote.tags, key: key
+        )
+
+        return ConflictInfo(
+            id: syncNote.id,
+            localContent: localContent,
+            localTags: localTags,
+            localModifiedAt: localRecord.modifiedAt,
+            serverContent: serverContent,
+            serverTags: serverTags,
+            serverModifiedAt: syncNote.modifiedAt,
+            serverEncryptedContent: syncNote.content,
+            serverEncryptedTags: syncNote.tags,
+            serverVersion: syncNote.version,
+            serverAttachments: syncNote.attachments,
+            serverPinned: syncNote.pinned,
+            serverSyntaxLanguage: syncNote.syntaxLanguage,
+            serverWordWrap: syncNote.wordWrap,
+            serverShowPreview: syncNote.showPreview,
+            serverContentHash: syncNote.contentHash,
+            serverParentHash: syncNote.parentHash,
+            serverHashChain: syncNote.hashChain
+        )
+    }
+
+    /// Process a single note from a pull response with hash-chain conflict detection.
+    private func processNote(_ syncNote: SyncNote, syncedAt: String) throws {
+        // Skip notes with pending conflicts from push — preserve local version
+        if pendingConflicts.contains(where: { $0.id == syncNote.id }) {
+            return
+        }
+
+        // Check for existing local note
+        guard let localRecord = try noteRepo.getRaw(id: syncNote.id) else {
+            // New note from server — no conflict
+            let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
+            try noteRepo.insertOrReplace(record)
+            return
+        }
+
+        // Hash-based conflict detection (git-like merkle chain)
+        if let remoteHash = syncNote.contentHash, let localHash = localRecord.contentHash {
+            // CASE 1: Fast-forward — local is remote's parent
+            if localHash == syncNote.parentHash {
+                let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
+                try noteRepo.insertOrReplace(record)
+                return
+            }
+
+            // CASE 2: Identical content — no update needed
+            if localHash == remoteHash {
+                return
+            }
+
+            // CASE 3: Local has unsynced changes — always a conflict
+            if localRecord.needsSync {
+                let conflict = buildPullConflictInfo(localRecord: localRecord, syncNote: syncNote)
+                pendingConflicts.append(conflict)
+                return
+            }
+
+            // Local is synced — check chain relationships
+            let localChain: [String]
+            if let chainStr = localRecord.hashChain, let data = chainStr.data(using: .utf8) {
+                localChain = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+            } else {
+                localChain = []
+            }
+
+            // CASE 4: Remote's parent in local chain — local is ahead, skip
+            if let remoteParent = syncNote.parentHash, localChain.contains(remoteParent) {
+                return
+            }
+
+            // CASE 5: Local hash in remote chain — remote is ahead, fast-forward
+            let remoteChain = syncNote.hashChain ?? []
+            if remoteChain.contains(localHash) {
+                let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
+                try noteRepo.insertOrReplace(record)
+                return
+            }
+
+            // No clear relationship and local is synced — accept remote
+            let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
+            try noteRepo.insertOrReplace(record)
+            return
+        }
+
+        // Fallback for legacy notes without hash chains
+        if localRecord.needsSync && syncNote.modifiedAt > localRecord.modifiedAt {
+            let conflict = buildPullConflictInfo(localRecord: localRecord, syncNote: syncNote)
+            pendingConflicts.append(conflict)
+            return
+        }
+
+        // Server is newer or local is synced — accept remote
+        let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
         try noteRepo.insertOrReplace(record)
     }
 
@@ -436,12 +538,30 @@ actor SyncService {
 
         switch strategy {
         case .keepLocal:
-            // Mark the local note as needing sync again — it will be pushed on next sync
+            // Keep local content, rebase hash chain onto server's so next push is a fast-forward
             guard let record = try noteRepo.getRaw(id: noteId) else { break }
             var updated = record
             updated.needsSync = true
-            // Bump version past server to win next push
             updated.version = conflict.serverVersion + 1
+            // Rebase: set parentHash to server's hash so server sees fast-forward
+            updated.parentHash = conflict.serverContentHash
+            // Merge hash chains: local hash, server hash, then merged history
+            var localChain: [String] = []
+            if let chainStr = record.hashChain, let data = chainStr.data(using: .utf8) {
+                localChain = (try? JSONDecoder().decode([String].self, from: data)) ?? []
+            }
+            let serverChain = conflict.serverHashChain ?? []
+            var mergedChain: [String] = []
+            if let localHash = record.contentHash { mergedChain.append(localHash) }
+            if let serverHash = conflict.serverContentHash { mergedChain.append(serverHash) }
+            var seen = Set(mergedChain)
+            for hash in localChain + serverChain {
+                if seen.insert(hash).inserted {
+                    mergedChain.append(hash)
+                }
+            }
+            mergedChain = Array(mergedChain.prefix(CryptoService.maxHashChainLength))
+            updated.hashChain = String(data: (try? JSONEncoder().encode(mergedChain)) ?? Data("[]".utf8), encoding: .utf8)
             try noteRepo.updateRaw(updated)
 
         case .keepServer:
