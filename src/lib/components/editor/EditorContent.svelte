@@ -157,7 +157,7 @@
 </div>
 
 <!-- Content Editor with CodeMirror/WYSIWYG OR Preview (swap, not side-by-side) -->
-<div class="flex-1 overflow-hidden bg-white dark:bg-gray-900 flex flex-col">
+<div class="flex-1 overflow-hidden bg-white dark:bg-gray-900 flex flex-col" data-testid="editor-content">
   <!-- Editor - Only shown when NOT in preview mode -->
   {#if !showPreview}
     <!-- WYSIWYG mode (markdown only) -->

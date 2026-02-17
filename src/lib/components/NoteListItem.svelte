@@ -364,6 +364,7 @@
       on:touchcancel={handleTouchCancel}
       class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : noteBackgroundColor ? '' : 'bg-white dark:bg-gray-900'}"
       style="transform: translateX({swipeTransform}px); transition: {isSwipeActive ? 'none' : 'transform 0.2s ease-out'}; {noteBackgroundColor && !isMultiSelected ? `background-color: ${noteBackgroundColor};` : ''}"
+      data-testid="note-list-item"
     >
       <div class="flex items-start justify-between mb-1">
         <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -471,6 +472,7 @@
     on:mouseleave={() => isHovered = false}
     class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
     style:background-color={!isMultiSelected && noteBackgroundColor ? noteBackgroundColor : undefined}
+    data-testid="note-list-item"
   >
     <div class="flex items-start justify-between mb-1">
       <div class="flex items-center gap-2 flex-1 min-w-0">

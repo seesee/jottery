@@ -540,6 +540,7 @@
           on:keydown={handleKeydown}
           role="list"
           tabindex="-1"
+          data-testid="note-list"
         >
         {#if $filteredNotes.length === 0}
           <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
@@ -608,6 +609,7 @@
       on:keydown={handleKeydown}
       role="list"
       tabindex="-1"
+      data-testid="note-list"
     >
       {#if $filteredNotes.length === 0}
         <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">

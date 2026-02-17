@@ -136,7 +136,7 @@
 </script>
 
 <div class="relative">
-  <div class="tag-input-container flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 min-h-[2.5rem]">
+  <div class="tag-input-container flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 min-h-[2.5rem]" data-testid="tag-input-container">
     <!-- Existing tags -->
     {#each tags as tag, index}
       {@const tagBgColor = getTagBackgroundColor(tag)}
@@ -145,6 +145,7 @@
       <span
         class="tag-pill inline-flex items-center gap-1 px-2 py-1 text-sm rounded-md {isTitle ? 'italic bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' : tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300'}"
         style:background-color={!isTitle ? tagBgColor : undefined}
+        data-testid="tag-pill"
       >
         <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
         <span
@@ -196,6 +197,7 @@
         aria-controls={showSuggestions ? 'tag-input-suggestions' : undefined}
         aria-activedescendant={showSuggestions && selectedSuggestionIndex >= 0 ? `tag-input-suggestion-${selectedSuggestionIndex}` : undefined}
         class="flex-1 min-w-[120px] outline-none bg-transparent text-sm text-gray-900 dark:text-gray-100"
+        data-testid="tag-input"
       />
     {/if}
   </div>

@@ -336,6 +336,7 @@
         <div class="relative flex-1">
           <input
             id="search-input"
+            data-testid="search-input"
             type="text"
             bind:value={$searchQuery}
             on:input={handleSearchInput}
@@ -418,6 +419,7 @@
         <div class="relative">
           <input
             id="search-input-mobile"
+            data-testid="search-input-mobile"
             type="text"
             bind:value={$searchQuery}
             on:input={handleSearchInput}

@@ -221,7 +221,7 @@
 
 {#if $selectedCount > 0}
   <!-- Fixed bottom toolbar -->
-  <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 safe-area-bottom">
+  <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 safe-area-bottom" data-testid="bulk-toolbar">
     <div class="max-w-4xl mx-auto px-4 py-3">
       {#if isProcessing && progress}
         <!-- Progress bar -->
@@ -262,6 +262,7 @@
             <button
               on:click={openAddTagsModal}
               class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 transition-colors"
+              data-testid="bulk-add-tags"
             >
               {$_('bulk.addTags')}
             </button>
@@ -270,6 +271,7 @@
             <button
               on:click={openRemoveTagsModal}
               class="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 transition-colors"
+              data-testid="bulk-remove-tags"
             >
               {$_('bulk.removeTags')}
             </button>
@@ -278,6 +280,7 @@
             <button
               on:click={() => showColorPicker = true}
               class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+              data-testid="bulk-set-color"
             >
               {$_('bulk.setColor')}
             </button>
@@ -286,6 +289,7 @@
             <button
               on:click={handleExport}
               class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 transition-colors"
+              data-testid="bulk-export"
             >
               {$_('bulk.export')}
             </button>
@@ -295,6 +299,7 @@
               <button
                 on:click={openCombineModal}
                 class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 active:bg-purple-800 transition-colors"
+                data-testid="bulk-combine"
               >
                 {$_('bulk.combine')}
               </button>
@@ -304,6 +309,7 @@
             <button
               on:click={handleArchive}
               class="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700 active:bg-amber-800 transition-colors"
+              data-testid="bulk-archive"
             >
               {$_('bulk.archive')}
             </button>
@@ -312,6 +318,7 @@
             <button
               on:click={() => showDeleteConfirm = true}
               class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 active:bg-red-800 transition-colors"
+              data-testid="bulk-delete"
             >
               {$_('bulk.delete')}
             </button>
@@ -320,6 +327,7 @@
             <button
               on:click={clearMultiSelection}
               class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              data-testid="bulk-cancel"
             >
               {$_('bulk.cancel')}
             </button>
