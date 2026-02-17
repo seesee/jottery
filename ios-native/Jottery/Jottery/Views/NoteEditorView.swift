@@ -102,14 +102,16 @@ struct NoteEditorView: View {
                 )
             }
         }
-        .overlay {
-            PinchGestureOverlay { scale in
-                let newScale = pinchBaseScale * scale
-                appState.editorFontScale = max(0.5, min(3.0, newScale))
-            } onEnded: {
-                pinchBaseScale = appState.editorFontScale
-            }
-        }
+        .simultaneousGesture(
+            MagnifyGesture()
+                .onChanged { value in
+                    let newScale = pinchBaseScale * value.magnification
+                    appState.editorFontScale = max(0.5, min(3.0, newScale))
+                }
+                .onEnded { _ in
+                    pinchBaseScale = appState.editorFontScale
+                }
+        )
         .onAppear {
             pinchBaseScale = appState.editorFontScale
         }
@@ -452,93 +454,4 @@ struct PhotoPickerView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Pinch Gesture Overlay
-
-/// UIKit-based pinch gesture that doesn't block scrolling or text selection.
-///
-/// The overlay view returns `nil` from `hitTest` so all touches pass through
-/// to the editor underneath.  The `UIPinchGestureRecognizer` is installed on
-/// the overlay's **superview** (a common ancestor of both the overlay and the
-/// editor), so it still receives two-finger pinch events via the responder
-/// chain while single-finger scrolls reach the text view unimpeded.
-struct PinchGestureOverlay: UIViewRepresentable {
-    var onChanged: (CGFloat) -> Void
-    var onEnded: () -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onChanged: onChanged, onEnded: onEnded)
-    }
-
-    func makeUIView(context: Context) -> GesturePassthroughView {
-        let view = GesturePassthroughView()
-        view.backgroundColor = .clear
-
-        let pinch = UIPinchGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handlePinch(_:))
-        )
-        pinch.delegate = context.coordinator
-        view.pinchGesture = pinch
-
-        return view
-    }
-
-    func updateUIView(_ uiView: GesturePassthroughView, context: Context) {
-        context.coordinator.onChanged = onChanged
-        context.coordinator.onEnded = onEnded
-    }
-
-    class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var onChanged: (CGFloat) -> Void
-        var onEnded: () -> Void
-
-        init(onChanged: @escaping (CGFloat) -> Void, onEnded: @escaping () -> Void) {
-            self.onChanged = onChanged
-            self.onEnded = onEnded
-        }
-
-        @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
-            switch gesture.state {
-            case .changed:
-                onChanged(gesture.scale)
-            case .ended, .cancelled:
-                onEnded()
-            default:
-                break
-            }
-        }
-
-        func gestureRecognizer(
-            _ gestureRecognizer: UIGestureRecognizer,
-            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
-        ) -> Bool {
-            true
-        }
-    }
-}
-
-/// Passes all touches through to sibling views. The pinch gesture recognizer
-/// is installed on the superview so it receives touches that hit-test to the
-/// editor content rather than to this (invisible) overlay.
-final class GesturePassthroughView: UIView {
-    var pinchGesture: UIPinchGestureRecognizer?
-
-    override func didMoveToSuperview() {
-        super.didMoveToSuperview()
-        if let pinch = pinchGesture, pinch.view == nil, let parent = superview {
-            parent.addGestureRecognizer(pinch)
-        }
-    }
-
-    override func willMove(toSuperview newSuperview: UIView?) {
-        if let pinch = pinchGesture, let oldParent = pinch.view {
-            oldParent.removeGestureRecognizer(pinch)
-        }
-        super.willMove(toSuperview: newSuperview)
-    }
-
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        nil
-    }
-}
 
