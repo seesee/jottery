@@ -454,8 +454,13 @@ struct PhotoPickerView: UIViewControllerRepresentable {
 
 // MARK: - Pinch Gesture Overlay
 
-/// Transparent UIKit-based pinch gesture overlay that doesn't interfere with
-/// the underlying text editor's touch handling.
+/// UIKit-based pinch gesture that doesn't block scrolling or text selection.
+///
+/// The overlay view returns `nil` from `hitTest` so all touches pass through
+/// to the editor underneath.  The `UIPinchGestureRecognizer` is installed on
+/// the overlay's **superview** (a common ancestor of both the overlay and the
+/// editor), so it still receives two-finger pinch events via the responder
+/// chain while single-finger scrolls reach the text view unimpeded.
 struct PinchGestureOverlay: UIViewRepresentable {
     var onChanged: (CGFloat) -> Void
     var onEnded: () -> Void
@@ -464,22 +469,21 @@ struct PinchGestureOverlay: UIViewRepresentable {
         Coordinator(onChanged: onChanged, onEnded: onEnded)
     }
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
+    func makeUIView(context: Context) -> GesturePassthroughView {
+        let view = GesturePassthroughView()
         view.backgroundColor = .clear
-        view.isUserInteractionEnabled = true
 
         let pinch = UIPinchGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handlePinch(_:))
         )
         pinch.delegate = context.coordinator
-        view.addGestureRecognizer(pinch)
+        view.pinchGesture = pinch
 
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
+    func updateUIView(_ uiView: GesturePassthroughView, context: Context) {
         context.coordinator.onChanged = onChanged
         context.coordinator.onEnded = onEnded
     }
@@ -504,14 +508,37 @@ struct PinchGestureOverlay: UIViewRepresentable {
             }
         }
 
-        /// Allow simultaneous recognition so the pinch doesn't block
-        /// scrolling or text selection gestures underneath.
         func gestureRecognizer(
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
             true
         }
+    }
+}
+
+/// Passes all touches through to sibling views. The pinch gesture recognizer
+/// is installed on the superview so it receives touches that hit-test to the
+/// editor content rather than to this (invisible) overlay.
+final class GesturePassthroughView: UIView {
+    var pinchGesture: UIPinchGestureRecognizer?
+
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        if let pinch = pinchGesture, pinch.view == nil, let parent = superview {
+            parent.addGestureRecognizer(pinch)
+        }
+    }
+
+    override func willMove(toSuperview newSuperview: UIView?) {
+        if let pinch = pinchGesture, let oldParent = pinch.view {
+            oldParent.removeGestureRecognizer(pinch)
+        }
+        super.willMove(toSuperview: newSuperview)
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        nil
     }
 }
 
