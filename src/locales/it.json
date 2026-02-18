@@ -20,7 +20,7 @@
     "error": "Errore",
     "back": "Indietro",
     "edit": "Modifica",
-    "add": "Add",
+    "add": "Aggiungi",
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password"
   },
@@ -179,6 +179,10 @@
       "lockedBanner": "Questa nota è bloccata. Sblocca per modificare.",
       "mustUnlockToDelete": "Sblocca la nota prima di eliminarla"
     },
+    "confirmDelete": {
+      "title": "Elimina Nota",
+      "message": "Questo sposterà la nota nel cestino. Potrai ripristinarla in seguito se necessario."
+    },
     "readOnly": {
       "archivedBanner": "Questa nota è archiviata. Rimuovi dall'archivio per modificare.",
       "lockedBanner": "Questa nota è bloccata. Sblocca per modificare."
@@ -186,7 +190,9 @@
   },
   "noteList": {
     "deleteNote": "Elimina nota",
-    "filterByTag": "Filtra per #{tag}"
+    "filterByTag": "Filtra per #{tag}",
+    "noteCount": "{filtered} di {total}",
+    "noteCountAll": "{total} note"
   },
   "tagInput": {
     "removeTag": "Rimuovi tag"
@@ -349,6 +355,7 @@
     },
     "saveSettings": "Salva impostazioni",
     "saving": "Salvataggio...",
+    "autoSaved": "Modifiche salvate automaticamente",
     "settingsSaved": "Impostazioni salvate",
     "settingsSaveFailed": "Impossibile salvare le impostazioni: {error}",
     "deleteDatabaseFailed": "Impossibile eliminare il database: {error}",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "Rilasci",
     "description": "Scarica il TUI Jottery per la tua piattaforma.",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "Client TUI",
+    "standaloneWebApp": "Applicazione Web Autonoma",
     "webAppNote": "Esegui localmente dal filesystem (sincronizzazione disabilitata)"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "progress": "{current} di {total}",
     "selectAll": "Seleziona tutto",
     "deselectAll": "Deseleziona tutto",
-    "archive": "Archivia"
+    "archive": "Archivia",
+    "moreActions": "Altre azioni"
   },
   "conflict": {
     "title": "Conflitto di sincronizzazione rilevato",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "titolo"
     }
+  },
+  "searchHelp": {
+    "title": "Sintassi di Ricerca",
+    "tags": "Tag",
+    "text": "Testo",
+    "wildcards": "Caratteri Jolly",
+    "modifiers": "Modificatori",
+    "combined": "Esempi Combinati",
+    "clickToTry": "Clicca un esempio per provarlo",
+    "tagsAnd": "Entrambi i tag (AND)",
+    "tagsOr": "Uno dei tag (OR)",
+    "exactPhrase": "Frase esatta",
+    "bothWords": "Entrambe le parole (AND)",
+    "eitherWord": "Una delle parole (OR)",
+    "notContaining": "NON contiene",
+    "startsWith": "Inizia con",
+    "endsWith": "Finisce con",
+    "containsAnywhere": "Contiene ovunque",
+    "hasAttachment": "Note con allegati",
+    "createdAfter": "Creata dopo la data",
+    "createdBefore": "Creata prima della data",
+    "createdRange": "Creata nell'intervallo di date",
+    "modifiedAfter": "Modificata dopo la data",
+    "wordsMore": "Più di N parole",
+    "wordsLess": "Meno di N parole",
+    "wordsRange": "Tra N e M parole"
+  },
+  "commandPalette": {
+    "title": "Tavolozza dei Comandi",
+    "placeholder": "Digita un comando...",
+    "noResults": "Nessun comando corrispondente",
+    "navigation": "Navigazione",
+    "editorActions": "Editor",
+    "focusSearch": "Attiva Ricerca",
+    "newNote": "Nuova Nota",
+    "openSettings": "Impostazioni",
+    "openRecycleBin": "Cestino",
+    "openArchive": "Archivio",
+    "lockApp": "Blocca Applicazione",
+    "showShortcuts": "Scorciatoie Tastiera",
+    "togglePreview": "Attiva/Disattiva Anteprima",
+    "toggleWordWrap": "Attiva/Disattiva A Capo",
+    "copyContent": "Copia Contenuto Nota",
+    "copyLink": "Copia Link alla Nota",
+    "duplicateNote": "Duplica Nota",
+    "exportNote": "Esporta in File",
+    "printNote": "Stampa / Esporta PDF",
+    "noteInfo": "Informazioni Nota",
+    "versionHistory": "Cronologia Versioni",
+    "deleteNote": "Elimina Nota",
+    "lockNote": "Blocca/Sblocca Nota",
+    "setColor": "Imposta Categoria Nota",
+    "archiveNote": "Archivia Nota"
+  },
+  "contextMenu": {
+    "title": "Azioni nota",
+    "open": "Apri",
+    "pin": "Fissa nota",
+    "unpin": "Rimuovi fissaggio",
+    "duplicate": "Duplica",
+    "setColour": "Imposta colore categoria",
+    "archive": "Archivia",
+    "unarchive": "Ripristina",
+    "delete": "Elimina"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Scorri a sinistra per eliminare",
+    "swipeRightToSelect": "Scorri a destra per selezionare",
+    "tapToDismiss": "Tocca ovunque per chiudere"
+  },
+  "welcomeNote": {
+    "content": "# Benvenuto in Jottery\n\nJottery è il tuo blocco note privato e crittografato per catturare e organizzare le note.\n\n## Guida Rapida\n\n- **Crea una nota**: Clicca il pulsante + o premi `Ctrl+N`\n- **Cerca**: Usa la barra di ricerca o premi `Ctrl+K`\n- **Tag**: Aggiungi tag per organizzare le note, poi filtra con `#nometag`\n- **Fissa**: Fissa le note importanti per mantenerle in cima\n\n## Sintassi di Ricerca\n\nJottery supporta query di ricerca avanzate:\n\n- `#nometag` — filtra per tag\n- `\"frase esatta\"` — corrispondenza esatta\n- `has:attachment` — note con allegati\n- `created:>2024-01-01` — filtri per data\n- `words:>100` — filtri per conteggio parole\n- `-escluso` — escludi termini\n\nClicca il pulsante **?** accanto alla barra di ricerca per il riferimento completo.\n\n## Tavolozza dei Comandi\n\nPremi `Ctrl+Shift+P` per aprire la tavolozza dei comandi per un accesso rapido a tutte le azioni.\n\n## Scorciatoie Tastiera\n\nPremi `Ctrl+/` per vedere tutte le scorciatoie tastiera.\n\n## Privacy\n\nTutte le tue note sono crittografate localmente. Nessun dato lascia il tuo dispositivo a meno che tu non abiliti la sincronizzazione.\n\n---\n\n*Puoi eliminare questa nota in qualsiasi momento. Buona scrittura!*",
+    "tags": "benvenuto,primi-passi"
+  },
+  "emptyState": {
+    "title": "Inizia",
+    "createNote": "Crea una nota",
+    "createNoteDescription": "Inizia a scrivere la tua prima nota",
+    "importNotes": "Importa note",
+    "importNotesDescription": "Importa da un file di esportazione JSON",
+    "exploreSearch": "Esplora la sintassi di ricerca",
+    "exploreSearchDescription": "Scopri i potenti operatori di ricerca"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Ricerche Recenti",
+    "clearRecent": "Rimuovi",
+    "tryThese": "Prova Questi",
+    "clearAll": "Cancella tutto"
   }
 }

@@ -20,7 +20,7 @@
     "error": "エラー",
     "back": "戻る",
     "edit": "編集",
-    "add": "Add",
+    "add": "追加",
     "showPassword": "パスワードを表示",
     "hidePassword": "パスワードを非表示"
   },
@@ -182,11 +182,17 @@
     "readOnly": {
       "archivedBanner": "このノートはアーカイブされています。編集するにはアーカイブを解除してください。",
       "lockedBanner": "このノートはロックされています。編集するにはロックを解除してください。"
+    },
+    "confirmDelete": {
+      "title": "ノートを削除",
+      "message": "このノートはごみ箱に移動されます。必要に応じて後から復元できます。"
     }
   },
   "noteList": {
     "deleteNote": "ノートを削除",
-    "filterByTag": "#{tag}でフィルター"
+    "filterByTag": "#{tag}でフィルター",
+    "noteCount": "{total}件中{filtered}件",
+    "noteCountAll": "{total}件のノート"
   },
   "tagInput": {
     "removeTag": "タグを削除"
@@ -349,6 +355,7 @@
     },
     "saveSettings": "設定を保存",
     "saving": "保存中...",
+    "autoSaved": "変更は自動的に保存されます",
     "settingsSaved": "設定を保存しました",
     "settingsSaveFailed": "設定の保存に失敗しました: {error}",
     "deleteDatabaseFailed": "データベースの削除に失敗しました: {error}",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "リリース",
     "description": "お使いのプラットフォーム用のJottery TUIをダウンロードしてください。",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "TUIクライアント",
+    "standaloneWebApp": "スタンドアロンWebアプリ",
     "webAppNote": "ファイルシステムからローカル実行（同期無効）"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "progress": "{total}件中{current}件",
     "selectAll": "すべて選択",
     "deselectAll": "すべて選択解除",
-    "archive": "アーカイブ"
+    "archive": "アーカイブ",
+    "moreActions": "その他の操作"
   },
   "conflict": {
     "title": "同期の競合を検出",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "タイトル"
     }
+  },
+  "searchHelp": {
+    "title": "検索構文",
+    "tags": "タグ",
+    "text": "テキスト",
+    "wildcards": "ワイルドカード",
+    "modifiers": "修飾子",
+    "combined": "組み合わせの例",
+    "clickToTry": "例をクリックして試す",
+    "tagsAnd": "両方のタグ（AND）",
+    "tagsOr": "いずれかのタグ（OR）",
+    "exactPhrase": "完全一致フレーズ",
+    "bothWords": "両方の単語（AND）",
+    "eitherWord": "いずれかの単語（OR）",
+    "notContaining": "含まない",
+    "startsWith": "で始まる",
+    "endsWith": "で終わる",
+    "containsAnywhere": "どこかに含む",
+    "hasAttachment": "添付ファイル付きノート",
+    "createdAfter": "指定日以降に作成",
+    "createdBefore": "指定日以前に作成",
+    "createdRange": "日付範囲内に作成",
+    "modifiedAfter": "指定日以降に更新",
+    "wordsMore": "N語以上",
+    "wordsLess": "N語未満",
+    "wordsRange": "N語からM語の間"
+  },
+  "commandPalette": {
+    "title": "コマンドパレット",
+    "placeholder": "コマンドを入力...",
+    "noResults": "一致するコマンドがありません",
+    "navigation": "ナビゲーション",
+    "editorActions": "エディター",
+    "focusSearch": "検索にフォーカス",
+    "newNote": "新規ノート",
+    "openSettings": "設定",
+    "openRecycleBin": "ごみ箱",
+    "openArchive": "アーカイブ",
+    "lockApp": "アプリをロック",
+    "showShortcuts": "キーボードショートカット",
+    "togglePreview": "プレビューの切り替え",
+    "toggleWordWrap": "行の折り返しの切り替え",
+    "copyContent": "ノートの内容をコピー",
+    "copyLink": "ノートへのリンクをコピー",
+    "duplicateNote": "ノートを複製",
+    "exportNote": "ファイルにエクスポート",
+    "printNote": "印刷 / PDF出力",
+    "noteInfo": "ノート情報",
+    "versionHistory": "バージョン履歴",
+    "deleteNote": "ノートを削除",
+    "lockNote": "ノートのロック/ロック解除",
+    "setColor": "ノートのカテゴリを設定",
+    "archiveNote": "ノートをアーカイブ"
+  },
+  "contextMenu": {
+    "title": "ノートの操作",
+    "open": "開く",
+    "pin": "ノートをピン留め",
+    "unpin": "ピン留めを外す",
+    "duplicate": "複製",
+    "setColour": "カテゴリの色を設定",
+    "archive": "アーカイブ",
+    "unarchive": "アーカイブ解除",
+    "delete": "削除"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "左にスワイプして削除",
+    "swipeRightToSelect": "右にスワイプして選択",
+    "tapToDismiss": "どこかをタップして閉じる"
+  },
+  "welcomeNote": {
+    "content": "# Jotteryへようこそ\n\nJotteryは、ノートを記録・整理するためのプライベートで暗号化されたメモ帳です。\n\n## クイックスタート\n\n- **ノートを作成**: +ボタンをクリックするか `Ctrl+N` を押す\n- **検索**: 検索バーを使うか `Ctrl+K` を押す\n- **タグ**: ノートを整理するためにタグを追加し、`#タグ名` でフィルター\n- **ピン留め**: 重要なノートをピン留めして上部に固定\n\n## 検索構文\n\nJotteryは強力な検索クエリに対応しています：\n\n- `#タグ名` — タグでフィルター\n- `\"完全一致フレーズ\"` — 完全一致\n- `has:attachment` — 添付ファイル付きノート\n- `created:>2024-01-01` — 日付フィルター\n- `words:>100` — 単語数フィルター\n- `-除外` — 用語を除外\n\n完全なリファレンスは検索バーの横にある **?** ボタンをクリックしてください。\n\n## コマンドパレット\n\n`Ctrl+Shift+P` を押してコマンドパレットを開き、すべての操作にすばやくアクセスできます。\n\n## キーボードショートカット\n\n`Ctrl+/` を押してすべてのキーボードショートカットを確認できます。\n\n## プライバシー\n\nすべてのノートはローカルで暗号化されます。同期を有効にしない限り、データがデバイスから出ることはありません。\n\n---\n\n*このノートはいつでも削除できます。楽しく書いてください！*",
+    "tags": "ようこそ,はじめに"
+  },
+  "emptyState": {
+    "title": "はじめましょう",
+    "createNote": "ノートを作成",
+    "createNoteDescription": "最初のノートを書き始めましょう",
+    "importNotes": "ノートをインポート",
+    "importNotesDescription": "JSONエクスポートファイルからインポート",
+    "exploreSearch": "検索構文を探索",
+    "exploreSearchDescription": "強力な検索演算子を学ぶ"
+  },
+  "searchSuggestions": {
+    "recentSearches": "最近の検索",
+    "clearRecent": "削除",
+    "tryThese": "おすすめ",
+    "clearAll": "すべてクリア"
   }
 }

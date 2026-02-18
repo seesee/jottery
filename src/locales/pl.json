@@ -20,7 +20,7 @@
     "error": "Błąd",
     "back": "Wstecz",
     "edit": "Edytuj",
-    "add": "Add",
+    "add": "Dodaj",
     "showPassword": "Pokaż hasło",
     "hidePassword": "Ukryj hasło"
   },
@@ -179,6 +179,10 @@
       "lockedBanner": "Ta notatka jest zablokowana. Odblokuj, aby edytować.",
       "mustUnlockToDelete": "Odblokuj notatkę przed usunięciem"
     },
+    "confirmDelete": {
+      "title": "Usuń Notatkę",
+      "message": "Spowoduje to przeniesienie notatki do kosza. Możesz ją później przywrócić w razie potrzeby."
+    },
     "readOnly": {
       "archivedBanner": "Ta notatka jest zarchiwizowana. Przywróć z archiwum, aby edytować.",
       "lockedBanner": "Ta notatka jest zablokowana. Odblokuj, aby edytować."
@@ -186,7 +190,9 @@
   },
   "noteList": {
     "deleteNote": "Usuń notatkę",
-    "filterByTag": "Filtruj według #{tag}"
+    "filterByTag": "Filtruj według #{tag}",
+    "noteCount": "{filtered} z {total}",
+    "noteCountAll": "{total} notatek"
   },
   "tagInput": {
     "removeTag": "Usuń tag"
@@ -349,6 +355,7 @@
     },
     "saveSettings": "Zapisz ustawienia",
     "saving": "Zapisywanie...",
+    "autoSaved": "Zmiany zapisane automatycznie",
     "settingsSaved": "Ustawienia zapisane",
     "settingsSaveFailed": "Nie udało się zapisać ustawień: {error}",
     "deleteDatabaseFailed": "Nie udało się usunąć bazy danych: {error}",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "Wydania",
     "description": "Pobierz Jottery TUI dla swojej platformy.",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "Klient TUI",
+    "standaloneWebApp": "Samodzielna aplikacja webowa",
     "webAppNote": "Uruchom lokalnie z systemu plików (synchronizacja wyłączona)"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "progress": "{current} z {total}",
     "selectAll": "Zaznacz wszystko",
     "deselectAll": "Odznacz wszystko",
-    "archive": "Archiwizuj"
+    "archive": "Archiwizuj",
+    "moreActions": "Więcej działań"
   },
   "conflict": {
     "title": "Wykryto konflikt synchronizacji",
@@ -1227,8 +1235,8 @@
       "revoked": "Token skrzynki odbiorczej unieważniony",
       "copyToken": "Kopiuj Token",
       "copied": "Token skopiowany do schowka",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "quickStart": "Szybki start",
+      "curlExample": "Przykład: prześlij notatkę przez curl",
       "confirm": {
         "revoke": {
           "title": "Unieważnij Token Skrzynki Odbiorczej",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "tytuł"
     }
+  },
+  "searchHelp": {
+    "title": "Składnia Wyszukiwania",
+    "tags": "Tagi",
+    "text": "Tekst",
+    "wildcards": "Znaki Wieloznaczne",
+    "modifiers": "Modyfikatory",
+    "combined": "Przykłady Złożone",
+    "clickToTry": "Kliknij przykład, aby go wypróbować",
+    "tagsAnd": "Oba tagi (AND)",
+    "tagsOr": "Dowolny tag (OR)",
+    "exactPhrase": "Dokładna fraza",
+    "bothWords": "Oba słowa (AND)",
+    "eitherWord": "Dowolne słowo (OR)",
+    "notContaining": "NIE zawiera",
+    "startsWith": "Zaczyna się od",
+    "endsWith": "Kończy się na",
+    "containsAnywhere": "Zawiera gdziekolwiek",
+    "hasAttachment": "Notatki z załącznikami",
+    "createdAfter": "Utworzona po dacie",
+    "createdBefore": "Utworzona przed datą",
+    "createdRange": "Utworzona w zakresie dat",
+    "modifiedAfter": "Zmodyfikowana po dacie",
+    "wordsMore": "Więcej niż N słów",
+    "wordsLess": "Mniej niż N słów",
+    "wordsRange": "Między N a M słów"
+  },
+  "commandPalette": {
+    "title": "Paleta Poleceń",
+    "placeholder": "Wpisz polecenie...",
+    "noResults": "Brak pasujących poleceń",
+    "navigation": "Nawigacja",
+    "editorActions": "Edytor",
+    "focusSearch": "Przejdź do Wyszukiwania",
+    "newNote": "Nowa Notatka",
+    "openSettings": "Ustawienia",
+    "openRecycleBin": "Kosz",
+    "openArchive": "Archiwum",
+    "lockApp": "Zablokuj Aplikację",
+    "showShortcuts": "Skróty Klawiszowe",
+    "togglePreview": "Przełącz Podgląd",
+    "toggleWordWrap": "Przełącz Zawijanie Wierszy",
+    "copyContent": "Kopiuj Treść Notatki",
+    "copyLink": "Kopiuj Link do Notatki",
+    "duplicateNote": "Duplikuj Notatkę",
+    "exportNote": "Eksportuj do Pliku",
+    "printNote": "Drukuj / Eksportuj PDF",
+    "noteInfo": "Informacje o Notatce",
+    "versionHistory": "Historia Wersji",
+    "deleteNote": "Usuń Notatkę",
+    "lockNote": "Zablokuj/Odblokuj Notatkę",
+    "setColor": "Ustaw Kategorię Notatki",
+    "archiveNote": "Archiwizuj Notatkę"
+  },
+  "contextMenu": {
+    "title": "Akcje notatki",
+    "open": "Otwórz",
+    "pin": "Przypnij notatkę",
+    "unpin": "Odepnij notatkę",
+    "duplicate": "Duplikuj",
+    "setColour": "Ustaw kolor kategorii",
+    "archive": "Archiwizuj",
+    "unarchive": "Przywróć z archiwum",
+    "delete": "Usuń"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Przesuń w lewo, aby usunąć",
+    "swipeRightToSelect": "Przesuń w prawo, aby zaznaczyć",
+    "tapToDismiss": "Dotknij gdziekolwiek, aby zamknąć"
+  },
+  "welcomeNote": {
+    "content": "# Witaj w Jottery\n\nJottery to Twój prywatny, zaszyfrowany notatnik do przechwytywania i organizowania notatek.\n\n## Szybki Start\n\n- **Utwórz notatkę**: Kliknij przycisk + lub naciśnij `Ctrl+N`\n- **Szukaj**: Użyj paska wyszukiwania lub naciśnij `Ctrl+K`\n- **Tagi**: Dodaj tagi, aby organizować notatki, następnie filtruj za pomocą `#nazwatagów`\n- **Przypnij**: Przypnij ważne notatki, aby utrzymać je na górze\n\n## Składnia Wyszukiwania\n\nJottery obsługuje zaawansowane zapytania wyszukiwania:\n\n- `#nazwatagów` — filtruj po tagu\n- `\"dokładna fraza\"` — dokładne dopasowanie\n- `has:attachment` — notatki z załącznikami\n- `created:>2024-01-01` — filtry dat\n- `words:>100` — filtry liczby słów\n- `-wykluczone` — wyklucz terminy\n\nKliknij przycisk **?** obok paska wyszukiwania, aby zobaczyć pełne odniesienie.\n\n## Paleta Poleceń\n\nNaciśnij `Ctrl+Shift+P`, aby otworzyć paletę poleceń dla szybkiego dostępu do wszystkich akcji.\n\n## Skróty Klawiszowe\n\nNaciśnij `Ctrl+/`, aby zobaczyć wszystkie skróty klawiszowe.\n\n## Prywatność\n\nWszystkie Twoje notatki są szyfrowane lokalnie. Żadne dane nie opuszczają Twojego urządzenia, chyba że włączysz synchronizację.\n\n---\n\n*Możesz usunąć tę notatkę w dowolnym momencie. Miłego pisania!*",
+    "tags": "witaj,pierwsze-kroki"
+  },
+  "emptyState": {
+    "title": "Rozpocznij",
+    "createNote": "Utwórz notatkę",
+    "createNoteDescription": "Zacznij pisać swoją pierwszą notatkę",
+    "importNotes": "Importuj notatki",
+    "importNotesDescription": "Importuj z pliku eksportu JSON",
+    "exploreSearch": "Poznaj składnię wyszukiwania",
+    "exploreSearchDescription": "Poznaj zaawansowane operatory wyszukiwania"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Ostatnie Wyszukiwania",
+    "clearRecent": "Usuń",
+    "tryThese": "Wypróbuj Te",
+    "clearAll": "Wyczyść wszystko"
   }
 }

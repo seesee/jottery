@@ -56,12 +56,23 @@ export function initI18n(locale?: string) {
 
 /**
  * Get the locale code from settings or default
- * If userLocale is 'auto' or not set, detect from browser
+ * Priority: 1) Saved setting, 2) Landing page selection (localStorage), 3) Browser detection, 4) Default
  */
 export function getInitialLocale(userLocale?: string): string {
-  // If user explicitly selected a locale (not 'auto'), use it
+  // If user explicitly selected a locale in settings (not 'auto' or empty), use it
   if (userLocale && userLocale !== 'auto' && AVAILABLE_LOCALES.some(l => l.code === userLocale)) {
     return userLocale;
+  }
+
+  // Check if user selected a language on the landing page before setup completed
+  // (LanguagePicker stores this in localStorage as a bridge to persist through unlock)
+  try {
+    const landingLocale = localStorage.getItem('jottery-locale');
+    if (landingLocale && AVAILABLE_LOCALES.some(l => l.code === landingLocale)) {
+      return landingLocale;
+    }
+  } catch {
+    // Ignore localStorage errors (privacy mode, file:// URLs, etc.)
   }
 
   // Auto-detect from browser

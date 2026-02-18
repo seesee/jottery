@@ -20,7 +20,7 @@
     "error": "Fout",
     "back": "Terug",
     "edit": "Bewerken",
-    "add": "Add",
+    "add": "Toevoegen",
     "showPassword": "Wachtwoord tonen",
     "hidePassword": "Wachtwoord verbergen"
   },
@@ -71,7 +71,7 @@
     "editSearch": "Bewerken",
     "deleteSearch": "Verwijderen",
     "searchName": "Naam Zoekopdracht",
-    "query": "Query",
+    "query": "Zoekopdracht",
     "saveSearch": "Opslaan",
     "applySavedSearch": "Toepassen",
     "confirmDeleteSearch": "Opgeslagen zoekopdracht \"{name}\" verwijderen?",
@@ -84,7 +84,7 @@
     "noNoteSelectedHint": "Selecteer een notitie uit de lijst of maak een nieuwe",
     "attachmentPreview": "Bijlage voorvertoning",
     "download": "Downloaden",
-    "tags": "Tags",
+    "tags": "Labels",
     "addTags": "Tags toevoegen...",
     "plainText": "Platte tekst",
     "syntaxHighlight": "Syntaxisaccentuering",
@@ -179,6 +179,10 @@
       "lockedBanner": "Deze notitie is vergrendeld. Ontgrendel om te bewerken.",
       "mustUnlockToDelete": "Ontgrendel de notitie voor het verwijderen"
     },
+    "confirmDelete": {
+      "title": "Notitie Verwijderen",
+      "message": "Dit verplaatst de notitie naar de prullenbak. U kunt deze later herstellen indien nodig."
+    },
     "readOnly": {
       "archivedBanner": "Deze notitie is gearchiveerd. Dearchiveer om te bewerken.",
       "lockedBanner": "Deze notitie is vergrendeld. Ontgrendel om te bewerken."
@@ -186,7 +190,9 @@
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",
-    "filterByTag": "Filter op #{tag}"
+    "filterByTag": "Filter op #{tag}",
+    "noteCount": "{filtered} van {total}",
+    "noteCountAll": "{total} notities"
   },
   "tagInput": {
     "removeTag": "Tag verwijderen"
@@ -247,7 +253,7 @@
       "stats": {
         "title": "Back-up Informatie",
         "created": "Gemaakt",
-        "records": "Records"
+        "records": "Gegevens"
       }
     }
   },
@@ -349,6 +355,7 @@
     },
     "saveSettings": "Instellingen opslaan",
     "saving": "Opslaan...",
+    "autoSaved": "Wijzigingen automatisch opgeslagen",
     "settingsSaved": "Instellingen opgeslagen",
     "settingsSaveFailed": "Opslaan van instellingen mislukt: {error}",
     "deleteDatabaseFailed": "Verwijderen van database mislukt: {error}",
@@ -1034,10 +1041,10 @@
     "ctrl": "Ctrl"
   },
   "releases": {
-    "title": "Releases",
+    "title": "Versies",
     "description": "Download de Jottery TUI voor uw platform.",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "TUI-client",
+    "standaloneWebApp": "Zelfstandige web-app",
     "webAppNote": "Lokaal uitvoeren vanaf bestandssysteem (synchronisatie uitgeschakeld)"
   },
   "fileUpload": {
@@ -1066,7 +1073,7 @@
     "characters": "Tekens:",
     "created": "Gemaakt:",
     "synced": "Gesynchroniseerd:",
-    "tags": "Tags:",
+    "tags": "Labels:",
     "contentPreview": "Inhoudsvoorvertoning",
     "selectToPreview": "Selecteer een versie voor voorvertoning",
     "restoreButton": "Deze versie herstellen",
@@ -1146,7 +1153,8 @@
     "progress": "{current} van {total}",
     "selectAll": "Alles selecteren",
     "deselectAll": "Alles deselecteren",
-    "archive": "Archiveren"
+    "archive": "Archiveren",
+    "moreActions": "Meer acties"
   },
   "conflict": {
     "title": "Synchronisatieconflict gedetecteerd",
@@ -1179,7 +1187,7 @@
     "syncProgress": "Synchroniseren: {percentage}% voltooid"
   },
   "inbox": {
-    "title": "Inbox",
+    "title": "Postvak IN",
     "count": "{count} onderdelen",
     "countSingle": "1 onderdeel",
     "empty": "Inbox is leeg",
@@ -1227,8 +1235,8 @@
       "revoked": "Inbox-token ingetrokken",
       "copyToken": "Token kopiëren",
       "copied": "Token gekopieerd naar klembord",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "quickStart": "Snel starten",
+      "curlExample": "Voorbeeld: een notitie indienen via curl",
       "confirm": {
         "revoke": {
           "title": "Inbox-token Intrekken",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "titel"
     }
+  },
+  "searchHelp": {
+    "title": "Zoeksyntaxis",
+    "tags": "Labels",
+    "text": "Tekst",
+    "wildcards": "Jokertekens",
+    "modifiers": "Modificatoren",
+    "combined": "Gecombineerde Voorbeelden",
+    "clickToTry": "Klik op een voorbeeld om het te proberen",
+    "tagsAnd": "Beide tags (AND)",
+    "tagsOr": "Een van de tags (OR)",
+    "exactPhrase": "Exacte zin",
+    "bothWords": "Beide woorden (AND)",
+    "eitherWord": "Een van de woorden (OR)",
+    "notContaining": "Bevat NIET",
+    "startsWith": "Begint met",
+    "endsWith": "Eindigt met",
+    "containsAnywhere": "Bevat overal",
+    "hasAttachment": "Notities met bijlagen",
+    "createdAfter": "Gemaakt na datum",
+    "createdBefore": "Gemaakt voor datum",
+    "createdRange": "Gemaakt in datumbereik",
+    "modifiedAfter": "Gewijzigd na datum",
+    "wordsMore": "Meer dan N woorden",
+    "wordsLess": "Minder dan N woorden",
+    "wordsRange": "Tussen N en M woorden"
+  },
+  "commandPalette": {
+    "title": "Commandopalet",
+    "placeholder": "Typ een commando...",
+    "noResults": "Geen overeenkomende commando's",
+    "navigation": "Navigatie",
+    "editorActions": "Editor",
+    "focusSearch": "Focus op Zoeken",
+    "newNote": "Nieuwe Notitie",
+    "openSettings": "Instellingen",
+    "openRecycleBin": "Prullenbak",
+    "openArchive": "Archief",
+    "lockApp": "Applicatie Vergrendelen",
+    "showShortcuts": "Sneltoetsen",
+    "togglePreview": "Voorvertoning In-/Uitschakelen",
+    "toggleWordWrap": "Regelafbreking In-/Uitschakelen",
+    "copyContent": "Notitie-inhoud Kopiëren",
+    "copyLink": "Link naar Notitie Kopiëren",
+    "duplicateNote": "Notitie Dupliceren",
+    "exportNote": "Exporteren naar Bestand",
+    "printNote": "Afdrukken / PDF Exporteren",
+    "noteInfo": "Notitie-informatie",
+    "versionHistory": "Versiegeschiedenis",
+    "deleteNote": "Notitie Verwijderen",
+    "lockNote": "Notitie Vergrendelen/Ontgrendelen",
+    "setColor": "Notitiecategorie Instellen",
+    "archiveNote": "Notitie Archiveren"
+  },
+  "contextMenu": {
+    "title": "Notitieacties",
+    "open": "Openen",
+    "pin": "Notitie vastmaken",
+    "unpin": "Notitie losmaken",
+    "duplicate": "Dupliceren",
+    "setColour": "Categoriekleur instellen",
+    "archive": "Archiveren",
+    "unarchive": "Dearchiveren",
+    "delete": "Verwijderen"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Veeg naar links om te verwijderen",
+    "swipeRightToSelect": "Veeg naar rechts om te selecteren",
+    "tapToDismiss": "Tik ergens om te sluiten"
+  },
+  "welcomeNote": {
+    "content": "# Welkom bij Jottery\n\nJottery is uw privé, versleutelde kladblok voor het vastleggen en organiseren van notities.\n\n## Snelstart\n\n- **Notitie maken**: Klik op de + knop of druk op `Ctrl+N`\n- **Zoeken**: Gebruik de zoekbalk of druk op `Ctrl+K`\n- **Tags**: Voeg tags toe om notities te organiseren, filter vervolgens met `#tagnaam`\n- **Vastmaken**: Maak belangrijke notities vast om ze bovenaan te houden\n\n## Zoeksyntaxis\n\nJottery ondersteunt krachtige zoekquery's:\n\n- `#tagnaam` — filter op tag\n- `\"exacte zin\"` — exacte overeenkomst\n- `has:attachment` — notities met bijlagen\n- `created:>2024-01-01` — datumfilters\n- `words:>100` — woordaantalfilters\n- `-uitgesloten` — termen uitsluiten\n\nKlik op de **?** knop naast de zoekbalk voor de volledige referentie.\n\n## Commandopalet\n\nDruk op `Ctrl+Shift+P` om het commandopalet te openen voor snelle toegang tot alle acties.\n\n## Sneltoetsen\n\nDruk op `Ctrl+/` om alle sneltoetsen te bekijken.\n\n## Privacy\n\nAl uw notities zijn lokaal versleuteld. Er verlaat geen data uw apparaat tenzij u synchronisatie inschakelt.\n\n---\n\n*U kunt deze notitie op elk moment verwijderen. Veel schrijfplezier!*",
+    "tags": "welkom,aan-de-slag"
+  },
+  "emptyState": {
+    "title": "Aan de slag",
+    "createNote": "Notitie maken",
+    "createNoteDescription": "Begin met het schrijven van uw eerste notitie",
+    "importNotes": "Notities importeren",
+    "importNotesDescription": "Importeer vanuit een JSON-exportbestand",
+    "exploreSearch": "Zoeksyntaxis verkennen",
+    "exploreSearchDescription": "Leer krachtige zoekoperatoren"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Recente Zoekopdrachten",
+    "clearRecent": "Verwijderen",
+    "tryThese": "Probeer Deze",
+    "clearAll": "Alles wissen"
   }
 }

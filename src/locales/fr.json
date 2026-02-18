@@ -20,7 +20,7 @@
     "error": "Erreur",
     "back": "Retour",
     "edit": "Modifier",
-    "add": "Add",
+    "add": "Ajouter",
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe"
   },
@@ -182,11 +182,17 @@
     "readOnly": {
       "archivedBanner": "Cette note est archivée. Désarchivez pour modifier.",
       "lockedBanner": "Cette note est verrouillée. Déverrouillez pour modifier."
+    },
+    "confirmDelete": {
+      "title": "Supprimer la note",
+      "message": "Cette action déplacera la note vers la corbeille. Vous pourrez la restaurer plus tard si nécessaire."
     }
   },
   "noteList": {
     "deleteNote": "Supprimer la note",
-    "filterByTag": "Filtrer par #{tag}"
+    "filterByTag": "Filtrer par #{tag}",
+    "noteCount": "{filtered} sur {total}",
+    "noteCountAll": "{total} notes"
   },
   "tagInput": {
     "removeTag": "Supprimer l'étiquette"
@@ -349,6 +355,7 @@
     },
     "saveSettings": "Enregistrer les paramètres",
     "saving": "Enregistrement...",
+    "autoSaved": "Modifications enregistrées automatiquement",
     "settingsSaved": "Paramètres enregistrés",
     "settingsSaveFailed": "Échec de l'enregistrement des paramètres : {error}",
     "deleteDatabaseFailed": "Échec de la suppression de la base de données : {error}",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "Versions",
     "description": "Téléchargez le TUI Jottery pour votre plateforme.",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "Client TUI",
+    "standaloneWebApp": "Application Web Autonome",
     "webAppNote": "Exécuter localement depuis le système de fichiers (synchronisation désactivée)"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "progress": "{current} sur {total}",
     "selectAll": "Tout sélectionner",
     "deselectAll": "Tout désélectionner",
-    "archive": "Archiver"
+    "archive": "Archiver",
+    "moreActions": "Plus d'actions"
   },
   "conflict": {
     "title": "Conflit de synchronisation détecté",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "titre"
     }
+  },
+  "searchHelp": {
+    "title": "Syntaxe de recherche",
+    "tags": "Étiquettes",
+    "text": "Texte",
+    "wildcards": "Caractères génériques",
+    "modifiers": "Modificateurs",
+    "combined": "Exemples combinés",
+    "clickToTry": "Cliquez sur un exemple pour l'essayer",
+    "tagsAnd": "Les deux étiquettes (ET)",
+    "tagsOr": "L'une ou l'autre étiquette (OU)",
+    "exactPhrase": "Phrase exacte",
+    "bothWords": "Les deux mots (ET)",
+    "eitherWord": "L'un ou l'autre mot (OU)",
+    "notContaining": "NE contient PAS",
+    "startsWith": "Commence par",
+    "endsWith": "Se termine par",
+    "containsAnywhere": "Contient n'importe où",
+    "hasAttachment": "Notes avec pièces jointes",
+    "createdAfter": "Créée après la date",
+    "createdBefore": "Créée avant la date",
+    "createdRange": "Créée dans la plage de dates",
+    "modifiedAfter": "Modifiée après la date",
+    "wordsMore": "Plus de N mots",
+    "wordsLess": "Moins de N mots",
+    "wordsRange": "Entre N et M mots"
+  },
+  "commandPalette": {
+    "title": "Palette de commandes",
+    "placeholder": "Tapez une commande...",
+    "noResults": "Aucune commande correspondante",
+    "navigation": "Navigation",
+    "editorActions": "Éditeur",
+    "focusSearch": "Cibler la recherche",
+    "newNote": "Nouvelle note",
+    "openSettings": "Paramètres",
+    "openRecycleBin": "Corbeille",
+    "openArchive": "Archives",
+    "lockApp": "Verrouiller l'application",
+    "showShortcuts": "Raccourcis clavier",
+    "togglePreview": "Basculer l'aperçu",
+    "toggleWordWrap": "Basculer le retour à la ligne",
+    "copyContent": "Copier le contenu de la note",
+    "copyLink": "Copier le lien vers la note",
+    "duplicateNote": "Dupliquer la note",
+    "exportNote": "Exporter vers un fichier",
+    "printNote": "Imprimer / Exporter PDF",
+    "noteInfo": "Informations sur la note",
+    "versionHistory": "Historique des versions",
+    "deleteNote": "Supprimer la note",
+    "lockNote": "Verrouiller/Déverrouiller la note",
+    "setColor": "Définir la catégorie de note",
+    "archiveNote": "Archiver la note"
+  },
+  "contextMenu": {
+    "title": "Actions de note",
+    "open": "Ouvrir",
+    "pin": "Épingler la note",
+    "unpin": "Désépingler la note",
+    "duplicate": "Dupliquer",
+    "setColour": "Définir la couleur de catégorie",
+    "archive": "Archiver",
+    "unarchive": "Désarchiver",
+    "delete": "Supprimer"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Glissez à gauche pour supprimer",
+    "swipeRightToSelect": "Glissez à droite pour sélectionner",
+    "tapToDismiss": "Appuyez n'importe où pour fermer"
+  },
+  "welcomeNote": {
+    "content": "# Bienvenue dans Jottery\n\nJottery est votre bloc-notes privé et chiffré pour capturer et organiser vos notes.\n\n## Démarrage rapide\n\n- **Créer une note** : Cliquez sur le bouton + ou appuyez sur `Ctrl+N`\n- **Rechercher** : Utilisez la barre de recherche ou appuyez sur `Ctrl+K`\n- **Étiquettes** : Ajoutez des étiquettes pour organiser vos notes, puis filtrez avec `#étiquette`\n- **Épingler** : Épinglez les notes importantes pour les garder en haut\n\n## Syntaxe de recherche\n\nJottery prend en charge des requêtes de recherche puissantes :\n\n- `#étiquette` — filtrer par étiquette\n- `\"phrase exacte\"` — correspondance exacte\n- `has:attachment` — notes avec pièces jointes\n- `created:>2024-01-01` — filtres de date\n- `words:>100` — filtres de nombre de mots\n- `-exclu` — exclure des termes\n\nCliquez sur le bouton **?** à côté de la barre de recherche pour la référence complète.\n\n## Palette de commandes\n\nAppuyez sur `Ctrl+Shift+P` pour ouvrir la palette de commandes et accéder rapidement à toutes les actions.\n\n## Raccourcis clavier\n\nAppuyez sur `Ctrl+/` pour voir tous les raccourcis clavier.\n\n## Confidentialité\n\nToutes vos notes sont chiffrées localement. Aucune donnée ne quitte votre appareil sauf si vous activez la synchronisation.\n\n---\n\n*Vous pouvez supprimer cette note à tout moment. Bonne écriture !*",
+    "tags": "bienvenue,premiers-pas"
+  },
+  "emptyState": {
+    "title": "Pour commencer",
+    "createNote": "Créer une note",
+    "createNoteDescription": "Commencez à écrire votre première note",
+    "importNotes": "Importer des notes",
+    "importNotesDescription": "Importer depuis un fichier d'exportation JSON",
+    "exploreSearch": "Explorer la syntaxe de recherche",
+    "exploreSearchDescription": "Découvrez les opérateurs de recherche puissants"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Recherches récentes",
+    "clearRecent": "Supprimer",
+    "tryThese": "Essayez ceux-ci",
+    "clearAll": "Tout effacer"
   }
 }

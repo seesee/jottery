@@ -20,7 +20,7 @@
     "error": "Hata",
     "back": "Geri",
     "edit": "Düzenle",
-    "add": "Add",
+    "add": "Ekle",
     "showPassword": "Şifreyi göster",
     "hidePassword": "Şifreyi gizle"
   },
@@ -182,11 +182,17 @@
     "readOnly": {
       "archivedBanner": "Bu not arşivlenmiş. Düzenlemek için arşivden çıkarın.",
       "lockedBanner": "Bu not kilitli. Düzenlemek için kilidi açın."
+    },
+    "confirmDelete": {
+      "title": "Notu Sil",
+      "message": "Bu not geri dönüşüm kutusuna taşınacaktır. Gerekirse daha sonra geri yükleyebilirsiniz."
     }
   },
   "noteList": {
     "deleteNote": "Notu sil",
-    "filterByTag": "#{tag} etiketine göre filtrele"
+    "filterByTag": "#{tag} etiketine göre filtrele",
+    "noteCount": "{total} nottan {filtered}",
+    "noteCountAll": "{total} not"
   },
   "tagInput": {
     "removeTag": "Etiketi kaldır"
@@ -349,6 +355,7 @@
     },
     "saveSettings": "Ayarları Kaydet",
     "saving": "Kaydediliyor...",
+    "autoSaved": "Değişiklikler otomatik olarak kaydedildi",
     "settingsSaved": "Ayarlar kaydedildi",
     "settingsSaveFailed": "Ayarlar kaydedilemedi: {error}",
     "deleteDatabaseFailed": "Veritabanı silinemedi: {error}",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "Sürümler",
     "description": "Platformunuz için Jottery TUI'yi indirin.",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "TUI İstemcisi",
+    "standaloneWebApp": "Bağımsız Web Uygulaması",
     "webAppNote": "Dosya sisteminden yerel olarak çalıştır (senkronizasyon devre dışı)"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "progress": "{total} nottan {current}.",
     "selectAll": "Tümünü seç",
     "deselectAll": "Tümünün seçimini kaldır",
-    "archive": "Arşivle"
+    "archive": "Arşivle",
+    "moreActions": "Daha fazla işlem"
   },
   "conflict": {
     "title": "Senkronizasyon çakışması algılandı",
@@ -1227,8 +1235,8 @@
       "revoked": "Gelen kutusu tokenı iptal edildi",
       "copyToken": "Tokenı Kopyala",
       "copied": "Token panoya kopyalandı",
-      "quickStart": "Quick Start",
-      "curlExample": "Example: submit a note via curl",
+      "quickStart": "Hızlı Başlangıç",
+      "curlExample": "Örnek: curl ile not gönderin",
       "confirm": {
         "revoke": {
           "title": "Gelen Kutusu Tokenını İptal Et",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "başlık"
     }
+  },
+  "searchHelp": {
+    "title": "Arama Sözdizimi",
+    "tags": "Etiketler",
+    "text": "Metin",
+    "wildcards": "Joker Karakterler",
+    "modifiers": "Değiştiriciler",
+    "combined": "Birleşik Örnekler",
+    "clickToTry": "Denemek için bir örneğe tıklayın",
+    "tagsAnd": "Her iki etiket (VE)",
+    "tagsOr": "Herhangi bir etiket (VEYA)",
+    "exactPhrase": "Tam ifade",
+    "bothWords": "Her iki kelime (VE)",
+    "eitherWord": "Herhangi bir kelime (VEYA)",
+    "notContaining": "İçerMEZ",
+    "startsWith": "İle başlar",
+    "endsWith": "İle biter",
+    "containsAnywhere": "Herhangi bir yerde içerir",
+    "hasAttachment": "Eki olan notlar",
+    "createdAfter": "Tarihten sonra oluşturulmuş",
+    "createdBefore": "Tarihten önce oluşturulmuş",
+    "createdRange": "Tarih aralığında oluşturulmuş",
+    "modifiedAfter": "Tarihten sonra değiştirilmiş",
+    "wordsMore": "N kelimeden fazla",
+    "wordsLess": "N kelimeden az",
+    "wordsRange": "N ile M kelime arasında"
+  },
+  "commandPalette": {
+    "title": "Komut Paleti",
+    "placeholder": "Bir komut yazın...",
+    "noResults": "Eşleşen komut bulunamadı",
+    "navigation": "Gezinme",
+    "editorActions": "Editör",
+    "focusSearch": "Aramaya Odaklan",
+    "newNote": "Yeni Not",
+    "openSettings": "Ayarlar",
+    "openRecycleBin": "Geri Dönüşüm Kutusu",
+    "openArchive": "Arşiv",
+    "lockApp": "Uygulamayı Kilitle",
+    "showShortcuts": "Klavye Kısayolları",
+    "togglePreview": "Önizlemeyi Değiştir",
+    "toggleWordWrap": "Satır Kaydırmayı Değiştir",
+    "copyContent": "Not İçeriğini Kopyala",
+    "copyLink": "Not Bağlantısını Kopyala",
+    "duplicateNote": "Notu Çoğalt",
+    "exportNote": "Dosyaya Aktar",
+    "printNote": "Yazdır / PDF Dışa Aktar",
+    "noteInfo": "Not Bilgisi",
+    "versionHistory": "Sürüm Geçmişi",
+    "deleteNote": "Notu Sil",
+    "lockNote": "Notu Kilitle/Kilidini Aç",
+    "setColor": "Not Kategorisini Ayarla",
+    "archiveNote": "Notu Arşivle"
+  },
+  "contextMenu": {
+    "title": "Not işlemleri",
+    "open": "Aç",
+    "pin": "Notu sabitle",
+    "unpin": "Sabitlemeyi kaldır",
+    "duplicate": "Çoğalt",
+    "setColour": "Kategori rengini ayarla",
+    "archive": "Arşivle",
+    "unarchive": "Arşivden çıkar",
+    "delete": "Sil"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Silmek için sola kaydırın",
+    "swipeRightToSelect": "Seçmek için sağa kaydırın",
+    "tapToDismiss": "Kapatmak için herhangi bir yere dokunun"
+  },
+  "welcomeNote": {
+    "content": "# Jottery'ye Hoş Geldiniz\n\nJottery, notlarınızı kaydetmek ve düzenlemek için kişisel, şifreli not defterinizdir.\n\n## Hızlı Başlangıç\n\n- **Not oluştur**: + düğmesine tıklayın veya `Ctrl+N` tuşuna basın\n- **Arama**: Arama çubuğunu kullanın veya `Ctrl+K` tuşuna basın\n- **Etiketler**: Notları düzenlemek için etiket ekleyin, ardından `#etiketadı` ile filtreleyin\n- **Sabitle**: Önemli notları en üstte tutmak için sabitleyin\n\n## Arama Sözdizimi\n\nJottery güçlü arama sorgularını destekler:\n\n- `#etiketadı` — etikete göre filtrele\n- `\"tam ifade\"` — tam eşleşme\n- `has:attachment` — eki olan notlar\n- `created:>2024-01-01` — tarih filtreleri\n- `words:>100` — kelime sayısı filtreleri\n- `-hariç` — terimleri hariç tut\n\nTam referans için arama çubuğunun yanındaki **?** düğmesine tıklayın.\n\n## Komut Paleti\n\nTüm işlemlere hızlı erişim için `Ctrl+Shift+P` tuşuna basarak komut paletini açın.\n\n## Klavye Kısayolları\n\nTüm klavye kısayollarını görmek için `Ctrl+/` tuşuna basın.\n\n## Gizlilik\n\nTüm notlarınız yerel olarak şifrelenir. Senkronizasyonu etkinleştirmediğiniz sürece hiçbir veri cihazınızdan çıkmaz.\n\n---\n\n*Bu notu istediğiniz zaman silebilirsiniz. İyi yazmalar!*",
+    "tags": "hoş-geldiniz,başlangıç"
+  },
+  "emptyState": {
+    "title": "Başlayın",
+    "createNote": "Bir not oluşturun",
+    "createNoteDescription": "İlk notunuzu yazmaya başlayın",
+    "importNotes": "Notları içe aktar",
+    "importNotesDescription": "JSON dışa aktarma dosyasından içe aktar",
+    "exploreSearch": "Arama sözdizimini keşfedin",
+    "exploreSearchDescription": "Güçlü arama operatörlerini öğrenin"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Son Aramalar",
+    "clearRecent": "Kaldır",
+    "tryThese": "Bunları Deneyin",
+    "clearAll": "Tümünü temizle"
   }
 }
