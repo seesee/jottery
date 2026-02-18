@@ -4,52 +4,24 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Search Functionality', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
-  async function createNote(page: any, content: string, tags: string[] = []) {
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
-
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
-    await expect(editor).toBeVisible();
-    await editor.click();
-    await editor.pressSequentially(content);
-
-    // Add tags if provided
-    if (tags.length > 0) {
-      // Look for tag input with multiple possible selectors
-      const tagInput = page.locator('input[placeholder*="tag" i], input[class*="tag" i]').first();
-      if (await tagInput.isVisible()) {
-        for (const tag of tags) {
-          await tagInput.fill(tag);
-          await tagInput.press('Enter');
-          // Wait for tag pill to appear (state-based wait)
-          await expect(page.locator('.tag-pill').filter({ hasText: new RegExp(`#?${tag}`, 'i') })).toBeVisible({ timeout: 3000 });
-        }
-      }
-    }
-
-    // Wait for auto-save by checking note appears in list
-    // Use the note title heading (h3) to avoid matching tag pills
-    const noteList = page.getByRole('list');
-    const firstWord = content.split(' ')[0];
-    await expect(noteList.locator('h3').getByText(new RegExp(firstWord, 'i')).first()).toBeVisible({ timeout: 5000 });
-  }
-
   test('should find notes by text content', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // Create test notes
-    await createNote(page, 'This note contains apples and oranges');
-    await createNote(page, 'This note is about programming in Python');
-    await createNote(page, 'Another note with different content');
+    await jp.createNote('This note contains apples and oranges');
+    await jp.createNote('This note is about programming in Python');
+    await jp.createNote('Another note with different content');
 
     // Search for specific text
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    await searchInput.fill('apples');
+    await jp.searchInput.fill('apples');
 
     // Should find the note with apples (state-based wait)
     const noteList = page.getByRole('list');
@@ -57,18 +29,19 @@ test.describe('Search Functionality', () => {
   });
 
   test('should search with tag filter syntax', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // Create notes with tags
-    await createNote(page, 'Work meeting notes for Monday', ['work']);
-    await createNote(page, 'Personal journal entry', ['personal']);
-    await createNote(page, 'Project planning document', ['work', 'project']);
+    await jp.createNote('Work meeting notes for Monday', ['work']);
+    await jp.createNote('Personal journal entry', ['personal']);
+    await jp.createNote('Project planning document', ['work', 'project']);
 
     // Wait for all notes to be saved before searching
     const noteList = page.getByRole('list');
     await expect(noteList.getByText(/Project planning/i)).toBeVisible({ timeout: 5000 });
 
     // Search by tag
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    await searchInput.fill('#work');
+    await jp.searchInput.fill('#work');
 
     // Wait for search results to update - the personal note should disappear
     // Use state-based wait: personal note should NOT be visible after filter
@@ -80,15 +53,16 @@ test.describe('Search Functionality', () => {
   });
 
   test('should support negative search with minus', async ({ page }) => {
-    await createNote(page, 'Important document about cats');
-    await createNote(page, 'Important document about dogs');
-    await createNote(page, 'Random notes about weather');
+    const jp = new JotteryPage(page);
+
+    await jp.createNote('Important document about cats');
+    await jp.createNote('Important document about dogs');
+    await jp.createNote('Random notes about weather');
 
     // Search for important but not cats
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
     const noteList = page.getByRole('list');
 
-    await searchInput.fill('important -cats');
+    await jp.searchInput.fill('important -cats');
 
     // Should find dogs note but not cats note (state-based waits)
     // Use h3 to match note titles specifically
@@ -97,12 +71,13 @@ test.describe('Search Functionality', () => {
   });
 
   test('should support exact phrase search with quotes', async ({ page }) => {
-    await createNote(page, 'The quick brown fox jumps');
-    await createNote(page, 'Quick fox is brown and jumps high');
+    const jp = new JotteryPage(page);
+
+    await jp.createNote('The quick brown fox jumps');
+    await jp.createNote('Quick fox is brown and jumps high');
 
     // Search for exact phrase
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    await searchInput.fill('"quick brown fox"');
+    await jp.searchInput.fill('"quick brown fox"');
 
     // Should find the exact phrase match (state-based wait)
     const noteList = page.getByRole('list');
@@ -110,14 +85,15 @@ test.describe('Search Functionality', () => {
   });
 
   test('should show search result count', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // Create multiple notes
-    await createNote(page, 'Test note one');
-    await createNote(page, 'Test note two');
-    await createNote(page, 'Test note three');
+    await jp.createNote('Test note one');
+    await jp.createNote('Test note two');
+    await jp.createNote('Test note three');
 
     // Search
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    await searchInput.fill('test');
+    await jp.searchInput.fill('test');
 
     // Wait for search results (notes with 'test' should be visible)
     const noteList = page.getByRole('list');
@@ -134,20 +110,21 @@ test.describe('Search Functionality', () => {
   });
 
   test('should clear search and show all notes', async ({ page }) => {
-    await createNote(page, 'First note');
-    await createNote(page, 'Second note');
+    const jp = new JotteryPage(page);
+
+    await jp.createNote('First note');
+    await jp.createNote('Second note');
 
     // Search
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
     const noteList = page.getByRole('list');
 
-    await searchInput.fill('First');
+    await jp.searchInput.fill('First');
 
     // Wait for search to filter - Second note should disappear (use h3 for specificity)
     await expect(noteList.locator('h3').getByText(/Second/i)).not.toBeVisible({ timeout: 5000 });
 
     // Clear search
-    await searchInput.clear();
+    await jp.searchInput.clear();
 
     // Should show all notes again (state-based waits with longer timeout)
     await expect(noteList.locator('h3').getByText(/First/i)).toBeVisible({ timeout: 5000 });
@@ -155,13 +132,14 @@ test.describe('Search Functionality', () => {
   });
 
   test('should handle empty search results gracefully', async ({ page }) => {
-    await createNote(page, 'Sample note content');
+    const jp = new JotteryPage(page);
+
+    await jp.createNote('Sample note content');
 
     // Search for non-existent text
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
     const noteList = page.getByRole('list');
 
-    await searchInput.fill('xyznonexistent123');
+    await jp.searchInput.fill('xyznonexistent123');
 
     // Wait for search to complete - the sample note should disappear
     await expect(noteList.getByText(/Sample note/i)).not.toBeVisible({ timeout: 3000 });
@@ -174,15 +152,16 @@ test.describe('Search Functionality', () => {
   });
 
   test('should support wildcard search', async ({ page }) => {
-    await createNote(page, 'Programming in JavaScript');
-    await createNote(page, 'Programming in TypeScript');
-    await createNote(page, 'Writing documentation');
+    const jp = new JotteryPage(page);
+
+    await jp.createNote('Programming in JavaScript');
+    await jp.createNote('Programming in TypeScript');
+    await jp.createNote('Writing documentation');
 
     // Search with wildcard
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
     const noteList = page.getByRole('list');
 
-    await searchInput.fill('*Script');
+    await jp.searchInput.fill('*Script');
 
     // Give search time to process
     // Check for Script languages in results - they should still be visible
@@ -195,17 +174,18 @@ test.describe('Search Functionality', () => {
     } catch {
       // Wildcard search may not be fully supported - verify no crash at least
       // Just ensure search input is still functional
-      await expect(searchInput).toBeVisible();
+      await expect(jp.searchInput).toBeVisible();
     }
   });
 
   test('should preserve search on page interaction', async ({ page }) => {
-    await createNote(page, 'Searchable note content');
-    await createNote(page, 'Another note here');
+    const jp = new JotteryPage(page);
+
+    await jp.createNote('Searchable note content');
+    await jp.createNote('Another note here');
 
     // Search
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-    await searchInput.fill('Searchable');
+    await jp.searchInput.fill('Searchable');
 
     // Wait for search results to appear - the note should be visible in results
     const noteList = page.getByRole('list');
@@ -216,17 +196,16 @@ test.describe('Search Functionality', () => {
     await searchResult.click();
 
     // Wait for the note to open (editor visible) or for any navigation to complete
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea');
     // The search input might be hidden on mobile when editor opens, so check if still visible
-    const searchStillVisible = await searchInput.isVisible().catch(() => false);
+    const searchStillVisible = await jp.searchInput.isVisible().catch(() => false);
 
     if (searchStillVisible) {
       // Search should still be active
-      await expect(searchInput).toHaveValue('Searchable');
+      await expect(jp.searchInput).toHaveValue('Searchable');
     } else {
       // On mobile, search might be hidden when editor opens - that's OK
       // Verify editor opened successfully instead
-      await expect(editor.first()).toBeVisible({ timeout: 5000 });
+      await expect(jp.editorContent).toBeVisible({ timeout: 5000 });
     }
   });
 });

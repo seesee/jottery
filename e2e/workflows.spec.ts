@@ -4,32 +4,32 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './test-utils';
 
 test.describe('Search and Filtering Workflows', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
 
     // Create test notes with different content
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     const noteList = page.getByRole('list');
 
     // Note 1: Work meeting
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await editor.click();
     await editor.pressSequentially('Meeting notes for project alpha discussion');
     await expect(noteList.getByText(/Meeting notes/i)).toBeVisible({ timeout: 5000 });
 
     // Note 2: Personal task
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Buy groceries and walk the dog');
     await expect(noteList.getByText(/Buy groceries/i)).toBeVisible({ timeout: 5000 });
 
     // Note 3: Another work note
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Project beta documentation review');
@@ -82,15 +82,17 @@ test.describe('Search and Filtering Workflows', () => {
 
 test.describe('Tag Management Workflows', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   test('should create note with tags and filter by tag', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note about work tasks');
 
@@ -98,45 +100,46 @@ test.describe('Tag Management Workflows', () => {
     const noteList = page.getByRole('list');
     await expect(noteList.getByText(/Note about work/i)).toBeVisible({ timeout: 5000 });
 
-    // Find tag input - it's a text input with "Add tags..." placeholder inside .tag-input-container
-    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    // Find tag input
+    const tagInput = jp.tagInput;
     await expect(tagInput).toBeVisible();
 
     // Add first tag and wait for tag pill to appear (state-based wait)
     await tagInput.click();
     await tagInput.fill('work');
     await page.keyboard.press('Enter');
-    await expect(page.locator('.tag-pill').filter({ hasText: '#work' })).toBeVisible({ timeout: 3000 });
+    await expect(jp.tagPills.filter({ hasText: '#work' })).toBeVisible({ timeout: 3000 });
 
     // Add second tag and wait for tag pill to appear
     await tagInput.click();
     await tagInput.fill('important');
     await page.keyboard.press('Enter');
-    await expect(page.locator('.tag-pill').filter({ hasText: '#important' })).toBeVisible({ timeout: 3000 });
+    await expect(jp.tagPills.filter({ hasText: '#important' })).toBeVisible({ timeout: 3000 });
   });
 
   test('should remove tags from note', async ({ page }) => {
-    // Create note with tags
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create note with tags
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Tagged note');
     await page.waitForTimeout(2000);
 
     // Find and use tag input
-    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    const tagInput = jp.tagInput;
     await tagInput.click();
     await tagInput.fill('removeme');
     await page.keyboard.press('Enter');
     await page.waitForTimeout(1000);
 
     // Tag should be visible
-    const tag = page.locator('.tag-pill').filter({ hasText: '#removeme' });
+    const tag = jp.tagPills.filter({ hasText: '#removeme' });
     await expect(tag).toBeVisible();
 
-    // Click the remove button (× symbol) within the tag pill
+    // Click the remove button (x symbol) within the tag pill
     const removeButton = tag.locator('button.tag-remove');
     await removeButton.click();
     await page.waitForTimeout(1000);
@@ -148,7 +151,8 @@ test.describe('Tag Management Workflows', () => {
 
 test.describe('Settings Workflows', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   test('should open settings modal', async ({ page }) => {
@@ -221,13 +225,13 @@ test.describe('Settings Workflows', () => {
 
 test.describe('Complete User Journey', () => {
   test('full workflow: create, edit, search, delete', async ({ page }) => {
-    await setupFreshEnvironment(page, 'journey-test-password');
+    const jp = new JotteryPage(page);
+    await jp.setup('journey-test-password');
 
     // Step 3: Create first note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My journey note - original content');
     await page.waitForTimeout(3000);
@@ -246,7 +250,7 @@ test.describe('Complete User Journey', () => {
     await expect(noteList.getByText(/updated content/i)).toBeVisible();
 
     // Step 7: Create second note for search test
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Another note for testing search');

@@ -4,18 +4,19 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './test-utils';
 
 test.describe('Note Metadata Persistence', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   async function createNote(page: any, content: string) {
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially(content);
@@ -24,7 +25,7 @@ test.describe('Note Metadata Persistence', () => {
     // Extract a searchable word from content (skip markdown symbols and split by whitespace)
     const noteList = page.getByRole('list');
     const cleanContent = content.replace(/^[#*_>\-]+\s*/, '');
-    const words = cleanContent.split(/\s+/).filter(w => w.length > 2);
+    const words = cleanContent.split(/\s+/).filter((w: string) => w.length > 2);
     const searchWord = words[0] || cleanContent.substring(0, 10);
     await expect(noteList.locator('h3').getByText(new RegExp(searchWord, 'i')).first()).toBeVisible({ timeout: 5000 });
   }
@@ -43,7 +44,8 @@ test.describe('Note Metadata Persistence', () => {
       await firstNoteItem.click();
 
       // Wait for editor to load
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const jp = new JotteryPage(page);
+      const editor = jp.editorContent;
       await expect(editor).toBeVisible({ timeout: 3000 });
 
       // Find and click pin button (specifically the one with "Pin note" title)
@@ -257,6 +259,8 @@ test.describe('Note Metadata Persistence', () => {
     test.use({ viewport: { width: 1280, height: 720 } });
 
     test('should NOT show delete button when hovering over pinned notes', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
       // Create a note
       await createNote(page, 'Protected pinned note');
 
@@ -275,7 +279,7 @@ test.describe('Note Metadata Persistence', () => {
         await createNote(page, 'Another unpinned note');
 
         // Find the pinned note in the list
-        const pinnedNoteItem = page.locator('.note-list-item').filter({
+        const pinnedNoteItem = jp.noteListItems.filter({
           hasText: /Protected pinned/i
         });
         await expect(pinnedNoteItem).toBeVisible();
@@ -293,11 +297,13 @@ test.describe('Note Metadata Persistence', () => {
     });
 
     test('should show delete button when hovering over unpinned notes', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
       // Create an unpinned note
       await createNote(page, 'Unpinned deletable note');
 
       // Find the note in the list
-      const noteItem = page.locator('.note-list-item').filter({
+      const noteItem = jp.noteListItems.filter({
         hasText: /Unpinned deletable/i
       });
       await expect(noteItem).toBeVisible();

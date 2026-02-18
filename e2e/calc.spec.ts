@@ -3,24 +3,25 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Calculator Mode', () => {
 	test.beforeEach(async ({ page }) => {
-		await setupFreshEnvironment(page);
+		const jp = new JotteryPage(page);
+		await jp.setup();
 	});
 
 	test('should create calc note and show basic arithmetic result', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type calculation
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('2 + 2');
 
@@ -34,16 +35,16 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should handle variables across lines', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type multi-line with variables
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('x = 10');
 		await page.keyboard.press('Enter');
@@ -61,16 +62,16 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should evaluate math functions', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type math function
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('sqrt(16)');
 
@@ -84,16 +85,16 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should handle comments', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type comment and calculation
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('# This is a comment');
 		await page.keyboard.press('Enter');
@@ -109,16 +110,16 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should display errors inline', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type invalid expression
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('undefined_var');
 
@@ -134,16 +135,16 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should handle unit conversions', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type unit conversion
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('5 miles to km');
 
@@ -158,16 +159,16 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should update results when editing', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type calculation
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('10 + 5');
 		await page.waitForTimeout(500);
@@ -190,22 +191,22 @@ test.describe('Calculator Mode', () => {
 	});
 
 	test('should persist calc language when note is reopened', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to calc language
-		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="calc"]') });
-		await languageSelect.selectOption('calc');
+		await jp.languageSelect.selectOption('calc');
 
 		// Type calculation
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await editor.pressSequentially('2 + 2');
 		await page.waitForTimeout(3000); // Wait for save
 
 		// Create another note
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 		await page.waitForTimeout(1000);
 
 		// Clear any multi-select mode first
@@ -219,7 +220,7 @@ test.describe('Calculator Mode', () => {
 		await page.waitForTimeout(1000);
 
 		// Check that calc language is still selected
-		const selectedLanguage = await languageSelect.inputValue();
+		const selectedLanguage = await jp.languageSelect.inputValue();
 		expect(selectedLanguage).toBe('calc');
 
 		// Check that result is still displayed

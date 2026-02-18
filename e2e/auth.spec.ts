@@ -3,7 +3,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { clearAllStorage, handleLandingPage } from './test-utils';
+import { clearAllStorage, handleLandingPage, JotteryPage } from './test-utils';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
@@ -168,6 +168,7 @@ test.describe('Authentication', () => {
   });
 
   test('should show error on wrong password', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const correctPassword = 'test-password-123';
     const wrongPassword = 'wrong-password';
 
@@ -194,11 +195,9 @@ test.describe('Authentication', () => {
     await expect(appVisible.first()).toBeVisible({ timeout: 10000 });
 
     // Create a note (needed for password verification to work)
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially('Test note for password verification');

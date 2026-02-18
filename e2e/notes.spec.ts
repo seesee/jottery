@@ -3,20 +3,22 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './test-utils';
 
 test.describe('Note Operations', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   test('should create a new note', async ({ page }) => {
-    // Click new note button (look for + or New button)
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
+
+    // Click new note button
+    await jp.newNoteButton.click();
 
     // Should see editor with empty content
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
 
     // Type note content
@@ -32,11 +34,12 @@ test.describe('Note Operations', () => {
   });
 
   test('should edit an existing note', async ({ page }) => {
-    // Create a note first
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note first
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Original content');
     await page.waitForTimeout(3000);
@@ -53,17 +56,18 @@ test.describe('Note Operations', () => {
   });
 
   test('should add tags to a note', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note with tags');
     await page.waitForTimeout(2000);
 
-    // Find tag input - it's a text input inside .tag-input-container
-    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    // Find tag input
+    const tagInput = jp.tagInput;
     await tagInput.click();
     await tagInput.fill('test-tag');
     await page.keyboard.press('Enter');
@@ -71,15 +75,16 @@ test.describe('Note Operations', () => {
     await page.waitForTimeout(1000);
 
     // Tag should be visible as a tag pill with # prefix
-    await expect(page.locator('.tag-pill').filter({ hasText: '#test-tag' })).toBeVisible();
+    await expect(jp.tagPills.filter({ hasText: '#test-tag' })).toBeVisible();
   });
 
   test('should pin a note', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Pinned note');
     await page.waitForTimeout(3000);
@@ -97,11 +102,12 @@ test.describe('Note Operations', () => {
   });
 
   test('should delete a note', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note to delete');
     await page.waitForTimeout(3000);
@@ -131,25 +137,26 @@ test.describe('Note Operations', () => {
   });
 
   test('should create multiple notes', async ({ page }) => {
-    // Create first note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    let editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create first note
+    await jp.newNoteButton.click();
+
+    let editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('First note');
     await page.waitForTimeout(3000);
 
     // Create second note
-    await newNoteButton.click();
-    editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    await jp.newNoteButton.click();
+    editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Second note');
     await page.waitForTimeout(3000);
 
     // Create third note
-    await newNoteButton.click();
-    editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    await jp.newNoteButton.click();
+    editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Third note');
     await page.waitForTimeout(3000);
@@ -162,17 +169,17 @@ test.describe('Note Operations', () => {
   });
 
   test('should select and switch between notes', async ({ page }) => {
-    // Create two notes
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
+    const jp = new JotteryPage(page);
 
-    await newNoteButton.click();
-    let editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create two notes
+    await jp.newNoteButton.click();
+    let editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('First note content');
     await page.waitForTimeout(3000);
 
-    await newNoteButton.click();
-    editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    await jp.newNoteButton.click();
+    editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Second note content');
     await page.waitForTimeout(3000);

@@ -4,51 +4,27 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
-  async function openSettings(page: any) {
-    const settingsModal = page.locator('[class*="settings"], [class*="modal"], [role="dialog"]').first();
-
-    // Look for settings button (gear icon or text)
-    const settingsButton = page.locator('button, a, [role="button"]').filter({
-      hasText: /settings|⚙|preferences/i
-    }).first();
-
-    if (await settingsButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await settingsButton.click();
-      // Wait for modal to actually appear
-      await expect(settingsModal).toBeVisible({ timeout: 5000 });
-      return true;
-    }
-
-    // Try keyboard shortcut
-    await page.keyboard.press('Control+,');
-    // Wait for modal to actually appear
-    try {
-      await expect(settingsModal).toBeVisible({ timeout: 5000 });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   test('should open settings panel', async ({ page }) => {
-    const opened = await openSettings(page);
+    const jp = new JotteryPage(page);
+    const opened = await jp.openSettings();
 
     if (opened) {
       // Settings should be visible
-      const settingsPanel = page.locator('[class*="settings"], [class*="modal"], [role="dialog"]');
-      await expect(settingsPanel.first()).toBeVisible();
+      await expect(jp.dialog.first()).toBeVisible();
     }
   });
 
   test('should have theme toggle', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Look for theme options
     const themeToggle = page.locator('text=/theme|dark.*mode|light.*mode|appearance/i');
@@ -63,7 +39,8 @@ test.describe('Settings', () => {
   });
 
   test('should toggle dark mode', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Get initial state
     const initialIsDark = await page.evaluate(() => {
@@ -98,7 +75,8 @@ test.describe('Settings', () => {
   });
 
   test('should have language selection', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Look for language options
     const languageSelect = page.locator('select, [role="listbox"]').filter({
@@ -111,7 +89,8 @@ test.describe('Settings', () => {
   });
 
   test('should change language', async ({ page }) => {
-    const opened = await openSettings(page);
+    const jp = new JotteryPage(page);
+    const opened = await jp.openSettings();
     if (!opened) return;
 
     const languageSelect = page.locator('select').filter({ hasText: /english|language/i }).first();
@@ -136,7 +115,8 @@ test.describe('Settings', () => {
   });
 
   test('should have sync configuration section', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Look for sync-related settings
     const syncSection = page.locator('text=/sync|server|endpoint|remote/i');
@@ -147,7 +127,8 @@ test.describe('Settings', () => {
   });
 
   test('should validate sync server URL', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     const serverInput = page.locator('input[placeholder*="server" i], input[placeholder*="url" i]').first();
 
@@ -172,7 +153,8 @@ test.describe('Settings', () => {
   });
 
   test('should persist settings after reload', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Change a setting (theme)
     const darkToggle = page.locator('button, input[type="checkbox"]').filter({
@@ -197,17 +179,13 @@ test.describe('Settings', () => {
       }
 
       // Wait for modal to close
-      const modal = page.getByRole('dialog');
-      await expect(modal).not.toBeVisible({ timeout: 3000 }).catch(() => {});
+      await expect(jp.dialog).not.toBeVisible({ timeout: 3000 }).catch(() => {});
 
       // Reload page
       await page.reload();
 
       // Wait for app to load after reload
-      const appLoaded = page.getByText(/No notes yet|Create your first note/i)
-        .or(page.getByRole('list'))
-        .or(page.locator('button').filter({ hasText: /New|^\+$/ }));
-      await expect(appLoaded.first()).toBeVisible({ timeout: 10000 });
+      await expect(jp.appLoaded.first()).toBeVisible({ timeout: 10000 });
 
       // Settings should persist (check localStorage or visible state)
       const hasSettings = await page.evaluate(() => {
@@ -219,11 +197,11 @@ test.describe('Settings', () => {
   });
 
   test('should have auto-lock timeout setting', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Wait for settings content to fully load
-    const settingsModal = page.getByRole('dialog');
-    await expect(settingsModal).toBeVisible({ timeout: 5000 });
+    await expect(jp.dialog.first()).toBeVisible({ timeout: 5000 });
 
     // Look for auto-lock settings with broader selectors
     const autoLockSection = page.locator('text=/auto.*lock|timeout|idle|inactivity/i');
@@ -237,7 +215,8 @@ test.describe('Settings', () => {
   });
 
   test('should have sort order setting', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Look for sort options
     const sortSection = page.locator('text=/sort|order/i');
@@ -248,12 +227,12 @@ test.describe('Settings', () => {
   });
 
   test('should close settings with escape key', async ({ page }) => {
-    const opened = await openSettings(page);
+    const jp = new JotteryPage(page);
+    const opened = await jp.openSettings();
     if (!opened) return;
 
     // Look for settings modal
-    const settingsModal = page.locator('[role="dialog"]').first();
-    await expect(settingsModal).toBeVisible({ timeout: 5000 });
+    await expect(jp.dialog.first()).toBeVisible({ timeout: 5000 });
 
     // Press Escape to close the modal
     await page.keyboard.press('Escape');
@@ -263,7 +242,7 @@ test.describe('Settings', () => {
     await page.waitForTimeout(300);
 
     // Try a second Escape in case there was a nested dialog
-    if (await settingsModal.isVisible().catch(() => false)) {
+    if (await jp.dialog.first().isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
       await page.waitForTimeout(300);
     }
@@ -273,18 +252,18 @@ test.describe('Settings', () => {
   });
 
   test('should navigate between tabs by clicking', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Find tab buttons
-    const tabButtons = page.locator('[role="tab"]');
-    const tabCount = await tabButtons.count();
+    const tabCount = await jp.tabs.count();
 
     // Should have multiple tabs
     expect(tabCount).toBeGreaterThan(1);
 
     // Click each tab and verify it becomes active
     for (let i = 0; i < Math.min(tabCount, 3); i++) {
-      const tab = tabButtons.nth(i);
+      const tab = jp.tabs.nth(i);
       await tab.click();
       await page.waitForTimeout(300);
 
@@ -295,15 +274,15 @@ test.describe('Settings', () => {
   });
 
   test('should navigate tabs with keyboard arrow keys', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Find and click the first tab to ensure it's focused and selected
-    const tabs = page.locator('[role="tab"]');
-    await tabs.first().click();
+    await jp.tabs.first().click();
     await page.waitForTimeout(200);
 
     // Verify first tab is selected
-    let firstTabSelected = await tabs.first().getAttribute('aria-selected');
+    let firstTabSelected = await jp.tabs.first().getAttribute('aria-selected');
     expect(firstTabSelected).toBe('true');
 
     // Press right arrow to move to next tab
@@ -311,53 +290,50 @@ test.describe('Settings', () => {
     await page.waitForTimeout(300);
 
     // Second tab should now be selected (re-query to get fresh state)
-    const secondTabSelected = await tabs.nth(1).getAttribute('aria-selected');
+    const secondTabSelected = await jp.tabs.nth(1).getAttribute('aria-selected');
     expect(secondTabSelected).toBe('true');
 
     // Verify first tab is no longer selected
-    firstTabSelected = await tabs.first().getAttribute('aria-selected');
+    firstTabSelected = await jp.tabs.first().getAttribute('aria-selected');
     expect(firstTabSelected).toBe('false');
   });
 
   test('should show different content for each tab', async ({ page }) => {
-    await openSettings(page);
-
-    const tabButtons = page.locator('[role="tab"]');
-    const tabPanel = page.locator('[role="tabpanel"]');
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Click first tab (General) and check for theme-related content
-    await tabButtons.first().click();
+    await jp.tabs.first().click();
     await page.waitForTimeout(300);
-    const generalContent = await tabPanel.textContent();
+    const generalContent = await jp.tabPanel.textContent();
     expect(generalContent?.toLowerCase()).toMatch(/theme|language|appearance/i);
 
     // Click a different tab and verify content changes
-    const tabCount = await tabButtons.count();
+    const tabCount = await jp.tabs.count();
     if (tabCount > 1) {
       // Click the last tab (About)
-      await tabButtons.last().click();
+      await jp.tabs.last().click();
       await page.waitForTimeout(300);
-      const aboutContent = await tabPanel.textContent();
+      const aboutContent = await jp.tabPanel.textContent();
       // About tab should have different content
       expect(aboutContent?.toLowerCase()).toMatch(/about|version|documentation/i);
     }
   });
 
   test('should have scrollable tab content', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Navigate to a tab with lots of content (Editor or Keyboard)
-    const keyboardTab = page.locator('[role="tab"]').filter({ hasText: /keyboard/i });
+    const keyboardTab = jp.tabs.filter({ hasText: /keyboard/i });
     if (await keyboardTab.count() > 0) {
       await keyboardTab.click();
       await page.waitForTimeout(300);
     }
 
     // Find the tab panel
-    const tabPanel = page.locator('[role="tabpanel"]');
-
     // Check that the tabpanel has overflow-y-auto (scrollable)
-    const hasOverflow = await tabPanel.evaluate((el) => {
+    const hasOverflow = await jp.tabPanel.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.overflowY === 'auto' || style.overflowY === 'scroll';
     });
@@ -366,15 +342,15 @@ test.describe('Settings', () => {
   });
 
   test('tabs should have proper ARIA attributes', async ({ page }) => {
-    await openSettings(page);
+    const jp = new JotteryPage(page);
+    await jp.openSettings();
 
     // Check tablist exists
     const tablist = page.locator('[role="tablist"]');
     await expect(tablist).toBeVisible();
 
     // Check tabs have required attributes
-    const tabs = page.locator('[role="tab"]');
-    const firstTab = tabs.first();
+    const firstTab = jp.tabs.first();
 
     // Should have aria-selected
     const ariaSelected = await firstTab.getAttribute('aria-selected');

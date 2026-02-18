@@ -7,7 +7,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './test-utils';
 
 /**
  * Helper to inject conflict data into IndexedDB for a note
@@ -170,15 +170,17 @@ async function clearConflictData(page: Page, noteId: string) {
 
 test.describe('Conflict Resolution UI', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   test('should show conflict indicator when note has conflict data', async ({ page }) => {
-    // Create a note first
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note first
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My local content');
     await page.waitForTimeout(2000); // Wait for auto-save
@@ -216,11 +218,12 @@ test.describe('Conflict Resolution UI', () => {
   });
 
   test('should open conflict resolution modal and show 3-way merge UI with ancestor', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My local changes to the note');
     await page.waitForTimeout(2000);
@@ -262,7 +265,7 @@ test.describe('Conflict Resolution UI', () => {
     }
 
     // Check if the conflict modal is visible (it might auto-open or need manual trigger)
-    const modal = page.locator('[role="dialog"]');
+    const modal = jp.dialog;
     if (await modal.isVisible({ timeout: 3000 }).catch(() => false)) {
       // Verify the modal has the expected structure
       // Should show "Your Version" and "Server Version" columns
@@ -283,11 +286,12 @@ test.describe('Conflict Resolution UI', () => {
   });
 
   test('should resolve conflict with Keep Mine and clear conflict state', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My local content that I want to keep');
     await page.waitForTimeout(2000);
@@ -323,7 +327,7 @@ test.describe('Conflict Resolution UI', () => {
       await page.waitForTimeout(1000);
 
       // Modal should close
-      const modal = page.locator('[role="dialog"]');
+      const modal = jp.dialog;
       await expect(modal).not.toBeVisible({ timeout: 5000 });
 
       // Verify local content is preserved in editor
@@ -333,6 +337,8 @@ test.describe('Conflict Resolution UI', () => {
   });
 
   test('ConflictResolutionModal component should have all required buttons', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // This test verifies that the ConflictResolutionModal component
     // has all the expected resolution action buttons by checking the
     // component's source code or opening it programmatically.
@@ -362,11 +368,12 @@ test.describe('Conflict Resolution UI', () => {
   });
 
   test('app should handle missing conflict data gracefully', async ({ page }) => {
-    // Create a note first
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note first
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Test note without conflict');
     await page.waitForTimeout(2000);
@@ -380,16 +387,17 @@ test.describe('Conflict Resolution UI', () => {
   });
 
   test('note list should display normally when no conflicts exist', async ({ page }) => {
-    // Create test notes
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const jp = new JotteryPage(page);
 
-    await newNoteButton.click();
+    // Create test notes
+    const editor = jp.editorContent;
+
+    await jp.newNoteButton.click();
     await editor.click();
     await editor.pressSequentially('First test note');
     await page.waitForTimeout(2000);
 
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Second test note');
@@ -426,11 +434,12 @@ test.describe('Conflict Resolution UI', () => {
   });
 
   test('should display hash chain info in conflict modal', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Content with hash chain conflict');
     await page.waitForTimeout(2000);
@@ -464,15 +473,17 @@ test.describe('Conflict Resolution UI', () => {
 
 test.describe('Hash Chain Conflict Detection', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   test('should handle conflict without ancestor data (legacy mode)', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note with legacy conflict');
     await page.waitForTimeout(2000);
@@ -503,11 +514,12 @@ test.describe('Hash Chain Conflict Detection', () => {
   });
 
   test('should preserve content hash fields after conflict resolution', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note to test hash preservation');
     await page.waitForTimeout(2000);
@@ -543,7 +555,7 @@ test.describe('Hash Chain Conflict Detection', () => {
     await noteList.locator('text=/Note to test hash/i').first().click();
     await page.waitForTimeout(500);
 
-    const editorAfter = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editorAfter = jp.editorContent;
     await editorAfter.click();
     await page.keyboard.press('End');
     await editorAfter.pressSequentially(' - edited after resolution');
@@ -554,11 +566,12 @@ test.describe('Hash Chain Conflict Detection', () => {
   });
 
   test('should handle multiple conflicts simultaneously', async ({ page }) => {
-    // Create first note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create first note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('First conflicting note');
     await page.waitForTimeout(2000);
@@ -566,9 +579,9 @@ test.describe('Hash Chain Conflict Detection', () => {
     const firstNoteId = await getCurrentNoteId(page);
 
     // Create second note
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await page.waitForTimeout(500);
-    const editor2 = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor2 = jp.editorContent;
     await editor2.click();
     await editor2.pressSequentially('Second conflicting note');
     await page.waitForTimeout(2000);
@@ -610,7 +623,8 @@ test.describe('Hash Chain Conflict Detection', () => {
 
 test.describe('Conflict Translation Keys', () => {
   test('should have conflict-related translation keys loaded', async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
 
     // Check that the app loaded successfully
     // Translation keys for conflicts should be loaded in the i18n bundle
