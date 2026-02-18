@@ -153,18 +153,15 @@ test.describe('Import/Export', () => {
         const noteList = page.getByRole('list');
         const successIndicator = page.locator('text=/import.*success|imported|complete/i');
 
-        // Wait for either a success indicator or give import time to process
-        try {
-          await expect(successIndicator.first()).toBeVisible({ timeout: 3000 });
-        } catch {
-          // No success message visible - import might still be processing
-        }
+        // Wait for import result dialog to appear (shows on top of settings modal)
+        const importDoneButton = page.locator('[data-testid="btn-import-done"]');
+        await expect(importDoneButton).toBeVisible({ timeout: 10000 });
 
-        // Close settings
-        const closeButton = page.locator('button').filter({ hasText: /close|done|×/i }).first();
-        if (await closeButton.isVisible()) {
-          await closeButton.click();
-        }
+        // Dismiss the import result dialog
+        await importDoneButton.click();
+        await expect(importDoneButton).not.toBeVisible({ timeout: 3000 });
+
+        // Close settings modal
         await page.keyboard.press('Escape');
 
         // Wait for settings modal to close
@@ -388,19 +385,19 @@ test.describe('Import/Export', () => {
           return;
         }
 
-        // Close and reopen settings to Advanced tab
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
-        await jp.openAdvancedTab();
-
-        // Re-import the same file
+        // Settings modal is still open on the Advanced tab - just re-import directly
         const fileInput = page.locator('input[type="file"]');
         if (await fileInput.count() > 0 && fs.existsSync(downloadPath)) {
           await fileInput.setInputFiles(downloadPath);
-          await page.waitForTimeout(2000);
+
+          // Wait for import result dialog and dismiss it
+          const importDoneButton = page.locator('[data-testid="btn-import-done"]');
+          await expect(importDoneButton).toBeVisible({ timeout: 10000 });
+          await importDoneButton.click();
+          await expect(importDoneButton).not.toBeVisible({ timeout: 3000 });
         }
 
-        // Close settings
+        // Close settings modal
         await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
 
