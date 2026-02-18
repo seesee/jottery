@@ -4,46 +4,31 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './test-utils';
 
 test.describe('Version History', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
   });
 
-  async function openVersionHistory(page: any) {
-    // Open the "More actions" menu - look for button with 3 dots SVG
-    const moreButton = page.locator('button').filter({ has: page.locator('svg path[d*="12 8c1.1"]') });
-    await expect(moreButton).toBeVisible({ timeout: 5000 });
-    await moreButton.click();
-
-    // Click version history option (has 📜 emoji)
-    const versionHistoryButton = page.locator('button').filter({ hasText: '📜' });
-    await expect(versionHistoryButton).toBeVisible();
-    await versionHistoryButton.click();
-
-    // Wait for modal
-    const versionHistoryModal = page.locator('[role="dialog"]');
-    await expect(versionHistoryModal).toBeVisible({ timeout: 5000 });
-    return versionHistoryModal;
-  }
-
   test('should create version when switching notes after editing', async ({ page }) => {
-    // Create first note (use same selector as working tests)
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create first note (use same selector as working tests)
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially('First note original content');
     await page.waitForTimeout(2000); // Wait for auto-save
 
     // Create second note (this should trigger version creation for first note)
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await page.waitForTimeout(500);
 
-    const editor2 = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor2 = jp.editorContent;
     await editor2.click();
     await editor2.pressSequentially('Second note content');
     await page.waitForTimeout(2000); // Wait for auto-save
@@ -53,7 +38,7 @@ test.describe('Version History', () => {
     await noteList.getByText(/First note/i).click();
     await page.waitForTimeout(500);
 
-    const editorAfterSwitch = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editorAfterSwitch = jp.editorContent;
     await editorAfterSwitch.click();
     await page.keyboard.press('End'); // Go to end of line
     await editorAfterSwitch.pressSequentially(' - edited');
@@ -68,7 +53,7 @@ test.describe('Version History', () => {
     await page.waitForTimeout(500);
 
     // Open version history
-    const versionHistoryModal = await openVersionHistory(page);
+    const versionHistoryModal = await jp.openVersionHistory();
 
     // Verify at least one version exists (should see "v1" or higher)
     const versionItem = versionHistoryModal.locator('button').filter({ hasText: /^v\d+/ });
@@ -76,18 +61,19 @@ test.describe('Version History', () => {
   });
 
   test('should show initial version for new note', async ({ page }) => {
-    // Create a new note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a new note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially('New note with initial version');
     await page.waitForTimeout(2000); // Wait for auto-save
 
     // Open version history
-    const versionHistoryModal = await openVersionHistory(page);
+    const versionHistoryModal = await jp.openVersionHistory();
 
     // Should show initial version (v0 or v1) - new notes now create a version snapshot
     const versionItem = versionHistoryModal.locator('button').filter({ hasText: /^v\d+/ });
@@ -95,11 +81,12 @@ test.describe('Version History', () => {
   });
 
   test('should create version when closing note after editing', async ({ page }) => {
-    // Create a note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    const jp = new JotteryPage(page);
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    // Create a note
+    await jp.newNoteButton.click();
+
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially('Note to close');
@@ -129,7 +116,7 @@ test.describe('Version History', () => {
       await expect(editor).toBeVisible({ timeout: 3000 });
 
       // Open version history
-      const versionHistoryModal = await openVersionHistory(page);
+      const versionHistoryModal = await jp.openVersionHistory();
 
       // Verify version exists
       const versionItem = versionHistoryModal.locator('button').filter({ hasText: /^v\d+/ });
@@ -138,24 +125,25 @@ test.describe('Version History', () => {
   });
 
   test('should create version after auto-save completes and note is switched', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // This is the critical test for the bug where hasContentChanged is reset
     // after auto-save, preventing version creation when switching notes
 
     // Create first note
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially('First note');
     await page.waitForTimeout(2000); // Wait for initial save
 
     // Create second note
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
     await page.waitForTimeout(500);
 
-    const editor2 = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor2 = jp.editorContent;
     await editor2.click();
     await editor2.pressSequentially('Second note');
     await page.waitForTimeout(2000);
@@ -166,7 +154,7 @@ test.describe('Version History', () => {
     await page.waitForTimeout(500);
 
     // Edit the first note
-    const editorFirst = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editorFirst = jp.editorContent;
     await editorFirst.click();
     await page.keyboard.press('End');
     await editorFirst.pressSequentially(' modified content');
@@ -184,7 +172,7 @@ test.describe('Version History', () => {
     await page.waitForTimeout(500);
 
     // Open version history
-    const versionHistoryModal = await openVersionHistory(page);
+    const versionHistoryModal = await jp.openVersionHistory();
 
     // Verify version exists - this test would FAIL before the bug fix
     const versionItem = versionHistoryModal.locator('button').filter({ hasText: /^v\d+/ });

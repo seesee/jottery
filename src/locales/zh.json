@@ -20,7 +20,7 @@
     "error": "错误",
     "back": "返回",
     "edit": "编辑",
-    "add": "Add",
+    "add": "添加",
     "showPassword": "显示密码",
     "hidePassword": "隐藏密码"
   },
@@ -179,6 +179,10 @@
       "lockedBanner": "此笔记已锁定。解锁后可编辑。",
       "mustUnlockToDelete": "删除前请先解锁笔记"
     },
+    "confirmDelete": {
+      "title": "删除笔记",
+      "message": "此笔记将被移至回收站。如有需要，您可以稍后恢复。"
+    },
     "readOnly": {
       "archivedBanner": "此笔记已归档。取消归档后可编辑。",
       "lockedBanner": "此笔记已锁定。解锁后可编辑。"
@@ -186,7 +190,9 @@
   },
   "noteList": {
     "deleteNote": "删除笔记",
-    "filterByTag": "按 #{tag} 筛选"
+    "filterByTag": "按 #{tag} 筛选",
+    "noteCount": "{filtered} / {total}",
+    "noteCountAll": "{total} 条笔记"
   },
   "tagInput": {
     "removeTag": "移除标签"
@@ -347,6 +353,7 @@
         "warning": "⚠️ 仅在与无法更新的旧版 Jottery 共享时使用。旧版格式会以明文形式公开您的 API 密钥。"
       }
     },
+    "autoSaved": "更改已自动保存",
     "saveSettings": "保存设置",
     "saving": "保存中...",
     "settingsSaved": "设置已保存",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "发行版",
     "description": "下载适合您平台的 Jottery TUI。",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "TUI 客户端",
+    "standaloneWebApp": "独立网页应用",
     "webAppNote": "从文件系统本地运行（同步已禁用）"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "progress": "{current} / {total}",
     "selectAll": "全选",
     "deselectAll": "取消全选",
-    "archive": "归档"
+    "archive": "归档",
+    "moreActions": "更多操作"
   },
   "conflict": {
     "title": "检测到同步冲突",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "标题"
     }
+  },
+  "searchHelp": {
+    "title": "搜索语法",
+    "tags": "标签",
+    "text": "文本",
+    "wildcards": "通配符",
+    "modifiers": "修饰符",
+    "combined": "组合示例",
+    "clickToTry": "点击示例试试",
+    "tagsAnd": "两个标签都包含 (AND)",
+    "tagsOr": "包含任一标签 (OR)",
+    "exactPhrase": "精确短语",
+    "bothWords": "两个词都包含 (AND)",
+    "eitherWord": "包含任一词 (OR)",
+    "notContaining": "不包含",
+    "startsWith": "以此开头",
+    "endsWith": "以此结尾",
+    "containsAnywhere": "包含在任意位置",
+    "hasAttachment": "有附件的笔记",
+    "createdAfter": "在日期之后创建",
+    "createdBefore": "在日期之前创建",
+    "createdRange": "在日期范围内创建",
+    "modifiedAfter": "在日期之后修改",
+    "wordsMore": "超过 N 个词",
+    "wordsLess": "少于 N 个词",
+    "wordsRange": "在 N 到 M 个词之间"
+  },
+  "commandPalette": {
+    "title": "命令面板",
+    "placeholder": "输入命令...",
+    "noResults": "没有匹配的命令",
+    "navigation": "导航",
+    "editorActions": "编辑器",
+    "focusSearch": "聚焦搜索",
+    "newNote": "新建笔记",
+    "openSettings": "设置",
+    "openRecycleBin": "回收站",
+    "openArchive": "归档",
+    "lockApp": "锁定应用程序",
+    "showShortcuts": "键盘快捷键",
+    "togglePreview": "切换预览",
+    "toggleWordWrap": "切换自动换行",
+    "copyContent": "复制笔记内容",
+    "copyLink": "复制笔记链接",
+    "duplicateNote": "复制笔记",
+    "exportNote": "导出为文件",
+    "printNote": "打印 / 导出PDF",
+    "noteInfo": "笔记信息",
+    "versionHistory": "版本历史",
+    "deleteNote": "删除笔记",
+    "lockNote": "锁定/解锁笔记",
+    "setColor": "设置笔记类别",
+    "archiveNote": "归档笔记"
+  },
+  "contextMenu": {
+    "title": "笔记操作",
+    "open": "打开",
+    "pin": "置顶笔记",
+    "unpin": "取消置顶",
+    "duplicate": "复制",
+    "setColour": "设置类别颜色",
+    "archive": "归档",
+    "unarchive": "取消归档",
+    "delete": "删除"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "向左滑动删除",
+    "swipeRightToSelect": "向右滑动选择",
+    "tapToDismiss": "点击任意位置关闭"
+  },
+  "welcomeNote": {
+    "content": "# 欢迎使用 Jottery\n\nJottery 是您的私人加密记事本，用于捕获和整理笔记。\n\n## 快速开始\n\n- **创建笔记**：点击 + 按钮或按 `Ctrl+N`\n- **搜索**：使用搜索栏或按 `Ctrl+K`\n- **标签**：添加标签整理笔记，然后用 `#标签名` 筛选\n- **置顶**：置顶重要笔记使其保持在顶部\n\n## 搜索语法\n\nJottery 支持强大的搜索查询：\n\n- `#标签名` — 按标签筛选\n- `\"精确短语\"` — 精确匹配\n- `has:attachment` — 有附件的笔记\n- `created:>2024-01-01` — 日期筛选\n- `words:>100` — 字数筛选\n- `-排除词` — 排除条件\n\n点击搜索栏旁边的 **?** 按钮查看完整参考。\n\n## 命令面板\n\n按 `Ctrl+Shift+P` 打开命令面板，快速访问所有操作。\n\n## 键盘快捷键\n\n按 `Ctrl+/` 查看所有键盘快捷键。\n\n## 隐私\n\n您的所有笔记都在本地加密。除非您启用同步，否则数据不会离开您的设备。\n\n---\n\n*您可以随时删除此笔记。祝您写作愉快！*",
+    "tags": "欢迎,入门指南"
+  },
+  "emptyState": {
+    "title": "开始使用",
+    "createNote": "创建笔记",
+    "createNoteDescription": "开始写您的第一条笔记",
+    "importNotes": "导入笔记",
+    "importNotesDescription": "从 JSON 导出文件导入",
+    "exploreSearch": "探索搜索语法",
+    "exploreSearchDescription": "了解强大的搜索运算符"
+  },
+  "searchSuggestions": {
+    "recentSearches": "最近搜索",
+    "clearRecent": "移除",
+    "tryThese": "试试这些",
+    "clearAll": "清除全部"
   }
 }

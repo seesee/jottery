@@ -11,6 +11,7 @@
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
   import { getPreviewHtml } from '../utils/markdownPreview';
   import { ALL_LANGUAGES } from '../utils/syntaxLanguages';
   import { toast } from '../utils/toast.svelte';
@@ -104,6 +105,7 @@
   let showVersionHistory: boolean = false;
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
   let showColorPicker: boolean = false;
+  let showDeleteConfirm: boolean = false;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
   let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
@@ -649,7 +651,14 @@
     }
   }
 
+  function requestDelete() {
+    if (!$selectedNote) return;
+    showDeleteConfirm = true;
+  }
+
   async function handleDelete() {
+    showDeleteConfirm = false;
+
     if (!$selectedNote) {
       return;
     }
@@ -1130,7 +1139,7 @@
       onDuplicate={handleDuplicate}
       onShowInfo={handleShowInfo}
       onShowVersionHistory={handleShowVersionHistory}
-      onDelete={handleDelete}
+      onDelete={requestDelete}
       onClose={handleClose}
       {copyNoteShortcut}
       {noteInfoShortcut}
@@ -1294,6 +1303,18 @@
   currentColor={$selectedNote?.color}
   onColorSelect={handleColorSelected}
   onClose={() => showColorPicker = false}
+/>
+
+<!-- Delete Confirmation Modal -->
+<ConfirmModal
+  show={showDeleteConfirm}
+  title={$_('editor.confirmDelete.title')}
+  message={$_('editor.confirmDelete.message')}
+  confirmText={$_('common.delete')}
+  cancelText={$_('common.cancel')}
+  confirmClass="bg-red-600 hover:bg-red-700"
+  onConfirm={handleDelete}
+  onCancel={() => showDeleteConfirm = false}
 />
 
 <!-- Conflict Resolution Modal -->

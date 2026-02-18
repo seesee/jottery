@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
+  import { onMount, onDestroy } from 'svelte';
   import { selectedNoteIds, selectedCount, clearMultiSelection, notes, filteredNotes, selectAllFiltered } from '../stores/appStore';
   import { bulkOperationsService, type BulkProgress } from '../services/bulkOperationsService';
   import { toast } from '../utils/toast.svelte';
@@ -15,6 +16,63 @@
   let showColorPicker = false;
   let showCombineConfirm = false;
   let showDeleteConfirm = false;
+
+  // Overflow menu state (mobile)
+  let showOverflow = false;
+  let overflowContainerRef: HTMLDivElement;
+
+  function handleOverflowClickOutside(event: MouseEvent) {
+    if (showOverflow && overflowContainerRef && !overflowContainerRef.contains(event.target as Node)) {
+      showOverflow = false;
+    }
+  }
+
+  function handleOverflowKeydown(event: KeyboardEvent) {
+    if (showOverflow && event.key === 'Escape') {
+      showOverflow = false;
+      event.preventDefault();
+    }
+  }
+
+  function toggleOverflow() {
+    showOverflow = !showOverflow;
+  }
+
+  // Overflow menu action wrappers (close menu then trigger action)
+  function overflowRemoveTags() {
+    showOverflow = false;
+    openRemoveTagsModal();
+  }
+
+  function overflowSetColor() {
+    showOverflow = false;
+    showColorPicker = true;
+  }
+
+  function overflowExport() {
+    showOverflow = false;
+    handleExport();
+  }
+
+  function overflowCombine() {
+    showOverflow = false;
+    openCombineModal();
+  }
+
+  function overflowArchive() {
+    showOverflow = false;
+    handleArchive();
+  }
+
+  onMount(() => {
+    document.addEventListener('click', handleOverflowClickOutside);
+    document.addEventListener('keydown', handleOverflowKeydown);
+  });
+
+  onDestroy(() => {
+    document.removeEventListener('click', handleOverflowClickOutside);
+    document.removeEventListener('keydown', handleOverflowKeydown);
+  });
 
   // Combine options
   let combineMergeTags = true;
@@ -221,7 +279,7 @@
 
 {#if $selectedCount > 0}
   <!-- Fixed bottom toolbar -->
-  <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 safe-area-bottom">
+  <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-40 safe-area-bottom" data-testid="bulk-toolbar">
     <div class="max-w-4xl mx-auto px-4 py-3">
       {#if isProcessing && progress}
         <!-- Progress bar -->
@@ -256,12 +314,13 @@
             {/if}
           </div>
 
-          <!-- Action buttons -->
-          <div class="flex items-center gap-2 flex-wrap">
+          <!-- Action buttons: Desktop (sm: and above) — full text labels -->
+          <div class="hidden sm:flex items-center gap-2 flex-wrap">
             <!-- Add Tags -->
             <button
               on:click={openAddTagsModal}
               class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 transition-colors"
+              data-testid="bulk-add-tags"
             >
               {$_('bulk.addTags')}
             </button>
@@ -270,6 +329,7 @@
             <button
               on:click={openRemoveTagsModal}
               class="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 active:bg-gray-800 transition-colors"
+              data-testid="bulk-remove-tags"
             >
               {$_('bulk.removeTags')}
             </button>
@@ -278,6 +338,7 @@
             <button
               on:click={() => showColorPicker = true}
               class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+              data-testid="bulk-set-color"
             >
               {$_('bulk.setColor')}
             </button>
@@ -286,6 +347,7 @@
             <button
               on:click={handleExport}
               class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 active:bg-green-800 transition-colors"
+              data-testid="bulk-export"
             >
               {$_('bulk.export')}
             </button>
@@ -295,6 +357,7 @@
               <button
                 on:click={openCombineModal}
                 class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 active:bg-purple-800 transition-colors"
+                data-testid="bulk-combine"
               >
                 {$_('bulk.combine')}
               </button>
@@ -304,6 +367,7 @@
             <button
               on:click={handleArchive}
               class="px-3 py-1.5 text-sm bg-amber-600 text-white rounded-md hover:bg-amber-700 active:bg-amber-800 transition-colors"
+              data-testid="bulk-archive"
             >
               {$_('bulk.archive')}
             </button>
@@ -312,6 +376,7 @@
             <button
               on:click={() => showDeleteConfirm = true}
               class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 active:bg-red-800 transition-colors"
+              data-testid="bulk-delete"
             >
               {$_('bulk.delete')}
             </button>
@@ -320,8 +385,141 @@
             <button
               on:click={clearMultiSelection}
               class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              data-testid="bulk-cancel"
             >
               {$_('bulk.cancel')}
+            </button>
+          </div>
+
+          <!-- Action buttons: Mobile (below sm:) — icon-only with overflow menu -->
+          <div class="flex sm:hidden items-center gap-1.5">
+            <!-- Add Tags (icon) -->
+            <button
+              on:click={openAddTagsModal}
+              class="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 active:bg-blue-800 transition-colors"
+              title={$_('bulk.addTags')}
+              data-testid="bulk-add-tags"
+            >
+              <!-- Heroicons: tag -->
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+              </svg>
+            </button>
+
+            <!-- Delete (icon) -->
+            <button
+              on:click={() => showDeleteConfirm = true}
+              class="p-2 bg-red-600 text-white rounded-md hover:bg-red-700 active:bg-red-800 transition-colors"
+              title={$_('bulk.delete')}
+              data-testid="bulk-delete"
+            >
+              <!-- Heroicons: trash -->
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+            </button>
+
+            <!-- Overflow menu -->
+            <div class="relative" bind:this={overflowContainerRef}>
+              <button
+                on:click={toggleOverflow}
+                class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                title={$_('bulk.moreActions')}
+              >
+                <!-- Heroicons: ellipsis-horizontal -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                </svg>
+              </button>
+
+              {#if showOverflow}
+                <div class="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+                  <div class="py-1">
+                    <!-- Remove Tags -->
+                    <button
+                      on:click={overflowRemoveTags}
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      data-testid="bulk-remove-tags"
+                    >
+                      <!-- Heroicons: tag with minus indicator -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 15h4.5" />
+                      </svg>
+                      {$_('bulk.removeTags')}
+                    </button>
+
+                    <!-- Set Colour -->
+                    <button
+                      on:click={overflowSetColor}
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      data-testid="bulk-set-color"
+                    >
+                      <!-- Heroicons: swatch -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008Z" />
+                      </svg>
+                      {$_('bulk.setColor')}
+                    </button>
+
+                    <!-- Export -->
+                    <button
+                      on:click={overflowExport}
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      data-testid="bulk-export"
+                    >
+                      <!-- Heroicons: arrow-down-tray -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
+                      {$_('bulk.export')}
+                    </button>
+
+                    <!-- Combine (only when 2+ selected) -->
+                    {#if $selectedCount >= 2}
+                      <button
+                        on:click={overflowCombine}
+                        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        data-testid="bulk-combine"
+                      >
+                        <!-- Heroicons: document-duplicate -->
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                        </svg>
+                        {$_('bulk.combine')}
+                      </button>
+                    {/if}
+
+                    <!-- Archive -->
+                    <button
+                      on:click={overflowArchive}
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      data-testid="bulk-archive"
+                    >
+                      <!-- Heroicons: archive-box -->
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                      </svg>
+                      {$_('bulk.archive')}
+                    </button>
+                  </div>
+                </div>
+              {/if}
+            </div>
+
+            <!-- Cancel (icon) -->
+            <button
+              on:click={clearMultiSelection}
+              class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              title={$_('bulk.cancel')}
+              data-testid="bulk-cancel"
+            >
+              <!-- Heroicons: x-mark -->
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>

@@ -4,20 +4,22 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Keyboard Shortcuts', () => {
+  let jp: JotteryPage;
+
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   // Helper function to create a note via button click
   async function createNoteViaButton(page: any, content: string) {
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
     // Wait for editor to appear
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially(content);
@@ -28,17 +30,12 @@ test.describe('Keyboard Shortcuts', () => {
 
   // Helper to blur editor by clicking outside
   async function blurEditor(page: any) {
-    // Click on the note list area to unfocus editor
-    const noteList = page.getByRole('list');
-    if (await noteList.isVisible()) {
-      await noteList.click({ position: { x: 10, y: 10 } });
-      await page.waitForTimeout(200);
-    }
+    await jp.blurEditor();
   }
 
   test('should focus search with Ctrl/Cmd+K', async ({ page }) => {
     // Ensure the search input exists first
-    const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
+    const searchInput = jp.searchInput;
     await expect(searchInput).toBeVisible({ timeout: 5000 });
 
     // Click elsewhere first to ensure we're not already focused on search
@@ -58,7 +55,7 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForTimeout(500);
 
     // Settings panel should be visible
-    const settingsModal = page.locator('[role="dialog"]');
+    const settingsModal = jp.dialog;
     await expect(settingsModal.first()).toBeVisible();
   });
 
@@ -68,7 +65,7 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForTimeout(1000);
 
     // Editor should be visible
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
   });
 
@@ -88,7 +85,7 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForTimeout(500);
 
     // Should show keyboard shortcuts help modal
-    const helpModal = page.locator('[role="dialog"]');
+    const helpModal = jp.dialog;
     const shortcutsText = page.locator('text=/keyboard|shortcut/i');
 
     const hasHelp = await helpModal.count() > 0 || await shortcutsText.count() > 0;
@@ -148,7 +145,7 @@ test.describe('Keyboard Shortcuts', () => {
     await page.waitForTimeout(500);
 
     // Editor should be visible with the note content
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
   });
 
@@ -212,7 +209,7 @@ test.describe('Keyboard Shortcuts', () => {
     await createNoteViaButton(page, 'Editing test');
 
     // Editor should be focused
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await editor.click();
 
     // Type 'j' - should type in editor, not navigate

@@ -10,6 +10,7 @@
   export let onFocusSearch: () => void;
   export let onOpenShortcutsHelp: () => void;
   export let onOpenRecycleBin: () => void;
+  export let onOpenCommandPalette: (() => void) | undefined = undefined;
 
   async function handleLockNow() {
     isLocking.set(true);
@@ -65,6 +66,15 @@
     // Don't trigger shortcuts when typing in inputs/textareas
     const target = event.target as HTMLElement;
     const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+    // Command palette (Ctrl+Shift+P) - always available, even when editing
+    if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      if (onOpenCommandPalette) {
+        onOpenCommandPalette();
+      }
+      return;
+    }
 
     const shortcuts = $settings.keyboardShortcuts;
     if (!shortcuts) return;

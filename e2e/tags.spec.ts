@@ -4,18 +4,17 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Tags', () => {
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    const jp = new JotteryPage(page);
+    await jp.setup();
 
     // Create a note to work with
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially('Test note for tags');
@@ -26,6 +25,8 @@ test.describe('Tags', () => {
   });
 
   test('should show tag input area', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // Look for tag input
     const tagInput = page.locator('input[placeholder*="tag" i], input[placeholder*="Tag" i]');
     const tagSection = page.locator('[class*="tag"], [data-testid*="tag"]');
@@ -35,6 +36,7 @@ test.describe('Tags', () => {
   });
 
   test('should add tag to note', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -50,6 +52,7 @@ test.describe('Tags', () => {
   });
 
   test('should add multiple tags', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -72,6 +75,7 @@ test.describe('Tags', () => {
   });
 
   test('should remove tag from note', async ({ page }) => {
+    const jp = new JotteryPage(page);
     // Look for tag input with multiple selectors
     const tagInput = page.locator('input[placeholder*="tag" i], input[class*="tag" i]').first();
 
@@ -84,7 +88,7 @@ test.describe('Tags', () => {
       const tagBadge = page.locator('.tag-pill, [class*="tag-badge"]').filter({ hasText: /removable/i }).first();
       await expect(tagBadge).toBeVisible({ timeout: 3000 });
 
-      // Look for remove/close button - could be SVG, button, or span with × character
+      // Look for remove/close button - could be SVG, button, or span with x character
       const removeButton = tagBadge.locator('button, svg, [role="button"], span').filter({
         hasText: /×|✕|x/i
       }).first();
@@ -108,6 +112,7 @@ test.describe('Tags', () => {
   });
 
   test('should show tag autocomplete', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -124,7 +129,7 @@ test.describe('Tags', () => {
       await page.keyboard.press('Alt+n');
       await page.waitForTimeout(500);
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const editor = jp.editorContent;
       await editor.click();
       await editor.pressSequentially('Second note for autocomplete');
       await page.waitForTimeout(1500);
@@ -148,10 +153,11 @@ test.describe('Tags', () => {
   });
 
   test('should filter notes by tag', async ({ page }) => {
+    const jp = new JotteryPage(page);
     // Look for tag input with multiple selectors
     const tagInput = page.locator('input[placeholder*="tag" i], input[class*="tag" i]').first();
     const noteList = page.getByRole('list');
-    const noteItems = noteList.locator('.note-list-item');
+    const noteItems = jp.noteListItems;
 
     if (await tagInput.isVisible()) {
       // Add tag to first note
@@ -166,11 +172,9 @@ test.describe('Tags', () => {
       await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
 
       // Create another note without the tag
-      const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-      await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
-      await newNoteButton.click();
+      await jp.newNoteButton.click();
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const editor = jp.editorContent;
       await expect(editor).toBeVisible({ timeout: 5000 });
       await editor.click();
       // Clear any existing content and type new content
@@ -185,8 +189,7 @@ test.describe('Tags', () => {
       await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
 
       // Search by tag
-      const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-      await searchInput.fill('#filterable');
+      await jp.searchInput.fill('#filterable');
 
       // Wait for filtering - the tagged note should still be visible, untagged should be hidden
       await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
@@ -195,6 +198,7 @@ test.describe('Tags', () => {
   });
 
   test('should display tags in note list preview', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -216,6 +220,7 @@ test.describe('Tags', () => {
   });
 
   test('should handle special characters in tags', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -234,6 +239,7 @@ test.describe('Tags', () => {
   });
 
   test('should preserve tags after note edit', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -243,7 +249,7 @@ test.describe('Tags', () => {
       await page.waitForTimeout(500);
 
       // Edit note content
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const editor = jp.editorContent;
       await editor.click();
       await editor.pressSequentially(' - edited content');
       await page.waitForTimeout(2000);
@@ -255,6 +261,7 @@ test.describe('Tags', () => {
   });
 
   test('should allow clicking tag to filter', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -271,8 +278,7 @@ test.describe('Tags', () => {
         await page.waitForTimeout(500);
 
         // Should filter to this tag (search updated)
-        const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-        const searchValue = await searchInput.inputValue();
+        const searchValue = await jp.searchInput.inputValue();
 
         // Search should contain the tag
         const hasTagFilter = searchValue.includes('#clickable') || searchValue.includes('clickable');
@@ -285,6 +291,7 @@ test.describe('Tags', () => {
   });
 
   test('should prevent duplicate tags', async ({ page }) => {
+    const jp = new JotteryPage(page);
     // Look for tag input with multiple selectors
     const tagInput = page.locator('input[placeholder*="tag" i], input[class*="tag" i]').first();
 
@@ -308,6 +315,7 @@ test.describe('Tags', () => {
   });
 
   test('should handle empty tag input', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -323,6 +331,7 @@ test.describe('Tags', () => {
   });
 
   test('should trim whitespace from tags', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -340,14 +349,13 @@ test.describe('Tags', () => {
   });
 
   test('should support bulk tag operations', async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // Create additional notes using the New button (we already have one from beforeEach)
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-
     for (let i = 0; i < 2; i++) {
-      await expect(newNoteButton).toBeEnabled({ timeout: 5000 });
-      await newNoteButton.click();
+      await jp.newNoteButton.click();
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const editor = jp.editorContent;
       await expect(editor).toBeVisible({ timeout: 5000 });
       await editor.click();
       await editor.pressSequentially(`Bulk tag test note ${i + 1}`);
@@ -357,7 +365,7 @@ test.describe('Tags', () => {
 
     // Select multiple notes using the correct selector
     const noteList = page.getByRole('list');
-    const noteItems = noteList.locator('.note-list-item');
+    const noteItems = jp.noteListItems;
 
     // Wait for notes to appear in list (we should have 3 total: 1 from beforeEach + 2 created)
     await expect(async () => {
@@ -375,7 +383,7 @@ test.describe('Tags', () => {
 
     // Look for bulk tag button
     const bulkTagButton = page.locator('button').filter({ hasText: /add.*tag|tag/i });
-    const bulkToolbar = page.locator('[class*="bulk"], [class*="toolbar"]');
+    const bulkToolbar = jp.bulkToolbar;
 
     const hasBulkUI = await bulkTagButton.count() > 0 || await bulkToolbar.count() > 0;
 
@@ -386,6 +394,7 @@ test.describe('Tags', () => {
   });
 
   test('should show all available tags somewhere in UI', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -412,6 +421,7 @@ test.describe('Tags', () => {
   });
 
   test('should combine tag filter with text search', async ({ page }) => {
+    const jp = new JotteryPage(page);
     const tagInput = page.locator('input[placeholder*="tag" i]').first();
 
     if (await tagInput.isVisible()) {
@@ -424,7 +434,7 @@ test.describe('Tags', () => {
       await page.keyboard.press('Alt+n');
       await page.waitForTimeout(500);
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const editor = jp.editorContent;
       await editor.click();
       await editor.pressSequentially('Different content here');
       await page.waitForTimeout(1500);
@@ -435,8 +445,7 @@ test.describe('Tags', () => {
       await page.waitForTimeout(500);
 
       // Search with both tag and text
-      const searchInput = page.locator('input[type="search"], input[placeholder*="search" i]').first();
-      await searchInput.fill('#combined tags');
+      await jp.searchInput.fill('#combined tags');
       await page.waitForTimeout(500);
 
       // Should filter by both criteria

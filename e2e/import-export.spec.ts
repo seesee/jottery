@@ -7,21 +7,23 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe('Import/Export', () => {
+  let jp: JotteryPage;
+
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   async function createNote(page: any, content: string, tags: string[] = []) {
-    const newNoteButton = page.locator('button').filter({ hasText: /New|\+/ }).first();
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible();
     await editor.click();
     await editor.pressSequentially(content);
@@ -41,46 +43,12 @@ test.describe('Import/Export', () => {
     await page.waitForTimeout(2000);
   }
 
-  async function openSettings(page: any) {
-    const settingsButton = page.locator('button, a, [role="button"]').filter({
-      hasText: /settings|⚙|preferences/i
-    }).first();
-
-    if (await settingsButton.isVisible()) {
-      await settingsButton.click();
-      await page.waitForTimeout(500);
-      return true;
-    }
-
-    await page.keyboard.press('Control+,');
-    await page.waitForTimeout(500);
-    return true;
-  }
-
-  async function openAdvancedTab(page: any) {
-    await openSettings(page);
-
-    // Wait for settings modal to be visible
-    const settingsModal = page.locator('[role="dialog"]').first();
-    await expect(settingsModal).toBeVisible({ timeout: 3000 });
-
-    // Navigate to Advanced tab - look for tab button with "Advanced" text within the modal
-    const advancedTab = settingsModal.locator('button, [role="tab"]').filter({
-      hasText: /advanced/i
-    }).first();
-
-    if (await advancedTab.isVisible()) {
-      await advancedTab.click();
-      await page.waitForTimeout(500);
-    }
-  }
-
   test('should have export button', async ({ page }) => {
     // Look for export button in settings Advanced tab
-    await openAdvancedTab(page);
+    await jp.openAdvancedTab();
 
     // Look within the settings modal dialog
-    const settingsModal = page.locator('[role="dialog"]').first();
+    const settingsModal = jp.dialog.first();
     const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     });
@@ -90,10 +58,10 @@ test.describe('Import/Export', () => {
   });
 
   test('should have import button', async ({ page }) => {
-    await openAdvancedTab(page);
+    await jp.openAdvancedTab();
 
     // Look within the settings modal dialog
-    const settingsModal = page.locator('[role="dialog"]').first();
+    const settingsModal = jp.dialog.first();
     const importButton = settingsModal.locator('button').filter({
       hasText: /import/i
     });
@@ -108,13 +76,13 @@ test.describe('Import/Export', () => {
     await createNote(page, 'Export test note two');
 
     // Open settings Advanced tab
-    await openAdvancedTab(page);
+    await jp.openAdvancedTab();
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
     // Click export button within settings modal
-    const settingsModal = page.locator('[role="dialog"]').first();
+    const settingsModal = jp.dialog.first();
     const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
@@ -173,7 +141,7 @@ test.describe('Import/Export', () => {
     fs.writeFileSync(importFilePath, JSON.stringify(exportData, null, 2));
 
     try {
-      await openAdvancedTab(page);
+      await jp.openAdvancedTab();
 
       // Find file input for import (hidden, used by import button)
       const fileInput = page.locator('input[type="file"]');
@@ -222,7 +190,7 @@ test.describe('Import/Export', () => {
     fs.writeFileSync(invalidFilePath, '{ "invalid": "format" }');
 
     try {
-      await openAdvancedTab(page);
+      await jp.openAdvancedTab();
 
       const fileInput = page.locator('input[type="file"]');
 
@@ -264,12 +232,12 @@ test.describe('Import/Export', () => {
     await createNote(page, 'Note with special tags', ['important', 'work']);
 
     // Export from Advanced tab
-    await openAdvancedTab(page);
+    await jp.openAdvancedTab();
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
     // Look within the settings modal
-    const settingsModal = page.locator('[role="dialog"]').first();
+    const settingsModal = jp.dialog.first();
     const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
@@ -307,12 +275,12 @@ test.describe('Import/Export', () => {
   test('should handle empty export gracefully', async ({ page }) => {
     // Don't create any notes - export empty
 
-    await openAdvancedTab(page);
+    await jp.openAdvancedTab();
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
     // Look within the settings modal
-    const settingsModal = page.locator('[role="dialog"]').first();
+    const settingsModal = jp.dialog.first();
     const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
@@ -363,7 +331,7 @@ test.describe('Import/Export', () => {
     fs.writeFileSync(importFilePath, JSON.stringify(exportData, null, 2));
 
     try {
-      await openAdvancedTab(page);
+      await jp.openAdvancedTab();
 
       // Click import button to trigger file dialog
       const importButton = page.locator('button').filter({ hasText: /import/i }).first();
@@ -394,12 +362,12 @@ test.describe('Import/Export', () => {
     await createNote(page, 'Unique note for import skip test');
 
     // Export from Advanced tab
-    await openAdvancedTab(page);
+    await jp.openAdvancedTab();
 
     const downloadPromise = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 
     // Look within the settings modal
-    let settingsModal = page.locator('[role="dialog"]').first();
+    let settingsModal = jp.dialog.first();
     const exportButton = settingsModal.locator('button').filter({
       hasText: /export/i
     }).first();
@@ -423,7 +391,7 @@ test.describe('Import/Export', () => {
         // Close and reopen settings to Advanced tab
         await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
-        await openAdvancedTab(page);
+        await jp.openAdvancedTab();
 
         // Re-import the same file
         const fileInput = page.locator('input[type="file"]');

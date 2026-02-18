@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode } from './lib/stores/appStore';
+  import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode } from './lib/stores/appStore';
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
-  import { locale, _ } from 'svelte-i18n';
+  import { locale, _, waitLocale } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
   import { DEFAULT_SETTINGS } from './lib/types';
   import { getCurrentNotebook } from './lib/utils/notebookPath';
@@ -21,6 +21,9 @@
   import Toast from './lib/components/Toast.svelte';
   import BulkOperationsToolbar from './lib/components/BulkOperationsToolbar.svelte';
   import BackupReminderBanner from './lib/components/BackupReminderBanner.svelte';
+  import CommandPalette from './lib/components/CommandPalette.svelte';
+  import ResizableSplitter from './lib/components/ResizableSplitter.svelte';
+  import SwipeHintOverlay from './lib/components/SwipeHintOverlay.svelte';
 
   let initialized = false;
   let loadingNotes = false;
@@ -29,8 +32,10 @@
   let showRecycleBin = false;
   let showInboxPanel = false;
   let showShortcutsHelp = false;
+  let showCommandPalette = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
+  let lastSettingsLanguage: string | null = null; // Track language changes to avoid overriding LanguagePicker
 
   // Determine which layout to use based on layoutMode setting
   // For auto mode: only use mobile layout for narrow screens (phones)
@@ -39,6 +44,33 @@
     ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
 
   let creatingNote = false;
+
+  // Sidebar width constants
+  const SIDEBAR_MIN_WIDTH = 200;
+  const SIDEBAR_MAX_WIDTH = 500;
+  const SIDEBAR_DEFAULT_WIDTH = 320;
+
+  // Reactive sidebar width derived from settings
+  $: sidebarWidth = $settings.sidebarWidth ?? SIDEBAR_DEFAULT_WIDTH;
+
+  /**
+   * Update sidebar width in local state during drag (no persistence yet)
+   */
+  function handleSidebarWidthChange(newWidth: number) {
+    settings.update(s => ({ ...s, sidebarWidth: newWidth }));
+  }
+
+  /**
+   * Persist sidebar width to IndexedDB on drag end
+   */
+  async function handleSidebarWidthCommit(newWidth: number) {
+    try {
+      const updated = await settingsRepository.update({ sidebarWidth: newWidth });
+      settings.set({ ...DEFAULT_SETTINGS, ...updated });
+    } catch (error) {
+      console.warn('Failed to persist sidebar width:', error);
+    }
+  }
 
   /**
    * Check if a note is "blank" (empty content and no tags)
@@ -124,6 +156,34 @@
 
   function handleOpenShortcutsHelp() {
     showShortcutsHelp = true;
+  }
+
+  function handleOpenSearchHelp() {
+    window.dispatchEvent(new CustomEvent('open-search-help'));
+  }
+
+  function handleOpenCommandPalette() {
+    showCommandPalette = true;
+  }
+
+  function handleCommandPaletteAction(actionId: string) {
+    showCommandPalette = false;
+    switch (actionId) {
+      case 'focusSearch': handleFocusSearch(); break;
+      case 'newNote': handleNewNote(); break;
+      case 'openSettings': handleOpenSettings(); break;
+      case 'openRecycleBin': handleOpenRecycleBin(); break;
+      case 'openArchive': toggleArchiveMode(); break;
+      case 'lockApp':
+        // Dispatch lock via the same mechanism KeyboardShortcuts uses
+        window.dispatchEvent(new CustomEvent('command-palette-action', { detail: actionId }));
+        break;
+      case 'showShortcuts': handleOpenShortcutsHelp(); break;
+      default:
+        // Dispatch as custom event for EditorPane to handle
+        window.dispatchEvent(new CustomEvent('command-palette-action', { detail: actionId }));
+        break;
+    }
   }
 
   function handleFocusSearch() {
@@ -225,17 +285,9 @@
       initI18n(initialLocale);
       locale.set(initialLocale);
 
-      // If language was auto-detected (empty string), try to save the detected locale
-      // (wrapped in try-catch to handle QuotaExceededError gracefully)
-      if (!userSettings.language || userSettings.language === '') {
-        try {
-          const updated = await settingsRepository.update({ language: initialLocale });
-          settings.set({ ...DEFAULT_SETTINGS, ...updated });
-        } catch (error) {
-          // Ignore write failures (e.g., QuotaExceededError) - user can still use the app
-          console.warn('Failed to save language setting:', error);
-        }
-      }
+      // Don't save auto-detected language to IndexedDB during onMount.
+      // This allows the user to change language on the landing page before setup,
+      // and the choice will be persisted by refreshSettings() after unlock.
 
       // Check for theme override from URL parameter (?theme=light or ?theme=dark)
       const urlParams = new URLSearchParams(window.location.search);
@@ -272,18 +324,35 @@
     }
   });
 
-  // Watch for theme changes (but respect URL parameter override)
+  // Watch for theme changes (but respect URL parameter and localStorage overrides)
   $: if ($settings && initialized) {
     const urlParams = new URLSearchParams(window.location.search);
     const themeParam = urlParams.get('theme');
-    const themeToApply = (themeParam === 'light' || themeParam === 'dark') ? themeParam : $settings.theme;
+    let themeToApply: string = $settings.theme;
+    if (themeParam === 'light' || themeParam === 'dark') {
+      themeToApply = themeParam;
+    } else {
+      // Check for theme set on unlock screen (stored in localStorage before settings are available)
+      try {
+        const landingTheme = localStorage.getItem('jottery-theme');
+        if (landingTheme === 'light' || landingTheme === 'dark') {
+          themeToApply = landingTheme;
+        }
+      } catch {}
+    }
     applyTheme(themeToApply);
   }
 
-  // Watch for language changes (only after initialization to avoid race condition)
+  // Watch for language changes in settings (e.g., from Settings Modal or refreshSettings)
+  // Only set locale when the language field ACTUALLY changes — not on every $settings mutation.
+  // This prevents overriding the LanguagePicker's explicit locale.set() when unrelated
+  // settings (theme, sidebar width, etc.) change.
   $: if ($settings && initialized) {
-    const newLocale = getInitialLocale($settings.language);
-    locale.set(newLocale);
+    if ($settings.language !== lastSettingsLanguage) {
+      lastSettingsLanguage = $settings.language;
+      const newLocale = getInitialLocale($settings.language);
+      locale.set(newLocale);
+    }
   }
 
   // Watch lock status and load notes when unlocked
@@ -332,11 +401,38 @@
 
   /**
    * Refresh settings from IndexedDB
-   * Called after unlock to pick up any changes made during credential import
+   * Called after unlock to pick up any changes made during credential import.
+   * Also picks up language changes made on the landing page before unlock.
    */
   async function refreshSettings() {
     try {
       const userSettings = await settingsRepository.get();
+
+      // Check if user selected a language on the landing page (stored in localStorage
+      // by LanguagePicker but not yet persisted to IndexedDB settings)
+      try {
+        const landingLocale = localStorage.getItem('jottery-locale');
+        if (landingLocale && AVAILABLE_LOCALES.some(l => l.code === landingLocale)) {
+          userSettings.language = landingLocale;
+          await settingsRepository.update({ language: landingLocale });
+          localStorage.removeItem('jottery-locale');
+        }
+      } catch {
+        // Ignore localStorage errors (privacy mode, file:// URLs, etc.)
+      }
+
+      // Check if user toggled theme on the unlock screen (stored in localStorage)
+      try {
+        const landingTheme = localStorage.getItem('jottery-theme');
+        if (landingTheme === 'light' || landingTheme === 'dark') {
+          userSettings.theme = landingTheme as 'light' | 'dark';
+          await settingsRepository.update({ theme: landingTheme });
+          localStorage.removeItem('jottery-theme');
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+
       settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
     } catch (error) {
       console.error('Failed to refresh settings:', error);
@@ -344,6 +440,7 @@
   }
 
   async function loadNotes() {
+    if (loadingNotes) return; // Prevent concurrent calls (multiple reactives can trigger this)
     try {
       loadingNotes = true;
 
@@ -400,10 +497,44 @@
       // Clear loading state
       loadingNotes = false;
       loadingProgress = { current: 0, total: 0 };
+
+      // Create welcome note for new vaults (skip in test environments)
+      if (allNotes.length === 0 && !$settings.welcomeNoteCreated && !window.location.pathname.startsWith('/test')) {
+        await createWelcomeNote();
+      }
     } catch (error) {
       console.error('Failed to load notes:', error);
       loadingNotes = false;
       loadingProgress = { current: 0, total: 0 };
+    }
+  }
+
+  async function createWelcomeNote() {
+    try {
+      // Ensure locale is fully loaded before creating the welcome note
+      // (locale files are lazy-loaded via dynamic import)
+      await waitLocale();
+      const content = $_('welcomeNote.content');
+      const tagString = $_('welcomeNote.tags');
+      const tags = tagString.split(',').map(t => t.trim()).filter(t => t.length > 0);
+
+      const newNote = await noteService.createNote(content, tags, {
+        syntaxLanguage: 'markdown',
+        pinned: true,
+      });
+
+      const decryptedNote = await noteService.getNote(newNote.id);
+      if (decryptedNote) {
+        addNoteToStoreAndSearch(decryptedNote);
+        searchService.indexNotes([decryptedNote]);
+        await performSearch();
+      }
+
+      // Mark as created so it's not recreated
+      settings.update(s => ({ ...s, welcomeNoteCreated: true }));
+      await settingsRepository.update({ welcomeNoteCreated: true });
+    } catch (error) {
+      console.error('Failed to create welcome note:', error);
     }
   }
 
@@ -436,10 +567,8 @@
     filteredNotes.set(results);
   }
 
-  // Reload notes when lock status changes
-  $: if (!$isLocked) {
-    loadNotes();
-  } else if ($isLocked) {
+  // Clear notes when locked (loading is handled by the unlock reactive at line 349)
+  $: if ($isLocked) {
     notes.set([]);
     filteredNotes.set([]);
   }
@@ -515,7 +644,7 @@
           <!-- This preserves NoteList state (scroll position, height cache) across navigation -->
           <div class="w-full h-full relative">
             <div class="absolute inset-0" class:hidden={mobileView !== 'list'}>
-              <NoteList onNoteSelect={handleNoteSelect} onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
+              <NoteList onNoteSelect={handleNoteSelect} onOpenInbox={handleOpenInbox} onNewNote={handleNewNote} onOpenSettings={handleOpenSettings} onOpenSearchHelp={handleOpenSearchHelp} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
             </div>
             <div class="absolute inset-0" class:hidden={mobileView !== 'editor'}>
               <EditorPane bind:this={editorPaneRef} onBackToList={handleBackToList} forceMobileLayout={true} />
@@ -531,14 +660,29 @@
                 </div>
               </div>
             {/if}
+
+            <!-- Swipe gesture hints (shown once on first mobile load) -->
+            <SwipeHintOverlay show={mobileView === 'list' && !loadingNotes} />
           </div>
         {:else}
-          <!-- Desktop: Side-by-side layout -->
+          <!-- Desktop: Side-by-side layout with resizable sidebar -->
           <div class="flex w-full h-full min-h-0">
             <!-- Note List Sidebar -->
-            <div class="w-80 h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden">
-              <NoteList onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} />
+            <div
+              class="h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0"
+              style="width: {sidebarWidth}px"
+            >
+              <NoteList onOpenInbox={handleOpenInbox} onNewNote={handleNewNote} onOpenSettings={handleOpenSettings} onOpenSearchHelp={handleOpenSearchHelp} {loadingNotes} {loadingProgress} />
             </div>
+
+            <!-- Resizable splitter between sidebar and editor -->
+            <ResizableSplitter
+              width={sidebarWidth}
+              minWidth={SIDEBAR_MIN_WIDTH}
+              maxWidth={SIDEBAR_MAX_WIDTH}
+              onWidthChange={handleSidebarWidthChange}
+              onWidthCommit={handleSidebarWidthCommit}
+            />
 
             <!-- Editor -->
             <div class="flex-1 h-full min-h-0 overflow-hidden">
@@ -581,6 +725,14 @@
       onFocusSearch={handleFocusSearch}
       onOpenShortcutsHelp={handleOpenShortcutsHelp}
       onOpenRecycleBin={handleOpenRecycleBin}
+      onOpenCommandPalette={handleOpenCommandPalette}
+    />
+
+    <!-- Command Palette -->
+    <CommandPalette
+      show={showCommandPalette}
+      onClose={() => showCommandPalette = false}
+      onAction={handleCommandPaletteAction}
     />
 
     <!-- Bulk Operations Toolbar -->

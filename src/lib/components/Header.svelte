@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
   import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
@@ -6,6 +7,8 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import MobileMenuDrawer from './MobileMenuDrawer.svelte';
   import SavedSearchesPanel from './SavedSearchesPanel.svelte';
+  import SearchHelpPopover from './SearchHelpPopover.svelte';
+  import SearchSuggestionsDropdown from './SearchSuggestionsDropdown.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import { getFontSizeCSS } from '../utils/fontSize';
   import { localeIncludes } from '../utils/stringUtils';
@@ -22,14 +25,43 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showSavedSearches = false;
+  let showSearchHelp = false;
 
   // Tag autocomplete state
   let tagSuggestions: string[] = [];
   let showTagSuggestions = false;
   let selectedSuggestionIndex = -1;
 
+  // Search suggestions dropdown state
+  let showSearchSuggestions = false;
+  let recentSearches: string[] = [];
+  let searchSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
   // Get current notebook info for display
   const notebook = getCurrentNotebook();
+
+  // Load recent searches from settings on mount
+  onMount(() => {
+    recentSearches = $settings.recentSearches || [];
+  });
+
+  // Listen for external requests to open search help (e.g. from empty state onboarding cards)
+  function handleOpenSearchHelpEvent() {
+    showSearchHelp = true;
+  }
+
+  onMount(() => {
+    window.addEventListener('open-search-help', handleOpenSearchHelpEvent);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('open-search-help', handleOpenSearchHelpEvent);
+  });
+
+  // Keep recentSearches in sync if settings change externally
+  $: if ($settings.recentSearches) {
+    recentSearches = $settings.recentSearches;
+  }
 
   // Sync progress - show percentage if >= 5 items, otherwise just spinner
   $: showSyncPercentage = $syncProgress.total >= 5;
@@ -138,6 +170,9 @@
   }
 
   function handleSearchInput() {
+    // Hide search suggestions when user types
+    showSearchSuggestions = false;
+
     const tagInfo = getTagPartial($searchQuery);
     if (tagInfo && tagInfo.partial.length > 0) {
       // Get suggestions for the partial tag
@@ -159,6 +194,14 @@
       showTagSuggestions = false;
       tagSuggestions = [];
     }
+
+    // Schedule saving the search query as a recent search (debounced)
+    if (searchSaveTimer) clearTimeout(searchSaveTimer);
+    if ($searchQuery.trim()) {
+      searchSaveTimer = setTimeout(() => {
+        saveRecentSearch($searchQuery.trim());
+      }, 2000);
+    }
   }
 
   function selectTagSuggestion(tag: string) {
@@ -174,6 +217,18 @@
   }
 
   function handleSearchKeyDown(e: KeyboardEvent) {
+    // Close search suggestions on Escape
+    if (e.key === 'Escape' && showSearchSuggestions) {
+      showSearchSuggestions = false;
+      return;
+    }
+
+    // Save recent search on Enter (when not in tag suggestion mode)
+    if (e.key === 'Enter' && !showTagSuggestions && $searchQuery.trim()) {
+      if (searchSaveTimer) clearTimeout(searchSaveTimer);
+      saveRecentSearch($searchQuery.trim());
+    }
+
     if (!showTagSuggestions) return;
 
     if (e.key === 'ArrowDown') {
@@ -200,6 +255,7 @@
     // Delay to allow click on suggestion
     setTimeout(() => {
       showTagSuggestions = false;
+      showSearchSuggestions = false;
       selectedSuggestionIndex = -1;
     }, 200);
   }
@@ -215,6 +271,75 @@
   function handleApplySavedSearch(query: string) {
     searchQuery.set(query);
     closeSavedSearches();
+  }
+
+  function toggleSearchHelp() {
+    showSearchHelp = !showSearchHelp;
+  }
+
+  function closeSearchHelp() {
+    showSearchHelp = false;
+  }
+
+  function handleInsertSearchExample(query: string) {
+    searchQuery.set(query);
+    showSearchHelp = false;
+  }
+
+  // Search suggestions dropdown functions
+  function handleSearchFocus() {
+    if (!$searchQuery && !showTagSuggestions) {
+      showSearchSuggestions = true;
+    }
+  }
+
+  function handleSelectSuggestion(query: string) {
+    searchQuery.set(query);
+    showSearchSuggestions = false;
+  }
+
+  function closeSearchSuggestions() {
+    showSearchSuggestions = false;
+  }
+
+  async function saveRecentSearch(query: string) {
+    // Avoid saving very short or duplicate queries
+    if (query.length < 2) return;
+
+    // Remove existing occurrence of this query (case-sensitive) and add to front
+    const updated = [query, ...recentSearches.filter(q => q !== query)].slice(0, 10);
+
+    // Only persist if there's a change
+    if (JSON.stringify(updated) === JSON.stringify(recentSearches)) return;
+
+    recentSearches = updated;
+    try {
+      await settingsRepository.update({ recentSearches: updated });
+      settings.update(s => ({ ...s, recentSearches: updated }));
+    } catch (error) {
+      console.error('[Header] Failed to save recent searches:', error);
+    }
+  }
+
+  async function removeRecentSearch(query: string) {
+    const updated = recentSearches.filter(q => q !== query);
+    recentSearches = updated;
+    try {
+      await settingsRepository.update({ recentSearches: updated });
+      settings.update(s => ({ ...s, recentSearches: updated }));
+    } catch (error) {
+      console.error('[Header] Failed to update recent searches:', error);
+    }
+  }
+
+  async function clearAllRecentSearches() {
+    recentSearches = [];
+    try {
+      await settingsRepository.update({ recentSearches: [] });
+      settings.update(s => ({ ...s, recentSearches: [] }));
+    } catch (error) {
+      console.error('[Header] Failed to clear recent searches:', error);
+    }
   }
 </script>
 
@@ -336,18 +461,20 @@
         <div class="relative flex-1">
           <input
             id="search-input"
+            data-testid="search-input"
             type="text"
             bind:value={$searchQuery}
             on:input={handleSearchInput}
             on:keydown={handleSearchKeyDown}
+            on:focus={handleSearchFocus}
             on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
             role="combobox"
             aria-autocomplete="list"
-            aria-expanded={showTagSuggestions}
+            aria-expanded={showTagSuggestions || showSearchSuggestions}
             aria-haspopup="listbox"
-            aria-controls={showTagSuggestions ? 'tag-suggestions-desktop' : undefined}
+            aria-controls={showTagSuggestions ? 'tag-suggestions-desktop' : showSearchSuggestions ? 'search-suggestions' : undefined}
             aria-activedescendant={showTagSuggestions && selectedSuggestionIndex >= 0 ? `tag-suggestion-desktop-${selectedSuggestionIndex}` : undefined}
             class="w-full px-3 py-1.5 pr-8 border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
@@ -388,6 +515,15 @@
               {/each}
             </div>
           {/if}
+          <!-- Search suggestions dropdown (recent searches + syntax quick-picks) -->
+          <SearchSuggestionsDropdown
+            show={showSearchSuggestions && !showTagSuggestions}
+            onClose={closeSearchSuggestions}
+            onSelectQuery={handleSelectSuggestion}
+            {recentSearches}
+            onRemoveRecent={removeRecentSearch}
+            onClearAllRecent={clearAllRecentSearches}
+          />
         </div>
         <button
           on:click={toggleSavedSearches}
@@ -398,6 +534,23 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
+        <div class="relative">
+          <button
+            on:click={toggleSearchHelp}
+            class="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors flex items-center"
+            title={$_('searchHelp.title')}
+            aria-label={$_('searchHelp.title')}
+          >
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+          <SearchHelpPopover
+            show={showSearchHelp}
+            onClose={closeSearchHelp}
+            onInsertExample={handleInsertSearchExample}
+          />
+        </div>
         {#if $searchResultCount.isSearching}
           <span
             class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap"
@@ -418,20 +571,22 @@
         <div class="relative">
           <input
             id="search-input-mobile"
+            data-testid="search-input-mobile"
             type="text"
             bind:value={$searchQuery}
             on:input={handleSearchInput}
             on:keydown={handleSearchKeyDown}
+            on:focus={handleSearchFocus}
             on:blur={handleSearchBlur}
             placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
             role="combobox"
             aria-autocomplete="list"
-            aria-expanded={showTagSuggestions}
+            aria-expanded={showTagSuggestions || showSearchSuggestions}
             aria-haspopup="listbox"
-            aria-controls={showTagSuggestions ? 'tag-suggestions-mobile' : undefined}
+            aria-controls={showTagSuggestions ? 'tag-suggestions-mobile' : showSearchSuggestions ? 'search-suggestions' : undefined}
             aria-activedescendant={showTagSuggestions && selectedSuggestionIndex >= 0 ? `tag-suggestion-mobile-${selectedSuggestionIndex}` : undefined}
-            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-24' : 'pr-12'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
+            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-28' : 'pr-16'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
           {#if loadingNotes}
@@ -460,6 +615,23 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
               </button>
+              <div class="relative">
+                <button
+                  on:click={toggleSearchHelp}
+                  class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1"
+                  title={$_('searchHelp.title')}
+                  aria-label={$_('searchHelp.title')}
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+                <SearchHelpPopover
+                  show={showSearchHelp}
+                  onClose={closeSearchHelp}
+                  onInsertExample={handleInsertSearchExample}
+                />
+              </div>
               {#if $searchQuery}
                 <button
                   on:click={() => searchQuery.set('')}
@@ -494,6 +666,15 @@
               {/each}
             </div>
           {/if}
+          <!-- Search suggestions dropdown (mobile) -->
+          <SearchSuggestionsDropdown
+            show={showSearchSuggestions && !showTagSuggestions}
+            onClose={closeSearchSuggestions}
+            onSelectQuery={handleSelectSuggestion}
+            {recentSearches}
+            onRemoveRecent={removeRecentSearch}
+            onClearAllRecent={clearAllRecentSearches}
+          />
         </div>
       </div>
 

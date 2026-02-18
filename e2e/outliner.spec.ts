@@ -3,7 +3,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 // Helper to type into a contenteditable element reliably
 async function typeInContentEditable(page: Page, locator: ReturnType<Page['locator']>, text: string) {
@@ -16,13 +16,15 @@ async function typeInContentEditable(page: Page, locator: ReturnType<Page['locat
 
 test.describe('Outliner Mode', () => {
 	test.beforeEach(async ({ page }) => {
-		await setupFreshEnvironment(page);
+		const jp = new JotteryPage(page);
+		await jp.setup();
 	});
 
 	test('should create outliner note and add items', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
@@ -40,9 +42,10 @@ test.describe('Outliner Mode', () => {
 	});
 
 	test('should create new sibling on Enter', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
@@ -66,9 +69,10 @@ test.describe('Outliner Mode', () => {
 	});
 
 	test('should indent item with Tab', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
@@ -92,9 +96,10 @@ test.describe('Outliner Mode', () => {
 	});
 
 	test('should outdent item with Shift+Tab', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
@@ -124,9 +129,10 @@ test.describe('Outliner Mode', () => {
 	});
 
 	test('should collapse and expand nodes with children', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
@@ -165,9 +171,10 @@ test.describe('Outliner Mode', () => {
 	});
 
 	test('should persist outliner language when note is reopened', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
@@ -181,7 +188,7 @@ test.describe('Outliner Mode', () => {
 		await page.waitForTimeout(3000);
 
 		// Create another note
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 		await page.waitForTimeout(1000);
 
 		// Clear any multi-select mode
@@ -203,9 +210,10 @@ test.describe('Outliner Mode', () => {
 	});
 
 	test('should delete empty node with Backspace', async ({ page }) => {
+		const jp = new JotteryPage(page);
+
 		// Create new note
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
 		// Switch to outliner language
 		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });

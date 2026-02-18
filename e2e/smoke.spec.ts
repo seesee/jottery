@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { clearAllStorage, handleLandingPage, setupFreshEnvironment } from './test-utils';
+import { clearAllStorage, handleLandingPage, JotteryPage } from './test-utils';
 
 test.describe('Smoke Tests', () => {
   test('app loads without crashing', async ({ page }) => {
@@ -34,8 +34,10 @@ test.describe('Smoke Tests', () => {
   });
 
   test('can complete basic setup and unlock flow', async ({ page }) => {
-    // Use setupFreshEnvironment which properly clears storage and handles landing page
-    await setupFreshEnvironment(page, 'smoke-test-password');
+    const jp = new JotteryPage(page);
+
+    // Use jp.setup() which properly clears storage and handles landing page
+    await jp.setup('smoke-test-password');
 
     // Should see the app (either empty state or note list)
     const hasAppContent = await page.locator('body').evaluate((body) => {

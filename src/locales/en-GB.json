@@ -79,6 +79,32 @@
     "noSavedSearches": "No saved searches yet. Click 'Save Current Search' to create one.",
     "noCurrentQuery": "Enter a search query first"
   },
+  "searchHelp": {
+    "title": "Search Syntax",
+    "tags": "Tags",
+    "text": "Text",
+    "wildcards": "Wildcards",
+    "modifiers": "Modifiers",
+    "combined": "Combined Examples",
+    "clickToTry": "Click an example to try it",
+    "tagsAnd": "Both tags (AND)",
+    "tagsOr": "Either tag (OR)",
+    "exactPhrase": "Exact phrase",
+    "bothWords": "Both words (AND)",
+    "eitherWord": "Either word (OR)",
+    "notContaining": "Does NOT contain",
+    "startsWith": "Starts with",
+    "endsWith": "Ends with",
+    "containsAnywhere": "Contains anywhere",
+    "hasAttachment": "Notes with attachments",
+    "createdAfter": "Created after date",
+    "createdBefore": "Created before date",
+    "createdRange": "Created in date range",
+    "modifiedAfter": "Modified after date",
+    "wordsMore": "More than N words",
+    "wordsLess": "Less than N words",
+    "wordsRange": "Between N and M words"
+  },
   "editor": {
     "noNoteSelected": "No note selected",
     "noNoteSelectedHint": "Select a note from the list or create a new one",
@@ -179,6 +205,10 @@
       "lockedBanner": "This note is locked. Unlock to edit.",
       "mustUnlockToDelete": "Unlock the note before deleting"
     },
+    "confirmDelete": {
+      "title": "Delete Note",
+      "message": "This will move the note to the recycle bin. You can restore it later if needed."
+    },
     "readOnly": {
       "archivedBanner": "This note is archived. Unarchive to edit.",
       "lockedBanner": "This note is locked. Unlock to edit."
@@ -186,7 +216,29 @@
   },
   "noteList": {
     "deleteNote": "Delete note",
-    "filterByTag": "Filter by #{tag}"
+    "filterByTag": "Filter by #{tag}",
+    "noteCount": "{filtered} of {total}",
+    "noteCountAll": "{total} notes"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Swipe left to delete",
+    "swipeRightToSelect": "Swipe right to select",
+    "tapToDismiss": "Tap anywhere to dismiss"
+  },
+  "welcomeNote": {
+    "content": "# Welcome to Jottery\n\nJottery is your private, encrypted scratch pad for capturing and organising notes.\n\n## Quick Start\n\n- **Create a note**: Click the + button or press `Ctrl+N`\n- **Search**: Use the search bar or press `Ctrl+K`\n- **Tags**: Add tags to organise notes, then filter with `#tagname`\n- **Pin**: Pin important notes to keep them at the top\n\n## Search Syntax\n\nJottery supports powerful search queries:\n\n- `#tagname` — filter by tag\n- `\"exact phrase\"` — exact match\n- `has:attachment` — notes with attachments\n- `created:>2024-01-01` — date filters\n- `words:>100` — word count filters\n- `-excluded` — exclude terms\n\nClick the **?** button beside the search bar for the full reference.\n\n## Command Palette\n\nPress `Ctrl+Shift+P` to open the command palette for quick access to all actions.\n\n## Keyboard Shortcuts\n\nPress `Ctrl+/` to see all keyboard shortcuts.\n\n## Privacy\n\nAll your notes are encrypted locally. No data leaves your device unless you enable sync.\n\n---\n\n*You can delete this note at any time. Happy writing!*",
+    "tags": "welcome,getting-started"
+  },
+  "contextMenu": {
+    "title": "Note actions",
+    "open": "Open",
+    "pin": "Pin note",
+    "unpin": "Unpin note",
+    "duplicate": "Duplicate",
+    "setColour": "Set category colour",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "delete": "Delete"
   },
   "tagInput": {
     "removeTag": "Remove tag"
@@ -349,6 +401,7 @@
     },
     "saveSettings": "Save Settings",
     "saving": "Saving...",
+    "autoSaved": "Changes saved automatically",
     "settingsSaved": "Settings saved",
     "settingsSaveFailed": "Failed to save settings: {error}",
     "deleteDatabaseFailed": "Failed to delete database: {error}",
@@ -497,7 +550,9 @@
       "systemsLanguages": "Systems languages",
       "dataLanguages": "Data languages",
       "otherLanguages": "Other languages",
-      "enabledCount": "{enabled}/{total} enabled"
+      "enabledCount": "{enabled}/{total} enabled",
+      "alwaysEnabled": "(always enabled)",
+      "popularLanguages": "Popular languages"
     },
     "keyboardTab": {
       "description": "Customise keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
@@ -900,6 +955,14 @@
         "title": "🏠 Self-Hostable",
         "description": "Want to run your own sync server? Jottery is open source and easy to self-host.",
         "viewOnGitHub": "View on GitHub"
+      },
+      "localFirst": {
+        "title": "💾 Local-First",
+        "description": "Your notes are stored directly in your browser's local database. Jottery works completely <strong>offline</strong> and doesn't require an internet connection or account."
+      },
+      "syncWarning": {
+        "title": "⚠️ Set Up Sync",
+        "description": "Browser storage can be cleared unexpectedly. We recommend setting up sync to keep your notes safe across devices. Jottery is fully <strong>open source and self-hostable</strong>."
       }
     },
     "restoreFromBackup": "Restore from Backup",
@@ -1248,7 +1311,8 @@
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",
     "selectAll": "Select all",
-    "deselectAll": "Deselect all"
+    "deselectAll": "Deselect all",
+    "moreActions": "More actions"
   },
   "outliner": {
     "name": "Outliner",
@@ -1274,5 +1338,47 @@
     "virtual": {
       "title": "title"
     }
+  },
+  "emptyState": {
+    "title": "Get started",
+    "createNote": "Create a note",
+    "createNoteDescription": "Start writing your first note",
+    "importNotes": "Import notes",
+    "importNotesDescription": "Import from a JSON export file",
+    "exploreSearch": "Explore search syntax",
+    "exploreSearchDescription": "Learn powerful search operators"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Recent Searches",
+    "clearRecent": "Remove",
+    "tryThese": "Try These",
+    "clearAll": "Clear all"
+  },
+  "commandPalette": {
+    "title": "Command Palette",
+    "placeholder": "Type a command...",
+    "noResults": "No matching commands",
+    "navigation": "Navigation",
+    "editorActions": "Editor",
+    "focusSearch": "Focus Search",
+    "newNote": "New Note",
+    "openSettings": "Settings",
+    "openRecycleBin": "Recycle Bin",
+    "openArchive": "Archive",
+    "lockApp": "Lock Application",
+    "showShortcuts": "Keyboard Shortcuts",
+    "togglePreview": "Toggle Preview",
+    "toggleWordWrap": "Toggle Word Wrap",
+    "copyContent": "Copy Note Content",
+    "copyLink": "Copy Link to Note",
+    "duplicateNote": "Duplicate Note",
+    "exportNote": "Export to File",
+    "printNote": "Print / Export PDF",
+    "noteInfo": "Note Information",
+    "versionHistory": "Version History",
+    "deleteNote": "Delete Note",
+    "lockNote": "Lock/Unlock Note",
+    "setColor": "Set Note Category",
+    "archiveNote": "Archive Note"
   }
 }

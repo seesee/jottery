@@ -13,6 +13,7 @@
   import { searchService } from '../services/searchService';
   import { isMobileTouchDevice } from '../utils/device';
   import { setTitleTag } from '../utils/noteTitle';
+  import ColorPickerModal from './ColorPickerModal.svelte';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
   import {
     VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT,
@@ -24,6 +25,9 @@
 
   export let onNoteSelect: (() => void) | undefined = undefined;
   export let onOpenInbox: (() => void) | undefined = undefined;
+  export let onNewNote: (() => void) | undefined = undefined;
+  export let onOpenSettings: (() => void) | undefined = undefined;
+  export let onOpenSearchHelp: (() => void) | undefined = undefined;
   export let loadingNotes: boolean = false;
   export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
   export let forceMobileLayout: boolean = false;
@@ -486,6 +490,51 @@
     }
   }
 
+  // Context menu action handling
+  let showColorPicker = false;
+  let colorPickerNoteId: string | undefined = undefined;
+
+  async function handleContextAction(action: string, note: DecryptedNote) {
+    try {
+      switch (action) {
+        case 'togglePin':
+          await noteService.togglePin(note.id);
+          await reloadNotes();
+          break;
+        case 'duplicate':
+          await noteService.duplicateNote(note.id);
+          await reloadNotes();
+          break;
+        case 'setColor':
+          colorPickerNoteId = note.id;
+          showColorPicker = true;
+          break;
+        case 'archive':
+          if (note.archived) {
+            await noteService.unarchiveNote(note.id);
+          } else {
+            await noteService.archiveNote(note.id);
+          }
+          await reloadNotes();
+          break;
+      }
+    } catch (error) {
+      console.error('Context action failed:', error);
+    }
+  }
+
+  async function handleColorSelected(colorName: string | undefined) {
+    if (!colorPickerNoteId) return;
+    try {
+      await noteService.updateNote(colorPickerNoteId, { color: colorName });
+      await reloadNotes();
+    } catch (error) {
+      console.error('Failed to set note colour:', error);
+    }
+    showColorPicker = false;
+    colorPickerNoteId = undefined;
+  }
+
   function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): boolean {
     const ctrlOrCmd = event.ctrlKey || event.metaKey;
     return (
@@ -530,6 +579,15 @@
 
 {#if isMobile && $settings.syncEnabled}
   <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+    {#if $filteredNotes.length > 0 || $searchQuery.trim()}
+      <div class="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+        {#if $searchQuery.trim() || $filteredNotes.length !== $notes.filter(n => n.archived === $archiveMode).length}
+          {$_('noteList.noteCount', { values: { filtered: $filteredNotes.length, total: $notes.filter(n => n.archived === $archiveMode).length } })}
+        {:else}
+          {$_('noteList.noteCountAll', { values: { total: $filteredNotes.length } })}
+        {/if}
+      </div>
+    {/if}
     <div class="flex-1 min-h-0">
       <PullToRefresh onRefresh={handleRefresh} enabled={$settings.syncEnabled}>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -540,6 +598,7 @@
           on:keydown={handleKeydown}
           role="list"
           tabindex="-1"
+          data-testid="note-list"
         >
         {#if $filteredNotes.length === 0}
           <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
@@ -554,8 +613,57 @@
                   </p>
                 {/if}
               {:else if $notes.length === 0}
-                <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
-                <p class="text-sm">{$_('note.createFirstNote')}</p>
+                <!-- Onboarding action cards -->
+                <div data-testid="empty-state" class="w-full max-w-sm mx-auto">
+                  <p class="text-lg font-medium mb-4 text-gray-700 dark:text-gray-300">{$_('emptyState.title')}</p>
+                  <div class="flex flex-col gap-3">
+                    <!-- Create a note -->
+                    <button
+                      on:click={() => onNewNote?.()}
+                      class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left group"
+                    >
+                      <div class="flex-shrink-0 w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{$_('emptyState.createNote')}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{$_('emptyState.createNoteDescription')}</p>
+                      </div>
+                    </button>
+                    <!-- Import notes -->
+                    <button
+                      on:click={() => onOpenSettings?.()}
+                      class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-green-300 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors text-left group"
+                    >
+                      <div class="flex-shrink-0 w-9 h-9 rounded-md bg-green-100 dark:bg-green-900/40 flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/60 transition-colors">
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{$_('emptyState.importNotes')}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{$_('emptyState.importNotesDescription')}</p>
+                      </div>
+                    </button>
+                    <!-- Explore search syntax -->
+                    <button
+                      on:click={() => onOpenSearchHelp?.()}
+                      class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors text-left group"
+                    >
+                      <div class="flex-shrink-0 w-9 h-9 rounded-md bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/60 transition-colors">
+                        <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+                        </svg>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{$_('emptyState.exploreSearch')}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{$_('emptyState.exploreSearchDescription')}</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               {:else if $searchQuery.trim()}
                 <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
                 <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
@@ -577,7 +685,7 @@
             <!-- Render only visible items -->
             {#each visibleNotes as note, i (note.id)}
               <div bind:this={itemElements[i]}>
-                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} onContextAction={handleContextAction} />
               </div>
             {/each}
           </div>
@@ -600,6 +708,15 @@
   </div>
 {:else}
   <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+    {#if $filteredNotes.length > 0 || $searchQuery.trim()}
+      <div class="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+        {#if $searchQuery.trim() || $filteredNotes.length !== $notes.filter(n => n.archived === $archiveMode).length}
+          {$_('noteList.noteCount', { values: { filtered: $filteredNotes.length, total: $notes.filter(n => n.archived === $archiveMode).length } })}
+        {:else}
+          {$_('noteList.noteCountAll', { values: { total: $filteredNotes.length } })}
+        {/if}
+      </div>
+    {/if}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       bind:this={scrollContainer}
@@ -608,6 +725,7 @@
       on:keydown={handleKeydown}
       role="list"
       tabindex="-1"
+      data-testid="note-list"
     >
       {#if $filteredNotes.length === 0}
         <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 p-4 text-center">
@@ -622,8 +740,57 @@
                 </p>
               {/if}
             {:else if $notes.length === 0}
-              <p class="text-lg mb-2">{$_('note.noNotesYet')}</p>
-              <p class="text-sm">{$_('note.createFirstNote')}</p>
+              <!-- Onboarding action cards -->
+              <div data-testid="empty-state" class="w-full max-w-md mx-auto">
+                <p class="text-lg font-medium mb-4 text-gray-700 dark:text-gray-300">{$_('emptyState.title')}</p>
+                <div class="grid grid-cols-1 gap-3">
+                  <!-- Create a note -->
+                  <button
+                    on:click={() => onNewNote?.()}
+                    class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left group"
+                  >
+                    <div class="flex-shrink-0 w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                      <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{$_('emptyState.createNote')}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{$_('emptyState.createNoteDescription')}</p>
+                    </div>
+                  </button>
+                  <!-- Import notes -->
+                  <button
+                    on:click={() => onOpenSettings?.()}
+                    class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-green-300 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors text-left group"
+                  >
+                    <div class="flex-shrink-0 w-9 h-9 rounded-md bg-green-100 dark:bg-green-900/40 flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/60 transition-colors">
+                      <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                      </svg>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{$_('emptyState.importNotes')}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{$_('emptyState.importNotesDescription')}</p>
+                    </div>
+                  </button>
+                  <!-- Explore search syntax -->
+                  <button
+                    on:click={() => onOpenSearchHelp?.()}
+                    class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors text-left group"
+                  >
+                    <div class="flex-shrink-0 w-9 h-9 rounded-md bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/60 transition-colors">
+                      <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+                      </svg>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{$_('emptyState.exploreSearch')}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{$_('emptyState.exploreSearchDescription')}</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             {:else if $searchQuery.trim()}
               <p class="text-lg mb-2">{$_('note.noResultsFound')}</p>
               <p class="text-sm">{$_('note.tryDifferentSearch')}</p>
@@ -645,7 +812,7 @@
           <!-- Render only visible items -->
           {#each visibleNotes as note, i (note.id)}
             <div bind:this={itemElements[i]}>
-              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} onContextAction={handleContextAction} />
             </div>
           {/each}
         </div>
@@ -684,4 +851,12 @@
   noteId={conflictNoteId}
   onClose={() => { showConflictModal = false; conflictNoteId = undefined; }}
   onResolved={handleConflictResolved}
+/>
+
+<!-- Color Picker Modal (from context menu) -->
+<ColorPickerModal
+  show={showColorPicker}
+  currentColor={undefined}
+  onColorSelect={handleColorSelected}
+  onClose={() => { showColorPicker = false; colorPickerNoteId = undefined; }}
 />

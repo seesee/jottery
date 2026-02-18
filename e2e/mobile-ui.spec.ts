@@ -9,7 +9,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import { clearAllStorage, handleLandingPage } from './test-utils';
+import { clearAllStorage, handleLandingPage, JotteryPage } from './test-utils';
 
 test.describe('Mobile UI', () => {
   // Use mobile viewport for all tests in this describe block
@@ -22,6 +22,8 @@ test.describe('Mobile UI', () => {
   test.setTimeout(60000);
 
   test.beforeEach(async ({ page }) => {
+    const jp = new JotteryPage(page);
+
     // Clear all storage before each test
     await page.goto('');
     await clearAllStorage(page);
@@ -48,37 +50,8 @@ test.describe('Mobile UI', () => {
 
     // Wait for app to fully load - on mobile might take longer
     // Check for new note button which is always visible when app is ready
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ })
-      .or(page.locator('[aria-label*="new" i]'));
-    await expect(newNoteButton.first()).toBeVisible({ timeout: 15000 });
+    await expect(jp.newNoteButton).toBeVisible({ timeout: 15000 });
   });
-
-  /**
-   * Helper to create a note and return to the list
-   */
-  async function createNoteAndReturnToList(page: Page, content: string): Promise<void> {
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ })
-      .or(page.locator('[aria-label*="new" i], [aria-label*="add" i]'))
-      .first();
-    await expect(newNoteButton).toBeVisible({ timeout: 10000 });
-    await newNoteButton.click();
-
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
-    await expect(editor).toBeVisible({ timeout: 5000 });
-    await editor.click();
-    await editor.pressSequentially(content);
-    await page.waitForTimeout(2000);
-
-    // Go back to list
-    const backButton = page.locator('button svg').first()
-      .or(page.locator('button').filter({ hasText: /←/ }))
-      .or(page.locator('[aria-label*="back" i]'));
-
-    if (await backButton.count() > 0) {
-      await backButton.first().click();
-      await page.waitForTimeout(1000);
-    }
-  }
 
   /**
    * Helper to perform a swipe gesture on an element
@@ -100,11 +73,13 @@ test.describe('Mobile UI', () => {
 
   test.describe('Single-tap to open', () => {
     test('single tap on note should open it immediately', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
       // Create a note
-      await createNoteAndReturnToList(page, 'Single tap test note');
+      await jp.createNoteAndReturnToList('Single tap test note');
 
       // Find the note in the list
-      const noteItem = page.locator('.note-list-item').filter({
+      const noteItem = jp.noteListItems.filter({
         hasText: /Single tap test/i
       });
 
@@ -118,15 +93,17 @@ test.describe('Mobile UI', () => {
       await page.waitForTimeout(1000);
 
       // Should now be in editor view (not still on list)
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea');
-      await expect(editor.first()).toBeVisible({ timeout: 5000 });
+      const editor = jp.editorContent;
+      await expect(editor).toBeVisible({ timeout: 5000 });
     });
 
     test('tapping a note should show its content in editor', async ({ page }) => {
-      const testContent = 'Unique content for tap test 12345';
-      await createNoteAndReturnToList(page, testContent);
+      const jp = new JotteryPage(page);
 
-      const noteItem = page.locator('.note-list-item').filter({
+      const testContent = 'Unique content for tap test 12345';
+      await jp.createNoteAndReturnToList(testContent);
+
+      const noteItem = jp.noteListItems.filter({
         hasText: /Unique content/i
       });
 
@@ -140,7 +117,7 @@ test.describe('Mobile UI', () => {
       await page.waitForTimeout(1000);
 
       // Editor should contain the note content
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      const editor = jp.editorContent;
       await expect(editor).toBeVisible({ timeout: 5000 });
 
       const editorText = await editor.textContent();
@@ -153,9 +130,11 @@ test.describe('Mobile UI', () => {
     test.skip(({ browserName }) => browserName === 'webkit', 'Touch events not supported in WebKit e2e');
 
     test('swipe left on note should reveal delete action', async ({ page }) => {
-      await createNoteAndReturnToList(page, 'Swipe delete test');
+      const jp = new JotteryPage(page);
 
-      const noteItem = page.locator('.note-list-item').filter({
+      await jp.createNoteAndReturnToList('Swipe delete test');
+
+      const noteItem = jp.noteListItems.filter({
         hasText: /Swipe delete/i
       });
 
@@ -223,9 +202,11 @@ test.describe('Mobile UI', () => {
     });
 
     test('swipe right on note should enter multi-select mode', async ({ page }) => {
-      await createNoteAndReturnToList(page, 'Swipe select test');
+      const jp = new JotteryPage(page);
 
-      const noteItem = page.locator('.note-list-item').filter({
+      await jp.createNoteAndReturnToList('Swipe select test');
+
+      const noteItem = jp.noteListItems.filter({
         hasText: /Swipe select/i
       });
 
@@ -290,14 +271,12 @@ test.describe('Mobile UI', () => {
     });
 
     test('pinned notes should not be deletable via swipe', async ({ page }) => {
-      // Create a note and pin it
-      const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ })
-        .or(page.locator('[aria-label*="new" i]'))
-        .first();
-      await expect(newNoteButton).toBeVisible({ timeout: 10000 });
-      await newNoteButton.click();
+      const jp = new JotteryPage(page);
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      // Create a note and pin it
+      await jp.newNoteButton.click();
+
+      const editor = jp.editorContent;
       await expect(editor).toBeVisible({ timeout: 5000 });
       await editor.click();
       await editor.pressSequentially('Pinned note test');
@@ -322,7 +301,7 @@ test.describe('Mobile UI', () => {
       }
 
       // Find the pinned note (should have star indicator)
-      const pinnedNote = page.locator('.note-list-item').filter({
+      const pinnedNote = jp.noteListItems.filter({
         hasText: /Pinned note test/i
       });
 
@@ -377,13 +356,15 @@ test.describe('Mobile UI', () => {
 
   test.describe('Scroll position preservation', () => {
     test('scroll position should be preserved after returning from editor', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
       // Create multiple notes to enable scrolling
       for (let i = 1; i <= 10; i++) {
-        await createNoteAndReturnToList(page, `Scroll test note ${i}`);
+        await jp.createNoteAndReturnToList(`Scroll test note ${i}`);
       }
 
       // Wait for all notes to be visible in the list
-      await expect(page.locator('.note-list-item').nth(9)).toBeVisible({ timeout: 5000 });
+      await expect(jp.noteListItems.nth(9)).toBeVisible({ timeout: 5000 });
 
       // Find the scroll container - look for the specific note list container
       const scrollContainer = page.locator('.overflow-y-auto').first();
@@ -409,12 +390,12 @@ test.describe('Mobile UI', () => {
       }
 
       // Open a note (not the first one to avoid scroll jump)
-      const noteItem = page.locator('.note-list-item').nth(3);
+      const noteItem = jp.noteListItems.nth(3);
       await noteItem.click();
 
       // Should be in editor
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea');
-      await expect(editor.first()).toBeVisible({ timeout: 5000 });
+      const editor = jp.editorContent;
+      await expect(editor).toBeVisible({ timeout: 5000 });
 
       // Go back to list
       const backButton = page.locator('button svg').first()
@@ -425,7 +406,7 @@ test.describe('Mobile UI', () => {
       }
 
       // Wait for list to be visible again before checking scroll
-      await expect(page.locator('.note-list-item').first()).toBeVisible({ timeout: 5000 });
+      await expect(jp.noteListItems.first()).toBeVisible({ timeout: 5000 });
 
       // Check scroll position is preserved (or at least partially preserved)
       // Use toPass to wait for scroll restoration which may happen after render
@@ -441,23 +422,25 @@ test.describe('Mobile UI', () => {
 
   test.describe('Back navigation performance', () => {
     test('back navigation should be fast (< 2s perceived)', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
       // Create a note with some content
-      await createNoteAndReturnToList(page, 'Performance test note with some content to trigger save');
+      await jp.createNoteAndReturnToList('Performance test note with some content to trigger save');
 
       // Open the note
-      const noteItem = page.locator('.note-list-item').first();
+      const noteItem = jp.noteListItems.first();
       await noteItem.click();
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea');
-      await expect(editor.first()).toBeVisible({ timeout: 5000 });
+      const editor = jp.editorContent;
+      await expect(editor).toBeVisible({ timeout: 5000 });
 
       // Edit the note to trigger a save
-      await editor.first().click();
-      await editor.first().pressSequentially(' - edited');
+      await editor.click();
+      await editor.pressSequentially(' - edited');
 
       // Wait for auto-save by checking the save indicator or just give it time
       // Use a state-based wait: wait for the editor to still be visible and content settled
-      await expect(editor.first()).toContainText('edited', { timeout: 3000 });
+      await expect(editor).toContainText('edited', { timeout: 3000 });
 
       // Measure back navigation time
       const startTime = Date.now();
@@ -470,7 +453,7 @@ test.describe('Mobile UI', () => {
       }
 
       // Wait for list to be visible
-      const noteList = page.locator('.note-list-item').first();
+      const noteList = jp.noteListItems.first();
       await expect(noteList).toBeVisible({ timeout: 5000 });
 
       const endTime = Date.now();
@@ -485,14 +468,12 @@ test.describe('Mobile UI', () => {
 
   test.describe('Mobile layout', () => {
     test('should have only one back button in mobile editor view', async ({ page }) => {
-      // Create a note
-      const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ })
-        .or(page.locator('[aria-label*="new" i]'))
-        .first();
-      await expect(newNoteButton).toBeVisible({ timeout: 10000 });
-      await newNoteButton.click();
+      const jp = new JotteryPage(page);
 
-      const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+      // Create a note
+      await jp.newNoteButton.click();
+
+      const editor = jp.editorContent;
       await expect(editor).toBeVisible({ timeout: 5000 });
 
       // Wait for the header to also be visible (indicates full layout is ready)
@@ -511,13 +492,15 @@ test.describe('Mobile UI', () => {
     });
 
     test('mobile layout should show note list correctly', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
       // Create multiple notes
       for (let i = 1; i <= 3; i++) {
-        await createNoteAndReturnToList(page, `Mobile layout note ${i}`);
+        await jp.createNoteAndReturnToList(`Mobile layout note ${i}`);
       }
 
       // Check that notes are visible in the list
-      const noteItems = page.locator('.note-list-item');
+      const noteItems = jp.noteListItems;
       const count = await noteItems.count();
 
       // Should have at least 3 notes visible
@@ -525,9 +508,11 @@ test.describe('Mobile UI', () => {
     });
 
     test('checkbox should not appear on note selection (swipe-only model)', async ({ page }) => {
-      await createNoteAndReturnToList(page, 'No checkbox test');
+      const jp = new JotteryPage(page);
 
-      const noteItem = page.locator('.note-list-item').filter({
+      await jp.createNoteAndReturnToList('No checkbox test');
+
+      const noteItem = jp.noteListItems.filter({
         hasText: /No checkbox/i
       });
 

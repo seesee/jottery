@@ -1,6 +1,7 @@
 <script lang="ts">
   import { locale, _ } from 'svelte-i18n';
   import { AVAILABLE_LOCALES } from '../services/i18nService';
+  import { settings } from '../stores/appStore';
   import { onMount } from 'svelte';
 
   let isOpen = false;
@@ -18,6 +19,10 @@
 
   function selectLocale(code: string) {
     locale.set(code);
+    // Update the settings store so App.svelte's locale reactive sees the correct value
+    // (prevents the reactive from reverting to the auto-detected language)
+    settings.update(s => ({ ...s, language: code }));
+    // Also persist to localStorage as a bridge for the pre-unlock → post-unlock flow
     localStorage.setItem('jottery-locale', code);
     isOpen = false;
   }

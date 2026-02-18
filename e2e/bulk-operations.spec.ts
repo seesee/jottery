@@ -3,18 +3,20 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Bulk Operations', () => {
+  let jp: JotteryPage;
+
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    jp = new JotteryPage(page);
+    await jp.setup();
   });
 
   async function createNote(page: import('@playwright/test').Page, content: string) {
-    const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-    await newNoteButton.click();
+    await jp.newNoteButton.click();
 
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially(content);
@@ -34,11 +36,11 @@ test.describe('Bulk Operations', () => {
     await expect(noteList.getByText(/Second note content/i)).toBeVisible();
 
     // Enter multi-select mode with Ctrl+click on first note
-    const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /First note content/i });
+    const firstNoteItem = jp.noteListItems.filter({ hasText: /First note content/i });
     await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
     // Now checkboxes are visible - click second note's checkbox
-    const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Second note content/i });
+    const secondNoteItem = jp.noteListItems.filter({ hasText: /Second note content/i });
     const secondCheckbox = secondNoteItem.locator('[role="checkbox"]');
     await secondCheckbox.click();
 
@@ -62,20 +64,20 @@ test.describe('Bulk Operations', () => {
 
     // Should now have only one note containing content from both
     // The combined note should contain a horizontal rule separator
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toContainText(/First note content/i);
     await expect(editor).toContainText(/Second note content/i);
 
     // Original notes should be gone (moved to recycle bin)
     // There should be only one note in the list now
-    const noteItems = await noteList.locator('.note-list-item').count();
+    const noteItems = await jp.noteListItems.count();
     expect(noteItems).toBe(1);
   });
 
   test('should combine notes with tags merged by default', async ({ page }) => {
     // Create first note with tags
     await createNote(page, 'Note with tag A');
-    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    const tagInput = jp.tagInput;
     await tagInput.click();
     await tagInput.fill('tag-a');
     await page.keyboard.press('Enter');
@@ -89,12 +91,11 @@ test.describe('Bulk Operations', () => {
     await page.waitForTimeout(1000);
 
     // Select both notes - Ctrl+click first to enter multi-select mode
-    const noteList = page.getByRole('list');
-    const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note with tag A/i });
+    const firstNoteItem = jp.noteListItems.filter({ hasText: /Note with tag A/i });
     await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
     // Now checkboxes are visible - click second note's checkbox
-    const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note with tag B/i });
+    const secondNoteItem = jp.noteListItems.filter({ hasText: /Note with tag B/i });
     await secondNoteItem.locator('[role="checkbox"]').click();
 
     // Click Combine
@@ -108,14 +109,14 @@ test.describe('Bulk Operations', () => {
     await page.waitForTimeout(2000);
 
     // Combined note should have both tags
-    await expect(page.locator('.tag-pill').filter({ hasText: '#tag-a' })).toBeVisible();
-    await expect(page.locator('.tag-pill').filter({ hasText: '#tag-b' })).toBeVisible();
+    await expect(jp.tagPills.filter({ hasText: '#tag-a' })).toBeVisible();
+    await expect(jp.tagPills.filter({ hasText: '#tag-b' })).toBeVisible();
   });
 
   test('should combine notes without merging tags when checkbox unchecked', async ({ page }) => {
     // Create first note (oldest) with tag-first
     await createNote(page, 'First note oldest');
-    const tagInput = page.locator('.tag-input-container input[type="text"]').first();
+    const tagInput = jp.tagInput;
     await tagInput.click();
     await tagInput.fill('tag-first');
     await page.keyboard.press('Enter');
@@ -129,12 +130,11 @@ test.describe('Bulk Operations', () => {
     await page.waitForTimeout(1000);
 
     // Select both notes - Ctrl+click first to enter multi-select mode
-    const noteList = page.getByRole('list');
-    const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /First note oldest/i });
+    const firstNoteItem = jp.noteListItems.filter({ hasText: /First note oldest/i });
     await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
     // Now checkboxes are visible - click second note's checkbox
-    const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Second note newest/i });
+    const secondNoteItem = jp.noteListItems.filter({ hasText: /Second note newest/i });
     await secondNoteItem.locator('[role="checkbox"]').click();
 
     // Click Combine
@@ -142,7 +142,7 @@ test.describe('Bulk Operations', () => {
     await combineButton.click();
 
     // Wait for modal
-    const modal = page.locator('[role="dialog"]');
+    const modal = jp.dialog;
     await expect(modal).toBeVisible();
 
     // Uncheck the merge tags checkbox
@@ -156,9 +156,9 @@ test.describe('Bulk Operations', () => {
     await page.waitForTimeout(2000);
 
     // Combined note should only have tag from first (oldest) note
-    await expect(page.locator('.tag-pill').filter({ hasText: '#tag-first' })).toBeVisible();
+    await expect(jp.tagPills.filter({ hasText: '#tag-first' })).toBeVisible();
     // Second note's tag should NOT be present
-    await expect(page.locator('.tag-pill').filter({ hasText: '#tag-second' })).not.toBeVisible();
+    await expect(jp.tagPills.filter({ hasText: '#tag-second' })).not.toBeVisible();
   });
 
   test('should not show combine button with only one note selected', async ({ page }) => {
@@ -166,8 +166,7 @@ test.describe('Bulk Operations', () => {
     await createNote(page, 'Single note');
 
     // Select it with Ctrl+click
-    const noteList = page.getByRole('list');
-    const noteItem = noteList.locator('.note-list-item').filter({ hasText: /Single note/i });
+    const noteItem = jp.noteListItems.filter({ hasText: /Single note/i });
     await noteItem.click({ modifiers: ['ControlOrMeta'] });
 
     // Bulk toolbar should appear with "1 selected"
@@ -185,11 +184,11 @@ test.describe('Bulk Operations', () => {
 
     // Select both notes - Ctrl+click first to enter multi-select mode
     const noteList = page.getByRole('list');
-    const firstNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note one/i });
+    const firstNoteItem = jp.noteListItems.filter({ hasText: /Note one/i });
     await firstNoteItem.click({ modifiers: ['ControlOrMeta'] });
 
     // Now checkboxes are visible - click second note's checkbox
-    const secondNoteItem = noteList.locator('.note-list-item').filter({ hasText: /Note two/i });
+    const secondNoteItem = jp.noteListItems.filter({ hasText: /Note two/i });
     await secondNoteItem.locator('[role="checkbox"]').click();
 
     // Click Combine
@@ -197,7 +196,7 @@ test.describe('Bulk Operations', () => {
     await combineButton.click();
 
     // Confirmation modal should appear
-    const modal = page.locator('[role="dialog"]');
+    const modal = jp.dialog;
     await expect(modal).toBeVisible();
     await expect(modal.getByText(/Combine.*notes/i)).toBeVisible();
 
@@ -210,7 +209,7 @@ test.describe('Bulk Operations', () => {
     await expect(noteList.getByText(/Note two/i)).toBeVisible();
 
     // Count should still be 2
-    const noteItems = await noteList.locator('.note-list-item').count();
+    const noteItems = await jp.noteListItems.count();
     expect(noteItems).toBe(2);
   });
 
@@ -223,16 +222,14 @@ test.describe('Bulk Operations', () => {
     await createNote(page, 'CCC Third created');
 
     // Select all three notes - Ctrl+click first to enter multi-select mode
-    const noteList = page.getByRole('list');
-
-    const firstNote = noteList.locator('.note-list-item').filter({ hasText: /AAA First/i });
+    const firstNote = jp.noteListItems.filter({ hasText: /AAA First/i });
     await firstNote.click({ modifiers: ['ControlOrMeta'] });
 
     // Now checkboxes are visible - click remaining notes' checkboxes
-    const secondNote = noteList.locator('.note-list-item').filter({ hasText: /BBB Second/i });
+    const secondNote = jp.noteListItems.filter({ hasText: /BBB Second/i });
     await secondNote.locator('[role="checkbox"]').click();
 
-    const thirdNote = noteList.locator('.note-list-item').filter({ hasText: /CCC Third/i });
+    const thirdNote = jp.noteListItems.filter({ hasText: /CCC Third/i });
     await thirdNote.locator('[role="checkbox"]').click();
 
     // Should show 3 selected
@@ -249,7 +246,7 @@ test.describe('Bulk Operations', () => {
     await page.waitForTimeout(2000);
 
     // Check combined note has content in creation order (oldest first)
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     const content = await editor.textContent();
 
     // AAA should come before BBB, and BBB before CCC
@@ -261,7 +258,7 @@ test.describe('Bulk Operations', () => {
     expect(posB).toBeLessThan(posC);
 
     // Should only have 1 note now
-    const noteItems = await noteList.locator('.note-list-item').count();
-    expect(noteItems).toBe(1);
+    const noteItemCount = await jp.noteListItems.count();
+    expect(noteItemCount).toBe(1);
   });
 });

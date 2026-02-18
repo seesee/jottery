@@ -307,6 +307,7 @@
       class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
       title={$_('editor.moreActions')}
       aria-label="More actions"
+      data-testid="btn-more-actions"
     >
       <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
         <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />

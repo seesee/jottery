@@ -20,7 +20,7 @@
     "error": "Fehler",
     "back": "Zurück",
     "edit": "Bearbeiten",
-    "add": "Add",
+    "add": "Hinzufügen",
     "showPassword": "Passwort anzeigen",
     "hidePassword": "Passwort verbergen"
   },
@@ -182,11 +182,17 @@
     "readOnly": {
       "archivedBanner": "Diese Notiz ist archiviert. Dearchivieren zum Bearbeiten.",
       "lockedBanner": "Diese Notiz ist gesperrt. Entsperren zum Bearbeiten."
+    },
+    "confirmDelete": {
+      "title": "Notiz löschen",
+      "message": "Dies verschiebt die Notiz in den Papierkorb. Sie können sie später bei Bedarf wiederherstellen."
     }
   },
   "noteList": {
     "deleteNote": "Notiz löschen",
-    "filterByTag": "Nach #{tag} filtern"
+    "filterByTag": "Nach #{tag} filtern",
+    "noteCount": "{filtered} von {total}",
+    "noteCountAll": "{total} Notizen"
   },
   "tagInput": {
     "removeTag": "Schlagwort entfernen"
@@ -349,6 +355,7 @@
     },
     "saveSettings": "Einstellungen speichern",
     "saving": "Wird gespeichert...",
+    "autoSaved": "Änderungen automatisch gespeichert",
     "settingsSaved": "Einstellungen gespeichert",
     "settingsSaveFailed": "Fehler beim Speichern der Einstellungen: {error}",
     "deleteDatabaseFailed": "Fehler beim Löschen der Datenbank: {error}",
@@ -1036,8 +1043,8 @@
   "releases": {
     "title": "Versionen",
     "description": "Laden Sie die Jottery TUI für Ihre Plattform herunter.",
-    "tuiClient": "TUI Client",
-    "standaloneWebApp": "Standalone Web App",
+    "tuiClient": "TUI-Client",
+    "standaloneWebApp": "Eigenständige Web-App",
     "webAppNote": "Lokal vom Dateisystem ausführen (Synchronisierung deaktiviert)"
   },
   "fileUpload": {
@@ -1146,7 +1153,8 @@
     "setColor": "Kategorie festlegen",
     "colorSet": "Kategorie für {count} Notizen festgelegt",
     "selectColorForBulk": "Kategorie für ausgewählte Notizen auswählen",
-    "archive": "Archivieren"
+    "archive": "Archivieren",
+    "moreActions": "Weitere Aktionen"
   },
   "conflict": {
     "title": "Synchronisationskonflikt erkannt",
@@ -1298,5 +1306,93 @@
     "virtual": {
       "title": "Titel"
     }
+  },
+  "searchHelp": {
+    "title": "Suchsyntax",
+    "tags": "Schlagwörter",
+    "text": "Text",
+    "wildcards": "Platzhalter",
+    "modifiers": "Modifikatoren",
+    "combined": "Kombinierte Beispiele",
+    "clickToTry": "Klicken Sie auf ein Beispiel, um es auszuprobieren",
+    "tagsAnd": "Beide Schlagwörter (UND)",
+    "tagsOr": "Eines der Schlagwörter (ODER)",
+    "exactPhrase": "Exakte Phrase",
+    "bothWords": "Beide Wörter (UND)",
+    "eitherWord": "Eines der Wörter (ODER)",
+    "notContaining": "Enthält NICHT",
+    "startsWith": "Beginnt mit",
+    "endsWith": "Endet mit",
+    "containsAnywhere": "Enthält irgendwo",
+    "hasAttachment": "Notizen mit Anhängen",
+    "createdAfter": "Erstellt nach Datum",
+    "createdBefore": "Erstellt vor Datum",
+    "createdRange": "Erstellt im Datumsbereich",
+    "modifiedAfter": "Geändert nach Datum",
+    "wordsMore": "Mehr als N Wörter",
+    "wordsLess": "Weniger als N Wörter",
+    "wordsRange": "Zwischen N und M Wörter"
+  },
+  "commandPalette": {
+    "title": "Befehlspalette",
+    "placeholder": "Befehl eingeben...",
+    "noResults": "Keine passenden Befehle",
+    "navigation": "Navigation",
+    "editorActions": "Editor",
+    "focusSearch": "Suche fokussieren",
+    "newNote": "Neue Notiz",
+    "openSettings": "Einstellungen",
+    "openRecycleBin": "Papierkorb",
+    "openArchive": "Archiv",
+    "lockApp": "Anwendung sperren",
+    "showShortcuts": "Tastenkombinationen",
+    "togglePreview": "Vorschau umschalten",
+    "toggleWordWrap": "Zeilenumbruch umschalten",
+    "copyContent": "Notizinhalt kopieren",
+    "copyLink": "Link zur Notiz kopieren",
+    "duplicateNote": "Notiz duplizieren",
+    "exportNote": "In Datei exportieren",
+    "printNote": "Drucken / PDF exportieren",
+    "noteInfo": "Notizinformationen",
+    "versionHistory": "Versionsverlauf",
+    "deleteNote": "Notiz löschen",
+    "lockNote": "Notiz sperren/entsperren",
+    "setColor": "Notizkategorie festlegen",
+    "archiveNote": "Notiz archivieren"
+  },
+  "contextMenu": {
+    "title": "Notizaktionen",
+    "open": "Öffnen",
+    "pin": "Notiz anheften",
+    "unpin": "Notiz loslösen",
+    "duplicate": "Duplizieren",
+    "setColour": "Kategoriefarbe festlegen",
+    "archive": "Archivieren",
+    "unarchive": "Dearchivieren",
+    "delete": "Löschen"
+  },
+  "swipeHints": {
+    "swipeLeftToDelete": "Nach links wischen zum Löschen",
+    "swipeRightToSelect": "Nach rechts wischen zum Auswählen",
+    "tapToDismiss": "Tippen Sie irgendwo, um zu schließen"
+  },
+  "welcomeNote": {
+    "content": "# Willkommen bei Jottery\n\nJottery ist Ihr privater, verschlüsselter Notizblock zum Erfassen und Organisieren von Notizen.\n\n## Schnellstart\n\n- **Notiz erstellen**: Klicken Sie auf die +-Schaltfläche oder drücken Sie `Strg+N`\n- **Suchen**: Verwenden Sie die Suchleiste oder drücken Sie `Strg+K`\n- **Schlagwörter**: Fügen Sie Schlagwörter hinzu, um Notizen zu organisieren, dann filtern Sie mit `#schlagwort`\n- **Anheften**: Heften Sie wichtige Notizen an, um sie oben zu halten\n\n## Suchsyntax\n\nJottery unterstützt leistungsstarke Suchanfragen:\n\n- `#schlagwort` — nach Schlagwort filtern\n- `\"exakte Phrase\"` — exakte Übereinstimmung\n- `has:attachment` — Notizen mit Anhängen\n- `created:>2024-01-01` — Datumsfilter\n- `words:>100` — Wortzahlfilter\n- `-ausgeschlossen` — Begriffe ausschließen\n\nKlicken Sie auf die **?**-Schaltfläche neben der Suchleiste für die vollständige Referenz.\n\n## Befehlspalette\n\nDrücken Sie `Strg+Umschalt+P`, um die Befehlspalette für schnellen Zugriff auf alle Aktionen zu öffnen.\n\n## Tastenkombinationen\n\nDrücken Sie `Strg+/`, um alle Tastenkombinationen anzuzeigen.\n\n## Datenschutz\n\nAlle Ihre Notizen werden lokal verschlüsselt. Keine Daten verlassen Ihr Gerät, es sei denn, Sie aktivieren die Synchronisation.\n\n---\n\n*Sie können diese Notiz jederzeit löschen. Viel Spaß beim Schreiben!*",
+    "tags": "willkommen,erste-schritte"
+  },
+  "emptyState": {
+    "title": "Erste Schritte",
+    "createNote": "Notiz erstellen",
+    "createNoteDescription": "Beginnen Sie mit dem Schreiben Ihrer ersten Notiz",
+    "importNotes": "Notizen importieren",
+    "importNotesDescription": "Aus einer JSON-Exportdatei importieren",
+    "exploreSearch": "Suchsyntax erkunden",
+    "exploreSearchDescription": "Leistungsstarke Suchoperatoren kennenlernen"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Letzte Suchen",
+    "clearRecent": "Entfernen",
+    "tryThese": "Probieren Sie diese",
+    "clearAll": "Alle löschen"
   }
 }

@@ -12,7 +12,7 @@ import { test, expect, Page } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,14 +23,14 @@ test.use({ viewport: { width: 375, height: 667 } });
 /**
  * Helper to open the attachments modal via the toolbar button
  */
-async function openAttachmentsModal(page: Page): Promise<void> {
+async function openAttachmentsModal(page: Page, jp: JotteryPage): Promise<void> {
   // Find and click the attachments button in toolbar (has 📎 emoji)
-  const attachmentsButton = page.locator('button').filter({ hasText: '📎' });
+  const attachmentsButton = jp.attachmentsButton;
   await expect(attachmentsButton).toBeVisible({ timeout: 10000 });
   await attachmentsButton.click();
 
   // Wait for the modal to open (modal has role="dialog")
-  const modal = page.locator('[role="dialog"]');
+  const modal = jp.dialog;
   await expect(modal).toBeVisible({ timeout: 5000 });
 
   // Wait for modal content to be fully rendered (header should be visible)
@@ -41,13 +41,13 @@ async function openAttachmentsModal(page: Page): Promise<void> {
 /**
  * Helper to close the attachments modal
  */
-async function closeAttachmentsModal(page: Page): Promise<void> {
+async function closeAttachmentsModal(page: Page, jp: JotteryPage): Promise<void> {
   // Click the close button (X) in the modal header
-  const closeButton = page.locator('[role="dialog"]').locator('button').filter({
+  const closeButton = jp.dialog.locator('button').filter({
     has: page.locator('svg')
   }).first();
   await closeButton.click();
-  await expect(page.locator('[role="dialog"]')).not.toBeVisible({ timeout: 5000 });
+  await expect(jp.dialog).not.toBeVisible({ timeout: 5000 });
 
   // Wait a moment for any state updates to propagate to the toolbar
   // (attachment count badge update happens asynchronously)
@@ -57,14 +57,14 @@ async function closeAttachmentsModal(page: Page): Promise<void> {
 /**
  * Helper to upload a file and wait for it to appear
  */
-async function uploadFileAndWait(page: Page, filePath: string, expectedName: string): Promise<void> {
+async function uploadFileAndWait(page: Page, jp: JotteryPage, filePath: string, expectedName: string): Promise<void> {
   // The file input is inside the FileUpload component in the modal
-  const fileInput = page.locator('[role="dialog"] input[type="file"]');
+  const fileInput = jp.dialog.locator('input[type="file"]');
   await expect(fileInput).toBeAttached({ timeout: 5000 });
   await fileInput.setInputFiles(filePath);
 
   // Wait for the attachment to appear in the list
-  const attachmentItem = page.locator('[role="dialog"]').locator('.attachment-item, [class*="attachment"]').filter({
+  const attachmentItem = jp.dialog.locator('.attachment-item, [class*="attachment"]').filter({
     hasText: new RegExp(expectedName, 'i')
   });
   await expect(attachmentItem).toBeVisible({ timeout: 15000 });
@@ -89,8 +89,11 @@ function cleanupTestFile(filePath: string): void {
 }
 
 test.describe('Attachments', () => {
+  let jp: JotteryPage;
+
   test.beforeEach(async ({ page }) => {
-    await setupFreshEnvironment(page);
+    jp = new JotteryPage(page);
+    await jp.setup();
 
     // On mobile, find and click the "New note" button by aria-label
     const newNoteButton = page.locator('button[aria-label="New note"]');
@@ -98,13 +101,13 @@ test.describe('Attachments', () => {
     await newNoteButton.click();
 
     // Wait for editor to be visible (mobile switches to editor view)
-    const editor = page.locator('.cm-content, [contenteditable="true"], textarea').first();
+    const editor = jp.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
     await editor.pressSequentially('Test note for attachments', { delay: 20 });
 
     // Wait for the attachment button to be visible (editor toolbar is rendered)
-    const toolbarReady = page.locator('button').filter({ hasText: '📎' });
+    const toolbarReady = jp.attachmentsButton;
     await expect(toolbarReady).toBeVisible({ timeout: 10000 });
 
     // CRITICAL: Wait for auto-save to complete before running attachment tests.
@@ -117,20 +120,20 @@ test.describe('Attachments', () => {
 
   test('should show attachment button in toolbar', async ({ page }) => {
     // The attachments button (📎) should be visible in the toolbar
-    const attachmentsButton = page.locator('button').filter({ hasText: '📎' });
+    const attachmentsButton = jp.attachmentsButton;
     await expect(attachmentsButton).toBeVisible({ timeout: 10000 });
   });
 
   test('should open attachments modal when clicking button', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     // Modal should show "Attachments" header with count
-    const modalHeader = page.locator('[role="dialog"]').locator('h2');
+    const modalHeader = jp.dialog.locator('h2');
     await expect(modalHeader).toBeVisible();
     await expect(modalHeader).toContainText(/attachments/i);
 
     // Should show "No attachments" message or file upload area
-    const modal = page.locator('[role="dialog"]');
+    const modal = jp.dialog;
     const noAttachmentsOrUpload = modal.locator('text=/no attachments/i').or(
       modal.locator('[role="button"]').filter({ hasText: /drag|drop|click/i })
     );
@@ -138,15 +141,15 @@ test.describe('Attachments', () => {
   });
 
   test('should accept file upload via input', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     const testFilePath = createTestFile('test-upload.txt', 'This is test content');
 
     try {
-      await uploadFileAndWait(page, testFilePath, 'test-upload');
+      await uploadFileAndWait(page, jp, testFilePath, 'test-upload');
 
       // Modal header should now show count of 1
-      const modalHeader = page.locator('[role="dialog"]').locator('h2');
+      const modalHeader = jp.dialog.locator('h2');
       await expect(modalHeader).toContainText('1', { timeout: 5000 });
     } finally {
       cleanupTestFile(testFilePath);
@@ -154,19 +157,19 @@ test.describe('Attachments', () => {
   });
 
   test('should display attachment count on toolbar button', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     const testFilePath = createTestFile('test-count.txt');
 
     try {
-      await uploadFileAndWait(page, testFilePath, 'test-count');
+      await uploadFileAndWait(page, jp, testFilePath, 'test-count');
 
       // Close modal
-      await closeAttachmentsModal(page);
+      await closeAttachmentsModal(page, jp);
 
       // The toolbar button should show a badge with count
       // Use longer timeout as the count updates asynchronously after modal close
-      const attachmentsButton = page.locator('button').filter({ hasText: '📎' });
+      const attachmentsButton = jp.attachmentsButton;
       await expect(attachmentsButton).toContainText('1', { timeout: 10000 });
     } finally {
       cleanupTestFile(testFilePath);
@@ -174,15 +177,15 @@ test.describe('Attachments', () => {
   });
 
   test('should show attachment list in modal', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     const testFilePath = createTestFile('test-list.txt', 'Test content for list');
 
     try {
-      await uploadFileAndWait(page, testFilePath, 'test-list');
+      await uploadFileAndWait(page, jp, testFilePath, 'test-list');
 
       // The attachment should be visible with filename
-      const attachmentItem = page.locator('[role="dialog"]').locator('.attachment-item, [class*="attachment"]').filter({
+      const attachmentItem = jp.dialog.locator('.attachment-item, [class*="attachment"]').filter({
         hasText: /test-list/i
       });
       await expect(attachmentItem).toBeVisible();
@@ -195,15 +198,15 @@ test.describe('Attachments', () => {
   });
 
   test('should allow deleting attachments', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     const testFilePath = createTestFile('test-delete.txt', 'Test content for deletion');
 
     try {
-      await uploadFileAndWait(page, testFilePath, 'test-delete');
+      await uploadFileAndWait(page, jp, testFilePath, 'test-delete');
 
       // Find the attachment item
-      const attachmentItem = page.locator('[role="dialog"]').locator('.attachment-item, [class*="attachment"]').filter({
+      const attachmentItem = jp.dialog.locator('.attachment-item, [class*="attachment"]').filter({
         hasText: /test-delete/i
       });
       await expect(attachmentItem).toBeVisible();
@@ -217,7 +220,7 @@ test.describe('Attachments', () => {
       await expect(attachmentItem).not.toBeVisible({ timeout: 5000 });
 
       // Modal header should show 0
-      const modalHeader = page.locator('[role="dialog"]').locator('h2');
+      const modalHeader = jp.dialog.locator('h2');
       await expect(modalHeader).toContainText('0', { timeout: 5000 });
     } finally {
       cleanupTestFile(testFilePath);
@@ -225,7 +228,7 @@ test.describe('Attachments', () => {
   });
 
   test('should show thumbnail for image attachments', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     // Create a simple PNG file (1x1 transparent pixel)
     const pngBuffer = Buffer.from([
@@ -241,10 +244,10 @@ test.describe('Attachments', () => {
     fs.writeFileSync(testFilePath, pngBuffer);
 
     try {
-      await uploadFileAndWait(page, testFilePath, 'test-image');
+      await uploadFileAndWait(page, jp, testFilePath, 'test-image');
 
       // Find the attachment item
-      const attachmentItem = page.locator('[role="dialog"]').locator('.attachment-item, [class*="attachment"]').filter({
+      const attachmentItem = jp.dialog.locator('.attachment-item, [class*="attachment"]').filter({
         hasText: /test-image/i
       });
 
@@ -257,20 +260,20 @@ test.describe('Attachments', () => {
   });
 
   test('should handle multiple attachments', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     const testFile1 = createTestFile('test-multi-1.txt', 'Content 1');
     const testFile2 = createTestFile('test-multi-2.txt', 'Content 2');
 
     try {
       // Upload first file
-      await uploadFileAndWait(page, testFile1, 'test-multi-1');
+      await uploadFileAndWait(page, jp, testFile1, 'test-multi-1');
 
       // Upload second file
-      await uploadFileAndWait(page, testFile2, 'test-multi-2');
+      await uploadFileAndWait(page, jp, testFile2, 'test-multi-2');
 
       // Verify both attachments are visible
-      const modal = page.locator('[role="dialog"]');
+      const modal = jp.dialog;
       const attachment1 = modal.locator('.attachment-item, [class*="attachment"]').filter({
         hasText: /test-multi-1/i
       });
@@ -291,21 +294,21 @@ test.describe('Attachments', () => {
   });
 
   test('should persist attachments after closing modal', async ({ page }) => {
-    await openAttachmentsModal(page);
+    await openAttachmentsModal(page, jp);
 
     const testFilePath = createTestFile('test-persist.txt', 'Persistent content');
 
     try {
-      await uploadFileAndWait(page, testFilePath, 'test-persist');
+      await uploadFileAndWait(page, jp, testFilePath, 'test-persist');
 
       // Close modal
-      await closeAttachmentsModal(page);
+      await closeAttachmentsModal(page, jp);
 
       // Reopen the modal
-      await openAttachmentsModal(page);
+      await openAttachmentsModal(page, jp);
 
       // Attachment should still be there
-      const attachmentItem = page.locator('[role="dialog"]').locator('.attachment-item, [class*="attachment"]').filter({
+      const attachmentItem = jp.dialog.locator('.attachment-item, [class*="attachment"]').filter({
         hasText: /test-persist/i
       });
       await expect(attachmentItem).toBeVisible({ timeout: 5000 });

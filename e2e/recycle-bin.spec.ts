@@ -3,18 +3,20 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { setupFreshEnvironment } from './test-utils';
+import { JotteryPage } from './page-objects';
 
 test.describe('Recycle Bin', () => {
+	let jp: JotteryPage;
+
 	test.beforeEach(async ({ page }) => {
-		await setupFreshEnvironment(page);
+		jp = new JotteryPage(page);
+		await jp.setup();
 	});
 
 	async function createNote(page: import('@playwright/test').Page, content: string) {
-		const newNoteButton = page.locator('button').filter({ hasText: /New|^\+$/ }).first();
-		await newNoteButton.click();
+		await jp.newNoteButton.click();
 
-		const editor = page.locator('.cm-content').first();
+		const editor = jp.editorContent;
 		await editor.click();
 		await page.keyboard.press('Control+A');
 		await editor.pressSequentially(content);
@@ -23,8 +25,7 @@ test.describe('Recycle Bin', () => {
 
 	async function deleteNoteViaBulk(page: import('@playwright/test').Page, noteContent: string) {
 		// Use bulk selection to delete - Ctrl/Cmd+click to enter multi-select mode
-		const noteList = page.getByRole('list');
-		const noteItem = noteList.locator('.note-list-item').filter({ hasText: new RegExp(noteContent, 'i') });
+		const noteItem = jp.noteListItems.filter({ hasText: new RegExp(noteContent, 'i') });
 		await noteItem.click({ modifiers: ['ControlOrMeta'] });
 
 		// Click bulk delete
@@ -32,7 +33,7 @@ test.describe('Recycle Bin', () => {
 		await bulkDeleteButton.click();
 
 		// Confirm bulk delete
-		const confirmBulkDelete = page.locator('[role="dialog"]').locator('button').filter({ hasText: /Delete/i }).first();
+		const confirmBulkDelete = jp.dialog.locator('button').filter({ hasText: /Delete/i }).first();
 		await confirmBulkDelete.click();
 		await page.waitForTimeout(1000);
 	}
@@ -55,14 +56,14 @@ test.describe('Recycle Bin', () => {
 		await deleteNoteViaBulk(page, 'Note to restore');
 
 		// Note should no longer be in the main list
-		const noteInMainList = noteList.locator('.note-list-item').filter({ hasText: /Note to restore/i });
+		const noteInMainList = jp.noteListItems.filter({ hasText: /Note to restore/i });
 		await expect(noteInMainList).toHaveCount(0);
 
 		// Open recycle bin
 		await openRecycleBin(page);
 
 		// Verify note is in recycle bin
-		const recycleBinModal = page.locator('[role="dialog"]');
+		const recycleBinModal = jp.dialog;
 		await expect(recycleBinModal).toBeVisible();
 		await expect(recycleBinModal.getByText(/Note to restore/i)).toBeVisible();
 
@@ -82,7 +83,7 @@ test.describe('Recycle Bin', () => {
 		await page.waitForTimeout(500);
 
 		// Note should immediately appear in the main notes list (without refresh)
-		await expect(noteList.locator('.note-list-item').filter({ hasText: /Note to restore/i })).toBeVisible();
+		await expect(jp.noteListItems.filter({ hasText: /Note to restore/i })).toBeVisible();
 	});
 
 	test('should restore note and make it searchable', async ({ page }) => {
@@ -94,7 +95,7 @@ test.describe('Recycle Bin', () => {
 
 		// Open recycle bin and restore
 		await openRecycleBin(page);
-		const recycleBinModal = page.locator('[role="dialog"]');
+		const recycleBinModal = jp.dialog;
 		const restoreButton = recycleBinModal.locator('button').filter({ hasText: /Restore/i }).first();
 		await restoreButton.click();
 		await page.waitForTimeout(1000);
@@ -105,13 +106,12 @@ test.describe('Recycle Bin', () => {
 		await page.waitForTimeout(500);
 
 		// Search for the restored note
-		const searchInput = page.locator('input[type="search"], input[placeholder*="Search"]').first();
+		const searchInput = jp.searchInput;
 		await searchInput.fill('UniqueSearchableContent12345');
 		await page.waitForTimeout(500);
 
 		// Note should appear in search results
-		const noteList = page.getByRole('list');
-		await expect(noteList.locator('.note-list-item').filter({ hasText: /UniqueSearchableContent12345/i })).toBeVisible();
+		await expect(jp.noteListItems.filter({ hasText: /UniqueSearchableContent12345/i })).toBeVisible();
 	});
 
 	test('should show empty recycle bin message', async ({ page }) => {
@@ -119,7 +119,7 @@ test.describe('Recycle Bin', () => {
 		await openRecycleBin(page);
 
 		// Should show empty message
-		const recycleBinModal = page.locator('[role="dialog"]');
+		const recycleBinModal = jp.dialog;
 		await expect(recycleBinModal).toBeVisible();
 		await expect(recycleBinModal.getByText(/Recycle bin is empty|empty/i)).toBeVisible();
 	});
@@ -133,7 +133,7 @@ test.describe('Recycle Bin', () => {
 
 		// Open recycle bin
 		await openRecycleBin(page);
-		const recycleBinModal = page.locator('[role="dialog"]');
+		const recycleBinModal = jp.dialog;
 
 		// Verify note is in recycle bin
 		await expect(recycleBinModal.getByText(/Note to permanently delete/i)).toBeVisible();
@@ -144,7 +144,7 @@ test.describe('Recycle Bin', () => {
 
 		// Confirm permanent deletion in the second modal
 		await page.waitForTimeout(500);
-		const confirmModal = page.locator('[role="dialog"]').last();
+		const confirmModal = jp.dialog.last();
 		const confirmButton = confirmModal.locator('button').filter({ hasText: /Delete Forever/i });
 		await confirmButton.click();
 		await page.waitForTimeout(1000);

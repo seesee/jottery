@@ -11,6 +11,7 @@
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
+  import LanguagePicker from './LanguagePicker.svelte';
   import PasswordInput from './PasswordInput.svelte';
   import type { UserSettings } from '../types';
 
@@ -482,6 +483,17 @@
     }
   }
 
+  // Theme toggle for unlock/setup screen
+  let isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+
+  function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.classList.toggle('dark', isDark);
+    try {
+      localStorage.setItem('jottery-theme', isDark ? 'dark' : 'light');
+    } catch {}
+  }
+
   function handleGetStarted() {
     showLandingPage = false;
     // Focus password input after a short delay to allow form to render
@@ -695,17 +707,38 @@
       </div>
 
       {#if needsInit}
-        <!-- Back to Landing Page Button -->
-        <button
-          type="button"
-          on:click={() => showLandingPage = true}
-          class="mb-6 flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          {$_('common.back')}
-        </button>
+        <!-- Language/theme controls and back link -->
+        <div class="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            on:click={() => showLandingPage = true}
+            class="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            {$_('common.back')}
+          </button>
+          <div class="flex items-center gap-2">
+            <LanguagePicker />
+            <button
+              type="button"
+              on:click={toggleTheme}
+              class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label={$_('settings.appearance.theme', { default: 'Toggle theme' })}
+            >
+              {#if isDark}
+                <svg class="w-[18px] h-[18px] text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              {:else}
+                <svg class="w-[18px] h-[18px] text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              {/if}
+            </button>
+          </div>
+        </div>
       {/if}
 
       {#if credentialsImported}
