@@ -42,6 +42,8 @@
   let colorPalette = $settings.colorPalette || {};
   let tagColors = $settings.tagColors || {};
   let saving = false;
+  let autoSaveReady = false;
+  let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
   let showRememberPasswordWarning = false;
@@ -706,6 +708,7 @@
   }
 
   async function handleSave() {
+    if (saving) return;
     saving = true;
     try {
       await settingsRepository.update({
@@ -754,16 +757,31 @@
         tagColors,
       }));
 
-      // Wait for Svelte to process reactive updates (e.g., locale change) before showing toast
       await tick();
-      toast.success($_('settings.settingsSaved'));
-      onClose();
     } catch (error) {
       console.error('Failed to save settings:', error);
       toast.error($_('settings.settingsSaveFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     } finally {
       saving = false;
     }
+  }
+
+  // Auto-save: debounced save that fires when settings change
+  function scheduleAutoSave() {
+    if (!autoSaveReady) return;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      handleSave();
+    }, 500);
+  }
+
+  // Watch all auto-saveable settings and trigger debounced save
+  $: if (autoSaveReady) {
+    void theme, layoutMode, fontSize, autoLockTimeout, sortOrder, language, timezone;
+    void rememberPassword, enabledSyntaxLanguages, defaultSyntaxLanguage, openLinksInNewTab;
+    void vimMode, quickCommandsEnabled, quickCommandsList, persistSession, persistSessionTimeout;
+    void colorPalette, tagColors, tempShortcuts;
+    scheduleAutoSave();
   }
 
   function handleDeleteDatabase() {
@@ -1108,6 +1126,10 @@
       }
     } else if (syncEndpoint) {
     }
+
+    // Enable auto-save after initial reactive updates have settled
+    await tick();
+    autoSaveReady = true;
   });
 
 </script>
@@ -1247,21 +1269,16 @@
       </TabContainer>
 
       <!-- Footer -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center gap-3 flex-shrink-0">
+      <div class="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center flex-shrink-0">
+        <span class="text-xs text-gray-400 dark:text-gray-500">
+          {saving ? $_('settings.saving') : $_('settings.autoSaved')}
+        </span>
         <button
           on:click={onClose}
-          class="px-4 py-2.5 min-h-11 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          data-testid="btn-settings-cancel"
+          class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 text-white font-medium rounded-md transition-colors"
+          data-testid="btn-settings-close"
         >
-          {$_('common.cancel')}
-        </button>
-        <button
-          on:click={handleSave}
-          disabled={saving}
-          class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-md transition-colors"
-          data-testid="btn-settings-save"
-        >
-          {saving ? $_('settings.saving') : $_('settings.saveSettings')}
+          {$_('common.close')}
         </button>
       </div>
     </div>

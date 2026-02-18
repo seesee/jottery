@@ -205,6 +205,10 @@
       "lockedBanner": "This note is locked. Unlock to edit.",
       "mustUnlockToDelete": "Unlock the note before deleting"
     },
+    "confirmDelete": {
+      "title": "Delete Note",
+      "message": "This will move the note to the recycle bin. You can restore it later if needed."
+    },
     "readOnly": {
       "archivedBanner": "This note is archived. Unarchive to edit.",
       "lockedBanner": "This note is locked. Unlock to edit."
@@ -388,6 +392,7 @@
     },
     "saveSettings": "Save Settings",
     "saving": "Saving...",
+    "autoSaved": "Changes saved automatically",
     "settingsSaved": "Settings saved",
     "settingsSaveFailed": "Failed to save settings: {error}",
     "deleteDatabaseFailed": "Failed to delete database: {error}",
