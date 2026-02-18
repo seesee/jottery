@@ -205,9 +205,12 @@ describe('Translation Quality', () => {
     // Words that are identical in multiple languages
     'Syntax:', // Same in German
     'Version:', // Same in German
+    'Text', // Same in German/French
+    'Navigation', // Same in German/French/Spanish
     'Description', // Same in French
     'note', // Same in French
     'notes', // Same in French
+    '{total} notes', // Same in French ("notes" is French)
     'Error', // Same in Spanish
     'Tags:', // Same in Portuguese/Dutch
     '1 item', // Same in Portuguese/Dutch (borrowed from English)
