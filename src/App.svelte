@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode } from './lib/stores/appStore';
+  import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode } from './lib/stores/appStore';
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
@@ -21,6 +21,7 @@
   import Toast from './lib/components/Toast.svelte';
   import BulkOperationsToolbar from './lib/components/BulkOperationsToolbar.svelte';
   import BackupReminderBanner from './lib/components/BackupReminderBanner.svelte';
+  import CommandPalette from './lib/components/CommandPalette.svelte';
 
   let initialized = false;
   let loadingNotes = false;
@@ -29,6 +30,7 @@
   let showRecycleBin = false;
   let showInboxPanel = false;
   let showShortcutsHelp = false;
+  let showCommandPalette = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
 
@@ -124,6 +126,30 @@
 
   function handleOpenShortcutsHelp() {
     showShortcutsHelp = true;
+  }
+
+  function handleOpenCommandPalette() {
+    showCommandPalette = true;
+  }
+
+  function handleCommandPaletteAction(actionId: string) {
+    showCommandPalette = false;
+    switch (actionId) {
+      case 'focusSearch': handleFocusSearch(); break;
+      case 'newNote': handleNewNote(); break;
+      case 'openSettings': handleOpenSettings(); break;
+      case 'openRecycleBin': handleOpenRecycleBin(); break;
+      case 'openArchive': toggleArchiveMode(); break;
+      case 'lockApp':
+        // Dispatch lock via the same mechanism KeyboardShortcuts uses
+        window.dispatchEvent(new CustomEvent('command-palette-action', { detail: actionId }));
+        break;
+      case 'showShortcuts': handleOpenShortcutsHelp(); break;
+      default:
+        // Dispatch as custom event for EditorPane to handle
+        window.dispatchEvent(new CustomEvent('command-palette-action', { detail: actionId }));
+        break;
+    }
   }
 
   function handleFocusSearch() {
@@ -581,6 +607,14 @@
       onFocusSearch={handleFocusSearch}
       onOpenShortcutsHelp={handleOpenShortcutsHelp}
       onOpenRecycleBin={handleOpenRecycleBin}
+      onOpenCommandPalette={handleOpenCommandPalette}
+    />
+
+    <!-- Command Palette -->
+    <CommandPalette
+      show={showCommandPalette}
+      onClose={() => showCommandPalette = false}
+      onAction={handleCommandPaletteAction}
     />
 
     <!-- Bulk Operations Toolbar -->
