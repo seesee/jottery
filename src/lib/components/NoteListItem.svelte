@@ -449,7 +449,7 @@
                 on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleTagClick(e, tag))}
                 role="button"
                 tabindex="0"
-                class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
+                class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer hover:underline {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
                 style:background-color={tagBgColor}
                 title={$_('noteList.filterByTag', { values: { tag } })}
               >
@@ -572,7 +572,7 @@
               on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleTagClick(e, tag))}
               role="button"
               tabindex="0"
-              class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
+              class="note-tag px-2 py-1 rounded text-xs whitespace-nowrap transition-colors cursor-pointer hover:underline {tagBgColor ? 'text-gray-900 dark:text-gray-100' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 hover:bg-blue-200 dark:hover:bg-blue-700 active:bg-blue-300 dark:active:bg-blue-600'}"
               style:background-color={tagBgColor}
               title={$_('noteList.filterByTag', { values: { tag } })}
             >

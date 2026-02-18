@@ -212,7 +212,9 @@
   },
   "noteList": {
     "deleteNote": "Delete note",
-    "filterByTag": "Filter by #{tag}"
+    "filterByTag": "Filter by #{tag}",
+    "noteCount": "{filtered} of {total}",
+    "noteCountAll": "{total} notes"
   },
   "tagInput": {
     "removeTag": "Remove tag"

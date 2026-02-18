@@ -530,6 +530,15 @@
 
 {#if isMobile && $settings.syncEnabled}
   <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+    {#if $filteredNotes.length > 0 || $searchQuery.trim()}
+      <div class="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+        {#if $searchQuery.trim() || $filteredNotes.length !== $notes.filter(n => n.archived === $archiveMode).length}
+          {$_('noteList.noteCount', { values: { filtered: $filteredNotes.length, total: $notes.filter(n => n.archived === $archiveMode).length } })}
+        {:else}
+          {$_('noteList.noteCountAll', { values: { total: $filteredNotes.length } })}
+        {/if}
+      </div>
+    {/if}
     <div class="flex-1 min-h-0">
       <PullToRefresh onRefresh={handleRefresh} enabled={$settings.syncEnabled}>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -601,6 +610,15 @@
   </div>
 {:else}
   <div class="h-full flex flex-col bg-white dark:bg-gray-900">
+    {#if $filteredNotes.length > 0 || $searchQuery.trim()}
+      <div class="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+        {#if $searchQuery.trim() || $filteredNotes.length !== $notes.filter(n => n.archived === $archiveMode).length}
+          {$_('noteList.noteCount', { values: { filtered: $filteredNotes.length, total: $notes.filter(n => n.archived === $archiveMode).length } })}
+        {:else}
+          {$_('noteList.noteCountAll', { values: { total: $filteredNotes.length } })}
+        {/if}
+      </div>
+    {/if}
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       bind:this={scrollContainer}
