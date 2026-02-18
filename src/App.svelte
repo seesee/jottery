@@ -328,7 +328,7 @@
   $: if ($settings && initialized) {
     const urlParams = new URLSearchParams(window.location.search);
     const themeParam = urlParams.get('theme');
-    let themeToApply: string = $settings.theme;
+    let themeToApply: 'light' | 'dark' | 'auto' = $settings.theme;
     if (themeParam === 'light' || themeParam === 'dark') {
       themeToApply = themeParam;
     } else {

@@ -4,7 +4,7 @@
  */
 
 import type { DecryptedNote } from '../types';
-import { normaliseForComparison, localeIncludes, localeSort } from '../utils/stringUtils';
+import { normaliseForComparison, localeSort } from '../utils/stringUtils';
 
 /**
  * Get all unique tags from notes
