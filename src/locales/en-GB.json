@@ -220,6 +220,11 @@
     "noteCount": "{filtered} of {total}",
     "noteCountAll": "{total} notes"
   },
+  "swipeHints": {
+    "swipeLeftToDelete": "Swipe left to delete",
+    "swipeRightToSelect": "Swipe right to select",
+    "tapToDismiss": "Tap anywhere to dismiss"
+  },
   "contextMenu": {
     "title": "Note actions",
     "open": "Open",

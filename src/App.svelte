@@ -22,6 +22,8 @@
   import BulkOperationsToolbar from './lib/components/BulkOperationsToolbar.svelte';
   import BackupReminderBanner from './lib/components/BackupReminderBanner.svelte';
   import CommandPalette from './lib/components/CommandPalette.svelte';
+  import ResizableSplitter from './lib/components/ResizableSplitter.svelte';
+  import SwipeHintOverlay from './lib/components/SwipeHintOverlay.svelte';
 
   let initialized = false;
   let loadingNotes = false;
@@ -41,6 +43,33 @@
     ($settings.layoutMode === 'auto' && window.matchMedia('(max-width: 767px)').matches);
 
   let creatingNote = false;
+
+  // Sidebar width constants
+  const SIDEBAR_MIN_WIDTH = 200;
+  const SIDEBAR_MAX_WIDTH = 500;
+  const SIDEBAR_DEFAULT_WIDTH = 320;
+
+  // Reactive sidebar width derived from settings
+  $: sidebarWidth = $settings.sidebarWidth ?? SIDEBAR_DEFAULT_WIDTH;
+
+  /**
+   * Update sidebar width in local state during drag (no persistence yet)
+   */
+  function handleSidebarWidthChange(newWidth: number) {
+    settings.update(s => ({ ...s, sidebarWidth: newWidth }));
+  }
+
+  /**
+   * Persist sidebar width to IndexedDB on drag end
+   */
+  async function handleSidebarWidthCommit(newWidth: number) {
+    try {
+      const updated = await settingsRepository.update({ sidebarWidth: newWidth });
+      settings.set({ ...DEFAULT_SETTINGS, ...updated });
+    } catch (error) {
+      console.warn('Failed to persist sidebar width:', error);
+    }
+  }
 
   /**
    * Check if a note is "blank" (empty content and no tags)
@@ -557,14 +586,29 @@
                 </div>
               </div>
             {/if}
+
+            <!-- Swipe gesture hints (shown once on first mobile load) -->
+            <SwipeHintOverlay show={mobileView === 'list' && !loadingNotes} />
           </div>
         {:else}
-          <!-- Desktop: Side-by-side layout -->
+          <!-- Desktop: Side-by-side layout with resizable sidebar -->
           <div class="flex w-full h-full min-h-0">
             <!-- Note List Sidebar -->
-            <div class="w-80 h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div
+              class="h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0"
+              style="width: {sidebarWidth}px"
+            >
               <NoteList onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} />
             </div>
+
+            <!-- Resizable splitter between sidebar and editor -->
+            <ResizableSplitter
+              width={sidebarWidth}
+              minWidth={SIDEBAR_MIN_WIDTH}
+              maxWidth={SIDEBAR_MAX_WIDTH}
+              onWidthChange={handleSidebarWidthChange}
+              onWidthCommit={handleSidebarWidthCommit}
+            />
 
             <!-- Editor -->
             <div class="flex-1 h-full min-h-0 overflow-hidden">

@@ -158,6 +158,8 @@ export interface UserSettings {
   autoBackupAfterChanges?: number; // Number of changes before auto-backup (default: 10)
   lastBackupAt?: string; // ISO timestamp of last backup
   noteUpdatesSinceBackup?: number; // Counter for note changes since last backup
+  sidebarWidth?: number; // Desktop sidebar width in pixels (default: 320, min: 200, max: 500)
+  swipeHintsShown?: boolean; // Whether mobile swipe gesture hints have been shown
 }
 
 /**
@@ -465,4 +467,5 @@ export const DEFAULT_SETTINGS: UserSettings = {
   autoBackupAfterChanges: 10,
   lastBackupAt: undefined,
   noteUpdatesSinceBackup: 0,
+  sidebarWidth: 320, // Default sidebar width matching Tailwind w-80
 };
