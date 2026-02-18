@@ -216,6 +216,17 @@
     "noteCount": "{filtered} of {total}",
     "noteCountAll": "{total} notes"
   },
+  "contextMenu": {
+    "title": "Note actions",
+    "open": "Open",
+    "pin": "Pin note",
+    "unpin": "Unpin note",
+    "duplicate": "Duplicate",
+    "setColour": "Set category colour",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "delete": "Delete"
+  },
   "tagInput": {
     "removeTag": "Remove tag"
   },

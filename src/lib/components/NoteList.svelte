@@ -13,6 +13,7 @@
   import { searchService } from '../services/searchService';
   import { isMobileTouchDevice } from '../utils/device';
   import { setTitleTag } from '../utils/noteTitle';
+  import ColorPickerModal from './ColorPickerModal.svelte';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
   import {
     VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT,
@@ -486,6 +487,51 @@
     }
   }
 
+  // Context menu action handling
+  let showColorPicker = false;
+  let colorPickerNoteId: string | undefined = undefined;
+
+  async function handleContextAction(action: string, note: DecryptedNote) {
+    try {
+      switch (action) {
+        case 'togglePin':
+          await noteService.togglePin(note.id);
+          await reloadNotes();
+          break;
+        case 'duplicate':
+          await noteService.duplicateNote(note.id);
+          await reloadNotes();
+          break;
+        case 'setColor':
+          colorPickerNoteId = note.id;
+          showColorPicker = true;
+          break;
+        case 'archive':
+          if (note.archived) {
+            await noteService.unarchiveNote(note.id);
+          } else {
+            await noteService.archiveNote(note.id);
+          }
+          await reloadNotes();
+          break;
+      }
+    } catch (error) {
+      console.error('Context action failed:', error);
+    }
+  }
+
+  async function handleColorSelected(colorName: string | undefined) {
+    if (!colorPickerNoteId) return;
+    try {
+      await noteService.updateNote(colorPickerNoteId, { color: colorName });
+      await reloadNotes();
+    } catch (error) {
+      console.error('Failed to set note colour:', error);
+    }
+    showColorPicker = false;
+    colorPickerNoteId = undefined;
+  }
+
   function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): boolean {
     const ctrlOrCmd = event.ctrlKey || event.metaKey;
     return (
@@ -587,7 +633,7 @@
             <!-- Render only visible items -->
             {#each visibleNotes as note, i (note.id)}
               <div bind:this={itemElements[i]}>
-                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+                <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} onContextAction={handleContextAction} />
               </div>
             {/each}
           </div>
@@ -665,7 +711,7 @@
           <!-- Render only visible items -->
           {#each visibleNotes as note, i (note.id)}
             <div bind:this={itemElements[i]}>
-              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} />
+              <NoteListItem {note} index={startIndex + i} filteredNotes={$filteredNotes} {onNoteSelect} onDeleteRequest={requestDelete} onUpdateTitle={handleUpdateTitle} hasConflict={conflictNoteIds.has(note.id)} onConflictClick={handleConflictClick} {forceMobileLayout} onContextAction={handleContextAction} />
             </div>
           {/each}
         </div>
@@ -704,4 +750,12 @@
   noteId={conflictNoteId}
   onClose={() => { showConflictModal = false; conflictNoteId = undefined; }}
   onResolved={handleConflictResolved}
+/>
+
+<!-- Color Picker Modal (from context menu) -->
+<ColorPickerModal
+  show={showColorPicker}
+  currentColor={undefined}
+  onColorSelect={handleColorSelected}
+  onClose={() => { showColorPicker = false; colorPickerNoteId = undefined; }}
 />

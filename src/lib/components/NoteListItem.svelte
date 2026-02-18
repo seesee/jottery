@@ -21,6 +21,7 @@
     shouldShowCheckbox,
     shouldShowDeleteButton,
   } from '../utils/noteListItemVisibility';
+  import NoteContextMenu from './NoteContextMenu.svelte';
   import {
     createSwipeState,
     handleSwipeStart,
@@ -42,6 +43,12 @@
   export let onConflictClick: ((note: DecryptedNote) => void) | undefined = undefined;
   export let forceMobileLayout: boolean = false;
   export let onUpdateTitle: ((noteId: string, title: string) => void) | undefined = undefined;
+  export let onContextAction: ((action: string, note: DecryptedNote) => void) | undefined = undefined;
+
+  // Context menu state (desktop only)
+  let showContextMenu = false;
+  let contextMenuX = 0;
+  let contextMenuY = 0;
 
   $: isSelected = $selectedNoteId === note.id;
   $: isMultiSelected = $selectedNoteIds.has(note.id);
@@ -326,6 +333,28 @@
     // Prevent click from propagating to parent (which would select the note)
     e.stopPropagation();
   }
+
+  function handleContextMenu(e: MouseEvent) {
+    // Only show on desktop (non-mobile layout)
+    if (forceMobileLayout) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    contextMenuX = e.clientX;
+    contextMenuY = e.clientY;
+    showContextMenu = true;
+  }
+
+  function handleContextAction(action: string, contextNote: DecryptedNote) {
+    if (action === 'open') {
+      selectNote(contextNote.id);
+      if (onNoteSelect) onNoteSelect();
+    } else if (action === 'delete' && onDeleteRequest) {
+      onDeleteRequest(contextNote);
+    } else if (onContextAction) {
+      onContextAction(action, contextNote);
+    }
+  }
 </script>
 
 <!-- Swipe container wrapper (mobile only) -->
@@ -468,6 +497,7 @@
   <!-- Desktop: No swipe container -->
   <button
     on:click={handleClick}
+    on:contextmenu={handleContextMenu}
     on:mouseenter={() => isHovered = true}
     on:mouseleave={() => isHovered = false}
     class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
@@ -586,6 +616,16 @@
       {/if}
     </div>
   </button>
+
+  <!-- Context menu (desktop only) -->
+  <NoteContextMenu
+    show={showContextMenu}
+    x={contextMenuX}
+    y={contextMenuY}
+    {note}
+    onClose={() => showContextMenu = false}
+    onAction={handleContextAction}
+  />
 {/if}
 
 <style>
