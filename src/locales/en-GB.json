@@ -225,6 +225,10 @@
     "swipeRightToSelect": "Swipe right to select",
     "tapToDismiss": "Tap anywhere to dismiss"
   },
+  "welcomeNote": {
+    "content": "# Welcome to Jottery\n\nJottery is your private, encrypted scratch pad for capturing and organising notes.\n\n## Quick Start\n\n- **Create a note**: Click the + button or press `Ctrl+N`\n- **Search**: Use the search bar or press `Ctrl+K`\n- **Tags**: Add tags to organise notes, then filter with `#tagname`\n- **Pin**: Pin important notes to keep them at the top\n\n## Search Syntax\n\nJottery supports powerful search queries:\n\n- `#tagname` — filter by tag\n- `\"exact phrase\"` — exact match\n- `has:attachment` — notes with attachments\n- `created:>2024-01-01` — date filters\n- `words:>100` — word count filters\n- `-excluded` — exclude terms\n\nClick the **?** button beside the search bar for the full reference.\n\n## Command Palette\n\nPress `Ctrl+Shift+P` to open the command palette for quick access to all actions.\n\n## Keyboard Shortcuts\n\nPress `Ctrl+/` to see all keyboard shortcuts.\n\n## Privacy\n\nAll your notes are encrypted locally. No data leaves your device unless you enable sync.\n\n---\n\n*You can delete this note at any time. Happy writing!*",
+    "tags": "welcome,getting-started"
+  },
   "contextMenu": {
     "title": "Note actions",
     "open": "Open",
@@ -1297,7 +1301,8 @@
     "enterTags": "Enter tags (comma-separated)",
     "progress": "{current} of {total}",
     "selectAll": "Select all",
-    "deselectAll": "Deselect all"
+    "deselectAll": "Deselect all",
+    "moreActions": "More actions"
   },
   "outliner": {
     "name": "Outliner",
@@ -1323,6 +1328,21 @@
     "virtual": {
       "title": "title"
     }
+  },
+  "emptyState": {
+    "title": "Get started",
+    "createNote": "Create a note",
+    "createNoteDescription": "Start writing your first note",
+    "importNotes": "Import notes",
+    "importNotesDescription": "Import from a JSON export file",
+    "exploreSearch": "Explore search syntax",
+    "exploreSearchDescription": "Learn powerful search operators"
+  },
+  "searchSuggestions": {
+    "recentSearches": "Recent Searches",
+    "clearRecent": "Remove",
+    "tryThese": "Try These",
+    "clearAll": "Clear all"
   },
   "commandPalette": {
     "title": "Command Palette",
