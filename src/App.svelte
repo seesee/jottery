@@ -2,9 +2,9 @@
   import { onMount, onDestroy } from 'svelte';
   import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode } from './lib/stores/appStore';
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
-  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
+  import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
-  import { locale, _ } from 'svelte-i18n';
+  import { locale, _, waitLocale } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
   import { DEFAULT_SETTINGS } from './lib/types';
   import { getCurrentNotebook } from './lib/utils/notebookPath';
@@ -284,17 +284,9 @@
       initI18n(initialLocale);
       locale.set(initialLocale);
 
-      // If language was auto-detected (empty string), try to save the detected locale
-      // (wrapped in try-catch to handle QuotaExceededError gracefully)
-      if (!userSettings.language || userSettings.language === '') {
-        try {
-          const updated = await settingsRepository.update({ language: initialLocale });
-          settings.set({ ...DEFAULT_SETTINGS, ...updated });
-        } catch (error) {
-          // Ignore write failures (e.g., QuotaExceededError) - user can still use the app
-          console.warn('Failed to save language setting:', error);
-        }
-      }
+      // Don't save auto-detected language to IndexedDB during onMount.
+      // This allows the user to change language on the landing page before setup,
+      // and the choice will be persisted by refreshSettings() after unlock.
 
       // Check for theme override from URL parameter (?theme=light or ?theme=dark)
       const urlParams = new URLSearchParams(window.location.search);
@@ -331,11 +323,22 @@
     }
   });
 
-  // Watch for theme changes (but respect URL parameter override)
+  // Watch for theme changes (but respect URL parameter and localStorage overrides)
   $: if ($settings && initialized) {
     const urlParams = new URLSearchParams(window.location.search);
     const themeParam = urlParams.get('theme');
-    const themeToApply = (themeParam === 'light' || themeParam === 'dark') ? themeParam : $settings.theme;
+    let themeToApply: string = $settings.theme;
+    if (themeParam === 'light' || themeParam === 'dark') {
+      themeToApply = themeParam;
+    } else {
+      // Check for theme set on unlock screen (stored in localStorage before settings are available)
+      try {
+        const landingTheme = localStorage.getItem('jottery-theme');
+        if (landingTheme === 'light' || landingTheme === 'dark') {
+          themeToApply = landingTheme;
+        }
+      } catch {}
+    }
     applyTheme(themeToApply);
   }
 
@@ -391,11 +394,38 @@
 
   /**
    * Refresh settings from IndexedDB
-   * Called after unlock to pick up any changes made during credential import
+   * Called after unlock to pick up any changes made during credential import.
+   * Also picks up language changes made on the landing page before unlock.
    */
   async function refreshSettings() {
     try {
       const userSettings = await settingsRepository.get();
+
+      // Check if user selected a language on the landing page (stored in localStorage
+      // by LanguagePicker but not yet persisted to IndexedDB settings)
+      try {
+        const landingLocale = localStorage.getItem('jottery-locale');
+        if (landingLocale && AVAILABLE_LOCALES.some(l => l.code === landingLocale)) {
+          userSettings.language = landingLocale;
+          await settingsRepository.update({ language: landingLocale });
+          localStorage.removeItem('jottery-locale');
+        }
+      } catch {
+        // Ignore localStorage errors (privacy mode, file:// URLs, etc.)
+      }
+
+      // Check if user toggled theme on the unlock screen (stored in localStorage)
+      try {
+        const landingTheme = localStorage.getItem('jottery-theme');
+        if (landingTheme === 'light' || landingTheme === 'dark') {
+          userSettings.theme = landingTheme as 'light' | 'dark';
+          await settingsRepository.update({ theme: landingTheme });
+          localStorage.removeItem('jottery-theme');
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+
       settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
     } catch (error) {
       console.error('Failed to refresh settings:', error);
@@ -403,6 +433,7 @@
   }
 
   async function loadNotes() {
+    if (loadingNotes) return; // Prevent concurrent calls (multiple reactives can trigger this)
     try {
       loadingNotes = true;
 
@@ -473,6 +504,9 @@
 
   async function createWelcomeNote() {
     try {
+      // Ensure locale is fully loaded before creating the welcome note
+      // (locale files are lazy-loaded via dynamic import)
+      await waitLocale();
       const content = $_('welcomeNote.content');
       const tagString = $_('welcomeNote.tags');
       const tags = tagString.split(',').map(t => t.trim()).filter(t => t.length > 0);
@@ -526,10 +560,8 @@
     filteredNotes.set(results);
   }
 
-  // Reload notes when lock status changes
-  $: if (!$isLocked) {
-    loadNotes();
-  } else if ($isLocked) {
+  // Clear notes when locked (loading is handled by the unlock reactive at line 349)
+  $: if ($isLocked) {
     notes.set([]);
     filteredNotes.set([]);
   }
