@@ -35,6 +35,7 @@
   let showCommandPalette = false;
   let mobileView: 'list' | 'editor' = 'list'; // Mobile navigation state
   let wasUnlocked = false; // Track if we were previously unlocked (to detect lock transitions)
+  let lastSettingsLanguage: string | null = null; // Track language changes to avoid overriding LanguagePicker
 
   // Determine which layout to use based on layoutMode setting
   // For auto mode: only use mobile layout for narrow screens (phones)
@@ -342,10 +343,16 @@
     applyTheme(themeToApply);
   }
 
-  // Watch for language changes (only after initialization to avoid race condition)
+  // Watch for language changes in settings (e.g., from Settings Modal or refreshSettings)
+  // Only set locale when the language field ACTUALLY changes — not on every $settings mutation.
+  // This prevents overriding the LanguagePicker's explicit locale.set() when unrelated
+  // settings (theme, sidebar width, etc.) change.
   $: if ($settings && initialized) {
-    const newLocale = getInitialLocale($settings.language);
-    locale.set(newLocale);
+    if ($settings.language !== lastSettingsLanguage) {
+      lastSettingsLanguage = $settings.language;
+      const newLocale = getInitialLocale($settings.language);
+      locale.set(newLocale);
+    }
   }
 
   // Watch lock status and load notes when unlocked
