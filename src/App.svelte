@@ -157,6 +157,10 @@
     showShortcutsHelp = true;
   }
 
+  function handleOpenSearchHelp() {
+    window.dispatchEvent(new CustomEvent('open-search-help'));
+  }
+
   function handleOpenCommandPalette() {
     showCommandPalette = true;
   }
@@ -455,10 +459,41 @@
       // Clear loading state
       loadingNotes = false;
       loadingProgress = { current: 0, total: 0 };
+
+      // Create welcome note for new vaults (skip in test environments)
+      if (allNotes.length === 0 && !$settings.welcomeNoteCreated && !window.location.pathname.startsWith('/test')) {
+        await createWelcomeNote();
+      }
     } catch (error) {
       console.error('Failed to load notes:', error);
       loadingNotes = false;
       loadingProgress = { current: 0, total: 0 };
+    }
+  }
+
+  async function createWelcomeNote() {
+    try {
+      const content = $_('welcomeNote.content');
+      const tagString = $_('welcomeNote.tags');
+      const tags = tagString.split(',').map(t => t.trim()).filter(t => t.length > 0);
+
+      const newNote = await noteService.createNote(content, tags, {
+        syntaxLanguage: 'markdown',
+        pinned: true,
+      });
+
+      const decryptedNote = await noteService.getNote(newNote.id);
+      if (decryptedNote) {
+        addNoteToStoreAndSearch(decryptedNote);
+        searchService.indexNotes([decryptedNote]);
+        await performSearch();
+      }
+
+      // Mark as created so it's not recreated
+      settings.update(s => ({ ...s, welcomeNoteCreated: true }));
+      await settingsRepository.update({ welcomeNoteCreated: true });
+    } catch (error) {
+      console.error('Failed to create welcome note:', error);
     }
   }
 
@@ -570,7 +605,7 @@
           <!-- This preserves NoteList state (scroll position, height cache) across navigation -->
           <div class="w-full h-full relative">
             <div class="absolute inset-0" class:hidden={mobileView !== 'list'}>
-              <NoteList onNoteSelect={handleNoteSelect} onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
+              <NoteList onNoteSelect={handleNoteSelect} onOpenInbox={handleOpenInbox} onNewNote={handleNewNote} onOpenSettings={handleOpenSettings} onOpenSearchHelp={handleOpenSearchHelp} {loadingNotes} {loadingProgress} forceMobileLayout={true} />
             </div>
             <div class="absolute inset-0" class:hidden={mobileView !== 'editor'}>
               <EditorPane bind:this={editorPaneRef} onBackToList={handleBackToList} forceMobileLayout={true} />
@@ -598,7 +633,7 @@
               class="h-full min-h-0 border-r border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0"
               style="width: {sidebarWidth}px"
             >
-              <NoteList onOpenInbox={handleOpenInbox} {loadingNotes} {loadingProgress} />
+              <NoteList onOpenInbox={handleOpenInbox} onNewNote={handleNewNote} onOpenSettings={handleOpenSettings} onOpenSearchHelp={handleOpenSearchHelp} {loadingNotes} {loadingProgress} />
             </div>
 
             <!-- Resizable splitter between sidebar and editor -->
