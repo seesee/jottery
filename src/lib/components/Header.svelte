@@ -6,6 +6,7 @@
   import ConfirmModal from './ConfirmModal.svelte';
   import MobileMenuDrawer from './MobileMenuDrawer.svelte';
   import SavedSearchesPanel from './SavedSearchesPanel.svelte';
+  import SearchHelpPopover from './SearchHelpPopover.svelte';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
   import { getFontSizeCSS } from '../utils/fontSize';
   import { localeIncludes } from '../utils/stringUtils';
@@ -22,6 +23,7 @@
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showSavedSearches = false;
+  let showSearchHelp = false;
 
   // Tag autocomplete state
   let tagSuggestions: string[] = [];
@@ -216,6 +218,19 @@
     searchQuery.set(query);
     closeSavedSearches();
   }
+
+  function toggleSearchHelp() {
+    showSearchHelp = !showSearchHelp;
+  }
+
+  function closeSearchHelp() {
+    showSearchHelp = false;
+  }
+
+  function handleInsertSearchExample(query: string) {
+    searchQuery.set(query);
+    showSearchHelp = false;
+  }
 </script>
 
 <header class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 relative">
@@ -399,6 +414,23 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
+        <div class="relative">
+          <button
+            on:click={toggleSearchHelp}
+            class="px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-md transition-colors flex items-center"
+            title={$_('searchHelp.title')}
+            aria-label={$_('searchHelp.title')}
+          >
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+          <SearchHelpPopover
+            show={showSearchHelp}
+            onClose={closeSearchHelp}
+            onInsertExample={handleInsertSearchExample}
+          />
+        </div>
         {#if $searchResultCount.isSearching}
           <span
             class="text-xs text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap"
@@ -433,7 +465,7 @@
             aria-haspopup="listbox"
             aria-controls={showTagSuggestions ? 'tag-suggestions-mobile' : undefined}
             aria-activedescendant={showTagSuggestions && selectedSuggestionIndex >= 0 ? `tag-suggestion-mobile-${selectedSuggestionIndex}` : undefined}
-            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-24' : 'pr-12'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
+            class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-28' : 'pr-16'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
           {#if loadingNotes}
@@ -462,6 +494,23 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
               </button>
+              <div class="relative">
+                <button
+                  on:click={toggleSearchHelp}
+                  class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1"
+                  title={$_('searchHelp.title')}
+                  aria-label={$_('searchHelp.title')}
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+                <SearchHelpPopover
+                  show={showSearchHelp}
+                  onClose={closeSearchHelp}
+                  onInsertExample={handleInsertSearchExample}
+                />
+              </div>
               {#if $searchQuery}
                 <button
                   on:click={() => searchQuery.set('')}
