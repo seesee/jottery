@@ -227,10 +227,11 @@ private fun DeletedNoteRow(note: DecryptedNote) {
         }
 
         // Deleted date
-        if (note.deletedAt != null) {
+        val deletedAt = note.deletedAt
+        if (deletedAt != null) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Deleted ${formatDeletedDate(note.deletedAt)}",
+                text = "Deleted ${formatDeletedDate(deletedAt)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             )
