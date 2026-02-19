@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "ja-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- プロジェクト計画\n  - フェーズ1：基盤構築\n    - プロジェクト構造の設定\n    - ビルドツールの構成\n    - 初期テストの作成\n  - フェーズ2：主要機能\n    - ユーザー認証\n      - ログイン・ログアウト\n      - パスワードリセット\n    - データ同期\n      - リアルタイム更新\n      - 競合解決\n  - フェーズ3：仕上げ\n    - UI/UXの改善\n    - パフォーマンス最適化\n    - ドキュメント作成",
+      "tags": [
+        "プロジェクト",
+        "計画",
+        "ロードマップ"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }

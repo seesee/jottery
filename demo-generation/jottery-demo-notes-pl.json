@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "pl-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- Plan projektu\n  - Faza 1: Fundamenty\n    - Konfiguracja struktury projektu\n    - Konfiguracja narzędzi budowania\n    - Pisanie początkowych testów\n  - Faza 2: Główne funkcje\n    - Uwierzytelnianie użytkownika\n      - Logowanie/wylogowanie\n      - Reset hasła\n    - Synchronizacja danych\n      - Aktualizacje w czasie rzeczywistym\n      - Rozwiązywanie konfliktów\n  - Faza 3: Szlify\n    - Ulepszenia UI/UX\n    - Optymalizacja wydajności\n    - Dokumentacja",
+      "tags": [
+        "projekt",
+        "planowanie",
+        "roadmap"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }

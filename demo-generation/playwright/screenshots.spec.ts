@@ -452,14 +452,10 @@ async function setAppLanguage(page: any, lang: string) {
   await languageDropdown.selectOption(locale);
   await page.waitForTimeout(500);
 
-  // Save settings using stable data-testid
-  const saveButton = page.locator('[data-testid="btn-settings-save"]');
-  await saveButton.waitFor({ state: 'visible' });
-  await saveButton.click();
-
-  // Wait for toast to disappear and close modal
-  await page.waitForTimeout(2000);
-  await page.keyboard.press('Escape');
+  // Settings auto-save, so just close the modal
+  const closeButton = page.locator('[data-testid="btn-settings-close"]');
+  await closeButton.waitFor({ state: 'visible' });
+  await closeButton.click();
   await page.waitForTimeout(500);
 }
 
@@ -495,16 +491,21 @@ async function importDemoNotes(page: any, demoFile: string = getDemoNotesFile(LA
   await doneButton.click();
   await page.waitForTimeout(500);
 
-  // Close settings modal
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(500);
+  // Close settings modal using the close button
+  const settingsCloseBtn = page.locator('[data-testid="btn-settings-close"]');
+  if (await settingsCloseBtn.isVisible().catch(() => false)) {
+    await settingsCloseBtn.click();
+    await page.waitForTimeout(500);
+  } else {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
 
   // Verify modal is closed
   const modalCheck = page.locator('[role="dialog"]').first();
   const isModalOpen = await modalCheck.isVisible().catch(() => false);
 
   if (isModalOpen) {
-    // Try one more escape
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
   }
@@ -1320,16 +1321,21 @@ async function importDemoNotesMobile(page: any, demoFile: string = getDemoNotesF
   await doneButton.click();
   await page.waitForTimeout(500);
 
-  // Close settings modal
-  await page.keyboard.press('Escape');
-  await page.waitForTimeout(500);
+  // Close settings modal using the close button
+  const settingsCloseBtn = page.locator('[data-testid="btn-settings-close"]');
+  if (await settingsCloseBtn.isVisible().catch(() => false)) {
+    await settingsCloseBtn.click();
+    await page.waitForTimeout(500);
+  } else {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
 
   // Verify modal is closed
   const modalCheck = page.locator('[role="dialog"]').first();
   const isModalOpen = await modalCheck.isVisible().catch(() => false);
 
   if (isModalOpen) {
-    // Try one more escape
     await page.keyboard.press('Escape');
     await page.waitForTimeout(500);
   }
@@ -1372,14 +1378,10 @@ async function setAppLanguageMobile(page: any, lang: string) {
   await languageDropdown.selectOption(locale);
   await page.waitForTimeout(500);
 
-  // Save settings using stable data-testid
-  const saveButton = page.locator('[data-testid="btn-settings-save"]');
-  await saveButton.waitFor({ state: 'visible' });
-  await saveButton.click();
-
-  // Wait for toast to disappear and close modal
-  await page.waitForTimeout(2000);
-  await page.keyboard.press('Escape');
+  // Settings auto-save, so just close the modal
+  const closeButton = page.locator('[data-testid="btn-settings-close"]');
+  await closeButton.waitFor({ state: 'visible' });
+  await closeButton.click();
   await page.waitForTimeout(500);
 }
 
@@ -1744,107 +1746,51 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Always set the app's UI language explicitly (browser may default to different locale)
+    // Set the app's UI language before importing notes
     await setAppLanguage(page, LANG);
+
+    // Import demo notes (includes outliner note)
+    await importDemoNotes(page);
+
+    // Set tag colors
+    await setTagColors(page, getTagColors(LANG));
+    await page.waitForTimeout(1000);
   });
 
   test('09-light. Outliner Mode', async ({ page }) => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Create a new note
-    const newButton = page.locator('[data-testid="btn-new-note"]');
-    await newButton.click();
-    await page.waitForTimeout(1000);
+    // Find and click the outliner note using its exact title from the content
+    const outlinerTitle = getOutlinerContent(LANG)[0]; // e.g. "Project Roadmap", "Projektplan", "プロジェクト計画"
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
 
-    // Find the language dropdown and select outliner
-    const languageDropdown = page.locator('select').first();
-    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
-    await languageDropdown.selectOption('outliner');
+    // Match notes whose title (h3) contains the exact outliner title
+    const outlinerNote = noteListItems.filter({
+      has: page.locator('h3').filter({ hasText: outlinerTitle })
+    });
+
+    if (await outlinerNote.count() > 0) {
+      await outlinerNote.first().click();
+    } else {
+      // Fallback: look for note with "- " prefix in title (outliner format)
+      const dashNote = noteListItems.filter({
+        has: page.locator('h3').filter({ hasText: /^- / })
+      });
+      if (await dashNote.count() > 0) {
+        await dashNote.first().click();
+      } else {
+        // Last resort: click the last note
+        const count = await noteListItems.count();
+        await noteListItems.nth(count - 1).click();
+      }
+    }
     await page.waitForTimeout(1500);
 
-    // Outliner mode uses contenteditable divs, not CodeMirror
-    // Find the first outliner node content area and click it
-    const outlinerContent = page.locator('[contenteditable="true"].content, .outliner-node .content[contenteditable]').first();
-    await outlinerContent.waitFor({ state: 'visible', timeout: 10000 });
-    await outlinerContent.click();
+    // Wait for outliner editor to render
+    const outlinerEditor = page.locator('.outliner-node, [contenteditable="true"].content');
+    await outlinerEditor.first().waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForTimeout(500);
-
-    // Get language-specific outliner content
-    const outline = getOutlinerContent(LANG);
-
-    // Type the first item and create hierarchy using Tab for indentation and Enter for new items
-    await page.keyboard.type(outline[0]); // Project Roadmap
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[1]); // Phase 1: Foundation
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab'); // Indent to create child
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[2]); // Set up project structure
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[3]); // Configure build tools
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[4]); // Write initial tests
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Shift+Tab'); // Unindent
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[5]); // Phase 2: Core Features
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[6]); // User authentication
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[7]); // Login/logout
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[8]); // Password reset
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[9]); // Data synchronisation
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[10]); // Real-time updates
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[11]); // Conflict resolution
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Shift+Tab');
-    await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[12]); // Phase 3: Polish
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[13]); // UI/UX improvements
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[14]); // Performance optimisation
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[15]); // Documentation
-    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: `${SCREENSHOT_DIR}/09-outliner-light.png`,
@@ -1890,8 +1836,15 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     // Wait for app to load
     await page.waitForTimeout(2000);
 
-    // Always set the app's UI language explicitly (browser may default to different locale)
+    // Set the app's UI language before importing notes
     await setAppLanguage(page, LANG);
+
+    // Import demo notes (includes outliner note)
+    await importDemoNotes(page);
+
+    // Set tag colors
+    await setTagColors(page, getTagColors(LANG));
+    await page.waitForTimeout(1000);
 
     // Apply dark theme
     await page.evaluate(() => {
@@ -1904,99 +1857,36 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Create a new note
-    const newButton = page.locator('[data-testid="btn-new-note"]');
-    await newButton.click();
-    await page.waitForTimeout(1000);
+    // Find and click the outliner note using its exact title from the content
+    const outlinerTitle = getOutlinerContent(LANG)[0];
+    const noteListItems = page.locator('.note-list-item, [role="listitem"]');
 
-    // Find the language dropdown and select outliner
-    const languageDropdown = page.locator('select').first();
-    await languageDropdown.waitFor({ state: 'visible', timeout: 5000 });
-    await languageDropdown.selectOption('outliner');
+    // Match notes whose title (h3) contains the exact outliner title
+    const outlinerNote = noteListItems.filter({
+      has: page.locator('h3').filter({ hasText: outlinerTitle })
+    });
+
+    if (await outlinerNote.count() > 0) {
+      await outlinerNote.first().click();
+    } else {
+      // Fallback: look for note with "- " prefix in title (outliner format)
+      const dashNote = noteListItems.filter({
+        has: page.locator('h3').filter({ hasText: /^- / })
+      });
+      if (await dashNote.count() > 0) {
+        await dashNote.first().click();
+      } else {
+        // Last resort: click the last note
+        const count = await noteListItems.count();
+        await noteListItems.nth(count - 1).click();
+      }
+    }
     await page.waitForTimeout(1500);
 
-    // Outliner mode uses contenteditable divs, not CodeMirror
-    // Find the first outliner node content area and click it
-    const outlinerContent = page.locator('[contenteditable="true"].content, .outliner-node .content[contenteditable]').first();
-    await outlinerContent.waitFor({ state: 'visible', timeout: 10000 });
-    await outlinerContent.click();
+    // Wait for outliner editor to render
+    const outlinerEditor = page.locator('.outliner-node, [contenteditable="true"].content');
+    await outlinerEditor.first().waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForTimeout(500);
-
-    // Get language-specific outliner content
-    const outline = getOutlinerContent(LANG);
-
-    // Type the first item and create hierarchy using Tab for indentation and Enter for new items
-    await page.keyboard.type(outline[0]); // Project Roadmap
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[1]); // Phase 1: Foundation
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab'); // Indent to create child
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[2]); // Set up project structure
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[3]); // Configure build tools
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[4]); // Write initial tests
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Shift+Tab'); // Unindent
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[5]); // Phase 2: Core Features
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[6]); // User authentication
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[7]); // Login/logout
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[8]); // Password reset
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[9]); // Data synchronisation
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[10]); // Real-time updates
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[11]); // Conflict resolution
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Shift+Tab');
-    await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[12]); // Phase 3: Polish
-    await page.keyboard.press('Enter');
-    await page.keyboard.press('Tab');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[13]); // UI/UX improvements
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[14]); // Performance optimisation
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
-
-    await page.keyboard.type(outline[15]); // Documentation
-    await page.waitForTimeout(1000);
 
     await page.screenshot({
       path: `${SCREENSHOT_DIR}/09-outliner-dark.png`,
@@ -2075,13 +1965,11 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     await languageDropdown.selectOption('el');
     await page.waitForTimeout(1000);
 
-    // Save settings to apply the language change
-    const saveButton = page.locator('[data-testid="btn-settings-save"]');
-    await saveButton.waitFor({ state: 'visible' });
-    await saveButton.click();
-
-    // Wait for toast to disappear (toast displays for ~3 seconds)
-    await page.waitForTimeout(4000);
+    // Settings auto-save, so just close the modal
+    const closeBtn = page.locator('[data-testid="btn-settings-close"]');
+    await closeBtn.waitFor({ state: 'visible' });
+    await closeBtn.click();
+    await page.waitForTimeout(1000);
   });
 
   test('10-light. Greek UI - Multi-lingual', async ({ page }) => {
@@ -2173,13 +2061,11 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     await languageDropdown.selectOption('el');
     await page.waitForTimeout(1000);
 
-    // Save settings to apply the language change
-    const saveButton = page.locator('[data-testid="btn-settings-save"]');
-    await saveButton.waitFor({ state: 'visible' });
-    await saveButton.click();
-
-    // Wait for toast to disappear (toast displays for ~3 seconds)
-    await page.waitForTimeout(4000);
+    // Settings auto-save, so just close the modal
+    const closeBtn = page.locator('[data-testid="btn-settings-close"]');
+    await closeBtn.waitFor({ state: 'visible' });
+    await closeBtn.click();
+    await page.waitForTimeout(1000);
 
     // Apply dark theme
     await page.evaluate(() => {

@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "de-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- Projektplan\n  - Phase 1: Grundlagen\n    - Projektstruktur einrichten\n    - Build-Tools konfigurieren\n    - Erste Tests schreiben\n  - Phase 2: Kernfunktionen\n    - Benutzerauthentifizierung\n      - Anmeldung/Abmeldung\n      - Passwort zurücksetzen\n    - Datensynchronisation\n      - Echtzeit-Updates\n      - Konfliktlösung\n  - Phase 3: Feinschliff\n    - UI/UX-Verbesserungen\n    - Leistungsoptimierung\n    - Dokumentation",
+      "tags": [
+        "projekt",
+        "planung",
+        "roadmap"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }

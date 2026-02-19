@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "tr-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- Proje yol haritası\n  - Aşama 1: Temel\n    - Proje yapısını kurma\n    - Build araçlarını yapılandırma\n    - İlk testleri yazma\n  - Aşama 2: Temel özellikler\n    - Kullanıcı kimlik doğrulaması\n      - Giriş/çıkış\n      - Şifre sıfırlama\n    - Veri senkronizasyonu\n      - Gerçek zamanlı güncellemeler\n      - Çakışma çözümü\n  - Aşama 3: Cilalama\n    - UI/UX iyileştirmeleri\n    - Performans optimizasyonu\n    - Dokümantasyon",
+      "tags": [
+        "proje",
+        "planlama",
+        "yol-haritası"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }

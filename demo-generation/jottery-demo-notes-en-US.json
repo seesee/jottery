@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "en-us-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- Project Roadmap\n  - Phase 1: Foundation\n    - Set up project structure\n    - Configure build tools\n    - Write initial tests\n  - Phase 2: Core Features\n    - User authentication\n      - Login/logout\n      - Password reset\n    - Data synchronization\n      - Real-time updates\n      - Conflict resolution\n  - Phase 3: Polish\n    - UI/UX improvements\n    - Performance optimization\n    - Documentation",
+      "tags": [
+        "project",
+        "roadmap",
+        "planning"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }

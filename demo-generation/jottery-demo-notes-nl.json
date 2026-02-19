@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "nl-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- Project routekaart\n  - Fase 1: Fundament\n    - Projectstructuur opzetten\n    - Build-tools configureren\n    - Eerste tests schrijven\n  - Fase 2: Kernfuncties\n    - Gebruikersauthenticatie\n      - Inloggen/uitloggen\n      - Wachtwoord resetten\n    - Gegevenssynchronisatie\n      - Realtime updates\n      - Conflictoplossing\n  - Fase 3: Afwerking\n    - UI/UX-verbeteringen\n    - Prestatieoptimalisatie\n    - Documentatie",
+      "tags": [
+        "project",
+        "planning",
+        "routekaart"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }

@@ -124,6 +124,21 @@
       ],
       "attachments": [],
       "pinned": false
+    },
+    {
+      "id": "it-j8a9b0c1-d2e3-4f4a-5b6c-7d8e9f0a1b2c",
+      "createdAt": "2026-01-28T10:00:00Z",
+      "modifiedAt": "2026-01-28T10:00:00Z",
+      "syntaxLanguage": "outliner",
+      "content": "- Roadmap del progetto\n  - Fase 1: Fondamenta\n    - Configurare la struttura del progetto\n    - Configurare gli strumenti di build\n    - Scrivere i test iniziali\n  - Fase 2: Funzionalità principali\n    - Autenticazione utente\n      - Login/logout\n      - Ripristino password\n    - Sincronizzazione dati\n      - Aggiornamenti in tempo reale\n      - Risoluzione conflitti\n  - Fase 3: Rifinitura\n    - Miglioramenti UI/UX\n    - Ottimizzazione prestazioni\n    - Documentazione",
+      "tags": [
+        "progetto",
+        "pianificazione",
+        "roadmap"
+      ],
+      "attachments": [],
+      "pinned": false,
+      "color": "purple"
     }
   ]
 }
