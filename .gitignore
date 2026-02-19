@@ -31,6 +31,9 @@ demo-generation/tui-demo/
 xcuserdata/
 *.xcuserdatad/
 
+# Server runtime database
+jottery.db
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
