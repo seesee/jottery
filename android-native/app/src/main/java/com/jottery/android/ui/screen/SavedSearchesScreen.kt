@@ -12,7 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,6 +24,7 @@ fun SavedSearchesScreen(
     onApplySearch: (String) -> Unit,
 ) {
     val savedSearches by appState.savedSearches.collectAsState()
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -67,7 +70,7 @@ fun SavedSearchesScreen(
                         headlineContent = { Text(search.name) },
                         supportingContent = { Text(search.query) },
                         trailingContent = {
-                            IconButton(onClick = { appState.deleteSavedSearch(search.id) }) {
+                            IconButton(onClick = { scope.launch { appState.deleteSavedSearch(search.id) } }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete")
                             }
                         },

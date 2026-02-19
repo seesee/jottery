@@ -81,6 +81,9 @@ class SavedSearchRepository(
     /** Insert or replace raw record (for sync). */
     suspend fun insertOrReplace(record: SavedSearch) = dao.insertOrReplace(record)
 
+    /** List all raw records (for backup). */
+    suspend fun listAllRaw(): List<SavedSearch> = dao.listAll()
+
     /** List records needing sync. */
     suspend fun listNeedingSync(): List<SavedSearch> = dao.listNeedingSync()
 

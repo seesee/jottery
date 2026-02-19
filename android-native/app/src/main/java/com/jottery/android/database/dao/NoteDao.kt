@@ -74,6 +74,9 @@ interface NoteDao {
     @Query("SELECT id, attachments FROM notes")
     suspend fun listIdsAndAttachments(): List<NoteIdAttachments>
 
+    @Query("SELECT * FROM notes")
+    suspend fun listAll(): List<NoteRecord>
+
     @Query("DELETE FROM notes WHERE deleted = 1 AND deleted_at < :cutoff")
     suspend fun purgeOldDeleted(cutoff: String): Int
 }

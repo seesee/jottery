@@ -10,12 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +61,7 @@ fun SettingsScreen(
             SettingsSectionHeader("General")
             SettingsRow(
                 title = "Theme",
-                subtitle = when (settings.theme) {
+                subtitle = when (settings.themeMode) {
                     ThemeMode.LIGHT -> "Light"
                     ThemeMode.DARK -> "Dark"
                     ThemeMode.AUTO -> "System"
@@ -113,7 +113,7 @@ fun SettingsScreen(
                 SettingsRow(
                     title = "Force full sync",
                     onClick = {
-                        kotlinx.coroutines.MainScope().launch { appState.forceFullSync() }
+                        scope.launch { appState.forceFullSync() }
                     },
                 )
             }
@@ -150,11 +150,11 @@ fun SettingsScreen(
         SingleChoiceDialog(
             title = "Theme",
             options = listOf("System" to ThemeMode.AUTO, "Light" to ThemeMode.LIGHT, "Dark" to ThemeMode.DARK),
-            selected = settings.theme,
+            selected = settings.themeMode,
             onSelect = { mode ->
                 showThemeDialog = false
-                kotlinx.coroutines.MainScope().launch {
-                    appState.updateSettings(settings.copy(theme = mode))
+                scope.launch {
+                    appState.updateSettings(settings.copy(theme = mode.value))
                 }
             },
             onDismiss = { showThemeDialog = false },
@@ -174,8 +174,8 @@ fun SettingsScreen(
             selected = settings.sort,
             onSelect = { order ->
                 showSortDialog = false
-                kotlinx.coroutines.MainScope().launch {
-                    appState.updateSettings(settings.copy(sort = order))
+                scope.launch {
+                    appState.updateSettings(settings.copy(sortOrder = order.value))
                 }
             },
             onDismiss = { showSortDialog = false },
@@ -197,7 +197,7 @@ fun SettingsScreen(
             selected = settings.autoLockTimeout,
             onSelect = { timeout ->
                 showAutoLockDialog = false
-                kotlinx.coroutines.MainScope().launch {
+                scope.launch {
                     appState.updateSettings(settings.copy(autoLockTimeout = timeout))
                 }
             },

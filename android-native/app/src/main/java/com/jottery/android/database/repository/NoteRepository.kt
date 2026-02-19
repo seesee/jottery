@@ -92,6 +92,11 @@ class NoteRepository(
         return noteDao.listNeedingSync()
     }
 
+    /** Fetch all raw records (for backup). */
+    suspend fun listAllRaw(): List<NoteRecord> {
+        return noteDao.listAll()
+    }
+
     /**
      * Return note IDs and their referenced attachment blob IDs for all non-deleted notes.
      * Uses raw DB access — no decryption required.

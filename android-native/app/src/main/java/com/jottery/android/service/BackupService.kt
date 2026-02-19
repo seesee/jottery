@@ -246,7 +246,7 @@ class BackupService(
                 noteId = backupVer.noteId,
                 version = backupVer.version,
                 createdAt = backupVer.createdAt,
-                syncedAt = backupVer.syncedAt,
+                syncedAt = backupVer.syncedAt ?: "",
                 content = backupVer.content,
                 tags = backupVer.tags,
                 attachments = backupVer.attachments,
@@ -254,7 +254,7 @@ class BackupService(
                 wordWrap = backupVer.wordWrap,
                 showPreview = backupVer.showPreview,
                 color = backupVer.color,
-                reason = backupVer.reason,
+                reason = backupVer.reason ?: "backup-restore",
                 contentHash = backupVer.contentHash,
                 parentHash = backupVer.parentHash,
             )
@@ -283,6 +283,7 @@ class BackupService(
                     name = backupSearch.name,
                     query = backupSearch.query,
                     createdAt = backupSearch.createdAt,
+                    modifiedAt = backupSearch.createdAt,
                     needsSync = false,
                 )
                 repo.insertOrReplace(record)

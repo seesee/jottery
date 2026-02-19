@@ -158,7 +158,7 @@ fun RecycleBinScreen(
                         SwipeToDismissBox(
                             state = dismissState,
                             backgroundContent = {
-                                DeletedNoteSwipeBackground(dismissState.dismissDirection)
+                                DeletedNoteSwipeBackground(dismissState.targetValue)
                             },
                         ) {
                             DeletedNoteRow(note = note)

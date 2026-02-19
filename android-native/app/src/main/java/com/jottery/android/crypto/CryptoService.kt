@@ -40,7 +40,8 @@ object CryptoService {
     const val MAX_HASH_CHAIN_LENGTH = 50
 
     private val secureRandom = SecureRandom()
-    private val json = Json { ignoreUnknownKeys = true }
+    @PublishedApi
+    internal val json = Json { ignoreUnknownKeys = true }
 
     // MARK: - Key Derivation
 
