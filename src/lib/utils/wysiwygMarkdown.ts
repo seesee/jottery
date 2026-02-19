@@ -74,6 +74,23 @@ export function createTurndownService(): TurndownService {
     }
   });
 
+  // Custom rule for list items to prevent extra blank lines between items
+  turndownService.addRule('listItem', {
+    filter: 'li',
+    replacement: (content, node) => {
+      // Let taskListItem rule handle task list items
+      if ((node as HTMLElement).hasAttribute('data-checked')) {
+        return '';
+      }
+      const prefix = node.parentNode?.nodeName === 'OL'
+        ? `${Array.from(node.parentNode!.children).indexOf(node as Element) + 1}. `
+        : '- ';
+      // Trim leading/trailing whitespace and ensure nested content is indented
+      const cleaned = content.replace(/^\s+/, '').replace(/\n+$/, '').replace(/\n/g, '\n  ');
+      return prefix + cleaned + '\n';
+    }
+  });
+
   // Custom rule for code blocks with language
   turndownService.addRule('codeBlock', {
     filter: (node) => {

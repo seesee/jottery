@@ -217,7 +217,7 @@
       <!-- Standard markdown preview -->
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <div bind:this={previewContainer} class="h-full overflow-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" on:click={handlePreviewClick}>
-        <div class="prose dark:prose-invert max-w-none">
+        <div class="prose dark:prose-invert max-w-none" data-preview-container>
           {@html previewHtml}
         </div>
       </div>

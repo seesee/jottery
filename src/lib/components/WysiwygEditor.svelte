@@ -34,8 +34,7 @@
   import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
   import { common, createLowlight } from 'lowlight';
   import { Marked } from 'marked';
-  import TurndownService from 'turndown';
-  import { gfm } from 'turndown-plugin-gfm';
+  import { createTurndownService } from '../utils/wysiwygMarkdown';
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
   import { attachmentService } from '../services';
@@ -54,76 +53,8 @@
   // Create lowlight instance for syntax highlighting
   const lowlight = createLowlight(common);
 
-  // Create turndown service for HTML to Markdown conversion
-  const turndownService = new TurndownService({
-    headingStyle: 'atx',
-    codeBlockStyle: 'fenced',
-    bulletListMarker: '-',
-    emDelimiter: '*',
-    strongDelimiter: '**',
-  });
-
-  // Use GFM plugin for tables, strikethrough, etc.
-  turndownService.use(gfm);
-
-  // Custom rule to preserve note links (link:uuid format)
-  turndownService.addRule('noteLink', {
-    filter: (node) => {
-      return node.nodeName === 'A' &&
-             ((node as HTMLAnchorElement).getAttribute('href')?.startsWith('link:') ?? false);
-    },
-    replacement: (content, node) => {
-      const href = (node as HTMLAnchorElement).getAttribute('href') || '';
-      // Restore empty link if placeholder was used (trim to handle any whitespace)
-      const trimmedContent = content?.trim() || '';
-      const text = (trimmedContent === EMPTY_LINK_PLACEHOLDER) ? '' : trimmedContent;
-      return `[${text}](${href})`;
-    }
-  });
-
-  // Custom rule to preserve attachment images (attachment:uuid format)
-  turndownService.addRule('attachmentImage', {
-    filter: (node) => {
-      return node.nodeName === 'IMG' &&
-             ((node as HTMLImageElement).getAttribute('data-attachment-url')?.startsWith('attachment:') ?? false);
-    },
-    replacement: (_content, node) => {
-      const attachmentUrl = (node as HTMLImageElement).getAttribute('data-attachment-url') || '';
-      const alt = (node as HTMLImageElement).getAttribute('alt') || '';
-      const title = (node as HTMLImageElement).getAttribute('title');
-      if (title) {
-        return `![${alt}](${attachmentUrl} "${title}")`;
-      }
-      return `![${alt}](${attachmentUrl})`;
-    }
-  });
-
-  // Custom rule for task lists
-  turndownService.addRule('taskListItem', {
-    filter: (node) => {
-      return node.nodeName === 'LI' &&
-             node.parentNode?.nodeName === 'UL' &&
-             (node as HTMLElement).hasAttribute('data-checked');
-    },
-    replacement: (content, node) => {
-      const checked = (node as HTMLElement).getAttribute('data-checked') === 'true';
-      const checkbox = checked ? '[x]' : '[ ]';
-      return `${checkbox} ${content.trim()}\n`;
-    }
-  });
-
-  // Custom rule for code blocks with language
-  turndownService.addRule('codeBlock', {
-    filter: (node) => {
-      return node.nodeName === 'PRE' && node.firstChild?.nodeName === 'CODE';
-    },
-    replacement: (_content, node) => {
-      const codeNode = node.firstChild as HTMLElement;
-      const language = codeNode?.className?.match(/language-(\w+)/)?.[1] || '';
-      const code = codeNode?.textContent || '';
-      return `\n\`\`\`${language}\n${code}\n\`\`\`\n`;
-    }
-  });
+  // Create turndown service using shared config (includes list item, task list, code block, etc.)
+  const turndownService = createTurndownService();
 
   // Custom rule for tables to ensure markdown format (override any issues with gfm plugin)
   turndownService.addRule('table', {

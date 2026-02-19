@@ -499,7 +499,9 @@
       loadingProgress = { current: 0, total: 0 };
 
       // Create welcome note for new vaults (skip in test environments)
-      if (allNotes.length === 0 && !$settings.welcomeNoteCreated && !window.location.pathname.startsWith('/test')) {
+      // Check both in-memory array AND repository count to avoid injecting welcome note
+      // when notes exist but decryption partially failed or loading was incomplete
+      if (allNotes.length === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !window.location.pathname.startsWith('/test')) {
         await createWelcomeNote();
       }
     } catch (error) {

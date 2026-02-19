@@ -44,6 +44,9 @@
   let saving = false;
   let autoSaveReady = false;
   let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Snapshot of settings values at mount time (or after save) for dirty-checking
+  let settingsSnapshot: string = '';
   let fileInput: HTMLInputElement;
   let showDeleteConfirm = false;
   let showRememberPasswordWarning = false;
@@ -766,22 +769,38 @@
     }
   }
 
+  // Capture a JSON snapshot of all auto-saveable settings for dirty-checking
+  function captureSettingsSnapshot(): string {
+    return JSON.stringify([
+      theme, layoutMode, fontSize, autoLockTimeout, sortOrder, language, timezone,
+      rememberPassword, enabledSyntaxLanguages, defaultSyntaxLanguage, openLinksInNewTab,
+      vimMode, quickCommandsEnabled, quickCommandsList, persistSession, persistSessionTimeout,
+      colorPalette, tagColors, tempShortcuts,
+    ]);
+  }
+
   // Auto-save: debounced save that fires when settings change
   function scheduleAutoSave() {
     if (!autoSaveReady) return;
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => {
-      handleSave();
+    autoSaveTimer = setTimeout(async () => {
+      await handleSave();
+      settingsSnapshot = captureSettingsSnapshot();
     }, 500);
   }
 
-  // Watch all auto-saveable settings and trigger debounced save
+  // Watch all auto-saveable settings and trigger debounced save only when dirty
   $: if (autoSaveReady) {
-    void theme, layoutMode, fontSize, autoLockTimeout, sortOrder, language, timezone;
-    void rememberPassword, enabledSyntaxLanguages, defaultSyntaxLanguage, openLinksInNewTab;
-    void vimMode, quickCommandsEnabled, quickCommandsList, persistSession, persistSessionTimeout;
-    void colorPalette, tagColors, tempShortcuts;
-    scheduleAutoSave();
+    // Reference all tracked variables so Svelte registers dependencies
+    const currentSnapshot = JSON.stringify([
+      theme, layoutMode, fontSize, autoLockTimeout, sortOrder, language, timezone,
+      rememberPassword, enabledSyntaxLanguages, defaultSyntaxLanguage, openLinksInNewTab,
+      vimMode, quickCommandsEnabled, quickCommandsList, persistSession, persistSessionTimeout,
+      colorPalette, tagColors, tempShortcuts,
+    ]);
+    if (currentSnapshot !== settingsSnapshot) {
+      scheduleAutoSave();
+    }
   }
 
   function handleDeleteDatabase() {
@@ -1129,6 +1148,7 @@
 
     // Enable auto-save after initial reactive updates have settled
     await tick();
+    settingsSnapshot = captureSettingsSnapshot();
     autoSaveReady = true;
   });
 

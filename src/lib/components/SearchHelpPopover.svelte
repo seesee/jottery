@@ -38,9 +38,15 @@
 </script>
 
 {#if show}
+  <!-- Backdrop for mobile to prevent interaction with elements below -->
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 bg-black/20 z-50 sm:hidden"
+    on:click={onClose}
+  ></div>
   <div
     bind:this={popoverEl}
-    class="absolute right-0 top-full mt-2 z-50 w-80 sm:w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-[70vh] overflow-y-auto"
+    class="fixed inset-x-4 top-16 z-50 mx-auto max-w-96 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:mx-0 sm:w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-[70vh] overflow-y-auto"
     role="dialog"
     aria-label={$_('searchHelp.title')}
   >
