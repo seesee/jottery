@@ -168,6 +168,47 @@ Some paragraph text.
     });
   });
 
+  describe('list roundtrip', () => {
+    test('unordered list has no extra blank lines between items', () => {
+      const markdown = '- item 1\n- item 2\n- item 3';
+      const html = markdownToHtml(markdown);
+      const result = htmlToMarkdown(html);
+
+      expect(result).toBe('- item 1\n- item 2\n- item 3');
+    });
+
+    test('ordered list has no extra blank lines between items', () => {
+      const markdown = '1. first\n2. second\n3. third';
+      const html = markdownToHtml(markdown);
+      const result = htmlToMarkdown(html);
+
+      expect(result).toBe('1. first\n2. second\n3. third');
+    });
+
+    test('nested unordered list preserves structure', () => {
+      const markdown = '- parent\n  - child\n- sibling';
+      const html = markdownToHtml(markdown);
+      const result = htmlToMarkdown(html);
+
+      expect(result).toContain('- parent');
+      expect(result).toContain('- child');
+      expect(result).toContain('- sibling');
+      // Should not have double blank lines
+      expect(result).not.toContain('\n\n\n');
+    });
+
+    test('list items do not accumulate whitespace through roundtrips', () => {
+      const markdown = '- alpha\n- beta\n- gamma';
+      // Roundtrip twice
+      const html1 = markdownToHtml(markdown);
+      const md1 = htmlToMarkdown(html1);
+      const html2 = markdownToHtml(md1);
+      const md2 = htmlToMarkdown(html2);
+
+      expect(md2).toBe('- alpha\n- beta\n- gamma');
+    });
+  });
+
   describe('edge cases', () => {
     test('handles empty markdown', () => {
       expect(markdownToHtml('')).toBe('');

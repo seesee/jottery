@@ -1080,14 +1080,10 @@
   });
 
   // Process attachment URLs in preview mode
-  afterUpdate(async () => {
-    if (!showPreview) return;
+  async function resolvePreviewAttachments() {
+    const previewContainer = document.querySelector('[data-preview-container]');
+    if (!previewContainer) return false;
 
-    // Find the preview container
-    const previewContainer = document.querySelector('.prose');
-    if (!previewContainer) return;
-
-    // Resolve all attachment references using the extracted utility
     await resolveAttachmentPreviews({
       container: previewContainer,
       attachments,
@@ -1095,6 +1091,17 @@
       onPreviewAttachment: handlePreviewAttachment,
       getErrorMessage: () => $_('editor.errors.loadingAttachment'),
     });
+    return true;
+  }
+
+  afterUpdate(async () => {
+    if (!showPreview) return;
+
+    // Try to resolve immediately; if container isn't ready, retry on next frame
+    const resolved = await resolvePreviewAttachments();
+    if (!resolved) {
+      requestAnimationFrame(() => resolvePreviewAttachments());
+    }
   });
 </script>
 
