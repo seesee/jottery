@@ -173,6 +173,10 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     // MARK: - Initialisation
 
+    init {
+        initialise()
+    }
+
     /**
      * Create the database, repositories, and check if a vault exists.
      * Safe to call multiple times -- subsequent calls are no-ops.
