@@ -438,6 +438,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val note = repo.create(content = content, tags = tags, key = key)
         _notes.value = listOf(note) + _notes.value
         _selectedNoteId.value = note.id
+        scheduleSearch()
         return note
     }
 
@@ -456,6 +457,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val updated = note.copy(modifiedAt = Instant.now())
             currentNotes[index] = updated
             _notes.value = currentNotes
+            scheduleSearch()
         }
     }
 
@@ -469,6 +471,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val duplicate = repo.create(content = original.content, tags = original.tags, key = key)
         _notes.value = listOf(duplicate) + _notes.value
         _selectedNoteId.value = duplicate.id
+        scheduleSearch()
     }
 
     /**
@@ -481,6 +484,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
         }
+        scheduleSearch()
     }
 
     /**
@@ -504,6 +508,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val note = currentNotes[index]
             currentNotes[index] = note.copy(pinned = !note.pinned)
             _notes.value = currentNotes
+            scheduleSearch()
         }
     }
 
@@ -517,6 +522,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
         }
+        scheduleSearch()
         loadArchivedNotes()
     }
 
