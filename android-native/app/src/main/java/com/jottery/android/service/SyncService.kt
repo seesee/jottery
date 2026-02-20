@@ -202,116 +202,138 @@ class SyncService(
         onSyncStatusChanged?.invoke("Pulling\u2026")
         try {
             val syncMeta = syncRepo.getSyncMetadata()
-            val knownIds = noteRepo.listIdsAndAttachmentBlobIds()
-            val noteIds = knownIds.map { it.first }
-            val blobIds = knownIds.flatMap { it.second }
+            val knownPairs = noteRepo.listIdsAndAttachmentBlobIds()
+            val knownNoteIds = knownPairs.map { it.first }.toMutableList()
+            val knownBlobIds = knownPairs.flatMap { it.second }.toMutableList()
 
-            val request = SyncPullRequest(
-                lastSyncAt = syncMeta?.lastSyncAt,
-                knownNoteIds = noteIds,
-                knownAttachmentIds = blobIds,
-            )
+            var offset = 0
+            var hasMore = true
+            var totalNewCount = 0
 
-            val response = syncClient.pull(request)
-            var newCount = 0
+            while (hasMore) {
+                val request = SyncPullRequest(
+                    lastSyncAt = syncMeta?.lastSyncAt,
+                    knownNoteIds = knownNoteIds,
+                    knownAttachmentIds = knownBlobIds,
+                    limit = 100,
+                    offset = offset,
+                )
 
-            // Process notes
-            for (syncNote in response.notes) {
-                val existing = noteRepo.getRaw(syncNote.id)
-                if (existing == null) {
-                    newCount++
-                }
+                val response = syncClient.pull(request)
 
-                // Convert sync tags back to single encrypted blob
-                val tagsBlob = if (syncNote.tags.size == 1 && syncNote.tags[0].contains("ciphertext")) {
-                    syncNote.tags[0]
-                } else {
-                    // Re-encrypt tags as a single blob
-                    val plainTags = syncNote.tags.mapNotNull { tagStr ->
-                        try {
-                            val enc = CryptoService.parseEncryptedJSON(tagStr)
-                            val plain = CryptoService.decryptText(enc, key)
-                            json.decodeFromString<String>(plain)
-                        } catch (_: Exception) { null }
+                Log.d(TAG, "Pull page: offset=$offset, notes=${response.notes.size}, " +
+                    "attachments=${response.attachments.size}, hasMore=${response.hasMore}")
+
+                // Process notes
+                for (syncNote in response.notes) {
+                    val existing = noteRepo.getRaw(syncNote.id)
+                    if (existing == null) {
+                        totalNewCount++
                     }
-                    val encTags = CryptoService.encryptStringArray(plainTags, key)
-                    CryptoService.serializeEncryptedJSON(encTags)
+
+                    // Convert sync tags back to single encrypted blob
+                    val tagsBlob = if (syncNote.tags.size == 1 && syncNote.tags[0].contains("ciphertext")) {
+                        syncNote.tags[0]
+                    } else {
+                        // Re-encrypt tags as a single blob
+                        val plainTags = syncNote.tags.mapNotNull { tagStr ->
+                            try {
+                                val enc = CryptoService.parseEncryptedJSON(tagStr)
+                                val plain = CryptoService.decryptText(enc, key)
+                                json.decodeFromString<String>(plain)
+                            } catch (_: Exception) { null }
+                        }
+                        val encTags = CryptoService.encryptStringArray(plainTags, key)
+                        CryptoService.serializeEncryptedJSON(encTags)
+                    }
+
+                    val record = NoteRecord(
+                        id = syncNote.id,
+                        createdAt = syncNote.createdAt,
+                        modifiedAt = syncNote.modifiedAt,
+                        syncedAt = response.syncedAt,
+                        content = syncNote.content,
+                        tags = tagsBlob,
+                        attachments = json.encodeToString(syncNote.attachments),
+                        pinned = syncNote.pinned,
+                        archived = syncNote.archived,
+                        archivedAt = syncNote.archivedAt,
+                        locked = syncNote.locked ?: false,
+                        lockedAt = syncNote.lockedAt,
+                        deleted = syncNote.deleted,
+                        deletedAt = syncNote.deletedAt,
+                        version = syncNote.version,
+                        wordWrap = syncNote.wordWrap ?: true,
+                        syntaxLanguage = syncNote.syntaxLanguage ?: "markdown",
+                        showPreview = syncNote.showPreview ?: false,
+                        color = syncNote.color,
+                        contentHash = syncNote.contentHash,
+                        parentHash = syncNote.parentHash,
+                        hashChain = syncNote.hashChain?.let { json.encodeToString(it) },
+                        needsSync = false,
+                    )
+                    noteRepo.insertOrReplace(record)
+                    knownNoteIds.add(syncNote.id)
                 }
 
-                val record = NoteRecord(
-                    id = syncNote.id,
-                    createdAt = syncNote.createdAt,
-                    modifiedAt = syncNote.modifiedAt,
-                    syncedAt = response.syncedAt,
-                    content = syncNote.content,
-                    tags = tagsBlob,
-                    attachments = json.encodeToString(syncNote.attachments),
-                    pinned = syncNote.pinned,
-                    archived = syncNote.archived,
-                    archivedAt = syncNote.archivedAt,
-                    locked = syncNote.locked ?: false,
-                    lockedAt = syncNote.lockedAt,
-                    deleted = syncNote.deleted,
-                    deletedAt = syncNote.deletedAt,
-                    version = syncNote.version,
-                    wordWrap = syncNote.wordWrap ?: true,
-                    syntaxLanguage = syncNote.syntaxLanguage ?: "markdown",
-                    showPreview = syncNote.showPreview ?: false,
-                    color = syncNote.color,
-                    contentHash = syncNote.contentHash,
-                    parentHash = syncNote.parentHash,
-                    hashChain = syncNote.hashChain?.let { json.encodeToString(it) },
-                    needsSync = false,
-                )
-                noteRepo.insertOrReplace(record)
-            }
-
-            // Process attachments
-            for (syncAtt in response.attachments) {
-                val data = android.util.Base64.decode(syncAtt.data, android.util.Base64.NO_WRAP)
-                attachmentRepo.insertOrReplace(
-                    com.jottery.android.model.AttachmentRecord(
-                        id = syncAtt.id,
-                        filename = "",
-                        mimeType = "",
-                        size = data.size,
-                        data = data,
+                // Process attachments
+                for (syncAtt in response.attachments) {
+                    val data = android.util.Base64.decode(syncAtt.data, android.util.Base64.NO_WRAP)
+                    attachmentRepo.insertOrReplace(
+                        com.jottery.android.model.AttachmentRecord(
+                            id = syncAtt.id,
+                            filename = "",
+                            mimeType = "",
+                            size = data.size,
+                            data = data,
+                        )
                     )
-                )
-            }
+                    knownBlobIds.add(syncAtt.id)
+                }
 
-            // Process versions
-            for (syncVer in response.versions) {
-                val ver = NoteVersionRecord(
-                    versionKey = syncVer.versionKey,
-                    noteId = syncVer.noteId,
-                    version = syncVer.version,
-                    createdAt = syncVer.createdAt,
-                    syncedAt = syncVer.syncedAt,
-                    content = syncVer.content,
-                    tags = syncVer.tags.firstOrNull() ?: "[]",
-                    attachments = json.encodeToString(syncVer.attachments),
-                    syntaxLanguage = syncVer.syntaxLanguage,
-                    wordWrap = syncVer.wordWrap,
-                    showPreview = syncVer.showPreview,
-                    color = syncVer.color,
-                    reason = syncVer.reason,
-                    contentHash = syncVer.contentHash,
-                    parentHash = syncVer.parentHash,
-                )
-                versionRepo.insertOrReplace(ver)
-            }
+                // Process versions
+                for (syncVer in response.versions) {
+                    val ver = NoteVersionRecord(
+                        versionKey = syncVer.versionKey,
+                        noteId = syncVer.noteId,
+                        version = syncVer.version,
+                        createdAt = syncVer.createdAt,
+                        syncedAt = syncVer.syncedAt,
+                        content = syncVer.content,
+                        tags = syncVer.tags.firstOrNull() ?: "[]",
+                        attachments = json.encodeToString(syncVer.attachments),
+                        syntaxLanguage = syncVer.syntaxLanguage,
+                        wordWrap = syncVer.wordWrap,
+                        showPreview = syncVer.showPreview,
+                        color = syncVer.color,
+                        reason = syncVer.reason,
+                        contentHash = syncVer.contentHash,
+                        parentHash = syncVer.parentHash,
+                    )
+                    versionRepo.insertOrReplace(ver)
+                }
 
-            // Process deletions
-            response.deletions?.forEach { deletion ->
-                noteRepo.hardDelete(deletion.id)
+                // Process deletions
+                response.deletions?.forEach { deletion ->
+                    noteRepo.hardDelete(deletion.id)
+                }
+
+                hasMore = response.hasMore ?: false
+                offset += response.notes.size
+
+                // Safety: avoid infinite loop if server returns hasMore but no notes
+                if (hasMore && response.notes.isEmpty()) {
+                    Log.w(TAG, "Server says hasMore but returned 0 notes — breaking")
+                    break
+                }
             }
 
             val now = DateUtils.nowISO8601()
             syncRepo.updateLastPullAt(now)
             syncRepo.updateLastSyncAt(now)
 
-            return newCount
+            Log.d(TAG, "Pull complete: $totalNewCount new notes across ${offset} total")
+            return totalNewCount
         } catch (e: Exception) {
             Log.e(TAG, "Pull failed: ${e.message}")
             throw e

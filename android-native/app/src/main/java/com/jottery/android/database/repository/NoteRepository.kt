@@ -34,8 +34,20 @@ class NoteRepository(
 
     // MARK: - Read
 
+    /** Result of listing active notes with decryption stats. */
+    data class ListResult(
+        val notes: List<DecryptedNote>,
+        val totalRecords: Int,
+        val failedCount: Int,
+    )
+
     /** Fetch all active (non-deleted, non-archived) notes, decrypted. */
     suspend fun listActive(key: SecretKey): List<DecryptedNote> {
+        return listActiveWithStats(key).notes
+    }
+
+    /** Fetch all active notes with decryption stats (total records, failures). */
+    suspend fun listActiveWithStats(key: SecretKey): ListResult {
         val records = noteDao.listActive()
         var failCount = 0
         val decrypted = mutableListOf<DecryptedNote>()
@@ -44,12 +56,15 @@ class NoteRepository(
                 decrypted.add(decrypt(record, key))
             } catch (e: Exception) {
                 failCount++
+                if (failCount <= 3) {
+                    Log.w(TAG, "Decrypt failed for note ${record.id}: ${e.javaClass.simpleName}: ${e.message}")
+                }
             }
         }
         if (failCount > 0) {
             Log.w(TAG, "$failCount/${records.size} notes failed to decrypt")
         }
-        return decrypted
+        return ListResult(decrypted, records.size, failCount)
     }
 
     /** Fetch all deleted notes, decrypted (recycle bin). */

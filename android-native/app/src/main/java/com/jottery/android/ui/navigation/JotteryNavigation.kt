@@ -1,6 +1,7 @@
 package com.jottery.android.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
@@ -49,6 +50,25 @@ fun JotteryNavigation(
         isFirstLaunch -> Routes.SETUP
         isLocked -> Routes.UNLOCK
         else -> Routes.MAIN
+    }
+
+    // React to state changes (e.g. wipeAllData sets isFirstLaunch=true while on
+    // the unlock screen). NavHost's startDestination only affects initial composition,
+    // so we must navigate explicitly when the auth state changes.
+    LaunchedEffect(isFirstLaunch, isLocked) {
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
+        when {
+            isFirstLaunch && currentRoute != null && currentRoute != Routes.SETUP -> {
+                navController.navigate(Routes.SETUP) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            !isFirstLaunch && isLocked && currentRoute != null && currentRoute != Routes.UNLOCK -> {
+                navController.navigate(Routes.UNLOCK) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
     }
 
     NavHost(

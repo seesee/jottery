@@ -436,9 +436,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun loadNotes() {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
-        _notes.value = repo.listActive(key)
+
+        val result = repo.listActiveWithStats(key)
+        _notes.value = result.notes
         _archivedNotes.value = repo.listArchived(key)
         _savedSearches.value = savedSearchRepo?.listActive(key) ?: emptyList()
+
+        Log.d(TAG, "[loadNotes] ${result.notes.size} decrypted, " +
+            "${result.failedCount} failed, ${result.totalRecords} total in DB")
+
+        // Surface decryption failures so the user knows something is wrong
+        if (result.failedCount > 0 && result.notes.isEmpty()) {
+            _syncError.value = "${result.failedCount} notes in database could not be decrypted. " +
+                "This usually means the encryption key differs from the device that created them. " +
+                "Try wiping and re-importing credentials (including the encryption salt) from your other device."
+        } else if (result.failedCount > 0) {
+            _syncError.value = "${result.failedCount} of ${result.totalRecords} notes failed to decrypt"
+        }
+
         scheduleSearch()
     }
 
