@@ -45,7 +45,6 @@ class SyncService(
     suspend fun startSSE() {
         try {
             val tokenResponse = syncClient.getSSEToken()
-            sseClient.onSyncNeeded = { /* Caller wires this to triggerSync */ }
             sseClient.start(tokenResponse.token)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to start SSE: ${e.message}")
