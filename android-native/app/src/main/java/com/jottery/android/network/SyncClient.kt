@@ -31,65 +31,65 @@ class SyncClient(
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-    // MARK: - Device Registration
+    // MARK: - Device Registration (unauthenticated)
 
     suspend fun registerDevice(request: RegisterDeviceRequest): RegisterDeviceResponse {
-        return post("/api/devices/register", request)
+        return postUnauthenticated("/api/v1/auth/register-device", request)
     }
 
     suspend fun cloneDevice(request: CloneDeviceRequest): RegisterDeviceResponse {
-        return post("/api/devices/clone", request)
+        return postUnauthenticated("/api/v1/auth/clone-device", request)
     }
 
-    // MARK: - Sync
+    // MARK: - Sync (authenticated)
 
     suspend fun push(request: SyncPushRequest): SyncPushResponse {
-        return post("/api/sync/push", request)
+        return post("/api/v1/sync/push", request)
     }
 
     suspend fun pull(request: SyncPullRequest): SyncPullResponse {
-        return post("/api/sync/pull", request)
+        return post("/api/v1/sync/pull", request)
     }
 
     suspend fun status(): SyncStatusResponse {
-        return get("/api/sync/status")
+        return get("/api/v1/sync/status")
     }
 
     // MARK: - SSE Token
 
     suspend fun getSSEToken(): SSETokenResponse {
-        return get("/api/sync/sse-token")
+        return get("/api/v1/sync/events/token")
     }
 
     // MARK: - Inbox
 
     suspend fun getInboxItems(): List<InboxItem> {
-        return get("/api/inbox/items")
+        return get("/api/v1/inbox")
     }
 
     suspend fun getInboxStatus(): InboxStatusResponse {
-        return get("/api/inbox/status")
+        return get("/api/v1/inbox/status")
     }
 
     suspend fun deleteInboxItem(id: String) {
-        delete("/api/inbox/items/$id")
+        delete("/api/v1/inbox/$id")
     }
 
     suspend fun deleteAllInboxItems() {
-        delete("/api/inbox/items")
+        delete("/api/v1/inbox")
     }
 
     suspend fun getInboxToken(): InboxTokenResponse {
-        return get("/api/inbox/token")
+        return get("/api/v1/user/inbox-token")
     }
 
     suspend fun getInboxTokenStatus(): InboxTokenStatusResponse {
-        return get("/api/inbox/token/status")
+        return get("/api/v1/user/inbox-token/status")
     }
 
     // MARK: - Private HTTP Methods
 
-    private inline fun <reified T> buildAuthRequest(path: String): Request.Builder {
+    private fun buildAuthRequest(path: String): Request.Builder {
         return Request.Builder()
             .url("$baseUrl$path")
             .header("Authorization", "Bearer $apiKey")
@@ -97,8 +97,14 @@ class SyncClient(
             .header("Content-Type", "application/json")
     }
 
+    private fun buildUnauthRequest(path: String): Request.Builder {
+        return Request.Builder()
+            .url("$baseUrl$path")
+            .header("Content-Type", "application/json")
+    }
+
     private inline fun <reified R> get(path: String): R {
-        val request = buildAuthRequest<Unit>(path).get().build()
+        val request = buildAuthRequest(path).get().build()
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw SyncClientException("Empty response body")
         if (!response.isSuccessful) {
@@ -109,7 +115,18 @@ class SyncClient(
 
     private inline fun <reified T, reified R> post(path: String, payload: T): R {
         val jsonBody = json.encodeToString(payload).toRequestBody(jsonMediaType)
-        val request = buildAuthRequest<Unit>(path).post(jsonBody).build()
+        val request = buildAuthRequest(path).post(jsonBody).build()
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: throw SyncClientException("Empty response body")
+        if (!response.isSuccessful) {
+            throw SyncClientException("HTTP ${response.code}: $body")
+        }
+        return json.decodeFromString(body)
+    }
+
+    private inline fun <reified T, reified R> postUnauthenticated(path: String, payload: T): R {
+        val jsonBody = json.encodeToString(payload).toRequestBody(jsonMediaType)
+        val request = buildUnauthRequest(path).post(jsonBody).build()
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw SyncClientException("Empty response body")
         if (!response.isSuccessful) {
@@ -119,7 +136,7 @@ class SyncClient(
     }
 
     private fun delete(path: String) {
-        val request = buildAuthRequest<Unit>(path).delete().build()
+        val request = buildAuthRequest(path).delete().build()
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
             val body = response.body?.string() ?: ""

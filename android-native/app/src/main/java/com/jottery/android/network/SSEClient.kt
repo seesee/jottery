@@ -70,7 +70,7 @@ class SSEClient(
         val token = sseToken ?: return
 
         val request = Request.Builder()
-            .url("$baseUrl/api/sync/sse?token=$token")
+            .url("$baseUrl/api/v1/sync/events?token=$token")
             .header("Accept", "text/event-stream")
             .build()
 
