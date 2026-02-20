@@ -154,6 +154,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private var sseClientInstance: SSEClient? = null
 
     private var searchJob: Job? = null
+    private var syncDebounceJob: Job? = null
     private var backgroundedAt: Instant? = null
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -471,6 +472,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = listOf(note) + _notes.value
         _selectedNoteId.value = note.id
         scheduleSearch()
+        scheduleDebouncedSync()
         return note
     }
 
@@ -491,6 +493,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _notes.value = currentNotes
             scheduleSearch()
         }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -504,6 +507,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = listOf(duplicate) + _notes.value
         _selectedNoteId.value = duplicate.id
         scheduleSearch()
+        scheduleDebouncedSync()
     }
 
     /**
@@ -517,6 +521,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _selectedNoteId.value = null
         }
         scheduleSearch()
+        scheduleDebouncedSync()
     }
 
     /**
@@ -526,6 +531,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val repo = noteRepo ?: return
         repo.restore(id)
         loadNotes()
+        scheduleDebouncedSync()
     }
 
     /**
@@ -542,6 +548,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _notes.value = currentNotes
             scheduleSearch()
         }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -556,6 +563,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
         scheduleSearch()
         loadArchivedNotes()
+        scheduleDebouncedSync()
     }
 
     /**
@@ -569,6 +577,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _selectedNoteId.value = null
         }
         loadNotes()
+        scheduleDebouncedSync()
     }
 
     /**
@@ -601,6 +610,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             )
             _archivedNotes.value = currentArchived
         }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -639,6 +649,19 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val filtered = filterNotes(source, query)
             val results = sortNotes(filtered, order)
             _filteredNotes.value = results
+        }
+    }
+
+    /**
+     * Schedule a debounced sync push after a local note change.
+     * Waits 3 seconds after the last call to avoid syncing on every keystroke.
+     */
+    private fun scheduleDebouncedSync() {
+        if (!_syncEnabled.value || syncServiceInstance == null) return
+        syncDebounceJob?.cancel()
+        syncDebounceJob = viewModelScope.launch {
+            delay(3_000)
+            triggerSync()
         }
     }
 
@@ -1001,6 +1024,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             currentNotes[index] = currentNote.copy(attachments = updatedAttachments)
             _notes.value = currentNotes
         }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -1033,6 +1057,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             )
             _notes.value = currentNotes
         }
+        scheduleDebouncedSync()
     }
 
     // MARK: - Version Restore
