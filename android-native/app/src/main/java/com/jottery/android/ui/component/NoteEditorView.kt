@@ -1,6 +1,7 @@
 package com.jottery.android.ui.component
 
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -369,15 +370,36 @@ fun NoteEditorView(
             HorizontalDivider()
         }
 
-        // Editor area with pinch-to-zoom
+        // Editor area with pinch-to-zoom (only intercepts two-finger gestures)
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        val newScale = pinchBaseScale * zoom
-                        appState.setEditorFontScale(newScale.coerceIn(0.5f, 3.0f))
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var prevSpan = 0f
+                        do {
+                            val event = awaitPointerEvent()
+                            val pointers = event.changes.filter { it.pressed }
+                            if (pointers.size >= 2) {
+                                val p0 = pointers[0].position
+                                val p1 = pointers[1].position
+                                val span = (p0 - p1).getDistance()
+                                if (prevSpan > 0f && span > 0f) {
+                                    val zoom = span / prevSpan
+                                    if (zoom != 1f) {
+                                        val newScale = (pinchBaseScale * zoom).coerceIn(0.5f, 3.0f)
+                                        appState.setEditorFontScale(newScale)
+                                        pinchBaseScale = newScale
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                                prevSpan = span
+                            } else {
+                                prevSpan = 0f
+                            }
+                        } while (event.changes.any { it.pressed })
                     }
                 },
         ) {
