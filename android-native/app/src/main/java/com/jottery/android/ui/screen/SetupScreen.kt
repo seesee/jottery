@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
+import android.os.Build
 
 @Composable
 fun SetupScreen(
@@ -224,12 +225,46 @@ fun SetupScreen(
 
             Button(
                 onClick = {
-                    // TODO: Implement server registration in Phase 5
-                    error = "Server connection will be available in a future update"
+                    when {
+                        serverUrl.isBlank() -> error = "Server URL is required"
+                        email.isBlank() -> error = "Email is required"
+                        serverPassword.isEmpty() -> error = "Password is required"
+                        serverPassword.length < 8 -> error = "Password must be at least 8 characters"
+                        else -> {
+                            isCreating = true
+                            error = null
+                            scope.launch {
+                                try {
+                                    // 1. Create local vault first (derives encryption key)
+                                    appState.createVault(serverPassword)
+
+                                    // 2. Register device with sync server
+                                    val result = appState.registerDevice(
+                                        serverUrl = serverUrl.trim().trimEnd('/'),
+                                        email = email.trim(),
+                                        password = serverPassword,
+                                        deviceName = Build.MODEL,
+                                    )
+                                    result.onSuccess {
+                                        onVaultCreated()
+                                    }.onFailure { e ->
+                                        // Vault is created but sync failed —
+                                        // user can retry from Settings > Sync
+                                        error = "Registered locally. Sync failed: ${e.message}"
+                                        isCreating = false
+                                    }
+                                } catch (e: Exception) {
+                                    error = e.message ?: "Setup failed"
+                                    isCreating = false
+                                }
+                            }
+                        }
+                    }
                 },
+                enabled = !isCreating,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Register Device")
+                Text(if (isCreating) "Registering\u2026" else "Register Device")
             }
 
             Spacer(modifier = Modifier.height(12.dp))
