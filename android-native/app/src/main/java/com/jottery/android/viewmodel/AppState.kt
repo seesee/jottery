@@ -1094,6 +1094,20 @@ class AppState(application: Application) : AndroidViewModel(application) {
         return versionRepo?.getVersions(noteId) ?: emptyList()
     }
 
+    /**
+     * Decrypt a version's content for preview.
+     */
+    fun decryptVersionContent(version: NoteVersionRecord): String? {
+        val key = keyManager.masterKey ?: return null
+        return try {
+            val enc = CryptoService.parseEncryptedJSON(version.content)
+            CryptoService.decryptText(enc, key)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to decrypt version content: ${e.message}")
+            null
+        }
+    }
+
     // MARK: - Version Restore
 
     /**

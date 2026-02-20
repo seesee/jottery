@@ -508,6 +508,9 @@ fun NoteEditorView(
                 }
                 showVersionHistory = false
             },
+            onPreview = { version ->
+                appState.decryptVersionContent(version)
+            },
             onDismiss = { showVersionHistory = false },
         )
     }

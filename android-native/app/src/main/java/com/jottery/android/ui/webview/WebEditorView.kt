@@ -3,6 +3,7 @@ package com.jottery.android.ui.webview
 import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -10,7 +11,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
@@ -31,12 +34,21 @@ fun WebEditorView(
     onRequestAttachment: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    // Keep callback references current across recompositions.
+    // The bridge is created once (remember) but callbacks may change when
+    // NoteEditorView recomposes with a new note parameter. rememberUpdatedState
+    // ensures the bridge always invokes the latest callback.
+    val currentOnContentChanged by rememberUpdatedState(onContentChanged)
+    val currentOnReady by rememberUpdatedState(onReady)
+    val currentOnOpenLink by rememberUpdatedState(onOpenLink)
+    val currentOnRequestAttachment by rememberUpdatedState(onRequestAttachment)
+
     val bridge = remember {
         WebBridge(
-            onContentChanged = onContentChanged,
-            onReady = onReady,
-            onOpenLink = onOpenLink,
-            onRequestAttachment = onRequestAttachment,
+            onContentChanged = { currentOnContentChanged(it) },
+            onReady = { currentOnReady() },
+            onOpenLink = { currentOnOpenLink(it) },
+            onRequestAttachment = { currentOnRequestAttachment(it) },
         )
     }
 
@@ -58,7 +70,7 @@ fun WebEditorView(
                         view: WebView?,
                         request: WebResourceRequest?,
                     ): Boolean {
-                        request?.url?.toString()?.let { onOpenLink(it) }
+                        request?.url?.toString()?.let { currentOnOpenLink(it) }
                         return true
                     }
 
@@ -121,8 +133,8 @@ class WebBridge(
                     mainHandler.post { onOpenLink(url) }
                 }
             }
-        } catch (_: Exception) {
-            // Invalid JSON — ignore
+        } catch (e: Exception) {
+            Log.e("WebBridge", "postMessage failed: ${e.message}", e)
         }
     }
 }
