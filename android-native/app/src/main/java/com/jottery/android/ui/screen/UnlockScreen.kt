@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,6 +38,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.jottery.android.ui.component.ConfirmDialog
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
 
@@ -48,7 +51,37 @@ fun UnlockScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var isUnlocking by remember { mutableStateOf(false) }
+    var failedAttempts by remember { mutableIntStateOf(0) }
+    var showWipeConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    fun attemptUnlock() {
+        if (password.isEmpty()) {
+            error = "Password is required"
+            return
+        }
+        isUnlocking = true
+        error = null
+        scope.launch {
+            try {
+                val success = appState.unlock(password)
+                isUnlocking = false
+                if (success) {
+                    failedAttempts = 0
+                    onUnlocked()
+                } else {
+                    failedAttempts++
+                    error = "Incorrect password"
+                    password = ""
+                }
+            } catch (_: Exception) {
+                isUnlocking = false
+                failedAttempts++
+                error = "Incorrect password"
+                password = ""
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -94,20 +127,7 @@ fun UnlockScreen(
                 imeAction = ImeAction.Done,
             ),
             keyboardActions = KeyboardActions(
-                onDone = {
-                    if (password.isNotEmpty()) {
-                        isUnlocking = true
-                        scope.launch {
-                            val success = appState.unlock(password)
-                            isUnlocking = false
-                            if (success) {
-                                onUnlocked()
-                            } else {
-                                error = "Incorrect password"
-                            }
-                        }
-                    }
-                }
+                onDone = { attemptUnlock() }
             ),
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -133,35 +153,19 @@ fun UnlockScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = {
-                if (password.isEmpty()) {
-                    error = "Password is required"
-                    return@Button
-                }
-                isUnlocking = true
-                scope.launch {
-                    val success = appState.unlock(password)
-                    isUnlocking = false
-                    if (success) {
-                        onUnlocked()
-                    } else {
-                        error = "Incorrect password"
-                        password = ""
-                    }
-                }
-            },
+            onClick = { attemptUnlock() },
             enabled = !isUnlocking,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(if (isUnlocking) "Unlocking\u2026" else "Unlock")
         }
 
-        // Biometric button placeholder — completed in Phase 6
+        // Biometric button placeholder
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedButton(
             onClick = {
-                // TODO: Biometric unlock in Phase 6
+                // TODO: Biometric unlock
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -173,5 +177,41 @@ fun UnlockScreen(
             Spacer(modifier = Modifier.padding(4.dp))
             Text("Unlock with Biometrics")
         }
+
+        // Wipe button after 3 failed attempts
+        if (failedAttempts >= 3) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Forgotten your password?",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = { showWipeConfirm = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Text("Wipe All Data & Start Fresh")
+            }
+        }
+    }
+
+    if (showWipeConfirm) {
+        ConfirmDialog(
+            title = "Wipe All Data?",
+            message = "This will permanently delete all notes, settings, and encryption keys. This action cannot be undone.",
+            confirmText = "Wipe Everything",
+            onConfirm = {
+                showWipeConfirm = false
+                appState.wipeAllData()
+            },
+            onDismiss = { showWipeConfirm = false },
+        )
     }
 }
