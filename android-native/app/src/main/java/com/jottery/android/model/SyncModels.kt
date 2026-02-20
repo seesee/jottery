@@ -3,6 +3,25 @@ package com.jottery.android.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// MARK: - Credential Import Payloads
+
+/** Decrypted payload inside jottery:v1: encrypted credentials. */
+@Serializable
+data class CredentialPayload(
+    val endpoint: String,
+    val clientId: String,
+    val apiKey: String,
+)
+
+/** Legacy base64 JSON credentials (includes salt). */
+@Serializable
+data class LegacyCredentialPayload(
+    val endpoint: String,
+    val clientId: String,
+    val apiKey: String,
+    val salt: String? = null,
+)
+
 // MARK: - Device Registration
 
 @Serializable

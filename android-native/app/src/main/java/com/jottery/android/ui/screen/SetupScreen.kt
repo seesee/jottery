@@ -1,5 +1,6 @@
 package com.jottery.android.ui.screen
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,8 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
@@ -37,30 +40,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
-import android.os.Build
+
+private enum class SetupMode { NEW_VAULT, REGISTER, IMPORT }
 
 @Composable
 fun SetupScreen(
     appState: AppState,
     onVaultCreated: () -> Unit,
 ) {
+    var mode by remember { mutableStateOf(SetupMode.NEW_VAULT) }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var isCreating by remember { mutableStateOf(false) }
-    var showServerConnect by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // Server connect fields
+    // Register fields
     var serverUrl by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var serverPassword by remember { mutableStateOf("") }
 
+    // Import fields
+    var credentialString by remember { mutableStateOf("") }
+    var importPassword by remember { mutableStateOf("") }
+    var deviceName by remember { mutableStateOf(Build.MODEL) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -80,8 +90,13 @@ fun SetupScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        val subtitle = when (mode) {
+            SetupMode.NEW_VAULT -> "Create a password to encrypt your notes.\nThis cannot be recovered if lost."
+            SetupMode.REGISTER -> "Register as the first device on a sync server."
+            SetupMode.IMPORT -> "Import credentials from an existing device\nto sync your encrypted notes."
+        }
         Text(
-            text = "Create a password to encrypt your notes.\nThis cannot be recovered if lost.",
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -89,192 +104,279 @@ fun SetupScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        if (!showServerConnect) {
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it; error = null },
-                label = { Text("Password") },
-                singleLine = true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None
-                    else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next,
-                ),
-                trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(
-                            if (passwordVisible) Icons.Default.VisibilityOff
-                            else Icons.Default.Visibility,
-                            contentDescription = "Toggle password visibility",
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+        when (mode) {
+            // ── New Vault ────────────────────────────────────────────
+            SetupMode.NEW_VAULT -> {
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it; error = null },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None
+                        else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Next,
+                    ),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Default.VisibilityOff
+                                else Icons.Default.Visibility,
+                                contentDescription = "Toggle password visibility",
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it; error = null },
-                label = { Text("Confirm Password") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (password == confirmPassword && password.isNotEmpty()) {
-                            isCreating = true
-                            scope.launch {
-                                appState.createVault(password)
-                                onVaultCreated()
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it; error = null },
+                    label = { Text("Confirm Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (password == confirmPassword && password.isNotEmpty()) {
+                                isCreating = true
+                                scope.launch {
+                                    appState.createVault(password)
+                                    onVaultCreated()
+                                }
                             }
                         }
-                    }
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (error != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                ErrorText(error)
 
-            Button(
-                onClick = {
-                    when {
-                        password.isEmpty() -> error = "Password is required"
-                        password.length < 8 -> error = "Password must be at least 8 characters"
-                        password != confirmPassword -> error = "Passwords do not match"
-                        else -> {
-                            isCreating = true
-                            scope.launch {
-                                appState.createVault(password)
-                                onVaultCreated()
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        when {
+                            password.isEmpty() -> error = "Password is required"
+                            password.length < 8 -> error = "Password must be at least 8 characters"
+                            password != confirmPassword -> error = "Passwords do not match"
+                            else -> {
+                                isCreating = true
+                                scope.launch {
+                                    appState.createVault(password)
+                                    onVaultCreated()
+                                }
                             }
                         }
-                    }
-                },
-                enabled = !isCreating,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (isCreating) "Creating vault\u2026" else "Create Vault")
-            }
+                    },
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (isCreating) "Creating vault\u2026" else "Create Vault")
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedButton(
-                onClick = { showServerConnect = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Connect to Server")
-            }
-        } else {
-            // Server connect form
-            OutlinedTextField(
-                value = serverUrl,
-                onValueChange = { serverUrl = it; error = null },
-                label = { Text("Server URL") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+                OutlinedButton(
+                    onClick = { mode = SetupMode.REGISTER; error = null },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Register First Device")
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it; error = null },
-                label = { Text("Email") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = serverPassword,
-                onValueChange = { serverPassword = it; error = null },
-                label = { Text("Password") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+
+                OutlinedButton(
+                    onClick = { mode = SetupMode.IMPORT; error = null },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Import from Another Device")
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // ── Register (first device) ──────────────────────────────
+            SetupMode.REGISTER -> {
+                OutlinedTextField(
+                    value = serverUrl,
+                    onValueChange = { serverUrl = it; error = null },
+                    label = { Text("Server URL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
-            Button(
-                onClick = {
-                    when {
-                        serverUrl.isBlank() -> error = "Server URL is required"
-                        email.isBlank() -> error = "Email is required"
-                        serverPassword.isEmpty() -> error = "Password is required"
-                        serverPassword.length < 8 -> error = "Password must be at least 8 characters"
-                        else -> {
-                            isCreating = true
-                            error = null
-                            scope.launch {
-                                try {
-                                    // 1. Create local vault first (derives encryption key)
-                                    appState.createVault(serverPassword)
+                Spacer(modifier = Modifier.height(12.dp))
 
-                                    // 2. Register device with sync server
-                                    val result = appState.registerDevice(
-                                        serverUrl = serverUrl.trim().trimEnd('/'),
-                                        email = email.trim(),
-                                        password = serverPassword,
-                                        deviceName = Build.MODEL,
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it; error = null },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = serverPassword,
+                    onValueChange = { serverPassword = it; error = null },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                ErrorText(error)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        when {
+                            serverUrl.isBlank() -> error = "Server URL is required"
+                            email.isBlank() -> error = "Email is required"
+                            serverPassword.isEmpty() -> error = "Password is required"
+                            serverPassword.length < 8 -> error = "Password must be at least 8 characters"
+                            else -> {
+                                isCreating = true
+                                error = null
+                                scope.launch {
+                                    try {
+                                        appState.createVault(serverPassword)
+                                        val result = appState.registerDevice(
+                                            serverUrl = serverUrl.trim().trimEnd('/'),
+                                            email = email.trim(),
+                                            password = serverPassword,
+                                            deviceName = Build.MODEL,
+                                        )
+                                        result.onSuccess {
+                                            onVaultCreated()
+                                        }.onFailure { e ->
+                                            error = "Registered locally. Sync failed: ${e.message}"
+                                            isCreating = false
+                                        }
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Setup failed"
+                                        isCreating = false
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (isCreating) "Registering\u2026" else "Register Device")
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { mode = SetupMode.NEW_VAULT; error = null },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Back")
+                }
+            }
+
+            // ── Import Credentials (second+ device) ─────────────────
+            SetupMode.IMPORT -> {
+                OutlinedTextField(
+                    value = credentialString,
+                    onValueChange = { credentialString = it; error = null },
+                    label = { Text("Credential String") },
+                    placeholder = { Text("jottery:v1:\u2026 or base64 JSON") },
+                    minLines = 3,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = importPassword,
+                    onValueChange = { importPassword = it; error = null },
+                    label = { Text("Encryption Password") },
+                    supportingText = { Text("Same password used on your other device") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = deviceName,
+                    onValueChange = { deviceName = it; error = null },
+                    label = { Text("Device Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                ErrorText(error)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        when {
+                            credentialString.isBlank() -> error = "Credential string is required"
+                            importPassword.isEmpty() -> error = "Password is required"
+                            deviceName.isBlank() -> error = "Device name is required"
+                            else -> {
+                                isCreating = true
+                                error = null
+                                scope.launch {
+                                    val result = appState.importFromDevice(
+                                        credentialString = credentialString.trim(),
+                                        password = importPassword,
+                                        deviceName = deviceName.trim(),
                                     )
                                     result.onSuccess {
                                         onVaultCreated()
                                     }.onFailure { e ->
-                                        // Vault is created but sync failed —
-                                        // user can retry from Settings > Sync
-                                        error = "Registered locally. Sync failed: ${e.message}"
+                                        error = e.message ?: "Import failed"
                                         isCreating = false
                                     }
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Setup failed"
-                                    isCreating = false
                                 }
                             }
                         }
-                    }
-                },
-                enabled = !isCreating,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (isCreating) "Registering\u2026" else "Register Device")
-            }
+                    },
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (isCreating) "Importing\u2026" else "Import & Sync")
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedButton(
-                onClick = { showServerConnect = false },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Back to New Vault")
+                OutlinedButton(
+                    onClick = { mode = SetupMode.NEW_VAULT; error = null },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Back")
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun ErrorText(error: String?) {
+    if (error != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }

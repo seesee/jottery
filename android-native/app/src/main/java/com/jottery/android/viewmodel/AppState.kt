@@ -24,6 +24,9 @@ import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.InboxItem
 import com.jottery.android.model.NoteVersionRecord
+import com.jottery.android.model.CloneDeviceRequest
+import com.jottery.android.model.CredentialPayload
+import com.jottery.android.model.LegacyCredentialPayload
 import com.jottery.android.model.RegisterDeviceRequest
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.UserSettings
@@ -1544,6 +1547,200 @@ class AppState(application: Application) : AndroidViewModel(application) {
             Log.e(TAG, "[Sync] importCredentials failed: ${e.message}", e)
             Result.failure(e)
         }
+    }
+
+    // MARK: - Credential Import (multi-device setup)
+
+    /**
+     * Import credentials from another device.
+     * Supports both encrypted (jottery:v1:) and legacy (base64 JSON) formats.
+     *
+     * This is the main entry point called from SetupScreen's Import mode.
+     */
+    suspend fun importFromDevice(
+        credentialString: String,
+        password: String,
+        deviceName: String,
+    ): Result<String> {
+        return try {
+            val trimmed = credentialString.trim()
+
+            if (trimmed.startsWith("jottery:v1:")) {
+                importEncryptedCredentials(trimmed, password, deviceName)
+            } else {
+                importLegacyCredentials(trimmed, password, deviceName)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "[Import] importFromDevice failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Handle encrypted credential format:
+     * jottery:v1:<salt_b64>.<base64(JSON({"ciphertext":"...","iv":"..."}))>
+     */
+    private suspend fun importEncryptedCredentials(
+        input: String,
+        password: String,
+        deviceName: String,
+    ): Result<String> {
+        val payload = input.removePrefix("jottery:v1:")
+        val dotIndex = payload.indexOf('.')
+        if (dotIndex == -1) {
+            return Result.failure(Exception("Invalid credential format: missing separator"))
+        }
+
+        val saltB64 = payload.substring(0, dotIndex)
+        val encryptedPayloadB64 = payload.substring(dotIndex + 1)
+
+        // Decode salt from base64
+        val salt = android.util.Base64.decode(saltB64, android.util.Base64.DEFAULT)
+        if (salt.size < 32) {
+            return Result.failure(Exception("Invalid credential format: salt too short"))
+        }
+
+        // Decode encrypted payload: base64 → JSON string → EncryptedData
+        val payloadBytes = android.util.Base64.decode(encryptedPayloadB64, android.util.Base64.DEFAULT)
+        val payloadJSON = String(payloadBytes, Charsets.UTF_8)
+        val encrypted = CryptoService.parseEncryptedJSON(payloadJSON)
+
+        // Try decrypting with common iteration counts
+        // (the jottery:v1: format does not include the iteration count)
+        val iterationCandidates = listOf(
+            CryptoService.DEFAULT_ITERATIONS,  // 600,000
+            CryptoService.MIN_ITERATIONS,      // 100,000
+        )
+
+        var decryptedJSON: String? = null
+        var matchedIterations = CryptoService.DEFAULT_ITERATIONS
+
+        for (candidate in iterationCandidates) {
+            try {
+                val key = withContext(Dispatchers.Default) {
+                    CryptoService.deriveKey(password, salt, candidate)
+                }
+                decryptedJSON = CryptoService.decryptText(encrypted, key)
+                matchedIterations = candidate
+                break
+            } catch (_: Exception) {
+                // Try next iteration count
+            }
+        }
+
+        if (decryptedJSON == null) {
+            return Result.failure(Exception("Wrong password or corrupted credentials"))
+        }
+
+        // Parse decrypted payload: {"endpoint":"...","apiKey":"...","clientId":"..."}
+        val jsonParser = Json { ignoreUnknownKeys = true }
+        val creds = jsonParser.decodeFromString<CredentialPayload>(decryptedJSON)
+
+        if (creds.endpoint.isBlank() || creds.apiKey.isBlank()) {
+            return Result.failure(Exception("Invalid credential payload: missing endpoint or API key"))
+        }
+
+        val endpoint = creds.endpoint.trimEnd('/')
+        return finishImport(endpoint, creds.apiKey, deviceName, password, salt, matchedIterations)
+    }
+
+    /**
+     * Handle legacy credential format: base64(JSON with endpoint, apiKey, clientId, salt).
+     */
+    private suspend fun importLegacyCredentials(
+        input: String,
+        password: String,
+        deviceName: String,
+    ): Result<String> {
+        val jsonStr = try {
+            val bytes = android.util.Base64.decode(input, android.util.Base64.DEFAULT)
+            String(bytes, Charsets.UTF_8)
+        } catch (e: Exception) {
+            return Result.failure(Exception("Invalid credential format: not valid base64"))
+        }
+
+        val jsonParser = Json { ignoreUnknownKeys = true }
+        val creds = try {
+            jsonParser.decodeFromString<LegacyCredentialPayload>(jsonStr)
+        } catch (e: Exception) {
+            return Result.failure(Exception("Invalid credential format: could not parse JSON"))
+        }
+
+        if (creds.endpoint.isBlank() || creds.apiKey.isBlank()) {
+            return Result.failure(Exception("Invalid credentials: missing required fields"))
+        }
+
+        if (creds.salt.isNullOrBlank()) {
+            return Result.failure(Exception("Invalid credentials: missing salt"))
+        }
+
+        val salt = android.util.Base64.decode(creds.salt, android.util.Base64.DEFAULT)
+        val endpoint = creds.endpoint.trimEnd('/')
+
+        return finishImport(endpoint, creds.apiKey, deviceName, password, salt, CryptoService.DEFAULT_ITERATIONS)
+    }
+
+    /**
+     * Common finishing logic: clone device, create vault with imported salt, setup sync.
+     */
+    private suspend fun finishImport(
+        endpoint: String,
+        sourceApiKey: String,
+        deviceName: String,
+        password: String,
+        salt: ByteArray,
+        iterations: Int,
+    ): Result<String> {
+        // Clone device to get a fresh API key for this device
+        val tempClient = SyncClient(endpoint, "", "")
+        val response = withContext(Dispatchers.IO) {
+            tempClient.cloneDevice(
+                CloneDeviceRequest(
+                    apiKey = sourceApiKey,
+                    deviceName = deviceName,
+                )
+            )
+        }
+
+        // Store API key and client ID
+        val context = getApplication<Application>()
+        KeystoreService.setAPIKey(context, response.apiKey)
+        KeystoreService.setClientId(context, response.clientId)
+
+        // Create vault with the imported salt so the same password derives the same key
+        createVault(password, existingSalt = salt, existingIterations = iterations)
+
+        // Enable sync
+        val newSettings = _settings.value.copy(
+            syncEnabled = true,
+            syncEndpoint = endpoint,
+        )
+        updateSettings(newSettings)
+        setupSync(response.apiKey)
+
+        // Trigger initial sync in the background
+        viewModelScope.launch {
+            try {
+                _isSyncing.value = true
+                _syncStatusMessage.value = "Pulling notes\u2026"
+                val service = syncServiceInstance ?: return@launch
+                withContext(Dispatchers.IO) { service.fullSync() }
+                _isSyncing.value = false
+                _lastSyncAt.value = Instant.now()
+                loadNotes()
+                val count = _notes.value.size
+                _syncStatusMessage.value = "Synced \u2014 $count note${if (count == 1) "" else "s"}"
+                delay(4_000)
+                _syncStatusMessage.value = null
+            } catch (e: Exception) {
+                Log.e(TAG, "[Import] Initial sync failed: ${e.message}", e)
+                _isSyncing.value = false
+                _syncError.value = "Initial sync failed: ${e.message}"
+                _syncStatusMessage.value = null
+            }
+        }
+
+        return Result.success("Credentials imported successfully.")
     }
 
     /**
