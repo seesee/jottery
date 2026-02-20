@@ -32,6 +32,8 @@ import com.jottery.android.model.SortOrder
 import com.jottery.android.model.UserSettings
 import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
+import com.jottery.android.service.BackupService
+import com.jottery.android.service.ImportService
 import com.jottery.android.service.SyncService
 import com.jottery.android.util.DateUtils
 import kotlinx.coroutines.Dispatchers
@@ -1083,6 +1085,15 @@ class AppState(application: Application) : AndroidViewModel(application) {
         scheduleDebouncedSync()
     }
 
+    // MARK: - Version History
+
+    /**
+     * Get version history for a note.
+     */
+    suspend fun getVersionsForNote(noteId: String): List<NoteVersionRecord> {
+        return versionRepo?.getVersions(noteId) ?: emptyList()
+    }
+
     // MARK: - Version Restore
 
     /**
@@ -1791,11 +1802,66 @@ class AppState(application: Application) : AndroidViewModel(application) {
         return Result.success("Credentials imported successfully.")
     }
 
+    // MARK: - Backup & Import
+
+    /**
+     * Create an encrypted backup of all notes.
+     */
+    suspend fun createBackup(): String {
+        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
+        val vRepo = versionRepo ?: throw AppStateError.NotInitialised
+        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
+        val service = BackupService(nRepo, vRepo, aRepo, savedSearchRepo)
+        return withContext(Dispatchers.IO) { service.createBackup() }
+    }
+
+    /**
+     * Restore notes from an encrypted backup.
+     * Returns the number of notes restored.
+     */
+    suspend fun restoreBackup(backupJson: String): Int {
+        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
+        val vRepo = versionRepo ?: throw AppStateError.NotInitialised
+        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
+        val service = BackupService(nRepo, vRepo, aRepo, savedSearchRepo)
+        val count = withContext(Dispatchers.IO) { service.restoreBackup(backupJson) }
+        loadNotes()
+        return count
+    }
+
+    /**
+     * Import notes from a JSON export file.
+     * Returns the number of notes imported.
+     */
+    suspend fun importNotes(jsonString: String): Int {
+        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
+        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
+        val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
+        val service = ImportService(nRepo, aRepo)
+        val count = withContext(Dispatchers.IO) { service.`import`(jsonString, key) }
+        loadNotes()
+        return count
+    }
+
     /**
      * Resolve a sync conflict for a specific note.
      */
     suspend fun resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) {
         Log.d(TAG, "[Sync] resolveConflict: noteId=$noteId, strategy=$strategy")
+
+        val conflict = _pendingConflicts.value.firstOrNull { it.id == noteId } ?: return
+        val service = syncServiceInstance
+
+        if (service != null) {
+            try {
+                withContext(Dispatchers.IO) {
+                    service.resolveConflict(conflict, strategy)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "[Sync] resolveConflict failed: ${e.message}", e)
+            }
+        }
+
         _pendingConflicts.value = _pendingConflicts.value.filter { it.id != noteId }
         loadNotes()
         triggerSync()

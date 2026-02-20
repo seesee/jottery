@@ -51,6 +51,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jottery.android.model.DecryptedNote
+import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.ui.theme.NoteColors
 import com.jottery.android.ui.webview.MarkdownPreviewView
 import com.jottery.android.ui.webview.WebCalcEditorView
@@ -101,6 +102,9 @@ fun NoteEditorView(
     var colorMenuExpanded by remember { mutableStateOf(false) }
     var languageMenuExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showVersionHistory by remember { mutableStateOf(false) }
+    var showNoteInfo by remember { mutableStateOf(false) }
+    var versions by remember(note.id) { mutableStateOf<List<NoteVersionRecord>>(emptyList()) }
 
     // Pinch-to-zoom state
     var pinchBaseScale by remember { mutableFloatStateOf(editorFontScale) }
@@ -265,11 +269,14 @@ fun NoteEditorView(
                             languageMenuExpanded = true
                         },
                         onShowVersionHistory = {
-                            // TODO: Navigate to version history
+                            scope.launch {
+                                versions = appState.getVersionsForNote(note.id)
+                            }
+                            showVersionHistory = true
                             menuExpanded = false
                         },
                         onShowNoteInfo = {
-                            // TODO: Show note info dialog
+                            showNoteInfo = true
                             menuExpanded = false
                         },
                         onResetTextSize = {
@@ -488,6 +495,31 @@ fun NoteEditorView(
                 onNavigateBack?.invoke()
             },
             onDismiss = { showDeleteConfirm = false },
+        )
+    }
+
+    // Version history bottom sheet
+    if (showVersionHistory) {
+        VersionHistoryView(
+            versions = versions,
+            onRestore = { version ->
+                scope.launch {
+                    appState.restoreVersion(note.id, version)
+                }
+                showVersionHistory = false
+            },
+            onDismiss = { showVersionHistory = false },
+        )
+    }
+
+    // Note info bottom sheet
+    if (showNoteInfo) {
+        NoteInfoView(
+            note = note.copy(
+                content = textFieldValue.text,
+                tags = tags,
+            ),
+            onDismiss = { showNoteInfo = false },
         )
     }
 }

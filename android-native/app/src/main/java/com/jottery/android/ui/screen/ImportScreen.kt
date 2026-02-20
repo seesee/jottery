@@ -40,10 +40,7 @@ fun ImportScreen(
                         input.bufferedReader().readText()
                     } ?: throw Exception("Could not read file")
                 }
-                val count = withContext(Dispatchers.IO) {
-                    // TODO: Wire to ImportService.import(json, key)
-                    0
-                }
+                val count = appState.importNotes(json)
                 statusMessage = "Imported $count notes successfully."
             } catch (e: Exception) {
                 errorMessage = "Import failed: ${e.message}"

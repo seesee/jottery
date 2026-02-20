@@ -38,10 +38,7 @@ fun BackupScreen(
             isCreating = true
             errorMessage = null
             try {
-                val json = withContext(Dispatchers.IO) {
-                    // TODO: Wire to BackupService.createBackup()
-                    "{}"
-                }
+                val json = appState.createBackup()
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.use { os ->
                         os.write(json.toByteArray(Charsets.UTF_8))
@@ -69,10 +66,7 @@ fun BackupScreen(
                         input.bufferedReader().readText()
                     } ?: throw Exception("Could not read file")
                 }
-                val count = withContext(Dispatchers.IO) {
-                    // TODO: Wire to BackupService.restoreBackup(json)
-                    0
-                }
+                val count = appState.restoreBackup(json)
                 statusMessage = "Restored $count notes from backup."
             } catch (e: Exception) {
                 errorMessage = "Restore failed: ${e.message}"

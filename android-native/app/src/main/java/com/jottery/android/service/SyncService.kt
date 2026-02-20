@@ -406,4 +406,119 @@ class SyncService(
             Log.e(TAG, "Failed to handle rejection for ${rejected.id}: ${e.message}")
         }
     }
+
+    /**
+     * Resolve a sync conflict using the specified strategy.
+     * Ported from iOS SyncService.resolveConflict().
+     */
+    suspend fun resolveConflict(conflict: ConflictInfo, strategy: ConflictResolutionStrategy) {
+        val localRecord = noteRepo.getRaw(conflict.id) ?: return
+
+        when (strategy) {
+            ConflictResolutionStrategy.KEEP_LOCAL -> {
+                // Rebase local hash chain onto server's for fast-forward push
+                val localChain: List<String> = localRecord.hashChain?.let {
+                    try { json.decodeFromString(it) } catch (_: Exception) { emptyList() }
+                } ?: emptyList()
+                val serverChain = conflict.serverHashChain ?: emptyList()
+
+                // Merge chains: server chain + local chain, deduplicated, max 50
+                val merged = (serverChain + localChain).distinct().takeLast(50)
+
+                val updated = localRecord.copy(
+                    version = conflict.serverVersion + 1,
+                    parentHash = conflict.serverContentHash,
+                    hashChain = json.encodeToString(merged),
+                    needsSync = true,
+                    modifiedAt = DateUtils.nowISO8601(),
+                )
+                noteRepo.updateRaw(updated)
+            }
+
+            ConflictResolutionStrategy.KEEP_SERVER -> {
+                // Snapshot current state before overwriting
+                versionRepo.insertOrReplace(
+                    NoteVersionRecord.from(localRecord, "pre-conflict-resolution")
+                )
+
+                // Convert server sync tags to storage format (single encrypted blob)
+                val tagsBlob = syncTagsToStorageTags(conflict.serverEncryptedTags)
+
+                val updated = localRecord.copy(
+                    content = conflict.serverEncryptedContent,
+                    tags = tagsBlob,
+                    attachments = json.encodeToString(conflict.serverAttachments),
+                    pinned = conflict.serverPinned,
+                    syntaxLanguage = conflict.serverSyntaxLanguage ?: localRecord.syntaxLanguage,
+                    wordWrap = conflict.serverWordWrap ?: localRecord.wordWrap,
+                    showPreview = conflict.serverShowPreview ?: localRecord.showPreview,
+                    version = conflict.serverVersion,
+                    contentHash = conflict.serverContentHash,
+                    parentHash = conflict.serverParentHash,
+                    hashChain = conflict.serverHashChain?.let { json.encodeToString(it) },
+                    needsSync = false,
+                    syncedAt = DateUtils.nowISO8601(),
+                    modifiedAt = conflict.serverModifiedAt,
+                )
+                noteRepo.updateRaw(updated)
+            }
+
+            ConflictResolutionStrategy.KEEP_BOTH -> {
+                // Accept server version for the existing note
+                val tagsBlob = syncTagsToStorageTags(conflict.serverEncryptedTags)
+
+                val serverRecord = localRecord.copy(
+                    content = conflict.serverEncryptedContent,
+                    tags = tagsBlob,
+                    attachments = json.encodeToString(conflict.serverAttachments),
+                    pinned = conflict.serverPinned,
+                    syntaxLanguage = conflict.serverSyntaxLanguage ?: localRecord.syntaxLanguage,
+                    wordWrap = conflict.serverWordWrap ?: localRecord.wordWrap,
+                    showPreview = conflict.serverShowPreview ?: localRecord.showPreview,
+                    version = conflict.serverVersion,
+                    contentHash = conflict.serverContentHash,
+                    parentHash = conflict.serverParentHash,
+                    hashChain = conflict.serverHashChain?.let { json.encodeToString(it) },
+                    needsSync = false,
+                    syncedAt = DateUtils.nowISO8601(),
+                    modifiedAt = conflict.serverModifiedAt,
+                )
+                noteRepo.updateRaw(serverRecord)
+
+                // Create a new note with the local content
+                noteRepo.create(
+                    content = conflict.localContent,
+                    tags = conflict.localTags,
+                    key = key,
+                )
+            }
+        }
+
+        Log.d(TAG, "Conflict resolved for ${conflict.id} with strategy $strategy")
+    }
+
+    /**
+     * Convert sync-format tags (individually encrypted) to storage format (single encrypted blob).
+     */
+    private fun syncTagsToStorageTags(syncTags: List<String>): String {
+        return try {
+            if (syncTags.size == 1 && syncTags[0].contains("ciphertext")) {
+                // Already in storage format
+                syncTags[0]
+            } else {
+                // Decrypt individual sync tags and re-encrypt as single blob
+                val plainTags = syncTags.mapNotNull { tagStr ->
+                    try {
+                        val enc = CryptoService.parseEncryptedJSON(tagStr)
+                        val plain = CryptoService.decryptText(enc, key)
+                        json.decodeFromString<String>(plain)
+                    } catch (_: Exception) { null }
+                }
+                val encTags = CryptoService.encryptStringArray(plainTags, key)
+                CryptoService.serializeEncryptedJSON(encTags)
+            }
+        } catch (_: Exception) {
+            syncTags.firstOrNull() ?: "[]"
+        }
+    }
 }
