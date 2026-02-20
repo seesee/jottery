@@ -12,6 +12,8 @@ import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
 import com.jottery.android.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.crypto.SecretKey
@@ -44,8 +46,11 @@ class SyncService(
 
     suspend fun startSSE() {
         try {
-            val tokenResponse = syncClient.getSSEToken()
+            val tokenResponse = withContext(Dispatchers.IO) {
+                syncClient.getSSEToken()
+            }
             sseClient.start(tokenResponse.token)
+            Log.d(TAG, "SSE started with token")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to start SSE: ${e.message}")
         }
