@@ -23,7 +23,6 @@ fun SettingsScreen(
     appState: AppState,
     onBack: () -> Unit,
     onNavigateToSyncSetup: () -> Unit,
-    onNavigateToChangePassword: () -> Unit,
     onNavigateToBackup: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
@@ -92,10 +91,6 @@ fun SettingsScreen(
 
             // Security Section
             SettingsSectionHeader("Security")
-            SettingsRow(
-                title = "Change password",
-                onClick = onNavigateToChangePassword,
-            )
             SettingsRow(
                 title = "Lock now",
                 onClick = { appState.lock() },

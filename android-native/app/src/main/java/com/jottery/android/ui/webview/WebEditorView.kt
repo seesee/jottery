@@ -1,13 +1,15 @@
 package com.jottery.android.ui.webview
 
 import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
@@ -41,6 +43,10 @@ fun WebEditorView(
     AndroidView(
         factory = { context ->
             WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
@@ -58,14 +64,11 @@ fun WebEditorView(
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        // Set initial content after page loads
-                        val escapedContent = content
-                            .replace("\\", "\\\\")
-                            .replace("\"", "\\\"")
-                            .replace("\n", "\\n")
-                            .replace("\r", "\\r")
+                        // Set initial content after page loads using JSON string
+                        // escaping (handles all special characters)
+                        val jsonContent = org.json.JSONObject.quote(content)
                         view?.evaluateJavascript(
-                            "window.bridge.setContent(\"$escapedContent\", $isDark)",
+                            "window.bridge.setContent($jsonContent, $isDark)",
                             null,
                         )
                         view?.evaluateJavascript(
@@ -96,6 +99,8 @@ class WebBridge(
     private val onOpenLink: (String) -> Unit,
     private val onRequestAttachment: (String) -> Unit,
 ) {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     @JavascriptInterface
     fun postMessage(jsonString: String) {
         try {
@@ -104,16 +109,16 @@ class WebBridge(
             when (obj["type"]?.jsonPrimitive?.content) {
                 "contentChanged" -> {
                     val content = obj["content"]?.jsonPrimitive?.content ?: return
-                    onContentChanged(content)
+                    mainHandler.post { onContentChanged(content) }
                 }
-                "ready" -> onReady()
+                "ready" -> mainHandler.post { onReady() }
                 "requestAttachment" -> {
                     val id = obj["id"]?.jsonPrimitive?.content ?: return
-                    onRequestAttachment(id)
+                    mainHandler.post { onRequestAttachment(id) }
                 }
                 "openLink" -> {
                     val url = obj["url"]?.jsonPrimitive?.content ?: return
-                    onOpenLink(url)
+                    mainHandler.post { onOpenLink(url) }
                 }
             }
         } catch (_: Exception) {

@@ -1,6 +1,7 @@
 package com.jottery.android.ui.webview
 
 import android.annotation.SuppressLint
+import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -31,6 +32,10 @@ fun MarkdownPreviewView(
     AndroidView(
         factory = { context ->
             WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
@@ -40,13 +45,9 @@ fun MarkdownPreviewView(
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        val escapedContent = content
-                            .replace("\\", "\\\\")
-                            .replace("\"", "\\\"")
-                            .replace("\n", "\\n")
-                            .replace("\r", "\\r")
+                        val jsonContent = org.json.JSONObject.quote(content)
                         view?.evaluateJavascript(
-                            "window.bridge.setContent(\"$escapedContent\", $isDark)",
+                            "window.bridge.setContent($jsonContent, $isDark)",
                             null,
                         )
                         view?.evaluateJavascript(
