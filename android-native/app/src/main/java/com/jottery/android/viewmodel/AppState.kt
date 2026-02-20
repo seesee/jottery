@@ -891,6 +891,29 @@ class AppState(application: Application) : AndroidViewModel(application) {
     /** Non-flow accessor for sync-enabled check (used by dispose effects). */
     val syncEnabledValue: Boolean get() = _syncEnabled.value
 
+    /**
+     * Save a note and trigger sync from viewModelScope.
+     * Use this from DisposableEffect.onDispose where the composable scope
+     * may already be cancelled.
+     */
+    fun saveNoteAndSync(note: DecryptedNote) {
+        viewModelScope.launch {
+            saveNote(note)
+            if (_syncEnabled.value) {
+                triggerSync()
+            }
+        }
+    }
+
+    /**
+     * Trigger sync from viewModelScope (fire-and-forget).
+     * Use this from DisposableEffect.onDispose.
+     */
+    fun triggerSyncBackground() {
+        if (!_syncEnabled.value) return
+        viewModelScope.launch { triggerSync() }
+    }
+
     fun setPendingEditorNote(note: DecryptedNote?) {
         _pendingEditorNote.value = note
     }

@@ -148,7 +148,10 @@ fun NoteEditorView(
         }
     }
 
-    // Save on dispose (navigating away)
+    // Save on dispose (navigating away).
+    // Uses viewModelScope via appState methods because the composable scope
+    // (rememberCoroutineScope) is cancelled when leaving the composition,
+    // which would silently drop the save and sync coroutines.
     DisposableEffect(note.id) {
         onDispose {
             saveJob?.cancel()
@@ -161,14 +164,9 @@ fun NoteEditorView(
                     color = color,
                     showPreview = showPreview,
                 )
-                scope.launch {
-                    appState.saveNote(updated)
-                    if (appState.syncEnabledValue) {
-                        appState.triggerSync()
-                    }
-                }
+                appState.saveNoteAndSync(updated)
             } else if (didSaveDuringSession && appState.syncEnabledValue) {
-                scope.launch { appState.triggerSync() }
+                appState.triggerSyncBackground()
             }
         }
     }
