@@ -54,7 +54,7 @@ data class SyncPushRequest(
     val notes: List<SyncNote>,
     val attachments: List<SyncAttachment>,
     val versions: List<SyncNoteVersion>,
-    val deletions: List<SyncDeletion>? = null,
+    val deletions: List<SyncDeletion> = emptyList(),
     val savedSearches: List<SyncSavedSearch>? = null,
 )
 

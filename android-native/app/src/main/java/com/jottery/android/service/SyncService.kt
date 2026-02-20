@@ -171,7 +171,7 @@ class SyncService(
                 notes = syncNotes,
                 attachments = syncAttachments,
                 versions = syncVersions,
-                deletions = syncDeletions.ifEmpty { null },
+                deletions = syncDeletions,
             )
 
             val response = syncClient.push(request)
