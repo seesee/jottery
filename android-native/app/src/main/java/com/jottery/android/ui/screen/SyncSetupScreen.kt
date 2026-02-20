@@ -32,11 +32,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,6 +57,7 @@ fun SyncSetupScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
@@ -182,9 +185,42 @@ fun SyncSetupScreen(
 
             Button(
                 onClick = {
-                    // TODO: Wire to AppState sync setup
                     isLoading = true
                     errorMessage = null
+                    successMessage = null
+                    val trimmedUrl = serverUrl.trim().trimEnd('/')
+
+                    scope.launch {
+                        when (mode) {
+                            SyncSetupMode.Register -> {
+                                val result = appState.registerDevice(
+                                    serverUrl = trimmedUrl,
+                                    email = email.trim(),
+                                    password = password,
+                                    deviceName = deviceName.trim(),
+                                )
+                                isLoading = false
+                                result.onSuccess { msg ->
+                                    successMessage = msg
+                                }.onFailure { e ->
+                                    errorMessage = e.message ?: "Registration failed"
+                                }
+                            }
+                            SyncSetupMode.Import -> {
+                                val result = appState.importCredentials(
+                                    serverUrl = trimmedUrl,
+                                    apiKey = importApiKey.trim(),
+                                    clientId = importClientId.trim(),
+                                )
+                                isLoading = false
+                                result.onSuccess { msg ->
+                                    successMessage = msg
+                                }.onFailure { e ->
+                                    errorMessage = e.message ?: "Import failed"
+                                }
+                            }
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading && serverUrl.isNotBlank() && when (mode) {

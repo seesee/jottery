@@ -51,6 +51,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.ui.theme.NoteColors
+import com.jottery.android.ui.webview.MarkdownPreviewView
+import com.jottery.android.ui.webview.WebCalcEditorView
+import com.jottery.android.ui.webview.WebOutlinerEditorView
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -378,41 +381,78 @@ fun NoteEditorView(
                     }
                 },
         ) {
-            BasicTextField(
-                value = textFieldValue,
-                onValueChange = { newValue ->
-                    if (!isReadOnly) {
-                        textFieldValue = newValue
-                        scheduleSave()
-                    }
-                },
-                readOnly = isReadOnly,
-                textStyle = TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = effectiveFontSize,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = effectiveFontSize * 1.5f,
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (textFieldValue.text.isEmpty() && !isReadOnly) {
-                            Text(
-                                text = "Start typing\u2026",
-                                style = TextStyle(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = effectiveFontSize,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                ),
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-            )
+            when {
+                showPreview -> {
+                    MarkdownPreviewView(
+                        content = textFieldValue.text,
+                        fontSize = 14f * editorFontScale,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                syntaxLanguage == "calc" -> {
+                    WebCalcEditorView(
+                        content = textFieldValue.text,
+                        fontSize = 14f * editorFontScale,
+                        onContentChanged = { newContent ->
+                            if (!isReadOnly) {
+                                textFieldValue = TextFieldValue(newContent)
+                                scheduleSave()
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                syntaxLanguage == "outliner" -> {
+                    WebOutlinerEditorView(
+                        content = textFieldValue.text,
+                        fontSize = 14f * editorFontScale,
+                        onContentChanged = { newContent ->
+                            if (!isReadOnly) {
+                                textFieldValue = TextFieldValue(newContent)
+                                scheduleSave()
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                else -> {
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            if (!isReadOnly) {
+                                textFieldValue = newValue
+                                scheduleSave()
+                            }
+                        },
+                        readOnly = isReadOnly,
+                        textStyle = TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = effectiveFontSize,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = effectiveFontSize * 1.5f,
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (textFieldValue.text.isEmpty() && !isReadOnly) {
+                                    Text(
+                                        text = "Start typing\u2026",
+                                        style = TextStyle(
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = effectiveFontSize,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        ),
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 

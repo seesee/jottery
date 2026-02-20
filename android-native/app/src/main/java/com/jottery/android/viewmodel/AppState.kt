@@ -24,9 +24,15 @@ import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.InboxItem
 import com.jottery.android.model.NoteVersionRecord
+import com.jottery.android.model.RegisterDeviceRequest
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.UserSettings
+import com.jottery.android.network.SSEClient
+import com.jottery.android.network.SyncClient
+import com.jottery.android.service.SyncService
 import com.jottery.android.util.DateUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -139,6 +145,10 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private var versionRepo: VersionRepository? = null
     private var attachmentRepo: AttachmentRepository? = null
     private var savedSearchRepo: SavedSearchRepository? = null
+
+    private var syncClientInstance: SyncClient? = null
+    private var syncServiceInstance: SyncService? = null
+    private var sseClientInstance: SSEClient? = null
 
     private var searchJob: Job? = null
     private var backgroundedAt: Instant? = null
@@ -401,7 +411,11 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _pendingEditorNote.value = null
         }
 
-        // TODO: Phase 5 -- stop SSE and release sync objects
+        // Stop SSE and release sync objects
+        sseClientInstance?.stop()
+        syncClientInstance = null
+        syncServiceInstance = null
+        sseClientInstance = null
         _syncEnabled.value = false
 
         keyManager.lock()
@@ -1097,6 +1111,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         // Delete database file
         context.deleteDatabase("jottery.db")
 
+        // Stop sync and SSE
+        sseClientInstance?.stop()
+        syncClientInstance = null
+        syncServiceInstance = null
+        sseClientInstance = null
+
         // Reset all in-memory state
         db = null
         noteRepo = null
@@ -1287,8 +1307,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
     /**
      * Set up the sync client. Pass apiKey directly after registration
      * to avoid Keystore retrieval timing issues; otherwise reads from Keystore.
-     *
-     * TODO: Phase 5 -- implement full sync service.
      */
     fun setupSync(apiKey: String? = null) {
         val currentSettings = _settings.value
@@ -1314,37 +1332,101 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _syncError.value = "No API key found. Please re-register the device."
             return
         }
+        val clientId = KeystoreService.getClientId(context)
+        if (clientId.isNullOrEmpty()) {
+            Log.d(TAG, "[Sync] setupSync: no client ID in Keystore")
+            _syncError.value = "No client ID found. Please re-register the device."
+            return
+        }
 
         Log.d(TAG, "[Sync] setupSync: OK -- endpoint=$endpoint")
+
+        val noteRepository = noteRepo ?: return
+        val versionRepository = versionRepo ?: return
+        val attachmentRepository = attachmentRepo ?: return
+        val syncRepository = syncRepo ?: return
+        val savedSearchRepository = savedSearchRepo ?: return
+
+        val client = SyncClient(endpoint, resolvedApiKey, clientId)
+        val sse = SSEClient(endpoint, viewModelScope)
+        val service = SyncService(
+            syncClient = client,
+            sseClient = sse,
+            noteRepo = noteRepository,
+            versionRepo = versionRepository,
+            attachmentRepo = attachmentRepository,
+            syncRepo = syncRepository,
+            savedSearchRepo = savedSearchRepository,
+            key = key,
+            scope = viewModelScope,
+        )
+
+        service.onSyncStatusChanged = { status ->
+            _syncStatusMessage.value = status
+        }
+        service.onConflictDetected = { conflict ->
+            _pendingConflicts.value = _pendingConflicts.value + conflict
+        }
+        service.onSyncComplete = { _ ->
+            viewModelScope.launch { loadNotes() }
+        }
+
+        // Wire SSE to trigger sync on server-sent events
+        sse.onSyncNeeded = {
+            viewModelScope.launch { triggerSync() }
+        }
+
+        syncClientInstance = client
+        syncServiceInstance = service
+        sseClientInstance = sse
         _syncEnabled.value = true
         _syncError.value = null
 
-        // TODO: Phase 5 -- create SyncClient + SyncService, wire post-sync handler,
-        //   start SSE, run initial sync, start network monitor.
+        // Start SSE and run initial sync
+        viewModelScope.launch {
+            try { service.startSSE() } catch (e: Exception) {
+                Log.w(TAG, "[Sync] SSE start failed: ${e.message}")
+            }
+            try { triggerSync() } catch (e: Exception) {
+                Log.w(TAG, "[Sync] Initial sync failed: ${e.message}")
+            }
+        }
     }
 
     /**
      * Trigger a sync cycle (push then pull).
-     *
-     * TODO: Phase 5 -- implement full sync cycle.
      */
     suspend fun triggerSync() {
-        if (!_syncEnabled.value) {
-            Log.d(TAG, "[Sync] triggerSync: sync not enabled -- aborting")
+        val service = syncServiceInstance
+        if (service == null || !_syncEnabled.value) {
+            Log.d(TAG, "[Sync] triggerSync: sync not enabled or no service -- aborting")
             return
         }
         Log.d(TAG, "[Sync] triggerSync: starting sync cycle")
         _isSyncing.value = true
         _syncError.value = null
-        _syncStatusMessage.value = "Pushing changes..."
 
-        // TODO: Phase 5 -- push, pull, finalise, reload notes, update conflicts.
-        _isSyncing.value = false
-        _syncStatusMessage.value = "Synced -- up to date"
+        try {
+            val newCount = withContext(Dispatchers.IO) { service.fullSync() }
+            _isSyncing.value = false
+            _lastSyncAt.value = Instant.now()
+            _syncStatusMessage.value = if (newCount > 0) {
+                "Synced \u2014 $newCount new note${if (newCount == 1) "" else "s"}"
+            } else {
+                "Synced \u2014 up to date"
+            }
+            loadNotes()
+        } catch (e: Exception) {
+            Log.e(TAG, "[Sync] triggerSync failed: ${e.message}", e)
+            _isSyncing.value = false
+            _syncError.value = "Sync failed: ${e.message}"
+            _syncStatusMessage.value = null
+        }
 
         viewModelScope.launch {
             delay(4_000)
-            if (_syncStatusMessage.value == "Synced -- up to date") {
+            val current = _syncStatusMessage.value
+            if (current != null && current.startsWith("Synced")) {
                 _syncStatusMessage.value = null
             }
         }
@@ -1352,18 +1434,26 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     /**
      * Force a full sync -- re-downloads all notes from the server.
-     *
-     * TODO: Phase 5 -- implement full sync reset and re-download.
      */
     suspend fun forceFullSync() {
-        if (!_syncEnabled.value) return
+        val service = syncServiceInstance
+        if (service == null || !_syncEnabled.value) return
         _isSyncing.value = true
         _syncError.value = null
-        _syncStatusMessage.value = "Full sync in progress..."
+        _syncStatusMessage.value = "Full sync in progress\u2026"
 
-        // TODO: Phase 5 -- force full sync, reload notes, update conflicts.
-        _isSyncing.value = false
-        _syncStatusMessage.value = "Full sync complete"
+        try {
+            val newCount = withContext(Dispatchers.IO) { service.fullSync() }
+            _isSyncing.value = false
+            _lastSyncAt.value = Instant.now()
+            _syncStatusMessage.value = "Full sync complete"
+            loadNotes()
+        } catch (e: Exception) {
+            Log.e(TAG, "[Sync] forceFullSync failed: ${e.message}", e)
+            _isSyncing.value = false
+            _syncError.value = "Full sync failed: ${e.message}"
+            _syncStatusMessage.value = null
+        }
 
         viewModelScope.launch {
             delay(4_000)
@@ -1374,14 +1464,81 @@ class AppState(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Register this device with a Jottery sync server.
+     * Stores the returned API key and client ID, enables sync.
+     */
+    suspend fun registerDevice(
+        serverUrl: String,
+        email: String,
+        password: String,
+        deviceName: String,
+    ): Result<String> {
+        return try {
+            val tempClient = SyncClient(serverUrl, "", "")
+            val response = withContext(Dispatchers.IO) {
+                tempClient.registerDevice(
+                    RegisterDeviceRequest(
+                        email = email,
+                        password = password,
+                        deviceName = deviceName,
+                    )
+                )
+            }
+
+            val context = getApplication<Application>()
+            KeystoreService.setAPIKey(context, response.apiKey)
+            KeystoreService.setClientId(context, response.clientId)
+
+            val newSettings = _settings.value.copy(
+                syncEnabled = true,
+                syncEndpoint = serverUrl,
+            )
+            updateSettings(newSettings)
+            setupSync(response.apiKey)
+
+            Result.success("Device registered successfully.")
+        } catch (e: Exception) {
+            Log.e(TAG, "[Sync] registerDevice failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Import sync credentials from another device.
+     * Stores the API key and client ID, enables sync.
+     */
+    suspend fun importCredentials(
+        serverUrl: String,
+        apiKey: String,
+        clientId: String,
+    ): Result<String> {
+        return try {
+            val context = getApplication<Application>()
+            KeystoreService.setAPIKey(context, apiKey)
+            KeystoreService.setClientId(context, clientId)
+
+            val newSettings = _settings.value.copy(
+                syncEnabled = true,
+                syncEndpoint = serverUrl,
+            )
+            updateSettings(newSettings)
+            setupSync(apiKey)
+
+            Result.success("Credentials imported successfully.")
+        } catch (e: Exception) {
+            Log.e(TAG, "[Sync] importCredentials failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Resolve a sync conflict for a specific note.
-     *
-     * TODO: Phase 5 -- delegate to SyncService.resolveConflict, reload notes, trigger sync.
      */
     suspend fun resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) {
         Log.d(TAG, "[Sync] resolveConflict: noteId=$noteId, strategy=$strategy")
-        // TODO: Phase 5 -- resolve via SyncService, update pendingConflicts, loadNotes, triggerSync.
         _pendingConflicts.value = _pendingConflicts.value.filter { it.id != noteId }
+        loadNotes()
+        triggerSync()
     }
 
     // MARK: - Inbox (Phase 5 Stubs)
@@ -1445,7 +1602,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             if (backgroundedAt == null) {
                 backgroundedAt = Instant.now()
             }
-            // TODO: Phase 5 -- stop SSE
+            sseClientInstance?.stop()
         } else {
             // Coming to foreground
             if (_isLocked.value) return
@@ -1464,10 +1621,10 @@ class AppState(application: Application) : AndroidViewModel(application) {
             backgroundedAt = null
             keyManager.recordActivity()
 
-            // Only restart SSE and sync when returning from genuine background
+            // Restart SSE and sync when returning from genuine background
             if (wasBackgrounded && _syncEnabled.value) {
                 viewModelScope.launch {
-                    // TODO: Phase 5 -- restart SSE, trigger sync
+                    try { syncServiceInstance?.startSSE() } catch (_: Exception) {}
                     triggerSync()
                 }
             }
