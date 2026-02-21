@@ -31,6 +31,13 @@ demo-generation/tui-demo/
 xcuserdata/
 *.xcuserdatad/
 
+# Android build artifacts
+android-native/.gradle/
+android-native/app/build/
+android-native/app/schemas/
+android-native/build/
+android-native/local.properties
+
 # Server runtime database
 jottery.db
 
