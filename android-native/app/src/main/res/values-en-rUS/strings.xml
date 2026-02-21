@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- US English overrides for British English defaults -->
+    <string name="editor_colour">Color</string>
+    <string name="bulk_set_colour">Set Color</string>
+</resources>

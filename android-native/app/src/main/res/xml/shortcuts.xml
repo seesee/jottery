@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_note"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_input_add"
+        android:shortcutShortLabel="@string/notes_new"
+        android:shortcutLongLabel="@string/notes_new">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.jottery.android"
+            android:targetClass="com.jottery.android.MainActivity"
+            android:data="jottery://new_note" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="search"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_search"
+        android:shortcutShortLabel="@string/notes_search"
+        android:shortcutLongLabel="@string/notes_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.jottery.android"
+            android:targetClass="com.jottery.android.MainActivity"
+            android:data="jottery://search" />
+    </shortcut>
+</shortcuts>

@@ -370,21 +370,8 @@
     stopAutoLock();
     syncService.disableAutoSync();
     syncService.disconnectFromSyncEvents();
-    // Only sync on lock if we were previously unlocked (not on app start)
     if (wasUnlocked) {
-      syncOnLock();
       wasUnlocked = false;
-    }
-  }
-
-  async function syncOnLock() {
-    try {
-      const syncMetadata = await syncRepository.getMetadata();
-      if (syncMetadata?.syncEnabled) {
-        await syncService.syncNow();
-      }
-    } catch (error) {
-      console.error('Failed to sync on lock:', error);
     }
   }
 

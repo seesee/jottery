@@ -19,6 +19,9 @@ declare global {
         };
       };
     };
+    Android?: {
+      postMessage(json: string): void;
+    };
     bridge: {
       setContent(content: string, isDark: boolean): void;
       setTheme(isDark: boolean): void;
@@ -28,7 +31,14 @@ declare global {
   }
 }
 
-/** Post a message to Swift. No-op if not running in WKWebView. */
+/** Post a message to the native host. Supports iOS (WKWebView) and Android (@JavascriptInterface). */
 export function postToSwift(message: JsToSwift): void {
-  window.webkit?.messageHandlers?.bridge?.postMessage(message);
+  if (window.webkit?.messageHandlers?.bridge) {
+    window.webkit.messageHandlers.bridge.postMessage(message);
+    return;
+  }
+  if (window.Android?.postMessage) {
+    window.Android.postMessage(JSON.stringify(message));
+    return;
+  }
 }

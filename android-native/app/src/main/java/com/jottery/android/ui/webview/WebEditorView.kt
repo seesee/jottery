@@ -1,0 +1,146 @@
+package com.jottery.android.ui.webview
+
+import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.view.ViewGroup
+import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
+import com.jottery.android.ui.theme.LocalIsDarkTheme
+
+/**
+ * Android WebView wrapper matching iOS's WebEditorView.
+ * Uses @JavascriptInterface for bridge communication.
+ */
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun WebEditorView(
+    htmlAsset: String,
+    content: String,
+    isDark: Boolean = LocalIsDarkTheme.current,
+    fontSize: Float = 16f,
+    onContentChanged: (String) -> Unit,
+    onReady: () -> Unit = {},
+    onOpenLink: (String) -> Unit = {},
+    onRequestAttachment: (String) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    // Keep callback references current across recompositions.
+    // The bridge is created once (remember) but callbacks may change when
+    // NoteEditorView recomposes with a new note parameter. rememberUpdatedState
+    // ensures the bridge always invokes the latest callback.
+    val currentOnContentChanged by rememberUpdatedState(onContentChanged)
+    val currentOnReady by rememberUpdatedState(onReady)
+    val currentOnOpenLink by rememberUpdatedState(onOpenLink)
+    val currentOnRequestAttachment by rememberUpdatedState(onRequestAttachment)
+
+    val bridge = remember {
+        WebBridge(
+            onContentChanged = { currentOnContentChanged(it) },
+            onReady = { currentOnReady() },
+            onOpenLink = { currentOnOpenLink(it) },
+            onRequestAttachment = { currentOnRequestAttachment(it) },
+        )
+    }
+
+    AndroidView(
+        factory = { context ->
+            WebView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+
+                addJavascriptInterface(bridge, "Android")
+
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                    ): Boolean {
+                        request?.url?.toString()?.let { currentOnOpenLink(it) }
+                        return true
+                    }
+
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        // Set initial content after page loads using JSON string
+                        // escaping (handles all special characters)
+                        val jsonContent = org.json.JSONObject.quote(content)
+                        view?.evaluateJavascript(
+                            "window.bridge.setContent($jsonContent, $isDark)",
+                            null,
+                        )
+                        view?.evaluateJavascript(
+                            "window.bridge.setFontSize($fontSize)",
+                            null,
+                        )
+                    }
+                }
+
+                loadUrl("file:///android_asset/$htmlAsset")
+            }
+        },
+        update = { webView ->
+            webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
+            webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
+        },
+        modifier = modifier,
+    )
+}
+
+/**
+ * JavaScript bridge interface. Methods run on a background thread —
+ * UI updates must be dispatched to the main thread.
+ */
+class WebBridge(
+    private val onContentChanged: (String) -> Unit,
+    private val onReady: () -> Unit,
+    private val onOpenLink: (String) -> Unit,
+    private val onRequestAttachment: (String) -> Unit,
+) {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    @JavascriptInterface
+    fun postMessage(jsonString: String) {
+        try {
+            val json = kotlinx.serialization.json.Json.parseToJsonElement(jsonString)
+            val obj = json.jsonObject
+            when (obj["type"]?.jsonPrimitive?.content) {
+                "contentChanged" -> {
+                    val content = obj["content"]?.jsonPrimitive?.content ?: return
+                    mainHandler.post { onContentChanged(content) }
+                }
+                "ready" -> mainHandler.post { onReady() }
+                "requestAttachment" -> {
+                    val id = obj["id"]?.jsonPrimitive?.content ?: return
+                    mainHandler.post { onRequestAttachment(id) }
+                }
+                "openLink" -> {
+                    val url = obj["url"]?.jsonPrimitive?.content ?: return
+                    mainHandler.post { onOpenLink(url) }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("WebBridge", "postMessage failed: ${e.message}", e)
+        }
+    }
+}
+
+private val kotlinx.serialization.json.JsonElement.jsonObject
+    get() = this as kotlinx.serialization.json.JsonObject
+
+private val kotlinx.serialization.json.JsonElement.jsonPrimitive
+    get() = this as kotlinx.serialization.json.JsonPrimitive
