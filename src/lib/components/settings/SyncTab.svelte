@@ -116,7 +116,7 @@
     </div>
   {:else}
     <!-- Sync Enabled: Show Configuration UI -->
-    {#if !syncStatus?.isEnabled}
+    {#if !syncStatus?.clientId}
       <!-- Sync Setup Form -->
       <SyncSetupForm
         bind:syncEndpoint
