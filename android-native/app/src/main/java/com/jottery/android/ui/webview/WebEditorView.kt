@@ -9,13 +9,13 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import com.jottery.android.ui.theme.LocalIsDarkTheme
 
 /**
  * Android WebView wrapper matching iOS's WebEditorView.
@@ -26,7 +26,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 fun WebEditorView(
     htmlAsset: String,
     content: String,
-    isDark: Boolean = isSystemInDarkTheme(),
+    isDark: Boolean = LocalIsDarkTheme.current,
     fontSize: Float = 16f,
     onContentChanged: (String) -> Unit,
     onReady: () -> Unit = {},
@@ -94,8 +94,8 @@ fun WebEditorView(
             }
         },
         update = { webView ->
-            // Update theme if it changes
             webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
+            webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
         },
         modifier = modifier,
     )

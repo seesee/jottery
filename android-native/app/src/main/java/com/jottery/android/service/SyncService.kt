@@ -235,11 +235,9 @@ class SyncService(
                         totalNewCount++
                     }
 
-                    // Convert sync tags back to single encrypted blob
-                    val tagsBlob = if (syncNote.tags.size == 1 && syncNote.tags[0].contains("ciphertext")) {
-                        syncNote.tags[0]
-                    } else {
-                        // Re-encrypt tags as a single blob
+                    // Convert sync tags (individually encrypted) to storage format (single encrypted blob).
+                    // Each sync tag decrypts to a JSON-encoded string — decode it to get the plain tag.
+                    val tagsBlob = run {
                         val plainTags = syncNote.tags.mapNotNull { tagStr ->
                             try {
                                 val enc = CryptoService.parseEncryptedJSON(tagStr)
@@ -502,23 +500,21 @@ class SyncService(
      */
     private fun syncTagsToStorageTags(syncTags: List<String>): String {
         return try {
-            if (syncTags.size == 1 && syncTags[0].contains("ciphertext")) {
-                // Already in storage format
-                syncTags[0]
-            } else {
-                // Decrypt individual sync tags and re-encrypt as single blob
-                val plainTags = syncTags.mapNotNull { tagStr ->
-                    try {
-                        val enc = CryptoService.parseEncryptedJSON(tagStr)
-                        val plain = CryptoService.decryptText(enc, key)
-                        json.decodeFromString<String>(plain)
-                    } catch (_: Exception) { null }
-                }
-                val encTags = CryptoService.encryptStringArray(plainTags, key)
-                CryptoService.serializeEncryptedJSON(encTags)
+            // Decrypt individual sync tags and re-encrypt as single blob.
+            // Each sync tag decrypts to a JSON-encoded string — decode it to get the plain tag.
+            val plainTags = syncTags.mapNotNull { tagStr ->
+                try {
+                    val enc = CryptoService.parseEncryptedJSON(tagStr)
+                    val plain = CryptoService.decryptText(enc, key)
+                    json.decodeFromString<String>(plain)
+                } catch (_: Exception) { null }
             }
+            val encTags = CryptoService.encryptStringArray(plainTags, key)
+            CryptoService.serializeEncryptedJSON(encTags)
         } catch (_: Exception) {
-            syncTags.firstOrNull() ?: "[]"
+            // Fallback: encrypt empty list
+            val encTags = CryptoService.encryptStringArray(emptyList(), key)
+            CryptoService.serializeEncryptedJSON(encTags)
         }
     }
 }

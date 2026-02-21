@@ -41,8 +41,13 @@ fun JotteryNavigation(
     appState: AppState,
     navController: NavHostController = rememberNavController(),
 ) {
+    val isInitialised by appState.isInitialised.collectAsState()
     val isFirstLaunch by appState.isFirstLaunch.collectAsState()
     val isLocked by appState.isLocked.collectAsState()
+
+    // Don't render anything until the vault check completes, to avoid
+    // briefly flashing the setup screen when a vault already exists.
+    if (!isInitialised) return
 
     val startDestination = when {
         isFirstLaunch -> Routes.SETUP

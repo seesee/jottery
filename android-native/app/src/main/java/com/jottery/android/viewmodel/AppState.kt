@@ -57,6 +57,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     // MARK: - Lock State
 
+    private val _isInitialised = MutableStateFlow(false)
+    val isInitialised: StateFlow<Boolean> = _isInitialised.asStateFlow()
+
     private val _isFirstLaunch = MutableStateFlow(true)
     val isFirstLaunch: StateFlow<Boolean> = _isFirstLaunch.asStateFlow()
 
@@ -238,11 +241,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     Log.e(TAG, "Initialisation error: ${e.message}")
                     _isFirstLaunch.value = true
+                } finally {
+                    _isInitialised.value = true
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Database init failed: ${e.message}")
             _isFirstLaunch.value = true
+            _isInitialised.value = true
         }
     }
 
@@ -1083,6 +1089,38 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _notes.value = currentNotes
         }
         scheduleDebouncedSync()
+    }
+
+    /**
+     * Resolve an attachment blob to a data URL for the markdown preview WebView.
+     * Matches iOS's MarkdownPreviewView.resolveAttachment behaviour.
+     */
+    suspend fun resolveAttachmentDataUrl(
+        attachmentId: String,
+        attachments: List<AttachmentRef>,
+    ): String? {
+        val attachmentRepository = attachmentRepo ?: return null
+        val key = keyManager.masterKey ?: return null
+
+        // Find the matching attachment ref (by id or data field)
+        val ref = attachments.firstOrNull { ref ->
+            ref.id == attachmentId ||
+                    ref.data == attachmentId ||
+                    ref.id.replace("-", "").startsWith(attachmentId) ||
+                    ref.data.replace("-", "").startsWith(attachmentId)
+        } ?: return null
+
+        return try {
+            val blobData = attachmentRepository.getBlob(ref.data) ?: return null
+            val blobString = String(blobData, Charsets.UTF_8)
+            val encrypted = CryptoService.parseEncryptedJSON(blobString)
+            val decryptedData = CryptoService.decrypt(encrypted, key)
+            val base64 = android.util.Base64.encodeToString(decryptedData, android.util.Base64.NO_WRAP)
+            "data:${ref.mimeType};base64,$base64"
+        } catch (e: Exception) {
+            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.message}")
+            null
+        }
     }
 
     // MARK: - Version History

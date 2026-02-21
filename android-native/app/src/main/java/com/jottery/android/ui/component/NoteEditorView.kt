@@ -413,6 +413,26 @@ fun NoteEditorView(
                     MarkdownPreviewView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
+                        onRequestAttachment = { id, callback ->
+                            scope.launch {
+                                val dataUrl = appState.resolveAttachmentDataUrl(
+                                    attachmentId = id,
+                                    attachments = note.attachments,
+                                )
+                                if (dataUrl != null) callback(dataUrl)
+                            }
+                        },
+                        onOpenLink = { url ->
+                            try {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(url),
+                                )
+                                appState.getApplication<android.app.Application>().startActivity(
+                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            } catch (_: Exception) { }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

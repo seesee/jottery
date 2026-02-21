@@ -1,8 +1,8 @@
 package com.jottery.android.ui.webview
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.jottery.android.ui.theme.LocalIsDarkTheme
 
 /**
  * Calculator editor using the calc.html WebView bundle.
@@ -17,7 +17,7 @@ fun WebCalcEditorView(
     WebEditorView(
         htmlAsset = "calc.html",
         content = content,
-        isDark = isSystemInDarkTheme(),
+        isDark = LocalIsDarkTheme.current,
         fontSize = fontSize,
         onContentChanged = onContentChanged,
         modifier = modifier,

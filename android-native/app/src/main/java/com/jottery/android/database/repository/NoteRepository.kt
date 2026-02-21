@@ -421,6 +421,21 @@ class NoteRepository(
         }
     }
 
+    /**
+     * Strip accumulated JSON quote escaping from a tag value.
+     * A sync format mismatch could store `"tag"` instead of `tag`, and each
+     * sync round-trip would add another layer of escaping. This peels them off.
+     */
+    private fun stripAccumulatedQuotes(tag: String): String {
+        var t = tag
+        while (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) {
+            val unescaped = t.substring(1, t.length - 1).replace("\\\"", "\"")
+            if (unescaped == t) break
+            t = unescaped
+        }
+        return t
+    }
+
     /** Decrypt a NoteRecord to a DecryptedNote. */
     private fun decrypt(record: NoteRecord, key: SecretKey): DecryptedNote {
         val encContent = CryptoService.parseEncryptedJSON(record.content)
@@ -433,9 +448,19 @@ class NoteRepository(
             emptyList()
         } else if (decryptedTagsText.startsWith("[")) {
             try {
-                json.decodeFromString(decryptedTagsText)
+                val decoded: List<String> = json.decodeFromString(decryptedTagsText)
+                // Strip any accumulated JSON quote escaping from sync format mismatch
+                decoded.map { tag -> stripAccumulatedQuotes(tag) }
             } catch (_: Exception) {
                 emptyList()
+            }
+        } else if (decryptedTagsText.startsWith("\"")) {
+            // Single JSON-encoded string (mismatched sync/storage format) — decode it
+            try {
+                val single: String = json.decodeFromString(decryptedTagsText)
+                listOf(stripAccumulatedQuotes(single))
+            } catch (_: Exception) {
+                listOf(decryptedTagsText.trim('"'))
             }
         } else {
             // Plain string — single tag or comma-separated
