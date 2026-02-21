@@ -58,6 +58,9 @@ export default defineConfig({
     // Allow specific hostnames when VITE_ALLOWED_HOSTS is set
     ...(allowedHosts.length > 0 && { allowedHosts }),
   },
+  resolve: {
+    dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
+  },
   build: {
     target: 'esnext',
     outDir: 'dist',
