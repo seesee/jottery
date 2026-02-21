@@ -159,7 +159,11 @@ SCREENSHOTS_PUBLIC="$PROJECT_ROOT/public/screenshots"
 debug "Temp screenshot dir: $SCREENSHOTS_TEMP"
 debug "Public screenshot dir: $SCREENSHOTS_PUBLIC"
 
+# Expected number of screenshots per language (26 tests = 26 screenshots)
+EXPECTED_SCREENSHOTS=26
+
 # Function to generate web screenshots for a single language
+# Returns 0 if all tests passed, 1 if total failure (no screenshots), 2 if partial failure
 generate_lang_screenshots() {
   local lang="$1"
 
@@ -183,34 +187,40 @@ generate_lang_screenshots() {
   # Run playwright tests with DEMO_LANG env var (DEMO_LANG avoids conflict with system LANG)
   debug "Running: DEMO_LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts"
 
+  local tests_passed=true
   if DEMO_LANG=$lang npx playwright test --config=demo-generation/playwright.config.ts; then
-    echo -e "${GREEN}✓ Playwright tests passed for $lang${NC}"
+    echo -e "${GREEN}✓ All tests passed for $lang${NC}"
   else
-    local exit_code=$?
-    echo -e "${RED}❌ Tests failed for $lang (exit code: $exit_code)${NC}"
-    return $exit_code
+    tests_passed=false
   fi
 
-  # Check what was generated
-  debug "Checking output directory: $LANG_OUTPUT_DIR"
+  # Count how many screenshots were generated
+  local count=0
   if [ -d "$LANG_OUTPUT_DIR" ]; then
-    local count=$(ls -1 "$LANG_OUTPUT_DIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
-    debug "Found $count PNG files in $LANG_OUTPUT_DIR"
-  else
-    echo -e "${RED}❌ Output directory not created: $LANG_OUTPUT_DIR${NC}"
+    count=$(ls -1 "$LANG_OUTPUT_DIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
+  fi
+
+  # Total failure: no screenshots at all
+  if [ "$count" -eq 0 ]; then
+    echo -e "${RED}❌ TOTAL FAILURE for $lang — no screenshots generated${NC}"
     return 1
   fi
 
-  # Copy screenshots to public directory
-  if [ -d "$LANG_OUTPUT_DIR" ] && [ "$(ls -A "$LANG_OUTPUT_DIR" 2>/dev/null)" ]; then
-    mkdir -p "$SCREENSHOTS_PUBLIC/$lang"
-    cp -r "$LANG_OUTPUT_DIR"/* "$SCREENSHOTS_PUBLIC/$lang/"
-    echo -e "${GREEN}✓ Screenshots copied to $SCREENSHOTS_PUBLIC/$lang/${NC}"
-  else
-    echo -e "${YELLOW}⚠ No screenshots found to copy${NC}"
+  # Copy whatever was generated to public directory
+  mkdir -p "$SCREENSHOTS_PUBLIC/$lang"
+  cp -r "$LANG_OUTPUT_DIR"/* "$SCREENSHOTS_PUBLIC/$lang/"
+
+  # Partial failure: some tests failed but screenshots were produced
+  if [ "$tests_passed" = false ]; then
+    local missing=$((EXPECTED_SCREENSHOTS - count))
+    echo -e "${YELLOW}⚠ Partial: $count/$EXPECTED_SCREENSHOTS screenshots for $lang ($missing missing) — copied to public${NC}"
+    echo ""
+    return 2
   fi
 
+  echo -e "${GREEN}✓ $count screenshots copied to $SCREENSHOTS_PUBLIC/$lang/${NC}"
   echo ""
+  return 0
 }
 
 # Function to generate TUI demos for a single language
@@ -234,6 +244,7 @@ generate_lang_tui() {
 
 # Track results
 FAILED_WEB=""
+PARTIAL_WEB=""
 PASSED_WEB=""
 FAILED_TUI=""
 PASSED_TUI=""
@@ -250,8 +261,14 @@ if [ "$ALL_EVERYTHING" = true ]; then
   echo ""
 
   for lang in $AVAILABLE_LANGS; do
-    if generate_lang_screenshots "$lang"; then
+    generate_lang_screenshots "$lang"
+    rc=$?
+    if [ $rc -eq 0 ]; then
       PASSED_WEB="$PASSED_WEB $lang"
+    elif [ $rc -eq 2 ]; then
+      PARTIAL_WEB="$PARTIAL_WEB $lang"
+      echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
+      echo ""
     else
       FAILED_WEB="$FAILED_WEB $lang"
       echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
@@ -281,8 +298,11 @@ if [ "$ALL_EVERYTHING" = true ]; then
   if [ -n "$PASSED_WEB" ]; then
     echo -e "${GREEN}  ✓ Passed:$PASSED_WEB${NC}"
   fi
+  if [ -n "$PARTIAL_WEB" ]; then
+    echo -e "${YELLOW}  ⚠ Partial (some screenshots missing):$PARTIAL_WEB${NC}"
+  fi
   if [ -n "$FAILED_WEB" ]; then
-    echo -e "${RED}  ❌ Failed:$FAILED_WEB${NC}"
+    echo -e "${RED}  ❌ Failed (no screenshots):$FAILED_WEB${NC}"
   fi
   echo ""
   echo "TUI Demos:"
@@ -292,6 +312,22 @@ if [ "$ALL_EVERYTHING" = true ]; then
   if [ -n "$FAILED_TUI" ]; then
     echo -e "${RED}  ❌ Failed:$FAILED_TUI${NC}"
   fi
+
+  # Loud warning if there were any failures
+  if [ -n "$FAILED_WEB" ] || [ -n "$PARTIAL_WEB" ] || [ -n "$FAILED_TUI" ]; then
+    echo ""
+    echo -e "${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  WARNING: Some screenshots failed to generate!              ║${NC}"
+    if [ -n "$FAILED_WEB" ]; then
+      echo -e "${RED}║  TOTAL FAILURES (no output):$FAILED_WEB${NC}"
+    fi
+    if [ -n "$PARTIAL_WEB" ]; then
+      echo -e "${RED}║  PARTIAL FAILURES (missing screenshots):$PARTIAL_WEB${NC}"
+    fi
+    echo -e "${RED}║  Re-run failed languages individually to retry.             ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+  fi
+
   echo ""
   echo "Generated files in: $SCREENSHOTS_PUBLIC/<lang>/"
   echo -e "${GREEN}🎉 Full regeneration complete!${NC}"
@@ -304,8 +340,14 @@ if [ "$ALL_LANGS" = true ]; then
   echo ""
 
   for lang in $AVAILABLE_LANGS; do
-    if generate_lang_screenshots "$lang"; then
+    generate_lang_screenshots "$lang"
+    rc=$?
+    if [ $rc -eq 0 ]; then
       PASSED_WEB="$PASSED_WEB $lang"
+    elif [ $rc -eq 2 ]; then
+      PARTIAL_WEB="$PARTIAL_WEB $lang"
+      echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
+      echo ""
     else
       FAILED_WEB="$FAILED_WEB $lang"
       echo -e "${YELLOW}⚠ Continuing to next language...${NC}"
@@ -319,9 +361,28 @@ if [ "$ALL_LANGS" = true ]; then
   if [ -n "$PASSED_WEB" ]; then
     echo -e "${GREEN}✓ Passed:$PASSED_WEB${NC}"
   fi
-  if [ -n "$FAILED_WEB" ]; then
-    echo -e "${RED}❌ Failed:$FAILED_WEB${NC}"
+  if [ -n "$PARTIAL_WEB" ]; then
+    echo -e "${YELLOW}⚠ Partial (some screenshots missing):$PARTIAL_WEB${NC}"
   fi
+  if [ -n "$FAILED_WEB" ]; then
+    echo -e "${RED}❌ Failed (no screenshots):$FAILED_WEB${NC}"
+  fi
+
+  # Loud warning if there were any failures
+  if [ -n "$FAILED_WEB" ] || [ -n "$PARTIAL_WEB" ]; then
+    echo ""
+    echo -e "${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  WARNING: Some screenshots failed to generate!              ║${NC}"
+    if [ -n "$FAILED_WEB" ]; then
+      echo -e "${RED}║  TOTAL FAILURES (no output):$FAILED_WEB${NC}"
+    fi
+    if [ -n "$PARTIAL_WEB" ]; then
+      echo -e "${RED}║  PARTIAL FAILURES (missing screenshots):$PARTIAL_WEB${NC}"
+    fi
+    echo -e "${RED}║  Re-run failed languages individually to retry.             ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+  fi
+
   echo ""
   echo "Generated files in: $SCREENSHOTS_PUBLIC/<lang>/"
   exit 0

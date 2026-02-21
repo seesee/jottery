@@ -565,6 +565,17 @@ async function clearAllStorage(page: any) {
   });
 }
 
+// Helper to prepare the final page load for demos:
+// 1. Pre-sets locale in localStorage so the app initialises in the correct language
+// 2. Adds ?nowelcome to suppress the auto-created welcome note (demo notes have their own)
+async function prepareDemoPage(page: any, url: string, lang?: string) {
+  await page.evaluate((l: string) => {
+    localStorage.setItem('jottery-locale', l);
+  }, lang || LANG);
+  const separator = url.includes('?') ? '&' : '?';
+  await page.goto(`${url}${separator}nowelcome`);
+}
+
 test.describe('Landing Page Screenshots - Light Mode', () => {
   test.beforeEach(async ({ page }) => {
     // Clear all storage before test - do it twice for robustness
@@ -577,8 +588,8 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/?theme=light');
+    // Final reload: pre-set locale and suppress welcome note (demo notes have their own)
+    await prepareDemoPage(page, '/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -664,9 +675,9 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (always at index 3 in demo data)
+    // Find and click the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
+    const travelNote = noteListItems.nth(5);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -690,9 +701,9 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (always at index 3 in demo data)
+    // Find and click the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
+    const travelNote = noteListItems.nth(5);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -757,16 +768,17 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the travel note (always at index 3 in demo data)
+    // Click on the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
-    await travelNote.waitFor({ state: 'visible' });
-    await travelNote.click();
+    await noteListItems.nth(5).waitFor({ state: 'visible' });
+    await noteListItems.nth(5).click();
     await page.waitForTimeout(1000);
 
     // Create version history by making edits and navigating away/back to trigger sync
     const editor = page.locator('.cm-content').first();
-    const welcomeNote = noteListItems.first(); // Use first note (welcome) instead of searching by title
+    const welcomeNote = noteListItems.first();
+    // After each edit, the travel note moves to index 1 (most recently modified, after pinned welcome)
+    // so we must use nth(1) for subsequent clicks, not nth(5)
 
     // Edit 1: Add packing list start
     await editor.waitFor({ state: 'visible' });
@@ -782,9 +794,10 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     await page.waitForTimeout(500);
 
     // Navigate away and back to trigger sync (creates version 1)
+    // After editing, the travel note re-sorts to index 1 (below pinned welcome)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await travelNote.click();
+    await noteListItems.nth(1).click();
     await page.waitForTimeout(1000);
 
     // Edit 2: Add more items
@@ -800,7 +813,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Navigate away and back to trigger sync (creates version 2)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await travelNote.click();
+    await noteListItems.nth(1).click();
     await page.waitForTimeout(1000);
 
     // Edit 3: Add final items
@@ -816,7 +829,7 @@ test.describe('Landing Page Screenshots - Light Mode', () => {
     // Navigate away and back to trigger sync (creates version 3)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await travelNote.click();
+    await noteListItems.nth(1).click();
     await page.waitForTimeout(1000);
 
     // Open the more menu to access version history
@@ -932,8 +945,8 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/');
+    // Final reload: pre-set locale and suppress welcome note (demo notes have their own)
+    await prepareDemoPage(page, '/');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -1024,9 +1037,9 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (always at index 3 in demo data)
+    // Find and click the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
+    const travelNote = noteListItems.nth(5);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1050,9 +1063,9 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (always at index 3 in demo data)
+    // Find and click the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
+    const travelNote = noteListItems.nth(5);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1117,16 +1130,17 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Wait for theme to fully apply
     await page.waitForTimeout(1000);
 
-    // Click on the travel note (always at index 3 in demo data)
+    // Click on the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
-    await travelNote.waitFor({ state: 'visible' });
-    await travelNote.click();
+    await noteListItems.nth(5).waitFor({ state: 'visible' });
+    await noteListItems.nth(5).click();
     await page.waitForTimeout(1000);
 
     // Create version history by making edits and navigating away/back to trigger sync
     const editor = page.locator('.cm-content').first();
     const welcomeNote = noteListItems.first();
+    // After each edit, the travel note moves to index 1 (most recently modified, after pinned welcome)
+    // so we must use nth(1) for subsequent clicks, not nth(5)
 
     // Edit 1: Add packing list start
     await editor.waitFor({ state: 'visible' });
@@ -1142,9 +1156,10 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     await page.waitForTimeout(500);
 
     // Navigate away and back to trigger sync (creates version 1)
+    // After editing, the travel note re-sorts to index 1 (below pinned welcome)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await travelNote.click();
+    await noteListItems.nth(1).click();
     await page.waitForTimeout(1000);
 
     // Edit 2: Add more items
@@ -1160,7 +1175,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Navigate away and back to trigger sync (creates version 2)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await travelNote.click();
+    await noteListItems.nth(1).click();
     await page.waitForTimeout(1000);
 
     // Edit 3: Add final items
@@ -1176,7 +1191,7 @@ test.describe('Landing Page Screenshots - Dark Mode', () => {
     // Navigate away and back to trigger sync (creates version 3)
     await welcomeNote.click();
     await page.waitForTimeout(1000);
-    await travelNote.click();
+    await noteListItems.nth(1).click();
     await page.waitForTimeout(1000);
 
     // Open the more menu to access version history
@@ -1403,8 +1418,8 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/?theme=light');
+    // Final reload: pre-set locale and suppress welcome note (demo notes have their own)
+    await prepareDemoPage(page, '/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -1456,9 +1471,9 @@ test.describe('Landing Page Screenshots - Mobile Light', () => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (always at index 3 in demo data)
+    // Find and click the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
+    const travelNote = noteListItems.nth(5);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1563,8 +1578,8 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/');
+    // Final reload: pre-set locale and suppress welcome note (demo notes have their own)
+    await prepareDemoPage(page, '/');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -1622,9 +1637,9 @@ test.describe('Landing Page Screenshots - Mobile Dark', () => {
     // Wait for app to settle
     await page.waitForTimeout(1000);
 
-    // Find and click the travel note (always at index 3 in demo data)
+    // Find and click the travel note (index 5 in display order: pinned welcome, then by modifiedAt desc)
     const noteListItems = page.locator('.note-list-item, [role="listitem"]');
-    const travelNote = noteListItems.nth(3);
+    const travelNote = noteListItems.nth(5);
     await travelNote.waitFor({ state: 'visible' });
     await travelNote.click();
     await page.waitForTimeout(1000);
@@ -1723,8 +1738,8 @@ test.describe('Landing Page Screenshots - Outliner Light', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/?theme=light');
+    // Final reload: pre-set locale and suppress welcome note (demo notes have their own)
+    await prepareDemoPage(page, '/?theme=light');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -1813,8 +1828,8 @@ test.describe('Landing Page Screenshots - Outliner Dark', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/');
+    // Final reload: pre-set locale and suppress welcome note (demo notes have their own)
+    await prepareDemoPage(page, '/');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -1909,8 +1924,8 @@ test.describe('Landing Page Screenshots - Greek UI Light', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/?theme=light');
+    // Final reload: pre-set Greek locale and suppress welcome note
+    await prepareDemoPage(page, '/?theme=light', 'el');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);
@@ -2005,8 +2020,8 @@ test.describe('Landing Page Screenshots - Greek UI Dark', () => {
     await clearAllStorage(page);
     await page.waitForTimeout(300);
 
-    // Final reload to ensure clean state
-    await page.goto('/');
+    // Final reload: pre-set Greek locale and suppress welcome note
+    await prepareDemoPage(page, '/', 'el');
 
     // Wait for landing page, then click "Try It Out"
     await page.waitForTimeout(1000);

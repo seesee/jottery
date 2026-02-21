@@ -485,10 +485,11 @@
       loadingNotes = false;
       loadingProgress = { current: 0, total: 0 };
 
-      // Create welcome note for new vaults (skip in test environments)
+      // Create welcome note for new vaults (skip in test and demo environments)
       // Check both in-memory array AND repository count to avoid injecting welcome note
       // when notes exist but decryption partially failed or loading was incomplete
-      if (allNotes.length === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !window.location.pathname.startsWith('/test')) {
+      const skipWelcome = window.location.pathname.startsWith('/test') || new URLSearchParams(window.location.search).has('nowelcome');
+      if (allNotes.length === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !skipWelcome) {
         await createWelcomeNote();
       }
     } catch (error) {
