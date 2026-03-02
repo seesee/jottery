@@ -409,6 +409,11 @@ pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Res
 
         use base64::Engine;
 
+        // Check if envelope encryption is active — use v2 format (just endpoint)
+        if !use_legacy_format && encryption_meta.envelope_version.is_some() {
+            return Ok(format!("jottery:v2:{}", metadata.sync_endpoint));
+        }
+
         if use_legacy_format {
             // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
             let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
@@ -453,6 +458,43 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
 
     // Get database
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    // Check for v2 format: jottery:v2:<endpoint> (envelope encryption — just needs endpoint)
+    if let Some(endpoint) = input.strip_prefix("jottery:v2:") {
+        let endpoint = endpoint.trim().to_string();
+        if endpoint.is_empty() {
+            anyhow::bail!("Invalid v2 credentials: missing endpoint");
+        }
+
+        let endpoint = if !endpoint.starts_with("http://") && !endpoint.starts_with("https://") {
+            format!("https://{}", endpoint)
+        } else {
+            endpoint
+        };
+
+        app.debug_log(&format!("Process credentials - v2 format, endpoint: {}", endpoint));
+        app.debug_log(&format!("Process credentials - Device name: {}", device_name));
+
+        // Store endpoint and ONBOARD marker — the actual onboarding happens during
+        // device registration (email + password needed to derive wrapping key)
+        let sync_repo = SyncRepository::new(db.connection());
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+        metadata.api_key = Some("ONBOARD:".to_string());
+        metadata.sync_endpoint = endpoint.clone();
+        metadata.sync_enabled = false;
+        metadata.pending_device_name = Some(device_name.to_string());
+        sync_repo.update_metadata(&metadata)?;
+
+        // Update app settings with the endpoint
+        app.settings.sync_endpoint = Some(endpoint);
+        app.settings.sync_enabled = false;
+        save_settings(app)?;
+
+        app.sync_status = Some(t!("sync.v2_import_success").to_string());
+        app.sync_status_set_at = Some(std::time::Instant::now());
+
+        return Ok(());
+    }
 
     // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
     if let Some(payload) = input.strip_prefix("jottery:v1:") {

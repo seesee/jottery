@@ -197,6 +197,7 @@ sync:
   paste_failed: "Failed to paste credentials: %{error}"
   salt_sync: "Salt synchronised! Please re-enter your password to unlock with the new encryption salt."
   encrypted_import: "Encrypted credentials imported. Please enter your password to decrypt and complete setup."
+  v2_import_success: "Server endpoint saved. Register a new account or sign in to complete sync setup."
   legacy_format_warning: "Warning: Using legacy unencrypted format. API key is exposed in plain text."
   disconnected: "Disconnected from sync server. Local notes preserved."
   disconnect_failed: "Failed to disconnect from sync server"
