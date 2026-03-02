@@ -87,6 +87,28 @@ class SyncClient(
         return get("/api/v1/user/inbox-token/status")
     }
 
+    // MARK: - Wrapped Key (Envelope Encryption)
+
+    /** Fetch the server-stored wrapped master key. Returns null if no key exists (404). */
+    suspend fun getWrappedKey(): WrappedKeyResponse? {
+        return try {
+            get("/api/v1/auth/wrapped-key")
+        } catch (e: SyncClientException) {
+            if (e.message?.contains("HTTP 404") == true) null else throw e
+        }
+    }
+
+    /** Upload a wrapped master key to the server. */
+    suspend fun putWrappedKey(request: PutWrappedKeyRequest) {
+        val jsonBody = json.encodeToString(request).toRequestBody(jsonMediaType)
+        val httpRequest = buildAuthRequest("/api/v1/auth/wrapped-key").put(jsonBody).build()
+        val response = client.newCall(httpRequest).execute()
+        if (!response.isSuccessful) {
+            val body = response.body?.string() ?: ""
+            throw SyncClientException("HTTP ${response.code}: $body")
+        }
+    }
+
     // MARK: - Private HTTP Methods
 
     private fun buildAuthRequest(path: String): Request.Builder {

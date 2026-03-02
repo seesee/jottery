@@ -41,7 +41,7 @@ import com.jottery.android.model.UserSettings
         NoteDeletion::class,
         SavedSearch::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class JotteryDatabase : RoomDatabase() {
@@ -68,12 +68,24 @@ abstract class JotteryDatabase : RoomDatabase() {
             }
         }
 
+        /** Migration 1→2: Add envelope encryption columns and userId. */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN envelope_version INTEGER")
+                db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN device_salt TEXT")
+                db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN local_wrapped_master TEXT")
+                db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN wrapping_kdf_version INTEGER")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN user_id TEXT")
+            }
+        }
+
         private fun buildDatabase(context: Context): JotteryDatabase {
             return Room.databaseBuilder(
                 context.applicationContext,
                 JotteryDatabase::class.java,
                 DATABASE_NAME,
             )
+                .addMigrations(MIGRATION_1_2)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

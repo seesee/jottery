@@ -32,9 +32,12 @@ import com.jottery.android.model.SortOrder
 import com.jottery.android.model.UserSettings
 import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
+import com.jottery.android.crypto.EncryptedData
 import com.jottery.android.service.BackupService
+import com.jottery.android.service.EnvelopeService
 import com.jottery.android.service.ImportService
 import com.jottery.android.service.SyncService
+import javax.crypto.spec.SecretKeySpec
 import com.jottery.android.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -155,6 +158,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private var savedSearchRepo: SavedSearchRepository? = null
 
     private var syncClientInstance: SyncClient? = null
+    /** Expose sync client for EnvelopeService. */
+    val syncClient: SyncClient? get() = syncClientInstance
     private var syncServiceInstance: SyncService? = null
     private var sseClientInstance: SSEClient? = null
 
@@ -303,26 +308,58 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         val metadata = repo.get() ?: throw AppStateError.NoVault
 
-        val saltData = metadata.saltData ?: throw AppStateError.InvalidSalt
+        val key: javax.crypto.SecretKey
 
-        val key = keyManager.unlock(
-            password = password,
-            salt = saltData,
-            iterations = metadata.iterations,
-        )
+        if (metadata.envelopeVersion != null) {
+            // Envelope unlock path — derive device key, unwrap master key
+            val deviceSaltB64 = metadata.deviceSalt ?: throw AppStateError.InvalidSalt
+            val deviceSalt = android.util.Base64.decode(deviceSaltB64, android.util.Base64.NO_WRAP)
+            val wrappedJSON = metadata.localWrappedMaster ?: throw AppStateError.InvalidSalt
 
-        // Verify password
-        val verified = if (metadata.verification != null) {
-            verifyWithToken(metadata.verification, key)
+            val deviceKey = CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+            val wrapped = CryptoService.parseEncryptedJSON(wrappedJSON)
+            val masterKeyData: ByteArray
+            try {
+                masterKeyData = CryptoService.unwrapMasterKey(wrapped, deviceKey)
+            } catch (_: Exception) {
+                keyManager.lock()
+                _isLocked.value = true
+                throw AppStateError.WrongPassword
+            }
+
+            key = SecretKeySpec(masterKeyData, "AES")
+            keyManager.unlockWithKeyData(masterKeyData)
+
+            // Verify with token if available
+            if (metadata.verification != null) {
+                if (!verifyWithToken(metadata.verification, key)) {
+                    keyManager.lock()
+                    _isLocked.value = true
+                    throw AppStateError.WrongPassword
+                }
+            }
         } else {
-            // No token (old vault) -- try decrypting a note instead
-            verifyByDecryptingNote(key)
-        }
+            // Legacy unlock path — derive key directly from password + salt
+            val saltData = metadata.saltData ?: throw AppStateError.InvalidSalt
 
-        if (!verified) {
-            keyManager.lock()
-            _isLocked.value = true
-            throw AppStateError.WrongPassword
+            key = keyManager.unlock(
+                password = password,
+                salt = saltData,
+                iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
+            )
+
+            // Verify password
+            val verified = if (metadata.verification != null) {
+                verifyWithToken(metadata.verification, key)
+            } else {
+                verifyByDecryptingNote(key)
+            }
+
+            if (!verified) {
+                keyManager.lock()
+                _isLocked.value = true
+                throw AppStateError.WrongPassword
+            }
         }
 
         loadNotes()
@@ -344,6 +381,21 @@ class AppState(application: Application) : AndroidViewModel(application) {
             try {
                 upgradeVaultVerification(key)
             } catch (_: Exception) { /* ignore */ }
+        }
+
+        // Auto-migrate legacy vaults to envelope in background (non-fatal)
+        if (metadata.envelopeVersion == null && _settings.value.syncEnabled) {
+            val syncRepository = syncRepo
+            val encRepo = encryptionRepo
+            val client = syncClient
+            if (syncRepository != null && encRepo != null && client != null) {
+                val unlockPassword = password
+                viewModelScope.launch(Dispatchers.IO) {
+                    EnvelopeService.tryEnvelopeSetup(
+                        this@AppState, syncRepository, encRepo, client, unlockPassword, key,
+                    )
+                }
+            }
         }
 
         return true
@@ -1291,13 +1343,61 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val versionRepository = versionRepo ?: throw AppStateError.NotInitialised
 
         val metadata = encRepo.get() ?: throw AppStateError.NoVault
+
+        if (metadata.envelopeVersion != null) {
+            // FAST PATH: envelope active — re-wrap only, no note re-encryption
+            val deviceSaltB64 = metadata.deviceSalt ?: throw AppStateError.InvalidSalt
+            val deviceSalt = android.util.Base64.decode(deviceSaltB64, android.util.Base64.NO_WRAP)
+            val wrappedJSON = metadata.localWrappedMaster ?: throw AppStateError.InvalidSalt
+
+            // Verify current password by unwrapping the master key
+            val currentDeviceKey = CryptoService.deriveKey(currentPassword, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+            val wrapped = CryptoService.parseEncryptedJSON(wrappedJSON)
+            val masterKeyData: ByteArray
+            try {
+                masterKeyData = CryptoService.unwrapMasterKey(wrapped, currentDeviceKey)
+            } catch (_: Exception) {
+                throw AppStateError.WrongPassword
+            }
+
+            // Verify with token as extra check
+            if (metadata.verification != null) {
+                val masterKey = SecretKeySpec(masterKeyData, "AES")
+                if (!verifyWithToken(metadata.verification, masterKey)) {
+                    throw AppStateError.WrongPassword
+                }
+            }
+
+            // Synchronous: local re-wrap (throws on failure)
+            EnvelopeService.changePasswordLocal(encRepo, newPassword, masterKeyData)
+
+            // Synchronous: update biometric key if enabled (master key unchanged)
+            if (KeystoreService.hasBiometricKey(getApplication())) {
+                try {
+                    KeystoreService.storeBiometricKey(getApplication(), masterKeyData)
+                } catch (_: Exception) { /* ignore */ }
+            }
+
+            // Background: server re-wrap (non-fatal)
+            val syncRepository = syncRepo
+            val client = syncClientInstance
+            if (syncRepository != null && client != null) {
+                val dataForServer = masterKeyData.copyOf()
+                viewModelScope.launch(Dispatchers.IO) {
+                    EnvelopeService.changePasswordServer(syncRepository, client, newPassword, dataForServer)
+                }
+            }
+            return
+        }
+
+        // LEGACY PATH: full re-encryption
         val saltData = metadata.saltData ?: throw AppStateError.InvalidSalt
 
         // Verify current password
         val currentKey = CryptoService.deriveKey(
             password = currentPassword,
             salt = saltData,
-            iterations = metadata.iterations,
+            iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
         )
         if (metadata.verification != null) {
             if (!verifyWithToken(metadata.verification, currentKey)) {
@@ -1311,7 +1411,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // Generate new salt and derive new key
         val newSalt = CryptoService.generateSalt()
-        val iterations = metadata.iterations
+        val iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS
         val newKey = CryptoService.deriveKey(
             password = newPassword,
             salt = newSalt,
@@ -1429,6 +1529,118 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // Reload notes with new key
         loadNotes()
+
+        // Try envelope migration after legacy password change
+        if (_settings.value.syncEnabled) {
+            val syncRepository = syncRepo
+            val encRepo = encryptionRepo
+            val client = syncClientInstance
+            if (syncRepository != null && encRepo != null && client != null) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    EnvelopeService.tryEnvelopeSetup(
+                        this@AppState, syncRepository, encRepo, client, newPassword, newKey,
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Re-encryption
+
+    /**
+     * Re-encrypt all notes, attachments, versions, and saved searches from one
+     * key to another. Used when onboarding from the server discovers a different master key.
+     */
+    suspend fun reEncryptAllData(oldKey: javax.crypto.SecretKey, newKey: javax.crypto.SecretKey) {
+        val noteRepository = noteRepo ?: throw AppStateError.NotInitialised
+        val versionRepository = versionRepo ?: throw AppStateError.NotInitialised
+
+        val allNotes = noteRepository.listActive(oldKey) +
+            noteRepository.listDeleted(oldKey) +
+            noteRepository.listArchived(oldKey)
+
+        for (note in allNotes) {
+            val encContent = CryptoService.encryptText(note.content, newKey)
+            val encTags = CryptoService.encryptStringArray(note.tags, newKey)
+            val contentJSON = CryptoService.serializeEncryptedJSON(encContent)
+            val tagsJSON = CryptoService.serializeEncryptedJSON(encTags)
+
+            val reEncryptedAttachments = note.attachments.map { ref ->
+                val encFilename = CryptoService.encryptText(ref.filename, newKey)
+                ref.copy(filename = CryptoService.serializeEncryptedJSON(encFilename))
+            }
+            val attachmentsString = json.encodeToString(reEncryptedAttachments)
+
+            val record = noteRepository.getRaw(note.id) ?: continue
+            val updatedRecord = record.copy(
+                content = contentJSON,
+                tags = tagsJSON,
+                attachments = attachmentsString,
+                needsSync = true,
+            )
+            noteRepository.updateRaw(updatedRecord)
+        }
+
+        // Re-encrypt attachment blobs
+        val attachmentRepository = attachmentRepo
+        if (attachmentRepository != null) {
+            val blobIds = attachmentRepository.listBlobIds()
+            for (blobId in blobIds) {
+                val blobData = attachmentRepository.getBlob(blobId) ?: continue
+                val blobStr = String(blobData, Charsets.UTF_8)
+                if (blobStr.isEmpty()) continue
+                try {
+                    val encrypted = CryptoService.parseEncryptedJSON(blobStr)
+                    val plainData = CryptoService.decrypt(encrypted, oldKey)
+                    val reEncrypted = CryptoService.encrypt(plainData, newKey)
+                    val reEncryptedJSON = CryptoService.serializeEncryptedJSON(reEncrypted)
+                    attachmentRepository.updateBlobData(blobId, reEncryptedJSON.toByteArray(Charsets.UTF_8))
+                } catch (e: Exception) {
+                    Log.w(TAG, "[ReEncrypt] Skipping blob $blobId: ${e.message}")
+                }
+            }
+        }
+
+        // Re-encrypt version snapshots
+        for (noteId in allNotes.map { it.id }.toSet()) {
+            val versions = versionRepository.getVersions(noteId)
+            for (ver in versions) {
+                try {
+                    val encContent = CryptoService.parseEncryptedJSON(ver.content)
+                    val plainContent = CryptoService.decryptText(encContent, oldKey)
+                    val newEncContent = CryptoService.encryptText(plainContent, newKey)
+
+                    val encTags = CryptoService.parseEncryptedJSON(ver.tags)
+                    val plainTagsStr = CryptoService.decryptText(encTags, oldKey)
+                    val newEncTags = CryptoService.encryptText(plainTagsStr, newKey)
+
+                    val updated = ver.copy(
+                        content = CryptoService.serializeEncryptedJSON(newEncContent),
+                        tags = CryptoService.serializeEncryptedJSON(newEncTags),
+                    )
+                    versionRepository.insertOrReplace(updated)
+                } catch (e: Exception) {
+                    Log.w(TAG, "[ReEncrypt] Skipping version ${ver.versionKey}: ${e.message}")
+                }
+            }
+        }
+
+        // Re-encrypt saved searches
+        val searchRepo = savedSearchRepo
+        if (searchRepo != null) {
+            val searches = searchRepo.listAll(oldKey)
+            for (search in searches) {
+                val encName = CryptoService.encryptText(search.name, newKey)
+                val encQuery = CryptoService.encryptText(search.query, newKey)
+                searchRepo.updateEncrypted(
+                    id = search.id,
+                    name = CryptoService.serializeEncryptedJSON(encName),
+                    query = CryptoService.serializeEncryptedJSON(encQuery),
+                )
+            }
+        }
+
+        Log.i(TAG, "[ReEncrypt] All data re-encrypted successfully")
     }
 
     // MARK: - Sync (Phase 5 Stubs)
@@ -1618,12 +1830,33 @@ class AppState(application: Application) : AndroidViewModel(application) {
             KeystoreService.setAPIKey(context, response.apiKey)
             KeystoreService.setClientId(context, response.clientId)
 
+            // Store userId for envelope encryption
+            val syncRepository = syncRepo
+            if (syncRepository != null) {
+                val syncMeta = syncRepository.getSyncMetadata()
+                    ?: com.jottery.android.model.SyncMetadata()
+                syncRepository.saveSyncMetadata(syncMeta.copy(userId = response.userId))
+            }
+
             val newSettings = _settings.value.copy(
                 syncEnabled = true,
                 syncEndpoint = serverUrl,
             )
             updateSettings(newSettings)
             setupSync(response.apiKey)
+
+            // Attempt envelope setup in background (non-fatal)
+            val masterKey = keyManager.masterKey
+            val encRepo = encryptionRepo
+            val client = syncClientInstance
+            if (masterKey != null && syncRepository != null && encRepo != null && client != null) {
+                val regPassword = password
+                viewModelScope.launch(Dispatchers.IO) {
+                    EnvelopeService.tryEnvelopeSetup(
+                        this@AppState, syncRepository, encRepo, client, regPassword, masterKey,
+                    )
+                }
+            }
 
             Result.success("Device registered successfully.")
         } catch (e: Exception) {

@@ -37,6 +37,8 @@ object CryptoService {
     const val TAG_LENGTH_BITS = 128     // 16 bytes
     const val DEFAULT_ITERATIONS = 600_000
     const val MIN_ITERATIONS = 100_000
+    const val WRAPPING_ITERATIONS = 1_000_000
+    const val WRAPPING_KDF_VERSION = 1  // PBKDF2
     const val MAX_HASH_CHAIN_LENGTH = 50
 
     private val secureRandom = SecureRandom()
@@ -65,6 +67,26 @@ object CryptoService {
         val keyBytes = factory.generateSecret(spec).encoded
         spec.clearPassword()
         return SecretKeySpec(keyBytes, "AES")
+    }
+
+    // MARK: - Envelope Key Wrapping
+
+    /**
+     * Derive a wrapping key from password + userId (used as salt).
+     * Uses 1M iterations for extra strength — only called during migration/onboard, not daily unlock.
+     */
+    fun deriveWrappingKey(password: String, userId: String): SecretKey {
+        return deriveKey(password, userId.toByteArray(Charsets.UTF_8), WRAPPING_ITERATIONS)
+    }
+
+    /** Wrap (encrypt) a master key with a wrapping/device key using AES-GCM. */
+    fun wrapMasterKey(masterKeyData: ByteArray, wrappingKey: SecretKey): EncryptedData {
+        return encrypt(masterKeyData, wrappingKey)
+    }
+
+    /** Unwrap (decrypt) a master key from its encrypted form. */
+    fun unwrapMasterKey(wrapped: EncryptedData, wrappingKey: SecretKey): ByteArray {
+        return decrypt(wrapped, wrappingKey)
     }
 
     // MARK: - Encrypt / Decrypt
