@@ -571,15 +571,15 @@ mod tests {
         let service = CryptoService::new();
         // UUID is 36 chars = 36 bytes >= 32
         let user_id = "550e8400-e29b-41d4-a716-446655440000";
-        let password = "test_password";
+        let password = test_password();
 
-        let key1 = service.derive_wrapping_key(password, user_id).unwrap();
-        let key2 = service.derive_wrapping_key(password, user_id).unwrap();
+        let key1 = service.derive_wrapping_key(&password, user_id).unwrap();
+        let key2 = service.derive_wrapping_key(&password, user_id).unwrap();
 
         assert_eq!(key1, key2);
 
         // Different userId should produce different key
-        let key3 = service.derive_wrapping_key(password, "660e8400-e29b-41d4-a716-446655440000").unwrap();
+        let key3 = service.derive_wrapping_key(&password, "660e8400-e29b-41d4-a716-446655440000").unwrap();
         assert_ne!(key1, key3);
     }
 
