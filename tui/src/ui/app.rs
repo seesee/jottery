@@ -476,6 +476,9 @@ impl App {
             AppState::RegisterInputPassword { .. } => input::credentials::handle_register_input_password_key(self, key)?,
             AppState::RegisterPendingApproval { .. } => input::credentials::handle_register_pending_approval_key(self, key)?,
             AppState::RegisterInputDeviceName { .. } => input::credentials::handle_register_input_device_name_key(self, key)?,
+            AppState::ChangePasswordCurrent { .. } => input::credentials::handle_change_password_current_key(self, key)?,
+            AppState::ChangePasswordNew { .. } => input::credentials::handle_change_password_new_key(self, key)?,
+            AppState::ChangePasswordConfirm { .. } => input::credentials::handle_change_password_confirm_key(self, key)?,
             AppState::Quit => {}
             AppState::Settings { .. } => unreachable!(), // Handled above
             AppState::Help { .. } => unreachable!(), // Handled above
@@ -1506,6 +1509,15 @@ impl App {
             }
             AppState::RegisterInputDeviceName { .. } => {
                 rendering::credentials::render_register_input_device_name(self, frame)
+            }
+            AppState::ChangePasswordCurrent { .. } => {
+                rendering::credentials::render_change_password(self, frame, "current")
+            }
+            AppState::ChangePasswordNew { .. } => {
+                rendering::credentials::render_change_password(self, frame, "new")
+            }
+            AppState::ChangePasswordConfirm { .. } => {
+                rendering::credentials::render_change_password(self, frame, "confirm")
             }
             AppState::Quit => {}
         }

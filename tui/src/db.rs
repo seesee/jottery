@@ -195,6 +195,14 @@ impl Database {
         &mut self.conn
     }
 
+    /// Change the SQLCipher database password
+    pub fn change_password(&self, new_password: &str) -> anyhow::Result<()> {
+        // SQLCipher rekey changes the encryption key for the database
+        let quoted = new_password.replace('\'', "''");
+        self.conn.execute_batch(&format!("PRAGMA rekey = '{}';", quoted))?;
+        Ok(())
+    }
+
     /// Close the database connection
     pub fn close(self) -> Result<()> {
         debug!("Closing database connection");

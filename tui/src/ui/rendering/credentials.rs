@@ -399,6 +399,17 @@ pub fn render_import_device_name(app: &App, frame: &mut Frame) {
     );
 }
 
+/// Render change password modal
+pub fn render_change_password(app: &App, frame: &mut Frame, step: &str) {
+    let (title, instruction) = match step {
+        "current" => ("Change Password", "Enter your current password:"),
+        "new" => ("Change Password", "Enter new password (min 12 characters):"),
+        "confirm" => ("Change Password", "Confirm new password:"),
+        _ => ("Change Password", "Enter password:"),
+    };
+    render_registration_input_modal(app, frame, title, instruction, &app.credential_input, true);
+}
+
 /// Helper to render a registration input modal
 fn render_registration_input_modal(
     app: &App,

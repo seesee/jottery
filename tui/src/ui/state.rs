@@ -75,6 +75,21 @@ pub enum AppState {
         password: String,
         previous: Box<AppState>,
     },
+    /// Password change flow - input current password
+    ChangePasswordCurrent {
+        previous: Box<AppState>,
+    },
+    /// Password change flow - input new password
+    ChangePasswordNew {
+        current_password: String,
+        previous: Box<AppState>,
+    },
+    /// Password change flow - confirm new password
+    ChangePasswordConfirm {
+        current_password: String,
+        new_password: String,
+        previous: Box<AppState>,
+    },
     /// Quit
     Quit,
 }
