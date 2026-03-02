@@ -414,8 +414,15 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
         console.warn('[ImportHandler] Sync disabled due to re-registration failure:', errorMessage);
         // Don't throw - let the app work without sync
       }
+    }
+    // Check for ONBOARD: marker (v2 credential import — needs email + password to complete)
+    else if (metadata.apiKey.startsWith('ONBOARD:')) {
+      console.log('[ImportHandler] ONBOARD marker detected — user needs to authenticate via sync setup to complete onboarding');
+      // Nothing to do here: the marker stays in place until the user
+      // completes the "Connect existing account" flow in SyncSetupForm,
+      // which calls onboardFromServer() to download the wrapped master key.
     } else {
-      console.log('[ImportHandler] No IMPORT/ENCRYPTED/RESTORE marker - credentials already encrypted');
+      console.log('[ImportHandler] No IMPORT/ENCRYPTED/RESTORE/ONBOARD marker - credentials already encrypted');
     }
   } catch (error) {
     console.error('[ImportHandler] ERROR handling imported credentials:', error);
@@ -519,7 +526,7 @@ export async function changePassword(
  * Migrate from legacy (direct PBKDF2) to envelope encryption.
  * The master key bytes are the same — just stored differently.
  */
-async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uint8Array): Promise<void> {
+export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uint8Array): Promise<void> {
   try {
     const syncMetadata = await syncRepository.getMetadata();
 

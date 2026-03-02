@@ -16,7 +16,7 @@
   export let syncError: string;
 
   // Registration state
-  export let registrationMode: 'select' | 'newUser' | 'existingUser';
+  export let registrationMode: 'select' | 'newUser' | 'existingUser' | 'importCredentials';
   export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
   export let userEmail: string;
   export let userPassword: string;

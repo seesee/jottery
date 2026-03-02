@@ -25,7 +25,7 @@ export { noteService } from './noteService';
 export { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 export { attachmentService } from './attachmentService';
 export { conflictService } from './conflictService';
-export { isInitialized, initialize, unlock, lock, isLocked, changePassword, restoreFromBackup } from './initService';
+export { isInitialized, initialize, unlock, lock, isLocked, changePassword, onboardFromServer, tryMigrateToEnvelope, restoreFromBackup } from './initService';
 export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFile } from './exportService';
 export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';
 export { tagService, getAllTags, getTagStats, getPopularTags, getNotesByTag, getNotesByTags, normalizeTag, isValidTag, parseTagString } from './tagService';
