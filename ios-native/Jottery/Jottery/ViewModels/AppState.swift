@@ -373,7 +373,7 @@ final class AppState {
         // Auto-migrate legacy vaults to envelope in background (non-fatal)
         if metadata.envelopeVersion == nil, settings.syncEnabled {
             Task {
-                await EnvelopeService.tryMigrateToEnvelope(
+                await EnvelopeService.tryEnvelopeSetup(
                     appState: self,
                     password: password,
                     masterKey: key
@@ -1027,18 +1027,28 @@ final class AppState {
                 }
             }
 
-            // Re-wrap with new password (async for server upload)
-            let dataToWrap = masterKeyData
-            Task {
-                try await EnvelopeService.changePasswordEnvelope(
-                    appState: self,
-                    newPassword: newPassword,
-                    masterKeyData: dataToWrap
-                )
+            // Synchronous: local re-wrap (throws on failure so the UI sees the error)
+            try EnvelopeService.changePasswordLocal(
+                encryptionRepo: encryptionRepo,
+                newPassword: newPassword,
+                masterKeyData: masterKeyData
+            )
 
-                // Update biometric key if enabled (master key unchanged)
-                if self.keyManager.isBiometricEnabled {
-                    try? self.keyManager.enableBiometricUnlock()
+            // Synchronous: update biometric key if enabled (master key unchanged)
+            if keyManager.isBiometricEnabled {
+                try? keyManager.enableBiometricUnlock()
+            }
+
+            // Background: server re-wrap (non-fatal, will retry on next unlock/sync)
+            if let syncRepo, let syncClient {
+                let dataForServer = masterKeyData
+                Task {
+                    await EnvelopeService.changePasswordServer(
+                        syncRepo: syncRepo,
+                        syncClient: syncClient,
+                        newPassword: newPassword,
+                        masterKeyData: dataForServer
+                    )
                 }
             }
         } else {
@@ -1181,7 +1191,7 @@ final class AppState {
             // Try envelope migration after legacy password change
             if settings.syncEnabled {
                 Task {
-                    await EnvelopeService.tryMigrateToEnvelope(
+                    await EnvelopeService.tryEnvelopeSetup(
                         appState: self,
                         password: newPassword,
                         masterKey: newKey
@@ -1189,6 +1199,103 @@ final class AppState {
                 }
             }
         }
+    }
+
+    // MARK: - Re-encryption
+
+    /// Re-encrypt all notes, attachments, versions, and saved searches from one
+    /// key to another. Used when onboarding from the server discovers a different
+    /// master key than the local one.
+    func reEncryptAllData(from oldKey: SymmetricKey, to newKey: SymmetricKey) throws {
+        guard let noteRepo, let versionRepo else {
+            throw AppStateError.notInitialised
+        }
+
+        // Re-encrypt all notes (active, deleted, archived)
+        let allNotes = try noteRepo.listActive(key: oldKey) +
+                        noteRepo.listDeleted(key: oldKey) +
+                        noteRepo.listArchived(key: oldKey)
+
+        for note in allNotes {
+            let encContent = try CryptoService.encryptText(note.content, key: newKey)
+            let encTags = try CryptoService.encryptStringArray(note.tags, key: newKey)
+            let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
+            let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
+
+            // Re-encrypt attachment filenames
+            var reEncryptedAttachments = note.attachments
+            for i in reEncryptedAttachments.indices {
+                let encFilename = try CryptoService.encryptText(reEncryptedAttachments[i].filename, key: newKey)
+                reEncryptedAttachments[i].filename = try CryptoService.serializeEncryptedJSON(encFilename)
+            }
+            let attachmentsJSON = try JSONEncoder().encode(reEncryptedAttachments)
+            let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+
+            guard var record = try noteRepo.getRaw(id: note.id) else { continue }
+            record.content = contentJSON
+            record.tags = tagsJSON
+            record.attachments = attachmentsString
+            record.needsSync = true
+            try noteRepo.updateRaw(record)
+        }
+
+        // Re-encrypt attachment blobs
+        if let attachmentRepo {
+            let blobIds = try attachmentRepo.listBlobIds()
+            for blobId in blobIds {
+                guard let blobData = try attachmentRepo.getBlob(id: blobId) else { continue }
+                let blobStr = String(data: blobData, encoding: .utf8) ?? ""
+                guard !blobStr.isEmpty else { continue }
+                do {
+                    let encrypted = try CryptoService.parseEncryptedJSON(blobStr)
+                    let plainData = try CryptoService.decrypt(encrypted, key: oldKey)
+                    let reEncrypted = try CryptoService.encrypt(plainData, key: newKey)
+                    let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
+                    try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
+                } catch {
+                    print("[ReEncrypt] Skipping blob \(blobId): \(error)")
+                }
+            }
+        }
+
+        // Re-encrypt version snapshots
+        for noteId in Set(allNotes.map(\.id)) {
+            let versions = try versionRepo.getVersions(noteId: noteId)
+            for ver in versions {
+                do {
+                    let encContent = try CryptoService.parseEncryptedJSON(ver.content)
+                    let plainContent = try CryptoService.decryptText(encContent, key: oldKey)
+                    let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
+
+                    let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
+                    let plainTagsStr = try CryptoService.decryptText(encTags, key: oldKey)
+                    let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
+
+                    var updated = ver
+                    updated.content = try CryptoService.serializeEncryptedJSON(newEncContent)
+                    updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
+                    try versionRepo.insertOrReplace(updated)
+                } catch {
+                    print("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
+                }
+            }
+        }
+
+        // Re-encrypt saved searches
+        if let savedSearchRepo {
+            let searches = try savedSearchRepo.listAll(key: oldKey)
+            for search in searches {
+                let encName = try CryptoService.encryptText(search.name, key: newKey)
+                let encQuery = try CryptoService.encryptText(search.query, key: newKey)
+                try savedSearchRepo.updateEncrypted(
+                    id: search.id,
+                    name: try CryptoService.serializeEncryptedJSON(encName),
+                    query: try CryptoService.serializeEncryptedJSON(encQuery)
+                )
+            }
+        }
+
+        print("[ReEncrypt] All data re-encrypted successfully")
     }
 
     // MARK: - Settings

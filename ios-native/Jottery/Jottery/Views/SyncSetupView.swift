@@ -165,12 +165,15 @@ struct SyncSetupView: View {
                 success = true
                 isWorking = false
 
-                // Attempt envelope migration in background (non-fatal)
+                // Attempt envelope setup in background (non-fatal).
+                // If another device already uploaded a wrapped key, we onboard
+                // from that key; otherwise we upload ours.
                 if let masterKey = appState.keyManager.masterKey {
+                    let regPassword = password
                     Task {
-                        await EnvelopeService.tryMigrateToEnvelope(
+                        await EnvelopeService.tryEnvelopeSetup(
                             appState: appState,
-                            password: password,
+                            password: regPassword,
                             masterKey: masterKey
                         )
                     }

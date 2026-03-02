@@ -158,19 +158,86 @@ enum EnvelopeService {
         return masterKey
     }
 
-    // MARK: - Fast Password Change
+    // MARK: - Envelope Setup (Register / Unlock)
 
-    /// Change password with envelope encryption — re-wraps only, no note re-encryption.
+    /// Set up envelope encryption after device registration or on unlock.
+    /// Checks the server for an existing wrapped key first (another device may
+    /// have already uploaded one). If found, onboards from the server key and
+    /// re-encrypts local data if the master key differs. If no server key exists,
+    /// falls through to `tryMigrateToEnvelope` to upload ours.
     @MainActor
-    static func changePasswordEnvelope(
+    static func tryEnvelopeSetup(
         appState: AppState,
-        newPassword: String,
-        masterKeyData: Data
-    ) async throws {
-        guard let encryptionRepo = appState.encryptionRepo else {
-            throw EnvelopeError.notInitialised
+        password: String,
+        masterKey: SymmetricKey
+    ) async {
+        guard let syncRepo = appState.syncRepo,
+              let encryptionRepo = appState.encryptionRepo,
+              let syncClient = appState.syncClient else {
+            print("[Envelope] Setup skipped — sync not configured")
+            return
         }
 
+        do {
+            guard let syncMeta = try syncRepo.getMetadata(),
+                  syncMeta.syncEnabled,
+                  let userId = syncMeta.userId,
+                  !userId.isEmpty else {
+                print("[Envelope] Setup skipped — no userId in sync metadata")
+                return
+            }
+
+            // Already migrated — nothing to do
+            if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
+                print("[Envelope] Already migrated — skipping setup")
+                return
+            }
+
+            // Check server for an existing wrapped key from another device
+            let serverResponse = try? await syncClient.getWrappedKey()
+
+            if serverResponse != nil {
+                // Another device already uploaded — onboard from server
+                print("[Envelope] Server has wrapped key — onboarding from server")
+                let serverKey = try await onboardFromServer(
+                    syncClient: syncClient,
+                    encryptionRepo: encryptionRepo,
+                    password: password,
+                    userId: userId
+                )
+
+                // If the server key differs from our local key, re-encrypt all data
+                let localKeyData = masterKey.withUnsafeBytes { Data($0) }
+                let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
+                if localKeyData != serverKeyData {
+                    print("[Envelope] Server key differs from local — re-encrypting data")
+                    try appState.reEncryptAllData(from: masterKey, to: serverKey)
+                    appState.keyManager.unlockWithKeyData(serverKeyData)
+                    try appState.loadNotes()
+                }
+            } else {
+                // No server key — we're the first device, upload ours
+                print("[Envelope] No server key — migrating local key to envelope")
+                await tryMigrateToEnvelope(
+                    appState: appState,
+                    password: password,
+                    masterKey: masterKey
+                )
+            }
+        } catch {
+            print("[Envelope] Setup failed (non-fatal): \(error)")
+        }
+    }
+
+    // MARK: - Fast Password Change
+
+    /// Local re-wrap only — new device salt, re-wrap master key, save to DB.
+    /// Synchronous (throws on failure) so the caller knows immediately if it failed.
+    static func changePasswordLocal(
+        encryptionRepo: EncryptionRepository,
+        newPassword: String,
+        masterKeyData: Data
+    ) throws {
         // Generate new device salt and derive new device key
         let newDeviceSalt = CryptoService.generateSalt()
         let newDeviceKey = CryptoService.deriveKey(
@@ -204,12 +271,24 @@ enum EnvelopeService {
             try encryptionRepo.store(metadata)
         }
 
-        // If sync configured, re-wrap for server too
-        if let syncRepo = appState.syncRepo,
-           let syncClient = appState.syncClient,
-           let syncMeta = try? syncRepo.getMetadata(),
-           syncMeta.syncEnabled,
-           let userId = syncMeta.userId, !userId.isEmpty {
+        print("[Envelope] Local password re-wrap complete")
+    }
+
+    /// Server re-wrap — upload new wrapped key. Non-fatal; server will be
+    /// updated on next unlock/sync if this fails.
+    static func changePasswordServer(
+        syncRepo: SyncRepository,
+        syncClient: SyncClient,
+        newPassword: String,
+        masterKeyData: Data
+    ) async {
+        do {
+            guard let syncMeta = try syncRepo.getMetadata(),
+                  syncMeta.syncEnabled,
+                  let userId = syncMeta.userId, !userId.isEmpty else {
+                print("[Envelope] Server re-wrap skipped — no userId")
+                return
+            }
 
             let newWrappingKey = CryptoService.deriveWrappingKey(password: newPassword, userId: userId)
             let serverWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: newWrappingKey)
@@ -221,6 +300,9 @@ enum EnvelopeService {
                 kdfIterations: Int(CryptoService.wrappingIterations)
             )
             try await syncClient.putWrappedKey(putRequest)
+            print("[Envelope] Server re-wrap complete")
+        } catch {
+            print("[Envelope] Server re-wrap failed (non-fatal): \(error)")
         }
     }
 }
