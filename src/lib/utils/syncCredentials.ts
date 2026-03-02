@@ -35,8 +35,9 @@ export interface ImportResult {
 /**
  * Export sync credentials as a portable string
  *
- * Modern format: jottery:v1:<salt>.<encrypted_payload>
- * Legacy format: base64(JSON) with salt included (for older Jottery versions)
+ * v2 format: jottery:v2:<endpoint> (envelope encryption — new device just needs email + password)
+ * v1 format: jottery:v1:<salt>.<encrypted_payload> (legacy, includes salt)
+ * Legacy format: base64(JSON) with salt included (for oldest Jottery versions)
  */
 export async function exportCredentials(useLegacyFormat: boolean = false): Promise<ExportResult> {
   try {
@@ -70,9 +71,12 @@ export async function exportCredentials(useLegacyFormat: boolean = false): Promi
         endpoint: metadata.syncEndpoint || '',
         clientId: metadata.clientId,
         apiKey: apiKey,
-        salt: encryptionMeta.salt,
+        salt: encryptionMeta?.salt || '',
       };
       credentials = btoa(JSON.stringify(legacyCredentials));
+    } else if (encryptionMeta?.envelopeVersion) {
+      // v2 format: just the endpoint — new devices onboard via wrapped key download
+      credentials = `jottery:v2:${metadata.syncEndpoint || ''}`;
     } else {
       // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
       const syncCredentials: SyncCredentials = {
