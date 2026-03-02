@@ -26,6 +26,8 @@ enum CryptoService {
     static let saltLength = 32        // 256 bits
     static let defaultIterations: UInt32 = 600_000
     static let minIterations: UInt32 = 100_000
+    static let wrappingIterations: UInt32 = 1_000_000
+    static let wrappingKdfVersion: Int = 1  // PBKDF2
     static let maxHashChainLength = 50
 
     // MARK: - Key Derivation
@@ -53,6 +55,34 @@ enum CryptoService {
             }
         }
         return SymmetricKey(data: derivedKey)
+    }
+
+    // MARK: - Envelope Encryption
+
+    /// Generate a random 256-bit master key.
+    static func generateMasterKey() -> Data {
+        var key = Data(count: keyLength)
+        key.withUnsafeMutableBytes { ptr in
+            _ = SecRandomCopyBytes(kSecRandomDefault, keyLength, ptr.baseAddress!)
+        }
+        return key
+    }
+
+    /// Derive a wrapping key from password + userId (used as salt).
+    /// Uses 1M iterations for extra strength — only called during migration/onboard, not daily unlock.
+    static func deriveWrappingKey(password: String, userId: String) -> SymmetricKey {
+        let salt = Data(userId.utf8)
+        return deriveKey(password: password, salt: salt, iterations: wrappingIterations)
+    }
+
+    /// Wrap (encrypt) a master key with a wrapping/device key using AES-GCM.
+    static func wrapMasterKey(_ masterKeyData: Data, with wrappingKey: SymmetricKey) throws -> EncryptedData {
+        try encrypt(masterKeyData, key: wrappingKey)
+    }
+
+    /// Unwrap (decrypt) a master key from its encrypted form.
+    static func unwrapMasterKey(_ wrapped: EncryptedData, with wrappingKey: SymmetricKey) throws -> Data {
+        try decrypt(wrapped, key: wrappingKey)
     }
 
     // MARK: - Encrypt / Decrypt
