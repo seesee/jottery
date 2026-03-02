@@ -411,7 +411,7 @@ pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Res
 
         if use_legacy_format {
             // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
-            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
             let mut creds = SyncCredentials::new(
                 metadata.sync_endpoint,
                 api_key,
@@ -421,7 +421,7 @@ pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Res
             creds.to_base64()
         } else {
             // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
 
             // Create credentials payload WITHOUT salt (salt goes in prefix)
             let creds = SyncCredentials::new(

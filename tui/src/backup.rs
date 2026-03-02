@@ -301,8 +301,8 @@ pub fn create_backup(
         backup_type: BACKUP_TYPE.to_string(),
         created_at: Utc::now().to_rfc3339(),
         encryption: BackupEncryption {
-            salt: base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt),
-            iterations: encryption_meta.iterations as i64,
+            salt: base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[])),
+            iterations: encryption_meta.iterations.unwrap_or(600_000) as i64,
             algorithm: "PBKDF2".to_string(),
         },
         data: jwe_records,

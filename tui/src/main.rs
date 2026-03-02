@@ -13,6 +13,7 @@ mod ui;
 rust_i18n::i18n!("locales", fallback = "en-GB");
 
 use anyhow::{Context, Result};
+use base64::Engine as _;
 use rust_i18n::t;
 use clap::{Parser, Subcommand, CommandFactory, FromArgMatches};
 use std::path::{Path, PathBuf};
@@ -436,18 +437,31 @@ fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
     let crypto = CryptoService::new();
 
     // Get stored salt and iterations from database
-    let (salt, iterations) = if let Some(metadata) = encryption_repo.get()? {
-        (metadata.salt, metadata.iterations)
+    if let Some(metadata) = encryption_repo.get()? {
+        if metadata.envelope_version.is_some() {
+            // Envelope path: derive device key, unwrap master key
+            let device_salt_b64 = metadata.device_salt.as_deref()
+                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing device_salt"))?;
+            let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt_b64)
+                .context("Invalid device_salt base64")?;
+            let device_key = crypto.derive_key(password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+            let wrapped_json = metadata.local_wrapped_master.as_deref()
+                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing local_wrapped_master"))?;
+            let wrapped: crate::models::encryption::EncryptedData = serde_json::from_str(wrapped_json)
+                .context("Invalid local_wrapped_master JSON")?;
+            crypto.unwrap_master_key(&device_key, &wrapped)
+        } else if let (Some(salt), Some(iterations)) = (&metadata.salt, metadata.iterations) {
+            crypto.derive_key(password, salt, iterations)
+        } else {
+            anyhow::bail!("Invalid encryption metadata")
+        }
     } else {
         // First-time setup: generate new salt and save it
         let new_salt = crypto.generate_salt();
         let iterations = 256_000;
         encryption_repo.save(&new_salt, iterations)?;
-        (new_salt.to_vec(), iterations)
-    };
-
-    // Derive key using stored salt
-    crypto.derive_key(password, &salt, iterations)
+        crypto.derive_key(password, &new_salt, iterations)
+    }
 }
 
 /// Open $EDITOR with content and return the edited result
