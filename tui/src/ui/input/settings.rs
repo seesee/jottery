@@ -196,13 +196,25 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.input_mode = InputMode::Normal;
                             }
                             _ => {
-                                // No pending registration - start fresh
-                                app.credential_input.clear();
-                                let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                                app.state = AppState::RegisterInputEndpoint {
-                                    previous: Box::new(prev),
-                                };
-                                app.input_mode = InputMode::Insert;
+                                // Check for ONBOARD marker (v2 import awaiting registration)
+                                if let Some(endpoint) = operations::settings::get_pending_onboard(app) {
+                                    // Skip endpoint input - go directly to email
+                                    app.credential_input.clear();
+                                    let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                                    app.state = AppState::RegisterInputEmail {
+                                        endpoint,
+                                        previous: Box::new(prev),
+                                    };
+                                    app.input_mode = InputMode::Insert;
+                                } else {
+                                    // No pending registration - start fresh
+                                    app.credential_input.clear();
+                                    let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                                    app.state = AppState::RegisterInputEndpoint {
+                                        previous: Box::new(prev),
+                                    };
+                                    app.input_mode = InputMode::Insert;
+                                }
                             }
                         }
                     }

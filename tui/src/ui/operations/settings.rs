@@ -848,8 +848,27 @@ pub fn is_sync_fully_configured(app: &mut App) -> bool {
     if let Some(db) = &app.db {
         let sync_repo = SyncRepository::new(db.connection());
         if let Ok(Some(metadata)) = sync_repo.get_metadata() {
-            return metadata.api_key.is_some();
+            // ONBOARD: marker means v2 credentials were imported but setup isn't complete
+            if let Some(ref key) = metadata.api_key {
+                return !key.starts_with("ONBOARD:") && !key.starts_with("PLAINTEXT:") && !key.starts_with("ENCRYPTED:");
+            }
         }
     }
     false
+}
+
+/// Check if there's a pending ONBOARD marker (v2 credential import awaiting registration)
+/// Returns the stored endpoint if ONBOARD is pending
+pub fn get_pending_onboard(app: &mut App) -> Option<String> {
+    if let Some(db) = &app.db {
+        let sync_repo = SyncRepository::new(db.connection());
+        if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+            if let Some(ref key) = metadata.api_key {
+                if key.starts_with("ONBOARD:") && !metadata.sync_endpoint.is_empty() {
+                    return Some(metadata.sync_endpoint.clone());
+                }
+            }
+        }
+    }
+    None
 }
