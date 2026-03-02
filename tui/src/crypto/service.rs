@@ -20,6 +20,10 @@ const SALT_LENGTH: usize = 32; // 256 bits
 pub const DEFAULT_ITERATIONS: u32 = 600_000;
 /// Minimum iterations accepted (for backwards compatibility with existing databases)
 const MIN_ITERATIONS: u32 = 100_000;
+/// PBKDF2 iterations for envelope wrapping key derivation (onboarding/migration only)
+pub const WRAPPING_ITERATIONS: u32 = 1_000_000;
+/// KDF version for envelope encryption (1=PBKDF2, 2=Argon2id future)
+pub const WRAPPING_KDF_VERSION: u32 = 1;
 /// Maximum hash chain length (matching web client)
 pub const MAX_HASH_CHAIN_LENGTH: usize = 50;
 
@@ -198,6 +202,57 @@ impl CryptoService {
         });
 
         self.hash(&hash_data.to_string())
+    }
+
+    // === Envelope Encryption Methods ===
+
+    /// Generate a random 256-bit master key
+    pub fn generate_master_key(&self) -> [u8; KEY_LENGTH] {
+        let mut key = [0u8; KEY_LENGTH];
+        OsRng.fill_bytes(&mut key);
+        key
+    }
+
+    /// Derive wrapping key from password + userId (used during onboarding/migration only)
+    ///
+    /// Uses PBKDF2 with 1M iterations and the userId string as salt.
+    /// This is intentionally slow — only runs during onboarding, not daily unlock.
+    pub fn derive_wrapping_key(
+        &self,
+        password: &str,
+        user_id: &str,
+    ) -> Result<[u8; KEY_LENGTH]> {
+        let salt = user_id.as_bytes();
+        if salt.len() < KEY_LENGTH {
+            anyhow::bail!("userId must be at least {} bytes when used as salt", KEY_LENGTH);
+        }
+        let mut key = [0u8; KEY_LENGTH];
+        pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, WRAPPING_ITERATIONS, &mut key);
+        Ok(key)
+    }
+
+    /// Wrap (encrypt) master key bytes with a wrapping key using AES-256-GCM
+    pub fn wrap_master_key(
+        &self,
+        wrapping_key: &[u8; KEY_LENGTH],
+        master_key_bytes: &[u8],
+    ) -> Result<EncryptedData> {
+        self.encrypt_binary(master_key_bytes, wrapping_key)
+    }
+
+    /// Unwrap (decrypt) master key bytes from a wrapped blob
+    pub fn unwrap_master_key(
+        &self,
+        wrapping_key: &[u8; KEY_LENGTH],
+        wrapped: &EncryptedData,
+    ) -> Result<[u8; KEY_LENGTH]> {
+        let bytes = self.decrypt_binary(wrapped, wrapping_key)?;
+        if bytes.len() != KEY_LENGTH {
+            anyhow::bail!("Unwrapped master key has invalid length: {} (expected {})", bytes.len(), KEY_LENGTH);
+        }
+        let mut key = [0u8; KEY_LENGTH];
+        key.copy_from_slice(&bytes);
+        Ok(key)
     }
 
     /// Encrypt JSON data (helper)
@@ -471,6 +526,61 @@ mod tests {
 
         let ancestor = find_common_ancestor(&chain_a, &chain_b);
         assert_eq!(ancestor, Some("common".to_string()));
+    }
+
+    // ===== Envelope Encryption Tests =====
+
+    #[test]
+    fn test_generate_master_key() {
+        let service = CryptoService::new();
+        let key1 = service.generate_master_key();
+        let key2 = service.generate_master_key();
+
+        // Random keys should be different
+        assert_ne!(key1, key2);
+        assert_eq!(key1.len(), 32);
+    }
+
+    #[test]
+    fn test_wrap_unwrap_master_key() {
+        let service = CryptoService::new();
+        let master_key = service.generate_master_key();
+        let salt = service.generate_salt();
+        let wrapping_key = service.derive_key(&test_password(), &salt, 100_000).unwrap();
+
+        let wrapped = service.wrap_master_key(&wrapping_key, &master_key).unwrap();
+        let unwrapped = service.unwrap_master_key(&wrapping_key, &wrapped).unwrap();
+
+        assert_eq!(master_key, unwrapped);
+    }
+
+    #[test]
+    fn test_wrap_unwrap_wrong_key_fails() {
+        let service = CryptoService::new();
+        let master_key = service.generate_master_key();
+        let salt = service.generate_salt();
+        let wrapping_key = service.derive_key("correct_password", &salt, 100_000).unwrap();
+        let wrong_key = service.derive_key("wrong_password", &salt, 100_000).unwrap();
+
+        let wrapped = service.wrap_master_key(&wrapping_key, &master_key).unwrap();
+        assert!(service.unwrap_master_key(&wrong_key, &wrapped).is_err());
+    }
+
+    #[test]
+    fn test_derive_wrapping_key_deterministic() {
+        let service = CryptoService::new();
+        // UUID is 36 chars = 36 bytes >= 32
+        let user_id = "550e8400-e29b-41d4-a716-446655440000";
+        let password = "test_password";
+
+        let key1 = service.derive_wrapping_key(password, user_id).unwrap();
+        let key2 = service.derive_wrapping_key(password, user_id).unwrap();
+
+        assert_eq!(key1, key2);
+
+        // Different userId should produce different key
+        let key3 = service.derive_wrapping_key(password, "660e8400-e29b-41d4-a716-446655440000").unwrap();
+        assert_ne!(key1, key3);
     }
 
     #[test]
