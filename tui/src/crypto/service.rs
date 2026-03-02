@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(key1, key2);
 
         // Different password should produce different key
-        let key3 = service.derive_key("different_password_for_test", &salt, 100_000).unwrap();
+        let key3 = service.derive_key(&format!("different_{}", password), &salt, 100_000).unwrap();
         assert_ne!(key1, key3);
     }
 
@@ -365,8 +365,9 @@ mod tests {
         let service = CryptoService::new();
         let salt = service.generate_salt();
         // Intentionally different passwords to verify key mismatch detection
-        let key1 = service.derive_key("first_test_password", &salt, 100_000).unwrap();
-        let key2 = service.derive_key("second_test_password", &salt, 100_000).unwrap();
+        let password = test_password();
+        let key1 = service.derive_key(&password, &salt, 100_000).unwrap();
+        let key2 = service.derive_key(&format!("wrong_{}", password), &salt, 100_000).unwrap();
 
         let plaintext = "Secret message";
         let encrypted = service.encrypt_text(plaintext, &key1).unwrap();
@@ -559,8 +560,8 @@ mod tests {
         let service = CryptoService::new();
         let master_key = service.generate_master_key();
         let salt = service.generate_salt();
-        let wrapping_key = service.derive_key("correct_password", &salt, 100_000).unwrap();
-        let wrong_key = service.derive_key("wrong_password", &salt, 100_000).unwrap();
+        let wrapping_key = service.derive_key(&test_password(), &salt, 100_000).unwrap();
+        let wrong_key = service.derive_key(&format!("wrong_{}", test_password()), &salt, 100_000).unwrap();
 
         let wrapped = service.wrap_master_key(&wrapping_key, &master_key).unwrap();
         assert!(service.unwrap_master_key(&wrong_key, &wrapped).is_err());
