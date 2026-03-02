@@ -187,6 +187,20 @@ struct SSETokenResponse: Codable {
     }
 }
 
+// MARK: - Wrapped Key (Envelope Encryption)
+
+struct WrappedKeyResponse: Codable {
+    let blob: String           // JSON {"ciphertext":"...","iv":"..."}
+    let kdfVersion: Int
+    let kdfIterations: Int
+}
+
+struct PutWrappedKeyRequest: Codable {
+    let blob: String
+    let kdfVersion: Int
+    let kdfIterations: Int
+}
+
 // MARK: - Sync Saved Search
 
 struct SyncSavedSearch: Codable {
