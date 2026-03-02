@@ -152,12 +152,29 @@ struct SyncSetupView: View {
                 try KeychainService.storeClientId(response.clientId)
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
+                // Store userId for envelope encryption
+                if var syncMeta = try? appState.syncRepo?.getMetadata() {
+                    syncMeta.userId = response.userId
+                    try? appState.syncRepo?.saveMetadata(syncMeta)
+                }
+
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
 
                 registeredApiKey = response.apiKey
                 success = true
                 isWorking = false
+
+                // Attempt envelope migration in background (non-fatal)
+                if let masterKey = appState.keyManager.masterKey {
+                    Task {
+                        await EnvelopeService.tryMigrateToEnvelope(
+                            appState: appState,
+                            password: password,
+                            masterKey: masterKey
+                        )
+                    }
+                }
             } catch {
                 self.error = error.localizedDescription
                 isWorking = false
@@ -247,6 +264,12 @@ struct SyncSetupView: View {
         try KeychainService.storeAPIKey(response.apiKey)
         try KeychainService.storeClientId(response.clientId)
         try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+
+        // Store userId for envelope encryption
+        if var syncMeta = try? appState.syncRepo?.getMetadata() {
+            syncMeta.userId = response.userId
+            try? appState.syncRepo?.saveMetadata(syncMeta)
+        }
 
         appState.settings.syncEnabled = true
         appState.settings.syncEndpoint = normalised
