@@ -2051,6 +2051,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         KeystoreService.setAPIKey(context, response.apiKey)
         KeystoreService.setClientId(context, response.clientId)
 
+        // Store userId for envelope encryption
+        syncRepo?.let { repo ->
+            val syncMeta = repo.getSyncMetadata() ?: com.jottery.android.model.SyncMetadata()
+            repo.saveSyncMetadata(syncMeta.copy(userId = response.userId))
+        }
+
         // Create vault with the imported salt so the same password derives the same key
         createVault(password, existingSalt = salt, existingIterations = iterations)
 
