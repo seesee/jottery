@@ -223,7 +223,7 @@ class WebCryptoService implements CryptoService {
    * Generate a random 256-bit master key for envelope encryption
    */
   generateMasterKey(): Uint8Array {
-    return crypto.getRandomValues(new Uint8Array(KEY_LENGTH));
+    return crypto.getRandomValues(new Uint8Array(KEY_LENGTH / 8));
   }
 
   /**
