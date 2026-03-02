@@ -581,6 +581,21 @@
         "description": "Beheer uw account, wijzig uw wachtwoord of verwijder uw gegevens",
         "openButton": "Open gebruikersportaal"
       },
+      "changePassword": {
+        "title": "Wachtwoord wijzigen",
+        "description": "Wijzig uw versleutelingswachtwoord. Dankzij envelopversleuteling gaat dit snel — uw notities hoeven niet opnieuw versleuteld te worden.",
+        "currentPasswordLabel": "Huidig wachtwoord",
+        "newPasswordLabel": "Nieuw wachtwoord",
+        "confirmPasswordLabel": "Bevestig nieuw wachtwoord",
+        "currentPasswordPlaceholder": "Voer huidig wachtwoord in",
+        "newPasswordPlaceholder": "Voer nieuw wachtwoord in",
+        "confirmPasswordPlaceholder": "Bevestig nieuw wachtwoord",
+        "mismatch": "Wachtwoorden komen niet overeen",
+        "changing": "Wachtwoord wijzigen...",
+        "button": "Wachtwoord wijzigen",
+        "success": "Wachtwoord succesvol gewijzigd",
+        "error": "Kan wachtwoord niet wijzigen: {error}"
+      },
       "connectionDetails": {
         "title": "Verbindingsdetails",
         "server": "Server",

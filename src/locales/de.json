@@ -581,6 +581,21 @@
         "description": "Verwalten Sie Ihr Konto, ändern Sie Ihr Passwort oder löschen Sie Ihre Daten",
         "openButton": "Benutzerportal öffnen"
       },
+      "changePassword": {
+        "title": "Passwort ändern",
+        "description": "Ändern Sie Ihr Verschlüsselungspasswort. Dank der Umschlagverschlüsselung geht das schnell — Ihre Notizen müssen nicht neu verschlüsselt werden.",
+        "currentPasswordLabel": "Aktuelles Passwort",
+        "newPasswordLabel": "Neues Passwort",
+        "confirmPasswordLabel": "Neues Passwort bestätigen",
+        "currentPasswordPlaceholder": "Aktuelles Passwort eingeben",
+        "newPasswordPlaceholder": "Neues Passwort eingeben",
+        "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
+        "mismatch": "Passwörter stimmen nicht überein",
+        "changing": "Passwort wird geändert...",
+        "button": "Passwort ändern",
+        "success": "Passwort erfolgreich geändert",
+        "error": "Passwort konnte nicht geändert werden: {error}"
+      },
       "connectionDetails": {
         "title": "Verbindungsdetails",
         "server": "Server",

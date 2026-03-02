@@ -581,6 +581,21 @@
         "description": "Gérez votre compte, changez votre mot de passe ou supprimez vos données",
         "openButton": "Ouvrir le portail utilisateur"
       },
+      "changePassword": {
+        "title": "Modifier le mot de passe",
+        "description": "Modifiez votre mot de passe de chiffrement. Grâce au chiffrement par enveloppe, c'est rapide — vos notes n'ont pas besoin d'être rechiffrées.",
+        "currentPasswordLabel": "Mot de passe actuel",
+        "newPasswordLabel": "Nouveau mot de passe",
+        "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+        "currentPasswordPlaceholder": "Saisissez le mot de passe actuel",
+        "newPasswordPlaceholder": "Saisissez le nouveau mot de passe",
+        "confirmPasswordPlaceholder": "Confirmez le nouveau mot de passe",
+        "mismatch": "Les mots de passe ne correspondent pas",
+        "changing": "Modification du mot de passe...",
+        "button": "Modifier le mot de passe",
+        "success": "Mot de passe modifié avec succès",
+        "error": "Échec de la modification du mot de passe : {error}"
+      },
       "connectionDetails": {
         "title": "Détails de connexion",
         "server": "Serveur",

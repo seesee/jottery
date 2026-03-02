@@ -581,6 +581,21 @@
         "description": "Gerencie sua conta, altere a senha ou exclua seus dados",
         "openButton": "Abrir portal do usuário"
       },
+      "changePassword": {
+        "title": "Alterar palavra-passe",
+        "description": "Altere a sua palavra-passe de encriptação. Graças à encriptação por envelope, isto é rápido — as suas notas não precisam de ser reencriptadas.",
+        "currentPasswordLabel": "Palavra-passe actual",
+        "newPasswordLabel": "Nova palavra-passe",
+        "confirmPasswordLabel": "Confirmar nova palavra-passe",
+        "currentPasswordPlaceholder": "Introduza a palavra-passe actual",
+        "newPasswordPlaceholder": "Introduza a nova palavra-passe",
+        "confirmPasswordPlaceholder": "Confirme a nova palavra-passe",
+        "mismatch": "As palavras-passe não coincidem",
+        "changing": "A alterar palavra-passe...",
+        "button": "Alterar palavra-passe",
+        "success": "Palavra-passe alterada com sucesso",
+        "error": "Falha ao alterar a palavra-passe: {error}"
+      },
       "connectionDetails": {
         "title": "Detalhes da conexão",
         "server": "Servidor",

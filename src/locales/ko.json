@@ -581,6 +581,21 @@
         "description": "계정 관리, 비밀번호 변경 또는 데이터 삭제",
         "openButton": "사용자 포털 열기"
       },
+      "changePassword": {
+        "title": "비밀번호 변경",
+        "description": "암호화 비밀번호를 변경합니다. 봉투 암호화 덕분에 빠르게 처리됩니다 — 노트를 다시 암호화할 필요가 없습니다.",
+        "currentPasswordLabel": "현재 비밀번호",
+        "newPasswordLabel": "새 비밀번호",
+        "confirmPasswordLabel": "새 비밀번호 확인",
+        "currentPasswordPlaceholder": "현재 비밀번호 입력",
+        "newPasswordPlaceholder": "새 비밀번호 입력",
+        "confirmPasswordPlaceholder": "새 비밀번호 확인",
+        "mismatch": "비밀번호가 일치하지 않습니다",
+        "changing": "비밀번호 변경 중...",
+        "button": "비밀번호 변경",
+        "success": "비밀번호가 성공적으로 변경되었습니다",
+        "error": "비밀번호 변경 실패: {error}"
+      },
       "connectionDetails": {
         "title": "연결 세부정보",
         "server": "서버",

@@ -581,6 +581,21 @@
         "description": "Управляйте своей учётной записью, измените пароль или удалите данные",
         "openButton": "Открыть портал пользователя"
       },
+      "changePassword": {
+        "title": "Изменить пароль",
+        "description": "Измените пароль шифрования. Благодаря конвертному шифрованию это происходит быстро — ваши заметки не нужно перешифровывать.",
+        "currentPasswordLabel": "Текущий пароль",
+        "newPasswordLabel": "Новый пароль",
+        "confirmPasswordLabel": "Подтвердите новый пароль",
+        "currentPasswordPlaceholder": "Введите текущий пароль",
+        "newPasswordPlaceholder": "Введите новый пароль",
+        "confirmPasswordPlaceholder": "Подтвердите новый пароль",
+        "mismatch": "Пароли не совпадают",
+        "changing": "Изменение пароля...",
+        "button": "Изменить пароль",
+        "success": "Пароль успешно изменён",
+        "error": "Не удалось изменить пароль: {error}"
+      },
       "connectionDetails": {
         "title": "Детали подключения",
         "server": "Сервер",

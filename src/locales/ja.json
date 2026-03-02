@@ -581,6 +581,21 @@
         "description": "アカウントの管理、パスワードの変更、またはデータの削除",
         "openButton": "ユーザーポータルを開く"
       },
+      "changePassword": {
+        "title": "パスワードの変更",
+        "description": "暗号化パスワードを変更します。エンベロープ暗号化のおかげで、この操作は高速です — ノートを再暗号化する必要はありません。",
+        "currentPasswordLabel": "現在のパスワード",
+        "newPasswordLabel": "新しいパスワード",
+        "confirmPasswordLabel": "新しいパスワードの確認",
+        "currentPasswordPlaceholder": "現在のパスワードを入力",
+        "newPasswordPlaceholder": "新しいパスワードを入力",
+        "confirmPasswordPlaceholder": "新しいパスワードを確認",
+        "mismatch": "パスワードが一致しません",
+        "changing": "パスワードを変更中...",
+        "button": "パスワードを変更",
+        "success": "パスワードが正常に変更されました",
+        "error": "パスワードの変更に失敗しました: {error}"
+      },
       "connectionDetails": {
         "title": "接続詳細",
         "server": "サーバー",
