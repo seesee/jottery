@@ -90,6 +90,27 @@ export interface CryptoService {
    * Generate UUID v4
    */
   generateUUID(): string;
+
+  /**
+   * Generate a random 256-bit master key for envelope encryption
+   */
+  generateMasterKey(): Uint8Array;
+
+  /**
+   * Derive a wrapping key from password + userId for envelope encryption.
+   * Uses higher iteration count than daily unlock.
+   */
+  deriveWrappingKey(password: string, userId: string): Promise<CryptoKey>;
+
+  /**
+   * Wrap (encrypt) a master key with a wrapping key
+   */
+  wrapMasterKey(wrappingKey: CryptoKey, masterKeyBytes: Uint8Array): Promise<EncryptionResult>;
+
+  /**
+   * Unwrap (decrypt) a master key from a wrapped blob
+   */
+  unwrapMasterKey(wrappingKey: CryptoKey, wrappedBlob: EncryptionResult): Promise<Uint8Array>;
 }
 
 /**

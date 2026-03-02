@@ -179,10 +179,24 @@ export interface QuickCommandConfig {
 
 /**
  * Encryption metadata stored per user
+ *
+ * Supports two modes:
+ * - Legacy: salt + iterations → PBKDF2 derives the encryption key directly
+ * - Envelope: deviceSalt + localWrappedMaster → PBKDF2 derives a device key
+ *   that unwraps a random master key (envelope encryption)
  */
 export interface EncryptionMetadata {
-  salt: string; // Unique salt for key derivation
-  iterations: number; // PBKDF2 iterations
+  // Legacy fields (pre-envelope, removed after migration)
+  salt?: string; // Unique salt for key derivation
+  iterations?: number; // PBKDF2 iterations
+
+  // Envelope encryption fields (post-migration)
+  envelopeVersion?: number; // 1 = initial envelope scheme
+  deviceSalt?: string; // Random per-device salt for daily unlock
+  localWrappedMaster?: string; // AES-GCM(device_key, master_key) as JSON
+  wrappingKdfVersion?: number; // 1 = PBKDF2, 2 = Argon2id (future)
+
+  // Common fields
   createdAt: string; // When encryption was set up
   algorithm: 'AES-256-GCM'; // Encryption algorithm
 }

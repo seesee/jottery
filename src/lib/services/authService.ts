@@ -40,6 +40,19 @@ export interface CloneDeviceRequest {
 
 export type CloneDeviceResponse = RegisterDeviceResponse;
 
+// Wrapped key types (envelope encryption)
+export interface WrappedKeyResponse {
+  blob: string;
+  kdfVersion: number;
+  kdfIterations: number;
+}
+
+export interface PutWrappedKeyRequest {
+  blob: string;
+  kdfVersion: number;
+  kdfIterations: number;
+}
+
 class AuthService {
   /**
    * Normalize endpoint URL by removing trailing slash
@@ -191,6 +204,56 @@ class AuthService {
 
     const result: CloneDeviceResponse = await response.json();
     return result;
+  }
+
+  /**
+   * Get the server-escrowed wrapped master key for the current user.
+   * Returns null if no wrapped key exists (user hasn't migrated to envelope encryption).
+   */
+  async getWrappedKey(
+    endpoint: string,
+    authToken: string
+  ): Promise<WrappedKeyResponse | null> {
+    endpoint = this.normalizeEndpoint(endpoint);
+    const response = await fetch(`${endpoint}/api/v1/auth/wrapped-key`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Failed to get wrapped key: ${await response.text()}`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Store or update the server-escrowed wrapped master key.
+   */
+  async putWrappedKey(
+    endpoint: string,
+    authToken: string,
+    request: PutWrappedKeyRequest
+  ): Promise<void> {
+    endpoint = this.normalizeEndpoint(endpoint);
+    const response = await fetch(`${endpoint}/api/v1/auth/wrapped-key`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to store wrapped key: ${await response.text()}`);
+    }
   }
 }
 
