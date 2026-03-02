@@ -12,6 +12,12 @@ struct EncryptionMetadata: Codable, FetchableRecord, PersistableRecord {
     var algorithm: String      // "AES-256-GCM"
     var verification: String?  // Encrypted known plaintext for password verification
 
+    // Envelope encryption fields (post-migration)
+    var envelopeVersion: Int?       // 1 = envelope active
+    var deviceSalt: String?         // Base64-encoded per-device salt
+    var localWrappedMaster: String? // JSON {"ciphertext":"...","iv":"..."}
+    var wrappingKdfVersion: Int?    // 1 = PBKDF2
+
     enum CodingKeys: String, CodingKey {
         case id
         case salt
@@ -19,6 +25,10 @@ struct EncryptionMetadata: Codable, FetchableRecord, PersistableRecord {
         case createdAt = "created_at"
         case algorithm
         case verification
+        case envelopeVersion = "envelope_version"
+        case deviceSalt = "device_salt"
+        case localWrappedMaster = "local_wrapped_master"
+        case wrappingKdfVersion = "wrapping_kdf_version"
     }
 
     /// The known plaintext used for password verification.

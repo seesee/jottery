@@ -24,4 +24,18 @@ struct EncryptionRepository: Sendable {
     func isVaultSetUp() throws -> Bool {
         try get() != nil
     }
+
+    /// Save envelope encryption metadata, clearing legacy salt/iterations.
+    func saveEnvelope(envelopeVersion: Int, deviceSalt: String,
+                      localWrappedMaster: String, wrappingKdfVersion: Int) throws {
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE encryption_metadata
+                SET envelope_version = ?, device_salt = ?,
+                    local_wrapped_master = ?, wrapping_kdf_version = ?,
+                    salt = NULL, iterations = NULL
+                WHERE id = 1
+            """, arguments: [envelopeVersion, deviceSalt, localWrappedMaster, wrappingKdfVersion])
+        }
+    }
 }
