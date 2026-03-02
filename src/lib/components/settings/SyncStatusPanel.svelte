@@ -1,8 +1,10 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import AccountManagementPanel from './AccountManagementPanel.svelte';
+  import PasswordInput from '../PasswordInput.svelte';
   import ConfirmModal from '../ConfirmModal.svelte';
   import type { SyncStatus } from '../../types';
+  import { changePassword } from '../../services';
   import { toast } from '../../utils/toast.svelte';
 
   // Sync status
@@ -45,6 +47,34 @@
   let useLegacyFormat = false;
   let showDangerZone = false;
   let showConnectionDetails = false;
+
+  // Password change state
+  let showPasswordChange = false;
+  let currentPasswordInput = '';
+  let newPasswordInput = '';
+  let confirmPasswordInput = '';
+  let changingPassword = false;
+
+  async function handleChangePassword() {
+    if (!currentPasswordInput || !newPasswordInput) return;
+    if (newPasswordInput !== confirmPasswordInput) return;
+
+    changingPassword = true;
+    try {
+      await changePassword(currentPasswordInput, newPasswordInput);
+      toast.success($_('settings.syncTab.changePassword.success'));
+      // Reset form
+      currentPasswordInput = '';
+      newPasswordInput = '';
+      confirmPasswordInput = '';
+      showPasswordChange = false;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error($_('settings.syncTab.changePassword.error', { values: { error: message } }));
+    } finally {
+      changingPassword = false;
+    }
+  }
 
   // Inbox token state
   let inboxTokenState: 'none' | 'active' | 'generated' = 'none';
@@ -251,6 +281,79 @@
   {onAccountLogout}
   {onShowDeleteServerNotesConfirm}
 />
+
+<!-- Change Password -->
+<div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+  <button
+    type="button"
+    on:click={() => showPasswordChange = !showPasswordChange}
+    class="w-full flex items-center justify-between p-3 text-left"
+  >
+    <span class="text-sm font-medium text-gray-900 dark:text-white">
+      {$_('settings.syncTab.changePassword.title')}
+    </span>
+    <span class="text-gray-500 dark:text-gray-400">
+      {showPasswordChange ? '▼' : '▶'}
+    </span>
+  </button>
+
+  {#if showPasswordChange}
+    <div class="border-t border-gray-200 dark:border-gray-700 p-3 space-y-3">
+      <p class="text-xs text-gray-600 dark:text-gray-400">
+        {$_('settings.syncTab.changePassword.description')}
+      </p>
+
+      <div>
+        <label for="change-current-password" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {$_('settings.syncTab.changePassword.currentPasswordLabel')}
+        </label>
+        <PasswordInput
+          id="change-current-password"
+          bind:value={currentPasswordInput}
+          placeholder={$_('settings.syncTab.changePassword.currentPasswordPlaceholder')}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        />
+      </div>
+
+      <div>
+        <label for="change-new-password" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {$_('settings.syncTab.changePassword.newPasswordLabel')}
+        </label>
+        <PasswordInput
+          id="change-new-password"
+          bind:value={newPasswordInput}
+          placeholder={$_('settings.syncTab.changePassword.newPasswordPlaceholder')}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        />
+      </div>
+
+      <div>
+        <label for="change-confirm-password" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {$_('settings.syncTab.changePassword.confirmPasswordLabel')}
+        </label>
+        <PasswordInput
+          id="change-confirm-password"
+          bind:value={confirmPasswordInput}
+          placeholder={$_('settings.syncTab.changePassword.confirmPasswordPlaceholder')}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        />
+        {#if confirmPasswordInput && newPasswordInput !== confirmPasswordInput}
+          <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+            {$_('settings.syncTab.changePassword.mismatch')}
+          </p>
+        {/if}
+      </div>
+
+      <button
+        on:click={handleChangePassword}
+        disabled={!currentPasswordInput || !newPasswordInput || !confirmPasswordInput || newPasswordInput !== confirmPasswordInput || changingPassword}
+        class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
+      >
+        {changingPassword ? $_('settings.syncTab.changePassword.changing') : $_('settings.syncTab.changePassword.button')}
+      </button>
+    </div>
+  {/if}
+</div>
 
 <!-- Error Display -->
             {#if syncError}
