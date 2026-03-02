@@ -996,6 +996,7 @@ fn main() -> Result<()> {
                 api_key: Some(api_key_json),
                 client_id: Some(response.client_id),
                 user_email: Some(email.clone()),
+                user_id: Some(response.user_id.clone()),
                 sync_enabled: true,
                 sync_endpoint: server.clone(),
                 auto_sync_interval: Some(1),

@@ -92,6 +92,8 @@ impl Database {
             (13, include_str!("../migrations/013_add_pending_device_name.sql")),
             (14, include_str!("../migrations/014_add_version_show_preview.sql")),
             (15, include_str!("../migrations/015_add_hash_chain.sql")),
+            (16, include_str!("../migrations/016_add_envelope_encryption.sql")),
+            (17, include_str!("../migrations/017_add_user_id.sql")),
         ];
 
         // Run pending migrations

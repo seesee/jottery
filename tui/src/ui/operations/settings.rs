@@ -687,6 +687,7 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
     metadata.api_key = Some(encrypted_api_key);
     metadata.client_id = Some(response.client_id);
+    metadata.user_id = Some(response.user_id);
     metadata.sync_endpoint = endpoint.to_string();
     metadata.sync_enabled = true;
     metadata.pending_registration_email = None; // Clear pending registration
@@ -744,6 +745,7 @@ pub fn clear_pending_registration(app: &mut App) -> Result<()> {
     metadata.api_key = None;
     metadata.client_id = None;
     metadata.user_email = None;
+    metadata.user_id = None;
     metadata.sync_enabled = false;
     sync_repo.update_metadata(&metadata)?;
 

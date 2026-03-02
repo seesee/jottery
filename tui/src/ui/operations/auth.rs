@@ -107,6 +107,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         // Update metadata with NEW credentials
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.client_id = Some(clone_result.client_id);
+                        metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_enabled = true;
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
@@ -177,6 +178,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
 
                         // Update metadata with NEW credentials
                         metadata.client_id = Some(clone_result.client_id);
+                        metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
