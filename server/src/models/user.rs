@@ -80,6 +80,26 @@ pub struct CloneDeviceRequest {
 /// Clone device response (same as register device response)
 pub type CloneDeviceResponse = RegisterDeviceResponse;
 
+/// Wrapped key request (for envelope encryption)
+#[derive(Debug, Deserialize)]
+pub struct PutWrappedKeyRequest {
+    pub blob: String,
+    #[serde(rename = "kdfVersion")]
+    pub kdf_version: i32,
+    #[serde(rename = "kdfIterations")]
+    pub kdf_iterations: i32,
+}
+
+/// Wrapped key response (for envelope encryption)
+#[derive(Debug, Serialize)]
+pub struct WrappedKeyResponse {
+    pub blob: String,
+    #[serde(rename = "kdfVersion")]
+    pub kdf_version: i32,
+    #[serde(rename = "kdfIterations")]
+    pub kdf_iterations: i32,
+}
+
 /// Admin login request
 #[derive(Debug, Deserialize)]
 pub struct LoginRequest {

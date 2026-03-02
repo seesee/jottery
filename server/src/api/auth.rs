@@ -419,6 +419,117 @@ pub async fn logout(
     Ok(StatusCode::NO_CONTENT)
 }
 
+// =============================================================================
+// Wrapped Key Endpoints (Envelope Encryption)
+// =============================================================================
+
+/// Get the wrapped master key for the authenticated user (API key auth)
+pub async fn get_wrapped_key(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(client_info): axum::Extension<crate::api::middleware::ClientInfo>,
+) -> AppResult<Json<crate::models::WrappedKeyResponse>> {
+    get_wrapped_key_for_user(&state, &client_info.user_id).await
+}
+
+/// Get the wrapped master key for the authenticated user (session auth)
+pub async fn get_wrapped_key_session(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<crate::models::Session>,
+) -> AppResult<Json<crate::models::WrappedKeyResponse>> {
+    get_wrapped_key_for_user(&state, &session.user_id).await
+}
+
+/// Shared implementation for getting wrapped key
+async fn get_wrapped_key_for_user(
+    state: &AppState,
+    user_id: &str,
+) -> AppResult<Json<crate::models::WrappedKeyResponse>> {
+    let row = sqlx::query!(
+        "SELECT wrapped_blob, kdf_version, kdf_iterations FROM wrapped_keys WHERE user_id = ?",
+        user_id
+    )
+    .fetch_optional(&state.pool)
+    .await?;
+
+    match row {
+        Some(row) => Ok(Json(crate::models::WrappedKeyResponse {
+            blob: row.wrapped_blob,
+            kdf_version: row.kdf_version as i32,
+            kdf_iterations: row.kdf_iterations as i32,
+        })),
+        None => Err(crate::error::AppError::NotFound(
+            "No wrapped key found".to_string(),
+        )),
+    }
+}
+
+/// Store or update the wrapped master key for the authenticated user (API key auth)
+pub async fn put_wrapped_key(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(client_info): axum::Extension<crate::api::middleware::ClientInfo>,
+    Json(req): Json<crate::models::PutWrappedKeyRequest>,
+) -> AppResult<StatusCode> {
+    put_wrapped_key_for_user(&state, &client_info.user_id, req).await
+}
+
+/// Store or update the wrapped master key for the authenticated user (session auth)
+pub async fn put_wrapped_key_session(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<crate::models::Session>,
+    Json(req): Json<crate::models::PutWrappedKeyRequest>,
+) -> AppResult<StatusCode> {
+    put_wrapped_key_for_user(&state, &session.user_id, req).await
+}
+
+/// Shared implementation for storing wrapped key
+async fn put_wrapped_key_for_user(
+    state: &AppState,
+    user_id: &str,
+    req: crate::models::PutWrappedKeyRequest,
+) -> AppResult<StatusCode> {
+    if req.blob.is_empty() {
+        return Err(crate::error::AppError::BadRequest(
+            "Wrapped key blob cannot be empty".to_string(),
+        ));
+    }
+
+    if req.kdf_version < 1 {
+        return Err(crate::error::AppError::BadRequest(
+            "Invalid KDF version".to_string(),
+        ));
+    }
+
+    if req.kdf_iterations < 100_000 {
+        return Err(crate::error::AppError::BadRequest(
+            "KDF iterations must be at least 100,000".to_string(),
+        ));
+    }
+
+    let now = chrono::Utc::now().to_rfc3339();
+
+    sqlx::query!(
+        "INSERT INTO wrapped_keys (user_id, wrapped_blob, kdf_version, kdf_iterations, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET
+           wrapped_blob = excluded.wrapped_blob,
+           kdf_version = excluded.kdf_version,
+           kdf_iterations = excluded.kdf_iterations,
+           updated_at = excluded.updated_at",
+        user_id,
+        req.blob,
+        req.kdf_version,
+        req.kdf_iterations,
+        now,
+        now,
+    )
+    .execute(&state.pool)
+    .await?;
+
+    tracing::info!("Wrapped key stored for user_id={}", user_id);
+
+    Ok(StatusCode::OK)
+}
+
 // Helper functions
 
 fn generate_api_key() -> String {
