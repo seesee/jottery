@@ -115,6 +115,11 @@ export async function parseAndStoreImportedCredentials(input: string, deviceName
       return { success: false, isEncrypted: false, error: 'Please paste the credentials' };
     }
 
+    // Check for v2 format: jottery:v2:<endpoint> (envelope encryption — just needs endpoint)
+    if (trimmedInput.startsWith('jottery:v2:')) {
+      return await handleV2Format(trimmedInput, deviceName);
+    }
+
     // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
     if (trimmedInput.startsWith('jottery:v1:')) {
       return await handleEncryptedFormat(trimmedInput, deviceName);
@@ -134,6 +139,29 @@ export async function parseAndStoreImportedCredentials(input: string, deviceName
 /**
  * Handle encrypted credentials format
  */
+/**
+ * Handle v2 credentials format: jottery:v2:<endpoint>
+ * With envelope encryption, the new device only needs the server endpoint.
+ * It will authenticate with email + password and download the wrapped master key.
+ */
+async function handleV2Format(input: string, deviceName: string): Promise<ImportResult> {
+  const endpoint = input.substring('jottery:v2:'.length).trim();
+
+  if (!endpoint) {
+    return { success: false, isEncrypted: false, error: 'Invalid v2 credentials: missing endpoint' };
+  }
+
+  // Store endpoint and marker for onboarding flow
+  await syncRepository.updateMetadata({
+    syncEndpoint: endpoint,
+    apiKey: 'ONBOARD:',
+    syncEnabled: false,
+    pendingDeviceName: deviceName,
+  });
+
+  return { success: true, isEncrypted: false };
+}
+
 async function handleEncryptedFormat(input: string, deviceName: string): Promise<ImportResult> {
   const payload = input.substring('jottery:v1:'.length);
   const dotIndex = payload.indexOf('.');
