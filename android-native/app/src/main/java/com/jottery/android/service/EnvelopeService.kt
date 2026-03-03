@@ -115,6 +115,7 @@ object EnvelopeService {
         encryptionRepo: EncryptionRepository,
         password: String,
         userId: String,
+        localPassword: String? = null,
     ): SecretKey {
         val response = syncClient.getWrappedKey()
             ?: throw EnvelopeException("No wrapped key found on server")
@@ -132,7 +133,7 @@ object EnvelopeService {
 
         // Generate device salt for local storage
         val deviceSalt = CryptoService.generateSalt()
-        val deviceKey = CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+        val deviceKey = CryptoService.deriveKey(localPassword ?: password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
 
         // Wrap master key locally
         val localWrapped = CryptoService.wrapMasterKey(masterKeyData, deviceKey)

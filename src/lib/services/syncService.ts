@@ -930,12 +930,6 @@ class SyncService {
       throw new Error('Application is locked');
     }
 
-    // Diagnostic: fingerprint key for debugging onboarding issues
-    if (masterKey.keyBytes) {
-      const pullFingerprint = Array.from(masterKey.keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
-      console.log('[SyncService] Pull using key fingerprint:', pullFingerprint);
-    }
-
     let offset = 0;
     let hasMore = true;
     let totalNotes = 0;
@@ -971,27 +965,6 @@ class SyncService {
       if (totalCount > SYNC_PULL_BATCH_SIZE) {
         const page = Math.floor((offset - result.notes.length) / SYNC_PULL_BATCH_SIZE) + 1;
         console.log(`[SyncService] Pulling page ${page}/${Math.ceil(totalCount / SYNC_PULL_BATCH_SIZE)} (${result.notes.length} notes)`);
-      }
-
-      // Diagnostic: test-decrypt first note's content to verify key works
-      if (offset === result.notes.length && result.notes.length > 0) {
-        const testNote = result.notes[0];
-        try {
-          const parsed = JSON.parse(testNote.content);
-          const contentKeys = Object.keys(parsed);
-          console.log('[SyncService] First note content structure: keys=%s, iv_len=%d, ct_len=%d',
-            contentKeys.join(','), parsed.iv?.length ?? 0, parsed.ciphertext?.length ?? 0);
-          const decrypted = await cryptoService.decryptText(parsed, masterKey.key);
-          console.log('[SyncService] ✓ Test decrypt OK (first %d chars): %s',
-            Math.min(40, decrypted.length), decrypted.substring(0, 40));
-        } catch (err) {
-          console.error('[SyncService] ✗ Test decrypt FAILED for first note:', err);
-          console.error('[SyncService]   content type=%s, length=%d, preview=%s',
-            typeof testNote.content, testNote.content.length, testNote.content.substring(0, 80));
-          if (testNote.tags?.length > 0) {
-            console.error('[SyncService]   first tag preview=%s', testNote.tags[0].substring(0, 80));
-          }
-        }
       }
 
       // Process notes with incremental progress updates

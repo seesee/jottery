@@ -94,6 +94,7 @@ pub fn onboard_from_server(
     endpoint: &str,
     user_id: &str,
     api_key: &str,
+    local_password: Option<&str>,
 ) -> Result<[u8; 32]> {
     app.debug_log("[Onboard] Downloading wrapped key from server...");
 
@@ -116,7 +117,7 @@ pub fn onboard_from_server(
     // Create local envelope storage
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
     let device_salt = app.crypto.generate_salt();
-    let device_key = app.crypto.derive_key(password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+    let device_key = app.crypto.derive_key(local_password.unwrap_or(password), &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
     let local_wrapped = app.crypto.wrap_master_key(&device_key, &master_key)?;
 
     let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&device_salt);

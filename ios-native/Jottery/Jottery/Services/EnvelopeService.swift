@@ -103,7 +103,8 @@ enum EnvelopeService {
         syncClient: SyncClient,
         encryptionRepo: EncryptionRepository,
         password: String,
-        userId: String
+        userId: String,
+        localPassword: String? = nil
     ) async throws -> SymmetricKey {
         // Fetch wrapped key from server
         guard let response = try await syncClient.getWrappedKey() else {
@@ -126,7 +127,7 @@ enum EnvelopeService {
         // Generate device salt for local storage
         let deviceSalt = CryptoService.generateSalt()
         let deviceKey = CryptoService.deriveKey(
-            password: password,
+            password: localPassword ?? password,
             salt: deviceSalt,
             iterations: CryptoService.defaultIterations
         )

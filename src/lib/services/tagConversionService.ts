@@ -85,18 +85,10 @@ export async function syncToStorage(
 
   // Decrypt each individually encrypted tag
   const decryptedTags: string[] = [];
-  let tagIndex = 0;
 
   for (const encryptedTagJson of syncTags) {
     try {
       const encryptedTag = JSON.parse(encryptedTagJson);
-      // Diagnostic: log first tag's structure to help debug format issues
-      if (tagIndex === 0) {
-        const keys = Object.keys(encryptedTag);
-        console.log('[TagConversion] First tag structure: keys=%s, iv_len=%d, ct_len=%d',
-          keys.join(','), encryptedTag.iv?.length ?? 0, encryptedTag.ciphertext?.length ?? 0);
-      }
-      tagIndex++;
       const tagJson = await cryptoService.decryptText(encryptedTag, key);
       const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
 
