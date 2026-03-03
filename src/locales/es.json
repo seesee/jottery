@@ -886,7 +886,40 @@
       "completeInSettings": "Complete la configuración de sincronización en Configuración > Sync después de crear su contraseña."
     },
     "restoreFromBackup": "Restaurar desde copia de seguridad",
-    "orDivider": "o"
+    "orDivider": "o",
+    "connectExisting": {
+      "title": "Conectar cuenta existente",
+      "subtitle": "Vincule este dispositivo a su cuenta de Jottery existente y sincronice sus notas.",
+      "endpoint": "URL del servidor de sincronización",
+      "endpointHint": "La dirección de su servidor de sincronización de Jottery.",
+      "deviceName": "Nombre del dispositivo",
+      "deviceNamePlaceholder": "p. ej. Portátil del trabajo",
+      "deviceNameHint": "Un nombre descriptivo para identificar este dispositivo.",
+      "email": "Dirección de correo electrónico",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Contraseña del servidor",
+      "serverPasswordPlaceholder": "La contraseña de su cuenta",
+      "serverPasswordHint": "La contraseña que utiliza para iniciar sesión en el servidor de sincronización.",
+      "notesPassword": "Contraseña de notas",
+      "notesPasswordPlaceholder": "Elija una contraseña local (mín. 8 caracteres)",
+      "notesPasswordHint": "Se utiliza para desbloquear sus notas en este dispositivo. Puede diferir de la contraseña del servidor.",
+      "submitButton": "Conectar y sincronizar",
+      "errors": {
+        "endpointRequired": "La URL del servidor de sincronización es obligatoria.",
+        "deviceNameRequired": "El nombre del dispositivo es obligatorio.",
+        "emailRequired": "La dirección de correo electrónico es obligatoria.",
+        "serverPasswordRequired": "La contraseña del servidor es obligatoria.",
+        "notesPasswordMinLength": "La contraseña de notas debe tener al menos 8 caracteres.",
+        "onboardingFailed": "No se pudieron descargar las claves de cifrado del servidor. Asegúrese de que su contraseña del servidor sea correcta y de que el dispositivo de origen se haya sincronizado"
+      },
+      "steps": {
+        "initialising": "Inicializando cifrado local…",
+        "registering": "Registrando dispositivo en el servidor…",
+        "onboarding": "Descargando claves de cifrado…",
+        "encrypting": "Asegurando credenciales…",
+        "syncing": "Iniciando sincronización inicial…"
+      }
+    }
   },
   "lock": {
     "title": "Bloquear aplicación",

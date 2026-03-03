@@ -886,7 +886,40 @@
       "completeInSettings": "Completa la configurazione della sincronizzazione in Impostazioni > Sync dopo aver creato la password."
     },
     "restoreFromBackup": "Ripristina da Backup",
-    "orDivider": "o"
+    "orDivider": "o",
+    "connectExisting": {
+      "title": "Collega account esistente",
+      "subtitle": "Collega questo dispositivo al tuo account Jottery esistente e sincronizza le tue note.",
+      "endpoint": "URL del server di sincronizzazione",
+      "endpointHint": "L'indirizzo del tuo server di sincronizzazione Jottery.",
+      "deviceName": "Nome del dispositivo",
+      "deviceNamePlaceholder": "es. Portatile da lavoro",
+      "deviceNameHint": "Un nome descrittivo per identificare questo dispositivo.",
+      "email": "Indirizzo e-mail",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Password del server",
+      "serverPasswordPlaceholder": "La password del tuo account",
+      "serverPasswordHint": "La password che utilizzi per accedere al server di sincronizzazione.",
+      "notesPassword": "Password delle note",
+      "notesPasswordPlaceholder": "Scegli una password locale (min. 8 caratteri)",
+      "notesPasswordHint": "Utilizzata per sbloccare le tue note su questo dispositivo. Può essere diversa dalla password del server.",
+      "submitButton": "Collega e sincronizza",
+      "errors": {
+        "endpointRequired": "L'URL del server di sincronizzazione è obbligatorio.",
+        "deviceNameRequired": "Il nome del dispositivo è obbligatorio.",
+        "emailRequired": "L'indirizzo e-mail è obbligatorio.",
+        "serverPasswordRequired": "La password del server è obbligatoria.",
+        "notesPasswordMinLength": "La password delle note deve contenere almeno 8 caratteri.",
+        "onboardingFailed": "Impossibile scaricare le chiavi di crittografia dal server. Assicurati che la password del server sia corretta e che il dispositivo di origine sia stato sincronizzato"
+      },
+      "steps": {
+        "initialising": "Inizializzazione della crittografia locale…",
+        "registering": "Registrazione del dispositivo presso il server…",
+        "onboarding": "Download delle chiavi di crittografia…",
+        "encrypting": "Protezione delle credenziali…",
+        "syncing": "Avvio della sincronizzazione iniziale…"
+      }
+    }
   },
   "lock": {
     "title": "Blocca applicazione",

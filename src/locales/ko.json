@@ -886,7 +886,40 @@
       "completeInSettings": "비밀번호 생성 후 설정 > 동기화에서 동기화 설정을 완료하세요."
     },
     "restoreFromBackup": "백업에서 복원",
-    "orDivider": "또는"
+    "orDivider": "또는",
+    "connectExisting": {
+      "title": "기존 계정 연결",
+      "subtitle": "이 기기를 기존 Jottery 계정에 연결하고 노트를 동기화합니다.",
+      "endpoint": "동기화 서버 URL",
+      "endpointHint": "Jottery 동기화 서버의 주소.",
+      "deviceName": "기기 이름",
+      "deviceNamePlaceholder": "예: 업무용 노트북",
+      "deviceNameHint": "이 기기를 식별하기 위한 알기 쉬운 이름.",
+      "email": "이메일 주소",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "서버 비밀번호",
+      "serverPasswordPlaceholder": "계정 비밀번호",
+      "serverPasswordHint": "동기화 서버에 로그인할 때 사용하는 비밀번호.",
+      "notesPassword": "노트 비밀번호",
+      "notesPasswordPlaceholder": "로컬 비밀번호 선택 (최소 8자)",
+      "notesPasswordHint": "이 기기에서 노트를 잠금 해제하는 데 사용됩니다. 서버 비밀번호와 다를 수 있습니다.",
+      "submitButton": "연결 및 동기화",
+      "errors": {
+        "endpointRequired": "동기화 서버 URL은 필수입니다.",
+        "deviceNameRequired": "기기 이름은 필수입니다.",
+        "emailRequired": "이메일 주소는 필수입니다.",
+        "serverPasswordRequired": "서버 비밀번호는 필수입니다.",
+        "notesPasswordMinLength": "노트 비밀번호는 최소 8자 이상이어야 합니다.",
+        "onboardingFailed": "서버에서 암호화 키를 다운로드하지 못했습니다. 서버 비밀번호가 올바른지, 원본 기기가 동기화되었는지 확인하세요"
+      },
+      "steps": {
+        "initialising": "로컬 암호화 초기화 중…",
+        "registering": "서버에 기기 등록 중…",
+        "onboarding": "암호화 키 다운로드 중…",
+        "encrypting": "자격 증명 보호 중…",
+        "syncing": "초기 동기화 시작 중…"
+      }
+    }
   },
   "lock": {
     "title": "애플리케이션 잠금",

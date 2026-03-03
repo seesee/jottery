@@ -886,7 +886,40 @@
       "completeInSettings": "Dokończ konfigurację synchronizacji w Ustawienia > Sync po utworzeniu hasła."
     },
     "restoreFromBackup": "Przywróć z Kopii Zapasowej",
-    "orDivider": "lub"
+    "orDivider": "lub",
+    "connectExisting": {
+      "title": "Połącz istniejące konto",
+      "subtitle": "Połącz to urządzenie ze swoim istniejącym kontem Jottery i zsynchronizuj notatki.",
+      "endpoint": "Adres URL serwera synchronizacji",
+      "endpointHint": "Adres Twojego serwera synchronizacji Jottery.",
+      "deviceName": "Nazwa urządzenia",
+      "deviceNamePlaceholder": "np. Laptop służbowy",
+      "deviceNameHint": "Przyjazna nazwa do identyfikacji tego urządzenia.",
+      "email": "Adres e-mail",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Hasło serwera",
+      "serverPasswordPlaceholder": "Hasło do Twojego konta",
+      "serverPasswordHint": "Hasło, którego używasz do logowania na serwerze synchronizacji.",
+      "notesPassword": "Hasło notatek",
+      "notesPasswordPlaceholder": "Wybierz lokalne hasło (min. 8 znaków)",
+      "notesPasswordHint": "Służy do odblokowywania notatek na tym urządzeniu. Może się różnić od hasła serwera.",
+      "submitButton": "Połącz i zsynchronizuj",
+      "errors": {
+        "endpointRequired": "Adres URL serwera synchronizacji jest wymagany.",
+        "deviceNameRequired": "Nazwa urządzenia jest wymagana.",
+        "emailRequired": "Adres e-mail jest wymagany.",
+        "serverPasswordRequired": "Hasło serwera jest wymagane.",
+        "notesPasswordMinLength": "Hasło notatek musi mieć co najmniej 8 znaków.",
+        "onboardingFailed": "Nie udało się pobrać kluczy szyfrowania z serwera. Upewnij się, że hasło serwera jest poprawne i urządzenie źródłowe zostało zsynchronizowane"
+      },
+      "steps": {
+        "initialising": "Inicjalizacja lokalnego szyfrowania…",
+        "registering": "Rejestracja urządzenia na serwerze…",
+        "onboarding": "Pobieranie kluczy szyfrowania…",
+        "encrypting": "Zabezpieczanie danych uwierzytelniających…",
+        "syncing": "Rozpoczynanie pierwszej synchronizacji…"
+      }
+    }
   },
   "lock": {
     "title": "Zablokuj aplikację",

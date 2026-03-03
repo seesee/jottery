@@ -886,7 +886,40 @@
       "completeInSettings": "パスワード作成後、設定 > 同期で同期設定を完了してください。"
     },
     "restoreFromBackup": "バックアップから復元",
-    "orDivider": "または"
+    "orDivider": "または",
+    "connectExisting": {
+      "title": "既存アカウントに接続",
+      "subtitle": "このデバイスを既存のJotteryアカウントにリンクし、ノートを同期します。",
+      "endpoint": "同期サーバーURL",
+      "endpointHint": "Jottery同期サーバーのアドレス。",
+      "deviceName": "デバイス名",
+      "deviceNamePlaceholder": "例：仕事用ノートPC",
+      "deviceNameHint": "このデバイスを識別するためのわかりやすい名前。",
+      "email": "メールアドレス",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "サーバーパスワード",
+      "serverPasswordPlaceholder": "アカウントのパスワード",
+      "serverPasswordHint": "同期サーバーへのサインインに使用するパスワード。",
+      "notesPassword": "ノートパスワード",
+      "notesPasswordPlaceholder": "ローカルパスワードを選択（8文字以上）",
+      "notesPasswordHint": "このデバイスでノートのロック解除に使用します。サーバーパスワードとは異なるものにできます。",
+      "submitButton": "接続して同期",
+      "errors": {
+        "endpointRequired": "同期サーバーURLは必須です。",
+        "deviceNameRequired": "デバイス名は必須です。",
+        "emailRequired": "メールアドレスは必須です。",
+        "serverPasswordRequired": "サーバーパスワードは必須です。",
+        "notesPasswordMinLength": "ノートパスワードは8文字以上である必要があります。",
+        "onboardingFailed": "サーバーからの暗号化キーのダウンロードに失敗しました。サーバーパスワードが正しいこと、および元のデバイスが同期済みであることを確認してください"
+      },
+      "steps": {
+        "initialising": "ローカル暗号化を初期化中…",
+        "registering": "サーバーにデバイスを登録中…",
+        "onboarding": "暗号化キーをダウンロード中…",
+        "encrypting": "認証情報を保護中…",
+        "syncing": "初期同期を開始中…"
+      }
+    }
   },
   "lock": {
     "title": "アプリケーションをロック",

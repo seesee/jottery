@@ -886,7 +886,40 @@
       "completeInSettings": "Terminez la configuration de la synchronisation dans Paramètres > Sync après avoir créé votre mot de passe."
     },
     "restoreFromBackup": "Restaurer depuis une sauvegarde",
-    "orDivider": "ou"
+    "orDivider": "ou",
+    "connectExisting": {
+      "title": "Connecter un compte existant",
+      "subtitle": "Associez cet appareil à votre compte Jottery existant et synchronisez vos notes.",
+      "endpoint": "URL du serveur de synchronisation",
+      "endpointHint": "L'adresse de votre serveur de synchronisation Jottery.",
+      "deviceName": "Nom de l'appareil",
+      "deviceNamePlaceholder": "p. ex. Ordinateur portable du travail",
+      "deviceNameHint": "Un nom convivial pour identifier cet appareil.",
+      "email": "Adresse e-mail",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Mot de passe du serveur",
+      "serverPasswordPlaceholder": "Le mot de passe de votre compte",
+      "serverPasswordHint": "Le mot de passe que vous utilisez pour vous connecter au serveur de synchronisation.",
+      "notesPassword": "Mot de passe des notes",
+      "notesPasswordPlaceholder": "Choisissez un mot de passe local (min. 8 caractères)",
+      "notesPasswordHint": "Utilisé pour déverrouiller vos notes sur cet appareil. Peut différer du mot de passe du serveur.",
+      "submitButton": "Connecter et synchroniser",
+      "errors": {
+        "endpointRequired": "L'URL du serveur de synchronisation est requise.",
+        "deviceNameRequired": "Le nom de l'appareil est requis.",
+        "emailRequired": "L'adresse e-mail est requise.",
+        "serverPasswordRequired": "Le mot de passe du serveur est requis.",
+        "notesPasswordMinLength": "Le mot de passe des notes doit comporter au moins 8 caractères.",
+        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe du serveur est correct et que l'appareil source a été synchronisé"
+      },
+      "steps": {
+        "initialising": "Initialisation du chiffrement local…",
+        "registering": "Enregistrement de l'appareil auprès du serveur…",
+        "onboarding": "Téléchargement des clés de chiffrement…",
+        "encrypting": "Sécurisation des identifiants…",
+        "syncing": "Démarrage de la synchronisation initiale…"
+      }
+    }
   },
   "lock": {
     "title": "Verrouiller l'application",

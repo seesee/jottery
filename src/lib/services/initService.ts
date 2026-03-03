@@ -458,7 +458,8 @@ export async function onboardFromServer(
   password: string,
   endpoint: string,
   userId: string,
-  apiKey: string
+  apiKey: string,
+  localPassword?: string
 ): Promise<void> {
   console.log('[Onboard] Downloading wrapped key from server...');
 
@@ -488,7 +489,7 @@ export async function onboardFromServer(
   // Create local envelope storage
   const deviceSalt = cryptoService.generateSalt();
   const deviceKey = await cryptoService.deriveKey({
-    password,
+    password: localPassword ?? password,
     salt: deviceSalt,
     iterations: CRYPTO_PBKDF2_ITERATIONS,
     extractable: false,

@@ -886,7 +886,40 @@
       "completeInSettings": "Schließen Sie die Sync-Einrichtung unter Einstellungen > Sync ab, nachdem Sie Ihr Passwort erstellt haben."
     },
     "restoreFromBackup": "Aus Backup wiederherstellen",
-    "orDivider": "oder"
+    "orDivider": "oder",
+    "connectExisting": {
+      "title": "Bestehendes Konto verbinden",
+      "subtitle": "Verbinden Sie dieses Gerät mit Ihrem bestehenden Jottery-Konto und synchronisieren Sie Ihre Notizen.",
+      "endpoint": "Sync-Server-URL",
+      "endpointHint": "Die Adresse Ihres Jottery-Sync-Servers.",
+      "deviceName": "Gerätename",
+      "deviceNamePlaceholder": "z.\u00a0B. Arbeits-Laptop",
+      "deviceNameHint": "Ein verständlicher Name zur Identifizierung dieses Geräts.",
+      "email": "E-Mail-Adresse",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Server-Passwort",
+      "serverPasswordPlaceholder": "Ihr Kontopasswort",
+      "serverPasswordHint": "Das Passwort, mit dem Sie sich beim Sync-Server anmelden.",
+      "notesPassword": "Notizen-Passwort",
+      "notesPasswordPlaceholder": "Wählen Sie ein lokales Passwort (mind. 8 Zeichen)",
+      "notesPasswordHint": "Wird zum Entsperren Ihrer Notizen auf diesem Gerät verwendet. Kann vom Server-Passwort abweichen.",
+      "submitButton": "Verbinden & Synchronisieren",
+      "errors": {
+        "endpointRequired": "Sync-Server-URL ist erforderlich.",
+        "deviceNameRequired": "Gerätename ist erforderlich.",
+        "emailRequired": "E-Mail-Adresse ist erforderlich.",
+        "serverPasswordRequired": "Server-Passwort ist erforderlich.",
+        "notesPasswordMinLength": "Das Notizen-Passwort muss mindestens 8 Zeichen lang sein.",
+        "onboardingFailed": "Herunterladen der Verschlüsselungsschlüssel vom Server fehlgeschlagen. Stellen Sie sicher, dass Ihr Server-Passwort korrekt ist und das Quellgerät synchronisiert wurde"
+      },
+      "steps": {
+        "initialising": "Lokale Verschlüsselung wird initialisiert…",
+        "registering": "Gerät wird beim Server registriert…",
+        "onboarding": "Verschlüsselungsschlüssel werden heruntergeladen…",
+        "encrypting": "Anmeldedaten werden gesichert…",
+        "syncing": "Erste Synchronisierung wird gestartet…"
+      }
+    }
   },
   "lock": {
     "title": "Anwendung sperren",

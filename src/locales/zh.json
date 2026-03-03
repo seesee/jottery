@@ -886,7 +886,40 @@
       "completeInSettings": "创建密码后，在设置 > 同步中完成同步设置。"
     },
     "restoreFromBackup": "从备份恢复",
-    "orDivider": "或"
+    "orDivider": "或",
+    "connectExisting": {
+      "title": "连接现有账户",
+      "subtitle": "将此设备链接到您现有的Jottery账户并同步笔记。",
+      "endpoint": "同步服务器URL",
+      "endpointHint": "Jottery同步服务器的地址。",
+      "deviceName": "设备名称",
+      "deviceNamePlaceholder": "例如：工作笔记本电脑",
+      "deviceNameHint": "用于识别此设备的友好名称。",
+      "email": "电子邮件地址",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "服务器密码",
+      "serverPasswordPlaceholder": "您的账户密码",
+      "serverPasswordHint": "您用于登录同步服务器的密码。",
+      "notesPassword": "笔记密码",
+      "notesPasswordPlaceholder": "选择本地密码（至少8个字符）",
+      "notesPasswordHint": "用于在此设备上解锁笔记。可以与服务器密码不同。",
+      "submitButton": "连接并同步",
+      "errors": {
+        "endpointRequired": "同步服务器URL为必填项。",
+        "deviceNameRequired": "设备名称为必填项。",
+        "emailRequired": "电子邮件地址为必填项。",
+        "serverPasswordRequired": "服务器密码为必填项。",
+        "notesPasswordMinLength": "笔记密码至少需要8个字符。",
+        "onboardingFailed": "从服务器下载加密密钥失败。请确保服务器密码正确，且源设备已完成同步"
+      },
+      "steps": {
+        "initialising": "正在初始化本地加密…",
+        "registering": "正在向服务器注册设备…",
+        "onboarding": "正在下载加密密钥…",
+        "encrypting": "正在保护凭据…",
+        "syncing": "正在开始初始同步…"
+      }
+    }
   },
   "lock": {
     "title": "锁定应用程序",

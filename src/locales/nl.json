@@ -886,7 +886,40 @@
       "completeInSettings": "Voltooi de sync-instellingen in Instellingen > Sync na het aanmaken van je wachtwoord."
     },
     "restoreFromBackup": "Herstellen vanuit Back-up",
-    "orDivider": "of"
+    "orDivider": "of",
+    "connectExisting": {
+      "title": "Bestaand account verbinden",
+      "subtitle": "Koppel dit apparaat aan je bestaande Jottery-account en synchroniseer je notities.",
+      "endpoint": "Synchronisatieserver-URL",
+      "endpointHint": "Het adres van je Jottery-synchronisatieserver.",
+      "deviceName": "Apparaatnaam",
+      "deviceNamePlaceholder": "bijv. Werk Laptop",
+      "deviceNameHint": "Een herkenbare naam om dit apparaat te identificeren.",
+      "email": "E-mailadres",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Serverwachtwoord",
+      "serverPasswordPlaceholder": "Je accountwachtwoord",
+      "serverPasswordHint": "Het wachtwoord waarmee je inlogt op de synchronisatieserver.",
+      "notesPassword": "Notitiewachtwoord",
+      "notesPasswordPlaceholder": "Kies een lokaal wachtwoord (min. 8 tekens)",
+      "notesPasswordHint": "Wordt gebruikt om je notities op dit apparaat te ontgrendelen. Kan afwijken van het serverwachtwoord.",
+      "submitButton": "Verbinden & synchroniseren",
+      "errors": {
+        "endpointRequired": "Synchronisatieserver-URL is vereist.",
+        "deviceNameRequired": "Apparaatnaam is vereist.",
+        "emailRequired": "E-mailadres is vereist.",
+        "serverPasswordRequired": "Serverwachtwoord is vereist.",
+        "notesPasswordMinLength": "Notitiewachtwoord moet minimaal 8 tekens bevatten.",
+        "onboardingFailed": "Downloaden van versleutelingssleutels van de server is mislukt. Controleer of je serverwachtwoord correct is en of het bronapparaat is gesynchroniseerd"
+      },
+      "steps": {
+        "initialising": "Lokale versleuteling initialiseren…",
+        "registering": "Apparaat registreren bij server…",
+        "onboarding": "Versleutelingssleutels downloaden…",
+        "encrypting": "Inloggegevens beveiligen…",
+        "syncing": "Eerste synchronisatie starten…"
+      }
+    }
   },
   "lock": {
     "title": "Applicatie vergrendelen",

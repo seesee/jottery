@@ -918,7 +918,40 @@
       }
     },
     "restoreFromBackup": "Restore from Backup",
-    "orDivider": "or"
+    "orDivider": "or",
+    "connectExisting": {
+      "title": "Connect Existing Account",
+      "subtitle": "Link this device to your existing Jottery account and sync your notes.",
+      "endpoint": "Sync Server URL",
+      "endpointHint": "The address of your Jottery sync server.",
+      "deviceName": "Device Name",
+      "deviceNamePlaceholder": "e.g. Work Laptop",
+      "deviceNameHint": "A friendly name to identify this device.",
+      "email": "Email Address",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Server Password",
+      "serverPasswordPlaceholder": "Your account password",
+      "serverPasswordHint": "The password you use to sign in to the sync server.",
+      "notesPassword": "Notes Password",
+      "notesPasswordPlaceholder": "Choose a local password (min 8 characters)",
+      "notesPasswordHint": "Used to unlock your notes on this device. Can differ from the server password.",
+      "submitButton": "Connect & Sync",
+      "errors": {
+        "endpointRequired": "Sync server URL is required.",
+        "deviceNameRequired": "Device name is required.",
+        "emailRequired": "Email address is required.",
+        "serverPasswordRequired": "Server password is required.",
+        "notesPasswordMinLength": "Notes password must be at least 8 characters.",
+        "onboardingFailed": "Failed to download encryption keys from server. Ensure your server password is correct and the source device has synced"
+      },
+      "steps": {
+        "initialising": "Initialising local encryption…",
+        "registering": "Registering device with server…",
+        "onboarding": "Downloading encryption keys…",
+        "encrypting": "Securing credentials…",
+        "syncing": "Starting initial sync…"
+      }
+    }
   },
   "lock": {
     "title": "Lock Application",

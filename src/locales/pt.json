@@ -886,7 +886,40 @@
       "completeInSettings": "Complete a configuração de sincronização em Configurações > Sync após criar sua senha."
     },
     "restoreFromBackup": "Restaurar do Backup",
-    "orDivider": "ou"
+    "orDivider": "ou",
+    "connectExisting": {
+      "title": "Conectar conta existente",
+      "subtitle": "Vincule este dispositivo à sua conta Jottery existente e sincronize as suas notas.",
+      "endpoint": "URL do servidor de sincronização",
+      "endpointHint": "O endereço do seu servidor de sincronização Jottery.",
+      "deviceName": "Nome do dispositivo",
+      "deviceNamePlaceholder": "ex. Portátil de trabalho",
+      "deviceNameHint": "Um nome amigável para identificar este dispositivo.",
+      "email": "Endereço de e-mail",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Palavra-passe do servidor",
+      "serverPasswordPlaceholder": "A palavra-passe da sua conta",
+      "serverPasswordHint": "A palavra-passe que utiliza para iniciar sessão no servidor de sincronização.",
+      "notesPassword": "Palavra-passe das notas",
+      "notesPasswordPlaceholder": "Escolha uma palavra-passe local (mín. 8 caracteres)",
+      "notesPasswordHint": "Usada para desbloquear as suas notas neste dispositivo. Pode ser diferente da palavra-passe do servidor.",
+      "submitButton": "Conectar e sincronizar",
+      "errors": {
+        "endpointRequired": "O URL do servidor de sincronização é obrigatório.",
+        "deviceNameRequired": "O nome do dispositivo é obrigatório.",
+        "emailRequired": "O endereço de e-mail é obrigatório.",
+        "serverPasswordRequired": "A palavra-passe do servidor é obrigatória.",
+        "notesPasswordMinLength": "A palavra-passe das notas deve ter pelo menos 8 caracteres.",
+        "onboardingFailed": "Falha ao transferir as chaves de encriptação do servidor. Certifique-se de que a palavra-passe do servidor está correcta e que o dispositivo de origem foi sincronizado"
+      },
+      "steps": {
+        "initialising": "A inicializar encriptação local…",
+        "registering": "A registar dispositivo no servidor…",
+        "onboarding": "A transferir chaves de encriptação…",
+        "encrypting": "A proteger credenciais…",
+        "syncing": "A iniciar primeira sincronização…"
+      }
+    }
   },
   "lock": {
     "title": "Bloquear aplicativo",

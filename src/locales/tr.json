@@ -886,7 +886,40 @@
       "completeInSettings": "Şifrenizi oluşturduktan sonra Ayarlar > Sync'de senkronizasyon kurulumunu tamamlayın."
     },
     "restoreFromBackup": "Yedekten Geri Yükle",
-    "orDivider": "veya"
+    "orDivider": "veya",
+    "connectExisting": {
+      "title": "Mevcut Hesabı Bağla",
+      "subtitle": "Bu cihazı mevcut Jottery hesabınıza bağlayın ve notlarınızı senkronize edin.",
+      "endpoint": "Senkronizasyon Sunucusu URL'si",
+      "endpointHint": "Jottery senkronizasyon sunucunuzun adresi.",
+      "deviceName": "Cihaz Adı",
+      "deviceNamePlaceholder": "örn. İş Dizüstü Bilgisayarı",
+      "deviceNameHint": "Bu cihazı tanımlamak için kolay bir ad.",
+      "email": "E-posta Adresi",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Sunucu Şifresi",
+      "serverPasswordPlaceholder": "Hesap şifreniz",
+      "serverPasswordHint": "Senkronizasyon sunucusuna giriş yapmak için kullandığınız şifre.",
+      "notesPassword": "Not Şifresi",
+      "notesPasswordPlaceholder": "Yerel bir şifre seçin (en az 8 karakter)",
+      "notesPasswordHint": "Bu cihazdaki notlarınızın kilidini açmak için kullanılır. Sunucu şifresinden farklı olabilir.",
+      "submitButton": "Bağlan ve Senkronize Et",
+      "errors": {
+        "endpointRequired": "Senkronizasyon sunucusu URL'si gereklidir.",
+        "deviceNameRequired": "Cihaz adı gereklidir.",
+        "emailRequired": "E-posta adresi gereklidir.",
+        "serverPasswordRequired": "Sunucu şifresi gereklidir.",
+        "notesPasswordMinLength": "Not şifresi en az 8 karakter olmalıdır.",
+        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Sunucu şifrenizin doğru olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
+      },
+      "steps": {
+        "initialising": "Yerel şifreleme başlatılıyor…",
+        "registering": "Cihaz sunucuya kaydediliyor…",
+        "onboarding": "Şifreleme anahtarları indiriliyor…",
+        "encrypting": "Kimlik bilgileri güvence altına alınıyor…",
+        "syncing": "İlk senkronizasyon başlatılıyor…"
+      }
+    }
   },
   "lock": {
     "title": "Uygulamayı Kilitle",
