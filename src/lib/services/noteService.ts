@@ -140,11 +140,19 @@ class NoteService {
     // Sort encrypted notes first (by metadata) to maintain correct order
     const sortedNotes = this.sortEncryptedNotes(notes, sortOrder);
 
-    // Decrypt first batch immediately
+    // Decrypt first batch immediately (skip notes that fail to decrypt)
     const firstBatch = sortedNotes.slice(0, batchSize);
-    const firstDecrypted = await Promise.all(
+    const firstResults = await Promise.allSettled(
       firstBatch.map(note => this.decryptNote(note, masterKey.key))
     );
+    const firstDecrypted: DecryptedNote[] = [];
+    for (const result of firstResults) {
+      if (result.status === 'fulfilled') {
+        firstDecrypted.push(result.value);
+      } else {
+        console.error('[NoteService] Skipping undecryptable note:', result.reason);
+      }
+    }
 
     // Decrypt remaining batches in background
     if (sortedNotes.length > batchSize && onProgress) {
@@ -176,19 +184,24 @@ class NoteService {
       const end = Math.min(start + batchSize, notes.length);
       const batch = notes.slice(start, end);
 
-      try {
-        const decrypted = await Promise.all(
-          batch.map(note => this.decryptNote(note, key))
-        );
-
-        // Report progress
-        onProgress(decrypted);
-
-        // Small delay between batches to avoid blocking UI
-        await new Promise(resolve => setTimeout(resolve, 10));
-      } catch (error) {
-        console.error(`Failed to decrypt batch ${i + 1}/${totalBatches}:`, error);
+      const results = await Promise.allSettled(
+        batch.map(note => this.decryptNote(note, key))
+      );
+      const decrypted: DecryptedNote[] = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          decrypted.push(result.value);
+        } else {
+          console.error(`[NoteService] Skipping undecryptable note in batch ${i + 1}/${totalBatches}:`, result.reason);
+        }
       }
+
+      if (decrypted.length > 0) {
+        onProgress(decrypted);
+      }
+
+      // Small delay between batches to avoid blocking UI
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
   }
 
