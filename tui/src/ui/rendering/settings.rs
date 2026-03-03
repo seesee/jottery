@@ -83,8 +83,16 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
     // Determine sync endpoint display value
     let sync_endpoint_display = if let Some((ref endpoint, ref email)) = pending_registration {
         format!("{} ({}: {})", endpoint, t!("register.pending_status"), email)
+    } else if let Some(ref endpoint) = app.settings.sync_endpoint {
+        endpoint.clone()
+    } else if let Some(ref m) = metadata {
+        if !m.sync_endpoint.is_empty() {
+            m.sync_endpoint.clone()
+        } else {
+            String::from("-")
+        }
     } else {
-        app.settings.sync_endpoint.clone().unwrap_or_else(|| t!("sync.no_api_key").to_string())
+        String::from("-")
     };
 
     let mut settings_text = vec![

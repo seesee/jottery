@@ -351,6 +351,11 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     metadata.sync_enabled = true;
     metadata.pending_registration_email = None; // Clear pending registration
     sync_repo.update_metadata(&metadata)?;
+
+    // Update app.settings so the UI reflects the new state immediately
+    app.settings.sync_endpoint = Some(endpoint.to_string());
+    app.settings.sync_enabled = true;
+
     let local_password = app.unlock_password.clone();
     match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check, local_password.as_deref()) {
         Ok(()) => app.debug_log("Envelope setup succeeded after device registration"),
