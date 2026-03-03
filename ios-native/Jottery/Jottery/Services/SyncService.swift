@@ -200,10 +200,14 @@ actor SyncService {
 
         // Mark accepted notes as synced and create version snapshots
         for accepted in response.accepted {
-            try noteRepo.markSynced(id: accepted.id, syncedAt: accepted.syncedAt ?? now, serverVersion: accepted.serverVersion)
-            // Create a version snapshot of the accepted state
-            if let record = try noteRepo.getRaw(id: accepted.id) {
-                try versionRepo.createVersion(from: record, reason: "sync")
+            do {
+                try noteRepo.markSynced(id: accepted.id, syncedAt: accepted.syncedAt ?? now, serverVersion: accepted.serverVersion)
+                // Create a version snapshot of the accepted state
+                if let record = try noteRepo.getRaw(id: accepted.id) {
+                    try versionRepo.createVersion(from: record, reason: "sync")
+                }
+            } catch {
+                print("[Sync] push: failed to mark accepted note \(accepted.id): \(error)")
             }
         }
 
@@ -214,7 +218,11 @@ actor SyncService {
 
         // Mark pushed saved searches as synced
         for record in savedSearchRecords {
-            try savedSearchRepo.markSynced(id: record.id, syncedAt: now)
+            do {
+                try savedSearchRepo.markSynced(id: record.id, syncedAt: now)
+            } catch {
+                print("[Sync] push: failed to mark saved search \(record.id) synced: \(error)")
+            }
         }
 
         // Handle rejected (conflicts) — queue for user resolution
@@ -297,75 +305,96 @@ actor SyncService {
             // Process pulled notes and build attachment metadata lookup
             var attachmentMetadata: [String: AttachmentRef] = [:]
             for syncNote in response.notes {
-                try processNote(syncNote, syncedAt: now)
-                knownIds.append(syncNote.id)
-                // Index attachment refs by their blob ID (ref.data)
-                for ref in syncNote.attachments {
-                    attachmentMetadata[ref.data] = ref
+                do {
+                    try processNote(syncNote, syncedAt: now)
+                    knownIds.append(syncNote.id)
+                    // Index attachment refs by their blob ID (ref.data)
+                    for ref in syncNote.attachments {
+                        attachmentMetadata[ref.data] = ref
+                    }
+                } catch {
+                    print("[Sync] pull: failed to process note \(syncNote.id): \(error)")
+                    knownIds.append(syncNote.id) // still track as known to avoid re-pull loops
                 }
             }
 
             // Store pulled attachment blobs
             for syncAttachment in response.attachments {
                 guard let blobData = Data(base64Encoded: syncAttachment.data) else { continue }
-                let ref = attachmentMetadata[syncAttachment.id]
-                try attachmentRepo.storeBlob(
-                    id: syncAttachment.id,
-                    filename: ref?.filename ?? "",
-                    mimeType: ref?.mimeType ?? "application/octet-stream",
-                    size: ref?.size ?? blobData.count,
-                    data: blobData
-                )
+                do {
+                    let ref = attachmentMetadata[syncAttachment.id]
+                    try attachmentRepo.storeBlob(
+                        id: syncAttachment.id,
+                        filename: ref?.filename ?? "",
+                        mimeType: ref?.mimeType ?? "application/octet-stream",
+                        size: ref?.size ?? blobData.count,
+                        data: blobData
+                    )
+                } catch {
+                    print("[Sync] pull: failed to store attachment \(syncAttachment.id): \(error)")
+                }
             }
 
             // Process deletions
             if let deletions = response.deletions {
                 for deletion in deletions {
-                    try noteRepo.hardDelete(id: deletion.id)
+                    do {
+                        try noteRepo.hardDelete(id: deletion.id)
+                    } catch {
+                        print("[Sync] pull: failed to delete note \(deletion.id): \(error)")
+                    }
                 }
             }
 
             // Store pulled version snapshots
             for syncVersion in response.versions {
-                let storageTags = Self.syncTagsToStorageTags(syncVersion.tags, key: key)
-                let attachmentsStr = String(data: (try? JSONEncoder().encode(syncVersion.attachments)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
-                let versionRecord = NoteVersionRecord(
-                    versionKey: syncVersion.versionKey,
-                    noteId: syncVersion.noteId,
-                    version: syncVersion.version,
-                    createdAt: syncVersion.createdAt,
-                    syncedAt: syncVersion.syncedAt,
-                    content: syncVersion.content,
-                    tags: storageTags,
-                    attachments: attachmentsStr,
-                    syntaxLanguage: syncVersion.syntaxLanguage,
-                    wordWrap: syncVersion.wordWrap,
-                    showPreview: syncVersion.showPreview,
-                    color: syncVersion.color,
-                    reason: syncVersion.reason,
-                    contentHash: syncVersion.contentHash,
-                    parentHash: syncVersion.parentHash
-                )
-                try versionRepo.insertOrReplace(versionRecord)
+                do {
+                    let storageTags = Self.syncTagsToStorageTags(syncVersion.tags, key: key)
+                    let attachmentsStr = String(data: (try? JSONEncoder().encode(syncVersion.attachments)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
+                    let versionRecord = NoteVersionRecord(
+                        versionKey: syncVersion.versionKey,
+                        noteId: syncVersion.noteId,
+                        version: syncVersion.version,
+                        createdAt: syncVersion.createdAt,
+                        syncedAt: syncVersion.syncedAt,
+                        content: syncVersion.content,
+                        tags: storageTags,
+                        attachments: attachmentsStr,
+                        syntaxLanguage: syncVersion.syntaxLanguage,
+                        wordWrap: syncVersion.wordWrap,
+                        showPreview: syncVersion.showPreview,
+                        color: syncVersion.color,
+                        reason: syncVersion.reason,
+                        contentHash: syncVersion.contentHash,
+                        parentHash: syncVersion.parentHash
+                    )
+                    try versionRepo.insertOrReplace(versionRecord)
+                } catch {
+                    print("[Sync] pull: failed to store version \(syncVersion.versionKey): \(error)")
+                }
             }
 
             // Process pulled saved searches
             if let savedSearches = response.savedSearches {
                 for remote in savedSearches {
-                    let record = SavedSearchRepository.SavedSearchRecord(
-                        id: remote.id,
-                        name: remote.name,
-                        query: remote.query,
-                        displayOrder: remote.order,
-                        createdAt: remote.createdAt,
-                        modifiedAt: remote.modifiedAt,
-                        syncedAt: now,
-                        deleted: remote.deleted,
-                        deletedAt: remote.deletedAt,
-                        version: remote.version,
-                        needsSync: false
-                    )
-                    try savedSearchRepo.insertOrReplace(record: record)
+                    do {
+                        let record = SavedSearchRepository.SavedSearchRecord(
+                            id: remote.id,
+                            name: remote.name,
+                            query: remote.query,
+                            displayOrder: remote.order,
+                            createdAt: remote.createdAt,
+                            modifiedAt: remote.modifiedAt,
+                            syncedAt: now,
+                            deleted: remote.deleted,
+                            deletedAt: remote.deletedAt,
+                            version: remote.version,
+                            needsSync: false
+                        )
+                        try savedSearchRepo.insertOrReplace(record: record)
+                    } catch {
+                        print("[Sync] pull: failed to store saved search \(remote.id): \(error)")
+                    }
                 }
             }
 

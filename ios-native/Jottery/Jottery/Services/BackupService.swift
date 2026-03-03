@@ -387,23 +387,27 @@ enum BackupService {
                 let attachments: [BackupAttachment] = try decryptBatch(batch.data, key: backupKey)
                 for att in attachments {
                     guard let blobData = Data(base64Encoded: att.blob) else { continue }
-                    // Re-encrypt blob data with current key
-                    let blobStr = String(data: blobData, encoding: .utf8) ?? ""
-                    if !blobStr.isEmpty,
-                       let enc = try? CryptoService.parseEncryptedJSON(blobStr) {
-                        let plain = try CryptoService.decrypt(enc, key: backupKey)
-                        let reEnc = try CryptoService.encrypt(plain, key: currentKey)
-                        let reEncJSON = try CryptoService.serializeEncryptedJSON(reEnc)
-                        try attachmentRepo.storeBlob(
-                            id: att.id, filename: "", mimeType: "",
-                            size: plain.count, data: Data(reEncJSON.utf8)
-                        )
-                    } else {
-                        // Store as-is if not encrypted (shouldn't happen but be safe)
-                        try attachmentRepo.storeBlob(
-                            id: att.id, filename: "", mimeType: "",
-                            size: blobData.count, data: blobData
-                        )
+                    do {
+                        // Re-encrypt blob data with current key
+                        let blobStr = String(data: blobData, encoding: .utf8) ?? ""
+                        if !blobStr.isEmpty,
+                           let enc = try? CryptoService.parseEncryptedJSON(blobStr) {
+                            let plain = try CryptoService.decrypt(enc, key: backupKey)
+                            let reEnc = try CryptoService.encrypt(plain, key: currentKey)
+                            let reEncJSON = try CryptoService.serializeEncryptedJSON(reEnc)
+                            try attachmentRepo.storeBlob(
+                                id: att.id, filename: "", mimeType: "",
+                                size: plain.count, data: Data(reEncJSON.utf8)
+                            )
+                        } else {
+                            // Store as-is if not encrypted (shouldn't happen but be safe)
+                            try attachmentRepo.storeBlob(
+                                id: att.id, filename: "", mimeType: "",
+                                size: blobData.count, data: blobData
+                            )
+                        }
+                    } catch {
+                        print("[Backup] Skipping attachment blob \(att.id): \(error)")
                     }
                 }
 
