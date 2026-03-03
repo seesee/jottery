@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
-  import { isInitialized as isInitializedStore, isLocked } from '../stores/appStore';
+  import { isInitialized as isInitializedStore, isLocked, settings } from '../stores/appStore';
   import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, onboardFromServer } from '../services';
   import { authService } from '../services/authService';
   import { validateBackup, getBackupStats } from '../services/backupService';
@@ -381,12 +381,24 @@
         userEmail: connectEmail.trim(),
       });
 
-      // Save settings
+      // Save settings to IndexedDB
       await settingsRepository.update({
         syncEndpoint: connectEndpoint.trim(),
         syncEnabled: true,
         deviceName: connectDeviceName.trim(),
+        welcomeNoteCreated: true,
       });
+
+      // Update the in-memory Svelte store BEFORE unlocking so that
+      // App.svelte's reactive block sees syncEnabled=true (for startAutoSync)
+      // and welcomeNoteCreated=true (to suppress welcome note creation)
+      settings.update(s => ({
+        ...s,
+        syncEndpoint: connectEndpoint.trim(),
+        syncEnabled: true,
+        deviceName: connectDeviceName.trim(),
+        welcomeNoteCreated: true,
+      }));
 
       // Step 6: Unlock
       isInitializedStore.set(true);
@@ -394,10 +406,10 @@
 
       // Store password for session if applicable
       try {
-        const settings = await settingsRepository.get();
-        if (settings.rememberPassword) {
+        const currentSettings = await settingsRepository.get();
+        if (currentSettings.rememberPassword) {
           await passwordStorageService.store(connectNotesPassword);
-        } else if (settings.persistSession && sessionStorageService.isAvailable()) {
+        } else if (currentSettings.persistSession && sessionStorageService.isAvailable()) {
           sessionStorageService.store(connectNotesPassword);
         }
       } catch (err) {
