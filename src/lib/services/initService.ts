@@ -86,7 +86,8 @@ export async function initialize(password: string): Promise<void> {
       derivedAt: Date.now(),
     };
     keyManager.setMasterKey(masterKey);
-    console.log('[Initialize] ✓ Envelope encryption initialised');
+    const initFingerprint = Array.from(masterKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('[Initialize] ✓ Envelope encryption initialised, key fingerprint:', initFingerprint);
   }
 
   // Ensure default settings are saved
@@ -192,7 +193,8 @@ export async function unlock(password: string): Promise<void> {
   };
 
   keyManager.setMasterKey(masterKey);
-  console.log('[Unlock] ✓ Master key stored in keyManager');
+  const unlockFingerprint = Array.from(keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+  console.log('[Unlock] ✓ Master key stored in keyManager, key fingerprint:', unlockFingerprint);
 
   // Get settings to check rememberPassword
   const settings = await settingsRepository.get();
@@ -513,7 +515,9 @@ export async function onboardFromServer(
   };
   keyManager.setMasterKey(masterKey);
 
-  console.log('[Onboard] ✓ Device onboarded via envelope encryption');
+  // Diagnostic: fingerprint key for debugging onboarding issues
+  const onboardFingerprint = Array.from(masterKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+  console.log('[Onboard] ✓ Device onboarded via envelope encryption, key fingerprint:', onboardFingerprint);
 }
 
 /**

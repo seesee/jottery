@@ -930,6 +930,12 @@ class SyncService {
       throw new Error('Application is locked');
     }
 
+    // Diagnostic: fingerprint key for debugging onboarding issues
+    if (masterKey.keyBytes) {
+      const pullFingerprint = Array.from(masterKey.keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+      console.log('[SyncService] Pull using key fingerprint:', pullFingerprint);
+    }
+
     let offset = 0;
     let hasMore = true;
     let totalNotes = 0;
