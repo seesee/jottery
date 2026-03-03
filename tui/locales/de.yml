@@ -141,8 +141,6 @@ settings:
   instructions_remember: "Passwort merken: Enter fragt nach Passwort (bei Aktivierung) oder deaktiviert"
   instructions_sync: Drücken Sie 'y' zum Synchronisieren
   instructions_force_sync: Drücken Sie 'Y' (Shift+y) für vollständige Synchronisation (vom Server abrufen)
-  instructions_paste: Drücken Sie 'p' um Sync-Anmeldedaten von einem anderen Gerät einzufügen
-  instructions_copy: Drücken Sie 'c' um Sync-Anmeldedaten zu kopieren
   press_enter_cycle: Enter zum Durchschalten
   press_enter_toggle: Enter zum Umschalten
   disabled: disabled
@@ -159,8 +157,6 @@ sync:
   conflict: Synchronisationskonflikt erkannt. Einige Notizen haben widersprüchliche Änderungen auf dem Server.
   request_failed: Fehler beim Senden der Synchronisationsanfrage
   response_parse_failed: Fehler beim Parsen der Synchronisationsantwort
-  encrypted_import: Verschlüsselte Anmeldedaten importiert. Bitte geben Sie Ihr Passwort ein, um die Einrichtung zu entschlüsseln und abzuschließen.
-  legacy_format_warning: "Warnung: Verwendung des Legacy-Formats ohne Verschlüsselung. API-Schlüssel wird im Klartext angezeigt."
   disconnected: Vom Sync-Server getrennt. Lokale Notizen bleiben erhalten.
   disconnect_failed: Trennung vom Sync-Server fehlgeschlagen
   sse_connected: "Echtzeit-Synchronisation verbunden"
@@ -183,17 +179,6 @@ sync:
   reload_failed: "Synchronisation erfolgreich, aber Notizen konnten nicht neu geladen werden: %{error}"
   note: Notiz
   notes: Notizen
-  credentials_title: Sync-Anmeldedaten (Diesen Text kopieren)
-  credentials_instruction: "Kopieren Sie den Text unten und fügen Sie ihn in einen anderen Jottery-Client ein:"
-  paste_title: Sync-Anmeldedaten einfügen
-  paste_instruction: "Fügen Sie die base64-Anmeldedaten von einem anderen Jottery-Client ein:"
-  paste_success: Sync-Anmeldedaten erfolgreich konfiguriert!
-  paste_failed: "Fehler beim Einfügen der Anmeldedaten: %{error}"
-  salt_sync: Salt synchronisiert! Bitte geben Sie Ihr Passwort erneut ein, um mit dem neuen Verschlüsselungssalt zu entsperren.
-  import_device_title: Anmeldedaten importieren - Gerätename
-  import_enter_device_name: "Geben Sie einen Namen für dieses Gerät ein (z.B. Mein Laptop):"
-  credentials_empty: Keine Anmeldedaten eingegeben
-  import_failed: Import der Anmeldedaten fehlgeschlagen
 
 # Posteingang
 inbox:
@@ -388,12 +373,6 @@ help:
   enter_save_desc: Text-/Zahlenfelder speichern, andere Felder durchschalten/umschalten
   esc_cancel_key: Esc
   esc_cancel_desc: Bearbeitung abbrechen (Text-/Zahlenfelder)
-  p_paste_key: p
-  p_paste_desc: Sync-Anmeldedaten einfügen (zeigt Texteingabe)
-  c_copy_key: c
-  c_copy_desc: Sync-Anmeldedaten kopieren (verschlüsseltes Format)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Sync-Anmeldedaten kopieren (Legacy unverschlüsseltes Format)
   s_q_close_key: s / q
   s_q_close_desc: Einstellungsfenster schließen
   tab_focus_attachment_key: Tab

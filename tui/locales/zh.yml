@@ -141,8 +141,6 @@ settings:
   instructions_remember: "记住密码：Enter 提示输入密码（启用时）或禁用（已启用时）"
   instructions_sync: 按 'y' 触发同步
   instructions_force_sync: 按 'Y' (Shift+y) 强制完全同步（从服务器拉取）
-  instructions_paste: 按 'p' 从其他设备粘贴同步凭据
-  instructions_copy: 按 'c' 复制同步凭据以分享给其他设备
   press_enter_cycle: 按 Enter 循环
   press_enter_toggle: 按 Enter 切换
   disabled: 禁用
@@ -159,8 +157,6 @@ sync:
   conflict: 检测到同步冲突。某些笔记在服务器上有冲突的更改。
   request_failed: 发送同步请求失败
   response_parse_failed: 解析同步响应失败
-  encrypted_import: 已导入加密凭据。请输入密码以解密并完成设置。
-  legacy_format_warning: 警告：使用未加密的旧版格式。API密钥以明文显示。
   disconnected: 已断开与同步服务器的连接。本地笔记已保留。
   disconnect_failed: 断开与同步服务器的连接失败
   sse_connected: "实时同步已连接"
@@ -183,17 +179,6 @@ sync:
   reload_failed: "同步成功但重新加载笔记失败: %{error}"
   note: 条笔记
   notes: 条笔记
-  credentials_title: 同步凭据（复制此文本）
-  credentials_instruction: "复制下方文本并粘贴到另一个 Jottery 客户端："
-  paste_title: 粘贴同步凭据
-  paste_instruction: "粘贴来自另一个 Jottery 客户端的 base64 凭据文本："
-  paste_success: 同步凭据配置成功！
-  paste_failed: "粘贴凭据失败: %{error}"
-  salt_sync: 盐值已同步！请重新输入密码以使用新的加密盐值解锁。
-  import_device_title: 导入凭据 - 设备名称
-  import_enter_device_name: "为此设备输入名称（例如：我的笔记本电脑）："
-  credentials_empty: 未输入凭据
-  import_failed: 导入凭据失败
 
 # 收件箱
 inbox:
@@ -388,12 +373,6 @@ help:
   enter_save_desc: 保存文本/数字字段，切换其他字段
   esc_cancel_key: Esc
   esc_cancel_desc: 取消编辑 (文本/数字字段)
-  p_paste_key: p
-  p_paste_desc: 粘贴同步凭据 (显示文本输入)
-  c_copy_key: c
-  c_copy_desc: 复制同步凭据 (加密格式)
-  shift_c_copy_key: C
-  shift_c_copy_desc: 复制同步凭据 (旧版未加密格式)
   s_q_close_key: s / q
   s_q_close_desc: 关闭设置面板
   tab_focus_attachment_key: Tab

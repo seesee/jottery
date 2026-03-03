@@ -137,8 +137,6 @@ settings:
   instructions_remember: "Mémoriser le mot de passe : Entrée demande le mot de passe (si activation) ou désactive (si activé)"
   instructions_sync: Appuyez sur 'y' pour déclencher la synchronisation
   instructions_force_sync: Appuyez sur 'Y' (Maj+y) pour forcer la synchronisation complète (tirer du serveur)
-  instructions_paste: Appuyez sur 'p' pour coller les informations de synchronisation d'un autre appareil
-  instructions_copy: Appuyez sur 'c' pour copier les informations de synchronisation à partager avec un autre appareil
   instructions_disconnect: Appuyez sur 'd' pour vous déconnecter du serveur de synchronisation (conserve les notes locales)
   instructions_status: Appuyez sur 'R' (Maj+r) pour vérifier le statut d'approbation de l'inscription
   instructions_register: Appuyez sur 'r' pour vous inscrire auprès d'un serveur de synchronisation
@@ -167,19 +165,6 @@ sync:
   reload_failed: "Synchronisation réussie mais échec du rechargement des notes : %{error}"
   note: note
   notes: notes
-  credentials_title: Informations de synchronisation (Copiez ce texte)
-  credentials_instruction: "Copiez le texte ci-dessous et collez-le dans un autre client Jottery :"
-  paste_title: Coller les informations de synchronisation
-  paste_instruction: "Collez le texte des informations d'identification base64 d'un autre client Jottery :"
-  paste_success: Informations de synchronisation configurées avec succès !
-  paste_failed: "Échec du collage des informations : %{error}"
-  salt_sync: Sel synchronisé ! Veuillez rentrer votre mot de passe pour déverrouiller avec le nouveau sel de chiffrement.
-  import_device_title: Importer les identifiants - Nom de l'appareil
-  import_enter_device_name: "Entrez un nom pour cet appareil (ex. Mon Ordinateur) :"
-  credentials_empty: Aucun identifiant saisi
-  import_failed: Échec de l'importation des identifiants
-  encrypted_import: Identifiants chiffrés importés. Veuillez entrer votre mot de passe pour déchiffrer et terminer la configuration.
-  legacy_format_warning: "Attention : Utilisation du format hérité non chiffré. La clé API est exposée en texte clair."
   disconnected: Déconnecté du serveur de synchronisation. Les notes locales sont conservées.
   disconnect_failed: Échec de la déconnexion du serveur de synchronisation
   sse_connected: "Synchronisation en temps réel connectée"
@@ -388,12 +373,6 @@ help:
   enter_save_desc: Enregistrer les champs texte/nombre, cycler/basculer les autres champs
   esc_cancel_key: Échap
   esc_cancel_desc: Annuler l'édition (champs texte/nombre)
-  p_paste_key: p
-  p_paste_desc: Coller les informations de synchronisation (affiche l'entrée texte)
-  c_copy_key: c
-  c_copy_desc: Copier les identifiants de synchronisation (format chiffré)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Copier les identifiants de synchronisation (format hérité non chiffré)
   s_q_close_key: s / q
   s_q_close_desc: Fermer le panneau des paramètres
   tab_focus_attachment_key: Tab

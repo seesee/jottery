@@ -40,7 +40,7 @@ use std::{
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Note, UserSettings, sync::{SyncCredentials, ConflictData}},
+    models::{Note, UserSettings, sync::ConflictData},
     password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
     repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
 };
@@ -172,6 +172,8 @@ pub struct App {
     pub password_input: String,
     /// Password confirmation buffer (for new databases)
     pub password_confirm: String,
+    /// Saved unlock password (for envelope encryption when server password differs from notes password)
+    pub unlock_password: Option<String>,
     /// Whether database is being created (vs unlocked)
     pub is_new_database: bool,
     /// Which password field is active (false = password, true = confirm)
@@ -356,6 +358,7 @@ impl App {
             input_mode: InputMode::Normal,
             password_input: String::new(),
             password_confirm: String::new(),
+            unlock_password: None,
             is_new_database,
             password_confirm_focused: false,
             remember_password_checkbox: false,
@@ -466,9 +469,6 @@ impl App {
             AppState::Locked => input::locked::handle_locked_key(self, key)?,
             AppState::NoteList => input::note_list::handle_note_list_key(self, key)?,
             AppState::NoteView => input::note_view::handle_note_view_key(self, key)?,
-            AppState::ShowSyncCredentials { .. } => input::credentials::handle_show_credentials_key(self, key)?,
-            AppState::InputSyncCredentials { .. } => input::credentials::handle_input_credentials_key(self, key)?,
-            AppState::ImportInputDeviceName { .. } => input::credentials::handle_import_device_name_key(self, key)?,
             AppState::InputEmailForStatus { .. } => input::credentials::handle_input_email_for_status_key(self, key)?,
             AppState::ShowRegistrationStatus { .. } => input::credentials::handle_show_registration_status_key(self, key)?,
             AppState::RegisterInputEndpoint { .. } => input::credentials::handle_register_input_endpoint_key(self, key)?,
@@ -1298,167 +1298,6 @@ impl App {
         }
     }
 
-    /// Save settings to database
-    fn save_settings(&mut self) -> Result<()> {
-        if let Some(db) = &self.db {
-            let settings_repo = SettingsRepository::new(db.connection());
-            settings_repo.update(&self.settings)?;
-        }
-        Ok(())
-    }
-
-    /// Paste sync credentials from clipboard
-    #[allow(dead_code)]
-    fn paste_sync_credentials(&mut self) -> Result<()> {
-        // Get clipboard content
-        let mut clipboard = arboard::Clipboard::new()
-            .context("Failed to access clipboard")?;
-        let clipboard_text = clipboard.get_text()
-            .context("Failed to read from clipboard")?;
-
-        // Decode credentials
-        let creds = SyncCredentials::from_base64(clipboard_text.trim())
-            .context("Invalid sync credentials format")?;
-
-        self.debug_log(&format!("Paste credentials - endpoint: {}", creds.endpoint));
-        self.debug_log(&format!("Paste credentials - client_id: {}", creds.client_id));
-        self.debug_log(&format!("Paste credentials - has salt: {}", creds.salt.is_some()));
-
-        // Get database
-        let db = self.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-
-        // If web app salt is provided, update it first
-        // We'll encrypt the API key AFTER the user unlocks with the new salt
-        if let Some(salt_b64) = &creds.salt {
-            use base64::Engine;
-            use crate::repository::encryption::EncryptionRepository;
-            let encryption_repo = EncryptionRepository::new(db.connection());
-
-            // Decode the base64 salt from web app
-            let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
-                .context("Invalid base64 salt from sync credentials")?;
-
-            self.debug_log(&format!("Paste credentials - Salt (base64): {}", salt_b64));
-            self.debug_log(&format!("Paste credentials - Salt (hex): {}", hex::encode(&salt)));
-            self.debug_log(&format!("Paste credentials - Salt length: {} bytes", salt.len()));
-
-            // Validate salt length - must be at least 32 bytes (256 bits) for PBKDF2
-            if salt.len() < 32 {
-                anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes). Web app salt may be incompatible with TUI.", salt.len());
-            }
-
-            // Update encryption metadata with web app's salt AND iteration count
-            self.debug_log(&format!("Paste credentials - Saving salt with {} iterations", crate::crypto::DEFAULT_ITERATIONS));
-            encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
-            self.debug_log("Paste credentials - Salt saved successfully");
-        }
-
-        // Save sync metadata
-        let sync_repo = SyncRepository::new(db.connection());
-        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-
-        // If salt was synced, we need to store plaintext and encrypt on next unlock
-        // because the key will be re-derived with the new salt.
-        // Otherwise, encrypt immediately with the current session key if available.
-        let api_key_to_store = if creds.salt.is_some() {
-            // Salt changed - must wait for next unlock to encrypt with new key
-            self.debug_log("Paste credentials - Storing API key (will encrypt on next unlock with new salt)");
-            format!("PLAINTEXT:{}", creds.api_key)
-        } else if let Some(ref key) = self.key {
-            // No salt change and we have a session key - encrypt immediately
-            self.debug_log("Paste credentials - Encrypting API key immediately");
-            let encrypted = self.crypto.encrypt_text(&creds.api_key, key)
-                .context("Failed to encrypt API key")?;
-            serde_json::to_string(&encrypted)
-                .context("Failed to serialize encrypted API key")?
-        } else {
-            // No session key available (shouldn't happen in normal flow)
-            self.debug_log("Paste credentials - No session key, storing plaintext temporarily");
-            format!("PLAINTEXT:{}", creds.api_key)
-        };
-
-        metadata.api_key = Some(api_key_to_store);
-        metadata.client_id = Some(creds.client_id);
-        metadata.sync_endpoint = creds.endpoint.clone();
-        metadata.sync_enabled = true;
-
-        sync_repo.update_metadata(&metadata)?;
-
-        // Update settings
-        self.settings.sync_endpoint = Some(creds.endpoint);
-        self.settings.sync_enabled = true;
-        self.save_settings()?;
-
-        // If web app salt was provided, we need to lock and force re-unlock with the new salt
-        // This ensures the user knows the salt was changed and re-enters their password
-        if creds.salt.is_some() {
-            self.debug_log("Paste credentials - Locking database to force re-unlock with new salt");
-
-            // Stop SSE connection before locking
-            self.stop_sse();
-
-            // Automatically lock the database
-            self.key = None;
-            self.notes.clear();
-            self.selected_note = 0;
-            self.password_input.zeroize();
-            self.password_confirm.zeroize();
-            self.input_mode = InputMode::Normal;
-            self.state = AppState::Locked;
-
-            // Show message about what happened
-            self.error = Some(t!("sync.salt_sync").to_string());
-        }
-
-        Ok(())
-    }
-
-    /// Copy sync credentials to clipboard
-    #[allow(dead_code)]
-    fn copy_sync_credentials(&mut self) -> Result<()> {
-        // Get sync metadata
-        if let Some(db) = &self.db {
-            let sync_repo = SyncRepository::new(db.connection());
-            let metadata = sync_repo.get_metadata()?
-                .ok_or_else(|| anyhow::anyhow!("No sync configuration found"))?;
-
-            // Check if credentials exist
-            let encrypted_api_key = metadata.api_key
-                .ok_or_else(|| anyhow::anyhow!("No API key configured. Enable sync first."))?;
-            let client_id = metadata.client_id
-                .ok_or_else(|| anyhow::anyhow!("No client ID found. Enable sync first."))?;
-
-            // Decrypt API key
-            let api_key = if let Some(key) = &self.key {
-                let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
-                self.crypto.decrypt_text(&encrypted, key)?
-            } else {
-                anyhow::bail!("Database not unlocked");
-            };
-
-            // Create credentials payload
-            let creds = SyncCredentials::new(
-                metadata.sync_endpoint,
-                api_key,
-                client_id,
-            );
-
-            // Encode to base64
-            let encoded = creds.to_base64()?;
-
-            // Copy to clipboard
-            let mut clipboard = arboard::Clipboard::new()
-                .context("Failed to access clipboard")?;
-            clipboard.set_text(&encoded)
-                .context("Failed to write to clipboard")?;
-        } else {
-            anyhow::bail!("Database not available");
-        }
-
-        Ok(())
-    }
-
-
     /// Check if terminal needs redraw and reset flag
     pub fn should_redraw(&mut self) -> bool {
         if self.need_redraw {
@@ -1485,11 +1324,6 @@ impl App {
             AppState::NoteView => rendering::note_view::render_note_view(self, frame),
             AppState::Settings { .. } => rendering::settings::render_settings(self, frame),
             AppState::Help { .. } => rendering::help::render_help(self, frame),
-            AppState::ShowSyncCredentials { credentials, .. } => {
-                rendering::credentials::render_show_credentials(self, frame, credentials)
-            }
-            AppState::InputSyncCredentials { .. } => rendering::credentials::render_input_credentials(self, frame),
-            AppState::ImportInputDeviceName { .. } => rendering::credentials::render_import_device_name(self, frame),
             AppState::InputEmailForStatus { .. } => rendering::credentials::render_input_email_for_status(self, frame),
             AppState::ShowRegistrationStatus { status_message, .. } => {
                 rendering::credentials::render_registration_status(self, frame, status_message)

@@ -21,7 +21,7 @@ use super::super::app::App;
 /// 2. Convert local storage to envelope format (password + random device salt → device key)
 ///
 /// This is non-fatal: if it fails, the legacy path still works.
-pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 32]) -> Result<()> {
+pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 32], local_password: Option<&str>) -> Result<()> {
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
     let sync_repo = SyncRepository::new(db.connection());
 
@@ -67,7 +67,7 @@ pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 
 
     // Convert local storage to envelope format
     let device_salt = app.crypto.generate_salt();
-    let device_key = app.crypto.derive_key(password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+    let device_key = app.crypto.derive_key(local_password.unwrap_or(password), &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
     let local_wrapped = app.crypto.wrap_master_key(&device_key, master_key)?;
 
     let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&device_salt);
@@ -152,7 +152,7 @@ pub fn change_password(
 
     // If still on legacy, migrate first
     if is_legacy {
-        if let Err(e) = try_migrate_to_envelope(app, current_password, master_key) {
+        if let Err(e) = try_migrate_to_envelope(app, current_password, master_key, None) {
             app.debug_log(&format!("[ChangePassword] Migration failed (non-fatal): {}", e));
         }
     }

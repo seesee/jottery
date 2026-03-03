@@ -1,17 +1,15 @@
 //! Settings management operations
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use rust_i18n::t;
 use std::time::Instant;
-use zeroize::Zeroize;
 
 use crate::{
-    models::sync::SyncCredentials,
-    repository::{EncryptionRepository, SettingsRepository, sync::SyncRepository},
+    repository::{SettingsRepository, sync::SyncRepository},
 };
 
 use super::super::app::App;
-use super::super::state::{AppState, InputMode};
+use super::super::state::InputMode;
 
 /// Start editing a setting field (forward for cyclic fields)
 pub fn start_editing_setting(app: &mut App) {
@@ -228,393 +226,6 @@ pub fn save_settings(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Paste sync credentials from clipboard
-#[allow(dead_code)]
-pub fn paste_sync_credentials(app: &mut App) -> Result<()> {
-    // Get clipboard content
-    let mut clipboard = arboard::Clipboard::new()
-        .context("Failed to access clipboard")?;
-    let clipboard_text = clipboard.get_text()
-        .context("Failed to read from clipboard")?;
-
-    // Decode credentials
-    let creds = SyncCredentials::from_base64(clipboard_text.trim())
-        .context("Invalid sync credentials format")?;
-
-    app.debug_log(&format!("Paste credentials - endpoint: {}", creds.endpoint));
-    app.debug_log(&format!("Paste credentials - client_id: {}", creds.client_id));
-    app.debug_log(&format!("Paste credentials - has salt: {}", creds.salt.is_some()));
-
-    // Get database
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-
-    // If web app salt is provided, update it first
-    // We'll encrypt the API key AFTER the user unlocks with the new salt
-    if let Some(salt_b64) = &creds.salt {
-        use base64::Engine;
-        let encryption_repo = EncryptionRepository::new(db.connection());
-
-        // Decode the base64 salt from web app
-        let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
-            .context("Invalid base64 salt from sync credentials")?;
-
-        app.debug_log(&format!("Paste credentials - Salt (base64): {}", salt_b64));
-        app.debug_log(&format!("Paste credentials - Salt (hex): {}", hex::encode(&salt)));
-        app.debug_log(&format!("Paste credentials - Salt length: {} bytes", salt.len()));
-
-        // Validate salt length - must be at least 32 bytes (256 bits) for PBKDF2
-        if salt.len() < 32 {
-            anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes). Web app salt may be incompatible with TUI.", salt.len());
-        }
-
-        // Update encryption metadata with web app's salt AND iteration count
-        app.debug_log(&format!("Paste credentials - Saving salt with {} iterations", crate::crypto::DEFAULT_ITERATIONS));
-        encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
-        app.debug_log("Paste credentials - Salt saved successfully");
-    }
-
-    // Save sync metadata
-    let sync_repo = SyncRepository::new(db.connection());
-    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-
-    // If salt was synced, we need to store plaintext and encrypt on next unlock
-    // because the key will be re-derived with the new salt.
-    // Otherwise, encrypt immediately with the current session key if available.
-    let api_key_to_store = if creds.salt.is_some() {
-        // Salt changed - must wait for next unlock to encrypt with new key
-        app.debug_log("Paste credentials - Storing API key (will encrypt on next unlock with new salt)");
-        format!("PLAINTEXT:{}", creds.api_key)
-    } else if let Some(ref key) = app.key {
-        // No salt change and we have a session key - encrypt immediately
-        app.debug_log("Paste credentials - Encrypting API key immediately");
-        let encrypted = app.crypto.encrypt_text(&creds.api_key, key)
-            .context("Failed to encrypt API key")?;
-        serde_json::to_string(&encrypted)
-            .context("Failed to serialize encrypted API key")?
-    } else {
-        // No session key available (shouldn't happen in normal flow)
-        app.debug_log("Paste credentials - No session key, storing plaintext temporarily");
-        format!("PLAINTEXT:{}", creds.api_key)
-    };
-
-    metadata.api_key = Some(api_key_to_store);
-    metadata.client_id = Some(creds.client_id);
-    metadata.sync_endpoint = creds.endpoint.clone();
-    metadata.sync_enabled = true;
-
-    sync_repo.update_metadata(&metadata)?;
-
-    // Update settings
-    app.settings.sync_endpoint = Some(creds.endpoint);
-    app.settings.sync_enabled = true;
-    save_settings(app)?;
-
-    // If web app salt was provided, we need to lock and force re-unlock with the new salt
-    // This ensures the user knows the salt was changed and re-enters their password
-    if creds.salt.is_some() {
-        app.debug_log("Paste credentials - Locking database to force re-unlock with new salt");
-
-        // Stop SSE connection before locking
-        app.stop_sse();
-
-        // Automatically lock the database
-        app.key = None;
-        app.notes.clear();
-        app.selected_note = 0;
-        app.password_input.zeroize();
-        app.password_confirm.zeroize();
-        app.input_mode = InputMode::Normal;
-        app.state = AppState::Locked;
-
-        // Show message about what happened
-        app.error = Some(t!("sync.salt_sync").to_string());
-    }
-
-    Ok(())
-}
-
-/// Copy sync credentials to clipboard
-#[allow(dead_code)]
-pub fn copy_sync_credentials(app: &mut App) -> Result<()> {
-    // Get sync metadata
-    if let Some(db) = &app.db {
-        let sync_repo = SyncRepository::new(db.connection());
-        let metadata = sync_repo.get_metadata()?
-            .ok_or_else(|| anyhow::anyhow!("No sync configuration found"))?;
-
-        // Check if credentials exist
-        let encrypted_api_key = metadata.api_key
-            .ok_or_else(|| anyhow::anyhow!("No API key configured. Enable sync first."))?;
-        let client_id = metadata.client_id
-            .ok_or_else(|| anyhow::anyhow!("No client ID found. Enable sync first."))?;
-
-        // Decrypt API key
-        let api_key = if let Some(key) = &app.key {
-            let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
-            app.crypto.decrypt_text(&encrypted, key)?
-        } else {
-            anyhow::bail!("Database not unlocked");
-        };
-
-        // Create credentials payload
-        let creds = SyncCredentials::new(
-            metadata.sync_endpoint,
-            api_key,
-            client_id,
-        );
-
-        // Encode to base64
-        let encoded = creds.to_base64()?;
-
-        // Copy to clipboard
-        let mut clipboard = arboard::Clipboard::new()
-            .context("Failed to access clipboard")?;
-        clipboard.set_text(&encoded)
-            .context("Failed to write to clipboard")?;
-    } else {
-        anyhow::bail!("Database not available");
-    }
-
-    Ok(())
-}
-
-/// Generate sync credentials text
-/// - use_legacy_format=false: encrypted format jottery:v1:<salt>.<encrypted_payload>
-/// - use_legacy_format=true: legacy unencrypted base64 JSON (for older Jottery versions)
-pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Result<String> {
-    // Get sync metadata
-    if let Some(db) = &app.db {
-        let sync_repo = SyncRepository::new(db.connection());
-        let metadata = sync_repo.get_metadata()?
-            .ok_or_else(|| anyhow::anyhow!("No sync configuration found"))?;
-
-        // Check if credentials exist
-        let encrypted_api_key = metadata.api_key
-            .ok_or_else(|| anyhow::anyhow!("No API key configured. Enable sync first."))?;
-        let client_id = metadata.client_id
-            .ok_or_else(|| anyhow::anyhow!("No client ID found. Enable sync first."))?;
-
-        // Need encryption key to decrypt API key and encrypt credentials
-        let key = app.key.as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-
-        // Decrypt API key
-        let encrypted: crate::crypto::EncryptedData = serde_json::from_str(&encrypted_api_key)?;
-        let api_key = app.crypto.decrypt_text(&encrypted, key)?;
-
-        // Get encryption metadata for salt
-        let encryption_repo = EncryptionRepository::new(db.connection());
-        let encryption_meta = encryption_repo.get()?
-            .ok_or_else(|| anyhow::anyhow!("Encryption metadata not found"))?;
-
-        use base64::Engine;
-
-        // Check if envelope encryption is active — use v2 format (just endpoint)
-        if !use_legacy_format && encryption_meta.envelope_version.is_some() {
-            return Ok(format!("jottery:v2:{}", metadata.sync_endpoint));
-        }
-
-        if use_legacy_format {
-            // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
-            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
-            let mut creds = SyncCredentials::new(
-                metadata.sync_endpoint,
-                api_key,
-                client_id,
-            );
-            creds.salt = Some(salt_b64);
-            creds.to_base64()
-        } else {
-            // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
-
-            // Create credentials payload WITHOUT salt (salt goes in prefix)
-            let creds = SyncCredentials::new(
-                metadata.sync_endpoint,
-                api_key,
-                client_id,
-            );
-
-            // Encrypt the credentials JSON
-            let creds_json = serde_json::to_string(&creds)?;
-            let encrypted_creds = app.crypto.encrypt_text(&creds_json, key)?;
-            let encrypted_json = serde_json::to_string(&encrypted_creds)?;
-            let encrypted_b64 = base64::engine::general_purpose::STANDARD.encode(encrypted_json.as_bytes());
-
-            // Format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-            Ok(format!("jottery:v1:{}.{}", salt_b64, encrypted_b64))
-        }
-    } else {
-        anyhow::bail!("Database not available")
-    }
-}
-
-/// Process credentials input with a specified device name
-/// This stores the device name for use during the clone-device call on unlock
-pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, device_name: &str) -> Result<()> {
-    use base64::Engine;
-
-    let input = input.trim();
-
-    // Get database
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-
-    // Check for v2 format: jottery:v2:<endpoint> (envelope encryption — just needs endpoint)
-    if let Some(endpoint) = input.strip_prefix("jottery:v2:") {
-        let endpoint = endpoint.trim().to_string();
-        if endpoint.is_empty() {
-            anyhow::bail!("Invalid v2 credentials: missing endpoint");
-        }
-
-        let endpoint = if !endpoint.starts_with("http://") && !endpoint.starts_with("https://") {
-            format!("https://{}", endpoint)
-        } else {
-            endpoint
-        };
-
-        app.debug_log(&format!("Process credentials - v2 format, endpoint: {}", endpoint));
-        app.debug_log(&format!("Process credentials - Device name: {}", device_name));
-
-        // Store endpoint and ONBOARD marker — the actual onboarding happens during
-        // device registration (email + password needed to derive wrapping key)
-        let sync_repo = SyncRepository::new(db.connection());
-        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-        metadata.api_key = Some("ONBOARD:".to_string());
-        metadata.sync_endpoint = endpoint.clone();
-        metadata.sync_enabled = false;
-        metadata.pending_device_name = Some(device_name.to_string());
-        sync_repo.update_metadata(&metadata)?;
-
-        // Update app settings with the endpoint
-        app.settings.sync_endpoint = Some(endpoint);
-        app.settings.sync_enabled = false;
-        save_settings(app)?;
-
-        app.sync_status = Some(t!("sync.v2_import_success").to_string());
-        app.sync_status_set_at = Some(std::time::Instant::now());
-
-        return Ok(());
-    }
-
-    // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
-    if let Some(payload) = input.strip_prefix("jottery:v1:") {
-        let dot_index = payload.find('.')
-            .ok_or_else(|| anyhow::anyhow!("Invalid encrypted credentials format"))?;
-
-        let salt_b64 = &payload[..dot_index];
-        let encrypted_payload = &payload[dot_index + 1..];
-
-        app.debug_log("Process credentials - Encrypted format detected");
-        app.debug_log(&format!("Process credentials - Salt (base64): {}", salt_b64));
-        app.debug_log(&format!("Process credentials - Device name: {}", device_name));
-
-        // Decode and validate salt
-        let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
-            .context("Invalid base64 salt in encrypted credentials")?;
-
-        if salt.len() < 32 {
-            anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes)", salt.len());
-        }
-
-        // Update encryption metadata with the extracted salt
-        let encryption_repo = EncryptionRepository::new(db.connection());
-        encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
-        app.debug_log("Process credentials - Salt saved successfully");
-
-        // Store encrypted payload with marker for deferred decryption AND device name
-        let sync_repo = SyncRepository::new(db.connection());
-        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-        metadata.api_key = Some(format!("ENCRYPTED:{}", encrypted_payload));
-        metadata.sync_enabled = false; // Will be enabled after successful clone-device
-        metadata.pending_device_name = Some(device_name.to_string());
-        sync_repo.update_metadata(&metadata)?;
-
-        app.debug_log("Process credentials - Encrypted payload stored for deferred decryption");
-
-        // Stop SSE connection before locking
-        app.stop_sse();
-
-        // Lock and force re-unlock to derive correct key from new salt
-        app.key = None;
-        app.notes.clear();
-        app.selected_note = 0;
-        app.password_input.zeroize();
-        app.password_confirm.zeroize();
-        app.password_confirm_focused = false;
-        app.input_mode = InputMode::Normal;
-        app.state = AppState::Locked;
-
-        app.error = Some(t!("sync.encrypted_import").to_string());
-        return Ok(());
-    }
-
-    // Legacy unencrypted format: base64(JSON)
-    let creds = SyncCredentials::from_base64(input)
-        .context("Invalid sync credentials format")?;
-
-    app.debug_log(&format!("Process credentials - Legacy format - endpoint: {}", creds.endpoint));
-    app.debug_log(&format!("Process credentials - client_id: {}", creds.client_id));
-    app.debug_log(&format!("Process credentials - has salt: {}", creds.salt.is_some()));
-    app.debug_log(&format!("Process credentials - Device name: {}", device_name));
-
-    // If web app salt is provided, update it first
-    if let Some(salt_b64) = &creds.salt {
-        let encryption_repo = EncryptionRepository::new(db.connection());
-
-        // Decode the base64 salt from web app
-        let salt = base64::engine::general_purpose::STANDARD.decode(salt_b64)
-            .context("Invalid base64 salt from sync credentials")?;
-
-        app.debug_log(&format!("Process credentials - Salt (base64): {}", salt_b64));
-        app.debug_log(&format!("Process credentials - Salt (hex): {}", hex::encode(&salt)));
-        app.debug_log(&format!("Process credentials - Salt length: {} bytes", salt.len()));
-
-        // Validate salt length
-        if salt.len() < 32 {
-            anyhow::bail!("Invalid salt length: {} bytes (expected at least 32 bytes)", salt.len());
-        }
-
-        // Update encryption metadata with web app's salt AND iteration count
-        app.debug_log(&format!("Process credentials - Saving salt with {} iterations", crate::crypto::DEFAULT_ITERATIONS));
-        encryption_repo.save(&salt, crate::crypto::DEFAULT_ITERATIONS)?;
-        app.debug_log("Process credentials - Salt saved successfully");
-    }
-
-    // Save sync metadata with PLAINTEXT marker for clone-device on unlock
-    let sync_repo = SyncRepository::new(db.connection());
-    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-    metadata.api_key = Some(format!("PLAINTEXT:{}", creds.api_key));
-    metadata.sync_endpoint = creds.endpoint.clone();
-    metadata.sync_enabled = false; // Will be enabled after successful clone-device
-    metadata.pending_device_name = Some(device_name.to_string());
-    sync_repo.update_metadata(&metadata)?;
-
-    // Update settings
-    app.settings.sync_endpoint = Some(creds.endpoint);
-    app.settings.sync_enabled = false; // Will be enabled after clone-device
-    save_settings(app)?;
-
-    // Lock and force re-unlock with the new salt
-    app.debug_log("Process credentials - Locking database to force re-unlock with new salt");
-
-    // Stop SSE connection before locking
-    app.stop_sse();
-
-    app.key = None;
-    app.notes.clear();
-    app.selected_note = 0;
-    app.password_input.zeroize();
-    app.password_confirm.zeroize();
-    app.password_confirm_focused = false;
-    app.input_mode = InputMode::Normal;
-    app.state = AppState::Locked;
-
-    // Show message about what happened
-    app.error = Some(t!("sync.salt_sync").to_string());
-
-    Ok(())
-}
-
 /// Disconnect from sync server
 /// Clears all sync credentials and metadata, but preserves local notes
 pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
@@ -740,7 +351,8 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     metadata.sync_enabled = true;
     metadata.pending_registration_email = None; // Clear pending registration
     sync_repo.update_metadata(&metadata)?;
-    match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check) {
+    let local_password = app.unlock_password.clone();
+    match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check, local_password.as_deref()) {
         Ok(()) => app.debug_log("Envelope setup succeeded after device registration"),
         Err(e) => app.debug_log(&format!("Envelope setup after registration failed (non-fatal): {}", e)),
     }
@@ -758,6 +370,7 @@ fn try_envelope_setup(
     endpoint: &str,
     plaintext_api_key: &str,
     user_id: &str,
+    local_password: Option<&str>,
 ) -> Result<()> {
     // Try onboarding first (server may already have a wrapped key from another device)
     let client = crate::api::AuthClient::new(endpoint.to_string());
@@ -765,7 +378,7 @@ fn try_envelope_setup(
         Some(_) => {
             // Server has a wrapped key — onboard from it
             app.debug_log("Server has wrapped key, onboarding...");
-            let onboarded_key = super::envelope::onboard_from_server(app, password, endpoint, user_id, plaintext_api_key, None)?;
+            let onboarded_key = super::envelope::onboard_from_server(app, password, endpoint, user_id, plaintext_api_key, local_password)?;
             // Verify onboarded key matches our current key
             if onboarded_key != *master_key {
                 app.debug_log("Warning: onboarded master key differs from local key (expected for new device joining existing account)");
@@ -775,7 +388,7 @@ fn try_envelope_setup(
         None => {
             // No wrapped key on server — migrate our local key
             app.debug_log("No wrapped key on server, migrating local...");
-            super::envelope::try_migrate_to_envelope(app, password, master_key)
+            super::envelope::try_migrate_to_envelope(app, password, master_key, local_password)
         }
     }
 }
@@ -848,27 +461,10 @@ pub fn is_sync_fully_configured(app: &mut App) -> bool {
     if let Some(db) = &app.db {
         let sync_repo = SyncRepository::new(db.connection());
         if let Ok(Some(metadata)) = sync_repo.get_metadata() {
-            // ONBOARD: marker means v2 credentials were imported but setup isn't complete
             if let Some(ref key) = metadata.api_key {
-                return !key.starts_with("ONBOARD:") && !key.starts_with("PLAINTEXT:") && !key.starts_with("ENCRYPTED:");
+                return !key.starts_with("PLAINTEXT:") && !key.starts_with("ENCRYPTED:");
             }
         }
     }
     false
-}
-
-/// Check if there's a pending ONBOARD marker (v2 credential import awaiting registration)
-/// Returns the stored endpoint if ONBOARD is pending
-pub fn get_pending_onboard(app: &mut App) -> Option<String> {
-    if let Some(db) = &app.db {
-        let sync_repo = SyncRepository::new(db.connection());
-        if let Ok(Some(metadata)) = sync_repo.get_metadata() {
-            if let Some(ref key) = metadata.api_key {
-                if key.starts_with("ONBOARD:") && !metadata.sync_endpoint.is_empty() {
-                    return Some(metadata.sync_endpoint.clone());
-                }
-            }
-        }
-    }
-    None
 }

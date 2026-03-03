@@ -141,8 +141,6 @@ settings:
   instructions_remember: "Recordar contraseña: Enter pide contraseña (si activa) o desactiva (si está activada)"
   instructions_sync: Presione 'y' para sincronizar
   instructions_force_sync: Presione 'Y' (Shift+y) para forzar sincronización completa (descargar del servidor)
-  instructions_paste: Presione 'p' para pegar credenciales de sincronización de otro dispositivo
-  instructions_copy: Presione 'c' para copiar credenciales de sincronización para compartir con otro dispositivo
   press_enter_cycle: presione Enter para alternar
   press_enter_toggle: presione Enter para cambiar
   disabled: deshabilitado
@@ -159,8 +157,6 @@ sync:
   conflict: Conflicto de sincronización detectado. Algunas notas tienen cambios conflictivos en el servidor.
   request_failed: Error al enviar solicitud de sincronización
   response_parse_failed: Error al analizar respuesta de sincronización
-  encrypted_import: Credenciales encriptadas importadas. Por favor ingrese su contraseña para descifrar y completar la configuración.
-  legacy_format_warning: "Advertencia: Usando formato heredado sin cifrar. La clave API está expuesta en texto plano."
   disconnected: Desconectado del servidor de sincronización. Las notas locales se conservan.
   disconnect_failed: Error al desconectarse del servidor de sincronización
   sse_connected: "Sincronización en tiempo real conectada"
@@ -183,17 +179,6 @@ sync:
   reload_failed: "La sincronización tuvo éxito pero falló al recargar las notas: %{error}"
   note: nota
   notes: notas
-  credentials_title: Credenciales de sincronización (Copie este texto)
-  credentials_instruction: "Copie el texto de abajo y péguelo en otro cliente Jottery:"
-  paste_title: Pegar credenciales de sincronización
-  paste_instruction: "Pegue el texto base64 de credenciales de otro cliente Jottery:"
-  paste_success: ¡Credenciales de sincronización configuradas exitosamente!
-  paste_failed: "Error al pegar las credenciales: %{error}"
-  salt_sync: ¡Salt sincronizado! Por favor, vuelva a introducir su contraseña para desbloquear con el nuevo salt de cifrado.
-  import_device_title: Importar credenciales - Nombre del dispositivo
-  import_enter_device_name: "Introduzca un nombre para este dispositivo (ej. Mi portátil):"
-  credentials_empty: No se introdujeron credenciales
-  import_failed: Error al importar las credenciales
 
 # Bandeja de entrada
 inbox:
@@ -388,12 +373,6 @@ help:
   enter_save_desc: Guardar campos de texto/número, alternar otros campos
   esc_cancel_key: Esc
   esc_cancel_desc: Cancelar edición (campos de texto/número)
-  p_paste_key: p
-  p_paste_desc: Pegar credenciales de sincronización (muestra entrada de texto)
-  c_copy_key: c
-  c_copy_desc: Copiar credenciales de sincronización (formato encriptado)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Copiar credenciales de sincronización (formato heredado sin cifrar)
   s_q_close_key: s / q
   s_q_close_desc: Cerrar panel de configuración
   tab_focus_attachment_key: Tab

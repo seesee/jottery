@@ -255,6 +255,9 @@ pub fn unlock(app: &mut App) -> Result<()> {
         }
     }
 
+    // Save unlock password for envelope encryption (server password may differ from notes password)
+    app.unlock_password = Some(app.password_input.clone());
+
     // Clear password fields and reset flags
     app.password_input.zeroize();
     app.password_confirm.zeroize();

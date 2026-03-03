@@ -119,8 +119,6 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.enter_edit_key", "help.enter_edit_desc"),
                 HelpEntry::new("help.enter_save_key", "help.enter_save_desc"),
                 HelpEntry::new("help.esc_cancel_key", "help.esc_cancel_desc"),
-                HelpEntry::new("help.p_paste_key", "help.p_paste_desc"),
-                HelpEntry::new("help.c_copy_key", "help.c_copy_desc"),
                 HelpEntry::new("help.s_q_close_key", "help.s_q_close_desc"),
             ],
         ),
