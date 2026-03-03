@@ -384,9 +384,11 @@ fn try_envelope_setup(
             // Server has a wrapped key — onboard from it
             app.debug_log("Server has wrapped key, onboarding...");
             let onboarded_key = super::envelope::onboard_from_server(app, password, endpoint, user_id, plaintext_api_key, local_password)?;
-            // Verify onboarded key matches our current key
+            // Update app key to the shared master key from server
             if onboarded_key != *master_key {
-                app.debug_log("Warning: onboarded master key differs from local key (expected for new device joining existing account)");
+                app.debug_log("Onboarded master key differs from local key — updating to server key");
+                app.key = Some(onboarded_key);
+                app.key_manager.set_master_key(onboarded_key);
             }
             Ok(())
         }
