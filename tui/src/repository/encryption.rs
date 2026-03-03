@@ -87,10 +87,12 @@ impl<'a> EncryptionRepository<'a> {
     ) -> Result<()> {
         let created_at = Utc::now().to_rfc3339();
 
+        // Use empty string/0 for legacy salt/iterations since envelope mode
+        // doesn't use them, but the columns have NOT NULL constraints
         self.conn
             .execute(
                 "INSERT OR REPLACE INTO encryption_metadata (id, salt, iterations, created_at, algorithm, envelope_version, device_salt, local_wrapped_master, wrapping_kdf_version)
-                 VALUES (1, NULL, NULL, ?1, 'AES-256-GCM', ?2, ?3, ?4, ?5)",
+                 VALUES (1, '', 0, ?1, 'AES-256-GCM', ?2, ?3, ?4, ?5)",
                 rusqlite::params![created_at, envelope_version, device_salt, local_wrapped_master, wrapping_kdf_version],
             )
             .context("Failed to save envelope encryption metadata")?;
