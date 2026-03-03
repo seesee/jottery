@@ -3,7 +3,7 @@
 -- on the server, enabling new device onboarding without credential blob transfer.
 -- The wrapped blob is opaque to the server — only the client can unwrap it.
 
-CREATE TABLE wrapped_keys (
+CREATE TABLE IF NOT EXISTS wrapped_keys (
     user_id TEXT PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     wrapped_blob TEXT NOT NULL,
     kdf_version INTEGER NOT NULL DEFAULT 1,
