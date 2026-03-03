@@ -324,18 +324,22 @@ pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str
 pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &str, device_name: &str) -> Result<()> {
     let client = crate::api::AuthClient::new(endpoint.to_string());
 
+    app.debug_log(&format!("[Register] Starting device registration: endpoint={}, email={}", endpoint, email));
+
     // Register the device
     let response = client.register_device(email, password, device_name, "tui")?;
+    app.debug_log(&format!("[Register] Server responded: user_id={}, client_id={}", response.user_id, response.client_id));
 
-    // Get database
     // Copy key before borrowing app mutably
     let key = *app.key.as_ref().ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
+    app.debug_log(&format!("[Register] Current master key fingerprint: {:02x}{:02x}{:02x}{:02x}", key[0], key[1], key[2], key[3]));
 
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
     // Encrypt and save the API key
     let encrypted = app.crypto.encrypt_text(&response.api_key, &key)?;
     let encrypted_api_key = serde_json::to_string(&encrypted)?;
+    app.debug_log("[Register] API key encrypted with current master key");
 
     // Save values before moving response fields
     let api_key_for_check = response.api_key.clone();
@@ -349,12 +353,18 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     metadata.user_id = Some(response.user_id);
     metadata.sync_endpoint = endpoint.to_string();
     metadata.sync_enabled = true;
-    metadata.pending_registration_email = None; // Clear pending registration
+    metadata.pending_registration_email = None;
     sync_repo.update_metadata(&metadata)?;
+    app.debug_log("[Register] Sync metadata saved to database");
 
-    // Update app.settings so the UI reflects the new state immediately
+    // Update app.settings and persist to database
     app.settings.sync_endpoint = Some(endpoint.to_string());
     app.settings.sync_enabled = true;
+    save_settings(app)?;
+    app.debug_log("[Register] Settings persisted to database");
+
+    let has_unlock_pw = app.unlock_password.is_some();
+    app.debug_log(&format!("[Register] unlock_password available: {}", has_unlock_pw));
 
     let local_password = app.unlock_password.clone();
     match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check, local_password.as_deref()) {
@@ -363,21 +373,23 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
             // If onboarding changed the master key, re-encrypt the API key with the new key
             if let Some(new_key) = app.key.as_ref() {
                 if *new_key != key {
-                    app.debug_log("Master key changed after onboarding — re-encrypting API key");
-                    if let Ok(re_encrypted) = app.crypto.encrypt_text(&api_key_for_check, new_key) {
-                        if let Ok(re_encrypted_json) = serde_json::to_string(&re_encrypted) {
-                            let db = app.db.as_ref().unwrap();
-                            let sync_repo = SyncRepository::new(db.connection());
-                            if let Ok(Some(mut meta)) = sync_repo.get_metadata() {
-                                meta.api_key = Some(re_encrypted_json);
-                                let _ = sync_repo.update_metadata(&meta);
-                            }
-                        }
-                    }
+                    app.debug_log(&format!("[Register] Master key CHANGED after onboarding: {:02x}{:02x}{:02x}{:02x} -> {:02x}{:02x}{:02x}{:02x}",
+                        key[0], key[1], key[2], key[3],
+                        new_key[0], new_key[1], new_key[2], new_key[3]));
+                    let re_encrypted = app.crypto.encrypt_text(&api_key_for_check, new_key)?;
+                    let re_encrypted_json = serde_json::to_string(&re_encrypted)?;
+                    let db = app.db.as_ref().unwrap();
+                    let sync_repo = SyncRepository::new(db.connection());
+                    let mut meta = sync_repo.get_metadata()?.unwrap_or_default();
+                    meta.api_key = Some(re_encrypted_json);
+                    sync_repo.update_metadata(&meta)?;
+                    app.debug_log("[Register] API key re-encrypted with new master key");
+                } else {
+                    app.debug_log("[Register] Master key unchanged after onboarding");
                 }
             }
         }
-        Err(e) => app.debug_log(&format!("Envelope setup after registration failed (non-fatal): {}", e)),
+        Err(e) => app.debug_log(&format!("[Register] Envelope setup FAILED (non-fatal): {}", e)),
     }
 
     Ok(())

@@ -141,18 +141,32 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
     let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
 
+    app.debug_log(&format!("[Sync] Starting sync (force={}), key fingerprint: {:02x}{:02x}{:02x}{:02x}",
+        force, key[0], key[1], key[2], key[3]));
+
     let sync_repo = SyncRepository::new(db.connection());
     let note_repo = NoteRepository::new(db.connection());
     let version_repo = NoteVersionRepository::new(db.connection());
 
     // Get sync metadata
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    app.debug_log(&format!("[Sync] Metadata: endpoint={}, has_api_key={}, sync_enabled={}",
+        metadata.sync_endpoint, metadata.api_key.is_some(), metadata.sync_enabled));
 
     // Get API key
     let encrypted_api_key = metadata.api_key.as_ref()
         .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
-    let api_key_encrypted: crate::crypto::EncryptedData = serde_json::from_str(encrypted_api_key)?;
-    let api_key = app.crypto.decrypt_text(&api_key_encrypted, key)?;
+    let api_key_encrypted: crate::crypto::EncryptedData = serde_json::from_str(encrypted_api_key)
+        .map_err(|e| {
+            app.debug_log(&format!("[Sync] Failed to parse API key JSON: {}", e));
+            anyhow::anyhow!("Invalid API key format: {}", e)
+        })?;
+    let api_key = app.crypto.decrypt_text(&api_key_encrypted, key)
+        .map_err(|e| {
+            app.debug_log(&format!("[Sync] Failed to decrypt API key: {}", e));
+            e
+        })?;
+    app.debug_log("[Sync] API key decrypted successfully");
 
     let endpoint = metadata.sync_endpoint.clone();
 
