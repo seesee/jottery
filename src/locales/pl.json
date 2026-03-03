@@ -341,18 +341,6 @@
       "cancelButton": "Anuluj",
       "enableButton": "Rozumiem, włącz mimo to"
     },
-    "syncCredentials": {
-      "title": "📋 Dane uwierzytelniające synchronizacji",
-      "instructions": "Skopiuj poniższy tekst i wklej do innego klienta Jottery, używając \"Użyj istniejących danych uwierzytelniających\":",
-      "samePasswordWarning": "⚠️ <strong>Ważne:</strong> Wszystkie urządzenia muszą używać tego samego hasła, aby odszyfrować notatki!",
-      "clipboardNote": "Kopiowanie do schowka mogło się nie powieść (szczególnie przez SSH lub w niektórych przeglądarkach). Możesz ręcznie zaznaczyć i skopiować powyższy tekst.",
-      "closeButton": "Zamknij",
-      "advancedOptions": "Opcje zaawansowane",
-      "legacyFormat": {
-        "label": "Użyj starszego formatu (nieszyfrowany)",
-        "warning": "⚠️ Używaj tylko podczas udostępniania starszym wersjom Jottery, które nie mogą zostać zaktualizowane. Starszy format ujawnia klucz API w postaci zwykłego tekstu."
-      }
-    },
     "saveSettings": "Zapisz ustawienia",
     "saving": "Zapisywanie...",
     "autoSaved": "Zmiany zapisane automatycznie",
@@ -389,14 +377,6 @@
         "help": "Nazwa identyfikująca to urządzenie"
       },
       "chooseMethod": "Wybierz sposób konfiguracji synchronizacji:",
-      "importCredentials": {
-        "title": "Importuj dane uwierzytelniające synchronizacji",
-        "subtitle": "<strong>Dla dodatkowych urządzeń:</strong> Najbezpieczniejsza metoda",
-        "benefit1": "✓ Szyfrowanie zero-knowledge (serwer nie może odszyfrować notatek)",
-        "benefit2": "✓ Kopiuj dane uwierzytelniające z pierwszego urządzenia",
-        "benefit3": "✓ Wszystkie urządzenia używają tego samego klucza szyfrowania",
-        "button": "📋 Importuj dane z innego urządzenia"
-      },
       "registerServer": {
         "title": "Zarejestruj się na serwerze synchronizacji",
         "subtitle": "<strong>Tylko dla pierwszego urządzenia:</strong> Tworzy konto",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ Rejestrowanie urządzenia i synchronizacja...",
         "successTitle": "Synchronizacja włączona pomyślnie!",
         "successText": "Twoje urządzenie jest teraz zarejestrowane i <strong>wszystkie istniejące notatki zostały zsynchronizowane z serwerem</strong>. Przyszłe zmiany będą synchronizowane automatycznie.",
-        "successNextSteps": "📋 Aby dodać inne urządzenie: Kliknij poniżej \"Eksportuj dane uwierzytelniające synchronizacji\" i zaimportuj je na drugim urządzeniu.",
+        "successNextSteps": "🔗 Aby dodać inne urządzenie: Użyj \"Połącz istniejące konto\" na nowym urządzeniu.",
         "done": "Gotowe",
         "checkStatusLink": "Sprawdź status zatwierdzenia w Portalu Użytkownika →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "Hasło",
         "comingSoon": "Wkrótce",
         "futureUpdate": "Łączenie kont zostanie włączone w przyszłej aktualizacji"
-      },
-      "import": {
-        "title": "Importuj dane uwierzytelniające",
-        "instructions": "Wklej dane uwierzytelniające z pierwszego urządzenia. Aplikacja zostanie zablokowana i będziesz musiał odblokować ją hasłem.",
-        "warningTitle": "⚠️ WAŻNE: Musisz używać tego samego hasła na wszystkich urządzeniach!",
-        "warningText": "Jeśli użyjesz innego hasła, notatki nie zostaną odszyfrowane.",
-        "placeholder": "Wklej tutaj dane uwierzytelniające base64...",
-        "button": "📥 Importuj i zablokuj",
-        "importing": "Importowanie...",
-        "deviceName": {
-          "label": "Nazwa urządzenia",
-          "placeholder": "Mój laptop",
-          "help": "Nazwa do identyfikacji tego urządzenia na Twoim koncie"
-        }
       },
       "error": "Błąd"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} notatka oczekuje na synchronizację",
       "notesPendingPlural": "{count} notatek oczekuje na synchronizację",
-      "showCredentials": "Pokaż dane logowania dla innych urządzeń",
-      "credentialsHelp": "Kliknij, aby wyświetlić dane logowania jako tekst. Użyj \"Użyj istniejących danych logowania\" na innych urządzeniach, aby zaimportować.",
-      "samePasswordWarning": "Wszystkie urządzenia muszą używać TEGO SAMEGO hasła do odszyfrowania notatek!",
       "userPortal": {
         "title": "Portal użytkownika",
         "description": "Zarządzaj kontem, zmień hasło lub usuń dane",
@@ -906,10 +869,6 @@
       "note": "Uwaga: Po konfiguracji nadal musisz zarejestrować się na serwerze."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Masz dane logowania do synchronizacji?",
-        "subtitle": "Wklej swoje dane tutaj, aby zsynchronizować to urządzenie"
-      },
       "existingAccount": {
         "title": "Połącz istniejące konto",
         "subtitle": "Masz już konto? Połącz to urządzenie",
@@ -924,29 +883,7 @@
         "subtitle": "Tylko pierwsze urządzenie - tworzy Twoje konto",
         "formTitle": "Zarejestruj nowe konto"
       },
-      "import": {
-        "title": "Importuj dane logowania",
-        "instructions": "Wklej dane logowania z Ustawienia > Sync > Kopiuj dane logowania na innym urządzeniu.",
-        "passwordNote": "Musisz użyć tego samego hasła co na innym urządzeniu.",
-        "placeholder": "Wklej dane logowania tutaj...",
-        "button": "Importuj dane logowania",
-        "importing": "Importowanie...",
-        "emptyError": "Proszę wkleić dane logowania",
-        "failed": "Nie udało się zaimportować danych logowania",
-        "deviceName": {
-          "label": "Nazwa urządzenia",
-          "placeholder": "Mój laptop",
-          "help": "Nazwa do identyfikacji tego urządzenia na Twoim koncie"
-        },
-        "deviceNameRequired": "Wprowadź nazwę urządzenia"
-      },
       "completeInSettings": "Dokończ konfigurację synchronizacji w Ustawienia > Sync po utworzeniu hasła."
-    },
-    "credentialsImported": {
-      "title": "Dane logowania zaimportowane pomyślnie!",
-      "message": "Wprowadź to samo hasło, którego używasz na innym urządzeniu, aby odblokować.",
-      "passwordLabel": "Hasło (z innego urządzenia)",
-      "passwordPlaceholder": "Wprowadź hasło z innego urządzenia"
     },
     "restoreFromBackup": "Przywróć z Kopii Zapasowej",
     "orDivider": "lub"

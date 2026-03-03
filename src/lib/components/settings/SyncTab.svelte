@@ -16,7 +16,7 @@
   export let syncError: string;
 
   // Registration state
-  export let registrationMode: 'select' | 'newUser' | 'existingUser' | 'importCredentials';
+  export let registrationMode: 'select' | 'newUser' | 'existingUser';
   export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
   export let userEmail: string;
   export let userPassword: string;
@@ -24,11 +24,6 @@
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
   export let userRegistrationMessage: string;
-
-  // Import credentials
-  export let importCredentialsText: string;
-  export let importDeviceName: string;
-  export let importing: boolean;
 
   // Account management
   export let showAccountManagement: boolean;
@@ -51,10 +46,8 @@
   export let onRegisterUser: () => void;
   export let onRegisterDevice: () => void;
   export let onResetRegistrationFlow: () => void;
-  export let onImportCredentials: () => void;
   export let onSyncNow: () => void;
   export let onFullSync: () => void;
-  export let onCopySyncCredentials: () => void;
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
   export let onShowDeleteServerNotesConfirm: () => void;
@@ -129,14 +122,10 @@
         bind:registeringUser
         bind:registeringDevice
         bind:userRegistrationMessage
-        bind:importCredentialsText
-        bind:importDeviceName
-        bind:importing
         bind:syncError
         {onRegisterUser}
         {onRegisterDevice}
         {onResetRegistrationFlow}
-        {onImportCredentials}
       />
     {:else}
       <!-- Sync Status Panel -->
@@ -155,7 +144,6 @@
         {deviceName}
         {onSyncNow}
         {onFullSync}
-        {onCopySyncCredentials}
         {onAccountLogin}
         {onAccountLogout}
         {onShowDeleteServerNotesConfirm}

@@ -341,18 +341,6 @@
       "cancelButton": "취소",
       "enableButton": "이해했습니다, 활성화"
     },
-    "syncCredentials": {
-      "title": "📋 동기화 자격 증명",
-      "instructions": "아래 텍스트를 복사하여 다른 Jottery 클라이언트에 \"기존 자격 증명 사용\"으로 붙여넣으세요:",
-      "samePasswordWarning": "⚠️ <strong>중요:</strong> 모든 기기에서 동일한 비밀번호를 사용해야 노트를 해독할 수 있습니다!",
-      "clipboardNote": "클립보드 복사가 실패할 수 있습니다 (특히 SSH를 통하거나 일부 브라우저에서). 위의 텍스트를 수동으로 선택하여 복사할 수 있습니다.",
-      "closeButton": "닫기",
-      "advancedOptions": "고급 옵션",
-      "legacyFormat": {
-        "label": "레거시 형식 사용 (암호화되지 않음)",
-        "warning": "⚠️ 업데이트할 수 없는 이전 Jottery 버전과 공유할 때만 사용하세요. 레거시 형식은 API 키가 일반 텍스트로 노출됩니다."
-      }
-    },
     "autoSaved": "변경 사항이 자동으로 저장되었습니다",
     "saveSettings": "설정 저장",
     "saving": "저장 중...",
@@ -389,14 +377,6 @@
         "help": "이 기기를 식별할 이름"
       },
       "chooseMethod": "동기화 설정 방법을 선택하세요:",
-      "importCredentials": {
-        "title": "동기화 자격 증명 가져오기",
-        "subtitle": "<strong>추가 기기용:</strong> 가장 안전한 방법",
-        "benefit1": "✓ 제로 지식 암호화 (서버가 노트를 해독할 수 없음)",
-        "benefit2": "✓ 첫 번째 기기에서 자격 증명 복사",
-        "benefit3": "✓ 모든 기기가 동일한 암호화 키 사용",
-        "button": "📋 다른 기기에서 자격 증명 가져오기"
-      },
       "registerServer": {
         "title": "동기화 서버에 등록",
         "subtitle": "<strong>첫 번째 기기 전용:</strong> 계정 생성",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ 기기 등록 및 동기화 중...",
         "successTitle": "동기화가 성공적으로 활성화되었습니다!",
         "successText": "기기가 등록되었으며 <strong>모든 기존 노트가 서버에 동기화되었습니다</strong>. 향후 변경 사항은 자동으로 동기화됩니다.",
-        "successNextSteps": "📋 다른 기기를 추가하려면: 아래의 \"동기화 자격 증명 내보내기\"를 클릭하여 다른 기기에 가져오세요.",
+        "successNextSteps": "🔗 다른 기기를 추가하려면: 새 기기에서 \"기존 계정 연결\"을 사용하세요.",
         "done": "완료",
         "checkStatusLink": "사용자 포털에서 승인 상태 확인 →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "비밀번호",
         "comingSoon": "곧 제공",
         "futureUpdate": "계정 연결은 향후 업데이트에서 활성화됩니다"
-      },
-      "import": {
-        "title": "자격 증명 가져오기",
-        "instructions": "첫 번째 기기의 자격 증명을 붙여넣으세요. 앱이 잠기면 비밀번호로 잠금을 해제해야 합니다.",
-        "warningTitle": "⚠️ 중요: 모든 기기에서 동일한 비밀번호를 사용해야 합니다!",
-        "warningText": "다른 비밀번호를 사용하면 노트가 해독되지 않습니다.",
-        "placeholder": "여기에 base64 자격 증명을 붙여넣으세요...",
-        "button": "📥 가져오기 및 잠금",
-        "importing": "가져오는 중...",
-        "deviceName": {
-          "label": "기기 이름",
-          "placeholder": "내 노트북",
-          "help": "계정에서 이 기기를 식별하기 위한 이름"
-        }
       },
       "error": "오류"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count}개 노트 동기화 대기 중",
       "notesPendingPlural": "{count}개 노트 동기화 대기 중",
-      "showCredentials": "다른 기기용 인증정보 표시",
-      "credentialsHelp": "클릭하여 인증정보를 텍스트로 표시합니다. 다른 기기에서 \"기존 인증정보 사용\"을 선택하여 가져오세요.",
-      "samePasswordWarning": "노트를 해독하려면 모든 기기에서 동일한 비밀번호를 사용해야 합니다!",
       "userPortal": {
         "title": "사용자 포털",
         "description": "계정 관리, 비밀번호 변경 또는 데이터 삭제",
@@ -906,10 +869,6 @@
       "note": "참고: 설정 후에도 서버에 등록해야 합니다."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "동기화 자격 증명이 있으신가요?",
-        "subtitle": "여기에 자격 증명을 붙여넣어 이 기기를 동기화하세요"
-      },
       "existingAccount": {
         "title": "기존 계정 연결",
         "subtitle": "이미 계정이 있으신가요? 이 기기를 연결하세요",
@@ -924,29 +883,7 @@
         "subtitle": "첫 번째 기기만 - 계정을 생성합니다",
         "formTitle": "새 계정 등록"
       },
-      "import": {
-        "title": "자격 증명 가져오기",
-        "instructions": "다른 기기의 설정 > 동기화 > 자격 증명 복사에서 자격 증명을 붙여넣으세요.",
-        "passwordNote": "다른 기기와 동일한 비밀번호를 사용해야 합니다.",
-        "placeholder": "여기에 자격 증명 붙여넣기...",
-        "button": "자격 증명 가져오기",
-        "importing": "가져오는 중...",
-        "emptyError": "자격 증명을 붙여넣으세요",
-        "failed": "자격 증명 가져오기 실패",
-        "deviceName": {
-          "label": "기기 이름",
-          "placeholder": "내 노트북",
-          "help": "계정에서 이 기기를 식별하기 위한 이름"
-        },
-        "deviceNameRequired": "기기 이름을 입력하세요"
-      },
       "completeInSettings": "비밀번호 생성 후 설정 > 동기화에서 동기화 설정을 완료하세요."
-    },
-    "credentialsImported": {
-      "title": "자격 증명을 성공적으로 가져왔습니다!",
-      "message": "잠금을 해제하려면 다른 기기에서 사용하는 동일한 비밀번호를 입력하세요.",
-      "passwordLabel": "비밀번호 (다른 기기에서)",
-      "passwordPlaceholder": "다른 기기의 비밀번호 입력"
     },
     "restoreFromBackup": "백업에서 복원",
     "orDivider": "또는"

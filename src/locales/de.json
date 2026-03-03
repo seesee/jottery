@@ -341,18 +341,6 @@
       "cancelButton": "Abbrechen",
       "enableButton": "Ich verstehe, trotzdem aktivieren"
     },
-    "syncCredentials": {
-      "title": "📋 Synchronisierungs-Anmeldedaten",
-      "instructions": "Kopieren Sie den folgenden Text und fügen Sie ihn in einen anderen Jottery-Client ein, indem Sie \"Vorhandene Anmeldedaten verwenden\" wählen:",
-      "samePasswordWarning": "⚠️ <strong>Wichtig:</strong> Alle Geräte müssen dasselbe Passwort verwenden, um die Notizen zu entschlüsseln!",
-      "clipboardNote": "Das Kopieren in die Zwischenablage ist möglicherweise fehlgeschlagen (insbesondere über SSH oder in einigen Browsern). Sie können den obigen Text manuell auswählen und kopieren.",
-      "closeButton": "Schließen",
-      "advancedOptions": "Erweiterte Optionen",
-      "legacyFormat": {
-        "label": "Legacy-Format (unverschlüsselt) verwenden",
-        "warning": "⚠️ Nur verwenden, wenn Sie mit älteren Jottery-Versionen teilen, die nicht aktualisiert werden können. Das Legacy-Format zeigt Ihren API-Schlüssel im Klartext an."
-      }
-    },
     "saveSettings": "Einstellungen speichern",
     "saving": "Wird gespeichert...",
     "autoSaved": "Änderungen automatisch gespeichert",
@@ -389,14 +377,6 @@
         "help": "Ein Name zur Identifizierung dieses Geräts"
       },
       "chooseMethod": "Wählen Sie, wie die Synchronisation eingerichtet werden soll:",
-      "importCredentials": {
-        "title": "Synchronisierungs-Anmeldedaten importieren",
-        "subtitle": "<strong>Für zusätzliche Geräte:</strong> Sicherste Methode",
-        "benefit1": "✓ Zero-Knowledge-Verschlüsselung (Server kann Ihre Notizen nicht entschlüsseln)",
-        "benefit2": "✓ Anmeldedaten von Ihrem ersten Gerät kopieren",
-        "benefit3": "✓ Alle Geräte verwenden denselben Verschlüsselungsschlüssel",
-        "button": "📋 Anmeldedaten von anderem Gerät importieren"
-      },
       "registerServer": {
         "title": "Bei einem Synchronisierungsserver registrieren",
         "subtitle": "<strong>Nur für Ihr erstes Gerät:</strong> Erstellt Ihr Konto",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ Gerät wird registriert und synchronisiert...",
         "successTitle": "Synchronisation erfolgreich aktiviert!",
         "successText": "Ihr Gerät ist jetzt registriert und <strong>alle Ihre vorhandenen Notizen wurden mit dem Server synchronisiert</strong>. Alle zukünftigen Änderungen werden automatisch synchronisiert.",
-        "successNextSteps": "📋 Um ein weiteres Gerät hinzuzufügen: Klicken Sie unten auf \"Synchronisierungs-Anmeldedaten exportieren\" und importieren Sie sie auf Ihrem anderen Gerät.",
+        "successNextSteps": "🔗 Um ein weiteres Gerät hinzuzufügen: Verwenden Sie \"Bestehendes Konto verbinden\" auf Ihrem neuen Gerät.",
         "done": "Fertig",
         "checkStatusLink": "Überprüfen Sie Ihren Genehmigungsstatus im Benutzerportal →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "Passwort",
         "comingSoon": "Demnächst",
         "futureUpdate": "Die Kontoverknüpfung wird in einem zukünftigen Update aktiviert"
-      },
-      "import": {
-        "title": "Anmeldedaten importieren",
-        "instructions": "Fügen Sie die Anmeldedaten von Ihrem ersten Gerät ein. Die Anwendung wird gesperrt und Sie müssen sie mit Ihrem Passwort entsperren.",
-        "warningTitle": "⚠️ WICHTIG: Sie müssen auf allen Geräten dasselbe Passwort verwenden!",
-        "warningText": "Wenn Sie ein anderes Passwort verwenden, werden die Notizen nicht entschlüsselt.",
-        "placeholder": "Base64-Anmeldedaten hier einfügen...",
-        "button": "📥 Importieren und sperren",
-        "importing": "Wird importiert...",
-        "deviceName": {
-          "label": "Gerätename",
-          "placeholder": "Mein Laptop",
-          "help": "Ein Name zur Identifizierung dieses Geräts in Ihrem Konto"
-        }
       },
       "error": "Fehler"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} Notiz wartet auf Synchronisation",
       "notesPendingPlural": "{count} Notizen warten auf Synchronisation",
-      "showCredentials": "Anmeldedaten für andere Geräte anzeigen",
-      "credentialsHelp": "Klicken Sie, um Anmeldedaten als Text anzuzeigen. Verwenden Sie \"Vorhandene Anmeldedaten verwenden\" auf anderen Geräten zum Importieren.",
-      "samePasswordWarning": "Alle Geräte müssen dasselbe Passwort verwenden, um Notizen zu entschlüsseln!",
       "userPortal": {
         "title": "Benutzerportal",
         "description": "Verwalten Sie Ihr Konto, ändern Sie Ihr Passwort oder löschen Sie Ihre Daten",
@@ -906,10 +869,6 @@
       "note": "Hinweis: Sie müssen sich nach der Einrichtung noch beim Server registrieren."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Haben Sie Sync-Anmeldedaten?",
-        "subtitle": "Fügen Sie Ihre Anmeldedaten hier ein, um dieses Gerät zu synchronisieren"
-      },
       "existingAccount": {
         "title": "Bestehendes Konto verbinden",
         "subtitle": "Sie haben bereits ein Konto? Verbinden Sie dieses Gerät",
@@ -924,29 +883,7 @@
         "subtitle": "Nur für erstes Gerät - erstellt Ihr Konto",
         "formTitle": "Neues Konto registrieren"
       },
-      "import": {
-        "title": "Anmeldedaten importieren",
-        "instructions": "Fügen Sie die Anmeldedaten aus Einstellungen > Sync > Anmeldedaten kopieren von Ihrem anderen Gerät ein.",
-        "passwordNote": "Sie müssen dasselbe Passwort wie auf Ihrem anderen Gerät verwenden.",
-        "placeholder": "Anmeldedaten hier einfügen...",
-        "button": "Anmeldedaten importieren",
-        "importing": "Wird importiert...",
-        "emptyError": "Bitte fügen Sie die Anmeldedaten ein",
-        "failed": "Import der Anmeldedaten fehlgeschlagen",
-        "deviceName": {
-          "label": "Gerätename",
-          "placeholder": "Mein Laptop",
-          "help": "Ein Name zur Identifizierung dieses Geräts in Ihrem Konto"
-        },
-        "deviceNameRequired": "Bitte geben Sie einen Gerätenamen ein"
-      },
       "completeInSettings": "Schließen Sie die Sync-Einrichtung unter Einstellungen > Sync ab, nachdem Sie Ihr Passwort erstellt haben."
-    },
-    "credentialsImported": {
-      "title": "Anmeldedaten erfolgreich importiert!",
-      "message": "Geben Sie dasselbe Passwort ein, das Sie auf Ihrem anderen Gerät verwenden.",
-      "passwordLabel": "Passwort (von Ihrem anderen Gerät)",
-      "passwordPlaceholder": "Passwort vom anderen Gerät eingeben"
     },
     "restoreFromBackup": "Aus Backup wiederherstellen",
     "orDivider": "oder"

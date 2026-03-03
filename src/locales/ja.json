@@ -341,18 +341,6 @@
       "cancelButton": "キャンセル",
       "enableButton": "理解しました。有効にします"
     },
-    "syncCredentials": {
-      "title": "📋 同期認証情報",
-      "instructions": "以下のテキストをコピーして、別のJotteryクライアントで「既存の認証情報を使用」に貼り付けてください:",
-      "samePasswordWarning": "⚠️ <strong>重要:</strong> すべてのデバイスでノートを復号化するために、同じパスワードを使用する必要があります!",
-      "clipboardNote": "クリップボードへのコピーが失敗した可能性があります(特にSSH経由や一部のブラウザで)。上記のテキストを手動で選択してコピーできます。",
-      "closeButton": "閉じる",
-      "advancedOptions": "詳細オプション",
-      "legacyFormat": {
-        "label": "レガシー形式を使用(暗号化なし)",
-        "warning": "⚠️ アップデートできない古いJotteryバージョンと共有する場合のみ使用してください。レガシー形式はAPIキーが平文で公開されます。"
-      }
-    },
     "saveSettings": "設定を保存",
     "saving": "保存中...",
     "autoSaved": "変更は自動的に保存されます",
@@ -389,14 +377,6 @@
         "help": "このデバイスを識別する名前"
       },
       "chooseMethod": "同期のセットアップ方法を選択してください:",
-      "importCredentials": {
-        "title": "同期認証情報をインポート",
-        "subtitle": "<strong>追加デバイス用:</strong> 最も安全な方法",
-        "benefit1": "✓ ゼロ知識暗号化(サーバーはノートを復号化できません)",
-        "benefit2": "✓ 最初のデバイスから認証情報をコピー",
-        "benefit3": "✓ すべてのデバイスで同じ暗号化キーを使用",
-        "button": "📋 別のデバイスから認証情報をインポート"
-      },
       "registerServer": {
         "title": "同期サーバーに登録",
         "subtitle": "<strong>最初のデバイスのみ:</strong> アカウントを作成します",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ デバイスを登録して同期中...",
         "successTitle": "同期が正常に有効化されました!",
         "successText": "デバイスが登録され、<strong>既存のすべてのノートがサーバーに同期されました</strong>。今後の変更は自動的に同期されます。",
-        "successNextSteps": "📋 別のデバイスを追加するには: 以下の「同期認証情報をエクスポート」をクリックして、他のデバイスにインポートしてください。",
+        "successNextSteps": "🔗 別のデバイスを追加するには: 新しいデバイスで「既存アカウントに接続」を使用してください。",
         "done": "完了",
         "checkStatusLink": "ユーザーポータルで承認状況を確認 →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "パスワード",
         "comingSoon": "近日公開",
         "futureUpdate": "アカウントリンクは今後のアップデートで有効になります"
-      },
-      "import": {
-        "title": "認証情報をインポート",
-        "instructions": "最初のデバイスからの認証情報を貼り付けてください。アプリがロックされ、パスワードでロック解除する必要があります。",
-        "warningTitle": "⚠️ 重要: すべてのデバイスで同じパスワードを使用する必要があります!",
-        "warningText": "異なるパスワードを使用すると、ノートを復号化できません。",
-        "placeholder": "base64認証情報をここに貼り付け...",
-        "button": "📥 インポートしてロック",
-        "importing": "インポート中...",
-        "deviceName": {
-          "label": "デバイス名",
-          "placeholder": "マイノートPC",
-          "help": "アカウントでこのデバイスを識別するための名前"
-        }
       },
       "error": "エラー"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count}件のノートが同期待ち",
       "notesPendingPlural": "{count}件のノートが同期待ち",
-      "showCredentials": "他のデバイス用の認証情報を表示",
-      "credentialsHelp": "クリックして認証情報をテキストで表示。他のデバイスで「既存の認証情報を使用」を選択してインポートしてください。",
-      "samePasswordWarning": "すべてのデバイスでノートを復号化するには同じパスワードを使用する必要があります！",
       "userPortal": {
         "title": "ユーザーポータル",
         "description": "アカウントの管理、パスワードの変更、またはデータの削除",
@@ -906,10 +869,6 @@
       "note": "注: 設定後もサーバーへの登録が必要です。"
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "同期認証情報をお持ちですか？",
-        "subtitle": "認証情報をここに貼り付けてこのデバイスを同期"
-      },
       "existingAccount": {
         "title": "既存のアカウントに接続",
         "subtitle": "すでにアカウントをお持ちですか？このデバイスを接続",
@@ -924,29 +883,7 @@
         "subtitle": "最初のデバイスのみ - アカウントを作成",
         "formTitle": "新しいアカウントを登録"
       },
-      "import": {
-        "title": "認証情報をインポート",
-        "instructions": "他のデバイスの設定 > 同期 > 認証情報をコピーから認証情報を貼り付けてください。",
-        "passwordNote": "他のデバイスと同じパスワードを使用する必要があります。",
-        "placeholder": "認証情報をここに貼り付け...",
-        "button": "認証情報をインポート",
-        "importing": "インポート中...",
-        "emptyError": "認証情報を貼り付けてください",
-        "failed": "認証情報のインポートに失敗しました",
-        "deviceName": {
-          "label": "デバイス名",
-          "placeholder": "マイノートPC",
-          "help": "アカウントでこのデバイスを識別するための名前"
-        },
-        "deviceNameRequired": "デバイス名を入力してください"
-      },
       "completeInSettings": "パスワード作成後、設定 > 同期で同期設定を完了してください。"
-    },
-    "credentialsImported": {
-      "title": "認証情報が正常にインポートされました！",
-      "message": "ロック解除するには、他のデバイスで使用している同じパスワードを入力してください。",
-      "passwordLabel": "パスワード（他のデバイスから）",
-      "passwordPlaceholder": "他のデバイスのパスワードを入力"
     },
     "restoreFromBackup": "バックアップから復元",
     "orDivider": "または"

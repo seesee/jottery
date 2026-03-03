@@ -7,7 +7,6 @@
   import { validateBackup, getBackupStats } from '../services/backupService';
   import type { BackupData } from '../services/backupService';
   import { getCurrentNotebook } from '../utils/notebookPath';
-  import { parseAndStoreImportedCredentials } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
@@ -32,11 +31,7 @@
   let showSyncConfig = false;
   let syncEndpoint = '';
   let deviceName = '';
-  let syncSetupMode: 'select' | 'importCredentials' | 'existingUser' | 'newUser' | null = null;
-  let importCredentialsText = '';
-  let importDeviceName = '';
-  let importing = false;
-  let credentialsImported = false;
+  let syncSetupMode: 'select' | 'existingUser' | 'newUser' | null = null;
 
   // Existing account connection state
   let existingUserEmail = '';
@@ -310,56 +305,8 @@
     showDeleteConfirm = false;
   }
 
-  async function handleImportCredentials() {
-    if (!importCredentialsText.trim()) {
-      error = $_('unlock.syncSetup.import.emptyError');
-      return;
-    }
-    if (!importDeviceName.trim()) {
-      error = $_('unlock.syncSetup.import.deviceNameRequired');
-      return;
-    }
-
-    importing = true;
-    error = '';
-
-    try {
-      const result = await parseAndStoreImportedCredentials(importCredentialsText, importDeviceName.trim());
-
-      if (!result.success) {
-        error = result.error || $_('unlock.syncSetup.import.failed');
-        importing = false;
-        return;
-      }
-
-      // Credentials imported successfully - re-check initialization state
-      // The import sets up encryption metadata, so isInitialized() should now return true
-      needsInit = !(await isInitialized());
-      isInitializedStore.set(!needsInit);
-      credentialsImported = true;
-
-      // Clear the import text and reset mode
-      importCredentialsText = '';
-      syncSetupMode = null;
-      showSyncConfig = false;
-
-      // Focus password input
-      setTimeout(() => {
-        if (passwordInput) {
-          passwordInput.focus();
-        }
-      }, 100);
-    } catch (err) {
-      error = err instanceof Error ? err.message : $_('unlock.syncSetup.import.failed');
-    } finally {
-      importing = false;
-    }
-  }
-
   function resetSyncSetupMode() {
     syncSetupMode = null;
-    importCredentialsText = '';
-    importDeviceName = '';
     existingUserEmail = '';
     existingUserPassword = '';
     error = '';
@@ -741,33 +688,17 @@
         </div>
       {/if}
 
-      {#if credentialsImported}
-        <div class="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
-          <div class="flex items-start gap-2">
-            <span class="text-lg">✅</span>
-            <div>
-              <p class="text-sm font-medium text-green-900 dark:text-green-100">
-                {$_('unlock.credentialsImported.title')}
-              </p>
-              <p class="text-xs text-green-800 dark:text-green-200 mt-1">
-                {$_('unlock.credentialsImported.message')}
-              </p>
-            </div>
-          </div>
-        </div>
-      {/if}
-
       <form on:submit|preventDefault={handleSubmit} class="space-y-4">
         <div>
           <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {credentialsImported ? $_('unlock.credentialsImported.passwordLabel') : $_('unlock.password')}
+            {$_('unlock.password')}
           </label>
           <PasswordInput
             id="password"
             bind:value={password}
             bind:this={passwordInput}
             disabled={loading}
-            placeholder={credentialsImported ? $_('unlock.credentialsImported.passwordPlaceholder') : $_('unlock.password')}
+            placeholder={$_('unlock.password')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           />
         </div>
@@ -834,26 +765,7 @@
                       </div>
                     </button>
 
-                    <!-- Option 2: Import Credentials -->
-                    <button
-                      type="button"
-                      on:click={() => syncSetupMode = 'importCredentials'}
-                      class="w-full text-left border-2 border-green-500 dark:border-green-600 rounded-lg p-3 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                    >
-                      <div class="flex items-start gap-2">
-                        <span class="text-lg">🔐</span>
-                        <div class="flex-1">
-                          <div class="font-semibold text-sm text-green-900 dark:text-green-100">
-                            {$_('unlock.syncSetup.importCredentials.title')}
-                          </div>
-                          <div class="text-xs text-green-700 dark:text-green-300 mt-1">
-                            {$_('unlock.syncSetup.importCredentials.subtitle')}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-
-                    <!-- Option 3: Connect Existing Account -->
+                    <!-- Option 2: Connect Existing Account -->
                     <button
                       type="button"
                       on:click={() => syncSetupMode = 'existingUser'}
@@ -870,66 +782,6 @@
                           </div>
                         </div>
                       </div>
-                    </button>
-                  </div>
-
-                {:else if syncSetupMode === 'importCredentials'}
-                  <!-- Import Credentials Form -->
-                  <div class="border border-green-200 dark:border-green-800 rounded-lg p-3 bg-green-50 dark:bg-green-900/20 space-y-3">
-                    <div class="flex items-center justify-between">
-                      <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                        {$_('unlock.syncSetup.import.title')}
-                      </h4>
-                      <button
-                        type="button"
-                        on:click={resetSyncSetupMode}
-                        class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                      >
-                        {$_('common.back')}
-                      </button>
-                    </div>
-
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                      {$_('unlock.syncSetup.import.instructions')}
-                    </p>
-
-                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded p-2">
-                      <p class="text-xs text-amber-800 dark:text-amber-200 font-medium">
-                        {$_('unlock.syncSetup.import.passwordNote')}
-                      </p>
-                    </div>
-
-                    <textarea
-                      bind:value={importCredentialsText}
-                      placeholder={$_('unlock.syncSetup.import.placeholder')}
-                      rows="3"
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-xs"
-                    ></textarea>
-
-                    <!-- Device name for this device -->
-                    <div>
-                      <label for="import-device-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {$_('unlock.syncSetup.import.deviceName.label')}
-                      </label>
-                      <input
-                        id="import-device-name"
-                        type="text"
-                        bind:value={importDeviceName}
-                        placeholder={$_('unlock.syncSetup.import.deviceName.placeholder')}
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                      />
-                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {$_('unlock.syncSetup.import.deviceName.help')}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      on:click={handleImportCredentials}
-                      disabled={!importCredentialsText.trim() || !importDeviceName.trim() || importing}
-                      class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
-                    >
-                      {importing ? $_('unlock.syncSetup.import.importing') : $_('unlock.syncSetup.import.button')}
                     </button>
                   </div>
 

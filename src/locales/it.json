@@ -341,18 +341,6 @@
       "cancelButton": "Annulla",
       "enableButton": "Comprendo, abilita comunque"
     },
-    "syncCredentials": {
-      "title": "📋 Credenziali di sincronizzazione",
-      "instructions": "Copia il testo sottostante e incollalo in un altro client Jottery utilizzando \"Usa credenziali esistenti\":",
-      "samePasswordWarning": "⚠️ <strong>Importante:</strong> Tutti i dispositivi devono usare la STESSA password per decifrare le note!",
-      "clipboardNote": "La copia negli appunti potrebbe essere fallita (specialmente tramite SSH o in alcuni browser). Puoi selezionare e copiare manualmente il testo sopra.",
-      "closeButton": "Chiudi",
-      "advancedOptions": "Opzioni avanzate",
-      "legacyFormat": {
-        "label": "Usa formato legacy (non crittografato)",
-        "warning": "⚠️ Da usare solo se si condivide con versioni precedenti di Jottery che non possono essere aggiornate. Il formato legacy espone la chiave API in testo normale."
-      }
-    },
     "saveSettings": "Salva impostazioni",
     "saving": "Salvataggio...",
     "autoSaved": "Modifiche salvate automaticamente",
@@ -389,14 +377,6 @@
         "help": "Un nome per identificare questo dispositivo"
       },
       "chooseMethod": "Scegli come configurare la sincronizzazione:",
-      "importCredentials": {
-        "title": "Importa credenziali di sincronizzazione",
-        "subtitle": "<strong>Per dispositivi aggiuntivi:</strong> Metodo più sicuro",
-        "benefit1": "✓ Crittografia a conoscenza zero (il server non può decifrare le note)",
-        "benefit2": "✓ Copia credenziali dal primo dispositivo",
-        "benefit3": "✓ Tutti i dispositivi usano la stessa chiave di crittografia",
-        "button": "📋 Importa credenziali da un altro dispositivo"
-      },
       "registerServer": {
         "title": "Registrati a un server di sincronizzazione",
         "subtitle": "<strong>Solo per il primo dispositivo:</strong> Crea il tuo account",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ Registrazione dispositivo e sincronizzazione...",
         "successTitle": "Sincronizzazione abilitata con successo!",
         "successText": "Il dispositivo è ora registrato e <strong>tutte le note esistenti sono state sincronizzate sul server</strong>. Eventuali modifiche future verranno sincronizzate automaticamente.",
-        "successNextSteps": "📋 Per aggiungere un altro dispositivo: Clicca \"Esporta credenziali di sincronizzazione\" sotto e importale sull'altro dispositivo.",
+        "successNextSteps": "🔗 Per aggiungere un altro dispositivo: Usa \"Connetti account esistente\" sul nuovo dispositivo.",
         "done": "Fatto",
         "checkStatusLink": "Verifica lo stato di approvazione nel Portale Utente →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "Password",
         "comingSoon": "Prossimamente",
         "futureUpdate": "Il collegamento account verrà abilitato in un futuro aggiornamento"
-      },
-      "import": {
-        "title": "Importa credenziali",
-        "instructions": "Incolla le credenziali dal primo dispositivo. L'app verrà bloccata e dovrai sbloccarla con la password.",
-        "warningTitle": "⚠️ IMPORTANTE: Devi usare la STESSA password su tutti i dispositivi!",
-        "warningText": "Se usi una password diversa, le note non verranno decifrate.",
-        "placeholder": "Incolla credenziali base64 qui...",
-        "button": "📥 Importa e blocca",
-        "importing": "Importazione...",
-        "deviceName": {
-          "label": "Nome dispositivo",
-          "placeholder": "Il mio laptop",
-          "help": "Un nome per identificare questo dispositivo nel tuo account"
-        }
       },
       "error": "Errore"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} nota in attesa di sincronizzazione",
       "notesPendingPlural": "{count} note in attesa di sincronizzazione",
-      "showCredentials": "Mostra credenziali per altri dispositivi",
-      "credentialsHelp": "Clicca per visualizzare le credenziali come testo. Usa \"Usa credenziali esistenti\" su altri dispositivi per importare.",
-      "samePasswordWarning": "Tutti i dispositivi devono utilizzare la STESSA password per decifrare le note!",
       "userPortal": {
         "title": "Portale utente",
         "description": "Gestisci il tuo account, cambia la password o elimina i tuoi dati",
@@ -906,10 +869,6 @@
       "note": "Nota: Dovrai comunque registrarti al server dopo la configurazione."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Hai le credenziali di sincronizzazione?",
-        "subtitle": "Incolla le tue credenziali qui per sincronizzare questo dispositivo"
-      },
       "existingAccount": {
         "title": "Collega account esistente",
         "subtitle": "Hai già un account? Collega questo dispositivo",
@@ -924,29 +883,7 @@
         "subtitle": "Solo primo dispositivo - crea il tuo account",
         "formTitle": "Registra nuovo account"
       },
-      "import": {
-        "title": "Importa credenziali",
-        "instructions": "Incolla le credenziali da Impostazioni > Sync > Copia credenziali sull'altro dispositivo.",
-        "passwordNote": "Dovrai usare la stessa password dell'altro dispositivo.",
-        "placeholder": "Incolla le credenziali qui...",
-        "button": "Importa credenziali",
-        "importing": "Importazione...",
-        "emptyError": "Incolla le credenziali",
-        "failed": "Importazione credenziali non riuscita",
-        "deviceName": {
-          "label": "Nome dispositivo",
-          "placeholder": "Il mio laptop",
-          "help": "Un nome per identificare questo dispositivo nel tuo account"
-        },
-        "deviceNameRequired": "Inserisci un nome dispositivo"
-      },
       "completeInSettings": "Completa la configurazione della sincronizzazione in Impostazioni > Sync dopo aver creato la password."
-    },
-    "credentialsImported": {
-      "title": "Credenziali importate con successo!",
-      "message": "Inserisci la stessa password che usi sull'altro dispositivo per sbloccare.",
-      "passwordLabel": "Password (dall'altro dispositivo)",
-      "passwordPlaceholder": "Inserisci la password dall'altro dispositivo"
     },
     "restoreFromBackup": "Ripristina da Backup",
     "orDivider": "o"

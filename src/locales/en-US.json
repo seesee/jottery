@@ -328,18 +328,6 @@
       "cancelButton": "Cancel",
       "enableButton": "I Understand, Enable Anyway"
     },
-    "syncCredentials": {
-      "title": "📋 Sync Credentials",
-      "instructions": "Copy the text below and paste it into another Jottery client using \"Use Existing Credentials\":",
-      "samePasswordWarning": "⚠️ <strong>Important:</strong> All devices must use the SAME password to decrypt notes!",
-      "clipboardNote": "The clipboard copy may have failed (especially over SSH or in some browsers). You can manually select and copy the text above.",
-      "closeButton": "Close",
-      "advancedOptions": "Advanced options",
-      "legacyFormat": {
-        "label": "Use legacy (unencrypted) format",
-        "warning": "⚠️ Only use if sharing with older Jottery versions that cannot be updated. Legacy format exposes your API key in plain text."
-      }
-    },
     "saveSettings": "Save Settings",
     "saving": "Saving...",
     "autoSaved": "Changes saved automatically",
@@ -376,14 +364,6 @@
         "help": "A name to identify this device"
       },
       "chooseMethod": "Choose how to set up sync:",
-      "importCredentials": {
-        "title": "Import sync credentials",
-        "subtitle": "<strong>For additional devices:</strong> Recommended method",
-        "benefit1": "✓ Copy credentials from your first device",
-        "benefit2": "✓ All devices use the same encryption key",
-        "benefit3": "✓ Server stores only encrypted data",
-        "button": "📋 Import credentials from another device"
-      },
       "registerServer": {
         "title": "Register with a sync server",
         "subtitle": "<strong>For your first device only:</strong> Creates your account",
@@ -429,7 +409,7 @@
         "deviceRegistering": "⏳ Registering device and syncing...",
         "successTitle": "Sync enabled successfully!",
         "successText": "Your device is now registered and <strong>all your existing notes have been synced to the server</strong>. Any future changes will sync automatically.",
-        "successNextSteps": "📋 To add another device: Click \"Export sync credentials\" below and import them on your other device.",
+        "successNextSteps": "🔗 To add another device: Use \"Connect Existing Account\" on your new device.",
         "done": "Done",
         "checkStatusLink": "Check your approval status on the User Portal →"
       },
@@ -440,20 +420,6 @@
         "passwordLabel": "Password",
         "comingSoon": "Coming soon",
         "futureUpdate": "Account linking will be enabled in a future update"
-      },
-      "import": {
-        "title": "Import credentials",
-        "instructions": "Paste the credentials from your first device. The app will lock and you'll need to unlock with your password.",
-        "warningTitle": "⚠️ IMPORTANT: You must use the SAME password on all devices!",
-        "warningText": "If you use a different password, notes will not decrypt.",
-        "placeholder": "Paste base64 credentials here...",
-        "button": "📥 Import and lock",
-        "importing": "Importing...",
-        "deviceName": {
-          "label": "Device name",
-          "placeholder": "My Laptop",
-          "help": "A name to identify this device in your account"
-        }
       },
       "error": "Error"
     },
@@ -546,9 +512,6 @@
       },
       "notesPendingSingle": "{count} note pending sync",
       "notesPendingPlural": "{count} notes pending sync",
-      "showCredentials": "Show Credentials for Other Devices",
-      "credentialsHelp": "Click to display credentials as text. Use \"Use Existing Credentials\" on other devices to import.",
-      "samePasswordWarning": "All devices must use the SAME password to decrypt notes!",
       "userPortal": {
         "title": "User Portal",
         "description": "Manage your account, change password, or delete your data",
@@ -892,10 +855,6 @@
       "note": "Note: You'll still need to register with the server after setup."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Have Sync Credentials?",
-        "subtitle": "Paste your credentials here to sync this device"
-      },
       "existingAccount": {
         "title": "Connect existing account",
         "subtitle": "Already have an account? Connect this device",
@@ -910,29 +869,7 @@
         "subtitle": "First device only - creates your account",
         "formTitle": "Register New Account"
       },
-      "import": {
-        "title": "Import Credentials",
-        "instructions": "Paste the credentials from Settings > Sync > Copy Credentials on your other device.",
-        "passwordNote": "You'll need to use the same password as your other device.",
-        "placeholder": "Paste credentials here...",
-        "button": "Import Credentials",
-        "importing": "Importing...",
-        "emptyError": "Please paste the credentials",
-        "failed": "Failed to import credentials",
-        "deviceName": {
-          "label": "Device name",
-          "placeholder": "My Laptop",
-          "help": "A name to identify this device in your account"
-        },
-        "deviceNameRequired": "Please enter a device name"
-      },
       "completeInSettings": "Complete sync setup in Settings > Sync after creating your password."
-    },
-    "credentialsImported": {
-      "title": "Credentials imported successfully!",
-      "message": "Enter the same password you use on your other device to unlock.",
-      "passwordLabel": "Password (from your other device)",
-      "passwordPlaceholder": "Enter password from other device"
     },
     "restoreFromBackup": "Restore from Backup",
     "orDivider": "or"

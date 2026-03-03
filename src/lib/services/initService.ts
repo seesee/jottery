@@ -197,8 +197,7 @@ export async function unlock(password: string): Promise<void> {
   // Get settings to check rememberPassword
   const settings = await settingsRepository.get();
 
-  // Handle imported credentials (IMPORT: marker)
-  console.log('[Unlock] Checking for imported credentials...');
+  // Handle restored credentials (RESTORE: marker from backup restore)
   await handleImportedCredentials(key);
 
   // Attempt migration from legacy to envelope encryption
@@ -223,150 +222,21 @@ export async function unlock(password: string): Promise<void> {
 
 /**
  * Handle imported credentials after successful unlock
- * Detects IMPORT: or ENCRYPTED: marker, calls clone-device to register as new device
+ * Detects RESTORE: marker from backup restore, calls clone-device to register as new device
  */
 async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
   try {
-    console.log('[ImportHandler] Fetching sync metadata...');
     const metadata = await syncRepository.getMetadata();
 
-    if (!metadata) {
-      console.log('[ImportHandler] No sync metadata found - skipping');
+    if (!metadata?.apiKey) {
       return;
     }
 
-    if (!metadata.apiKey) {
-      console.log('[ImportHandler] No API key in metadata - skipping');
-      return;
-    }
+    // Get device name (default to 'Restored Device' if not set)
+    const deviceName = metadata.pendingDeviceName || 'Restored Device';
 
-    console.log('[ImportHandler] Sync metadata found:', {
-      hasClientId: !!metadata.clientId,
-      hasEndpoint: !!metadata.syncEndpoint,
-      hasApiKey: !!metadata.apiKey,
-      hasPendingDeviceName: !!metadata.pendingDeviceName,
-      syncEnabled: metadata.syncEnabled,
-    });
-
-    // Get device name (default to 'Imported Device' if not set)
-    const deviceName = metadata.pendingDeviceName || 'Imported Device';
-
-    // Check for IMPORT: marker (plaintext API key from legacy unencrypted import)
-    if (metadata.apiKey.startsWith('IMPORT:')) {
-      console.log('[ImportHandler] ✓ IMPORT marker detected! Processing imported credentials...');
-
-      // Extract plaintext API key
-      const plaintextApiKey = metadata.apiKey.substring(7); // Remove "IMPORT:" prefix
-      const endpoint = metadata.syncEndpoint;
-
-      if (!endpoint) {
-        throw new Error('No sync endpoint found for imported credentials');
-      }
-
-      // Call clone-device to register as a NEW device
-      console.log('[ImportHandler] Calling clone-device to register new device...');
-      const cloneResult = await authService.cloneDevice(endpoint, plaintextApiKey, deviceName);
-      console.log('[ImportHandler] ✓ Clone-device successful, got new clientId:', cloneResult.clientId);
-
-      // Encrypt the NEW API key
-      const encryptedApiKey = await cryptoService.encryptText(cloneResult.apiKey, masterKey);
-      console.log('[ImportHandler] ✓ New API key encrypted');
-
-      // Update sync metadata with NEW credentials
-      await syncRepository.updateMetadata({
-        clientId: cloneResult.clientId,
-        userId: cloneResult.userId,
-        apiKey: JSON.stringify(encryptedApiKey),
-        syncEnabled: true,
-        pendingDeviceName: undefined, // Clear the pending name
-      });
-      console.log('[ImportHandler] ✓ Sync metadata updated with new device credentials');
-
-      await settingsRepository.update({
-        syncEnabled: true,
-      });
-      console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
-
-      console.log('[ImportHandler] ✓✓✓ Import credentials processed successfully! Registered as new device.');
-    }
-    // Check for ENCRYPTED: marker (encrypted credentials from v1 format import)
-    else if (metadata.apiKey.startsWith('ENCRYPTED:')) {
-      console.log('[ImportHandler] ✓ ENCRYPTED marker detected! Decrypting imported credentials...');
-
-      // Extract encrypted payload (base64 encoded JSON of EncryptedData)
-      const encryptedPayload = metadata.apiKey.substring(10); // Remove "ENCRYPTED:" prefix
-
-      try {
-        // Decode and parse the encrypted data
-        const encryptedJson = atob(encryptedPayload);
-        const encryptedData = JSON.parse(encryptedJson);
-
-        // Decrypt the credentials JSON
-        const credentialsJson = await cryptoService.decryptText(encryptedData, masterKey);
-        const credentials = JSON.parse(credentialsJson);
-        console.log('[ImportHandler] ✓ Credentials decrypted successfully');
-
-        // Validate decrypted credentials
-        if (!credentials.endpoint || !credentials.apiKey) {
-          throw new Error('Invalid decrypted credentials - missing required fields');
-        }
-
-        // Call clone-device to register as a NEW device
-        console.log('[ImportHandler] Calling clone-device to register new device...');
-        const cloneResult = await authService.cloneDevice(credentials.endpoint, credentials.apiKey, deviceName);
-        console.log('[ImportHandler] ✓ Clone-device successful, got new clientId:', cloneResult.clientId);
-
-        // Encrypt the NEW API key
-        const encryptedApiKey = await cryptoService.encryptText(cloneResult.apiKey, masterKey);
-        console.log('[ImportHandler] ✓ New API key encrypted');
-
-        // Update sync metadata with NEW credentials
-        await syncRepository.updateMetadata({
-          clientId: cloneResult.clientId,
-          userId: cloneResult.userId,
-          syncEndpoint: credentials.endpoint,
-          apiKey: JSON.stringify(encryptedApiKey),
-          syncEnabled: true,
-          pendingDeviceName: undefined, // Clear the pending name
-        });
-        console.log('[ImportHandler] ✓ Sync metadata updated with new device credentials');
-
-        await settingsRepository.update({
-          syncEndpoint: credentials.endpoint,
-          syncEnabled: true,
-        });
-        console.log('[ImportHandler] ✓ Settings updated (syncEnabled: true)');
-
-        console.log('[ImportHandler] ✓✓✓ Encrypted credentials processed successfully! Registered as new device.');
-      } catch (decryptError) {
-        console.error('[ImportHandler] Failed to process credentials:', decryptError);
-        // Clear the invalid encrypted data so user can try again
-        await syncRepository.updateMetadata({
-          apiKey: '',
-          syncEnabled: false,
-          pendingDeviceName: undefined,
-        });
-
-        // Provide more specific error message based on where the error occurred
-        const errorMessage = decryptError instanceof Error ? decryptError.message : String(decryptError);
-
-        // Check if this is a device registration/API error (not a decryption error)
-        const isApiError = errorMessage.includes('Invalid API key') ||
-                          errorMessage.includes('device') ||
-                          errorMessage.includes('cloning') ||
-                          errorMessage.includes('admin approval') ||
-                          errorMessage.includes('deactivated') ||
-                          errorMessage.includes('401') ||
-                          errorMessage.includes('403');
-
-        if (isApiError) {
-          throw new Error(`Failed to register device: ${errorMessage}`);
-        }
-        throw new Error('Failed to decrypt sync credentials. Please ensure you are using the same password as the source device.');
-      }
-    }
     // Check for RESTORE: marker (credentials restored from backup - need new device ID)
-    else if (metadata.apiKey.startsWith('RESTORE:')) {
+    if (metadata.apiKey.startsWith('RESTORE:')) {
       console.log('[ImportHandler] ✓ RESTORE marker detected! Re-registering device with new ID...');
 
       // Extract encrypted API key payload (JSON stringified EncryptedData)
@@ -419,18 +289,8 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
         // Don't throw - let the app work without sync
       }
     }
-    // Check for ONBOARD: marker (v2 credential import — needs email + password to complete)
-    else if (metadata.apiKey.startsWith('ONBOARD:')) {
-      console.log('[ImportHandler] ONBOARD marker detected — user needs to authenticate via sync setup to complete onboarding');
-      // Nothing to do here: the marker stays in place until the user
-      // completes the "Connect existing account" flow in SyncSetupForm,
-      // which calls onboardFromServer() to download the wrapped master key.
-    } else {
-      console.log('[ImportHandler] No IMPORT/ENCRYPTED/RESTORE/ONBOARD marker - credentials already encrypted');
-    }
   } catch (error) {
-    console.error('[ImportHandler] ERROR handling imported credentials:', error);
-    console.error('[ImportHandler] Stack:', error instanceof Error ? error.stack : 'N/A');
+    console.error('[ImportHandler] ERROR handling restored credentials:', error);
     // Don't throw - this shouldn't prevent unlock
   }
 }

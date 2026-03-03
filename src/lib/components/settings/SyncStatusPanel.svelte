@@ -36,15 +36,11 @@
   // Callbacks
   export let onSyncNow: () => void;
   export let onFullSync: () => void;
-  export let onCopySyncCredentials: (useLegacyFormat: boolean) => void;
   export let onAccountLogin: () => void;
   export let onAccountLogout: () => void;
   export let onShowDeleteServerNotesConfirm: () => void;
   export let onShowDisconnectConfirm: () => void;
 
-  // Local state for legacy format toggle
-  let showLegacyOption = false;
-  let useLegacyFormat = false;
   let showDangerZone = false;
   let showConnectionDetails = false;
 
@@ -204,68 +200,16 @@
                   </p>
                 {/if}
 
-                <div class="border-t border-green-200 dark:border-green-700 pt-3">
-                  <button
-                    on:click={() => onCopySyncCredentials(useLegacyFormat)}
-                    class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors"
-                  >
-                    📋 {$_('settings.syncTab.showCredentials')}
-                  </button>
-
-                  <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    {$_('settings.syncTab.credentialsHelp')}
-                  </p>
-                  <p class="mt-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
-                    ⚠️ {$_('settings.syncTab.samePasswordWarning')}
-                  </p>
-
-                  <!-- Advanced: Legacy format option -->
-                  <button
-                    type="button"
-                    on:click={() => showLegacyOption = !showLegacyOption}
-                    class="mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline"
-                  >
-                    {showLegacyOption ? '▼' : '▶'} {$_('settings.syncCredentials.advancedOptions')}
-                  </button>
-
-                  {#if showLegacyOption}
-                    <div class="mt-2 space-y-3">
-                      <!-- Full Sync Option -->
-                      <div class="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded">
-                        <p class="text-xs text-blue-800 dark:text-blue-200 mb-2">
-                          <strong>{$_('settings.syncTab.fullSync.title')}</strong><br/>
-                          <span class="text-blue-600 dark:text-blue-400">
-                            {$_('settings.syncTab.fullSync.description')}
-                          </span>
-                        </p>
-                        <button
-                          on:click={onFullSync}
-                          disabled={syncing || syncStatus?.isSyncing}
-                          class="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-medium rounded transition-colors"
-                        >
-                          {syncing || syncStatus?.isSyncing ? $_('settings.syncTab.syncing') : '🔄 ' + $_('settings.syncTab.fullSync.button')}
-                        </button>
-                      </div>
-
-                      <!-- Legacy Format Option -->
-                      <div class="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded text-xs">
-                        <label class="flex items-start gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            bind:checked={useLegacyFormat}
-                            class="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                          />
-                          <span class="text-amber-800 dark:text-amber-200">
-                            <strong>{$_('settings.syncCredentials.legacyFormat.label')}</strong><br/>
-                            <span class="text-amber-600 dark:text-amber-400">
-                              {$_('settings.syncCredentials.legacyFormat.warning')}
-                            </span>
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  {/if}
-                </div>
+                <button
+                  on:click={onFullSync}
+                  disabled={syncing || syncStatus?.isSyncing}
+                  class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-md transition-colors"
+                >
+                  {syncing || syncStatus?.isSyncing ? $_('settings.syncTab.syncing') : '🔄 ' + $_('settings.syncTab.fullSync.button')}
+                </button>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {$_('settings.syncTab.fullSync.description')}
+                </p>
               </div>
 
 <!-- Account Management -->
