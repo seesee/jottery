@@ -358,7 +358,25 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
 
     let local_password = app.unlock_password.clone();
     match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check, local_password.as_deref()) {
-        Ok(()) => app.debug_log("Envelope setup succeeded after device registration"),
+        Ok(()) => {
+            app.debug_log("Envelope setup succeeded after device registration");
+            // If onboarding changed the master key, re-encrypt the API key with the new key
+            if let Some(new_key) = app.key.as_ref() {
+                if *new_key != key {
+                    app.debug_log("Master key changed after onboarding — re-encrypting API key");
+                    if let Ok(re_encrypted) = app.crypto.encrypt_text(&api_key_for_check, new_key) {
+                        if let Ok(re_encrypted_json) = serde_json::to_string(&re_encrypted) {
+                            let db = app.db.as_ref().unwrap();
+                            let sync_repo = SyncRepository::new(db.connection());
+                            if let Ok(Some(mut meta)) = sync_repo.get_metadata() {
+                                meta.api_key = Some(re_encrypted_json);
+                                let _ = sync_repo.update_metadata(&meta);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Err(e) => app.debug_log(&format!("Envelope setup after registration failed (non-fatal): {}", e)),
     }
 
