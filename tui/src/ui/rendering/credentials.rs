@@ -399,6 +399,18 @@ pub fn render_import_device_name(app: &App, frame: &mut Frame) {
     );
 }
 
+/// Render change password modal
+pub fn render_change_password(app: &App, frame: &mut Frame, step: &str) {
+    let title = t!("password.change_title").to_string();
+    let instruction = match step {
+        "current" => t!("password.change_enter_current").to_string(),
+        "new" => t!("password.change_enter_new").to_string(),
+        "confirm" => t!("password.change_confirm_new").to_string(),
+        _ => t!("password.enter").to_string(),
+    };
+    render_registration_input_modal(app, frame, &title, &instruction, &app.credential_input, true);
+}
+
 /// Helper to render a registration input modal
 fn render_registration_input_modal(
     app: &App,

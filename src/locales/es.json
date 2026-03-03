@@ -581,6 +581,21 @@
         "description": "Administre su cuenta, cambie la contraseña o elimine sus datos",
         "openButton": "Abrir portal de usuario"
       },
+      "changePassword": {
+        "title": "Cambiar contraseña",
+        "description": "Cambie su contraseña de cifrado. Gracias al cifrado de sobre, esto es rápido — sus notas no necesitan ser recifradas.",
+        "currentPasswordLabel": "Contraseña actual",
+        "newPasswordLabel": "Nueva contraseña",
+        "confirmPasswordLabel": "Confirmar nueva contraseña",
+        "currentPasswordPlaceholder": "Introduzca la contraseña actual",
+        "newPasswordPlaceholder": "Introduzca la nueva contraseña",
+        "confirmPasswordPlaceholder": "Confirme la nueva contraseña",
+        "mismatch": "Las contraseñas no coinciden",
+        "changing": "Cambiando contraseña...",
+        "button": "Cambiar contraseña",
+        "success": "Contraseña cambiada correctamente",
+        "error": "Error al cambiar la contraseña: {error}"
+      },
       "connectionDetails": {
         "title": "Detalles de conexión",
         "server": "Servidor",

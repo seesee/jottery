@@ -152,12 +152,32 @@ struct SyncSetupView: View {
                 try KeychainService.storeClientId(response.clientId)
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
+                // Store userId for envelope encryption
+                if var syncMeta = try? appState.syncRepo?.getMetadata() {
+                    syncMeta.userId = response.userId
+                    try? appState.syncRepo?.saveMetadata(syncMeta)
+                }
+
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
 
                 registeredApiKey = response.apiKey
                 success = true
                 isWorking = false
+
+                // Attempt envelope setup in background (non-fatal).
+                // If another device already uploaded a wrapped key, we onboard
+                // from that key; otherwise we upload ours.
+                if let masterKey = appState.keyManager.masterKey {
+                    let regPassword = password
+                    Task {
+                        await EnvelopeService.tryEnvelopeSetup(
+                            appState: appState,
+                            password: regPassword,
+                            masterKey: masterKey
+                        )
+                    }
+                }
             } catch {
                 self.error = error.localizedDescription
                 isWorking = false
@@ -247,6 +267,12 @@ struct SyncSetupView: View {
         try KeychainService.storeAPIKey(response.apiKey)
         try KeychainService.storeClientId(response.clientId)
         try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+
+        // Store userId for envelope encryption
+        if var syncMeta = try? appState.syncRepo?.getMetadata() {
+            syncMeta.userId = response.userId
+            try? appState.syncRepo?.saveMetadata(syncMeta)
+        }
 
         appState.settings.syncEnabled = true
         appState.settings.syncEndpoint = normalised

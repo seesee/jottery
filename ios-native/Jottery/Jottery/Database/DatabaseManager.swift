@@ -279,6 +279,15 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE saved_searches ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0")
         }
 
+        // Envelope encryption — decouples master key from password
+        migrator.registerMigration("ios_007_add_envelope") { db in
+            try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN envelope_version INTEGER")
+            try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN device_salt TEXT")
+            try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN local_wrapped_master TEXT")
+            try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN wrapping_kdf_version INTEGER")
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN user_id TEXT")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

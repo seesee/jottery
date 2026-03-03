@@ -76,6 +76,25 @@ actor SyncClient {
         URL(string: "\(endpoint)/api/\(apiVersion)/sync/events?token=\(token)")
     }
 
+    // MARK: - Wrapped Key (Envelope Encryption)
+
+    /// Fetch the server-stored wrapped master key. Returns nil if no key exists (404).
+    func getWrappedKey() async throws -> WrappedKeyResponse? {
+        let url = apiURL("auth/wrapped-key")
+        do {
+            let response: WrappedKeyResponse = try await get(url: url)
+            return response
+        } catch SyncClientError.httpError(let status, _) where status == 404 {
+            return nil
+        }
+    }
+
+    /// Upload a wrapped master key to the server.
+    func putWrappedKey(_ request: PutWrappedKeyRequest) async throws {
+        let url = apiURL("auth/wrapped-key")
+        try await put(url: url, body: request)
+    }
+
     // MARK: - Inbox
 
     func listInboxItems() async throws -> [InboxItem] {
@@ -118,6 +137,21 @@ actor SyncClient {
         try validateResponse(response, data: data)
 
         return try JSONDecoder().decode(Response.self, from: data)
+    }
+
+    private func put<Body: Encodable>(url: URL, body: Body) async throws {
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let apiKey {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+
+        let encoder = JSONEncoder()
+        request.httpBody = try encoder.encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
     }
 
     private func get<Response: Decodable>(url: URL) async throws -> Response {

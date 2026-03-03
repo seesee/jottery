@@ -14,7 +14,8 @@ import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
 import { authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
-import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
+import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
+import type { EncryptionResult } from '../types/crypto';
 import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
 import { clearAllStores, deleteDB, initDB } from './db';
@@ -40,22 +41,52 @@ export async function initialize(password: string): Promise<void> {
     console.log('[Initialize] Using existing encryption metadata from credential import');
     await unlock(password);
   } else {
-    // Fresh installation - generate new salt
-    console.log('[Initialize] Fresh installation - generating new encryption metadata');
+    // Fresh installation — envelope encryption
+    console.log('[Initialize] Fresh installation - generating envelope encryption metadata');
 
-    const salt = cryptoService.generateSalt();
+    // Generate random master key and per-device salt
+    const masterKeyBytes = cryptoService.generateMasterKey();
+    const deviceSalt = cryptoService.generateSalt();
+
+    // Derive device key for local storage
+    const deviceKey = await cryptoService.deriveKey({
+      password,
+      salt: deviceSalt,
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      extractable: false,
+    });
+
+    // Wrap master key for local storage
+    const localWrapped = await cryptoService.wrapMasterKey(deviceKey, masterKeyBytes);
 
     const metadata: EncryptionMetadata = {
-      salt: arrayBufferToBase64(salt),
-      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      envelopeVersion: 1,
+      deviceSalt: arrayBufferToBase64(deviceSalt),
+      localWrappedMaster: JSON.stringify(localWrapped),
+      wrappingKdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
       createdAt: new Date().toISOString(),
       algorithm: 'AES-256-GCM',
     };
 
     await encryptionRepository.setMetadata(metadata);
 
-    // Derive master key and unlock
-    await unlock(password);
+    // Import the raw master key bytes as a CryptoKey for encryption operations
+    const key = await crypto.subtle.importKey(
+      'raw',
+      masterKeyBytes,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
+
+    // Store the master key
+    const masterKey: MasterKey = {
+      key,
+      keyBytes: masterKeyBytes,
+      derivedAt: Date.now(),
+    };
+    keyManager.setMasterKey(masterKey);
+    console.log('[Initialize] ✓ Envelope encryption initialised');
   }
 
   // Ensure default settings are saved
@@ -77,24 +108,60 @@ export async function unlock(password: string): Promise<void> {
     throw new Error('Application not initialized. Please initialize first.');
   }
 
-  console.log('[Unlock] Encryption metadata found, deriving key...');
-  console.log('[Unlock] Salt length:', metadata.salt.length, 'Iterations:', metadata.iterations);
+  let key: CryptoKey;
+  let keyBytes: Uint8Array;
 
-  // Derive master key (extractable so we can export bytes for JWE backup)
-  const salt = base64ToUint8Array(metadata.salt);
-  const key = await cryptoService.deriveKey({
-    password,
-    salt,
-    iterations: metadata.iterations,
-    algorithm: 'PBKDF2',
-    extractable: true,
-  });
+  if (metadata.envelopeVersion) {
+    // === ENVELOPE PATH ===
+    console.log('[Unlock] Envelope encryption detected (v' + metadata.envelopeVersion + ')');
 
-  // Export key as raw bytes for JWE operations (backup)
-  const rawKey = await crypto.subtle.exportKey('raw', key);
-  const keyBytes = new Uint8Array(rawKey);
+    const deviceSalt = base64ToUint8Array(metadata.deviceSalt!);
+    const deviceKey = await cryptoService.deriveKey({
+      password,
+      salt: deviceSalt,
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      extractable: false,
+    });
 
-  console.log('[Unlock] ✓ Master key derived and exported');
+    // Unwrap the master key from local storage
+    const localWrapped: EncryptionResult = JSON.parse(metadata.localWrappedMaster!);
+    try {
+      keyBytes = await cryptoService.unwrapMasterKey(deviceKey, localWrapped);
+    } catch {
+      throw new Error('Incorrect password');
+    }
+
+    // Import as CryptoKey
+    key = await crypto.subtle.importKey(
+      'raw',
+      keyBytes,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
+
+    console.log('[Unlock] ✓ Master key unwrapped from envelope');
+  } else if (metadata.salt) {
+    // === LEGACY PATH ===
+    console.log('[Unlock] Legacy encryption detected, deriving key...');
+    console.log('[Unlock] Salt length:', metadata.salt.length, 'Iterations:', metadata.iterations);
+
+    const salt = base64ToUint8Array(metadata.salt);
+    key = await cryptoService.deriveKey({
+      password,
+      salt,
+      iterations: metadata.iterations!,
+      algorithm: 'PBKDF2',
+      extractable: true,
+    });
+
+    const rawKey = await crypto.subtle.exportKey('raw', key);
+    keyBytes = new Uint8Array(rawKey);
+
+    console.log('[Unlock] ✓ Master key derived (legacy)');
+  } else {
+    throw new Error('Invalid encryption metadata: neither envelope nor legacy fields found');
+  }
 
   // Verify the key is correct by attempting to decrypt an existing note
   // This prevents the UI from loading with a wrong password
@@ -133,6 +200,11 @@ export async function unlock(password: string): Promise<void> {
   // Handle imported credentials (IMPORT: marker)
   console.log('[Unlock] Checking for imported credentials...');
   await handleImportedCredentials(key);
+
+  // Attempt migration from legacy to envelope encryption
+  if (!metadata.envelopeVersion) {
+    await tryMigrateToEnvelope(password, keyBytes);
+  }
 
   // Setup auto-lock (disabled if rememberPassword is enabled)
   if (settings.rememberPassword) {
@@ -346,8 +418,15 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
         console.warn('[ImportHandler] Sync disabled due to re-registration failure:', errorMessage);
         // Don't throw - let the app work without sync
       }
+    }
+    // Check for ONBOARD: marker (v2 credential import — needs email + password to complete)
+    else if (metadata.apiKey.startsWith('ONBOARD:')) {
+      console.log('[ImportHandler] ONBOARD marker detected — user needs to authenticate via sync setup to complete onboarding');
+      // Nothing to do here: the marker stays in place until the user
+      // completes the "Connect existing account" flow in SyncSetupForm,
+      // which calls onboardFromServer() to download the wrapped master key.
     } else {
-      console.log('[ImportHandler] No IMPORT/ENCRYPTED/RESTORE marker - credentials already encrypted');
+      console.log('[ImportHandler] No IMPORT/ENCRYPTED/RESTORE/ONBOARD marker - credentials already encrypted');
     }
   } catch (error) {
     console.error('[ImportHandler] ERROR handling imported credentials:', error);
@@ -373,27 +452,207 @@ export function isLocked(): boolean {
 }
 
 /**
- * Change the password
+ * Change the password (enabled by envelope encryption — no re-encryption needed)
  */
 export async function changePassword(
   currentPassword: string,
-  _newPassword: string
+  newPassword: string
 ): Promise<void> {
-  // Verify current password by unlocking
+  // Ensure we're unlocked to get the master key
   if (isLocked()) {
     await unlock(currentPassword);
   }
 
-  // This is a simplified version - in reality, we'd need to:
-  // 1. Decrypt all notes with old key
-  // 2. Derive new key from new password
-  // 3. Re-encrypt all notes with new key
-  // 4. Update encryption metadata
-  // For now, we'll throw an error as this requires more complex migration
+  const currentMasterKey = keyManager.getMasterKey();
+  if (!currentMasterKey) {
+    throw new Error('Cannot change password: application is locked');
+  }
 
-  throw new Error(
-    'Password change not yet implemented. This requires re-encrypting all data.'
+  const metadata = await encryptionRepository.getMetadata();
+  if (!metadata) {
+    throw new Error('No encryption metadata found');
+  }
+
+  // If still on legacy, migrate first
+  if (!metadata.envelopeVersion) {
+    await tryMigrateToEnvelope(currentPassword, currentMasterKey.keyBytes);
+  }
+
+  // Re-wrap master key with new password for local storage
+  const newDeviceSalt = cryptoService.generateSalt();
+  const newDeviceKey = await cryptoService.deriveKey({
+    password: newPassword,
+    salt: newDeviceSalt,
+    iterations: CRYPTO_PBKDF2_ITERATIONS,
+    extractable: false,
+  });
+  const newLocalWrapped = await cryptoService.wrapMasterKey(newDeviceKey, currentMasterKey.keyBytes);
+
+  // Update local encryption metadata
+  await encryptionRepository.setMetadata({
+    ...metadata,
+    envelopeVersion: 1,
+    deviceSalt: arrayBufferToBase64(newDeviceSalt),
+    localWrappedMaster: JSON.stringify(newLocalWrapped),
+    wrappingKdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+    // Clear legacy fields
+    salt: undefined,
+    iterations: undefined,
+  });
+
+  // Re-wrap master key for server (if sync configured)
+  const syncMetadata = await syncRepository.getMetadata();
+  if (syncMetadata?.syncEnabled && syncMetadata.userId && syncMetadata.apiKey && syncMetadata.syncEndpoint) {
+    try {
+      const wrappingKey = await cryptoService.deriveWrappingKey(newPassword, syncMetadata.userId);
+      const serverWrapped = await cryptoService.wrapMasterKey(wrappingKey, currentMasterKey.keyBytes);
+
+      // Get plaintext API key for auth
+      const encryptedApiKey = JSON.parse(syncMetadata.apiKey);
+      const plaintextApiKey = await cryptoService.decryptText(encryptedApiKey, currentMasterKey.key);
+
+      await authService.putWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey, {
+        blob: JSON.stringify(serverWrapped),
+        kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+        kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
+      });
+      console.log('[ChangePassword] ✓ Server wrapped key updated');
+    } catch (error) {
+      console.warn('[ChangePassword] Failed to update server wrapped key:', error);
+      // Non-fatal — local password change still succeeded
+    }
+  }
+
+  console.log('[ChangePassword] ✓ Password changed successfully (no re-encryption needed)');
+}
+
+/**
+ * Migrate from legacy (direct PBKDF2) to envelope encryption.
+ * The master key bytes are the same — just stored differently.
+ */
+export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uint8Array): Promise<void> {
+  try {
+    const syncMetadata = await syncRepository.getMetadata();
+
+    // Only migrate if sync is configured and we have a userId
+    if (!syncMetadata?.syncEnabled || !syncMetadata.userId || !syncMetadata.apiKey || !syncMetadata.syncEndpoint) {
+      console.log('[Migration] Skipping envelope migration: sync not configured or no userId');
+      return;
+    }
+
+    const currentMasterKey = keyManager.getMasterKey();
+    if (!currentMasterKey) {
+      console.log('[Migration] Skipping: no master key in memory');
+      return;
+    }
+
+    console.log('[Migration] Starting legacy → envelope migration...');
+
+    // Upload wrapped key to server
+    const wrappingKey = await cryptoService.deriveWrappingKey(password, syncMetadata.userId);
+    const serverWrapped = await cryptoService.wrapMasterKey(wrappingKey, masterKeyBytes);
+
+    // Get plaintext API key for auth
+    const encryptedApiKey = JSON.parse(syncMetadata.apiKey);
+    const plaintextApiKey = await cryptoService.decryptText(encryptedApiKey, currentMasterKey.key);
+
+    await authService.putWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey, {
+      blob: JSON.stringify(serverWrapped),
+      kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+      kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
+    });
+    console.log('[Migration] ✓ Wrapped key uploaded to server');
+
+    // Convert local storage to envelope format
+    const deviceSalt = cryptoService.generateSalt();
+    const deviceKey = await cryptoService.deriveKey({
+      password,
+      salt: deviceSalt,
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      extractable: false,
+    });
+    const localWrapped = await cryptoService.wrapMasterKey(deviceKey, masterKeyBytes);
+
+    await encryptionRepository.setMetadata({
+      envelopeVersion: 1,
+      deviceSalt: arrayBufferToBase64(deviceSalt),
+      localWrappedMaster: JSON.stringify(localWrapped),
+      wrappingKdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+      createdAt: new Date().toISOString(),
+      algorithm: 'AES-256-GCM',
+    });
+
+    console.log('[Migration] ✓ Local metadata migrated to envelope format');
+    console.log('[Migration] ✓✓✓ Migration complete!');
+  } catch (error) {
+    console.warn('[Migration] Envelope migration failed (non-fatal, will retry next unlock):', error);
+    // Non-fatal — legacy path still works
+  }
+}
+
+/**
+ * Onboard a new device by downloading the wrapped master key from the server.
+ * Called during sync setup when the user provides email + password.
+ */
+export async function onboardFromServer(
+  password: string,
+  endpoint: string,
+  userId: string,
+  apiKey: string
+): Promise<void> {
+  console.log('[Onboard] Downloading wrapped key from server...');
+
+  // Get the wrapped key from the server
+  const wrappedKeyResponse = await authService.getWrappedKey(endpoint, apiKey);
+  if (!wrappedKeyResponse) {
+    throw new Error('No wrapped key found on server. The source device may not have migrated to envelope encryption yet.');
+  }
+
+  // Derive wrapping key from password + userId
+  const wrappingKey = await cryptoService.deriveWrappingKey(password, userId);
+
+  // Unwrap the master key
+  const serverWrapped: EncryptionResult = JSON.parse(wrappedKeyResponse.blob);
+  const masterKeyBytes = await cryptoService.unwrapMasterKey(wrappingKey, serverWrapped);
+  console.log('[Onboard] ✓ Master key unwrapped from server blob');
+
+  // Import as CryptoKey
+  const key = await crypto.subtle.importKey(
+    'raw',
+    masterKeyBytes,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
   );
+
+  // Create local envelope storage
+  const deviceSalt = cryptoService.generateSalt();
+  const deviceKey = await cryptoService.deriveKey({
+    password,
+    salt: deviceSalt,
+    iterations: CRYPTO_PBKDF2_ITERATIONS,
+    extractable: false,
+  });
+  const localWrapped = await cryptoService.wrapMasterKey(deviceKey, masterKeyBytes);
+
+  await encryptionRepository.setMetadata({
+    envelopeVersion: 1,
+    deviceSalt: arrayBufferToBase64(deviceSalt),
+    localWrappedMaster: JSON.stringify(localWrapped),
+    wrappingKdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+    createdAt: new Date().toISOString(),
+    algorithm: 'AES-256-GCM',
+  });
+
+  // Store the master key
+  const masterKey: MasterKey = {
+    key,
+    keyBytes: masterKeyBytes,
+    derivedAt: Date.now(),
+  };
+  keyManager.setMasterKey(masterKey);
+
+  console.log('[Onboard] ✓ Device onboarded via envelope encryption');
 }
 
 /**

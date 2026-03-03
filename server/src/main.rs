@@ -119,6 +119,7 @@ async fn main() {
         .route("/api/v1/sync/push", post(api::sync::push))
         .route("/api/v1/sync/pull", post(api::sync::pull))
         .route("/api/v1/sync/notes/:id", delete(api::sync::delete_note))
+        .route("/api/v1/auth/wrapped-key", get(api::auth::get_wrapped_key).put(api::auth::put_wrapped_key))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             api::middleware::auth_middleware,
@@ -136,6 +137,7 @@ async fn main() {
         .route("/api/v1/user/account", get(api::user::get_account_info).delete(api::user::delete_account))
         .route("/api/v1/user/notes", delete(api::user::delete_all_notes))
         .route("/api/v1/user/change-password", post(api::user::change_password))
+        .route("/api/v1/user/wrapped-key", get(api::auth::get_wrapped_key_session).put(api::auth::put_wrapped_key_session))
         .route("/api/v1/user/logout", post(api::user::logout))
         .route("/api/v1/user/devices", get(api::user::list_devices))
         .route("/api/v1/user/devices/:id", delete(api::user::revoke_device))

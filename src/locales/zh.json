@@ -581,6 +581,21 @@
         "description": "管理您的账户、更改密码或删除数据",
         "openButton": "打开用户门户"
       },
+      "changePassword": {
+        "title": "更改密码",
+        "description": "更改您的加密密码。得益于信封加密，此操作非常快速——您的笔记无需重新加密。",
+        "currentPasswordLabel": "当前密码",
+        "newPasswordLabel": "新密码",
+        "confirmPasswordLabel": "确认新密码",
+        "currentPasswordPlaceholder": "输入当前密码",
+        "newPasswordPlaceholder": "输入新密码",
+        "confirmPasswordPlaceholder": "确认新密码",
+        "mismatch": "密码不匹配",
+        "changing": "正在更改密码...",
+        "button": "更改密码",
+        "success": "密码更改成功",
+        "error": "更改密码失败: {error}"
+      },
       "connectionDetails": {
         "title": "连接详情",
         "server": "服务器",

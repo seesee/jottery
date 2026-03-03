@@ -22,7 +22,7 @@ impl<'a> SyncRepository<'a> {
             .query_row(
                 "SELECT last_sync_at, last_push_at, last_pull_at, api_key, client_id,
                         sync_enabled, sync_endpoint, auto_sync_interval, user_email,
-                        pending_registration_email, pending_device_name
+                        pending_registration_email, pending_device_name, user_id
                  FROM sync_metadata WHERE id = 1",
                 [],
                 |row| {
@@ -53,6 +53,7 @@ impl<'a> SyncRepository<'a> {
                         user_email: row.get(8)?,
                         pending_registration_email: row.get(9)?,
                         pending_device_name: row.get(10)?,
+                        user_id: row.get(11)?,
                     })
                 },
             )
@@ -67,8 +68,8 @@ impl<'a> SyncRepository<'a> {
             "INSERT OR REPLACE INTO sync_metadata (
                 id, last_sync_at, last_push_at, last_pull_at, api_key, client_id,
                 sync_enabled, sync_endpoint, auto_sync_interval, user_email,
-                pending_registration_email, pending_device_name
-            ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                pending_registration_email, pending_device_name, user_id
+            ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 metadata.last_sync_at.map(|dt| dt.to_rfc3339()),
                 metadata.last_push_at.map(|dt| dt.to_rfc3339()),
@@ -81,6 +82,7 @@ impl<'a> SyncRepository<'a> {
                 &metadata.user_email,
                 &metadata.pending_registration_email,
                 &metadata.pending_device_name,
+                &metadata.user_id,
             ],
         )?;
 

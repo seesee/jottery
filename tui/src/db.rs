@@ -92,6 +92,8 @@ impl Database {
             (13, include_str!("../migrations/013_add_pending_device_name.sql")),
             (14, include_str!("../migrations/014_add_version_show_preview.sql")),
             (15, include_str!("../migrations/015_add_hash_chain.sql")),
+            (16, include_str!("../migrations/016_add_envelope_encryption.sql")),
+            (17, include_str!("../migrations/017_add_user_id.sql")),
         ];
 
         // Run pending migrations
@@ -191,6 +193,14 @@ impl Database {
     /// Get a mutable reference to the inner connection
     pub fn connection_mut(&mut self) -> &mut Connection {
         &mut self.conn
+    }
+
+    /// Change the SQLCipher database password
+    pub fn change_password(&self, new_password: &str) -> anyhow::Result<()> {
+        // SQLCipher rekey changes the encryption key for the database
+        let quoted = new_password.replace('\'', "''");
+        self.conn.execute_batch(&format!("PRAGMA rekey = '{}';", quoted))?;
+        Ok(())
     }
 
     /// Close the database connection

@@ -613,6 +613,21 @@
         "description": "Manage your account, change password, or delete your data",
         "openButton": "Open User Portal"
       },
+      "changePassword": {
+        "title": "Change Password",
+        "description": "Change your encryption password. Thanks to envelope encryption, this is fast — your notes do not need to be re-encrypted.",
+        "currentPasswordLabel": "Current Password",
+        "newPasswordLabel": "New Password",
+        "confirmPasswordLabel": "Confirm New Password",
+        "currentPasswordPlaceholder": "Enter current password",
+        "newPasswordPlaceholder": "Enter new password",
+        "confirmPasswordPlaceholder": "Confirm new password",
+        "mismatch": "Passwords do not match",
+        "changing": "Changing password...",
+        "button": "Change Password",
+        "success": "Password changed successfully",
+        "error": "Failed to change password: {error}"
+      },
       "connectionDetails": {
         "title": "Connection Details",
         "server": "Server",

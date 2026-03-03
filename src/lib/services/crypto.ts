@@ -11,7 +11,7 @@ import type {
 } from '../types';
 import type { Note, Attachment } from '../types/models';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
-import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
+import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS } from '../constants';
 
 /**
  * Maximum number of ancestor hashes to keep in the hash chain.
@@ -213,6 +213,64 @@ class WebCryptoService implements CryptoService {
     // JSON.stringify produces deterministic output for this simple object
     const data = JSON.stringify(hashData);
     return this.hash(data);
+  }
+
+  // ===========================================================================
+  // Envelope Encryption Methods
+  // ===========================================================================
+
+  /**
+   * Generate a random 256-bit master key for envelope encryption
+   */
+  generateMasterKey(): Uint8Array {
+    return crypto.getRandomValues(new Uint8Array(KEY_LENGTH / 8));
+  }
+
+  /**
+   * Derive a wrapping key from password + userId.
+   * Used only during onboarding/migration — not for daily unlock.
+   * The userId serves as a deterministic, per-user salt.
+   */
+  async deriveWrappingKey(password: string, userId: string): Promise<CryptoKey> {
+    const salt = stringToArrayBuffer(userId);
+    return this.deriveKey({
+      password,
+      salt: new Uint8Array(salt),
+      iterations: CRYPTO_WRAPPING_ITERATIONS,
+      extractable: false,
+    });
+  }
+
+  /**
+   * Wrap (encrypt) a master key with a wrapping key using AES-GCM
+   */
+  async wrapMasterKey(wrappingKey: CryptoKey, masterKeyBytes: Uint8Array): Promise<EncryptionResult> {
+    const iv = this.generateIV();
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: ALGORITHM, iv: iv as BufferSource },
+      wrappingKey,
+      masterKeyBytes
+    );
+    return {
+      ciphertext: arrayBufferToBase64(ciphertext),
+      iv: arrayBufferToBase64(iv),
+    };
+  }
+
+  /**
+   * Unwrap (decrypt) a master key from a wrapped blob using AES-GCM
+   */
+  async unwrapMasterKey(wrappingKey: CryptoKey, wrappedBlob: EncryptionResult): Promise<Uint8Array> {
+    try {
+      const decrypted = await crypto.subtle.decrypt(
+        { name: ALGORITHM, iv: base64ToArrayBuffer(wrappedBlob.iv) },
+        wrappingKey,
+        base64ToArrayBuffer(wrappedBlob.ciphertext)
+      );
+      return new Uint8Array(decrypted);
+    } catch {
+      throw new Error('Failed to unwrap master key. Wrong password or corrupted data.');
+    }
   }
 
   /**

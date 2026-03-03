@@ -581,6 +581,21 @@
         "description": "Hesabınızı yönetin, şifrenizi değiştirin veya verilerinizi silin",
         "openButton": "Kullanıcı Portalını Aç"
       },
+      "changePassword": {
+        "title": "Şifre Değiştir",
+        "description": "Şifreleme şifrenizi değiştirin. Zarf şifreleme sayesinde bu işlem hızlıdır — notlarınızın yeniden şifrelenmesine gerek yoktur.",
+        "currentPasswordLabel": "Mevcut Şifre",
+        "newPasswordLabel": "Yeni Şifre",
+        "confirmPasswordLabel": "Yeni Şifreyi Onayla",
+        "currentPasswordPlaceholder": "Mevcut şifreyi girin",
+        "newPasswordPlaceholder": "Yeni şifreyi girin",
+        "confirmPasswordPlaceholder": "Yeni şifreyi onaylayın",
+        "mismatch": "Şifreler eşleşmiyor",
+        "changing": "Şifre değiştiriliyor...",
+        "button": "Şifre Değiştir",
+        "success": "Şifre başarıyla değiştirildi",
+        "error": "Şifre değiştirilemedi: {error}"
+      },
       "connectionDetails": {
         "title": "Bağlantı Detayları",
         "server": "Sunucu",

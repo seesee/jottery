@@ -14,10 +14,11 @@ data class EncryptionMetadata(
     @PrimaryKey
     val id: Int = 1,
 
-    // Base64-encoded 32-byte salt
-    val salt: String,
+    // Base64-encoded 32-byte salt (null when envelope active)
+    val salt: String? = null,
 
-    val iterations: Int,
+    // PBKDF2 iterations (null when envelope active)
+    val iterations: Int? = null,
 
     @ColumnInfo(name = "created_at")
     val createdAt: String,
@@ -26,10 +27,23 @@ data class EncryptionMetadata(
 
     // Encrypted known plaintext for password verification
     val verification: String? = null,
+
+    // Envelope encryption fields (post-migration)
+    @ColumnInfo(name = "envelope_version")
+    val envelopeVersion: Int? = null,       // 1 = envelope active
+
+    @ColumnInfo(name = "device_salt")
+    val deviceSalt: String? = null,         // Base64-encoded per-device salt
+
+    @ColumnInfo(name = "local_wrapped_master")
+    val localWrappedMaster: String? = null,  // JSON {"ciphertext":"...","iv":"..."}
+
+    @ColumnInfo(name = "wrapping_kdf_version")
+    val wrappingKdfVersion: Int? = null,     // 1 = PBKDF2
 ) {
     val saltData: ByteArray?
         get() = try {
-            Base64.decode(salt, Base64.NO_WRAP)
+            salt?.let { Base64.decode(it, Base64.NO_WRAP) }
         } catch (_: Exception) {
             null
         }

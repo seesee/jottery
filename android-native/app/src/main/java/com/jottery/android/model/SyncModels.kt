@@ -238,3 +238,19 @@ data class SyncSavedSearch(
     val deletedAt: String? = null,
     val version: Int,
 )
+
+// MARK: - Wrapped Key (Envelope Encryption)
+
+@Serializable
+data class WrappedKeyResponse(
+    val blob: String,           // JSON {"ciphertext":"...","iv":"..."}
+    val kdfVersion: Int,
+    val kdfIterations: Int,
+)
+
+@Serializable
+data class PutWrappedKeyRequest(
+    val blob: String,
+    val kdfVersion: Int,
+    val kdfIterations: Int,
+)

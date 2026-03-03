@@ -409,9 +409,14 @@ pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Res
 
         use base64::Engine;
 
+        // Check if envelope encryption is active — use v2 format (just endpoint)
+        if !use_legacy_format && encryption_meta.envelope_version.is_some() {
+            return Ok(format!("jottery:v2:{}", metadata.sync_endpoint));
+        }
+
         if use_legacy_format {
             // Legacy format: plain base64 JSON with salt inside (for older Jottery versions)
-            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
             let mut creds = SyncCredentials::new(
                 metadata.sync_endpoint,
                 api_key,
@@ -421,7 +426,7 @@ pub fn generate_sync_credentials_text(app: &App, use_legacy_format: bool) -> Res
             creds.to_base64()
         } else {
             // Encrypted format: jottery:v1:<salt_base64>.<encrypted_payload_base64>
-            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(&encryption_meta.salt);
+            let salt_b64 = base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[]));
 
             // Create credentials payload WITHOUT salt (salt goes in prefix)
             let creds = SyncCredentials::new(
@@ -453,6 +458,43 @@ pub fn process_credentials_input_with_device_name(app: &mut App, input: &str, de
 
     // Get database
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+
+    // Check for v2 format: jottery:v2:<endpoint> (envelope encryption — just needs endpoint)
+    if let Some(endpoint) = input.strip_prefix("jottery:v2:") {
+        let endpoint = endpoint.trim().to_string();
+        if endpoint.is_empty() {
+            anyhow::bail!("Invalid v2 credentials: missing endpoint");
+        }
+
+        let endpoint = if !endpoint.starts_with("http://") && !endpoint.starts_with("https://") {
+            format!("https://{}", endpoint)
+        } else {
+            endpoint
+        };
+
+        app.debug_log(&format!("Process credentials - v2 format, endpoint: {}", endpoint));
+        app.debug_log(&format!("Process credentials - Device name: {}", device_name));
+
+        // Store endpoint and ONBOARD marker — the actual onboarding happens during
+        // device registration (email + password needed to derive wrapping key)
+        let sync_repo = SyncRepository::new(db.connection());
+        let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+        metadata.api_key = Some("ONBOARD:".to_string());
+        metadata.sync_endpoint = endpoint.clone();
+        metadata.sync_enabled = false;
+        metadata.pending_device_name = Some(device_name.to_string());
+        sync_repo.update_metadata(&metadata)?;
+
+        // Update app settings with the endpoint
+        app.settings.sync_endpoint = Some(endpoint);
+        app.settings.sync_enabled = false;
+        save_settings(app)?;
+
+        app.sync_status = Some(t!("sync.v2_import_success").to_string());
+        app.sync_status_set_at = Some(std::time::Instant::now());
+
+        return Ok(());
+    }
 
     // Check for encrypted format: jottery:v1:<salt>.<encrypted_payload>
     if let Some(payload) = input.strip_prefix("jottery:v1:") {
@@ -675,29 +717,67 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     let response = client.register_device(email, password, device_name, "tui")?;
 
     // Get database
+    // Copy key before borrowing app mutably
+    let key = *app.key.as_ref().ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
+
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
 
     // Encrypt and save the API key
-    let encrypted = app.crypto.encrypt_text(&response.api_key, key)?;
+    let encrypted = app.crypto.encrypt_text(&response.api_key, &key)?;
     let encrypted_api_key = serde_json::to_string(&encrypted)?;
+
+    // Save values before moving response fields
+    let api_key_for_check = response.api_key.clone();
+    let user_id_for_check = response.user_id.clone();
 
     // Save sync metadata - also clear pending registration since we're now fully registered
     let sync_repo = SyncRepository::new(db.connection());
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
     metadata.api_key = Some(encrypted_api_key);
     metadata.client_id = Some(response.client_id);
+    metadata.user_id = Some(response.user_id);
     metadata.sync_endpoint = endpoint.to_string();
     metadata.sync_enabled = true;
     metadata.pending_registration_email = None; // Clear pending registration
     sync_repo.update_metadata(&metadata)?;
-
-    // Update app settings
-    app.settings.sync_endpoint = Some(endpoint.to_string());
-    app.settings.sync_enabled = true;
-    save_settings(app)?;
+    match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check) {
+        Ok(()) => app.debug_log("Envelope setup succeeded after device registration"),
+        Err(e) => app.debug_log(&format!("Envelope setup after registration failed (non-fatal): {}", e)),
+    }
 
     Ok(())
+}
+
+/// Try to set up envelope encryption after device registration.
+/// First attempts onboarding (downloading wrapped key from server),
+/// then falls back to migrating local legacy encryption.
+fn try_envelope_setup(
+    app: &mut App,
+    password: &str,
+    master_key: &[u8; 32],
+    endpoint: &str,
+    plaintext_api_key: &str,
+    user_id: &str,
+) -> Result<()> {
+    // Try onboarding first (server may already have a wrapped key from another device)
+    let client = crate::api::AuthClient::new(endpoint.to_string());
+    match client.get_wrapped_key(plaintext_api_key)? {
+        Some(_) => {
+            // Server has a wrapped key — onboard from it
+            app.debug_log("Server has wrapped key, onboarding...");
+            let onboarded_key = super::envelope::onboard_from_server(app, password, endpoint, user_id, plaintext_api_key)?;
+            // Verify onboarded key matches our current key
+            if onboarded_key != *master_key {
+                app.debug_log("Warning: onboarded master key differs from local key (expected for new device joining existing account)");
+            }
+            Ok(())
+        }
+        None => {
+            // No wrapped key on server — migrate our local key
+            app.debug_log("No wrapped key on server, migrating local...");
+            super::envelope::try_migrate_to_envelope(app, password, master_key)
+        }
+    }
 }
 
 /// Save pending registration state to database
@@ -744,6 +824,7 @@ pub fn clear_pending_registration(app: &mut App) -> Result<()> {
     metadata.api_key = None;
     metadata.client_id = None;
     metadata.user_email = None;
+    metadata.user_id = None;
     metadata.sync_enabled = false;
     sync_repo.update_metadata(&metadata)?;
 
@@ -767,8 +848,27 @@ pub fn is_sync_fully_configured(app: &mut App) -> bool {
     if let Some(db) = &app.db {
         let sync_repo = SyncRepository::new(db.connection());
         if let Ok(Some(metadata)) = sync_repo.get_metadata() {
-            return metadata.api_key.is_some();
+            // ONBOARD: marker means v2 credentials were imported but setup isn't complete
+            if let Some(ref key) = metadata.api_key {
+                return !key.starts_with("ONBOARD:") && !key.starts_with("PLAINTEXT:") && !key.starts_with("ENCRYPTED:");
+            }
         }
     }
     false
+}
+
+/// Check if there's a pending ONBOARD marker (v2 credential import awaiting registration)
+/// Returns the stored endpoint if ONBOARD is pending
+pub fn get_pending_onboard(app: &mut App) -> Option<String> {
+    if let Some(db) = &app.db {
+        let sync_repo = SyncRepository::new(db.connection());
+        if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+            if let Some(ref key) = metadata.api_key {
+                if key.starts_with("ONBOARD:") && !metadata.sync_endpoint.is_empty() {
+                    return Some(metadata.sync_endpoint.clone());
+                }
+            }
+        }
+    }
+    None
 }

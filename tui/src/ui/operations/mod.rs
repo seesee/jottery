@@ -12,6 +12,7 @@
 
 pub mod auth;
 pub mod bulk;
+pub mod envelope;
 pub mod inbox;
 pub mod notes;
 pub mod pager;

@@ -581,6 +581,21 @@
         "description": "Zarządzaj kontem, zmień hasło lub usuń dane",
         "openButton": "Otwórz portal użytkownika"
       },
+      "changePassword": {
+        "title": "Zmień hasło",
+        "description": "Zmień swoje hasło szyfrowania. Dzięki szyfrowaniu kopertowemu jest to szybkie — Twoje notatki nie muszą być ponownie szyfrowane.",
+        "currentPasswordLabel": "Aktualne hasło",
+        "newPasswordLabel": "Nowe hasło",
+        "confirmPasswordLabel": "Potwierdź nowe hasło",
+        "currentPasswordPlaceholder": "Wprowadź aktualne hasło",
+        "newPasswordPlaceholder": "Wprowadź nowe hasło",
+        "confirmPasswordPlaceholder": "Potwierdź nowe hasło",
+        "mismatch": "Hasła nie są zgodne",
+        "changing": "Zmiana hasła...",
+        "button": "Zmień hasło",
+        "success": "Hasło zostało pomyślnie zmienione",
+        "error": "Nie udało się zmienić hasła: {error}"
+      },
       "connectionDetails": {
         "title": "Szczegóły połączenia",
         "server": "Serwer",

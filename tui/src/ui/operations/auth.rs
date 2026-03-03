@@ -5,6 +5,8 @@ use rust_i18n::t;
 use std::time::Instant;
 use zeroize::Zeroize;
 
+use base64::Engine as _;
+
 use crate::{
     db::Database,
     repository::{EncryptionRepository, SettingsRepository, sync::SyncRepository},
@@ -22,29 +24,44 @@ pub fn unlock(app: &mut App) -> Result<()> {
     let encryption_repo = EncryptionRepository::new(db.connection());
 
     // Get or create encryption metadata
-    let (salt, iterations) = if let Some(metadata) = encryption_repo.get()? {
-        // Load existing salt from database
-        (metadata.salt, metadata.iterations)
+    let metadata = encryption_repo.get()?;
+    let key = if let Some(ref meta) = metadata {
+        if meta.envelope_version.is_some() {
+            // === ENVELOPE PATH ===
+            app.debug_log("Unlock - Envelope encryption detected");
+            let device_salt_b64 = meta.device_salt.as_deref()
+                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing device_salt"))?;
+            let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt_b64)
+                .context("Invalid device_salt base64")?;
+
+            let device_key = app.crypto.derive_key(&app.password_input, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+
+            let wrapped_json = meta.local_wrapped_master.as_deref()
+                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing local_wrapped_master"))?;
+            let wrapped: crate::models::encryption::EncryptedData = serde_json::from_str(wrapped_json)
+                .context("Invalid local_wrapped_master JSON")?;
+
+            let master_key = app.crypto.unwrap_master_key(&device_key, &wrapped)?;
+            app.debug_log("Unlock - Master key unwrapped from envelope");
+            master_key
+        } else if let (Some(salt), Some(iterations)) = (&meta.salt, meta.iterations) {
+            // === LEGACY PATH ===
+            app.debug_log(&format!("Unlock - Legacy encryption, iterations: {}", iterations));
+            app.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(salt)));
+            app.crypto.derive_key(&app.password_input, salt, iterations)?
+        } else {
+            anyhow::bail!("Invalid encryption metadata: neither envelope nor legacy fields found");
+        }
     } else {
         // First-time setup: generate new salt and save it
         let new_salt = app.crypto.generate_salt();
         let iterations = 256_000;
         encryption_repo.save(&new_salt, iterations)?;
-        (new_salt.to_vec(), iterations)
+        app.debug_log(&format!("Unlock - New database, generated salt, iterations: {}", iterations));
+        app.crypto.derive_key(&app.password_input, &new_salt, iterations)?
     };
 
-    // Derive encryption key from password and salt
     app.debug_log(&format!("Unlock - Password length: {} chars", app.password_input.len()));
-    app.debug_log(&format!("Unlock - Password is empty: {}", app.password_input.is_empty()));
-
-    let key = app
-        .crypto
-        .derive_key(&app.password_input, &salt, iterations)?;
-
-    // Debug logging for troubleshooting (key bytes intentionally excluded for security)
-    app.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(&salt)));
-    app.debug_log(&format!("Unlock - Salt length: {} bytes", salt.len()));
-    app.debug_log(&format!("Unlock - Iterations: {}", iterations));
 
     app.key_manager.set_master_key(key);
     app.key = Some(key);
@@ -90,6 +107,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         // Update metadata with NEW credentials
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.client_id = Some(clone_result.client_id);
+                        metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_enabled = true;
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
@@ -160,6 +178,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
 
                         // Update metadata with NEW credentials
                         metadata.client_id = Some(clone_result.client_id);
+                        metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;

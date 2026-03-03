@@ -79,6 +79,18 @@ export const SYNC_PROGRESS_THRESHOLD = 5;
  */
 export const CRYPTO_PBKDF2_ITERATIONS = 600000;
 
+/**
+ * PBKDF2 iteration count for the wrapping key (envelope encryption).
+ * Higher than daily unlock since wrapping only happens during onboarding/migration.
+ */
+export const CRYPTO_WRAPPING_ITERATIONS = 1_000_000;
+
+/**
+ * KDF version for wrapped key derivation.
+ * 1 = PBKDF2-HMAC-SHA256, 2 = Argon2id (future)
+ */
+export const CRYPTO_WRAPPING_KDF_VERSION = 1;
+
 // =============================================================================
 // Security Constants
 // =============================================================================

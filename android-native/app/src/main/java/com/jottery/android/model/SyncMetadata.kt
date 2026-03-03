@@ -44,4 +44,7 @@ data class SyncMetadata(
 
     @ColumnInfo(name = "pending_device_name")
     val pendingDeviceName: String? = null,
+
+    @ColumnInfo(name = "user_id")
+    val userId: String? = null,
 )

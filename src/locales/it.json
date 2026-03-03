@@ -581,6 +581,21 @@
         "description": "Gestisci il tuo account, cambia la password o elimina i tuoi dati",
         "openButton": "Apri portale utente"
       },
+      "changePassword": {
+        "title": "Cambia password",
+        "description": "Cambia la tua password di crittografia. Grazie alla crittografia a busta, l'operazione è veloce — le tue note non devono essere nuovamente crittografate.",
+        "currentPasswordLabel": "Password attuale",
+        "newPasswordLabel": "Nuova password",
+        "confirmPasswordLabel": "Conferma nuova password",
+        "currentPasswordPlaceholder": "Inserisci la password attuale",
+        "newPasswordPlaceholder": "Inserisci la nuova password",
+        "confirmPasswordPlaceholder": "Conferma la nuova password",
+        "mismatch": "Le password non corrispondono",
+        "changing": "Modifica della password in corso...",
+        "button": "Cambia password",
+        "success": "Password modificata con successo",
+        "error": "Impossibile modificare la password: {error}"
+      },
       "connectionDetails": {
         "title": "Dettagli connessione",
         "server": "Server",

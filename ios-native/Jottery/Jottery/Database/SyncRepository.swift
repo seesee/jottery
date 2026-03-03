@@ -17,6 +17,7 @@ struct SyncMetadataRecord: Codable, FetchableRecord, PersistableRecord {
     var userEmail: String?
     var pendingRegistrationEmail: String?
     var pendingDeviceName: String?
+    var userId: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -31,6 +32,7 @@ struct SyncMetadataRecord: Codable, FetchableRecord, PersistableRecord {
         case userEmail = "user_email"
         case pendingRegistrationEmail = "pending_registration_email"
         case pendingDeviceName = "pending_device_name"
+        case userId = "user_id"
     }
 }
 

@@ -206,22 +206,68 @@ final class AppState {
     func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) throws {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
-        let salt = existingSalt ?? CryptoService.generateSalt()
-        let iterations = existingIterations ?? CryptoService.defaultIterations
+        if existingSalt != nil {
+            // Legacy import path — use provided salt/iterations for compatibility
+            let salt = existingSalt!
+            let iterations = existingIterations ?? CryptoService.defaultIterations
 
-        // Derive key first so we can create the verification token
-        let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)
+            let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)
 
-        // Encrypt a known plaintext to verify the password later
-        let verificationEncrypted = try CryptoService.encryptText(
-            EncryptionMetadata.verificationPlaintext, key: key
-        )
-        let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+            let verificationEncrypted = try CryptoService.encryptText(
+                EncryptionMetadata.verificationPlaintext, key: key
+            )
+            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
 
-        let metadata = EncryptionMetadata.new(
-            salt: salt, iterations: iterations, verification: verificationJSON
-        )
-        try encryptionRepo.store(metadata)
+            let metadata = EncryptionMetadata.new(
+                salt: salt, iterations: iterations, verification: verificationJSON
+            )
+            try encryptionRepo.store(metadata)
+        } else {
+            // New vault — use envelope encryption from the start
+            let masterKeyData = CryptoService.generateMasterKey()
+            let masterKey = SymmetricKey(data: masterKeyData)
+
+            // Generate device salt and derive device key
+            let deviceSalt = CryptoService.generateSalt()
+            let deviceKey = CryptoService.deriveKey(
+                password: password,
+                salt: deviceSalt,
+                iterations: CryptoService.defaultIterations
+            )
+
+            // Wrap master key locally
+            let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
+            let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
+
+            // Create verification token encrypted with the master key
+            let verificationEncrypted = try CryptoService.encryptText(
+                EncryptionMetadata.verificationPlaintext, key: masterKey
+            )
+            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+            // Store initial metadata (needed before saveEnvelope which does UPDATE)
+            let initialMetadata = EncryptionMetadata.new(
+                salt: deviceSalt, iterations: CryptoService.defaultIterations,
+                verification: verificationJSON
+            )
+            try encryptionRepo.store(initialMetadata)
+
+            // Convert to envelope format
+            try encryptionRepo.saveEnvelope(
+                envelopeVersion: 1,
+                deviceSalt: deviceSalt.base64EncodedString(),
+                localWrappedMaster: localBlob,
+                wrappingKdfVersion: CryptoService.wrappingKdfVersion
+            )
+
+            // Update verification (saveEnvelope clears salt/iterations but not verification)
+            if var metadata = try encryptionRepo.get() {
+                metadata.verification = verificationJSON
+                try encryptionRepo.store(metadata)
+            }
+
+            keyManager.unlockWithKeyData(masterKeyData)
+        }
 
         isFirstLaunch = false
         isLocked = false
@@ -242,30 +288,68 @@ final class AppState {
             throw AppStateError.noVault
         }
 
-        guard let saltData = metadata.saltData else {
-            throw AppStateError.invalidSalt
-        }
+        let key: SymmetricKey
 
-        let key = keyManager.unlock(
-            password: password,
-            salt: saltData,
-            iterations: UInt32(metadata.iterations)
-        )
+        if metadata.envelopeVersion != nil {
+            // Envelope unlock path — derive device key, unwrap master key
+            guard let deviceSaltB64 = metadata.deviceSalt,
+                  let deviceSalt = Data(base64Encoded: deviceSaltB64),
+                  let wrappedJSON = metadata.localWrappedMaster else {
+                throw AppStateError.invalidSalt
+            }
 
-        // Verify password
-        let verified: Bool
-        if let verificationJSON = metadata.verification {
-            // Use stored verification token
-            verified = verifyWithToken(verificationJSON, key: key)
+            let deviceKey = CryptoService.deriveKey(
+                password: password,
+                salt: deviceSalt,
+                iterations: CryptoService.defaultIterations
+            )
+
+            let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
+            let masterKeyData: Data
+            do {
+                masterKeyData = try CryptoService.unwrapMasterKey(wrapped, with: deviceKey)
+            } catch {
+                keyManager.lock()
+                isLocked = true
+                throw AppStateError.wrongPassword
+            }
+
+            key = SymmetricKey(data: masterKeyData)
+            keyManager.unlockWithKeyData(masterKeyData)
+
+            // Verify with token if available
+            if let verificationJSON = metadata.verification {
+                guard verifyWithToken(verificationJSON, key: key) else {
+                    keyManager.lock()
+                    isLocked = true
+                    throw AppStateError.wrongPassword
+                }
+            }
         } else {
-            // No token (old vault) — try decrypting a note instead
-            verified = verifyByDecryptingNote(key: key)
-        }
+            // Legacy unlock path — derive key directly from password + salt
+            guard let saltData = metadata.saltData else {
+                throw AppStateError.invalidSalt
+            }
 
-        guard verified else {
-            keyManager.lock()
-            isLocked = true
-            throw AppStateError.wrongPassword
+            key = keyManager.unlock(
+                password: password,
+                salt: saltData,
+                iterations: UInt32(metadata.iterations)
+            )
+
+            // Verify password
+            let verified: Bool
+            if let verificationJSON = metadata.verification {
+                verified = verifyWithToken(verificationJSON, key: key)
+            } else {
+                verified = verifyByDecryptingNote(key: key)
+            }
+
+            guard verified else {
+                keyManager.lock()
+                isLocked = true
+                throw AppStateError.wrongPassword
+            }
         }
 
         try loadNotes()
@@ -284,6 +368,17 @@ final class AppState {
         // Upgrade old vaults: store a verification token if missing
         if metadata.verification == nil {
             try? upgradeVaultVerification(key: key)
+        }
+
+        // Auto-migrate legacy vaults to envelope in background (non-fatal)
+        if metadata.envelopeVersion == nil, settings.syncEnabled {
+            Task {
+                await EnvelopeService.tryEnvelopeSetup(
+                    appState: self,
+                    password: password,
+                    masterKey: key
+                )
+            }
         }
 
         return true
@@ -892,8 +987,8 @@ final class AppState {
 
     // MARK: - Password Change
 
-    /// Change the vault password. Re-derives a new key from the new password with a new salt,
-    /// then re-encrypts all notes, attachments, versions, and the verification token.
+    /// Change the vault password. With envelope encryption, only re-wraps the master key (fast).
+    /// For legacy vaults, re-encrypts all notes, attachments, versions, and the verification token.
     func changePassword(currentPassword: String, newPassword: String) throws {
         guard let encryptionRepo, let noteRepo, let versionRepo else {
             throw AppStateError.notInitialised
@@ -901,39 +996,225 @@ final class AppState {
         guard let metadata = try encryptionRepo.get() else {
             throw AppStateError.noVault
         }
-        guard let saltData = metadata.saltData else {
-            throw AppStateError.invalidSalt
-        }
 
-        // Verify current password
-        let currentKey = CryptoService.deriveKey(
-            password: currentPassword,
-            salt: saltData,
-            iterations: UInt32(metadata.iterations)
-        )
-        if let verificationJSON = metadata.verification {
-            guard verifyWithToken(verificationJSON, key: currentKey) else {
+        if metadata.envelopeVersion != nil {
+            // FAST PATH: envelope active — re-wrap only, no note re-encryption
+            guard let deviceSaltB64 = metadata.deviceSalt,
+                  let deviceSalt = Data(base64Encoded: deviceSaltB64),
+                  let wrappedJSON = metadata.localWrappedMaster else {
+                throw AppStateError.invalidSalt
+            }
+
+            // Verify current password by unwrapping the master key
+            let currentDeviceKey = CryptoService.deriveKey(
+                password: currentPassword,
+                salt: deviceSalt,
+                iterations: CryptoService.defaultIterations
+            )
+            let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
+            let masterKeyData: Data
+            do {
+                masterKeyData = try CryptoService.unwrapMasterKey(wrapped, with: currentDeviceKey)
+            } catch {
                 throw AppStateError.wrongPassword
+            }
+
+            // Verify with token as extra check
+            if let verificationJSON = metadata.verification {
+                let masterKey = SymmetricKey(data: masterKeyData)
+                guard verifyWithToken(verificationJSON, key: masterKey) else {
+                    throw AppStateError.wrongPassword
+                }
+            }
+
+            // Synchronous: local re-wrap (throws on failure so the UI sees the error)
+            try EnvelopeService.changePasswordLocal(
+                encryptionRepo: encryptionRepo,
+                newPassword: newPassword,
+                masterKeyData: masterKeyData
+            )
+
+            // Synchronous: update biometric key if enabled (master key unchanged)
+            if keyManager.isBiometricEnabled {
+                try? keyManager.enableBiometricUnlock()
+            }
+
+            // Background: server re-wrap (non-fatal, will retry on next unlock/sync)
+            if let syncRepo, let syncClient {
+                let dataForServer = masterKeyData
+                Task {
+                    await EnvelopeService.changePasswordServer(
+                        syncRepo: syncRepo,
+                        syncClient: syncClient,
+                        newPassword: newPassword,
+                        masterKeyData: dataForServer
+                    )
+                }
             }
         } else {
-            guard verifyByDecryptingNote(key: currentKey) else {
-                throw AppStateError.wrongPassword
+            // LEGACY PATH: full re-encryption
+            guard let saltData = metadata.saltData else {
+                throw AppStateError.invalidSalt
+            }
+
+            // Verify current password
+            let currentKey = CryptoService.deriveKey(
+                password: currentPassword,
+                salt: saltData,
+                iterations: UInt32(metadata.iterations)
+            )
+            if let verificationJSON = metadata.verification {
+                guard verifyWithToken(verificationJSON, key: currentKey) else {
+                    throw AppStateError.wrongPassword
+                }
+            } else {
+                guard verifyByDecryptingNote(key: currentKey) else {
+                    throw AppStateError.wrongPassword
+                }
+            }
+
+            // Generate new salt and derive new key
+            let newSalt = CryptoService.generateSalt()
+            let iterations = UInt32(metadata.iterations)
+            let newKey = CryptoService.deriveKey(
+                password: newPassword,
+                salt: newSalt,
+                iterations: iterations
+            )
+
+            // Re-encrypt all active, deleted, and archived notes
+            let allNotes = try noteRepo.listActive(key: currentKey) +
+                            noteRepo.listDeleted(key: currentKey) +
+                            noteRepo.listArchived(key: currentKey)
+
+            for note in allNotes {
+                let encContent = try CryptoService.encryptText(note.content, key: newKey)
+                let encTags = try CryptoService.encryptStringArray(note.tags, key: newKey)
+                let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
+                let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
+
+                // Re-encrypt attachment filenames
+                var reEncryptedAttachments = note.attachments
+                for i in reEncryptedAttachments.indices {
+                    let encFilename = try CryptoService.encryptText(reEncryptedAttachments[i].filename, key: newKey)
+                    reEncryptedAttachments[i].filename = try CryptoService.serializeEncryptedJSON(encFilename)
+                }
+                let attachmentsJSON = try JSONEncoder().encode(reEncryptedAttachments)
+                let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+
+                guard var record = try noteRepo.getRaw(id: note.id) else { continue }
+                record.content = contentJSON
+                record.tags = tagsJSON
+                record.attachments = attachmentsString
+                record.needsSync = true
+                try noteRepo.updateRaw(record)
+            }
+
+            // Re-encrypt attachment blobs
+            if let attachmentRepo {
+                let blobIds = try attachmentRepo.listBlobIds()
+                for blobId in blobIds {
+                    guard let blobData = try attachmentRepo.getBlob(id: blobId) else { continue }
+                    let blobStr = String(data: blobData, encoding: .utf8) ?? ""
+                    guard !blobStr.isEmpty else { continue }
+                    do {
+                        let encrypted = try CryptoService.parseEncryptedJSON(blobStr)
+                        let plainData = try CryptoService.decrypt(encrypted, key: currentKey)
+                        let reEncrypted = try CryptoService.encrypt(plainData, key: newKey)
+                        let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
+                        try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
+                    } catch {
+                        print("[ChangePassword] Skipping blob \(blobId): \(error)")
+                    }
+                }
+            }
+
+            // Re-encrypt version snapshots
+            for noteId in Set(allNotes.map(\.id)) {
+                let versions = try versionRepo.getVersions(noteId: noteId)
+                for ver in versions {
+                    do {
+                        let encContent = try CryptoService.parseEncryptedJSON(ver.content)
+                        let plainContent = try CryptoService.decryptText(encContent, key: currentKey)
+                        let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
+
+                        let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
+                        let plainTagsStr = try CryptoService.decryptText(encTags, key: currentKey)
+                        let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
+
+                        var updated = ver
+                        updated.content = try CryptoService.serializeEncryptedJSON(newEncContent)
+                        updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
+                        try versionRepo.insertOrReplace(updated)
+                    } catch {
+                        print("[ChangePassword] Skipping version \(ver.versionKey): \(error)")
+                    }
+                }
+            }
+
+            // Re-encrypt saved searches
+            if let savedSearchRepo {
+                let searches = try savedSearchRepo.listAll(key: currentKey)
+                for search in searches {
+                    let encName = try CryptoService.encryptText(search.name, key: newKey)
+                    let encQuery = try CryptoService.encryptText(search.query, key: newKey)
+                    try savedSearchRepo.updateEncrypted(
+                        id: search.id,
+                        name: try CryptoService.serializeEncryptedJSON(encName),
+                        query: try CryptoService.serializeEncryptedJSON(encQuery)
+                    )
+                }
+            }
+
+            // Update encryption metadata with new salt and verification token
+            let verificationEncrypted = try CryptoService.encryptText(
+                EncryptionMetadata.verificationPlaintext, key: newKey
+            )
+            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+            var newMetadata = metadata
+            newMetadata.salt = newSalt.base64EncodedString()
+            newMetadata.verification = verificationJSON
+            try encryptionRepo.store(newMetadata)
+
+            // Update in-memory master key
+            keyManager.masterKey = newKey
+
+            // Update biometric key if enabled
+            if keyManager.isBiometricEnabled {
+                try? keyManager.enableBiometricUnlock()
+            }
+
+            // Reload notes with new key
+            try loadNotes()
+
+            // Try envelope migration after legacy password change
+            if settings.syncEnabled {
+                Task {
+                    await EnvelopeService.tryEnvelopeSetup(
+                        appState: self,
+                        password: newPassword,
+                        masterKey: newKey
+                    )
+                }
             }
         }
+    }
 
-        // Generate new salt and derive new key
-        let newSalt = CryptoService.generateSalt()
-        let iterations = UInt32(metadata.iterations)
-        let newKey = CryptoService.deriveKey(
-            password: newPassword,
-            salt: newSalt,
-            iterations: iterations
-        )
+    // MARK: - Re-encryption
 
-        // Re-encrypt all active, deleted, and archived notes
-        let allNotes = try noteRepo.listActive(key: currentKey) +
-                        noteRepo.listDeleted(key: currentKey) +
-                        noteRepo.listArchived(key: currentKey)
+    /// Re-encrypt all notes, attachments, versions, and saved searches from one
+    /// key to another. Used when onboarding from the server discovers a different
+    /// master key than the local one.
+    func reEncryptAllData(from oldKey: SymmetricKey, to newKey: SymmetricKey) throws {
+        guard let noteRepo, let versionRepo else {
+            throw AppStateError.notInitialised
+        }
+
+        // Re-encrypt all notes (active, deleted, archived)
+        let allNotes = try noteRepo.listActive(key: oldKey) +
+                        noteRepo.listDeleted(key: oldKey) +
+                        noteRepo.listArchived(key: oldKey)
 
         for note in allNotes {
             let encContent = try CryptoService.encryptText(note.content, key: newKey)
@@ -967,12 +1248,12 @@ final class AppState {
                 guard !blobStr.isEmpty else { continue }
                 do {
                     let encrypted = try CryptoService.parseEncryptedJSON(blobStr)
-                    let plainData = try CryptoService.decrypt(encrypted, key: currentKey)
+                    let plainData = try CryptoService.decrypt(encrypted, key: oldKey)
                     let reEncrypted = try CryptoService.encrypt(plainData, key: newKey)
                     let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
                     try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
                 } catch {
-                    print("[ChangePassword] Skipping blob \(blobId): \(error)")
+                    print("[ReEncrypt] Skipping blob \(blobId): \(error)")
                 }
             }
         }
@@ -983,11 +1264,11 @@ final class AppState {
             for ver in versions {
                 do {
                     let encContent = try CryptoService.parseEncryptedJSON(ver.content)
-                    let plainContent = try CryptoService.decryptText(encContent, key: currentKey)
+                    let plainContent = try CryptoService.decryptText(encContent, key: oldKey)
                     let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
 
                     let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
-                    let plainTagsStr = try CryptoService.decryptText(encTags, key: currentKey)
+                    let plainTagsStr = try CryptoService.decryptText(encTags, key: oldKey)
                     let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
 
                     var updated = ver
@@ -995,14 +1276,14 @@ final class AppState {
                     updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
                     try versionRepo.insertOrReplace(updated)
                 } catch {
-                    print("[ChangePassword] Skipping version \(ver.versionKey): \(error)")
+                    print("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
                 }
             }
         }
 
         // Re-encrypt saved searches
         if let savedSearchRepo {
-            let searches = try savedSearchRepo.listAll(key: currentKey)
+            let searches = try savedSearchRepo.listAll(key: oldKey)
             for search in searches {
                 let encName = try CryptoService.encryptText(search.name, key: newKey)
                 let encQuery = try CryptoService.encryptText(search.query, key: newKey)
@@ -1014,27 +1295,7 @@ final class AppState {
             }
         }
 
-        // Update encryption metadata with new salt and verification token
-        let verificationEncrypted = try CryptoService.encryptText(
-            EncryptionMetadata.verificationPlaintext, key: newKey
-        )
-        let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-        var newMetadata = metadata
-        newMetadata.salt = newSalt.base64EncodedString()
-        newMetadata.verification = verificationJSON
-        try encryptionRepo.store(newMetadata)
-
-        // Update in-memory master key
-        keyManager.masterKey = newKey
-
-        // Update biometric key if enabled
-        if keyManager.isBiometricEnabled {
-            try? keyManager.enableBiometricUnlock()
-        }
-
-        // Reload notes with new key
-        try loadNotes()
+        print("[ReEncrypt] All data re-encrypted successfully")
     }
 
     // MARK: - Settings

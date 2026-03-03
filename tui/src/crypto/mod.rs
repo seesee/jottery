@@ -5,7 +5,7 @@
 mod service;
 mod key_manager;
 
-pub use service::{CryptoService, DEFAULT_ITERATIONS};
+pub use service::{CryptoService, DEFAULT_ITERATIONS, WRAPPING_ITERATIONS, WRAPPING_KDF_VERSION};
 pub use key_manager::*;
 
 // Re-export commonly used types

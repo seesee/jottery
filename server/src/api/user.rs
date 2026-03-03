@@ -293,6 +293,10 @@ pub async fn delete_all_notes(
 pub struct ChangePasswordRequest {
     pub current_password: String,
     pub new_password: String,
+    /// Re-wrapped master key blob (envelope encryption)
+    pub wrapped_blob: Option<String>,
+    pub kdf_version: Option<i32>,
+    pub kdf_iterations: Option<i32>,
 }
 
 /// Change user's own password
@@ -350,6 +354,33 @@ pub async fn change_password(
     )
     .execute(&state.pool)
     .await?;
+
+    // If wrapped key blob provided, update it atomically with password change
+    if let Some(blob) = &req.wrapped_blob {
+        let kdf_version = req.kdf_version.unwrap_or(1);
+        let kdf_iterations = req.kdf_iterations.unwrap_or(1_000_000);
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query!(
+            "INSERT INTO wrapped_keys (user_id, wrapped_blob, kdf_version, kdf_iterations, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(user_id) DO UPDATE SET
+               wrapped_blob = excluded.wrapped_blob,
+               kdf_version = excluded.kdf_version,
+               kdf_iterations = excluded.kdf_iterations,
+               updated_at = excluded.updated_at",
+            user_id,
+            blob,
+            kdf_version,
+            kdf_iterations,
+            now,
+            now,
+        )
+        .execute(&state.pool)
+        .await?;
+
+        tracing::info!("Wrapped key updated during password change for user: {}", user_id);
+    }
 
     tracing::info!("Password changed successfully for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)

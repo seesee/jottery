@@ -210,6 +210,54 @@ impl AuthClient {
         Ok(result)
     }
 
+    /// Get the server-escrowed wrapped master key (API key auth)
+    /// Returns None if no wrapped key exists (user hasn't migrated to envelope encryption)
+    pub fn get_wrapped_key(&self, api_key: &str) -> Result<Option<WrappedKeyResponse>> {
+        let url = format!("{}/api/v1/auth/wrapped-key", self.base_url);
+
+        let response = self.client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .context("Failed to fetch wrapped key")?;
+
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Failed to get wrapped key: {} - {}", status, error_body);
+        }
+
+        let result: WrappedKeyResponse = response.json()
+            .context("Failed to parse wrapped key response")?;
+
+        Ok(Some(result))
+    }
+
+    /// Store or update the server-escrowed wrapped master key (API key auth)
+    pub fn put_wrapped_key(&self, api_key: &str, request: &PutWrappedKeyRequest) -> Result<()> {
+        let url = format!("{}/api/v1/auth/wrapped-key", self.base_url);
+
+        let response = self.client
+            .put(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(request)
+            .send()
+            .context("Failed to store wrapped key")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Failed to store wrapped key: {} - {}", status, error_body);
+        }
+
+        Ok(())
+    }
+
     /// Check user approval status (no auth required)
     pub fn check_status(&self, email: &str) -> Result<UserStatusResponse> {
         let url = format!(
@@ -235,6 +283,24 @@ impl AuthClient {
 
         Ok(result)
     }
+}
+
+/// Wrapped key response from server (envelope encryption)
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WrappedKeyResponse {
+    pub blob: String,
+    pub kdf_version: u32,
+    pub kdf_iterations: u32,
+}
+
+/// Put wrapped key request (envelope encryption)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PutWrappedKeyRequest {
+    pub blob: String,
+    pub kdf_version: u32,
+    pub kdf_iterations: u32,
 }
 
 /// Login response for session-based auth

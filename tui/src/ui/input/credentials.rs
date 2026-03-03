@@ -124,6 +124,141 @@ pub fn handle_import_device_name_key(app: &mut App, key: KeyEvent) -> Result<()>
     Ok(())
 }
 
+/// Handle key events for change password - current password input
+pub fn handle_change_password_current_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    match key.code {
+        KeyCode::Esc => {
+            app.credential_input.clear();
+            app.input_mode = InputMode::Normal;
+            if let AppState::ChangePasswordCurrent { previous } =
+                std::mem::replace(&mut app.state, AppState::Quit)
+            {
+                app.state = *previous;
+            }
+        }
+        KeyCode::Enter => {
+            let current_password = app.credential_input.clone();
+            if current_password.is_empty() {
+                app.error = Some(t!("password.change_current_required").to_string());
+                return Ok(());
+            }
+            // Verify current password
+            match crate::db::Database::open(&app.db_path, &current_password) {
+                Ok(_) => {
+                    app.credential_input.clear();
+                    if let AppState::ChangePasswordCurrent { previous } =
+                        std::mem::replace(&mut app.state, AppState::Quit)
+                    {
+                        app.state = AppState::ChangePasswordNew { current_password, previous };
+                    }
+                }
+                Err(_) => {
+                    app.error = Some(t!("password.change_wrong_current").to_string());
+                }
+            }
+        }
+        KeyCode::Char(c) => { app.credential_input.push(c); }
+        KeyCode::Backspace => { app.credential_input.pop(); }
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Handle key events for change password - new password input
+pub fn handle_change_password_new_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    match key.code {
+        KeyCode::Esc => {
+            app.credential_input.clear();
+            app.input_mode = InputMode::Normal;
+            if let AppState::ChangePasswordNew { previous, .. } =
+                std::mem::replace(&mut app.state, AppState::Quit)
+            {
+                app.state = *previous;
+            }
+        }
+        KeyCode::Enter => {
+            let new_password = app.credential_input.clone();
+            if new_password.len() < 12 {
+                app.error = Some(t!("password.change_too_short").to_string());
+                return Ok(());
+            }
+            app.credential_input.clear();
+            if let AppState::ChangePasswordNew { current_password, previous } =
+                std::mem::replace(&mut app.state, AppState::Quit)
+            {
+                app.state = AppState::ChangePasswordConfirm { current_password, new_password, previous };
+            }
+        }
+        KeyCode::Char(c) => { app.credential_input.push(c); }
+        KeyCode::Backspace => { app.credential_input.pop(); }
+        _ => {}
+    }
+    Ok(())
+}
+
+/// Handle key events for change password - confirm new password
+pub fn handle_change_password_confirm_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    match key.code {
+        KeyCode::Esc => {
+            app.credential_input.clear();
+            app.input_mode = InputMode::Normal;
+            if let AppState::ChangePasswordConfirm { previous, .. } =
+                std::mem::replace(&mut app.state, AppState::Quit)
+            {
+                app.state = *previous;
+            }
+        }
+        KeyCode::Enter => {
+            let confirm = app.credential_input.clone();
+            app.credential_input.clear();
+
+            if let AppState::ChangePasswordConfirm { current_password, new_password, previous } =
+                std::mem::replace(&mut app.state, AppState::Quit)
+            {
+                if confirm != new_password {
+                    app.error = Some(t!("password.change_mismatch").to_string());
+                    app.state = *previous;
+                    app.input_mode = InputMode::Normal;
+                    return Ok(());
+                }
+                let master_key = match app.key {
+                    Some(k) => k,
+                    None => {
+                        app.state = *previous;
+                        app.input_mode = InputMode::Normal;
+                        return Ok(());
+                    }
+                };
+                // Change SQLCipher database password
+                if let Some(db) = &app.db {
+                    if let Err(e) = db.change_password(&new_password) {
+                        app.error = Some(format!("{}: {}", t!("password.change_failed"), e));
+                        app.state = *previous;
+                        app.input_mode = InputMode::Normal;
+                        return Ok(());
+                    }
+                }
+                // Re-wrap envelope encryption (non-fatal)
+                if let Err(e) = operations::envelope::change_password(app, &current_password, &new_password, &master_key) {
+                    app.debug_log(&format!("Envelope password change failed (non-fatal): {}", e));
+                }
+                // Update stored password if remember is enabled
+                if app.settings.remember_password {
+                    let _ = operations::auth::store_password_for_autounlock(app, &new_password);
+                }
+                app.sync_status = Some(t!("password.change_success").to_string());
+                app.sync_status_set_at = Some(std::time::Instant::now());
+                app.state = *previous;
+                app.input_mode = InputMode::Normal;
+            }
+        }
+        KeyCode::Char(c) => { app.credential_input.push(c); }
+        KeyCode::Backspace => { app.credential_input.pop(); }
+        _ => {}
+    }
+    Ok(())
+}
+
 /// Handle key events when inputting email for status check
 pub fn handle_input_email_for_status_key(app: &mut App, key: KeyEvent) -> Result<()> {
     match key.code {

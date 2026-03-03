@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote, onboardFromServer, tryMigrateToEnvelope } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
@@ -71,7 +71,7 @@
   let credentialsText = '';
 
   // Multi-user registration state
-  let registrationMode: 'select' | 'newUser' | 'existingUser' = 'select';
+  let registrationMode: 'select' | 'newUser' | 'existingUser' | 'importCredentials' = 'select';
   let userEmail = '';
   let userPassword = '';
   let userPasswordConfirm = '';
@@ -214,11 +214,20 @@
     try {
       syncStatus = await syncService.getSyncStatus();
 
+      // Detect ONBOARD: marker from v2 credential import — pre-fill endpoint and switch to existingUser flow
+      if (!syncStatus?.clientId) {
+        const metadata = await syncRepository.getMetadata();
+        if (metadata?.apiKey?.startsWith('ONBOARD:') && metadata.syncEndpoint) {
+          syncEndpoint = metadata.syncEndpoint;
+          registrationMode = 'existingUser';
+        }
+      }
+
       // If sync is enabled, fetch device name from server
       if (syncStatus?.isEnabled && syncStatus.syncEndpoint) {
         try {
           const metadata = await syncRepository.getMetadata();
-          if (metadata?.apiKey && !metadata.apiKey.startsWith('IMPORT:') && !metadata.apiKey.startsWith('ENCRYPTED:') && !metadata.apiKey.startsWith('RESTORE:')) {
+          if (metadata?.apiKey && !metadata.apiKey.startsWith('IMPORT:') && !metadata.apiKey.startsWith('ENCRYPTED:') && !metadata.apiKey.startsWith('RESTORE:') && !metadata.apiKey.startsWith('ONBOARD:')) {
             const masterKey = keyManager.getMasterKey();
             if (masterKey) {
               const apiKeyEncrypted = JSON.parse(metadata.apiKey);
@@ -309,13 +318,25 @@
         deviceName.trim()
       );
 
-      // Store the credentials similar to existing flow
+      // For existing users: try to onboard from server (download wrapped master key).
+      // This must happen BEFORE encrypting the API key, because onboarding replaces the local master key.
+      if (registrationMode === 'existingUser') {
+        try {
+          await onboardFromServer(userPassword, syncEndpoint, response.userId, response.apiKey);
+          console.log('[SettingsModal] ✓ Onboarded from server via envelope encryption');
+        } catch (onboardError) {
+          console.warn('[SettingsModal] Envelope onboarding skipped (server may not have wrapped key yet):', onboardError);
+          // Fall through — will use existing local master key
+        }
+      }
+
+      // Get master key (may have been replaced by onboardFromServer for existingUser)
       const masterKey = keyManager.getMasterKey();
       if (!masterKey) {
         throw new Error('Application is locked');
       }
 
-      // Encrypt and store API key
+      // Encrypt and store API key with the current master key
       const encryptedApiKey = await cryptoService.encryptText(response.apiKey, masterKey.key);
 
       // Save sync settings
@@ -337,6 +358,16 @@
       }));
 
       await settingsRepository.update({ syncEndpoint, syncEnabled: true, deviceName: deviceName.trim() });
+
+      // For new users (first device): migrate local encryption to envelope and upload wrapped key to server
+      if (registrationMode === 'newUser') {
+        try {
+          await tryMigrateToEnvelope(userPassword, masterKey.keyBytes);
+          console.log('[SettingsModal] ✓ Migrated to envelope encryption');
+        } catch (migrateError) {
+          console.warn('[SettingsModal] Envelope migration failed (non-fatal, will retry on next unlock):', migrateError);
+        }
+      }
 
       // Reload status
       await loadSyncStatus();
