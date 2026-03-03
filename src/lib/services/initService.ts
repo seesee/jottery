@@ -378,7 +378,8 @@ export async function changePassword(
         kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
         kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
       });
-      console.log('[ChangePassword] ✓ Server wrapped key updated');
+      const cpFingerprint = Array.from(currentMasterKey.keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+      console.log('[ChangePassword] ✓ Server wrapped key updated, key fingerprint:', cpFingerprint);
     } catch (error) {
       console.warn('[ChangePassword] Failed to update server wrapped key:', error);
       // Non-fatal — local password change still succeeded
@@ -423,7 +424,8 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
       kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
       kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
     });
-    console.log('[Migration] ✓ Wrapped key uploaded to server');
+    const uploadFingerprint = Array.from(masterKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('[Migration] ✓ Wrapped key uploaded to server, key fingerprint:', uploadFingerprint);
 
     // Convert local storage to envelope format
     const deviceSalt = cryptoService.generateSalt();
@@ -518,6 +520,16 @@ export async function onboardFromServer(
   // Diagnostic: fingerprint key for debugging onboarding issues
   const onboardFingerprint = Array.from(masterKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
   console.log('[Onboard] ✓ Device onboarded via envelope encryption, key fingerprint:', onboardFingerprint);
+
+  // Diagnostic: round-trip test to verify the imported CryptoKey actually works
+  try {
+    const testPlain = 'onboard-key-test';
+    const testEncrypted = await cryptoService.encryptText(testPlain, key);
+    const testDecrypted = await cryptoService.decryptText(testEncrypted, key);
+    console.log('[Onboard] ✓ Key round-trip test passed:', testDecrypted === testPlain);
+  } catch (rtErr) {
+    console.error('[Onboard] ✗ Key round-trip test FAILED:', rtErr);
+  }
 }
 
 /**

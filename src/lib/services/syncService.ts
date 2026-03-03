@@ -974,7 +974,7 @@ class SyncService {
       }
 
       // Diagnostic: test-decrypt first note's content to verify key works
-      if (offset === 0 && result.notes.length > 0) {
+      if (offset === result.notes.length && result.notes.length > 0) {
         const testNote = result.notes[0];
         try {
           const parsed = JSON.parse(testNote.content);
