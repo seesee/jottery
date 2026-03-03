@@ -125,7 +125,11 @@ export async function unlock(password: string): Promise<void> {
 
     // Unwrap the master key from local storage
     const localWrapped: EncryptionResult = JSON.parse(metadata.localWrappedMaster!);
-    keyBytes = await cryptoService.unwrapMasterKey(deviceKey, localWrapped);
+    try {
+      keyBytes = await cryptoService.unwrapMasterKey(deviceKey, localWrapped);
+    } catch {
+      throw new Error('Incorrect password');
+    }
 
     // Import as CryptoKey
     key = await crypto.subtle.importKey(
