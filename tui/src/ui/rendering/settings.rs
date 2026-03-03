@@ -62,17 +62,23 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         ])
     };
 
-    // Check for pending registration directly from database
-    let pending_registration: Option<(String, String)> = app.db.as_ref().and_then(|db| {
+    // Check sync state from database: pending registration and API key presence
+    let metadata = app.db.as_ref().and_then(|db| {
         let sync_repo = crate::repository::sync::SyncRepository::new(db.connection());
         sync_repo.get_metadata().ok().flatten()
-    }).and_then(|m| {
+    });
+
+    let pending_registration: Option<(String, String)> = metadata.as_ref().and_then(|m| {
         if !m.sync_endpoint.is_empty() && m.pending_registration_email.is_some() && m.api_key.is_none() {
-            Some((m.sync_endpoint, m.pending_registration_email.unwrap()))
+            Some((m.sync_endpoint.clone(), m.pending_registration_email.clone().unwrap()))
         } else {
             None
         }
     });
+
+    let has_valid_api_key = metadata.as_ref().map(|m| {
+        m.api_key.as_ref().is_some_and(|k| !k.starts_with("PLAINTEXT:") && !k.starts_with("ENCRYPTED:"))
+    }).unwrap_or(false);
 
     // Determine sync endpoint display value
     let sync_endpoint_display = if let Some((ref endpoint, ref email)) = pending_registration {
@@ -146,8 +152,9 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
     ]);
 
     // Add sync-related instructions based on sync state
-    let sync_configured = app.settings.sync_endpoint.is_some();
+    let sync_configured = app.settings.sync_endpoint.is_some() && has_valid_api_key;
     let has_pending = pending_registration.is_some();
+    let has_endpoint_no_key = app.settings.sync_endpoint.is_some() && !has_valid_api_key && !has_pending;
 
     if sync_configured {
         // Fully configured - show sync operations
@@ -168,6 +175,10 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_disconnect"))));
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_status"))));
+    } else if has_endpoint_no_key {
+        // Has endpoint but no API key - need to register
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));
+        settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_disconnect"))));
     } else {
         // Not configured - show setup options
         settings_text.push(Line::from(format!("  • {}", t!("settings.instructions_register"))));
