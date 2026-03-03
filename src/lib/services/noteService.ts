@@ -109,9 +109,17 @@ class NoteService {
     }
 
     const notes = await noteRepository.getAllActive();
-    const decrypted = await Promise.all(
+    const results = await Promise.allSettled(
       notes.map(note => this.decryptNote(note, masterKey.key))
     );
+    const decrypted: DecryptedNote[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        decrypted.push(result.value);
+      } else {
+        console.error('[NoteService] Skipping undecryptable note:', result.reason);
+      }
+    }
 
     return this.sortNotes(decrypted, sortOrder);
   }
@@ -254,9 +262,18 @@ class NoteService {
     }
 
     const notes = await noteRepository.getPinned();
-    return await Promise.all(
+    const results = await Promise.allSettled(
       notes.map(note => this.decryptNote(note, masterKey.key))
     );
+    const decrypted: DecryptedNote[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        decrypted.push(result.value);
+      } else {
+        console.error('[NoteService] Skipping undecryptable pinned note:', result.reason);
+      }
+    }
+    return decrypted;
   }
 
   /**
@@ -492,9 +509,18 @@ class NoteService {
     }
 
     const notes = await noteRepository.getArchived();
-    return await Promise.all(
+    const results = await Promise.allSettled(
       notes.map(note => this.decryptNote(note, masterKey.key))
     );
+    const decrypted: DecryptedNote[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        decrypted.push(result.value);
+      } else {
+        console.error('[NoteService] Skipping undecryptable archived note:', result.reason);
+      }
+    }
+    return decrypted;
   }
 
   /**
@@ -551,9 +577,18 @@ class NoteService {
     }
 
     const notes = await noteRepository.getDeleted();
-    return await Promise.all(
+    const results = await Promise.allSettled(
       notes.map(note => this.decryptNote(note, masterKey.key))
     );
+    const decrypted: DecryptedNote[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        decrypted.push(result.value);
+      } else {
+        console.error('[NoteService] Skipping undecryptable deleted note:', result.reason);
+      }
+    }
+    return decrypted;
   }
 
   /**

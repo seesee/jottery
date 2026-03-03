@@ -108,8 +108,17 @@ export async function getAll(): Promise<SavedSearch[]> {
       .filter(s => !s.deleted)
       .sort((a, b) => a.order - b.order);
 
-    // Decrypt all searches
-    return await Promise.all(filtered.map(s => decryptSavedSearch(s)));
+    // Decrypt all searches (skip any that fail)
+    const results = await Promise.allSettled(filtered.map(s => decryptSavedSearch(s)));
+    const decrypted: SavedSearch[] = [];
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        decrypted.push(result.value);
+      } else {
+        console.error('[savedSearchRepository] Skipping undecryptable saved search:', result.reason);
+      }
+    }
+    return decrypted;
   } catch (error) {
     // If saved_searches store doesn't exist yet (pre-v7 database), return empty array
     console.warn('[savedSearchRepository] Store not available yet:', error);
