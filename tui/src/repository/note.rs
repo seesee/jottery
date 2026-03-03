@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use tracing::warn;
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::crypto::{CryptoService, EncryptedData};
@@ -298,6 +299,7 @@ impl<'a> NoteRepository<'a> {
         })?;
 
         let mut notes = Vec::new();
+        let mut fail_count = 0usize;
         for row in rows {
             let (
                 id,
@@ -322,43 +324,62 @@ impl<'a> NoteRepository<'a> {
                 content_hash,
                 parent_hash,
                 hash_chain_json,
-            ) = row?;
+            ) = match row {
+                Ok(data) => data,
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping row with read error: {e}");
+                    fail_count += 1;
+                    continue;
+                }
+            };
 
-            let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-            let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+            let note_id = id.clone();
+            match (|| -> Result<Note> {
+                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
+                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
 
-            let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-            let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-            let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-            let hash_chain: Option<Vec<String>> = hash_chain_json
-                .map(|j| serde_json::from_str(&j))
-                .transpose()
-                .unwrap_or(None);
+                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
+                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+                let hash_chain: Option<Vec<String>> = hash_chain_json
+                    .map(|j| serde_json::from_str(&j))
+                    .transpose()
+                    .unwrap_or(None);
 
-            notes.push(Note {
-                id,
-                created_at: created_at.parse()?,
-                modified_at: modified_at.parse()?,
-                synced_at: synced_at.map(|s| s.parse()).transpose()?,
-                content,
-                tags,
-                attachments,
-                pinned: pinned != 0,
-                archived: archived != 0,
-                archived_at: archived_at.map(|s| s.parse()).transpose()?,
-                locked: locked != 0,
-                locked_at: locked_at.map(|s| s.parse()).transpose()?,
-                deleted: deleted != 0,
-                deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
-                sync_hash,
-                version,
-                word_wrap: word_wrap != 0,
-                syntax_language: syntax_language.parse().unwrap_or_default(),
-                color,
-                content_hash,
-                parent_hash,
-                hash_chain,
-            });
+                Ok(Note {
+                    id,
+                    created_at: created_at.parse()?,
+                    modified_at: modified_at.parse()?,
+                    synced_at: synced_at.map(|s| s.parse()).transpose()?,
+                    content,
+                    tags,
+                    attachments,
+                    pinned: pinned != 0,
+                    archived: archived != 0,
+                    archived_at: archived_at.map(|s| s.parse()).transpose()?,
+                    locked: locked != 0,
+                    locked_at: locked_at.map(|s| s.parse()).transpose()?,
+                    deleted: deleted != 0,
+                    deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
+                    sync_hash,
+                    version,
+                    word_wrap: word_wrap != 0,
+                    syntax_language: syntax_language.parse().unwrap_or_default(),
+                    color,
+                    content_hash,
+                    parent_hash,
+                    hash_chain,
+                })
+            })() {
+                Ok(note) => notes.push(note),
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping undecryptable note {note_id}: {e}");
+                    fail_count += 1;
+                }
+            }
+        }
+        if fail_count > 0 {
+            warn!("[NoteRepository] {fail_count} notes failed to decrypt in list()");
         }
 
         Ok(notes)
@@ -405,6 +426,7 @@ impl<'a> NoteRepository<'a> {
         })?;
 
         let mut notes = Vec::new();
+        let mut fail_count = 0usize;
         for row in rows {
             let (
                 id,
@@ -429,43 +451,62 @@ impl<'a> NoteRepository<'a> {
                 content_hash,
                 parent_hash,
                 hash_chain_json,
-            ) = row?;
+            ) = match row {
+                Ok(data) => data,
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping row with read error: {e}");
+                    fail_count += 1;
+                    continue;
+                }
+            };
 
-            let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-            let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+            let note_id = id.clone();
+            match (|| -> Result<Note> {
+                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
+                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
 
-            let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-            let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-            let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-            let hash_chain: Option<Vec<String>> = hash_chain_json
-                .map(|j| serde_json::from_str(&j))
-                .transpose()
-                .unwrap_or(None);
+                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
+                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+                let hash_chain: Option<Vec<String>> = hash_chain_json
+                    .map(|j| serde_json::from_str(&j))
+                    .transpose()
+                    .unwrap_or(None);
 
-            notes.push(Note {
-                id,
-                created_at: created_at.parse()?,
-                modified_at: modified_at.parse()?,
-                synced_at: synced_at.map(|s| s.parse()).transpose()?,
-                content,
-                tags,
-                attachments,
-                pinned: pinned != 0,
-                archived: archived != 0,
-                archived_at: archived_at.map(|s| s.parse()).transpose()?,
-                locked: locked != 0,
-                locked_at: locked_at.map(|s| s.parse()).transpose()?,
-                deleted: deleted != 0,
-                deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
-                sync_hash,
-                version,
-                word_wrap: word_wrap != 0,
-                syntax_language: syntax_language.parse().unwrap_or_default(),
-                color,
-                content_hash,
-                parent_hash,
-                hash_chain,
-            });
+                Ok(Note {
+                    id,
+                    created_at: created_at.parse()?,
+                    modified_at: modified_at.parse()?,
+                    synced_at: synced_at.map(|s| s.parse()).transpose()?,
+                    content,
+                    tags,
+                    attachments,
+                    pinned: pinned != 0,
+                    archived: archived != 0,
+                    archived_at: archived_at.map(|s| s.parse()).transpose()?,
+                    locked: locked != 0,
+                    locked_at: locked_at.map(|s| s.parse()).transpose()?,
+                    deleted: deleted != 0,
+                    deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
+                    sync_hash,
+                    version,
+                    word_wrap: word_wrap != 0,
+                    syntax_language: syntax_language.parse().unwrap_or_default(),
+                    color,
+                    content_hash,
+                    parent_hash,
+                    hash_chain,
+                })
+            })() {
+                Ok(note) => notes.push(note),
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping undecryptable note {note_id}: {e}");
+                    fail_count += 1;
+                }
+            }
+        }
+        if fail_count > 0 {
+            warn!("[NoteRepository] {fail_count} notes failed to decrypt in get_modified_after()");
         }
 
         Ok(notes)
@@ -516,55 +557,73 @@ impl<'a> NoteRepository<'a> {
             ))
         })?;
 
+        let mut fail_count = 0usize;
         for row_result in rows {
             let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
+                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = match row_result {
+                Ok(data) => data,
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping deleted row with read error: {e}");
+                    fail_count += 1;
+                    continue;
+                }
+            };
 
-            // Decrypt content and tags
-            let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-            let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+            let note_id = id.clone();
+            match (|| -> Result<Note> {
+                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
+                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
 
-            let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-            let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-            let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
+                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
 
-            notes.push(Note {
-                id,
-                created_at: DateTime::parse_from_rfc3339(&created_at)
-                    .unwrap()
-                    .with_timezone(&Utc),
-                modified_at: DateTime::parse_from_rfc3339(&modified_at)
-                    .unwrap()
-                    .with_timezone(&Utc),
-                synced_at: synced_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                content,
-                tags,
-                attachments,
-                pinned,
-                archived,
-                archived_at: archived_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                locked,
-                locked_at: locked_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                deleted,
-                deleted_at: deleted_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                sync_hash,
-                version,
-                word_wrap,
-                syntax_language: syntax_language.parse().unwrap_or_default(),
-                color,
-                // Hash chain fields not loaded in deleted view
-                content_hash: None,
-                parent_hash: None,
-                hash_chain: None,
-            });
+                Ok(Note {
+                    id,
+                    created_at: DateTime::parse_from_rfc3339(&created_at)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    modified_at: DateTime::parse_from_rfc3339(&modified_at)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    synced_at: synced_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    content,
+                    tags,
+                    attachments,
+                    pinned,
+                    archived,
+                    archived_at: archived_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    locked,
+                    locked_at: locked_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    deleted,
+                    deleted_at: deleted_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    sync_hash,
+                    version,
+                    word_wrap,
+                    syntax_language: syntax_language.parse().unwrap_or_default(),
+                    color,
+                    content_hash: None,
+                    parent_hash: None,
+                    hash_chain: None,
+                })
+            })() {
+                Ok(note) => notes.push(note),
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping undecryptable deleted note {note_id}: {e}");
+                    fail_count += 1;
+                }
+            }
+        }
+        if fail_count > 0 {
+            warn!("[NoteRepository] {fail_count} notes failed to decrypt in get_deleted()");
         }
 
         Ok(notes)
@@ -603,54 +662,73 @@ impl<'a> NoteRepository<'a> {
             ))
         })?;
 
+        let mut fail_count = 0usize;
         for row_result in rows {
             let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = row_result?;
+                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = match row_result {
+                Ok(data) => data,
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping archived row with read error: {e}");
+                    fail_count += 1;
+                    continue;
+                }
+            };
 
-            let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-            let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+            let note_id = id.clone();
+            match (|| -> Result<Note> {
+                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
+                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
 
-            let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-            let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-            let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
+                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
 
-            notes.push(Note {
-                id,
-                created_at: DateTime::parse_from_rfc3339(&created_at)
-                    .unwrap()
-                    .with_timezone(&Utc),
-                modified_at: DateTime::parse_from_rfc3339(&modified_at)
-                    .unwrap()
-                    .with_timezone(&Utc),
-                synced_at: synced_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                content,
-                tags,
-                attachments,
-                pinned,
-                archived,
-                archived_at: archived_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                locked,
-                locked_at: locked_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                deleted,
-                deleted_at: deleted_at
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-                sync_hash,
-                version,
-                word_wrap,
-                syntax_language: syntax_language.parse().unwrap_or_default(),
-                color,
-                // Hash chain fields not loaded in get_archived (use dedicated sync queries)
-                content_hash: None,
-                parent_hash: None,
-                hash_chain: None,
-            });
+                Ok(Note {
+                    id,
+                    created_at: DateTime::parse_from_rfc3339(&created_at)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    modified_at: DateTime::parse_from_rfc3339(&modified_at)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                    synced_at: synced_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    content,
+                    tags,
+                    attachments,
+                    pinned,
+                    archived,
+                    archived_at: archived_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    locked,
+                    locked_at: locked_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    deleted,
+                    deleted_at: deleted_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|dt| dt.with_timezone(&Utc)),
+                    sync_hash,
+                    version,
+                    word_wrap,
+                    syntax_language: syntax_language.parse().unwrap_or_default(),
+                    color,
+                    content_hash: None,
+                    parent_hash: None,
+                    hash_chain: None,
+                })
+            })() {
+                Ok(note) => notes.push(note),
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping undecryptable archived note {note_id}: {e}");
+                    fail_count += 1;
+                }
+            }
+        }
+        if fail_count > 0 {
+            warn!("[NoteRepository] {fail_count} notes failed to decrypt in get_archived()");
         }
 
         Ok(notes)

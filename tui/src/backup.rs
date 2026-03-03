@@ -4,6 +4,7 @@
 //! Format matches the web app's backup format for cross-platform compatibility.
 
 use anyhow::{Context, Result, anyhow};
+use tracing::warn;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -416,70 +417,93 @@ pub fn restore_backup(
 
     let total = backup.data.len();
     let mut restored = 0;
+    let mut fail_count = 0usize;
 
     for (i, jwe) in backup.data.iter().enumerate() {
-        let record = decrypt_jwe(jwe, key)?;
+        let record = match decrypt_jwe(jwe, key) {
+            Ok(r) => r,
+            Err(e) => {
+                warn!("[Backup] Skipping undecryptable record at index {i}: {e}");
+                fail_count += 1;
+                if let Some(ref callback) = on_progress {
+                    callback(i + 1, total, "records");
+                }
+                continue;
+            }
+        };
 
         match record {
             BackupRecord::Note(backup_note) => {
-                // Decrypt content and tags
-                let content_encrypted: EncryptedData = serde_json::from_str(&backup_note.content)?;
-                let content = crypto.decrypt_text(&content_encrypted, key)?;
+                let note_id = backup_note.id.clone();
+                match (|| -> Result<Note> {
+                    let content_encrypted: EncryptedData = serde_json::from_str(&backup_note.content)?;
+                    let content = crypto.decrypt_text(&content_encrypted, key)?;
 
-                let tags: Vec<String> = backup_note.tags.iter()
-                    .map(|tag_json| {
-                        let tag_encrypted: EncryptedData = serde_json::from_str(tag_json)?;
-                        crypto.decrypt_text(&tag_encrypted, key)
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-
-                // Parse dates
-                let created_at = backup_note.created_at.parse()?;
-                let modified_at = backup_note.modified_at.parse()?;
-                let synced_at = backup_note.synced_at.map(|s| s.parse()).transpose()?;
-                let deleted_at = backup_note.deleted_at.map(|s| s.parse()).transpose()?;
-                let archived_at = backup_note.archived_at.map(|s| s.parse()).transpose()?;
-                let locked_at = backup_note.locked_at.map(|s| s.parse()).transpose()?;
-
-                let note = Note {
-                    id: backup_note.id,
-                    created_at,
-                    modified_at,
-                    synced_at,
-                    content,
-                    tags,
-                    attachments: vec![], // Attachments not supported yet
-                    pinned: backup_note.pinned,
-                    deleted: backup_note.deleted,
-                    deleted_at,
-                    sync_hash: backup_note.sync_hash,
-                    version: backup_note.version,
-                    word_wrap: backup_note.word_wrap.unwrap_or(true),
-                    syntax_language: backup_note.syntax_language
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or_default(),
-                    archived: backup_note.archived,
-                    archived_at,
-                    locked: backup_note.locked,
-                    locked_at,
-                    color: backup_note.color,
-                    content_hash: backup_note.content_hash,
-                    parent_hash: backup_note.parent_hash,
-                    hash_chain: backup_note.hash_chain,
-                };
-
-                // Try to create, if exists try to update
-                match note_repo.create(&note, key) {
-                    Ok(_) => restored += 1,
-                    Err(_) => {
-                        if note_repo.update(&note, key).is_ok() {
-                            restored += 1;
+                    // Decrypt tags, skipping any that fail
+                    let mut tags = Vec::new();
+                    for tag_json in &backup_note.tags {
+                        match (|| -> Result<String> {
+                            let tag_encrypted: EncryptedData = serde_json::from_str(tag_json)?;
+                            Ok(crypto.decrypt_text(&tag_encrypted, key)?)
+                        })() {
+                            Ok(tag) => tags.push(tag),
+                            Err(e) => {
+                                warn!("[Backup] Skipping undecryptable tag in note {note_id}: {e}");
+                            }
                         }
+                    }
+
+                    let created_at = backup_note.created_at.parse()?;
+                    let modified_at = backup_note.modified_at.parse()?;
+                    let synced_at = backup_note.synced_at.map(|s| s.parse()).transpose()?;
+                    let deleted_at = backup_note.deleted_at.map(|s| s.parse()).transpose()?;
+                    let archived_at = backup_note.archived_at.map(|s| s.parse()).transpose()?;
+                    let locked_at = backup_note.locked_at.map(|s| s.parse()).transpose()?;
+
+                    Ok(Note {
+                        id: backup_note.id,
+                        created_at,
+                        modified_at,
+                        synced_at,
+                        content,
+                        tags,
+                        attachments: vec![],
+                        pinned: backup_note.pinned,
+                        deleted: backup_note.deleted,
+                        deleted_at,
+                        sync_hash: backup_note.sync_hash,
+                        version: backup_note.version,
+                        word_wrap: backup_note.word_wrap.unwrap_or(true),
+                        syntax_language: backup_note.syntax_language
+                            .and_then(|s| s.parse().ok())
+                            .unwrap_or_default(),
+                        archived: backup_note.archived,
+                        archived_at,
+                        locked: backup_note.locked,
+                        locked_at,
+                        color: backup_note.color,
+                        content_hash: backup_note.content_hash,
+                        parent_hash: backup_note.parent_hash,
+                        hash_chain: backup_note.hash_chain,
+                    })
+                })() {
+                    Ok(note) => {
+                        match note_repo.create(&note, key) {
+                            Ok(_) => restored += 1,
+                            Err(_) => {
+                                if note_repo.update(&note, key).is_ok() {
+                                    restored += 1;
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warn!("[Backup] Skipping undecryptable note {note_id}: {e}");
+                        fail_count += 1;
                     }
                 }
             }
             BackupRecord::Settings(settings_value) => {
-                // Restore settings
                 if let Ok(settings) = serde_json::from_value(settings_value) {
                     let _ = settings_repo.update(&settings);
                 }
@@ -492,6 +516,10 @@ pub fn restore_backup(
         if let Some(ref callback) = on_progress {
             callback(i + 1, total, "records");
         }
+    }
+
+    if fail_count > 0 {
+        warn!("[Backup] {fail_count}/{total} records failed to decrypt during restore");
     }
 
     Ok(restored)

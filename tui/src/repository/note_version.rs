@@ -2,7 +2,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::crypto::{CryptoService, EncryptedData};
 use crate::models::{Attachment, Note, SyntaxLanguage};
@@ -153,6 +153,7 @@ impl<'a> NoteVersionRepository<'a> {
         })?;
 
         let mut result = Vec::new();
+        let mut fail_count = 0usize;
         for version_data in versions {
             let (
                 version_key,
@@ -168,36 +169,51 @@ impl<'a> NoteVersionRepository<'a> {
                 show_preview,
                 color,
                 reason,
-            ) = version_data?;
+            ) = match version_data {
+                Ok(data) => data,
+                Err(e) => {
+                    warn!("[NoteVersionRepository] Skipping version row with read error: {e}");
+                    fail_count += 1;
+                    continue;
+                }
+            };
 
-            // Decrypt content and tags
-            let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-            let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+            let vk = version_key.clone();
+            match (|| -> Result<NoteVersion> {
+                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
+                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
 
-            let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-            let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
+                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
 
-            // Deserialize attachments
-            let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-
-            result.push(NoteVersion {
-                version_key,
-                note_id,
-                version,
-                created_at: created_at.parse()?,
-                synced_at: synced_at.parse()?,
-                content,
-                tags,
-                attachments,
-                syntax_language: Some(syntax_language.parse().unwrap_or_default()),
-                word_wrap: Some(word_wrap != 0),
-                show_preview: show_preview.map(|v| v != 0),
-                color,
-                reason: reason.parse().unwrap_or(VersionReason::Sync),
-                // Hash chain fields - computed on create, not stored in old versions
-                content_hash: None,
-                parent_hash: None,
-            });
+                Ok(NoteVersion {
+                    version_key,
+                    note_id,
+                    version,
+                    created_at: created_at.parse()?,
+                    synced_at: synced_at.parse()?,
+                    content,
+                    tags,
+                    attachments,
+                    syntax_language: Some(syntax_language.parse().unwrap_or_default()),
+                    word_wrap: Some(word_wrap != 0),
+                    show_preview: show_preview.map(|v| v != 0),
+                    color,
+                    reason: reason.parse().unwrap_or(VersionReason::Sync),
+                    content_hash: None,
+                    parent_hash: None,
+                })
+            })() {
+                Ok(v) => result.push(v),
+                Err(e) => {
+                    warn!("[NoteVersionRepository] Skipping undecryptable version {vk}: {e}");
+                    fail_count += 1;
+                }
+            }
+        }
+        if fail_count > 0 {
+            warn!("[NoteVersionRepository] {fail_count} versions failed to decrypt for note {note_id}");
         }
 
         Ok(result)
