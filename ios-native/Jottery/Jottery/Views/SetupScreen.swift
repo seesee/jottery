@@ -320,8 +320,23 @@ private struct ConnectToServerView: View {
                 try KeychainService.storeClientId(response.clientId)
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
+                // Store userId for envelope encryption
+                if var syncMeta = try? appState.syncRepo?.getMetadata() {
+                    syncMeta.userId = response.userId
+                    try? appState.syncRepo?.saveMetadata(syncMeta)
+                }
+
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
+
+                // Attempt envelope setup before declaring success.
+                if let masterKey = appState.keyManager.masterKey {
+                    await EnvelopeService.tryEnvelopeSetup(
+                        appState: appState,
+                        password: password,
+                        masterKey: masterKey
+                    )
+                }
 
                 registeredApiKey = response.apiKey
                 registeredEndpoint = normalised

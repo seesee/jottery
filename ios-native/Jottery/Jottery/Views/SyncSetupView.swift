@@ -162,22 +162,20 @@ struct SyncSetupView: View {
                 appState.settings.syncEndpoint = normalised
 
                 registeredApiKey = response.apiKey
-                success = true
-                isWorking = false
 
-                // Attempt envelope setup in background (non-fatal).
+                // Attempt envelope setup before declaring success.
                 // If another device already uploaded a wrapped key, we onboard
                 // from that key; otherwise we upload ours.
                 if let masterKey = appState.keyManager.masterKey {
-                    let regPassword = password
-                    Task {
-                        await EnvelopeService.tryEnvelopeSetup(
-                            appState: appState,
-                            password: regPassword,
-                            masterKey: masterKey
-                        )
-                    }
+                    await EnvelopeService.tryEnvelopeSetup(
+                        appState: appState,
+                        password: password,
+                        masterKey: masterKey
+                    )
                 }
+
+                success = true
+                isWorking = false
             } catch {
                 self.error = error.localizedDescription
                 isWorking = false
