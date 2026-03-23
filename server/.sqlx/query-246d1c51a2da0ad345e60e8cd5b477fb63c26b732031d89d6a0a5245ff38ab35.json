@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO wrapped_keys (user_id, wrapped_blob, kdf_version, kdf_iterations, created_at, updated_at)\n         VALUES (?, ?, ?, ?, ?, ?)\n         ON CONFLICT(user_id) DO UPDATE SET\n           wrapped_blob = excluded.wrapped_blob,\n           kdf_version = excluded.kdf_version,\n           kdf_iterations = excluded.kdf_iterations,\n           updated_at = excluded.updated_at",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "246d1c51a2da0ad345e60e8cd5b477fb63c26b732031d89d6a0a5245ff38ab35"
+}
