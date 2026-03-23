@@ -21,6 +21,15 @@ password:
   mismatch_error: Hasła nie pasują
   unlock_failed: "Odblokowanie nie powiodło się: %{error}"
   change_success: Hasło zmienione pomyślnie
+  change_title: "Zmiana hasła"
+  change_enter_current: "Wprowadź aktualne hasło:"
+  change_enter_new: "Wprowadź nowe hasło (min. 12 znaków):"
+  change_confirm_new: "Potwierdź nowe hasło:"
+  change_current_required: "Wprowadź aktualne hasło"
+  change_wrong_current: "Aktualne hasło jest nieprawidłowe"
+  change_too_short: "Nowe hasło musi mieć co najmniej 12 znaków"
+  change_mismatch: "Hasła nie pasują"
+  change_failed: "Zmiana hasła nie powiodła się"
   remember: Zapamiętaj hasło
   remember_toggle: Zapamiętaj hasło (Ctrl+R aby przełączyć)
   remember_enabled: "Hasło zapisane do automatycznego odblokowywania. Uwaga: Może być dostępne dla użytkowników z uprawnieniami superużytkownika."

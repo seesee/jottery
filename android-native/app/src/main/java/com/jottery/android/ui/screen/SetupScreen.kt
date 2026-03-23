@@ -60,6 +60,9 @@ fun SetupScreen(
     var serverUrl by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var serverPassword by remember { mutableStateOf("") }
+    var isRegistered by remember { mutableStateOf(false) }
+    var encryptionPassword by remember { mutableStateOf("") }
+    var registeredApiKey by remember { mutableStateOf<String?>(null) }
 
     // Import fields
     var credentialString by remember { mutableStateOf("") }
@@ -187,7 +190,7 @@ fun SetupScreen(
                     onClick = { mode = SetupMode.REGISTER; error = null },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Register First Device")
+                    Text("Connect to Server")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -202,87 +205,138 @@ fun SetupScreen(
 
             // ── Register (first device) ──────────────────────────────
             SetupMode.REGISTER -> {
-                OutlinedTextField(
-                    value = serverUrl,
-                    onValueChange = { serverUrl = it; error = null },
-                    label = { Text("Server URL") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (!isRegistered) {
+                    // Step 1: Server registration
+                    OutlinedTextField(
+                        value = serverUrl,
+                        onValueChange = { serverUrl = it; error = null },
+                        label = { Text("Server URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it; error = null },
-                    label = { Text("Email") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it; error = null },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = serverPassword,
-                    onValueChange = { serverPassword = it; error = null },
-                    label = { Text("Password") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    OutlinedTextField(
+                        value = serverPassword,
+                        onValueChange = { serverPassword = it; error = null },
+                        label = { Text("Password") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                ErrorText(error)
+                    ErrorText(error)
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = {
-                        when {
-                            serverUrl.isBlank() -> error = "Server URL is required"
-                            email.isBlank() -> error = "Email is required"
-                            serverPassword.isEmpty() -> error = "Password is required"
-                            serverPassword.length < 8 -> error = "Password must be at least 8 characters"
-                            else -> {
-                                isCreating = true
-                                error = null
-                                scope.launch {
-                                    try {
-                                        appState.createVault(serverPassword)
-                                        val result = appState.registerDevice(
-                                            serverUrl = serverUrl.trim().trimEnd('/'),
-                                            email = email.trim(),
-                                            password = serverPassword,
-                                            deviceName = Build.MODEL,
-                                        )
-                                        result.onSuccess {
-                                            onVaultCreated()
-                                        }.onFailure { e ->
-                                            error = "Registered locally. Sync failed: ${e.message}"
+                    Button(
+                        onClick = {
+                            when {
+                                serverUrl.isBlank() -> error = "Server URL is required"
+                                email.isBlank() -> error = "Email is required"
+                                serverPassword.isEmpty() -> error = "Password is required"
+                                serverPassword.length < 8 -> error = "Password must be at least 8 characters"
+                                else -> {
+                                    isCreating = true
+                                    error = null
+                                    scope.launch {
+                                        try {
+                                            val result = appState.registerDevice(
+                                                serverUrl = serverUrl.trim().trimEnd('/'),
+                                                email = email.trim(),
+                                                password = serverPassword,
+                                                deviceName = Build.MODEL,
+                                            )
+                                            result.onSuccess { msg ->
+                                                registeredApiKey = msg
+                                                isRegistered = true
+                                                isCreating = false
+                                                error = null
+                                            }.onFailure { e ->
+                                                error = e.message ?: "Registration failed"
+                                                isCreating = false
+                                            }
+                                        } catch (e: Exception) {
+                                            error = e.message ?: "Registration failed"
                                             isCreating = false
                                         }
-                                    } catch (e: Exception) {
-                                        error = e.message ?: "Setup failed"
-                                        isCreating = false
                                     }
                                 }
                             }
-                        }
-                    },
-                    enabled = !isCreating,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(if (isCreating) "Registering\u2026" else "Register Device")
-                }
+                        },
+                        enabled = !isCreating,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (isCreating) "Registering\u2026" else "Register Device")
+                    }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedButton(
-                    onClick = { mode = SetupMode.NEW_VAULT; error = null },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Back")
+                    OutlinedButton(
+                        onClick = { mode = SetupMode.NEW_VAULT; error = null },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Back")
+                    }
+                } else {
+                    // Step 2: Encryption password
+                    Text(
+                        text = "\u2705 Connected",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = encryptionPassword,
+                        onValueChange = { encryptionPassword = it; error = null },
+                        label = { Text("Encryption Password") },
+                        supportingText = { Text("Enter the same encryption password used on your other devices.") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        enabled = !isCreating,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    ErrorText(error)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = {
+                            when {
+                                encryptionPassword.isEmpty() -> error = "Encryption password is required"
+                                encryptionPassword.length < 8 -> error = "Password must be at least 8 characters"
+                                else -> {
+                                    isCreating = true
+                                    error = null
+                                    // Use viewModelScope so the coroutine survives
+                                    // the navigation triggered by createVault setting
+                                    // isFirstLaunch=false (which leaves this composition).
+                                    appState.unlockAndSync(encryptionPassword)
+                                }
+                            }
+                        },
+                        enabled = !isCreating && encryptionPassword.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (isCreating) "Unlocking\u2026" else "Unlock & Sync")
+                    }
                 }
             }
 

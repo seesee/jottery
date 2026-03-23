@@ -78,10 +78,13 @@
     "active": "Aktywne",
     "inactive": "Nieaktywne",
     "revoke": "Unieważnij",
+    "delete": "Usuń",
     "rename": "Zmień nazwę",
     "revokeConfirmTitle": "Unieważnij urządzenie",
     "revokeConfirm": "Czy na pewno chcesz unieważnić urządzenie \"{name}\"? To urządzenie nie będzie mogło się synchronizować.",
     "revokeWarning": "To urządzenie nie będzie mogło się synchronizować.",
+    "deleteConfirmTitle": "Usuń urządzenie",
+    "deleteConfirm": "Czy na pewno chcesz trwale usunąć urządzenie \"{name}\"? Ta akcja jest nieodwracalna.",
     "noDevices": "Brak zarejestrowanych urządzeń",
     "total": "łącznie",
     "nameRequired": "Nazwa urządzenia jest wymagana",
@@ -89,6 +92,9 @@
       "revoked": "Urządzenie \"{name}\" zostało unieważnione",
       "revokeFailed": "Nie udało się unieważnić urządzenia: {error}",
       "revokeFailedGeneric": "Nie udało się unieważnić urządzenia",
+      "deleted": "Urządzenie \"{name}\" zostało usunięte",
+      "deleteFailed": "Nie udało się usunąć urządzenia: {error}",
+      "deleteFailedGeneric": "Nie udało się usunąć urządzenia",
       "renamed": "Nazwa urządzenia została zmieniona",
       "renameFailed": "Nie udało się zmienić nazwy urządzenia: {error}",
       "renameFailedGeneric": "Nie udało się zmienić nazwy urządzenia"
@@ -292,7 +298,12 @@
       "revokeNote": "Unieważnienie urządzenia uniemożliwi synchronizację. Możesz ponownie zarejestrować urządzenie później, jeśli zajdzie taka potrzeba.",
       "revoked": "Urządzenie \"{name}\" zostało unieważnione",
       "revokeFailed": "Nie udało się unieważnić urządzenia: {error}",
-      "revokeFailedGeneric": "Nie udało się unieważnić urządzenia"
+      "revokeFailedGeneric": "Nie udało się unieważnić urządzenia",
+      "deleteTitle": "Usuń urządzenie",
+      "deleteConfirm": "Czy na pewno chcesz trwale usunąć \"{name}\"? Ta akcja jest nieodwracalna.",
+      "deleted": "Urządzenie \"{name}\" zostało usunięte",
+      "deleteFailed": "Nie udało się usunąć urządzenia: {error}",
+      "deleteFailedGeneric": "Nie udało się usunąć urządzenia"
     },
     "settings": {
       "title": "Ustawienia",

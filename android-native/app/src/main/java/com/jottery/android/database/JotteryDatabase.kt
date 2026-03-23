@@ -41,7 +41,7 @@ import com.jottery.android.model.UserSettings
         NoteDeletion::class,
         SavedSearch::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class JotteryDatabase : RoomDatabase() {
@@ -68,6 +68,14 @@ abstract class JotteryDatabase : RoomDatabase() {
             }
         }
 
+        /** Close and clear the singleton so the next getInstance rebuilds it. */
+        fun destroyInstance() {
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
+            }
+        }
+
         /** Migration 1→2: Add envelope encryption columns and userId. */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -79,13 +87,43 @@ abstract class JotteryDatabase : RoomDatabase() {
             }
         }
 
+        /** Migration 2→3: Make salt and iterations nullable for envelope encryption. */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // SQLite doesn't support ALTER COLUMN, so recreate the table
+                db.execSQL("""
+                    CREATE TABLE encryption_metadata_new (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        salt TEXT,
+                        iterations INTEGER,
+                        created_at TEXT NOT NULL,
+                        algorithm TEXT NOT NULL DEFAULT 'AES-256-GCM',
+                        verification TEXT,
+                        envelope_version INTEGER,
+                        device_salt TEXT,
+                        local_wrapped_master TEXT,
+                        wrapping_kdf_version INTEGER
+                    )
+                """)
+                db.execSQL("""
+                    INSERT INTO encryption_metadata_new
+                    SELECT id, salt, iterations, created_at, algorithm,
+                           verification, envelope_version, device_salt,
+                           local_wrapped_master, wrapping_kdf_version
+                    FROM encryption_metadata
+                """)
+                db.execSQL("DROP TABLE encryption_metadata")
+                db.execSQL("ALTER TABLE encryption_metadata_new RENAME TO encryption_metadata")
+            }
+        }
+
         private fun buildDatabase(context: Context): JotteryDatabase {
             return Room.databaseBuilder(
                 context.applicationContext,
                 JotteryDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

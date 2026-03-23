@@ -21,6 +21,15 @@ password:
   mismatch_error: Passwörter stimmen nicht überein
   unlock_failed: "Entsperren fehlgeschlagen: %{error}"
   change_success: Passwort erfolgreich geändert
+  change_title: "Passwort ändern"
+  change_enter_current: "Geben Sie Ihr aktuelles Passwort ein:"
+  change_enter_new: "Neues Passwort eingeben (mind. 12 Zeichen):"
+  change_confirm_new: "Neues Passwort bestätigen:"
+  change_current_required: "Bitte geben Sie Ihr aktuelles Passwort ein"
+  change_wrong_current: "Aktuelles Passwort ist falsch"
+  change_too_short: "Neues Passwort muss mindestens 12 Zeichen haben"
+  change_mismatch: "Passwörter stimmen nicht überein"
+  change_failed: "Passwort konnte nicht geändert werden"
   remember: Passwort merken
   remember_toggle: Passwort merken (Strg+R zum Umschalten)
   remember_enabled: "Passwort für Auto-Unlock gespeichert. Hinweis: Möglicherweise für Benutzer mit Superuser-Zugriff zugänglich."

@@ -78,10 +78,13 @@
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "revoke": "Widerrufen",
+    "delete": "Löschen",
     "rename": "Umbenennen",
     "revokeConfirmTitle": "Gerät widerrufen",
     "revokeConfirm": "Sind Sie sicher, dass Sie das Gerät \"{name}\" widerrufen möchten? Dieses Gerät kann nicht mehr synchronisiert werden.",
     "revokeWarning": "Dieses Gerät kann nicht mehr synchronisiert werden.",
+    "deleteConfirmTitle": "Gerät löschen",
+    "deleteConfirm": "Sind Sie sicher, dass Sie das Gerät \"{name}\" dauerhaft löschen möchten? Dies kann nicht rückgängig gemacht werden.",
     "noDevices": "Keine Geräte registriert",
     "total": "insgesamt",
     "nameRequired": "Gerätename ist erforderlich",
@@ -89,6 +92,9 @@
       "revoked": "Gerät \"{name}\" wurde widerrufen",
       "revokeFailed": "Fehler beim Widerrufen des Geräts: {error}",
       "revokeFailedGeneric": "Fehler beim Widerrufen des Geräts",
+      "deleted": "Gerät \"{name}\" wurde gelöscht",
+      "deleteFailed": "Fehler beim Löschen des Geräts: {error}",
+      "deleteFailedGeneric": "Fehler beim Löschen des Geräts",
       "renamed": "Gerät erfolgreich umbenannt",
       "renameFailed": "Fehler beim Umbenennen des Geräts: {error}",
       "renameFailedGeneric": "Fehler beim Umbenennen des Geräts"
@@ -292,7 +298,12 @@
       "revokeNote": "Das Widerrufen eines Geräts verhindert die Synchronisation. Sie können das Gerät später bei Bedarf erneut registrieren.",
       "revoked": "Gerät \"{name}\" wurde widerrufen",
       "revokeFailed": "Fehler beim Widerrufen des Geräts: {error}",
-      "revokeFailedGeneric": "Fehler beim Widerrufen des Geräts"
+      "revokeFailedGeneric": "Fehler beim Widerrufen des Geräts",
+      "deleteTitle": "Gerät löschen",
+      "deleteConfirm": "Sind Sie sicher, dass Sie \"{name}\" dauerhaft löschen möchten? Dies kann nicht rückgängig gemacht werden.",
+      "deleted": "Gerät \"{name}\" wurde gelöscht",
+      "deleteFailed": "Fehler beim Löschen des Geräts: {error}",
+      "deleteFailedGeneric": "Fehler beim Löschen des Geräts"
     },
     "settings": {
       "title": "Einstellungen",

@@ -42,9 +42,14 @@ impl<'a> EncryptionRepository<'a> {
                         if s.is_empty() { None } else { hex::decode(&s).ok() }
                     });
 
+                    let iterations: Option<u32> = row.get(1)?;
+                    // Treat 0 as None — envelope mode stores 0 as a
+                    // placeholder for the NOT NULL constraint
+                    let iterations = iterations.filter(|&i| i > 0);
+
                     Ok(EncryptionMetadata {
                         salt,
-                        iterations: row.get(1)?,
+                        iterations,
                         algorithm: row.get::<_, Option<String>>(2)?.unwrap_or_else(|| "AES-256-GCM".to_string()),
                         envelope_version: row.get(3)?,
                         device_salt: row.get(4)?,

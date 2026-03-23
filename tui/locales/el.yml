@@ -21,6 +21,15 @@ password:
   mismatch_error: Οι κωδικοί δεν ταιριάζουν
   unlock_failed: "Αποτυχία ξεκλειδώματος: %{error}"
   change_success: Ο κωδικός άλλαξε επιτυχώς
+  change_title: "Αλλαγή κωδικού"
+  change_enter_current: "Εισάγετε τον τρέχοντα κωδικό σας:"
+  change_enter_new: "Εισάγετε νέο κωδικό (τουλάχιστον 12 χαρακτήρες):"
+  change_confirm_new: "Επιβεβαιώστε τον νέο κωδικό:"
+  change_current_required: "Εισάγετε τον τρέχοντα κωδικό σας"
+  change_wrong_current: "Ο τρέχων κωδικός είναι λάθος"
+  change_too_short: "Ο νέος κωδικός πρέπει να έχει τουλάχιστον 12 χαρακτήρες"
+  change_mismatch: "Οι κωδικοί δεν ταιριάζουν"
+  change_failed: "Αποτυχία αλλαγής κωδικού"
   remember: Απομνημόνευση κωδικού
   remember_toggle: Απομνημόνευση κωδικού (Ctrl+R για εναλλαγή)
   remember_enabled: "Ο κωδικός αποθηκεύτηκε για αυτόματο ξεκλείδωμα. Σημείωση: Ενδέχεται να είναι προσβάσιμος σε χρήστες με δικαιώματα superuser."

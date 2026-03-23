@@ -78,10 +78,13 @@
     "active": "Actief",
     "inactive": "Inactief",
     "revoke": "Intrekken",
+    "delete": "Verwijderen",
     "rename": "Hernoemen",
     "revokeConfirmTitle": "Apparaat intrekken",
     "revokeConfirm": "Weet u zeker dat u apparaat \"{name}\" wilt intrekken? Dit apparaat kan niet meer synchroniseren.",
     "revokeWarning": "Dit apparaat kan niet meer synchroniseren.",
+    "deleteConfirmTitle": "Apparaat verwijderen",
+    "deleteConfirm": "Weet u zeker dat u apparaat \"{name}\" permanent wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "noDevices": "Geen apparaten geregistreerd",
     "total": "totaal",
     "nameRequired": "Apparaatnaam is vereist",
@@ -89,6 +92,9 @@
       "revoked": "Apparaat \"{name}\" is ingetrokken",
       "revokeFailed": "Apparaat intrekken mislukt: {error}",
       "revokeFailedGeneric": "Apparaat intrekken mislukt",
+      "deleted": "Apparaat \"{name}\" is verwijderd",
+      "deleteFailed": "Apparaat verwijderen mislukt: {error}",
+      "deleteFailedGeneric": "Apparaat verwijderen mislukt",
       "renamed": "Apparaat succesvol hernoemd",
       "renameFailed": "Apparaat hernoemen mislukt: {error}",
       "renameFailedGeneric": "Apparaat hernoemen mislukt"
@@ -292,7 +298,12 @@
       "revokeNote": "Het intrekken van een apparaat voorkomt synchronisatie. U kunt het apparaat later opnieuw registreren indien nodig.",
       "revoked": "Apparaat \"{name}\" is ingetrokken",
       "revokeFailed": "Apparaat intrekken mislukt: {error}",
-      "revokeFailedGeneric": "Apparaat intrekken mislukt"
+      "revokeFailedGeneric": "Apparaat intrekken mislukt",
+      "deleteTitle": "Apparaat verwijderen",
+      "deleteConfirm": "Weet u zeker dat u \"{name}\" permanent wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "deleted": "Apparaat \"{name}\" is verwijderd",
+      "deleteFailed": "Apparaat verwijderen mislukt: {error}",
+      "deleteFailedGeneric": "Apparaat verwijderen mislukt"
     },
     "settings": {
       "title": "Instellingen",

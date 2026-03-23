@@ -78,10 +78,13 @@
     "active": "활성",
     "inactive": "비활성",
     "revoke": "해지",
+    "delete": "삭제",
     "rename": "이름 변경",
     "revokeConfirmTitle": "기기 해지",
     "revokeConfirm": "기기 \"{name}\"을(를) 해지하시겠습니까? 이 기기는 더 이상 동기화할 수 없습니다.",
     "revokeWarning": "이 기기는 더 이상 동기화할 수 없습니다.",
+    "deleteConfirmTitle": "기기 삭제",
+    "deleteConfirm": "기기 \"{name}\"을(를) 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     "noDevices": "등록된 기기가 없습니다",
     "total": "총",
     "nameRequired": "기기 이름은 필수입니다",
@@ -89,6 +92,9 @@
       "revoked": "기기 \"{name}\"이(가) 해지되었습니다",
       "revokeFailed": "기기 해지 실패: {error}",
       "revokeFailedGeneric": "기기 해지에 실패했습니다",
+      "deleted": "기기 \"{name}\"이(가) 삭제되었습니다",
+      "deleteFailed": "기기 삭제 실패: {error}",
+      "deleteFailedGeneric": "기기 삭제에 실패했습니다",
       "renamed": "기기 이름이 변경되었습니다",
       "renameFailed": "기기 이름 변경 실패: {error}",
       "renameFailedGeneric": "기기 이름 변경에 실패했습니다"
@@ -292,7 +298,12 @@
       "revokeNote": "기기를 해지하면 동기화가 중지됩니다. 필요한 경우 나중에 기기를 다시 등록할 수 있습니다.",
       "revoked": "기기 \"{name}\"이(가) 해지되었습니다",
       "revokeFailed": "기기 해지 실패: {error}",
-      "revokeFailedGeneric": "기기 해지에 실패했습니다"
+      "revokeFailedGeneric": "기기 해지에 실패했습니다",
+      "deleteTitle": "기기 삭제",
+      "deleteConfirm": "\"{name}\"을(를) 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      "deleted": "기기 \"{name}\"이(가) 삭제되었습니다",
+      "deleteFailed": "기기 삭제 실패: {error}",
+      "deleteFailedGeneric": "기기 삭제에 실패했습니다"
     },
     "settings": {
       "title": "설정",

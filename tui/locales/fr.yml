@@ -21,6 +21,15 @@ password:
   mismatch_error: Les mots de passe ne correspondent pas
   unlock_failed: "Échec du déverrouillage : %{error}"
   change_success: Mot de passe modifié avec succès
+  change_title: "Changer le mot de passe"
+  change_enter_current: "Entrez votre mot de passe actuel :"
+  change_enter_new: "Entrez le nouveau mot de passe (min. 12 caractères) :"
+  change_confirm_new: "Confirmez le nouveau mot de passe :"
+  change_current_required: "Veuillez entrer votre mot de passe actuel"
+  change_wrong_current: "Le mot de passe actuel est incorrect"
+  change_too_short: "Le nouveau mot de passe doit comporter au moins 12 caractères"
+  change_mismatch: "Les mots de passe ne correspondent pas"
+  change_failed: "Échec du changement de mot de passe"
   remember: Mémoriser le mot de passe
   remember_toggle: Mémoriser le mot de passe (Ctrl+R pour basculer)
   remember_enabled: "Mot de passe enregistré pour le déverrouillage automatique. Note : Peut être accessible aux utilisateurs avec accès superutilisateur."

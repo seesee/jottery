@@ -21,6 +21,15 @@ password:
   mismatch_error: Пароли не совпадают
   unlock_failed: "Не удалось разблокировать: %{error}"
   change_success: Пароль успешно изменён
+  change_title: "Смена пароля"
+  change_enter_current: "Введите текущий пароль:"
+  change_enter_new: "Введите новый пароль (мин. 12 символов):"
+  change_confirm_new: "Подтвердите новый пароль:"
+  change_current_required: "Введите текущий пароль"
+  change_wrong_current: "Текущий пароль неверен"
+  change_too_short: "Новый пароль должен содержать не менее 12 символов"
+  change_mismatch: "Пароли не совпадают"
+  change_failed: "Не удалось сменить пароль"
   remember: Запомнить пароль
   remember_toggle: Запомнить пароль (Ctrl+R для переключения)
   remember_enabled: "Пароль сохранён для автоматической разблокировки. Примечание: Может быть доступен пользователям с правами суперпользователя."

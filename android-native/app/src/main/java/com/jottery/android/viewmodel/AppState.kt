@@ -34,6 +34,7 @@ import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
 import com.jottery.android.crypto.EncryptedData
 import com.jottery.android.service.BackupService
+import com.jottery.android.service.EnvelopeException
 import com.jottery.android.service.EnvelopeService
 import com.jottery.android.service.ImportService
 import com.jottery.android.service.SyncService
@@ -1289,6 +1290,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         KeystoreService.deleteClientId(context)
         KeystoreService.deleteBiometricKey(context)
 
+        // Close and clear the database singleton before deleting the file
+        JotteryDatabase.destroyInstance()
+
         // Delete database file
         context.deleteDatabase("jottery.db")
 
@@ -1646,6 +1650,67 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Sync (Phase 5 Stubs)
 
     /**
+     * Attempt envelope onboarding from the server.
+     * If another device has already uploaded a wrapped master key, fetch and
+     * unwrap it so this device uses the same encryption key. Must be called
+     * after createVault and before setupSync.
+     */
+    /**
+     * Create vault, onboard envelope, and start sync.
+     * Runs in viewModelScope so it survives Compose navigation changes.
+     */
+    fun unlockAndSync(encryptionPassword: String) {
+        viewModelScope.launch {
+            try {
+                createVault(encryptionPassword)
+                tryEnvelopeOnboarding(encryptionPassword)
+                setupSync()
+            } catch (e: Exception) {
+                Log.e(TAG, "[Setup] unlockAndSync failed: ${e.message}", e)
+                _syncError.value = e.message
+            }
+        }
+    }
+
+    suspend fun tryEnvelopeOnboarding(encryptionPassword: String) {
+        Log.d(TAG, "[Envelope] tryEnvelopeOnboarding called")
+        val encRepo = encryptionRepo
+        if (encRepo == null) { Log.w(TAG, "[Envelope] encryptionRepo is null"); return }
+        val syncRepository = syncRepo
+        if (syncRepository == null) { Log.w(TAG, "[Envelope] syncRepo is null"); return }
+        val currentSettings = _settings.value
+        val endpoint = currentSettings.syncEndpoint
+        if (endpoint.isNullOrEmpty()) { Log.w(TAG, "[Envelope] no syncEndpoint"); return }
+        val context = getApplication<Application>()
+        val apiKey = KeystoreService.getAPIKey(context)
+        if (apiKey.isNullOrEmpty()) { Log.w(TAG, "[Envelope] no API key in Keystore"); return }
+        val clientId = KeystoreService.getClientId(context)
+        if (clientId.isNullOrEmpty()) { Log.w(TAG, "[Envelope] no clientId in Keystore"); return }
+
+        val syncMeta = syncRepository.getSyncMetadata()
+        val userId = syncMeta?.userId
+        if (userId.isNullOrEmpty()) {
+            Log.w(TAG, "[Envelope] Skipped onboarding — no userId (syncMeta=$syncMeta)")
+            return
+        }
+
+        val client = SyncClient(endpoint, apiKey, clientId)
+        Log.d(TAG, "[Envelope] Attempting onboard from server, userId=$userId, endpoint=$endpoint")
+        try {
+            val serverKey = withContext(Dispatchers.IO) {
+                EnvelopeService.onboardFromServer(client, encRepo, encryptionPassword, userId)
+            }
+            val serverKeyData = serverKey.encoded
+            keyManager.unlockWithKeyData(serverKeyData)
+            Log.i(TAG, "[Envelope] Onboarded from server — master key replaced (${serverKeyData.size} bytes)")
+        } catch (_: EnvelopeException) {
+            Log.d(TAG, "[Envelope] No server key — this device is the first")
+        } catch (e: Exception) {
+            Log.e(TAG, "[Envelope] Onboarding failed: ${e.message}", e)
+        }
+    }
+
+    /**
      * Set up the sync client. Pass apiKey directly after registration
      * to avoid Keystore retrieval timing issues; otherwise reads from Keystore.
      */
@@ -1843,20 +1908,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 syncEndpoint = serverUrl,
             )
             updateSettings(newSettings)
-            setupSync(response.apiKey)
-
-            // Attempt envelope setup in background (non-fatal)
-            val masterKey = keyManager.masterKey
-            val encRepo = encryptionRepo
-            val client = syncClientInstance
-            if (masterKey != null && syncRepository != null && encRepo != null && client != null) {
-                val regPassword = password
-                viewModelScope.launch(Dispatchers.IO) {
-                    EnvelopeService.tryEnvelopeSetup(
-                        this@AppState, syncRepository, encRepo, client, regPassword, masterKey,
-                    )
-                }
-            }
 
             Result.success("Device registered successfully.")
         } catch (e: Exception) {
@@ -2066,6 +2117,30 @@ class AppState(application: Application) : AndroidViewModel(application) {
             syncEndpoint = endpoint,
         )
         updateSettings(newSettings)
+
+        // Envelope onboarding: if the server has a wrapped master key
+        // (from a device using envelope encryption), fetch and unwrap it
+        // so this device uses the same key. Must happen before setupSync.
+        val encRepo = encryptionRepo
+        val syncRepository = syncRepo
+        if (encRepo != null && syncRepository != null) {
+            val importClient = SyncClient(endpoint, response.apiKey, response.clientId)
+            val userId = response.userId
+            if (userId.isNotEmpty()) {
+                try {
+                    val serverKey = EnvelopeService.onboardFromServer(
+                        importClient, encRepo, password, userId,
+                    )
+                    val serverKeyData = serverKey.encoded
+                    keyManager.unlockWithKeyData(serverKeyData)
+                } catch (_: EnvelopeException) {
+                    Log.d(TAG, "[Envelope] No server key — this device is the first")
+                } catch (e: Exception) {
+                    Log.w(TAG, "[Envelope] Onboarding failed: ${e.message}")
+                }
+            }
+        }
+
         setupSync(response.apiKey)
 
         // Trigger initial sync in the background

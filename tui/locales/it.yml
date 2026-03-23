@@ -21,6 +21,15 @@ password:
   mismatch_error: Le password non corrispondono
   unlock_failed: "Sblocco fallito: %{error}"
   change_success: Password modificata con successo
+  change_title: "Cambia password"
+  change_enter_current: "Inserisci la password attuale:"
+  change_enter_new: "Inserisci la nuova password (min. 12 caratteri):"
+  change_confirm_new: "Conferma la nuova password:"
+  change_current_required: "Inserisci la password attuale"
+  change_wrong_current: "La password attuale non è corretta"
+  change_too_short: "La nuova password deve avere almeno 12 caratteri"
+  change_mismatch: "Le password non corrispondono"
+  change_failed: "Modifica password non riuscita"
   remember: Ricorda password
   remember_toggle: Ricorda password (Ctrl+R per attivare/disattivare)
   remember_enabled: "Password salvata per lo sblocco automatico. Nota: Potrebbe essere accessibile agli utenti con accesso superuser."

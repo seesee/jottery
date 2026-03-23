@@ -78,10 +78,13 @@
     "active": "Ativo",
     "inactive": "Inativo",
     "revoke": "Revogar",
+    "delete": "Eliminar",
     "rename": "Renomear",
     "revokeConfirmTitle": "Revogar dispositivo",
     "revokeConfirm": "Tem a certeza de que pretende revogar o dispositivo \"{name}\"? Este dispositivo deixará de poder sincronizar.",
     "revokeWarning": "Este dispositivo deixará de poder sincronizar.",
+    "deleteConfirmTitle": "Eliminar dispositivo",
+    "deleteConfirm": "Tem a certeza de que pretende eliminar permanentemente o dispositivo \"{name}\"? Esta ação não pode ser desfeita.",
     "noDevices": "Nenhum dispositivo registado",
     "total": "total",
     "nameRequired": "O nome do dispositivo é obrigatório",
@@ -89,6 +92,9 @@
       "revoked": "O dispositivo \"{name}\" foi revogado",
       "revokeFailed": "Falha ao revogar o dispositivo: {error}",
       "revokeFailedGeneric": "Falha ao revogar o dispositivo",
+      "deleted": "O dispositivo \"{name}\" foi eliminado",
+      "deleteFailed": "Falha ao eliminar o dispositivo: {error}",
+      "deleteFailedGeneric": "Falha ao eliminar o dispositivo",
       "renamed": "Dispositivo renomeado com sucesso",
       "renameFailed": "Falha ao renomear o dispositivo: {error}",
       "renameFailedGeneric": "Falha ao renomear o dispositivo"
@@ -292,7 +298,12 @@
       "revokeNote": "Revogar um dispositivo impede a sincronização. Pode voltar a registar o dispositivo mais tarde, se necessário.",
       "revoked": "O dispositivo \"{name}\" foi revogado",
       "revokeFailed": "Falha ao revogar o dispositivo: {error}",
-      "revokeFailedGeneric": "Falha ao revogar o dispositivo"
+      "revokeFailedGeneric": "Falha ao revogar o dispositivo",
+      "deleteTitle": "Eliminar dispositivo",
+      "deleteConfirm": "Tem a certeza de que pretende eliminar permanentemente \"{name}\"? Esta ação não pode ser desfeita.",
+      "deleted": "O dispositivo \"{name}\" foi eliminado",
+      "deleteFailed": "Falha ao eliminar o dispositivo: {error}",
+      "deleteFailedGeneric": "Falha ao eliminar o dispositivo"
     },
     "settings": {
       "title": "Configurações",

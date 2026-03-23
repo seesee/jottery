@@ -78,10 +78,13 @@
     "active": "アクティブ",
     "inactive": "非アクティブ",
     "revoke": "取り消し",
+    "delete": "削除",
     "rename": "名前変更",
     "revokeConfirmTitle": "デバイスの取り消し",
     "revokeConfirm": "デバイス「{name}」を取り消してもよろしいですか？このデバイスは同期できなくなります。",
     "revokeWarning": "このデバイスは同期できなくなります。",
+    "deleteConfirmTitle": "デバイスの削除",
+    "deleteConfirm": "デバイス「{name}」を完全に削除してもよろしいですか？この操作は元に戻せません。",
     "noDevices": "登録されているデバイスはありません",
     "total": "合計",
     "nameRequired": "デバイス名は必須です",
@@ -89,6 +92,9 @@
       "revoked": "デバイス「{name}」が取り消されました",
       "revokeFailed": "デバイスの取り消しに失敗しました: {error}",
       "revokeFailedGeneric": "デバイスの取り消しに失敗しました",
+      "deleted": "デバイス「{name}」が削除されました",
+      "deleteFailed": "デバイスの削除に失敗しました: {error}",
+      "deleteFailedGeneric": "デバイスの削除に失敗しました",
       "renamed": "デバイスの名前が変更されました",
       "renameFailed": "デバイスの名前変更に失敗しました: {error}",
       "renameFailedGeneric": "デバイスの名前変更に失敗しました"
@@ -292,7 +298,12 @@
       "revokeNote": "デバイスを取り消すと同期ができなくなります。必要に応じて後でデバイスを再登録できます。",
       "revoked": "デバイス「{name}」が取り消されました",
       "revokeFailed": "デバイスの取り消しに失敗しました: {error}",
-      "revokeFailedGeneric": "デバイスの取り消しに失敗しました"
+      "revokeFailedGeneric": "デバイスの取り消しに失敗しました",
+      "deleteTitle": "デバイスの削除",
+      "deleteConfirm": "「{name}」を完全に削除してもよろしいですか？この操作は元に戻せません。",
+      "deleted": "デバイス「{name}」が削除されました",
+      "deleteFailed": "デバイスの削除に失敗しました: {error}",
+      "deleteFailedGeneric": "デバイスの削除に失敗しました"
     },
     "settings": {
       "title": "設定",

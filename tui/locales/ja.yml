@@ -21,6 +21,15 @@ password:
   mismatch_error: パスワードが一致しません
   unlock_failed: "ロック解除に失敗: %{error}"
   change_success: パスワードを正常に変更しました
+  change_title: "パスワード変更"
+  change_enter_current: "現在のパスワードを入力してください:"
+  change_enter_new: "新しいパスワードを入力 (12文字以上):"
+  change_confirm_new: "新しいパスワードを確認:"
+  change_current_required: "現在のパスワードを入力してください"
+  change_wrong_current: "現在のパスワードが正しくありません"
+  change_too_short: "新しいパスワードは12文字以上必要です"
+  change_mismatch: "パスワードが一致しません"
+  change_failed: "パスワードの変更に失敗しました"
   remember: パスワードを記憶
   remember_toggle: パスワードを記憶 (Ctrl+Rで切り替え)
   remember_enabled: "自動ロック解除用にパスワードを保存しました。注意: スーパーユーザー権限を持つユーザーがアクセスできる可能性があります。"

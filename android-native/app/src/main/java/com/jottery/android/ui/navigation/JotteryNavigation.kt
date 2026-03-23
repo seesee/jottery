@@ -71,6 +71,11 @@ fun JotteryNavigation(
                     popUpTo(0) { inclusive = true }
                 }
             }
+            !isFirstLaunch && !isLocked && currentRoute != null && currentRoute != Routes.MAIN -> {
+                navController.navigate(Routes.MAIN) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
         }
     }
 

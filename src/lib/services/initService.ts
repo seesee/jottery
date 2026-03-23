@@ -73,7 +73,7 @@ export async function initialize(password: string): Promise<void> {
     // Import the raw master key bytes as a CryptoKey for encryption operations
     const key = await crypto.subtle.importKey(
       'raw',
-      masterKeyBytes,
+      masterKeyBytes as Uint8Array<ArrayBuffer>,
       { name: 'AES-GCM', length: 256 },
       true,
       ['encrypt', 'decrypt']
@@ -133,7 +133,7 @@ export async function unlock(password: string): Promise<void> {
     // Import as CryptoKey
     key = await crypto.subtle.importKey(
       'raw',
-      keyBytes,
+      keyBytes as Uint8Array<ArrayBuffer>,
       { name: 'AES-GCM', length: 256 },
       true,
       ['encrypt', 'decrypt']
@@ -478,7 +478,7 @@ export async function onboardFromServer(
   // Import as CryptoKey
   const key = await crypto.subtle.importKey(
     'raw',
-    masterKeyBytes,
+    masterKeyBytes as Uint8Array<ArrayBuffer>,
     { name: 'AES-GCM', length: 256 },
     true,
     ['encrypt', 'decrypt']

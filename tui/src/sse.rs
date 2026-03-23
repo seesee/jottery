@@ -103,7 +103,16 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
                 break;
             }
             Err(e) => {
-                consecutive_failures += 1;
+                // Only count as a failure if we never connected (immediate error).
+                // Read timeouts after a successful connection are expected and
+                // should not count towards the failure budget.
+                if e.contains("Failed to connect") || e.contains("Failed to get SSE token") {
+                    consecutive_failures += 1;
+                } else {
+                    // Read timeout or stream end — reset failures since the connection was alive
+                    consecutive_failures = 0;
+                    reconnect_delay = Duration::from_secs(1);
+                }
                 warn!(
                     "SSE connection error (attempt {}/{}): {}",
                     consecutive_failures, max_failures, e
@@ -135,11 +144,6 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
             }
         }
 
-        // Reset on successful connection
-        if consecutive_failures > 0 {
-            consecutive_failures = 0;
-            reconnect_delay = Duration::from_secs(1);
-        }
     }
 
     debug!("SSE thread exiting");
@@ -242,19 +246,29 @@ fn connect_and_listen(
         let line = line.map_err(|e| format!("Read error: {}", e))?;
 
         // SSE format: lines starting with "event:", "data:", or empty line (end of event)
+        //
+        // Per the SSE spec, events are terminated by a blank line. However,
+        // HTTP/2 and reverse proxies (e.g. Caddy) may buffer the trailing
+        // blank line until the next chunk arrives (often the next heartbeat,
+        // ~30 s later). Since our protocol only uses single event+data pairs,
+        // we process the event as soon as the "data:" line arrives — matching
+        // the iOS and web client behaviour.
         if line.is_empty() {
-            // End of event - process it
-            if current_event == "sync" {
-                debug!("SSE: Received sync notification from server");
-                let _ = sender.send(SseMessage::SyncNotification);
-            }
+            // Blank line — reset state (handles late-arriving terminators
+            // so we don't re-fire on the next blank line).
             current_event.clear();
         } else if let Some(event_type) = line.strip_prefix("event:") {
             current_event = event_type.trim().to_string();
             debug!("SSE event type: {}", current_event);
-        } else if line.starts_with("data:") {
-            // We don't need the data for sync events, just the event type
-            debug!("SSE data line: {}", line);
+        } else if let Some(data) = line.strip_prefix("data:") {
+            let data = data.trim();
+            debug!("SSE data line: {}", data);
+            // Process immediately once we have event + data
+            if current_event == "sync" && data == "pull" {
+                debug!("SSE: Received sync notification from server");
+                let _ = sender.send(SseMessage::SyncNotification);
+                current_event.clear();
+            }
         } else if line.starts_with(":") {
             // Comment/heartbeat - keep connection alive
             debug!("SSE heartbeat received");

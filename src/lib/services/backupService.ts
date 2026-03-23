@@ -1039,11 +1039,15 @@ export async function verifyBackupPassword(
 ): Promise<{ valid: boolean; key?: CryptoKey; keyBytes?: Uint8Array; error?: string }> {
   try {
     // Derive key using backup's salt and iterations (extractable for JWE)
-    const salt = base64ToUint8Array(backup.encryption.salt);
+    const backupSalt = backup.encryption.salt;
+    if (!backupSalt) throw new Error('Missing encryption salt in backup — file may be corrupted');
+    const backupIterations = backup.encryption.iterations;
+    if (!backupIterations) throw new Error('Missing encryption iterations in backup — file may be corrupted');
+    const salt = base64ToUint8Array(backupSalt);
     const key = await cryptoService.deriveKey({
       password,
       salt,
-      iterations: backup.encryption.iterations,
+      iterations: backupIterations,
       algorithm: 'PBKDF2',
       extractable: true,
     });

@@ -21,6 +21,15 @@ password:
   mismatch_error: Las contraseñas no coinciden
   unlock_failed: "Error al desbloquear: %{error}"
   change_success: Contraseña cambiada con éxito
+  change_title: "Cambiar contraseña"
+  change_enter_current: "Introduzca su contraseña actual:"
+  change_enter_new: "Introduzca nueva contraseña (mín. 12 caracteres):"
+  change_confirm_new: "Confirme la nueva contraseña:"
+  change_current_required: "Introduzca su contraseña actual"
+  change_wrong_current: "La contraseña actual es incorrecta"
+  change_too_short: "La nueva contraseña debe tener al menos 12 caracteres"
+  change_mismatch: "Las contraseñas no coinciden"
+  change_failed: "Error al cambiar la contraseña"
   remember: Recordar contraseña
   remember_toggle: Recordar contraseña (Ctrl+R para alternar)
   remember_enabled: "Contraseña almacenada para desbloqueo automático. Nota: Puede ser accesible para usuarios con acceso de superusuario."

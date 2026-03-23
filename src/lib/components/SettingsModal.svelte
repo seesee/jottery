@@ -815,6 +815,8 @@
         throw new Error('Encryption not initialized');
       }
 
+      if (!metadata.salt) throw new Error('Missing encryption salt — vault may be corrupted');
+      if (!metadata.iterations) throw new Error('Missing encryption iterations — vault may be corrupted');
       const salt = base64ToUint8Array(metadata.salt);
       const derivedKey = await cryptoService.deriveKey({
         password: persistSessionConfirmInput,
@@ -872,6 +874,8 @@
         throw new Error('Encryption not initialized');
       }
 
+      if (!metadata.salt) throw new Error('Missing encryption salt — vault may be corrupted');
+      if (!metadata.iterations) throw new Error('Missing encryption iterations — vault may be corrupted');
       const salt = base64ToUint8Array(metadata.salt);
       const derivedKey = await cryptoService.deriveKey({
         password: rememberPasswordConfirmInput,

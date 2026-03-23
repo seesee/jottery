@@ -2798,6 +2798,72 @@
         }
       }
     },
+    "unlock.deleteAndStartOver": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Database & Start Over"
+          }
+        }
+      }
+    },
+    "unlock.deleteConfirmAction": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Everything"
+          }
+        }
+      }
+    },
+    "unlock.deleteConfirmCancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "unlock.deleteConfirmMessage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This will delete all local data including notes, settings, and encryption keys. If your notes are synced to a server, you can recover them by connecting again. This action cannot be undone."
+          }
+        }
+      }
+    },
+    "unlock.deleteConfirmTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete All Data?"
+          }
+        }
+      }
+    },
+    "unlock.failedAttempts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incorrect password. You may need to delete the database and start over."
+          }
+        }
+      }
+    },
     "unlock.incorrectPassword": {
       "extractionState": "manual",
       "localizations": {

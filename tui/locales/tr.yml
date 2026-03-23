@@ -21,6 +21,15 @@ password:
   mismatch_error: Şifreler eşleşmiyor
   unlock_failed: "Kilidi açma başarısız: %{error}"
   change_success: Şifre başarıyla değiştirildi
+  change_title: "Şifre Değiştir"
+  change_enter_current: "Mevcut şifrenizi girin:"
+  change_enter_new: "Yeni şifre girin (en az 12 karakter):"
+  change_confirm_new: "Yeni şifreyi onaylayın:"
+  change_current_required: "Lütfen mevcut şifrenizi girin"
+  change_wrong_current: "Mevcut şifre yanlış"
+  change_too_short: "Yeni şifre en az 12 karakter olmalıdır"
+  change_mismatch: "Şifreler eşleşmiyor"
+  change_failed: "Şifre değiştirilemedi"
   remember: Şifreyi hatırla
   remember_toggle: Şifreyi hatırla (Ctrl+R ile değiştir)
   remember_enabled: "Şifre otomatik kilit açma için kaydedildi. Not: Süper kullanıcı erişimi olan kullanıcılar tarafından erişilebilir olabilir."

@@ -21,6 +21,15 @@ password:
   mismatch_error: Wachtwoorden komen niet overeen
   unlock_failed: "Ontgrendelen mislukt: %{error}"
   change_success: Wachtwoord succesvol gewijzigd
+  change_title: "Wachtwoord wijzigen"
+  change_enter_current: "Voer uw huidige wachtwoord in:"
+  change_enter_new: "Voer een nieuw wachtwoord in (min. 12 tekens):"
+  change_confirm_new: "Bevestig het nieuwe wachtwoord:"
+  change_current_required: "Voer uw huidige wachtwoord in"
+  change_wrong_current: "Huidig wachtwoord is onjuist"
+  change_too_short: "Nieuw wachtwoord moet minimaal 12 tekens bevatten"
+  change_mismatch: "Wachtwoorden komen niet overeen"
+  change_failed: "Wachtwoord wijzigen mislukt"
   remember: Wachtwoord onthouden
   remember_toggle: Wachtwoord onthouden (Ctrl+R om te wisselen)
   remember_enabled: "Wachtwoord opgeslagen voor automatisch ontgrendelen. Let op: Mogelijk toegankelijk voor gebruikers met superuser-toegang."

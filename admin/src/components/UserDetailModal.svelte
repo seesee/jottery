@@ -17,7 +17,7 @@
   let error = $state<string | null>(null);
 
   // Device actions
-  let confirmAction = $state<{ type: 'revoke'; device: Device } | null>(null);
+  let confirmAction = $state<{ type: 'revoke' | 'delete'; device: Device } | null>(null);
   let editingDevice = $state<{ id: string; name: string } | null>(null);
 
   // Settings editing
@@ -63,6 +63,25 @@
         toast.error($_('devices.toast.revokeFailed', { values: { error: err.message } }));
       } else {
         toast.error($_('devices.toast.revokeFailedGeneric'));
+      }
+    }
+  }
+
+  async function handleDeleteDevice() {
+    if (!confirmAction || confirmAction.type !== 'delete') return;
+
+    const device = confirmAction.device;
+    confirmAction = null;
+
+    try {
+      await api.revokeDevice(device.id);
+      toast.success($_('devices.toast.deleted', { values: { name: device.name } }));
+      await loadUser();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error($_('devices.toast.deleteFailed', { values: { error: err.message } }));
+      } else {
+        toast.error($_('devices.toast.deleteFailedGeneric'));
       }
     }
   }
@@ -581,6 +600,13 @@
                               >
                                 {$_('devices.revoke')}
                               </button>
+                            {:else}
+                              <button
+                                onclick={() => confirmAction = { type: 'delete', device }}
+                                class="text-red-600 hover:text-red-800"
+                              >
+                                {$_('devices.delete')}
+                              </button>
                             {/if}
                           {/if}
                         </div>
@@ -614,6 +640,16 @@
     confirmText={$_('devices.revoke')}
     cancelText={$_('common.cancel')}
     onConfirm={handleRevokeDevice}
+    onCancel={() => confirmAction = null}
+    danger={true}
+  />
+{:else if confirmAction?.type === 'delete'}
+  <ConfirmModal
+    title={$_('devices.deleteConfirmTitle')}
+    message={$_('devices.deleteConfirm', { values: { name: confirmAction.device.name } })}
+    confirmText={$_('devices.delete')}
+    cancelText={$_('common.cancel')}
+    onConfirm={handleDeleteDevice}
     onCancel={() => confirmAction = null}
     danger={true}
   />

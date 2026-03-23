@@ -21,6 +21,15 @@ password:
   mismatch_error: As senhas não correspondem
   unlock_failed: "Falha ao desbloquear: %{error}"
   change_success: Senha alterada com sucesso
+  change_title: "Alterar senha"
+  change_enter_current: "Digite a sua senha atual:"
+  change_enter_new: "Digite a nova senha (mín. 12 caracteres):"
+  change_confirm_new: "Confirme a nova senha:"
+  change_current_required: "Digite a sua senha atual"
+  change_wrong_current: "A senha atual está incorreta"
+  change_too_short: "A nova senha deve ter pelo menos 12 caracteres"
+  change_mismatch: "As senhas não correspondem"
+  change_failed: "Falha ao alterar a senha"
   remember: Lembrar senha
   remember_toggle: Lembrar senha (Ctrl+R para alternar)
   remember_enabled: "Senha armazenada para desbloqueio automático. Nota: Pode ser acessível a usuários com acesso de superusuário."
