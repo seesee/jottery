@@ -489,7 +489,7 @@
       // Check both in-memory array AND repository count to avoid injecting welcome note
       // when notes exist but decryption partially failed or loading was incomplete
       const skipWelcome = window.location.pathname.startsWith('/test') || new URLSearchParams(window.location.search).has('nowelcome');
-      if (allNotes.length === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !skipWelcome) {
+      if (allNotes.length === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !$settings.syncEnabled && !skipWelcome) {
         await createWelcomeNote();
       }
     } catch (error) {

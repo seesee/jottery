@@ -78,10 +78,13 @@
     "active": "Active",
     "inactive": "Inactive",
     "revoke": "Revoke",
+    "delete": "Delete",
     "rename": "Rename",
     "revokeConfirmTitle": "Revoke Device",
     "revokeConfirm": "Are you sure you want to revoke device \"{name}\"? This device will no longer be able to sync.",
     "revokeWarning": "This device will no longer be able to sync.",
+    "deleteConfirmTitle": "Delete Device",
+    "deleteConfirm": "Are you sure you want to permanently delete device \"{name}\"? This cannot be undone.",
     "noDevices": "No devices registered",
     "total": "total",
     "nameRequired": "Device name is required",
@@ -89,6 +92,9 @@
       "revoked": "Device \"{name}\" has been revoked",
       "revokeFailed": "Failed to revoke device: {error}",
       "revokeFailedGeneric": "Failed to revoke device",
+      "deleted": "Device \"{name}\" has been deleted",
+      "deleteFailed": "Failed to delete device: {error}",
+      "deleteFailedGeneric": "Failed to delete device",
       "renamed": "Device renamed successfully",
       "renameFailed": "Failed to rename device: {error}",
       "renameFailedGeneric": "Failed to rename device"
@@ -292,7 +298,12 @@
       "revokeNote": "Revoking a device will prevent it from syncing. You can re-register the device later if needed.",
       "revoked": "Device \"{name}\" has been revoked",
       "revokeFailed": "Failed to revoke device: {error}",
-      "revokeFailedGeneric": "Failed to revoke device"
+      "revokeFailedGeneric": "Failed to revoke device",
+      "deleteTitle": "Delete Device",
+      "deleteConfirm": "Are you sure you want to permanently delete \"{name}\"? This cannot be undone.",
+      "deleted": "Device \"{name}\" has been deleted",
+      "deleteFailed": "Failed to delete device: {error}",
+      "deleteFailedGeneric": "Failed to delete device"
     },
     "settings": {
       "title": "Settings",

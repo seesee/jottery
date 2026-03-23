@@ -288,6 +288,7 @@ impl AuthClient {
 /// Wrapped key response from server (envelope encryption)
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct WrappedKeyResponse {
     pub blob: String,
     pub kdf_version: u32,

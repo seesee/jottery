@@ -341,18 +341,6 @@
       "cancelButton": "取消",
       "enableButton": "我理解,仍然启用"
     },
-    "syncCredentials": {
-      "title": "📋 同步凭据",
-      "instructions": "复制下面的文本并将其粘贴到另一个 Jottery 客户端,使用\"使用现有凭据\":",
-      "samePasswordWarning": "⚠️ <strong>重要:</strong> 所有设备必须使用相同的密码才能解密笔记!",
-      "clipboardNote": "剪贴板复制可能失败(尤其是通过 SSH 或在某些浏览器中)。您可以手动选择并复制上面的文本。",
-      "closeButton": "关闭",
-      "advancedOptions": "高级选项",
-      "legacyFormat": {
-        "label": "使用旧版格式(未加密)",
-        "warning": "⚠️ 仅在与无法更新的旧版 Jottery 共享时使用。旧版格式会以明文形式公开您的 API 密钥。"
-      }
-    },
     "autoSaved": "更改已自动保存",
     "saveSettings": "保存设置",
     "saving": "保存中...",
@@ -389,14 +377,6 @@
         "help": "用于识别此设备的名称"
       },
       "chooseMethod": "选择设置同步的方式:",
-      "importCredentials": {
-        "title": "导入同步凭据",
-        "subtitle": "<strong>用于附加设备:</strong> 最安全的方法",
-        "benefit1": "✓ 零知识加密(服务器无法解密您的笔记)",
-        "benefit2": "✓ 从您的第一台设备复制凭据",
-        "benefit3": "✓ 所有设备使用相同的加密密钥",
-        "button": "📋 从另一台设备导入凭据"
-      },
       "registerServer": {
         "title": "注册到同步服务器",
         "subtitle": "<strong>仅用于您的第一台设备:</strong> 创建您的账户",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ 正在注册设备并同步...",
         "successTitle": "同步已成功启用!",
         "successText": "您的设备现已注册,<strong>所有现有笔记已同步到服务器</strong>。未来的更改将自动同步。",
-        "successNextSteps": "📋 添加另一台设备:点击下方的\"导出同步凭据\"并将其导入到您的其他设备。",
+        "successNextSteps": "🔗 添加另一台设备：在新设备上使用\"连接现有帐户\"。",
         "done": "完成",
         "checkStatusLink": "在用户门户查看您的审批状态 →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "密码",
         "comingSoon": "即将推出",
         "futureUpdate": "账户关联将在未来更新中启用"
-      },
-      "import": {
-        "title": "导入凭据",
-        "instructions": "粘贴来自您的第一台设备的凭据。应用程序将锁定,您需要使用密码解锁。",
-        "warningTitle": "⚠️ 重要:您必须在所有设备上使用相同的密码!",
-        "warningText": "如果使用不同的密码,笔记将无法解密。",
-        "placeholder": "在此粘贴 base64 凭据...",
-        "button": "📥 导入并锁定",
-        "importing": "导入中...",
-        "deviceName": {
-          "label": "设备名称",
-          "placeholder": "我的笔记本",
-          "help": "用于在您的账户中识别此设备的名称"
-        }
       },
       "error": "错误"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} 条笔记等待同步",
       "notesPendingPlural": "{count} 条笔记等待同步",
-      "showCredentials": "显示其他设备的凭据",
-      "credentialsHelp": "点击以文本形式显示凭据。在其他设备上使用\"使用现有凭据\"进行导入。",
-      "samePasswordWarning": "所有设备必须使用相同的密码来解密笔记！",
       "userPortal": {
         "title": "用户门户",
         "description": "管理您的账户、更改密码或删除数据",
@@ -906,10 +869,6 @@
       "note": "注意：设置后您仍需向服务器注册。"
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "有同步凭据吗？",
-        "subtitle": "在此粘贴您的凭据以同步此设备"
-      },
       "existingAccount": {
         "title": "连接现有账户",
         "subtitle": "已有账户？连接此设备",
@@ -924,32 +883,43 @@
         "subtitle": "仅限第一台设备 - 创建您的账户",
         "formTitle": "注册新账户"
       },
-      "import": {
-        "title": "导入凭据",
-        "instructions": "从其他设备的设置 > 同步 > 复制凭据粘贴凭据。",
-        "passwordNote": "您需要使用与其他设备相同的密码。",
-        "placeholder": "在此粘贴凭据...",
-        "button": "导入凭据",
-        "importing": "正在导入...",
-        "emptyError": "请粘贴凭据",
-        "failed": "导入凭据失败",
-        "deviceName": {
-          "label": "设备名称",
-          "placeholder": "我的笔记本",
-          "help": "用于在您的账户中识别此设备的名称"
-        },
-        "deviceNameRequired": "请输入设备名称"
-      },
       "completeInSettings": "创建密码后，在设置 > 同步中完成同步设置。"
     },
-    "credentialsImported": {
-      "title": "凭据导入成功！",
-      "message": "输入您在其他设备上使用的相同密码以解锁。",
-      "passwordLabel": "密码（来自您的其他设备）",
-      "passwordPlaceholder": "输入其他设备的密码"
-    },
     "restoreFromBackup": "从备份恢复",
-    "orDivider": "或"
+    "orDivider": "或",
+    "connectExisting": {
+      "title": "连接现有账户",
+      "subtitle": "将此设备链接到您现有的Jottery账户并同步笔记。",
+      "endpoint": "同步服务器URL",
+      "endpointHint": "Jottery同步服务器的地址。",
+      "deviceName": "设备名称",
+      "deviceNamePlaceholder": "例如：工作笔记本电脑",
+      "deviceNameHint": "用于识别此设备的友好名称。",
+      "email": "电子邮件地址",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "服务器密码",
+      "serverPasswordPlaceholder": "您的账户密码",
+      "serverPasswordHint": "您用于登录同步服务器的密码。",
+      "notesPassword": "笔记密码",
+      "notesPasswordPlaceholder": "选择本地密码（至少8个字符）",
+      "notesPasswordHint": "用于在此设备上解锁笔记。可以与服务器密码不同。",
+      "submitButton": "连接并同步",
+      "errors": {
+        "endpointRequired": "同步服务器URL为必填项。",
+        "deviceNameRequired": "设备名称为必填项。",
+        "emailRequired": "电子邮件地址为必填项。",
+        "serverPasswordRequired": "服务器密码为必填项。",
+        "notesPasswordMinLength": "笔记密码至少需要8个字符。",
+        "onboardingFailed": "从服务器下载加密密钥失败。请确保服务器密码正确，且源设备已完成同步"
+      },
+      "steps": {
+        "initialising": "正在初始化本地加密…",
+        "registering": "正在向服务器注册设备…",
+        "onboarding": "正在下载加密密钥…",
+        "encrypting": "正在保护凭据…",
+        "syncing": "正在开始初始同步…"
+      }
+    }
   },
   "lock": {
     "title": "锁定应用程序",

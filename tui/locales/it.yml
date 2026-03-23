@@ -21,6 +21,15 @@ password:
   mismatch_error: Le password non corrispondono
   unlock_failed: "Sblocco fallito: %{error}"
   change_success: Password modificata con successo
+  change_title: "Cambia password"
+  change_enter_current: "Inserisci la password attuale:"
+  change_enter_new: "Inserisci la nuova password (min. 12 caratteri):"
+  change_confirm_new: "Conferma la nuova password:"
+  change_current_required: "Inserisci la password attuale"
+  change_wrong_current: "La password attuale non è corretta"
+  change_too_short: "La nuova password deve avere almeno 12 caratteri"
+  change_mismatch: "Le password non corrispondono"
+  change_failed: "Modifica password non riuscita"
   remember: Ricorda password
   remember_toggle: Ricorda password (Ctrl+R per attivare/disattivare)
   remember_enabled: "Password salvata per lo sblocco automatico. Nota: Potrebbe essere accessibile agli utenti con accesso superuser."
@@ -141,8 +150,6 @@ settings:
   instructions_remember: "Ricorda password: Invio richiede password (se attivazione) o disattiva (se attivato)"
   instructions_sync: Premi 'y' per avviare la sincronizzazione
   instructions_force_sync: Premi 'Y' (Shift+y) per forzare la sincronizzazione completa (scarica dal server)
-  instructions_paste: Premi 'p' per incollare credenziali sync da un altro dispositivo
-  instructions_copy: Premi 'c' per copiare credenziali sync da condividere con un altro dispositivo
   press_enter_cycle: premi Invio per ciclare
   press_enter_toggle: premi Invio per attivare/disattivare
   disabled: disabilitato
@@ -159,8 +166,6 @@ sync:
   conflict: Conflitto di sincronizzazione rilevato. Alcune note hanno modifiche in conflitto sul server.
   request_failed: Invio richiesta di sincronizzazione fallito
   response_parse_failed: Analisi risposta di sincronizzazione fallita
-  encrypted_import: Credenziali crittografate importate. Inserisci la password per decrittografare e completare la configurazione.
-  legacy_format_warning: "Attenzione: Utilizzo del formato legacy non crittografato. La chiave API è esposta in testo normale."
   disconnected: Disconnesso dal server di sincronizzazione. Le note locali sono state conservate.
   disconnect_failed: Disconnessione dal server di sincronizzazione non riuscita
   sse_connected: "Sincronizzazione in tempo reale connessa"
@@ -183,17 +188,6 @@ sync:
   reload_failed: "Sincronizzazione riuscita ma ricaricamento note fallito: %{error}"
   note: nota
   notes: note
-  credentials_title: Credenziali Sync (Copia Questo Testo)
-  credentials_instruction: "Copia il testo qui sotto e incollalo in un altro client Jottery:"
-  paste_title: Incolla Credenziali Sync
-  paste_instruction: "Incolla il testo delle credenziali base64 da un altro client Jottery:"
-  paste_success: Credenziali sync configurate con successo!
-  paste_failed: "Incolla credenziali fallito: %{error}"
-  salt_sync: Salt sincronizzato! Reinserisci la password per sbloccare con il nuovo salt di crittografia.
-  import_device_title: Importa Credenziali - Nome Dispositivo
-  import_enter_device_name: "Inserisci un nome per questo dispositivo (es. Il Mio Laptop):"
-  credentials_empty: Nessuna credenziale inserita
-  import_failed: Importazione credenziali fallita
 
 # Posta in arrivo
 inbox:
@@ -388,12 +382,6 @@ help:
   enter_save_desc: Salva campi testo/numero, attiva/disattiva altri campi
   esc_cancel_key: Esc
   esc_cancel_desc: Annulla modifica (campi testo/numero)
-  p_paste_key: p
-  p_paste_desc: Incolla credenziali sync (mostra input testo)
-  c_copy_key: c
-  c_copy_desc: Copia credenziali sync (formato crittografato)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Copia credenziali sync (formato legacy non crittografato)
   s_q_close_key: s / q
   s_q_close_desc: Chiudi pannello impostazioni
   tab_focus_attachment_key: Tab

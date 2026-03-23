@@ -33,7 +33,7 @@ struct EncryptionRepository: Sendable {
                 UPDATE encryption_metadata
                 SET envelope_version = ?, device_salt = ?,
                     local_wrapped_master = ?, wrapping_kdf_version = ?,
-                    salt = NULL, iterations = NULL
+                    salt = '', iterations = 0
                 WHERE id = 1
             """, arguments: [envelopeVersion, deviceSalt, localWrappedMaster, wrappingKdfVersion])
         }

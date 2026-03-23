@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT wrapped_blob, kdf_version, kdf_iterations FROM wrapped_keys WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "wrapped_blob",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "kdf_version",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "kdf_iterations",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "29af93ad7287d3488ca122c23dea6c91af28e31f05e0f0ba9ac8aba5d8c7493c"
+}

@@ -21,6 +21,15 @@ password:
   mismatch_error: "비밀번호가 일치하지 않습니다"
   unlock_failed: "잠금 해제 실패: %{error}"
   change_success: "비밀번호가 성공적으로 변경되었습니다"
+  change_title: "비밀번호 변경"
+  change_enter_current: "현재 비밀번호를 입력하세요:"
+  change_enter_new: "새 비밀번호를 입력하세요 (12자 이상):"
+  change_confirm_new: "새 비밀번호를 확인하세요:"
+  change_current_required: "현재 비밀번호를 입력하세요"
+  change_wrong_current: "현재 비밀번호가 올바르지 않습니다"
+  change_too_short: "새 비밀번호는 12자 이상이어야 합니다"
+  change_mismatch: "비밀번호가 일치하지 않습니다"
+  change_failed: "비밀번호 변경에 실패했습니다"
   remember: "비밀번호 기억"
   remember_toggle: "비밀번호 기억 (Ctrl+R로 전환)"
   remember_enabled: "자동 잠금 해제를 위해 비밀번호가 저장되었습니다. 참고: 슈퍼유저 권한이 있는 사용자가 접근할 수 있습니다."
@@ -141,8 +150,6 @@ settings:
   instructions_remember: "비밀번호 기억: Enter로 비밀번호 입력 (활성화 시) 또는 비활성화 (활성화된 경우)"
   instructions_sync: "'y'를 눌러 동기화 실행"
   instructions_force_sync: "'Y' (Shift+y)를 눌러 전체 동기화 (서버에서 가져오기)"
-  instructions_paste: "'p'를 눌러 다른 기기의 동기화 자격 증명 붙여넣기"
-  instructions_copy: "'c'를 눌러 동기화 자격 증명 복사하여 다른 기기와 공유"
   press_enter_cycle: "Enter를 눌러 순환"
   press_enter_toggle: "Enter를 눌러 전환"
   disabled: "비활성화됨"
@@ -159,8 +166,6 @@ sync:
   conflict: "동기화 충돌이 감지되었습니다. 일부 노트에 서버에서 충돌하는 변경 사항이 있습니다."
   request_failed: "동기화 요청 전송 실패"
   response_parse_failed: "동기화 응답 구문 분석 실패"
-  encrypted_import: "암호화된 자격 증명을 가져왔습니다. 복호화하고 설정을 완료하려면 비밀번호를 입력하세요."
-  legacy_format_warning: "경고: 암호화되지 않은 레거시 형식을 사용 중입니다. API 키가 일반 텍스트로 표시됩니다."
   disconnected: "동기화 서버에서 연결 해제됨. 로컬 노트가 보존됩니다."
   disconnect_failed: "동기화 서버에서 연결 해제 실패"
   sse_connected: "실시간 동기화 연결됨"
@@ -183,17 +188,6 @@ sync:
   reload_failed: "동기화는 성공했지만 노트를 다시 로드하지 못했습니다: %{error}"
   note: "노트"
   notes: "노트"
-  credentials_title: "동기화 자격 증명 (이 텍스트 복사)"
-  credentials_instruction: "아래 텍스트를 복사하여 다른 Jottery 클라이언트에 붙여넣으세요:"
-  paste_title: "동기화 자격 증명 붙여넣기"
-  paste_instruction: "다른 Jottery 클라이언트의 base64 자격 증명 텍스트를 붙여넣으세요:"
-  paste_success: "동기화 자격 증명이 성공적으로 구성되었습니다!"
-  paste_failed: "자격 증명 붙여넣기 실패: %{error}"
-  salt_sync: Salt가 동기화되었습니다! 새 암호화 salt로 잠금 해제하려면 비밀번호를 다시 입력하세요.
-  import_device_title: "자격 증명 가져오기 - 기기 이름"
-  import_enter_device_name: "이 기기의 이름을 입력하세요 (예: 내 노트북):"
-  credentials_empty: "자격 증명이 입력되지 않았습니다"
-  import_failed: "자격 증명 가져오기 실패"
 
 # 받은편지함
 inbox:
@@ -388,12 +382,6 @@ help:
   enter_save_desc: "텍스트/숫자 필드 저장, 다른 필드 전환"
   esc_cancel_key: Esc
   esc_cancel_desc: "편집 취소 (텍스트/숫자 필드)"
-  p_paste_key: p
-  p_paste_desc: "동기화 자격 증명 붙여넣기 (텍스트 입력 표시)"
-  c_copy_key: c
-  c_copy_desc: "동기화 자격 증명 복사 (암호화된 형식)"
-  shift_c_copy_key: C
-  shift_c_copy_desc: "동기화 자격 증명 복사 (레거시 암호화되지 않은 형식)"
   s_q_close_key: s / q
   s_q_close_desc: "설정 패널 닫기"
   tab_focus_attachment_key: Tab

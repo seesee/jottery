@@ -92,7 +92,15 @@
     loading = true;
     try {
       const encryptedVersions = await versionRepository.getVersionsForNote(noteId);
-      versions = await Promise.all(encryptedVersions.map(v => decryptVersion(v)));
+      const results = await Promise.allSettled(encryptedVersions.map(v => decryptVersion(v)));
+      versions = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          versions.push(result.value);
+        } else {
+          console.error('[VersionHistory] Skipping undecryptable version:', result.reason);
+        }
+      }
       // Auto-select the first (newest) version
       if (versions.length > 0) {
         selectedVersion = versions[0];

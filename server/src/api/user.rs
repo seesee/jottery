@@ -582,7 +582,7 @@ pub async fn revoke_device(
 
     // Verify the device belongs to this user
     let device = sqlx::query!(
-        "SELECT user_id FROM clients WHERE id = ?",
+        "SELECT user_id, is_active FROM clients WHERE id = ?",
         device_id
     )
     .fetch_optional(&state.pool)
@@ -598,19 +598,38 @@ pub async fn revoke_device(
         return Err(AppError::Forbidden("Cannot revoke another user's device".to_string()));
     }
 
-    // Deactivate the device (soft revoke)
-    sqlx::query!(
-        "UPDATE clients SET is_active = 0 WHERE id = ?",
-        device_id
-    )
-    .execute(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to revoke device: {}", e);
-        AppError::InternalServerError
-    })?;
+    let is_active = device.is_active.unwrap_or(0) == 1;
 
-    tracing::info!("User {} revoked device {}", user_id, device_id);
+    if is_active {
+        // Deactivate the device (soft revoke)
+        sqlx::query!(
+            "UPDATE clients SET is_active = 0 WHERE id = ?",
+            device_id
+        )
+        .execute(&state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to revoke device: {}", e);
+            AppError::InternalServerError
+        })?;
+
+        tracing::info!("User {} revoked device {}", user_id, device_id);
+    } else {
+        // Already revoked — hard-delete the device
+        sqlx::query!(
+            "DELETE FROM clients WHERE id = ?",
+            device_id
+        )
+        .execute(&state.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete device: {}", e);
+            AppError::InternalServerError
+        })?;
+
+        tracing::info!("User {} deleted revoked device {}", user_id, device_id);
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 

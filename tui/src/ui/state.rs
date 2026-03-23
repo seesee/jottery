@@ -24,20 +24,6 @@ pub enum AppState {
         /// Current scroll offset
         scroll_offset: usize,
     },
-    /// Show sync credentials as text (for manual copy)
-    ShowSyncCredentials {
-        credentials: String,
-        previous: Box<AppState>,
-    },
-    /// Input sync credentials as text (for manual paste)
-    InputSyncCredentials {
-        previous: Box<AppState>,
-    },
-    /// Input device name for imported credentials
-    ImportInputDeviceName {
-        credentials: String,
-        previous: Box<AppState>,
-    },
     /// Input email for registration status check
     InputEmailForStatus {
         previous: Box<AppState>,

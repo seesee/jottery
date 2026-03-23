@@ -21,6 +21,15 @@ password:
   mismatch_error: パスワードが一致しません
   unlock_failed: "ロック解除に失敗: %{error}"
   change_success: パスワードを正常に変更しました
+  change_title: "パスワード変更"
+  change_enter_current: "現在のパスワードを入力してください:"
+  change_enter_new: "新しいパスワードを入力 (12文字以上):"
+  change_confirm_new: "新しいパスワードを確認:"
+  change_current_required: "現在のパスワードを入力してください"
+  change_wrong_current: "現在のパスワードが正しくありません"
+  change_too_short: "新しいパスワードは12文字以上必要です"
+  change_mismatch: "パスワードが一致しません"
+  change_failed: "パスワードの変更に失敗しました"
   remember: パスワードを記憶
   remember_toggle: パスワードを記憶 (Ctrl+Rで切り替え)
   remember_enabled: "自動ロック解除用にパスワードを保存しました。注意: スーパーユーザー権限を持つユーザーがアクセスできる可能性があります。"
@@ -141,8 +150,6 @@ settings:
   instructions_remember: "パスワードを記憶: Enterでパスワード入力（有効化時）または無効化（有効時）"
   instructions_sync: "'y'を押して同期を開始"
   instructions_force_sync: "'Y' (Shift+y)を押して強制完全同期（サーバーからプル）"
-  instructions_paste: "'p'を押して他のデバイスから同期認証情報を貼り付け"
-  instructions_copy: "'c'を押して同期認証情報をコピーして他のデバイスと共有"
   press_enter_cycle: Enterを押して切り替え
   press_enter_toggle: Enterを押してトグル
   disabled: 無効
@@ -159,8 +166,6 @@ sync:
   conflict: 同期の競合が検出されました。一部のノートにサーバー上で競合する変更があります。
   request_failed: 同期リクエストの送信に失敗
   response_parse_failed: 同期レスポンスの解析に失敗
-  encrypted_import: 暗号化された認証情報がインポートされました。設定を完了するにはパスワードを入力して復号化してください。
-  legacy_format_warning: "警告: 暗号化なしのレガシー形式を使用しています。APIキーが平文で表示されます。"
   disconnected: 同期サーバーから切断されました。ローカルノートは保持されています。
   disconnect_failed: 同期サーバーからの切断に失敗しました
   sse_connected: "リアルタイム同期に接続しました"
@@ -183,17 +188,6 @@ sync:
   reload_failed: "同期は成功しましたがノートの再読み込みに失敗: %{error}"
   note: 件のノート
   notes: 件のノート
-  credentials_title: 同期認証情報 (このテキストをコピー)
-  credentials_instruction: "下のテキストをコピーして別のJotteryクライアントに貼り付けてください:"
-  paste_title: 同期認証情報を貼り付け
-  paste_instruction: "別のJotteryクライアントからbase64認証情報テキストを貼り付けてください:"
-  paste_success: 同期認証情報を正常に設定しました！
-  paste_failed: "認証情報の貼り付けに失敗: %{error}"
-  salt_sync: ソルトを同期しました！新しい暗号化ソルトでロック解除するためにパスワードを再入力してください。
-  import_device_title: 認証情報のインポート - デバイス名
-  import_enter_device_name: "このデバイスの名前を入力してください (例: マイラップトップ):"
-  credentials_empty: 認証情報が入力されていません
-  import_failed: 認証情報のインポートに失敗しました
 
 # 受信トレイ
 inbox:
@@ -388,12 +382,6 @@ help:
   enter_save_desc: テキスト/数値フィールドを保存、その他のフィールドを切替
   esc_cancel_key: Esc
   esc_cancel_desc: 編集をキャンセル (テキスト/数値フィールド)
-  p_paste_key: p
-  p_paste_desc: 同期認証情報を貼り付け (テキスト入力を表示)
-  c_copy_key: c
-  c_copy_desc: 同期認証情報をコピー (暗号化形式)
-  shift_c_copy_key: C
-  shift_c_copy_desc: 同期認証情報をコピー (レガシー非暗号化形式)
   s_q_close_key: s / q
   s_q_close_desc: 設定パネルを閉じる
   tab_focus_attachment_key: Tab

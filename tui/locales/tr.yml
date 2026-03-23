@@ -21,6 +21,15 @@ password:
   mismatch_error: Şifreler eşleşmiyor
   unlock_failed: "Kilidi açma başarısız: %{error}"
   change_success: Şifre başarıyla değiştirildi
+  change_title: "Şifre Değiştir"
+  change_enter_current: "Mevcut şifrenizi girin:"
+  change_enter_new: "Yeni şifre girin (en az 12 karakter):"
+  change_confirm_new: "Yeni şifreyi onaylayın:"
+  change_current_required: "Lütfen mevcut şifrenizi girin"
+  change_wrong_current: "Mevcut şifre yanlış"
+  change_too_short: "Yeni şifre en az 12 karakter olmalıdır"
+  change_mismatch: "Şifreler eşleşmiyor"
+  change_failed: "Şifre değiştirilemedi"
   remember: Şifreyi hatırla
   remember_toggle: Şifreyi hatırla (Ctrl+R ile değiştir)
   remember_enabled: "Şifre otomatik kilit açma için kaydedildi. Not: Süper kullanıcı erişimi olan kullanıcılar tarafından erişilebilir olabilir."
@@ -141,8 +150,6 @@ settings:
   instructions_remember: "Şifreyi hatırla: Enter şifre sorar (etkinleştirirken) veya devre dışı bırakır (etkinse)"
   instructions_sync: Senkronizasyonu tetiklemek için 'y' tuşuna basın
   instructions_force_sync: Tam senkronizasyonu zorlamak için 'Y' (Shift+y) tuşuna basın (sunucudan çek)
-  instructions_paste: Başka bir cihazdan senkronizasyon kimlik bilgilerini yapıştırmak için 'p' tuşuna basın
-  instructions_copy: Başka bir cihazla paylaşmak için senkronizasyon kimlik bilgilerini kopyalamak için 'c' tuşuna basın
   press_enter_cycle: değiştirmek için Enter tuşuna basın
   press_enter_toggle: açıp kapatmak için Enter tuşuna basın
   disabled: devre dışı
@@ -159,8 +166,6 @@ sync:
   conflict: Senkronizasyon çakışması algılandı. Bazı notların sunucuda çakışan değişiklikleri var.
   request_failed: Senkronizasyon isteği gönderme başarısız
   response_parse_failed: Senkronizasyon yanıtını ayrıştırma başarısız
-  encrypted_import: Şifrelenmiş kimlik bilgileri içe aktarıldı. Şifre çözmek ve kurulumu tamamlamak için lütfen parolanızı girin.
-  legacy_format_warning: "Uyarı: Şifrelenmemiş eski format kullanılıyor. API anahtarı düz metin olarak görünür."
   disconnected: Senkronizasyon sunucusundan bağlantı kesildi. Yerel notlar korundu.
   disconnect_failed: Senkronizasyon sunucusundan bağlantı kesilmesi başarısız
   sse_connected: "Gerçek zamanlı senkronizasyon bağlandı"
@@ -183,17 +188,6 @@ sync:
   reload_failed: "Senkronizasyon başarılı ancak notlar yeniden yüklenemedi: %{error}"
   note: not
   notes: not
-  credentials_title: Senkronizasyon Kimlik Bilgileri (Bu Metni Kopyalayın)
-  credentials_instruction: "Aşağıdaki metni kopyalayın ve başka bir Jottery istemcisine yapıştırın:"
-  paste_title: Senkronizasyon Kimlik Bilgilerini Yapıştır
-  paste_instruction: "Başka bir Jottery istemcisinden base64 kimlik bilgileri metnini yapıştırın:"
-  paste_success: Senkronizasyon kimlik bilgileri başarıyla yapılandırıldı!
-  paste_failed: "Kimlik bilgileri yapıştırma başarısız: %{error}"
-  salt_sync: Tuz senkronize edildi! Yeni şifreleme tuzu ile kilidi açmak için lütfen şifrenizi tekrar girin.
-  import_device_title: Kimlik Bilgilerini İçe Aktar - Cihaz Adı
-  import_enter_device_name: "Bu cihaz için bir ad girin (örn. Dizüstü Bilgisayarım):"
-  credentials_empty: Kimlik bilgisi girilmedi
-  import_failed: Kimlik bilgilerini içe aktarma başarısız
 
 # Gelen Kutusu
 inbox:
@@ -388,12 +382,6 @@ help:
   enter_save_desc: Metin/sayı alanlarını kaydet, diğer alanları değiştir
   esc_cancel_key: Esc
   esc_cancel_desc: Düzenlemeyi iptal et (metin/sayı alanları)
-  p_paste_key: p
-  p_paste_desc: Senkronizasyon kimlik bilgilerini yapıştır (metin girişini gösterir)
-  c_copy_key: c
-  c_copy_desc: Senkronizasyon kimlik bilgilerini kopyala (şifreli format)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Senkronizasyon kimlik bilgilerini kopyala (eski şifresiz format)
   s_q_close_key: s / q
   s_q_close_desc: Ayarlar panelini kapat
   tab_focus_attachment_key: Tab

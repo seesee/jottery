@@ -1217,26 +1217,30 @@ final class AppState {
                         noteRepo.listArchived(key: oldKey)
 
         for note in allNotes {
-            let encContent = try CryptoService.encryptText(note.content, key: newKey)
-            let encTags = try CryptoService.encryptStringArray(note.tags, key: newKey)
-            let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
-            let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
+            do {
+                let encContent = try CryptoService.encryptText(note.content, key: newKey)
+                let encTags = try CryptoService.encryptStringArray(note.tags, key: newKey)
+                let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
+                let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
 
-            // Re-encrypt attachment filenames
-            var reEncryptedAttachments = note.attachments
-            for i in reEncryptedAttachments.indices {
-                let encFilename = try CryptoService.encryptText(reEncryptedAttachments[i].filename, key: newKey)
-                reEncryptedAttachments[i].filename = try CryptoService.serializeEncryptedJSON(encFilename)
+                // Re-encrypt attachment filenames
+                var reEncryptedAttachments = note.attachments
+                for i in reEncryptedAttachments.indices {
+                    let encFilename = try CryptoService.encryptText(reEncryptedAttachments[i].filename, key: newKey)
+                    reEncryptedAttachments[i].filename = try CryptoService.serializeEncryptedJSON(encFilename)
+                }
+                let attachmentsJSON = try JSONEncoder().encode(reEncryptedAttachments)
+                let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
+
+                guard var record = try noteRepo.getRaw(id: note.id) else { continue }
+                record.content = contentJSON
+                record.tags = tagsJSON
+                record.attachments = attachmentsString
+                record.needsSync = true
+                try noteRepo.updateRaw(record)
+            } catch {
+                print("[ReEncrypt] Skipping note \(note.id): \(error)")
             }
-            let attachmentsJSON = try JSONEncoder().encode(reEncryptedAttachments)
-            let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
-
-            guard var record = try noteRepo.getRaw(id: note.id) else { continue }
-            record.content = contentJSON
-            record.tags = tagsJSON
-            record.attachments = attachmentsString
-            record.needsSync = true
-            try noteRepo.updateRaw(record)
         }
 
         // Re-encrypt attachment blobs
@@ -1260,38 +1264,50 @@ final class AppState {
 
         // Re-encrypt version snapshots
         for noteId in Set(allNotes.map(\.id)) {
-            let versions = try versionRepo.getVersions(noteId: noteId)
-            for ver in versions {
-                do {
-                    let encContent = try CryptoService.parseEncryptedJSON(ver.content)
-                    let plainContent = try CryptoService.decryptText(encContent, key: oldKey)
-                    let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
+            do {
+                let versions = try versionRepo.getVersions(noteId: noteId)
+                for ver in versions {
+                    do {
+                        let encContent = try CryptoService.parseEncryptedJSON(ver.content)
+                        let plainContent = try CryptoService.decryptText(encContent, key: oldKey)
+                        let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
 
-                    let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
-                    let plainTagsStr = try CryptoService.decryptText(encTags, key: oldKey)
-                    let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
+                        let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
+                        let plainTagsStr = try CryptoService.decryptText(encTags, key: oldKey)
+                        let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
 
-                    var updated = ver
-                    updated.content = try CryptoService.serializeEncryptedJSON(newEncContent)
-                    updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
-                    try versionRepo.insertOrReplace(updated)
-                } catch {
-                    print("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
+                        var updated = ver
+                        updated.content = try CryptoService.serializeEncryptedJSON(newEncContent)
+                        updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
+                        try versionRepo.insertOrReplace(updated)
+                    } catch {
+                        print("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
+                    }
                 }
+            } catch {
+                print("[ReEncrypt] Skipping versions for note \(noteId): \(error)")
             }
         }
 
         // Re-encrypt saved searches
         if let savedSearchRepo {
-            let searches = try savedSearchRepo.listAll(key: oldKey)
-            for search in searches {
-                let encName = try CryptoService.encryptText(search.name, key: newKey)
-                let encQuery = try CryptoService.encryptText(search.query, key: newKey)
-                try savedSearchRepo.updateEncrypted(
-                    id: search.id,
-                    name: try CryptoService.serializeEncryptedJSON(encName),
-                    query: try CryptoService.serializeEncryptedJSON(encQuery)
-                )
+            do {
+                let searches = try savedSearchRepo.listAll(key: oldKey)
+                for search in searches {
+                    do {
+                        let encName = try CryptoService.encryptText(search.name, key: newKey)
+                        let encQuery = try CryptoService.encryptText(search.query, key: newKey)
+                        try savedSearchRepo.updateEncrypted(
+                            id: search.id,
+                            name: try CryptoService.serializeEncryptedJSON(encName),
+                            query: try CryptoService.serializeEncryptedJSON(encQuery)
+                        )
+                    } catch {
+                        print("[ReEncrypt] Skipping saved search \(search.id): \(error)")
+                    }
+                }
+            } catch {
+                print("[ReEncrypt] Failed to list saved searches: \(error)")
             }
         }
 

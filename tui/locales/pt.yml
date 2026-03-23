@@ -21,6 +21,15 @@ password:
   mismatch_error: As senhas não correspondem
   unlock_failed: "Falha ao desbloquear: %{error}"
   change_success: Senha alterada com sucesso
+  change_title: "Alterar senha"
+  change_enter_current: "Digite a sua senha atual:"
+  change_enter_new: "Digite a nova senha (mín. 12 caracteres):"
+  change_confirm_new: "Confirme a nova senha:"
+  change_current_required: "Digite a sua senha atual"
+  change_wrong_current: "A senha atual está incorreta"
+  change_too_short: "A nova senha deve ter pelo menos 12 caracteres"
+  change_mismatch: "As senhas não correspondem"
+  change_failed: "Falha ao alterar a senha"
   remember: Lembrar senha
   remember_toggle: Lembrar senha (Ctrl+R para alternar)
   remember_enabled: "Senha armazenada para desbloqueio automático. Nota: Pode ser acessível a usuários com acesso de superusuário."
@@ -141,8 +150,6 @@ settings:
   instructions_remember: "Lembrar senha: Enter solicita a senha (se ativando) ou desativa (se ativado)"
   instructions_sync: Pressione 'y' para sincronizar
   instructions_force_sync: Pressione 'Y' (Shift+y) para forçar sincronização completa (receber do servidor)
-  instructions_paste: Pressione 'p' para colar credenciais de sincronização de outro dispositivo
-  instructions_copy: Pressione 'c' para copiar credenciais de sincronização para compartilhar com outro dispositivo
   press_enter_cycle: pressione Enter para alternar
   press_enter_toggle: pressione Enter para alternar
   disabled: desativado
@@ -159,8 +166,6 @@ sync:
   conflict: Conflito de sincronização detectado. Algumas notas têm alterações conflitantes no servidor.
   request_failed: Falha ao enviar solicitação de sincronização
   response_parse_failed: Falha ao analisar resposta de sincronização
-  encrypted_import: Credenciais criptografadas importadas. Digite sua senha para descriptografar e completar a configuração.
-  legacy_format_warning: "Aviso: Usando formato legado não criptografado. A chave API está exposta em texto simples."
   disconnected: Desconectado do servidor de sincronização. Notas locais preservadas.
   disconnect_failed: Falha ao desconectar do servidor de sincronização
   sse_connected: "Sincronização em tempo real conectada"
@@ -183,17 +188,6 @@ sync:
   reload_failed: "Sincronização bem-sucedida mas falha ao recarregar notas: %{error}"
   note: nota
   notes: notas
-  credentials_title: Credenciais de sincronização (Copie este texto)
-  credentials_instruction: "Copie o texto abaixo e cole em outro cliente Jottery:"
-  paste_title: Colar credenciais de sincronização
-  paste_instruction: "Cole o texto base64 de credenciais de outro cliente Jottery:"
-  paste_success: Credenciais de sincronização configuradas com sucesso!
-  paste_failed: "Falha ao colar credenciais: %{error}"
-  salt_sync: Salt sincronizado! Por favor, digite sua senha novamente para desbloquear com o novo salt de criptografia.
-  import_device_title: Importar credenciais - Nome do dispositivo
-  import_enter_device_name: "Digite um nome para este dispositivo (ex. Meu Laptop):"
-  credentials_empty: Nenhuma credencial inserida
-  import_failed: Falha ao importar credenciais
 
 # Caixa de entrada
 inbox:
@@ -388,12 +382,6 @@ help:
   enter_save_desc: Salvar campos de texto/número, alternar outros campos
   esc_cancel_key: Esc
   esc_cancel_desc: Cancelar edição (campos de texto/número)
-  p_paste_key: p
-  p_paste_desc: Colar credenciais de sincronização (mostra entrada de texto)
-  c_copy_key: c
-  c_copy_desc: Copiar credenciais de sincronização (formato criptografado)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Copiar credenciais de sincronização (formato legado não criptografado)
   s_q_close_key: s / q
   s_q_close_desc: Fechar painel de configurações
   tab_focus_attachment_key: Tab

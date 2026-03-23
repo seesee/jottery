@@ -209,6 +209,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         var currentLanguage: String = ""
         var currentIsDark: Bool = false
         var currentFontSize: CGFloat = 0
+        private var endEditingWorkItem: DispatchWorkItem?
 
         init(text: Binding<String>) {
             self.text = text
@@ -216,12 +217,20 @@ struct RunestoneEditorView: UIViewRepresentable {
 
         @MainActor
         func textViewDidBeginEditing(_ textView: TextView) {
+            endEditingWorkItem?.cancel()
             isEditing = true
         }
 
         @MainActor
         func textViewDidEndEditing(_ textView: TextView) {
-            isEditing = false
+            // Delay clearing isEditing to allow dictation's final text
+            // replacement to land without triggering a re-entrant setState.
+            endEditingWorkItem?.cancel()
+            let item = DispatchWorkItem { [weak self] in
+                self?.isEditing = false
+            }
+            endEditingWorkItem = item
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: item)
         }
 
         @MainActor

@@ -21,6 +21,15 @@ password:
   mismatch_error: Wachtwoorden komen niet overeen
   unlock_failed: "Ontgrendelen mislukt: %{error}"
   change_success: Wachtwoord succesvol gewijzigd
+  change_title: "Wachtwoord wijzigen"
+  change_enter_current: "Voer uw huidige wachtwoord in:"
+  change_enter_new: "Voer een nieuw wachtwoord in (min. 12 tekens):"
+  change_confirm_new: "Bevestig het nieuwe wachtwoord:"
+  change_current_required: "Voer uw huidige wachtwoord in"
+  change_wrong_current: "Huidig wachtwoord is onjuist"
+  change_too_short: "Nieuw wachtwoord moet minimaal 12 tekens bevatten"
+  change_mismatch: "Wachtwoorden komen niet overeen"
+  change_failed: "Wachtwoord wijzigen mislukt"
   remember: Wachtwoord onthouden
   remember_toggle: Wachtwoord onthouden (Ctrl+R om te wisselen)
   remember_enabled: "Wachtwoord opgeslagen voor automatisch ontgrendelen. Let op: Mogelijk toegankelijk voor gebruikers met superuser-toegang."
@@ -141,8 +150,6 @@ settings:
   instructions_remember: "Wachtwoord onthouden: Enter vraagt om wachtwoord (bij inschakelen) of schakelt uit"
   instructions_sync: Druk op 'y' om te synchroniseren
   instructions_force_sync: Druk op 'Y' (Shift+y) voor volledige synchronisatie (ophalen van server)
-  instructions_paste: Druk op 'p' om synchronisatie-inloggegevens van een ander apparaat te plakken
-  instructions_copy: Druk op 'c' om synchronisatie-inloggegevens te kopiëren om te delen met een ander apparaat
   press_enter_cycle: druk op Enter om door te bladeren
   press_enter_toggle: druk op Enter om te schakelen
   disabled: uitgeschakeld
@@ -159,8 +166,6 @@ sync:
   conflict: Synchronisatieconflict gedetecteerd. Sommige notities hebben conflicterende wijzigingen op de server.
   request_failed: Verzenden synchronisatieverzoek mislukt
   response_parse_failed: Parseren synchronisatierespons mislukt
-  encrypted_import: Versleutelde inloggegevens geïmporteerd. Voer uw wachtwoord in om te ontsleutelen en de configuratie te voltooien.
-  legacy_format_warning: "Waarschuwing: Legacy-formaat zonder versleuteling gebruikt. API-sleutel is zichtbaar in platte tekst."
   disconnected: Verbinding met synchronisatieserver verbroken. Lokale notities behouden.
   disconnect_failed: Verbinding verbreken met synchronisatieserver mislukt
   sse_connected: "Realtime synchronisatie verbonden"
@@ -183,17 +188,6 @@ sync:
   reload_failed: "Synchronisatie geslaagd maar notities opnieuw laden mislukt: %{error}"
   note: notitie
   notes: notities
-  credentials_title: Synchronisatie-inloggegevens (Kopieer deze tekst)
-  credentials_instruction: "Kopieer de tekst hieronder en plak deze in een andere Jottery-client:"
-  paste_title: Synchronisatie-inloggegevens plakken
-  paste_instruction: "Plak de base64-inloggegevens van een andere Jottery-client:"
-  paste_success: Synchronisatie-inloggegevens succesvol geconfigureerd!
-  paste_failed: "Inloggegevens plakken mislukt: %{error}"
-  salt_sync: Salt gesynchroniseerd! Voer uw wachtwoord opnieuw in om te ontgrendelen met de nieuwe versleutelingssalt.
-  import_device_title: Inloggegevens importeren - Apparaatnaam
-  import_enter_device_name: "Voer een naam in voor dit apparaat (bijv. Mijn Laptop):"
-  credentials_empty: Geen inloggegevens ingevoerd
-  import_failed: Importeren inloggegevens mislukt
 
 # Postvak IN
 inbox:
@@ -388,12 +382,6 @@ help:
   enter_save_desc: Tekst-/nummervelden opslaan, andere velden wisselen
   esc_cancel_key: Esc
   esc_cancel_desc: Bewerking annuleren (tekst-/nummervelden)
-  p_paste_key: p
-  p_paste_desc: Synchronisatie-inloggegevens plakken (toont tekstinvoer)
-  c_copy_key: c
-  c_copy_desc: Synchronisatie-inloggegevens kopiëren (versleuteld formaat)
-  shift_c_copy_key: C
-  shift_c_copy_desc: Synchronisatie-inloggegevens kopiëren (legacy onversleuteld formaat)
   s_q_close_key: s / q
   s_q_close_desc: Instellingenpaneel sluiten
   tab_focus_attachment_key: Tab

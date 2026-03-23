@@ -42,9 +42,14 @@ impl<'a> EncryptionRepository<'a> {
                         if s.is_empty() { None } else { hex::decode(&s).ok() }
                     });
 
+                    let iterations: Option<u32> = row.get(1)?;
+                    // Treat 0 as None — envelope mode stores 0 as a
+                    // placeholder for the NOT NULL constraint
+                    let iterations = iterations.filter(|&i| i > 0);
+
                     Ok(EncryptionMetadata {
                         salt,
-                        iterations: row.get(1)?,
+                        iterations,
                         algorithm: row.get::<_, Option<String>>(2)?.unwrap_or_else(|| "AES-256-GCM".to_string()),
                         envelope_version: row.get(3)?,
                         device_salt: row.get(4)?,
@@ -87,10 +92,12 @@ impl<'a> EncryptionRepository<'a> {
     ) -> Result<()> {
         let created_at = Utc::now().to_rfc3339();
 
+        // Use empty string/0 for legacy salt/iterations since envelope mode
+        // doesn't use them, but the columns have NOT NULL constraints
         self.conn
             .execute(
                 "INSERT OR REPLACE INTO encryption_metadata (id, salt, iterations, created_at, algorithm, envelope_version, device_salt, local_wrapped_master, wrapping_kdf_version)
-                 VALUES (1, NULL, NULL, ?1, 'AES-256-GCM', ?2, ?3, ?4, ?5)",
+                 VALUES (1, '', 0, ?1, 'AES-256-GCM', ?2, ?3, ?4, ?5)",
                 rusqlite::params![created_at, envelope_version, device_salt, local_wrapped_master, wrapping_kdf_version],
             )
             .context("Failed to save envelope encryption metadata")?;

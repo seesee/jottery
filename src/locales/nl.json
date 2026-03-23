@@ -341,18 +341,6 @@
       "cancelButton": "Annuleren",
       "enableButton": "Ik begrijp het, toch inschakelen"
     },
-    "syncCredentials": {
-      "title": "📋 Synchronisatie-inloggegevens",
-      "instructions": "Kopieer de onderstaande tekst en plak deze in een andere Jottery-client met \"Bestaande inloggegevens gebruiken\":",
-      "samePasswordWarning": "⚠️ <strong>Belangrijk:</strong> Alle apparaten moeten hetzelfde wachtwoord gebruiken om notities te ontsleutelen!",
-      "clipboardNote": "Het kopiëren naar het klembord kan zijn mislukt (vooral via SSH of in sommige browsers). U kunt de bovenstaande tekst handmatig selecteren en kopiëren.",
-      "closeButton": "Sluiten",
-      "advancedOptions": "Geavanceerde opties",
-      "legacyFormat": {
-        "label": "Legacy-formaat gebruiken (onversleuteld)",
-        "warning": "⚠️ Gebruik alleen als u deelt met oudere Jottery-versies die niet kunnen worden bijgewerkt. Het legacy-formaat toont uw API-sleutel in platte tekst."
-      }
-    },
     "saveSettings": "Instellingen opslaan",
     "saving": "Opslaan...",
     "autoSaved": "Wijzigingen automatisch opgeslagen",
@@ -389,14 +377,6 @@
         "help": "Een naam om dit apparaat te identificeren"
       },
       "chooseMethod": "Kies hoe u synchronisatie wilt instellen:",
-      "importCredentials": {
-        "title": "Synchronisatie-inloggegevens importeren",
-        "subtitle": "<strong>Voor extra apparaten:</strong> Veiligste methode",
-        "benefit1": "✓ Zero-knowledge-versleuteling (server kan uw notities niet ontsleutelen)",
-        "benefit2": "✓ Kopieer inloggegevens van uw eerste apparaat",
-        "benefit3": "✓ Alle apparaten gebruiken dezelfde versleutelingssleutel",
-        "button": "📋 Inloggegevens van ander apparaat importeren"
-      },
       "registerServer": {
         "title": "Registreren bij een synchronisatieserver",
         "subtitle": "<strong>Alleen voor uw eerste apparaat:</strong> Maakt uw account aan",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ Apparaat registreren en synchroniseren...",
         "successTitle": "Synchronisatie succesvol ingeschakeld!",
         "successText": "Uw apparaat is nu geregistreerd en <strong>al uw bestaande notities zijn gesynchroniseerd met de server</strong>. Toekomstige wijzigingen worden automatisch gesynchroniseerd.",
-        "successNextSteps": "📋 Om een ander apparaat toe te voegen: Klik hieronder op \"Synchronisatie-inloggegevens exporteren\" en importeer ze op uw andere apparaat.",
+        "successNextSteps": "🔗 Om een ander apparaat toe te voegen: Gebruik \"Bestaand account verbinden\" op uw nieuwe apparaat.",
         "done": "Klaar",
         "checkStatusLink": "Controleer uw goedkeuringsstatus in het Gebruikersportaal →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "Wachtwoord",
         "comingSoon": "Binnenkort beschikbaar",
         "futureUpdate": "Accountkoppeling wordt ingeschakeld in een toekomstige update"
-      },
-      "import": {
-        "title": "Inloggegevens importeren",
-        "instructions": "Plak de inloggegevens van uw eerste apparaat. De app wordt vergrendeld en u moet met uw wachtwoord ontgrendelen.",
-        "warningTitle": "⚠️ BELANGRIJK: U moet hetzelfde wachtwoord op alle apparaten gebruiken!",
-        "warningText": "Als u een ander wachtwoord gebruikt, worden notities niet ontsleuteld.",
-        "placeholder": "Plak hier base64-inloggegevens...",
-        "button": "📥 Importeren en vergrendelen",
-        "importing": "Importeren...",
-        "deviceName": {
-          "label": "Apparaatnaam",
-          "placeholder": "Mijn laptop",
-          "help": "Een naam om dit apparaat in uw account te identificeren"
-        }
       },
       "error": "Fout"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} notitie wacht op synchronisatie",
       "notesPendingPlural": "{count} notities wachten op synchronisatie",
-      "showCredentials": "Toon inloggegevens voor andere apparaten",
-      "credentialsHelp": "Klik om inloggegevens als tekst te tonen. Gebruik \"Bestaande inloggegevens gebruiken\" op andere apparaten om te importeren.",
-      "samePasswordWarning": "Alle apparaten moeten HETZELFDE wachtwoord gebruiken om notities te ontsleutelen!",
       "userPortal": {
         "title": "Gebruikersportaal",
         "description": "Beheer uw account, wijzig uw wachtwoord of verwijder uw gegevens",
@@ -906,10 +869,6 @@
       "note": "Opmerking: Je moet je nog steeds bij de server registreren na de setup."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Heeft u synchronisatiegegevens?",
-        "subtitle": "Plak uw gegevens hier om dit apparaat te synchroniseren"
-      },
       "existingAccount": {
         "title": "Bestaand account verbinden",
         "subtitle": "Heb je al een account? Verbind dit apparaat",
@@ -924,32 +883,43 @@
         "subtitle": "Alleen eerste apparaat - maakt je account aan",
         "formTitle": "Nieuw account registreren"
       },
-      "import": {
-        "title": "Inloggegevens importeren",
-        "instructions": "Plak de inloggegevens van Instellingen > Sync > Inloggegevens kopiëren op je andere apparaat.",
-        "passwordNote": "Je moet hetzelfde wachtwoord gebruiken als op je andere apparaat.",
-        "placeholder": "Plak inloggegevens hier...",
-        "button": "Inloggegevens importeren",
-        "importing": "Importeren...",
-        "emptyError": "Plak de inloggegevens",
-        "failed": "Importeren van inloggegevens mislukt",
-        "deviceName": {
-          "label": "Apparaatnaam",
-          "placeholder": "Mijn laptop",
-          "help": "Een naam om dit apparaat in uw account te identificeren"
-        },
-        "deviceNameRequired": "Voer een apparaatnaam in"
-      },
       "completeInSettings": "Voltooi de sync-instellingen in Instellingen > Sync na het aanmaken van je wachtwoord."
     },
-    "credentialsImported": {
-      "title": "Inloggegevens succesvol geïmporteerd!",
-      "message": "Voer hetzelfde wachtwoord in dat je op je andere apparaat gebruikt om te ontgrendelen.",
-      "passwordLabel": "Wachtwoord (van je andere apparaat)",
-      "passwordPlaceholder": "Voer wachtwoord van ander apparaat in"
-    },
     "restoreFromBackup": "Herstellen vanuit Back-up",
-    "orDivider": "of"
+    "orDivider": "of",
+    "connectExisting": {
+      "title": "Bestaand account verbinden",
+      "subtitle": "Koppel dit apparaat aan je bestaande Jottery-account en synchroniseer je notities.",
+      "endpoint": "Synchronisatieserver-URL",
+      "endpointHint": "Het adres van je Jottery-synchronisatieserver.",
+      "deviceName": "Apparaatnaam",
+      "deviceNamePlaceholder": "bijv. Werk Laptop",
+      "deviceNameHint": "Een herkenbare naam om dit apparaat te identificeren.",
+      "email": "E-mailadres",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Serverwachtwoord",
+      "serverPasswordPlaceholder": "Je accountwachtwoord",
+      "serverPasswordHint": "Het wachtwoord waarmee je inlogt op de synchronisatieserver.",
+      "notesPassword": "Notitiewachtwoord",
+      "notesPasswordPlaceholder": "Kies een lokaal wachtwoord (min. 8 tekens)",
+      "notesPasswordHint": "Wordt gebruikt om je notities op dit apparaat te ontgrendelen. Kan afwijken van het serverwachtwoord.",
+      "submitButton": "Verbinden & synchroniseren",
+      "errors": {
+        "endpointRequired": "Synchronisatieserver-URL is vereist.",
+        "deviceNameRequired": "Apparaatnaam is vereist.",
+        "emailRequired": "E-mailadres is vereist.",
+        "serverPasswordRequired": "Serverwachtwoord is vereist.",
+        "notesPasswordMinLength": "Notitiewachtwoord moet minimaal 8 tekens bevatten.",
+        "onboardingFailed": "Downloaden van versleutelingssleutels van de server is mislukt. Controleer of je serverwachtwoord correct is en of het bronapparaat is gesynchroniseerd"
+      },
+      "steps": {
+        "initialising": "Lokale versleuteling initialiseren…",
+        "registering": "Apparaat registreren bij server…",
+        "onboarding": "Versleutelingssleutels downloaden…",
+        "encrypting": "Inloggegevens beveiligen…",
+        "syncing": "Eerste synchronisatie starten…"
+      }
+    }
   },
   "lock": {
     "title": "Applicatie vergrendelen",

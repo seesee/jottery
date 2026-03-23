@@ -9,8 +9,9 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  // Revoke confirmation
+  // Revoke/delete confirmation
   let deviceToRevoke = $state<Device | null>(null);
+  let deviceToDelete = $state<Device | null>(null);
 
   async function loadDevices() {
     try {
@@ -39,6 +40,25 @@
         toast.error($_('userPortal.devices.revokeFailed', { values: { error: err.message } }));
       } else {
         toast.error($_('userPortal.devices.revokeFailedGeneric'));
+      }
+    }
+  }
+
+  async function handleDeleteDevice() {
+    if (!deviceToDelete) return;
+
+    const device = deviceToDelete;
+    deviceToDelete = null;
+
+    try {
+      await userApi.revokeDevice(device.id);
+      toast.success($_('userPortal.devices.deleted', { values: { name: device.name } }));
+      await loadDevices();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error($_('userPortal.devices.deleteFailed', { values: { error: err.message } }));
+      } else {
+        toast.error($_('userPortal.devices.deleteFailedGeneric'));
       }
     }
   }
@@ -144,6 +164,13 @@
             >
               {$_('devices.revoke')}
             </button>
+          {:else}
+            <button
+              onclick={() => deviceToDelete = device}
+              class="px-3 py-1.5 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+            >
+              {$_('devices.delete')}
+            </button>
           {/if}
         </div>
       {/each}
@@ -163,6 +190,18 @@
     cancelText={$_('common.cancel')}
     onConfirm={handleRevokeDevice}
     onCancel={() => deviceToRevoke = null}
+    danger={true}
+  />
+{/if}
+
+{#if deviceToDelete}
+  <ConfirmModal
+    title={$_('userPortal.devices.deleteTitle')}
+    message={$_('userPortal.devices.deleteConfirm', { values: { name: deviceToDelete.name } })}
+    confirmText={$_('devices.delete')}
+    cancelText={$_('common.cancel')}
+    onConfirm={handleDeleteDevice}
+    onCancel={() => deviceToDelete = null}
     danger={true}
   />
 {/if}

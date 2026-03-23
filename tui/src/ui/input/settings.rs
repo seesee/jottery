@@ -48,66 +48,6 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     // Edit selected field (backward for cyclic fields)
                     operations::settings::start_editing_setting_backward(app);
                 }
-                KeyCode::Char('p') => {
-                    // Show text input for sync credentials (try clipboard first as convenience)
-                    // Try clipboard paste as convenience (may fail over SSH)
-                    if let Ok(mut clipboard) = arboard::Clipboard::new() {
-                        if let Ok(text) = clipboard.get_text() {
-                            app.credential_input = text;
-                        }
-                    }
-
-                    // Show input modal for manual paste
-                    let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                    app.state = AppState::InputSyncCredentials {
-                        previous: Box::new(prev),
-                    };
-                    app.input_mode = InputMode::Insert;
-                }
-                KeyCode::Char('c') => {
-                    // Show sync credentials as text (encrypted format)
-                    match operations::settings::generate_sync_credentials_text(app, false) {
-                        Ok(creds_text) => {
-                            // Try clipboard copy (best effort - may fail over SSH)
-                            let _ = arboard::Clipboard::new()
-                                .and_then(|mut clip| clip.set_text(&creds_text));
-
-                            // Always show text modal for manual copy
-                            let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                            app.state = AppState::ShowSyncCredentials {
-                                credentials: creds_text,
-                                previous: Box::new(prev),
-                            };
-                        }
-                        Err(e) => {
-                            app.error = Some(format!("Failed to generate credentials: {}", e));
-                        }
-                    }
-                }
-                KeyCode::Char('C') => {
-                    // Show sync credentials as text (legacy unencrypted format for older versions)
-                    match operations::settings::generate_sync_credentials_text(app, true) {
-                        Ok(creds_text) => {
-                            // Try clipboard copy (best effort - may fail over SSH)
-                            let _ = arboard::Clipboard::new()
-                                .and_then(|mut clip| clip.set_text(&creds_text));
-
-                            // Show warning about legacy format
-                            app.sync_status = Some(t!("sync.legacy_format_warning").to_string());
-                            app.sync_status_set_at = Some(std::time::Instant::now());
-
-                            // Always show text modal for manual copy
-                            let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                            app.state = AppState::ShowSyncCredentials {
-                                credentials: creds_text,
-                                previous: Box::new(prev),
-                            };
-                        }
-                        Err(e) => {
-                            app.error = Some(format!("Failed to generate credentials: {}", e));
-                        }
-                    }
-                }
                 KeyCode::Char('y') => {
                     // Trigger manual sync
                     operations::sync::trigger_sync(app);
@@ -196,25 +136,13 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.input_mode = InputMode::Normal;
                             }
                             _ => {
-                                // Check for ONBOARD marker (v2 import awaiting registration)
-                                if let Some(endpoint) = operations::settings::get_pending_onboard(app) {
-                                    // Skip endpoint input - go directly to email
-                                    app.credential_input.clear();
-                                    let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                                    app.state = AppState::RegisterInputEmail {
-                                        endpoint,
-                                        previous: Box::new(prev),
-                                    };
-                                    app.input_mode = InputMode::Insert;
-                                } else {
-                                    // No pending registration - start fresh
-                                    app.credential_input.clear();
-                                    let prev = std::mem::replace(&mut app.state, AppState::Quit);
-                                    app.state = AppState::RegisterInputEndpoint {
-                                        previous: Box::new(prev),
-                                    };
-                                    app.input_mode = InputMode::Insert;
-                                }
+                                // No pending registration - start fresh
+                                app.credential_input.clear();
+                                let prev = std::mem::replace(&mut app.state, AppState::Quit);
+                                app.state = AppState::RegisterInputEndpoint {
+                                    previous: Box::new(prev),
+                                };
+                                app.input_mode = InputMode::Insert;
                             }
                         }
                     }

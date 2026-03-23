@@ -249,7 +249,7 @@ class WebCryptoService implements CryptoService {
     const ciphertext = await crypto.subtle.encrypt(
       { name: ALGORITHM, iv: iv as BufferSource },
       wrappingKey,
-      masterKeyBytes
+      masterKeyBytes as Uint8Array<ArrayBuffer>
     );
     return {
       ciphertext: arrayBufferToBase64(ciphertext),

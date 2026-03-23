@@ -6,6 +6,8 @@ struct UnlockScreen: View {
     @State private var error: String?
     @State private var isUnlocking = false
     @State private var showBiometricPrompt = false
+    @State private var failedAttempts = 0
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         VStack(spacing: 32) {
@@ -44,6 +46,14 @@ struct UnlockScreen: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(password.isEmpty || isUnlocking)
+
+                if failedAttempts >= 5 {
+                    Button(action: { showDeleteConfirm = true }) {
+                        Text(L.unlockDeleteAndStartOver)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                }
             }
 
             // Biometric button
@@ -65,6 +75,14 @@ struct UnlockScreen: View {
             if appState.keyManager.isBiometricEnabled {
                 biometricUnlock()
             }
+        }
+        .alert(L.unlockDeleteConfirmTitle, isPresented: $showDeleteConfirm) {
+            Button(L.unlockDeleteConfirmAction, role: .destructive) {
+                appState.wipeAllData()
+            }
+            Button(L.unlockDeleteConfirmCancel, role: .cancel) {}
+        } message: {
+            Text(L.unlockDeleteConfirmMessage)
         }
         .alert(L.unlockEnableFaceIdTitle, isPresented: $showBiometricPrompt) {
             Button(L.unlockEnableFaceIdAction) {
@@ -92,7 +110,12 @@ struct UnlockScreen: View {
                     showBiometricPrompt = true
                 }
             } catch {
-                self.error = L.unlockIncorrectPassword
+                failedAttempts += 1
+                if failedAttempts >= 5 {
+                    self.error = L.unlockFailedAttempts
+                } else {
+                    self.error = L.unlockIncorrectPassword
+                }
                 self.isUnlocking = false
             }
         }

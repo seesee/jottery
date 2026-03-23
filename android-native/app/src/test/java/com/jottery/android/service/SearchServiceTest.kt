@@ -233,5 +233,6 @@ class SearchServiceTest {
         syntaxLanguage = "markdown",
         showPreview = false,
         color = color,
+        needsSync = false,
     )
 }

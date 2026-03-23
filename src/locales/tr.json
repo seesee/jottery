@@ -341,18 +341,6 @@
       "cancelButton": "İptal",
       "enableButton": "Anlıyorum, Yine de Etkinleştir"
     },
-    "syncCredentials": {
-      "title": "📋 Senkronizasyon Kimlik Bilgileri",
-      "instructions": "Aşağıdaki metni kopyalayın ve \"Mevcut Kimlik Bilgilerini Kullan\" seçeneğini kullanarak başka bir Jottery istemcisine yapıştırın:",
-      "samePasswordWarning": "⚠️ <strong>Önemli:</strong> Notların şifresini çözmek için tüm cihazlar AYNI şifreyi kullanmalıdır!",
-      "clipboardNote": "Panoya kopyalama başarısız olmuş olabilir (özellikle SSH üzerinden veya bazı tarayıcılarda). Yukarıdaki metni manuel olarak seçip kopyalayabilirsiniz.",
-      "closeButton": "Kapat",
-      "advancedOptions": "Gelişmiş seçenekler",
-      "legacyFormat": {
-        "label": "Eski format kullan (şifresiz)",
-        "warning": "⚠️ Yalnızca güncellenemeyen eski Jottery sürümleriyle paylaşıyorsanız kullanın. Eski format API anahtarınızı düz metin olarak gösterir."
-      }
-    },
     "saveSettings": "Ayarları Kaydet",
     "saving": "Kaydediliyor...",
     "autoSaved": "Değişiklikler otomatik olarak kaydedildi",
@@ -389,14 +377,6 @@
         "help": "Bu cihazı tanımlamak için bir ad"
       },
       "chooseMethod": "Senkronizasyonu nasıl kuracağınızı seçin:",
-      "importCredentials": {
-        "title": "Senkronizasyon kimlik bilgilerini içe aktar",
-        "subtitle": "<strong>Ek cihazlar için:</strong> En güvenli yöntem",
-        "benefit1": "✓ Sıfır bilgi şifreleme (sunucu notlarınızın şifresini çözemez)",
-        "benefit2": "✓ İlk cihazınızdan kimlik bilgilerini kopyalayın",
-        "benefit3": "✓ Tüm cihazlar aynı şifreleme anahtarını kullanır",
-        "button": "📋 Başka bir cihazdan kimlik bilgilerini içe aktar"
-      },
       "registerServer": {
         "title": "Senkronizasyon sunucusuna kaydol",
         "subtitle": "<strong>Yalnızca ilk cihazınız için:</strong> Hesabınızı oluşturur",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ Cihaz kaydediliyor ve senkronize ediliyor...",
         "successTitle": "Senkronizasyon başarıyla etkinleştirildi!",
         "successText": "Cihazınız şimdi kayıtlı ve <strong>mevcut tüm notlarınız sunucuya senkronize edildi</strong>. Gelecekteki değişiklikler otomatik olarak senkronize edilecek.",
-        "successNextSteps": "📋 Başka bir cihaz eklemek için: Aşağıdaki \"Senkronizasyon kimlik bilgilerini dışa aktar\" seçeneğine tıklayın ve diğer cihazınıza aktarın.",
+        "successNextSteps": "🔗 Başka bir cihaz eklemek için: Yeni cihazınızda \"Mevcut hesabı bağla\" seçeneğini kullanın.",
         "done": "Bitti",
         "checkStatusLink": "Kullanıcı Portalında onay durumunuzu kontrol edin →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "Şifre",
         "comingSoon": "Yakında",
         "futureUpdate": "Hesap bağlama gelecekteki bir güncellemede etkinleştirilecek"
-      },
-      "import": {
-        "title": "Kimlik bilgilerini içe aktar",
-        "instructions": "İlk cihazınızdaki kimlik bilgilerini yapıştırın. Uygulama kilitlenecek ve şifrenizle kilidi açmanız gerekecek.",
-        "warningTitle": "⚠️ ÖNEMLİ: Tüm cihazlarda AYNI şifreyi kullanmalısınız!",
-        "warningText": "Farklı bir şifre kullanırsanız, notların şifresi çözülmez.",
-        "placeholder": "Buraya base64 kimlik bilgilerini yapıştırın...",
-        "button": "📥 İçe aktar ve kilitle",
-        "importing": "İçe aktarılıyor...",
-        "deviceName": {
-          "label": "Cihaz adı",
-          "placeholder": "Dizüstü bilgisayarım",
-          "help": "Bu cihazı hesabınızda tanımlamak için bir ad"
-        }
       },
       "error": "Hata"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} not senkronizasyon bekliyor",
       "notesPendingPlural": "{count} not senkronizasyon bekliyor",
-      "showCredentials": "Diğer Cihazlar İçin Kimlik Bilgilerini Göster",
-      "credentialsHelp": "Kimlik bilgilerini metin olarak görüntülemek için tıklayın. İçe aktarmak için diğer cihazlarda \"Mevcut Kimlik Bilgilerini Kullan\" seçeneğini kullanın.",
-      "samePasswordWarning": "Notların şifresini çözmek için tüm cihazlar AYNI şifreyi kullanmalıdır!",
       "userPortal": {
         "title": "Kullanıcı Portalı",
         "description": "Hesabınızı yönetin, şifrenizi değiştirin veya verilerinizi silin",
@@ -906,10 +869,6 @@
       "note": "Not: Kurulumdan sonra hala sunucuya kaydolmanız gerekecek."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Senkronizasyon kimlik bilgileriniz var mı?",
-        "subtitle": "Bu cihazı senkronize etmek için kimlik bilgilerinizi buraya yapıştırın"
-      },
       "existingAccount": {
         "title": "Mevcut hesabı bağla",
         "subtitle": "Zaten bir hesabınız var mı? Bu cihazı bağlayın",
@@ -924,32 +883,43 @@
         "subtitle": "Sadece ilk cihaz - hesabınızı oluşturur",
         "formTitle": "Yeni hesap kaydet"
       },
-      "import": {
-        "title": "Kimlik bilgilerini içe aktar",
-        "instructions": "Diğer cihazınızda Ayarlar > Sync > Kimlik bilgilerini kopyala'dan kimlik bilgilerini yapıştırın.",
-        "passwordNote": "Diğer cihazınızdaki aynı şifreyi kullanmanız gerekecek.",
-        "placeholder": "Kimlik bilgilerini buraya yapıştırın...",
-        "button": "Kimlik bilgilerini içe aktar",
-        "importing": "İçe aktarılıyor...",
-        "emptyError": "Lütfen kimlik bilgilerini yapıştırın",
-        "failed": "Kimlik bilgileri içe aktarılamadı",
-        "deviceName": {
-          "label": "Cihaz adı",
-          "placeholder": "Dizüstü bilgisayarım",
-          "help": "Bu cihazı hesabınızda tanımlamak için bir ad"
-        },
-        "deviceNameRequired": "Lütfen bir cihaz adı girin"
-      },
       "completeInSettings": "Şifrenizi oluşturduktan sonra Ayarlar > Sync'de senkronizasyon kurulumunu tamamlayın."
     },
-    "credentialsImported": {
-      "title": "Kimlik bilgileri başarıyla içe aktarıldı!",
-      "message": "Kilidini açmak için diğer cihazınızda kullandığınız aynı şifreyi girin.",
-      "passwordLabel": "Şifre (diğer cihazınızdan)",
-      "passwordPlaceholder": "Diğer cihazdan şifreyi girin"
-    },
     "restoreFromBackup": "Yedekten Geri Yükle",
-    "orDivider": "veya"
+    "orDivider": "veya",
+    "connectExisting": {
+      "title": "Mevcut Hesabı Bağla",
+      "subtitle": "Bu cihazı mevcut Jottery hesabınıza bağlayın ve notlarınızı senkronize edin.",
+      "endpoint": "Senkronizasyon Sunucusu URL'si",
+      "endpointHint": "Jottery senkronizasyon sunucunuzun adresi.",
+      "deviceName": "Cihaz Adı",
+      "deviceNamePlaceholder": "örn. İş Dizüstü Bilgisayarı",
+      "deviceNameHint": "Bu cihazı tanımlamak için kolay bir ad.",
+      "email": "E-posta Adresi",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Sunucu Şifresi",
+      "serverPasswordPlaceholder": "Hesap şifreniz",
+      "serverPasswordHint": "Senkronizasyon sunucusuna giriş yapmak için kullandığınız şifre.",
+      "notesPassword": "Not Şifresi",
+      "notesPasswordPlaceholder": "Yerel bir şifre seçin (en az 8 karakter)",
+      "notesPasswordHint": "Bu cihazdaki notlarınızın kilidini açmak için kullanılır. Sunucu şifresinden farklı olabilir.",
+      "submitButton": "Bağlan ve Senkronize Et",
+      "errors": {
+        "endpointRequired": "Senkronizasyon sunucusu URL'si gereklidir.",
+        "deviceNameRequired": "Cihaz adı gereklidir.",
+        "emailRequired": "E-posta adresi gereklidir.",
+        "serverPasswordRequired": "Sunucu şifresi gereklidir.",
+        "notesPasswordMinLength": "Not şifresi en az 8 karakter olmalıdır.",
+        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Sunucu şifrenizin doğru olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
+      },
+      "steps": {
+        "initialising": "Yerel şifreleme başlatılıyor…",
+        "registering": "Cihaz sunucuya kaydediliyor…",
+        "onboarding": "Şifreleme anahtarları indiriliyor…",
+        "encrypting": "Kimlik bilgileri güvence altına alınıyor…",
+        "syncing": "İlk senkronizasyon başlatılıyor…"
+      }
+    }
   },
   "lock": {
     "title": "Uygulamayı Kilitle",

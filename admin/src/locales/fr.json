@@ -78,10 +78,13 @@
     "active": "Actif",
     "inactive": "Inactif",
     "revoke": "Révoquer",
+    "delete": "Supprimer",
     "rename": "Renommer",
     "revokeConfirmTitle": "Révoquer l'appareil",
     "revokeConfirm": "Êtes-vous sûr de vouloir révoquer l'appareil \"{name}\" ? Cet appareil ne pourra plus se synchroniser.",
     "revokeWarning": "Cet appareil ne pourra plus se synchroniser.",
+    "deleteConfirmTitle": "Supprimer l'appareil",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer définitivement l'appareil \"{name}\" ? Cette action est irréversible.",
     "noDevices": "Aucun appareil enregistré",
     "total": "total",
     "nameRequired": "Le nom de l'appareil est requis",
@@ -89,6 +92,9 @@
       "revoked": "L'appareil \"{name}\" a été révoqué",
       "revokeFailed": "Échec de la révocation de l'appareil : {error}",
       "revokeFailedGeneric": "Échec de la révocation de l'appareil",
+      "deleted": "L'appareil \"{name}\" a été supprimé",
+      "deleteFailed": "Échec de la suppression de l'appareil : {error}",
+      "deleteFailedGeneric": "Échec de la suppression de l'appareil",
       "renamed": "Appareil renommé avec succès",
       "renameFailed": "Échec du renommage de l'appareil : {error}",
       "renameFailedGeneric": "Échec du renommage de l'appareil"
@@ -292,7 +298,12 @@
       "revokeNote": "La révocation d'un appareil l'empêchera de se synchroniser. Vous pourrez réenregistrer l'appareil ultérieurement si nécessaire.",
       "revoked": "L'appareil \"{name}\" a été révoqué",
       "revokeFailed": "Échec de la révocation de l'appareil : {error}",
-      "revokeFailedGeneric": "Échec de la révocation de l'appareil"
+      "revokeFailedGeneric": "Échec de la révocation de l'appareil",
+      "deleteTitle": "Supprimer l'appareil",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer définitivement \"{name}\" ? Cette action est irréversible.",
+      "deleted": "L'appareil \"{name}\" a été supprimé",
+      "deleteFailed": "Échec de la suppression de l'appareil : {error}",
+      "deleteFailedGeneric": "Échec de la suppression de l'appareil"
     },
     "settings": {
       "title": "Paramètres",

@@ -6,7 +6,6 @@
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
   import { authService } from '../services/authService';
-  import { exportCredentials, parseAndStoreImportedCredentials, copyToClipboard } from '../utils/syncCredentials';
   import { _ } from 'svelte-i18n';
   import { modal, createBackdropHandler } from '../actions';
   import type { Theme, SyncStatus, KeyboardShortcut, KeyboardShortcuts, QuickCommandConfig } from '../types';
@@ -62,16 +61,12 @@
   let syncing = false;
   let syncError = '';
   let deviceName = $settings.deviceName || 'My Device';
-  let importCredentialsText = '';
-  let importDeviceName = 'My Device';
   let importing = false;
   let importProgress = { current: 0, total: 0 };
   let importResult: { imported: number; skipped: number; errors: string[]; attachments: number; tags: number } | null = null;
-  let showCredentialsModal = false;
-  let credentialsText = '';
 
   // Multi-user registration state
-  let registrationMode: 'select' | 'newUser' | 'existingUser' | 'importCredentials' = 'select';
+  let registrationMode: 'select' | 'newUser' | 'existingUser' = 'select';
   let userEmail = '';
   let userPassword = '';
   let userPasswordConfirm = '';
@@ -214,20 +209,11 @@
     try {
       syncStatus = await syncService.getSyncStatus();
 
-      // Detect ONBOARD: marker from v2 credential import — pre-fill endpoint and switch to existingUser flow
-      if (!syncStatus?.clientId) {
-        const metadata = await syncRepository.getMetadata();
-        if (metadata?.apiKey?.startsWith('ONBOARD:') && metadata.syncEndpoint) {
-          syncEndpoint = metadata.syncEndpoint;
-          registrationMode = 'existingUser';
-        }
-      }
-
       // If sync is enabled, fetch device name from server
       if (syncStatus?.isEnabled && syncStatus.syncEndpoint) {
         try {
           const metadata = await syncRepository.getMetadata();
-          if (metadata?.apiKey && !metadata.apiKey.startsWith('IMPORT:') && !metadata.apiKey.startsWith('ENCRYPTED:') && !metadata.apiKey.startsWith('RESTORE:') && !metadata.apiKey.startsWith('ONBOARD:')) {
+          if (metadata?.apiKey && !metadata.apiKey.startsWith('RESTORE:')) {
             const masterKey = keyManager.getMasterKey();
             if (masterKey) {
               const apiKeyEncrypted = JSON.parse(metadata.apiKey);
@@ -550,65 +536,6 @@
     syncError = '';
   }
 
-  async function handleCopySyncCredentials(useLegacyFormat: boolean = false) {
-    const result = await exportCredentials(useLegacyFormat);
-
-    if (result.success && result.credentials) {
-      // Try to copy to clipboard (best effort)
-      await copyToClipboard(result.credentials);
-
-      // Always show the modal with text for manual copy
-      credentialsText = result.credentials;
-      showCredentialsModal = true;
-    } else {
-      syncError = result.error || 'Failed to generate credentials';
-    }
-  }
-
-  async function handleImportCredentials() {
-    if (!importCredentialsText.trim()) {
-      syncError = 'Please paste the credentials';
-      return;
-    }
-
-    if (!importDeviceName.trim()) {
-      syncError = 'Please enter a device name';
-      return;
-    }
-
-    importing = true;
-    syncError = '';
-
-    try {
-      const result = await parseAndStoreImportedCredentials(importCredentialsText, importDeviceName.trim());
-
-      if (!result.success) {
-        syncError = result.error || 'Failed to import credentials';
-        return;
-      }
-
-      // Update settings to disable sync (will be enabled after unlock)
-      await settingsRepository.update({
-        syncEnabled: false,
-      });
-
-      // Close the modal first
-      onClose();
-
-      // Lock and update UI state
-      lock();
-      isLocked.set(true);
-
-      // Clear the import text
-      importCredentialsText = '';
-    } catch (error) {
-      console.error('[Import] ERROR:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to import credentials';
-    } finally {
-      importing = false;
-    }
-  }
-
   async function handleSyncNow() {
     syncing = true;
     syncError = '';
@@ -888,6 +815,8 @@
         throw new Error('Encryption not initialized');
       }
 
+      if (!metadata.salt) throw new Error('Missing encryption salt — vault may be corrupted');
+      if (!metadata.iterations) throw new Error('Missing encryption iterations — vault may be corrupted');
       const salt = base64ToUint8Array(metadata.salt);
       const derivedKey = await cryptoService.deriveKey({
         password: persistSessionConfirmInput,
@@ -945,6 +874,8 @@
         throw new Error('Encryption not initialized');
       }
 
+      if (!metadata.salt) throw new Error('Missing encryption salt — vault may be corrupted');
+      if (!metadata.iterations) throw new Error('Missing encryption iterations — vault may be corrupted');
       const salt = base64ToUint8Array(metadata.salt);
       const derivedKey = await cryptoService.deriveKey({
         password: rememberPasswordConfirmInput,
@@ -1143,7 +1074,6 @@
       const hasOpenChildModal = showDeleteConfirm ||
         showRememberPasswordWarning ||
         showPersistSessionConfirm ||
-        showCredentialsModal ||
         showDeleteServerNotesConfirm ||
         showDisconnectConfirm ||
         showDocumentation ||
@@ -1270,9 +1200,6 @@
             bind:registeringUser
             bind:registeringDevice
             bind:userRegistrationMessage
-            bind:importCredentialsText
-            bind:importDeviceName
-            bind:importing
             bind:showAccountManagement
             bind:accountEmail
             bind:accountPassword
@@ -1283,10 +1210,8 @@
             onRegisterUser={handleRegisterUser}
             onRegisterDevice={handleRegisterDevice}
             onResetRegistrationFlow={resetRegistrationFlow}
-            onImportCredentials={handleImportCredentials}
             onSyncNow={handleSyncNow}
             onFullSync={handleFullSync}
-            onCopySyncCredentials={handleCopySyncCredentials}
             onAccountLogin={handleAccountLogin}
             onAccountLogout={handleAccountLogout}
             onShowDeleteServerNotesConfirm={() => showDeleteServerNotesConfirm = true}
@@ -1496,73 +1421,6 @@
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
           >
             {$_('settings.persistSessionModal.enableButton')}
-          </button>
-        </div>
-      </div>
-    </div>
-  {/if}
-
-  <!-- Sync Credentials Display Modal -->
-  {#if showCredentialsModal}
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-    <div
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      on:click={createBackdropHandler(() => showCredentialsModal = false)}
-      role="dialog"
-      aria-modal="true"
-      tabindex="-1"
-      use:modal={{ onEscape: () => showCredentialsModal = false }}
-    >
-      <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
-      <div
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
-        on:click|stopPropagation
-        role="document"
-      >
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-            {$_('settings.syncCredentials.title')}
-          </h3>
-          <button
-            on:click={() => showCredentialsModal = false}
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            aria-label="Close credentials modal"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Content -->
-        <div class="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
-          <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
-            {$_('settings.syncCredentials.instructions')}
-          </p>
-
-          <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
-            <pre class="text-xs font-mono text-gray-900 dark:text-gray-100 break-all whitespace-pre-wrap">{credentialsText}</pre>
-          </div>
-
-          <div class="mt-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
-            <p class="text-sm text-orange-800 dark:text-orange-200">
-              {@html $_('settings.syncCredentials.samePasswordWarning')}
-            </p>
-          </div>
-
-          <p class="mt-3 text-xs text-gray-600 dark:text-gray-400">
-            {$_('settings.syncCredentials.clipboardNote')}
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-          <button
-            on:click={() => showCredentialsModal = false}
-            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors"
-          >
-            {$_('settings.syncCredentials.closeButton')}
           </button>
         </div>
       </div>

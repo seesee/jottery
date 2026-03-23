@@ -78,10 +78,13 @@
     "active": "Activo",
     "inactive": "Inactivo",
     "revoke": "Revocar",
+    "delete": "Eliminar",
     "rename": "Renombrar",
     "revokeConfirmTitle": "Revocar dispositivo",
     "revokeConfirm": "¿Estás seguro de que quieres revocar el dispositivo \"{name}\"? Este dispositivo ya no podrá sincronizarse.",
     "revokeWarning": "Este dispositivo ya no podrá sincronizarse.",
+    "deleteConfirmTitle": "Eliminar dispositivo",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar permanentemente el dispositivo \"{name}\"? Esta acción no se puede deshacer.",
     "noDevices": "No hay dispositivos registrados",
     "total": "total",
     "nameRequired": "El nombre del dispositivo es obligatorio",
@@ -89,6 +92,9 @@
       "revoked": "El dispositivo \"{name}\" ha sido revocado",
       "revokeFailed": "Error al revocar el dispositivo: {error}",
       "revokeFailedGeneric": "Error al revocar el dispositivo",
+      "deleted": "El dispositivo \"{name}\" ha sido eliminado",
+      "deleteFailed": "Error al eliminar el dispositivo: {error}",
+      "deleteFailedGeneric": "Error al eliminar el dispositivo",
       "renamed": "Dispositivo renombrado exitosamente",
       "renameFailed": "Error al renombrar el dispositivo: {error}",
       "renameFailedGeneric": "Error al renombrar el dispositivo"
@@ -292,7 +298,12 @@
       "revokeNote": "Revocar un dispositivo evitará que se sincronice. Puedes volver a registrar el dispositivo más tarde si es necesario.",
       "revoked": "El dispositivo \"{name}\" ha sido revocado",
       "revokeFailed": "Error al revocar el dispositivo: {error}",
-      "revokeFailedGeneric": "Error al revocar el dispositivo"
+      "revokeFailedGeneric": "Error al revocar el dispositivo",
+      "deleteTitle": "Eliminar dispositivo",
+      "deleteConfirm": "¿Estás seguro de que quieres eliminar permanentemente \"{name}\"? Esta acción no se puede deshacer.",
+      "deleted": "El dispositivo \"{name}\" ha sido eliminado",
+      "deleteFailed": "Error al eliminar el dispositivo: {error}",
+      "deleteFailedGeneric": "Error al eliminar el dispositivo"
     },
     "settings": {
       "title": "Configuración",

@@ -341,18 +341,6 @@
       "cancelButton": "Annuler",
       "enableButton": "Je comprends, activer quand même"
     },
-    "syncCredentials": {
-      "title": "📋 Identifiants de synchronisation",
-      "instructions": "Copiez le texte ci-dessous et collez-le dans un autre client Jottery en utilisant \"Utiliser les identifiants existants\" :",
-      "samePasswordWarning": "⚠️ <strong>Important :</strong> Tous les appareils doivent utiliser le MÊME mot de passe pour déchiffrer les notes !",
-      "clipboardNote": "La copie dans le presse-papiers a peut-être échoué (surtout via SSH ou dans certains navigateurs). Vous pouvez sélectionner et copier manuellement le texte ci-dessus.",
-      "closeButton": "Fermer",
-      "advancedOptions": "Options avancées",
-      "legacyFormat": {
-        "label": "Utiliser le format hérité (non chiffré)",
-        "warning": "⚠️ À utiliser uniquement pour partager avec des versions anciennes de Jottery qui ne peuvent pas être mises à jour. Le format hérité expose votre clé API en texte clair."
-      }
-    },
     "saveSettings": "Enregistrer les paramètres",
     "saving": "Enregistrement...",
     "autoSaved": "Modifications enregistrées automatiquement",
@@ -389,14 +377,6 @@
         "help": "Un nom pour identifier cet appareil"
       },
       "chooseMethod": "Choisissez comment configurer la synchronisation :",
-      "importCredentials": {
-        "title": "Importer les identifiants de synchronisation",
-        "subtitle": "<strong>Pour les appareils supplémentaires :</strong> Méthode la plus sécurisée",
-        "benefit1": "✓ Chiffrement à connaissance nulle (le serveur ne peut pas déchiffrer vos notes)",
-        "benefit2": "✓ Copiez les identifiants depuis votre premier appareil",
-        "benefit3": "✓ Tous les appareils utilisent la même clé de chiffrement",
-        "button": "📋 Importer les identifiants depuis un autre appareil"
-      },
       "registerServer": {
         "title": "S'inscrire auprès d'un serveur de synchronisation",
         "subtitle": "<strong>Pour votre premier appareil uniquement :</strong> Crée votre compte",
@@ -442,7 +422,7 @@
         "deviceRegistering": "⏳ Enregistrement de l'appareil et synchronisation...",
         "successTitle": "Synchronisation activée avec succès !",
         "successText": "Votre appareil est maintenant enregistré et <strong>toutes vos notes existantes ont été synchronisées avec le serveur</strong>. Tous les changements futurs seront synchronisés automatiquement.",
-        "successNextSteps": "📋 Pour ajouter un autre appareil : Cliquez sur \"Exporter les identifiants de synchronisation\" ci-dessous et importez-les sur votre autre appareil.",
+        "successNextSteps": "🔗 Pour ajouter un autre appareil : Utilisez \"Connecter un compte existant\" sur votre nouvel appareil.",
         "done": "Terminé",
         "checkStatusLink": "Vérifiez votre statut d'approbation sur le Portail Utilisateur →"
       },
@@ -453,20 +433,6 @@
         "passwordLabel": "Mot de passe",
         "comingSoon": "Prochainement",
         "futureUpdate": "La liaison de compte sera activée dans une future mise à jour"
-      },
-      "import": {
-        "title": "Importer les identifiants",
-        "instructions": "Collez les identifiants de votre premier appareil. L'application se verrouillera et vous devrez la déverrouiller avec votre mot de passe.",
-        "warningTitle": "⚠️ IMPORTANT : Vous devez utiliser le MÊME mot de passe sur tous les appareils !",
-        "warningText": "Si vous utilisez un mot de passe différent, les notes ne seront pas déchiffrées.",
-        "placeholder": "Collez les identifiants en base64 ici...",
-        "button": "📥 Importer et verrouiller",
-        "importing": "Importation...",
-        "deviceName": {
-          "label": "Nom de l'appareil",
-          "placeholder": "Mon ordinateur",
-          "help": "Un nom pour identifier cet appareil dans votre compte"
-        }
       },
       "error": "Erreur"
     },
@@ -573,9 +539,6 @@
       },
       "notesPendingSingle": "{count} note en attente de synchronisation",
       "notesPendingPlural": "{count} notes en attente de synchronisation",
-      "showCredentials": "Afficher les identifiants pour d'autres appareils",
-      "credentialsHelp": "Cliquez pour afficher les identifiants en texte. Utilisez \"Utiliser les identifiants existants\" sur d'autres appareils pour importer.",
-      "samePasswordWarning": "Tous les appareils doivent utiliser le MÊME mot de passe pour déchiffrer les notes !",
       "userPortal": {
         "title": "Portail utilisateur",
         "description": "Gérez votre compte, changez votre mot de passe ou supprimez vos données",
@@ -906,10 +869,6 @@
       "note": "Remarque : Vous devrez toujours vous enregistrer sur le serveur après la configuration."
     },
     "syncSetup": {
-      "importCredentials": {
-        "title": "Avez-vous des identifiants de synchronisation ?",
-        "subtitle": "Collez vos identifiants ici pour synchroniser cet appareil"
-      },
       "existingAccount": {
         "title": "Connecter un compte existant",
         "subtitle": "Vous avez déjà un compte ? Connectez cet appareil",
@@ -924,32 +883,43 @@
         "subtitle": "Premier appareil uniquement - crée votre compte",
         "formTitle": "Enregistrer un nouveau compte"
       },
-      "import": {
-        "title": "Importer les identifiants",
-        "instructions": "Collez les identifiants depuis Paramètres > Sync > Copier les identifiants sur votre autre appareil.",
-        "passwordNote": "Vous devrez utiliser le même mot de passe que sur votre autre appareil.",
-        "placeholder": "Collez les identifiants ici...",
-        "button": "Importer les identifiants",
-        "importing": "Importation...",
-        "emptyError": "Veuillez coller les identifiants",
-        "failed": "Échec de l'importation des identifiants",
-        "deviceName": {
-          "label": "Nom de l'appareil",
-          "placeholder": "Mon ordinateur",
-          "help": "Un nom pour identifier cet appareil dans votre compte"
-        },
-        "deviceNameRequired": "Veuillez entrer un nom d'appareil"
-      },
       "completeInSettings": "Terminez la configuration de la synchronisation dans Paramètres > Sync après avoir créé votre mot de passe."
     },
-    "credentialsImported": {
-      "title": "Identifiants importés avec succès !",
-      "message": "Entrez le même mot de passe que vous utilisez sur votre autre appareil pour déverrouiller.",
-      "passwordLabel": "Mot de passe (de votre autre appareil)",
-      "passwordPlaceholder": "Entrez le mot de passe de l'autre appareil"
-    },
     "restoreFromBackup": "Restaurer depuis une sauvegarde",
-    "orDivider": "ou"
+    "orDivider": "ou",
+    "connectExisting": {
+      "title": "Connecter un compte existant",
+      "subtitle": "Associez cet appareil à votre compte Jottery existant et synchronisez vos notes.",
+      "endpoint": "URL du serveur de synchronisation",
+      "endpointHint": "L'adresse de votre serveur de synchronisation Jottery.",
+      "deviceName": "Nom de l'appareil",
+      "deviceNamePlaceholder": "p. ex. Ordinateur portable du travail",
+      "deviceNameHint": "Un nom convivial pour identifier cet appareil.",
+      "email": "Adresse e-mail",
+      "emailPlaceholder": "you@example.com",
+      "serverPassword": "Mot de passe du serveur",
+      "serverPasswordPlaceholder": "Le mot de passe de votre compte",
+      "serverPasswordHint": "Le mot de passe que vous utilisez pour vous connecter au serveur de synchronisation.",
+      "notesPassword": "Mot de passe des notes",
+      "notesPasswordPlaceholder": "Choisissez un mot de passe local (min. 8 caractères)",
+      "notesPasswordHint": "Utilisé pour déverrouiller vos notes sur cet appareil. Peut différer du mot de passe du serveur.",
+      "submitButton": "Connecter et synchroniser",
+      "errors": {
+        "endpointRequired": "L'URL du serveur de synchronisation est requise.",
+        "deviceNameRequired": "Le nom de l'appareil est requis.",
+        "emailRequired": "L'adresse e-mail est requise.",
+        "serverPasswordRequired": "Le mot de passe du serveur est requis.",
+        "notesPasswordMinLength": "Le mot de passe des notes doit comporter au moins 8 caractères.",
+        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe du serveur est correct et que l'appareil source a été synchronisé"
+      },
+      "steps": {
+        "initialising": "Initialisation du chiffrement local…",
+        "registering": "Enregistrement de l'appareil auprès du serveur…",
+        "onboarding": "Téléchargement des clés de chiffrement…",
+        "encrypting": "Sécurisation des identifiants…",
+        "syncing": "Démarrage de la synchronisation initiale…"
+      }
+    }
   },
   "lock": {
     "title": "Verrouiller l'application",

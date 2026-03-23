@@ -121,6 +121,12 @@ enum L {
     static var unlockPassword: String { String(localized: "unlock.password") }
     static var unlockAction: String { String(localized: "unlock.action") }
     static var unlockIncorrectPassword: String { String(localized: "unlock.incorrectPassword") }
+    static var unlockFailedAttempts: String { String(localized: "unlock.failedAttempts") }
+    static var unlockDeleteAndStartOver: String { String(localized: "unlock.deleteAndStartOver") }
+    static var unlockDeleteConfirmTitle: String { String(localized: "unlock.deleteConfirmTitle") }
+    static var unlockDeleteConfirmMessage: String { String(localized: "unlock.deleteConfirmMessage") }
+    static var unlockDeleteConfirmAction: String { String(localized: "unlock.deleteConfirmAction") }
+    static var unlockDeleteConfirmCancel: String { String(localized: "unlock.deleteConfirmCancel") }
     static var unlockFaceId: String { String(localized: "unlock.faceId") }
     static var unlockEnableFaceIdTitle: String { String(localized: "unlock.enableFaceIdTitle") }
     static var unlockEnableFaceIdAction: String { String(localized: "unlock.enableFaceIdAction") }

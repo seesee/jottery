@@ -128,6 +128,8 @@ private struct ConnectToServerView: View {
     @State private var registeredEndpoint: String?
     @State private var encryptionPassword = ""
     @State private var syncProgress: String?
+    @State private var failedAttempts = 0
+    @State private var showDeleteConfirm = false
 
     // Imported credential data (set during import, used during unlock)
     @State private var importedSalt: Data?
@@ -226,7 +228,23 @@ private struct ConnectToServerView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(encryptionPassword.isEmpty || isWorking)
+
+                if failedAttempts >= 5 {
+                    Button(action: { showDeleteConfirm = true }) {
+                        Text(L.unlockDeleteAndStartOver)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                }
             }
+        }
+        .alert(L.unlockDeleteConfirmTitle, isPresented: $showDeleteConfirm) {
+            Button(L.unlockDeleteConfirmAction, role: .destructive) {
+                appState.wipeAllData()
+            }
+            Button(L.unlockDeleteConfirmCancel, role: .cancel) {}
+        } message: {
+            Text(L.unlockDeleteConfirmMessage)
         }
     }
 
@@ -320,8 +338,23 @@ private struct ConnectToServerView: View {
                 try KeychainService.storeClientId(response.clientId)
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
+                // Store userId for envelope encryption
+                if var syncMeta = try? appState.syncRepo?.getMetadata() {
+                    syncMeta.userId = response.userId
+                    try? appState.syncRepo?.saveMetadata(syncMeta)
+                }
+
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
+
+                // Attempt envelope setup before declaring success.
+                if let masterKey = appState.keyManager.masterKey {
+                    await EnvelopeService.tryEnvelopeSetup(
+                        appState: appState,
+                        password: password,
+                        masterKey: masterKey
+                    )
+                }
 
                 registeredApiKey = response.apiKey
                 registeredEndpoint = normalised
@@ -538,6 +571,35 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = true
                 appState.syncStatusMessage = L.setupProgressSettingUp
 
+                // Envelope onboarding: before starting sync, check if the
+                // server already has a wrapped master key (from another device).
+                // If so, fetch and unwrap it so this device uses the same key.
+                // This MUST happen before setupSync, which triggers a background
+                // sync that would race with envelope onboarding.
+                if let encryptionRepo = appState.encryptionRepo,
+                   let syncRepo = appState.syncRepo,
+                   let syncMeta = try? syncRepo.getMetadata(),
+                   let userId = syncMeta.userId, !userId.isEmpty,
+                   let endpoint = appState.settings.syncEndpoint,
+                   let apiKey = registeredApiKey {
+                    let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
+                    do {
+                        let serverKey = try await EnvelopeService.onboardFromServer(
+                            syncClient: client,
+                            encryptionRepo: encryptionRepo,
+                            password: encryptionPassword,
+                            userId: userId
+                        )
+                        let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
+                        appState.keyManager.unlockWithKeyData(serverKeyData)
+                    } catch EnvelopeError.noWrappedKeyOnServer {
+                        // First device — no server key yet; local key is fine
+                        print("[Envelope] No server key — this device is the first")
+                    } catch {
+                        print("[Envelope] Onboarding failed: \(error)")
+                    }
+                }
+
                 if let apiKey = registeredApiKey {
                     appState.setupSync(apiKey: apiKey)
                 }
@@ -576,6 +638,10 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
                 syncProgress = nil
                 isWorking = false
+                failedAttempts += 1
+                if failedAttempts >= 5 {
+                    self.error = L.unlockFailedAttempts
+                }
             }
         }
     }

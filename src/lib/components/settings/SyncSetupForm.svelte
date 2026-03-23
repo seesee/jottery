@@ -7,7 +7,7 @@
   export let deviceName: string;
 
   // Registration state
-  export let registrationMode: 'select' | 'newUser' | 'existingUser' | 'importCredentials';
+  export let registrationMode: 'select' | 'newUser' | 'existingUser';
   export let registrationStep: 'email' | 'pending' | 'device' | 'complete';
   export let userEmail: string;
   export let userPassword: string;
@@ -16,11 +16,6 @@
   export let registeringDevice: boolean;
   export let userRegistrationMessage: string;
 
-  // Import credentials
-  export let importCredentialsText: string;
-  export let importDeviceName: string;
-  export let importing: boolean;
-
   // Error handling
   export let syncError: string;
 
@@ -28,7 +23,6 @@
   export let onRegisterUser: () => void;
   export let onRegisterDevice: () => void;
   export let onResetRegistrationFlow: () => void;
-  export let onImportCredentials: () => void;
 </script>
 
 <!-- Setup: Endpoint and Device Name -->
@@ -71,33 +65,7 @@
                     {$_('settings.syncSetup.chooseMethod')}
                   </div>
 
-                  <!-- Option 1: Import Credentials (Most Secure) -->
-                  <div class="border-2 border-green-500 dark:border-green-600 rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
-                    <div class="flex items-start gap-3 mb-3">
-                      <span class="text-2xl">🔐</span>
-                      <div class="flex-1">
-                        <div class="font-semibold text-green-900 dark:text-green-100 mb-1">
-                          {$_('settings.syncSetup.importCredentials.title')}
-                        </div>
-                        <div class="text-xs text-green-800 dark:text-green-200 mb-2">
-                          {@html $_('settings.syncSetup.importCredentials.subtitle')}
-                        </div>
-                        <div class="text-xs text-green-700 dark:text-green-300 space-y-1">
-                          <div>{$_('settings.syncSetup.importCredentials.benefit1')}</div>
-                          <div>{$_('settings.syncSetup.importCredentials.benefit2')}</div>
-                          <div>{$_('settings.syncSetup.importCredentials.benefit3')}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      on:click={() => registrationMode = 'importCredentials'}
-                      class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
-                    >
-                      {$_('settings.syncSetup.importCredentials.button')}
-                    </button>
-                  </div>
-
-                  <!-- Option 2: Connect Existing Account -->
+                  <!-- Option 1: Connect Existing Account -->
                   <div class="border-2 border-purple-500 dark:border-purple-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
                     <div class="flex items-start gap-3 mb-3">
                       <span class="text-2xl">🔗</span>
@@ -123,7 +91,7 @@
                     </button>
                   </div>
 
-                  <!-- Option 3: Register with Server (First Device Only) -->
+                  <!-- Option 2: Register with Server (First Device Only) -->
                   <div class="border-2 border-blue-500 dark:border-blue-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
                     <div class="flex items-start gap-3 mb-3">
                       <span class="text-2xl">🌐</span>
@@ -347,66 +315,7 @@
                     {registeringDevice ? $_('settings.syncSetup.existingAccount.connecting') : $_('settings.syncSetup.existingAccount.connectButton')}
                   </button>
                 </div>
-{:else if registrationMode === 'importCredentials'}
-                <div class="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20 space-y-3">
-                  <div class="flex items-center justify-between mb-2">
-                    <h4 class="font-medium text-sm text-gray-900 dark:text-white">
-                      {$_('settings.syncSetup.import.title')}
-                    </h4>
-                    <button
-                      on:click={onResetRegistrationFlow}
-                      class="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                    >
-                      {$_('settings.syncSetup.back')}
-                    </button>
-                  </div>
-
-                  <p class="text-xs text-gray-600 dark:text-gray-400">
-                    {$_('settings.syncSetup.import.instructions')}
-                  </p>
-
-                  <div class="bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded p-2">
-                    <p class="text-xs text-orange-800 dark:text-orange-200 font-medium">
-                      {$_('settings.syncSetup.import.warningTitle')}
-                    </p>
-                    <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                      {$_('settings.syncSetup.import.warningText')}
-                    </p>
-                  </div>
-
-                  <textarea
-                    bind:value={importCredentialsText}
-                    placeholder={$_('settings.syncSetup.import.placeholder')}
-                    rows="4"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                  ></textarea>
-
-                  <!-- Device name for this device -->
-                  <div>
-                    <label for="import-device-name" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {$_('settings.syncSetup.import.deviceName.label')}
-                    </label>
-                    <input
-                      id="import-device-name"
-                      type="text"
-                      bind:value={importDeviceName}
-                      placeholder={$_('settings.syncSetup.import.deviceName.placeholder')}
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                    />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {$_('settings.syncSetup.import.deviceName.help')}
-                    </p>
-                  </div>
-
-                  <button
-                    on:click={onImportCredentials}
-                    disabled={!importCredentialsText.trim() || !importDeviceName.trim() || importing}
-                    class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-md transition-colors"
-                  >
-                    {importing ? $_('settings.syncSetup.import.importing') : $_('settings.syncSetup.import.button')}
-                  </button>
-                </div>
-              {/if}
+{/if}
 
 <!-- Error Display -->
 {#if syncError}

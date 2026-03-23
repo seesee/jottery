@@ -433,22 +433,37 @@ pub async fn revoke_device(
 ) -> AppResult<StatusCode> {
     // Check device exists
     let device = sqlx::query!(
-        "SELECT id FROM clients WHERE id = ?",
+        "SELECT id, is_active FROM clients WHERE id = ?",
         device_id
     )
     .fetch_optional(&state.pool)
     .await?
     .ok_or_else(|| crate::error::AppError::NotFound("Device not found".to_string()))?;
 
-    // Deactivate the device (soft revoke - keeps record for audit)
-    sqlx::query!(
-        "UPDATE clients SET is_active = 0 WHERE id = ?",
-        device.id
-    )
-    .execute(&state.pool)
-    .await?;
+    let is_active = device.is_active.unwrap_or(0) == 1;
 
-    tracing::info!("Admin revoked device: {}", device_id);
+    if is_active {
+        // Deactivate the device (soft revoke - keeps record for audit)
+        sqlx::query!(
+            "UPDATE clients SET is_active = 0 WHERE id = ?",
+            device.id
+        )
+        .execute(&state.pool)
+        .await?;
+
+        tracing::info!("Admin revoked device: {}", device_id);
+    } else {
+        // Already revoked — hard-delete the device
+        sqlx::query!(
+            "DELETE FROM clients WHERE id = ?",
+            device.id
+        )
+        .execute(&state.pool)
+        .await?;
+
+        tracing::info!("Admin deleted revoked device: {}", device_id);
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 
