@@ -269,6 +269,6 @@ The GCM authentication tag (16 bytes) is appended to the ciphertext.
 
 ## Updates
 
-This security policy was last updated: March 2026
+This security policy was last updated: 24th March 2026
 
 For the latest version, see the repository at: https://github.com/seesee/jottery
