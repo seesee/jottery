@@ -4,7 +4,7 @@
   import { EditorState, Compartment } from '@codemirror/state';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';
-  import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+  import { markdown, markdownLanguage, deleteMarkupBackward, insertNewlineContinueMarkupCommand } from '@codemirror/lang-markdown';
   import { json } from '@codemirror/lang-json';
   import { html } from '@codemirror/lang-html';
   import { css } from '@codemirror/lang-css';
@@ -26,7 +26,7 @@
   import { bracketMatching } from '@codemirror/language';
   import { defaultKeymap, indentWithTab } from '@codemirror/commands';
   import { keymap } from '@codemirror/view';
-  import { EditorSelection } from '@codemirror/state';
+  import { EditorSelection, Prec } from '@codemirror/state';
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
 
@@ -70,6 +70,9 @@
   let quickCommandsCompartment = new Compartment();
   let editableCompartment = new Compartment();
   let measuredWidth: number = 0;
+  // Track whether content change originated from the editor itself
+  // to skip the expensive O(n) reactive comparison on every keystroke
+  let internalUpdate = false;
 
   // Compute font size from settings
   $: fontSize = getFontSize($settings.fontSize);
@@ -153,8 +156,12 @@
         return python();
       case 'markdown':
         // Configure markdown with syntax highlighting for code blocks
+        // Disable default keymap (addKeymap: false) to avoid the built-in
+        // insertNewlineContinueMarkup which inserts blank lines for non-tight
+        // lists. We add our own markdown keymap in the extensions array.
         return markdown({
           base: markdownLanguage,
+          addKeymap: false,
           codeLanguages: [
             LanguageDescription.of({
               name: 'javascript',
@@ -232,6 +239,11 @@
         ...completionKeymap,
         indentWithTab
       ]),
+      // Markdown list continuation without blank lines for non-tight lists
+      Prec.high(keymap.of([
+        { key: 'Enter', run: insertNewlineContinueMarkupCommand({ nonTightLists: false }) },
+        { key: 'Backspace', run: deleteMarkupBackward },
+      ])),
       // Our custom extensions
       mobileAttributesCompartment.of(getMobileAttributes()),
       languageCompartment.of(getLanguageExtension()),
@@ -250,6 +262,7 @@
         if (update.docChanged) {
           const newValue = update.state.doc.toString();
           if (newValue !== value) {
+            internalUpdate = true;
             onChange(newValue);
           }
         }
@@ -325,15 +338,21 @@
     }
   });
 
-  // Update editor when value prop changes externally
-  $: if (editorView && value !== editorView.state.doc.toString()) {
-    editorView.dispatch({
-      changes: {
-        from: 0,
-        to: editorView.state.doc.length,
-        insert: value,
-      },
-    });
+  // Update editor when value prop changes externally (e.g., note switch)
+  // Skip when the change originated from the editor itself to avoid
+  // an O(n) toString() comparison on every keystroke
+  $: if (editorView && value) {
+    if (internalUpdate) {
+      internalUpdate = false;
+    } else if (value !== editorView.state.doc.toString()) {
+      editorView.dispatch({
+        changes: {
+          from: 0,
+          to: editorView.state.doc.length,
+          insert: value,
+        },
+      });
+    }
   }
 
   // Update language when language prop changes
