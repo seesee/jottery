@@ -35,7 +35,7 @@ test.describe('Version History', () => {
 
     // Edit the first note by clicking on it in the list
     const noteList = page.getByRole('list');
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).click();
     await page.waitForTimeout(500);
 
     const editorAfterSwitch = jp.editorContent;
@@ -45,11 +45,11 @@ test.describe('Version History', () => {
     await page.waitForTimeout(2000); // Wait for auto-save
 
     // Switch back to second note (this should trigger version creation for first note)
-    await noteList.getByText(/Second note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /Second note/i }).click();
     await page.waitForTimeout(1000); // Wait for version creation
 
     // Now go back to first note and open version history
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).click();
     await page.waitForTimeout(500);
 
     // Open version history
@@ -150,7 +150,7 @@ test.describe('Version History', () => {
 
     // Go back to first note
     const noteList = page.getByRole('list');
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).click();
     await page.waitForTimeout(500);
 
     // Edit the first note
@@ -164,11 +164,11 @@ test.describe('Version History', () => {
 
     // Now switch to second note - this should still create a version
     // even though hasContentChanged would have been incorrectly reset by auto-save
-    await noteList.getByText(/Second note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /Second note/i }).click();
     await page.waitForTimeout(1000);
 
     // Go back to first note and check version history
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).click();
     await page.waitForTimeout(500);
 
     // Open version history

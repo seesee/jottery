@@ -189,7 +189,7 @@ test.describe('Search Functionality', () => {
 
     // Wait for search results to appear - the note should be visible in results
     const noteList = page.getByRole('list');
-    const searchResult = noteList.getByText(/Searchable/i);
+    const searchResult = noteList.getByRole('button').filter({ hasText: /Searchable/i }).first();
     await expect(searchResult).toBeVisible({ timeout: 5000 });
 
     // Click on a note
