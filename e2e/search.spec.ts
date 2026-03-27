@@ -42,13 +42,13 @@ test.describe('Search Functionality', () => {
 
     // Search by tag
     await jp.searchInput.fill('#work');
+    await page.waitForTimeout(500); // Let search debounce
 
     // Wait for search results to update - the personal note should disappear
-    // Use state-based wait: personal note should NOT be visible after filter
-    await expect(noteList.getByText(/Personal journal/i)).not.toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('h3').getByText(/Personal journal/i)).not.toBeVisible({ timeout: 5000 });
 
     // Work-related notes should still be visible
-    const workNote = noteList.getByText(/Work meeting|Project planning/i);
+    const workNote = noteList.locator('h3').getByText(/Work meeting|Project planning/i);
     await expect(workNote.first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -62,10 +62,13 @@ test.describe('Search Functionality', () => {
     // Search for important but not cats
     const noteList = page.getByRole('list');
 
-    await jp.searchInput.fill('important -cats');
+    // Ensure all notes are created and visible first
+    await expect(noteList.locator('h3').getByText(/dogs/i)).toBeVisible({ timeout: 5000 });
 
-    // Should find dogs note but not cats note (state-based waits)
-    // Use h3 to match note titles specifically
+    await jp.searchInput.fill('important -cats');
+    await page.waitForTimeout(500); // Let search debounce
+
+    // Should find dogs note but not cats note
     await expect(noteList.locator('h3').getByText(/cats/i)).not.toBeVisible({ timeout: 5000 });
     await expect(noteList.locator('h3').getByText(/dogs/i)).toBeVisible({ timeout: 5000 });
   });
@@ -118,15 +121,21 @@ test.describe('Search Functionality', () => {
     // Search
     const noteList = page.getByRole('list');
 
-    await jp.searchInput.fill('First');
+    // Verify both notes are visible initially
+    await expect(noteList.locator('h3').getByText(/First/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('h3').getByText(/Second/i)).toBeVisible({ timeout: 5000 });
 
-    // Wait for search to filter - Second note should disappear (use h3 for specificity)
+    await jp.searchInput.fill('First');
+    await page.waitForTimeout(500); // Let search debounce
+
+    // Wait for search to filter - Second note should disappear
     await expect(noteList.locator('h3').getByText(/Second/i)).not.toBeVisible({ timeout: 5000 });
 
     // Clear search
     await jp.searchInput.clear();
+    await page.waitForTimeout(500); // Let search clear
 
-    // Should show all notes again (state-based waits with longer timeout)
+    // Should show all notes again
     await expect(noteList.locator('h3').getByText(/First/i)).toBeVisible({ timeout: 5000 });
     await expect(noteList.locator('h3').getByText(/Second/i)).toBeVisible({ timeout: 5000 });
   });
