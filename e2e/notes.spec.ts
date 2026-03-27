@@ -30,7 +30,7 @@ test.describe('Note Operations', () => {
 
     // Note should appear in list (check in note list area, not editor)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/My first note/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/My first note/i).first()).toBeVisible();
   });
 
   test('should edit an existing note', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('Note Operations', () => {
 
     // Should see updated content in list
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/Updated content/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Updated content/i).first()).toBeVisible();
   });
 
   test('should add tags to a note', async ({ page }) => {
@@ -97,7 +97,7 @@ test.describe('Note Operations', () => {
 
       // Check if note is still visible in list
       const noteList = page.getByRole('list');
-      await expect(noteList.getByText(/Pinned note/i)).toBeVisible();
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Pinned note/i).first()).toBeVisible();
     }
   });
 
@@ -163,9 +163,9 @@ test.describe('Note Operations', () => {
 
     // All three notes should be visible in the list
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/First note/i)).toBeVisible();
-    await expect(noteList.getByText(/Second note/i)).toBeVisible();
-    await expect(noteList.getByText(/Third note/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/First note/i).first()).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Second note/i).first()).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Third note/i).first()).toBeVisible();
   });
 
   test('should select and switch between notes', async ({ page }) => {
@@ -185,14 +185,14 @@ test.describe('Note Operations', () => {
     await page.waitForTimeout(3000);
 
     // Click on first note in list
-    await page.getByText(/First note/i).click();
+    await page.getByRole('list').getByRole('button').filter({ hasText: /First note/i }).first().click();
     await page.waitForTimeout(500);
 
     // Editor should show first note content
     await expect(editor).toContainText(/First note content/i);
 
     // Click on second note
-    await page.getByText(/Second note/i).click();
+    await page.getByRole('list').getByRole('button').filter({ hasText: /Second note/i }).first().click();
     await page.waitForTimeout(500);
 
     // Editor should show second note content

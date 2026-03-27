@@ -129,7 +129,7 @@ export class JotteryPage {
   }
 
   noteListItemTitle(textPattern: RegExp): Locator {
-    return this.noteList.locator('h3').getByText(textPattern);
+    return this.noteList.locator('[data-testid="note-list-item"] h3').getByText(textPattern).first();
   }
 
   // -- Editor --
@@ -264,7 +264,7 @@ export class JotteryPage {
     // Wait for auto-save by checking note title appears in list
     const firstWord = content.split(' ')[0];
     await expect(
-      this.noteList.locator('h3').getByText(new RegExp(firstWord, 'i')).first()
+      this.noteList.locator('[data-testid="note-list-item"] h3').getByText(new RegExp(firstWord, 'i')).first()
     ).toBeVisible({ timeout: 5000 });
   }
 

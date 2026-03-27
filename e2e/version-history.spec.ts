@@ -93,13 +93,13 @@ test.describe('Version History', () => {
 
     // Wait for auto-save by checking note appears in list (state-based wait)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/Note to close/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to close/i).first()).toBeVisible({ timeout: 5000 });
 
     // Edit the note
     await editor.pressSequentially(' - with more content');
 
     // Wait for auto-save by checking updated content appears in list preview
-    await expect(noteList.getByText(/with more content/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/with more content/i).first()).toBeVisible({ timeout: 5000 });
 
     // Close the note by clicking the X button (close icon)
     const closeButton = page.locator('button').filter({ has: page.locator('svg path[d*="M6 18L18 6"]') });
@@ -107,10 +107,10 @@ test.describe('Version History', () => {
       await closeButton.click();
 
       // Wait for note list to be visible (editor closed)
-      await expect(noteList.getByText(/Note to close/i)).toBeVisible({ timeout: 5000 });
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to close/i).first()).toBeVisible({ timeout: 5000 });
 
       // Re-select the note from the list
-      await noteList.getByText(/Note to close/i).click();
+      await noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to close/i).first().click();
 
       // Wait for editor to load
       await expect(editor).toBeVisible({ timeout: 3000 });

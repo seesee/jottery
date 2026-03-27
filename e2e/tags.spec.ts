@@ -450,7 +450,7 @@ test.describe('Tags', () => {
 
       // Should filter by both criteria
       const noteList = page.getByRole('list');
-      const matchingNote = noteList.getByText(/Test note for tags/i);
+      const matchingNote = noteList.locator('[data-testid="note-list-item"] h3').getByText(/Test note for tags/i).first();
 
       await expect(matchingNote).toBeVisible();
     }

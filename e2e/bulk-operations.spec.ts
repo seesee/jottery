@@ -32,8 +32,8 @@ test.describe('Bulk Operations', () => {
 
     // Verify both notes exist
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/First note content/i)).toBeVisible();
-    await expect(noteList.getByText(/Second note content/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/First note content/i).first()).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Second note content/i).first()).toBeVisible();
 
     // Enter multi-select mode with Ctrl+click on first note
     const firstNoteItem = jp.noteListItems.filter({ hasText: /First note content/i });
@@ -205,8 +205,8 @@ test.describe('Bulk Operations', () => {
     await cancelButton.click();
 
     // Modal should close, both notes should still exist
-    await expect(noteList.getByText(/Note one/i)).toBeVisible();
-    await expect(noteList.getByText(/Note two/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note one/i).first()).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note two/i).first()).toBeVisible();
 
     // Count should still be 2
     const noteItems = await jp.noteListItems.count();

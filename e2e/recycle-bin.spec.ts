@@ -50,7 +50,7 @@ test.describe('Recycle Bin', () => {
 
 		// Verify it exists in the list
 		const noteList = page.getByRole('list');
-		await expect(noteList.getByText(/Note to restore/i)).toBeVisible();
+		await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to restore/i).first()).toBeVisible();
 
 		// Delete the note using bulk selection
 		await deleteNoteViaBulk(page, 'Note to restore');

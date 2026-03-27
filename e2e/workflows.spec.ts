@@ -19,21 +19,21 @@ test.describe('Search and Filtering Workflows', () => {
     await jp.newNoteButton.click();
     await editor.click();
     await editor.pressSequentially('Meeting notes for project alpha discussion');
-    await expect(noteList.getByText(/Meeting notes/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Meeting notes/i).first()).toBeVisible({ timeout: 5000 });
 
     // Note 2: Personal task
     await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Buy groceries and walk the dog');
-    await expect(noteList.getByText(/Buy groceries/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Buy groceries/i).first()).toBeVisible({ timeout: 5000 });
 
     // Note 3: Another work note
     await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Project beta documentation review');
-    await expect(noteList.getByText(/Project beta/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Project beta/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should search notes by text content', async ({ page }) => {
@@ -48,17 +48,17 @@ test.describe('Search and Filtering Workflows', () => {
       const noteList = page.getByRole('list').or(page.locator('[role="list"]')).first();
 
       // Wait for groceries note to disappear (indicates search is working)
-      await expect(noteList.locator('h3').getByText(/groceries/i)).not.toBeVisible({ timeout: 5000 });
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/groceries/i).first()).not.toBeVisible({ timeout: 5000 });
 
       // Project notes should be visible
-      await expect(noteList.locator('h3').getByText(/project alpha/i)).toBeVisible({ timeout: 3000 });
-      await expect(noteList.locator('h3').getByText(/project beta/i)).toBeVisible({ timeout: 3000 });
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/project alpha/i).first()).toBeVisible({ timeout: 3000 });
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/project beta/i).first()).toBeVisible({ timeout: 3000 });
 
       // Clear search
       await searchInput.clear();
 
       // All notes should be visible again
-      await expect(noteList.locator('h3').getByText(/groceries/i)).toBeVisible({ timeout: 5000 });
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/groceries/i).first()).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -98,7 +98,7 @@ test.describe('Tag Management Workflows', () => {
 
     // Wait for note to be saved (appears in list)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/Note about work/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note about work/i).first()).toBeVisible({ timeout: 5000 });
 
     // Find tag input
     const tagInput = jp.tagInput;
@@ -238,7 +238,7 @@ test.describe('Complete User Journey', () => {
 
     // Step 4: Verify note appears in list
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/journey note/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/journey note/i).first()).toBeVisible();
 
     // Step 5: Edit the note
     await editor.click();
@@ -247,7 +247,7 @@ test.describe('Complete User Journey', () => {
     await page.waitForTimeout(3000);
 
     // Step 6: Verify update
-    await expect(noteList.getByText(/updated content/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/updated content/i).first()).toBeVisible();
 
     // Step 7: Create second note for search test
     await jp.newNoteButton.click();
@@ -263,8 +263,8 @@ test.describe('Complete User Journey', () => {
       await page.waitForTimeout(1000);
 
       // Should see journey note, not the other one
-      await expect(noteList.getByText(/journey note/i)).toBeVisible();
-      await expect(noteList.getByText(/testing search/i)).not.toBeVisible();
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/journey note/i).first()).toBeVisible();
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/testing search/i).first()).not.toBeVisible();
 
       // Clear search
       await searchInput.clear();
@@ -273,7 +273,7 @@ test.describe('Complete User Journey', () => {
 
     // Step 9: Delete the second note
     // Click on the note in the list (not the editor content)
-    await noteList.getByText(/testing search/i).click();
+    await noteList.getByRole('button').filter({ hasText: /testing search/i }).first().click();
     await page.waitForTimeout(500);
 
     const deleteButton = page.locator('button[aria-label*="Delete"], button').filter({ hasText: /Delete|Trash/i }).first();
@@ -290,7 +290,7 @@ test.describe('Complete User Journey', () => {
     }
 
     // Step 10: Verify only journey note remains visible (or is in active notes)
-    await expect(noteList.getByText(/journey note/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/journey note/i).first()).toBeVisible();
 
     // Step 11: Lock the app
     const lockButton = page.locator('button[aria-label*="Lock"], button').filter({ hasText: /Lock/i }).first();
@@ -308,7 +308,7 @@ test.describe('Complete User Journey', () => {
       await page.waitForTimeout(2000);
 
       // Should see our note still there
-      await expect(noteList.getByText(/journey note/i)).toBeVisible();
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/journey note/i).first()).toBeVisible();
     }
   });
 });

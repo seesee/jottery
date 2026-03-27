@@ -408,8 +408,8 @@ test.describe('Conflict Resolution UI', () => {
     await expect(noteList).toBeVisible();
 
     // Both notes should be visible
-    await expect(noteList.getByText(/First test note/i)).toBeVisible();
-    await expect(noteList.getByText(/Second test note/i)).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/First test note/i).first()).toBeVisible();
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Second test note/i).first()).toBeVisible();
   });
 
   test('sync button should be present in settings when sync is enabled', async ({ page }) => {

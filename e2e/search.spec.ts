@@ -25,7 +25,7 @@ test.describe('Search Functionality', () => {
 
     // Should find the note with apples (state-based wait)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/apples/i)).toBeVisible({ timeout: 3000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/apples/i).first()).toBeVisible({ timeout: 3000 });
   });
 
   test('should search with tag filter syntax', async ({ page }) => {
@@ -38,17 +38,17 @@ test.describe('Search Functionality', () => {
 
     // Wait for all notes to be saved before searching
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/Project planning/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Project planning/i).first()).toBeVisible({ timeout: 5000 });
 
     // Search by tag
     await jp.searchInput.fill('#work');
     await page.waitForTimeout(500); // Let search debounce
 
     // Wait for search results to update - the personal note should disappear
-    await expect(noteList.locator('h3').getByText(/Personal journal/i)).not.toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Personal journal/i).first()).not.toBeVisible({ timeout: 5000 });
 
     // Work-related notes should still be visible
-    const workNote = noteList.locator('h3').getByText(/Work meeting|Project planning/i);
+    const workNote = noteList.locator('[data-testid="note-list-item"] h3').getByText(/Work meeting|Project planning/i).first();
     await expect(workNote.first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -63,14 +63,14 @@ test.describe('Search Functionality', () => {
     const noteList = page.getByRole('list');
 
     // Ensure all notes are created and visible first
-    await expect(noteList.locator('h3').getByText(/dogs/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/dogs/i).first()).toBeVisible({ timeout: 5000 });
 
     await jp.searchInput.fill('important -cats');
     await page.waitForTimeout(500); // Let search debounce
 
     // Should find dogs note but not cats note
-    await expect(noteList.locator('h3').getByText(/cats/i)).not.toBeVisible({ timeout: 5000 });
-    await expect(noteList.locator('h3').getByText(/dogs/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/cats/i).first()).not.toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/dogs/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should support exact phrase search with quotes', async ({ page }) => {
@@ -84,7 +84,7 @@ test.describe('Search Functionality', () => {
 
     // Should find the exact phrase match (state-based wait)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/quick brown fox/i)).toBeVisible({ timeout: 3000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/quick brown fox/i).first()).toBeVisible({ timeout: 3000 });
   });
 
   test('should show search result count', async ({ page }) => {
@@ -100,7 +100,7 @@ test.describe('Search Functionality', () => {
 
     // Wait for search results (notes with 'test' should be visible)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/Test note/i).first()).toBeVisible({ timeout: 3000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Test note/i).first()).toBeVisible({ timeout: 3000 });
 
     // Should show result count somewhere
     const resultCount = page.locator('text=/\\d+.*match|\\d+.*result|\\d+\\/\\d+/i');
@@ -122,22 +122,22 @@ test.describe('Search Functionality', () => {
     const noteList = page.getByRole('list');
 
     // Verify both notes are visible initially
-    await expect(noteList.locator('h3').getByText(/First/i)).toBeVisible({ timeout: 5000 });
-    await expect(noteList.locator('h3').getByText(/Second/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/First/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Second/i).first()).toBeVisible({ timeout: 5000 });
 
     await jp.searchInput.fill('First');
     await page.waitForTimeout(500); // Let search debounce
 
     // Wait for search to filter - Second note should disappear
-    await expect(noteList.locator('h3').getByText(/Second/i)).not.toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Second/i).first()).not.toBeVisible({ timeout: 5000 });
 
     // Clear search
     await jp.searchInput.clear();
     await page.waitForTimeout(500); // Let search clear
 
     // Should show all notes again
-    await expect(noteList.locator('h3').getByText(/First/i)).toBeVisible({ timeout: 5000 });
-    await expect(noteList.locator('h3').getByText(/Second/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/First/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Second/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should handle empty search results gracefully', async ({ page }) => {
@@ -151,7 +151,7 @@ test.describe('Search Functionality', () => {
     await jp.searchInput.fill('xyznonexistent123');
 
     // Wait for search to complete - the sample note should disappear
-    await expect(noteList.getByText(/Sample note/i)).not.toBeVisible({ timeout: 3000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Sample note/i).first()).not.toBeVisible({ timeout: 3000 });
 
     // Should show empty state or no results message
     const emptyState = page.locator('text=/no.*result|no.*found|no.*match|0.*match/i');
@@ -174,7 +174,7 @@ test.describe('Search Functionality', () => {
 
     // Give search time to process
     // Check for Script languages in results - they should still be visible
-    const scriptNotes = noteList.locator('h3').getByText(/JavaScript|TypeScript/i);
+    const scriptNotes = noteList.locator('[data-testid="note-list-item"] h3').getByText(/JavaScript|TypeScript/i).first();
 
     // Wait for at least one Script note to be visible (wildcard should match)
     // If wildcard isn't supported, the test will fail gracefully
