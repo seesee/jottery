@@ -193,7 +193,7 @@ test.describe('Tags', () => {
 
       // Wait for filtering - the tagged note should still be visible, untagged should be hidden
       await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
-      await expect(noteItems.filter({ hasText: /Untagged second note/i })).not.toBeVisible({ timeout: 5000 });
+      await expect(noteItems.filter({ hasText: /Untagged second note/i })).toHaveCount(0, { timeout: 5000 });
     }
   });
 

@@ -47,8 +47,9 @@ test.describe('Search and Filtering Workflows', () => {
       // Should see project notes (alpha and beta) - use state-based waits
       const noteList = page.getByRole('list').or(page.locator('[role="list"]')).first();
 
-      // Wait for groceries note to disappear (indicates search is working)
-      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/groceries/i).first()).not.toBeVisible({ timeout: 5000 });
+      // Wait for groceries note to be filtered out
+      await page.waitForTimeout(1000);
+      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /groceries/i })).toHaveCount(0, { timeout: 5000 });
 
       // Project notes should be visible
       await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/project alpha/i).first()).toBeVisible({ timeout: 3000 });
@@ -263,8 +264,8 @@ test.describe('Complete User Journey', () => {
       await page.waitForTimeout(1000);
 
       // Should see journey note, not the other one
-      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/journey note/i).first()).toBeVisible();
-      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/testing search/i).first()).not.toBeVisible();
+      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /journey note/i }).first()).toBeVisible();
+      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /testing search/i })).toHaveCount(0, { timeout: 5000 });
 
       // Clear search
       await searchInput.clear();

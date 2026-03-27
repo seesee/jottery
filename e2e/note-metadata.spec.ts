@@ -281,7 +281,7 @@ test.describe('Note Metadata Persistence', () => {
         // Find the pinned note in the list
         const pinnedNoteItem = jp.noteListItems.filter({
           hasText: /Protected pinned/i
-        });
+        }).first();
         await expect(pinnedNoteItem).toBeVisible();
 
         // Hover over the pinned note
