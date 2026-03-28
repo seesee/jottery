@@ -38,11 +38,15 @@ test.describe('Search Functionality', () => {
     // Wait for all notes to be created
     await expect(noteItems(page, /Project planning/i).first()).toBeVisible({ timeout: 5000 });
 
+    // Select a work-tagged note so the selected item survives the filter
+    await noteItems(page, /Work meeting/i).first().click();
+    await page.waitForTimeout(500);
+
     // Search by tag
     await jp.searchInput.fill('#work');
     await page.waitForTimeout(1000);
 
-    // Verify work notes ARE visible first
+    // Verify work notes ARE visible
     await expect(noteItems(page, /Work meeting/i).first()).toBeVisible({ timeout: 5000 });
 
     // Personal note should be filtered out
@@ -60,6 +64,10 @@ test.describe('Search Functionality', () => {
     await expect(noteItems(page, /cats/i).first()).toBeVisible({ timeout: 5000 });
     await expect(noteItems(page, /dogs/i).first()).toBeVisible({ timeout: 5000 });
     await expect(noteItems(page, /weather/i).first()).toBeVisible({ timeout: 5000 });
+
+    // Select the dogs note so the selected item survives the filter
+    await noteItems(page, /dogs/i).first().click();
+    await page.waitForTimeout(500);
 
     await jp.searchInput.fill('important -cats');
     await page.waitForTimeout(1000);
@@ -107,6 +115,10 @@ test.describe('Search Functionality', () => {
     // Verify both notes are visible initially
     await expect(noteItems(page, /First note/i).first()).toBeVisible({ timeout: 5000 });
     await expect(noteItems(page, /Second note/i).first()).toBeVisible({ timeout: 5000 });
+
+    // Select the note that will survive the filter
+    await noteItems(page, /First note/i).first().click();
+    await page.waitForTimeout(500);
 
     await jp.searchInput.fill('First');
     await page.waitForTimeout(1000);
