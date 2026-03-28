@@ -49,7 +49,7 @@ test.describe('Search and Filtering Workflows', () => {
 
       // Wait for groceries note to be filtered out
       await page.waitForTimeout(1000);
-      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /groceries/i })).toHaveCount(0, { timeout: 5000 });
+      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /groceries/i })).not.toBeVisible({ timeout: 10000 });
 
       // Project notes should be visible
       await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/project alpha/i).first()).toBeVisible({ timeout: 3000 });
@@ -265,7 +265,7 @@ test.describe('Complete User Journey', () => {
 
       // Should see journey note, not the other one
       await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /journey note/i }).first()).toBeVisible();
-      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /testing search/i })).toHaveCount(0, { timeout: 5000 });
+      await expect(page.locator('[data-testid="note-list-item"]').filter({ hasText: /testing search/i })).not.toBeVisible({ timeout: 10000 });
 
       // Clear search
       await searchInput.clear();

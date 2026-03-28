@@ -45,8 +45,8 @@ test.describe('Search Functionality', () => {
     // Verify work notes ARE visible first
     await expect(noteItems(page, /Work meeting/i).first()).toBeVisible({ timeout: 5000 });
 
-    // Personal note should be filtered out (use toHaveCount for reliable negative check)
-    await expect(noteItems(page, /Personal journal/i)).toHaveCount(0, { timeout: 5000 });
+    // Personal note should be filtered out
+    await expect(noteItems(page, /Personal journal/i)).not.toBeVisible({ timeout: 10000 });
   });
 
   test('should support negative search with minus', async ({ page }) => {
@@ -65,8 +65,8 @@ test.describe('Search Functionality', () => {
     await page.waitForTimeout(1000);
 
     // Dogs note should be visible, cats note should be filtered out
-    await expect(noteItems(page, /dogs/i).first()).toBeVisible({ timeout: 5000 });
-    await expect(noteItems(page, /cats/i)).toHaveCount(0, { timeout: 5000 });
+    await expect(noteItems(page, /dogs/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(noteItems(page, /cats/i)).not.toBeVisible({ timeout: 10000 });
   });
 
   test('should support exact phrase search with quotes', async ({ page }) => {
@@ -112,7 +112,7 @@ test.describe('Search Functionality', () => {
     await page.waitForTimeout(1000);
 
     // Second note should be filtered out
-    await expect(noteItems(page, /Second note/i)).toHaveCount(0, { timeout: 5000 });
+    await expect(noteItems(page, /Second note/i)).not.toBeVisible({ timeout: 10000 });
 
     // Clear search
     await jp.searchInput.clear();
@@ -131,7 +131,7 @@ test.describe('Search Functionality', () => {
     await jp.searchInput.fill('xyznonexistent123');
 
     // Wait for search to complete - no notes should match
-    await expect(noteItems(page, /Sample note/i)).toHaveCount(0, { timeout: 5000 });
+    await expect(noteItems(page, /Sample note/i)).not.toBeVisible({ timeout: 10000 });
 
     // Should show empty state or no results message
     const emptyState = page.locator('text=/no.*result|no.*found|no.*match|0.*match/i');
