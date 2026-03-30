@@ -243,10 +243,18 @@ export class JotteryPage {
 
   /** Create a note with content and optional tags, waits for auto-save */
   async createNote(content: string, tags: string[] = []) {
+    // Count existing notes before creating a new one
+    const noteCountBefore = await this.page.locator('[data-testid="note-list-item"]').count();
+
     await this.newNoteButton.click();
 
     const editor = this.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // Wait for the editor to switch to the new empty note
+    // CodeMirror may have a newline or placeholder when empty
+    await expect(editor).toHaveText(/^[\s]*$/, { timeout: 5000 });
+
     await editor.click();
     await editor.pressSequentially(content);
 

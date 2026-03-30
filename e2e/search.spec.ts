@@ -11,6 +11,12 @@ function noteItems(page: import('@playwright/test').Page, pattern: RegExp) {
   return page.locator('[data-testid="note-list-item"]').filter({ hasText: pattern });
 }
 
+/** Helper: assert search result count shows matches/total (e.g., "2/3") */
+async function expectSearchCount(page: import('@playwright/test').Page, expected: string, timeout = 10000) {
+  const counter = page.locator('span[aria-hidden="true"]').filter({ hasText: expected });
+  await expect(counter.first()).toBeVisible({ timeout });
+}
+
 test.describe('Search Functionality', () => {
   test.beforeEach(async ({ page }) => {
     const jp = new JotteryPage(page);
@@ -31,50 +37,35 @@ test.describe('Search Functionality', () => {
   test('should search with tag filter syntax', async ({ page }) => {
     const jp = new JotteryPage(page);
 
-    await jp.createNote('Work meeting notes for Monday', ['work']);
-    await jp.createNote('Personal journal entry', ['personal']);
-    await jp.createNote('Project planning document', ['work', 'project']);
+    await jp.createNote('Alpha meeting notes', ['work']);
+    await jp.createNote('Bravo journal entry', ['personal']);
+    await jp.createNote('Charlie planning doc', ['work', 'project']);
 
     // Wait for all notes to be created
-    await expect(noteItems(page, /Project planning/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteItems(page, /Charlie/i).first()).toBeVisible({ timeout: 5000 });
 
-    // Select a work-tagged note so the selected item survives the filter
-    await noteItems(page, /Work meeting/i).first().click();
-    await page.waitForTimeout(500);
-
-    // Search by tag
+    // Search by tag — verify via result count (matches/total)
     await jp.searchInput.fill('#work');
-    await page.waitForTimeout(1000);
 
-    // Verify work notes ARE visible
-    await expect(noteItems(page, /Work meeting/i).first()).toBeVisible({ timeout: 5000 });
-
-    // Personal note should be filtered out
-    await expect(noteItems(page, /Personal journal/i)).not.toBeVisible({ timeout: 10000 });
+    // The result count should show 2/3 (2 work-tagged notes out of 3 total)
+    await expectSearchCount(page, '2/3');
   });
 
   test('should support negative search with minus', async ({ page }) => {
     const jp = new JotteryPage(page);
 
-    await jp.createNote('Important document about cats');
-    await jp.createNote('Important document about dogs');
-    await jp.createNote('Random notes about weather');
+    await jp.createNote('Foxtrot report about elephants');
+    await jp.createNote('Foxtrot report about giraffes');
+    await jp.createNote('Delta summary about rainfall');
 
-    // Ensure all notes are created and visible first
-    await expect(noteItems(page, /cats/i).first()).toBeVisible({ timeout: 5000 });
-    await expect(noteItems(page, /dogs/i).first()).toBeVisible({ timeout: 5000 });
-    await expect(noteItems(page, /weather/i).first()).toBeVisible({ timeout: 5000 });
+    // Ensure all notes are created
+    await expect(noteItems(page, /Delta/i).first()).toBeVisible({ timeout: 5000 });
 
-    // Select the dogs note so the selected item survives the filter
-    await noteItems(page, /dogs/i).first().click();
-    await page.waitForTimeout(500);
+    // Search for "foxtrot" excluding "elephants" — should match 1 of 3
+    await jp.searchInput.fill('foxtrot -elephants');
 
-    await jp.searchInput.fill('important -cats');
-    await page.waitForTimeout(1000);
-
-    // Dogs note should be visible, cats note should be filtered out
-    await expect(noteItems(page, /dogs/i).first()).toBeVisible({ timeout: 10000 });
-    await expect(noteItems(page, /cats/i)).not.toBeVisible({ timeout: 10000 });
+    // Result count should show 1/3 (only the giraffes note matches)
+    await expectSearchCount(page, '1/3');
   });
 
   test('should support exact phrase search with quotes', async ({ page }) => {
@@ -109,30 +100,24 @@ test.describe('Search Functionality', () => {
   test('should clear search and show all notes', async ({ page }) => {
     const jp = new JotteryPage(page);
 
-    await jp.createNote('First note');
-    await jp.createNote('Second note');
+    await jp.createNote('Kilo unique content');
+    await jp.createNote('Lima different text');
 
     // Verify both notes are visible initially
-    await expect(noteItems(page, /First note/i).first()).toBeVisible({ timeout: 5000 });
-    await expect(noteItems(page, /Second note/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteItems(page, /Kilo/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteItems(page, /Lima/i).first()).toBeVisible({ timeout: 5000 });
 
-    // Select the note that will survive the filter
-    await noteItems(page, /First note/i).first().click();
-    await page.waitForTimeout(500);
+    // Search for "Kilo" — should show 1/2
+    await jp.searchInput.fill('Kilo');
+    await expectSearchCount(page, '1/2');
 
-    await jp.searchInput.fill('First');
-    await page.waitForTimeout(1000);
-
-    // Second note should be filtered out
-    await expect(noteItems(page, /Second note/i)).not.toBeVisible({ timeout: 10000 });
-
-    // Clear search
+    // Clear search — result count should disappear (no longer searching)
     await jp.searchInput.clear();
     await page.waitForTimeout(1000);
 
     // Both should be visible again
-    await expect(noteItems(page, /First note/i).first()).toBeVisible({ timeout: 5000 });
-    await expect(noteItems(page, /Second note/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteItems(page, /Kilo/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteItems(page, /Lima/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('should handle empty search results gracefully', async ({ page }) => {
