@@ -294,16 +294,17 @@ mod tests {
     fn test_database_persistence() {
         let temp_dir = tempfile::tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
+        let password = test_password();
 
         // Create and close database
         {
-            let db = Database::open(&db_path, "password").unwrap();
+            let db = Database::open(&db_path, &password).unwrap();
             assert_eq!(db.schema_version().unwrap(), 17);
         }
 
         // Reopen and verify
         {
-            let db = Database::open(&db_path, "password").unwrap();
+            let db = Database::open(&db_path, &password).unwrap();
             assert_eq!(db.schema_version().unwrap(), 17);
         }
     }
