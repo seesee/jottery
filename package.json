@@ -1,6 +1,6 @@
 {
   "name": "jottery",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "main": "electron/dist/main.js",
@@ -80,7 +80,7 @@
     "chalk": "^4.1.2",
     "codemirror": "^6.0.1",
     "concurrently": "^9.0.0",
-    "electron": "^40.1.0",
+    "electron": "^40.8.5",
     "electron-builder": "^26.7.0",
     "fake-indexeddb": "^6.2.5",
     "flexsearch": "^0.7.43",
