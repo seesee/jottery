@@ -70,9 +70,6 @@
   let quickCommandsCompartment = new Compartment();
   let editableCompartment = new Compartment();
   let measuredWidth: number = 0;
-  // Track whether content change originated from the editor itself
-  // to skip the expensive O(n) reactive comparison on every keystroke
-  let internalUpdate = false;
 
   // Compute font size from settings
   $: fontSize = getFontSize($settings.fontSize);
@@ -262,7 +259,6 @@
         if (update.docChanged) {
           const newValue = update.state.doc.toString();
           if (newValue !== value) {
-            internalUpdate = true;
             onChange(newValue);
           }
         }
@@ -339,20 +335,16 @@
   });
 
   // Update editor when value prop changes externally (e.g., note switch)
-  // Skip when the change originated from the editor itself to avoid
-  // an O(n) toString() comparison on every keystroke
-  $: if (editorView && value) {
-    if (internalUpdate) {
-      internalUpdate = false;
-    } else if (value !== editorView.state.doc.toString()) {
-      editorView.dispatch({
-        changes: {
-          from: 0,
-          to: editorView.state.doc.length,
-          insert: value,
-        },
-      });
-    }
+  // The comparison is O(n) but only runs when the value prop changes,
+  // not on every keystroke — Svelte's reactivity ensures this.
+  $: if (editorView && value !== undefined && value !== editorView.state.doc.toString()) {
+    editorView.dispatch({
+      changes: {
+        from: 0,
+        to: editorView.state.doc.length,
+        insert: value,
+      },
+    });
   }
 
   // Update language when language prop changes

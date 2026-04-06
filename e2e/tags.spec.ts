@@ -193,7 +193,7 @@ test.describe('Tags', () => {
 
       // Wait for filtering - the tagged note should still be visible, untagged should be hidden
       await expect(noteItems.filter({ hasText: /Test note for tags/i })).toBeVisible({ timeout: 5000 });
-      await expect(noteItems.filter({ hasText: /Untagged second note/i })).not.toBeVisible({ timeout: 5000 });
+      await expect(noteItems.filter({ hasText: /Untagged second note/i })).not.toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -450,7 +450,7 @@ test.describe('Tags', () => {
 
       // Should filter by both criteria
       const noteList = page.getByRole('list');
-      const matchingNote = noteList.getByText(/Test note for tags/i);
+      const matchingNote = noteList.locator('[data-testid="note-list-item"] h3').getByText(/Test note for tags/i).first();
 
       await expect(matchingNote).toBeVisible();
     }

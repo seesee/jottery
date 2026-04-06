@@ -27,7 +27,7 @@ test.describe('Note Metadata Persistence', () => {
     const cleanContent = content.replace(/^[#*_>\-]+\s*/, '');
     const words = cleanContent.split(/\s+/).filter((w: string) => w.length > 2);
     const searchWord = words[0] || cleanContent.substring(0, 10);
-    await expect(noteList.locator('h3').getByText(new RegExp(searchWord, 'i')).first()).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(new RegExp(searchWord, 'i')).first()).toBeVisible({ timeout: 5000 });
   }
 
   test.describe('Pin State', () => {
@@ -40,7 +40,7 @@ test.describe('Note Metadata Persistence', () => {
 
       // Click on first note in the list
       const noteList = page.getByRole('list');
-      const firstNoteItem = noteList.getByText(/First note/i);
+      const firstNoteItem = noteList.getByRole('button').filter({ hasText: /First note/i }).first();
       await firstNoteItem.click();
 
       // Wait for editor to load
@@ -59,7 +59,7 @@ test.describe('Note Metadata Persistence', () => {
         await expect(unpinButton).toBeVisible({ timeout: 3000 });
 
         // Switch to second note
-        const secondNoteItem = noteList.getByText(/Second note/i);
+        const secondNoteItem = noteList.getByRole('button').filter({ hasText: /Second note/i }).first();
         await secondNoteItem.click();
         await expect(editor).toBeVisible({ timeout: 3000 });
 
@@ -84,11 +84,11 @@ test.describe('Note Metadata Persistence', () => {
 
       // Wait for notes to appear in list
       const noteList = page.getByRole('list');
-      await expect(noteList.getByText(/Apple/i)).toBeVisible();
-      await expect(noteList.getByText(/Banana/i)).toBeVisible();
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Apple/i).first()).toBeVisible();
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Banana/i).first()).toBeVisible();
 
       // Click on first note (Apple)
-      await noteList.getByText(/Apple/i).click();
+      await noteList.getByRole('button').filter({ hasText: /Apple/i }).first().click();
       await page.waitForTimeout(500);
 
       // Try to pin it
@@ -136,7 +136,7 @@ test.describe('Note Metadata Persistence', () => {
 
           // Go back to the markdown note
           const noteList = page.getByRole('list');
-          await noteList.getByText(/Heading/i).click();
+          await noteList.getByRole('button').filter({ hasText: /Heading/i }).first().click();
           await page.waitForTimeout(500);
 
           // Preview should still be enabled
@@ -202,7 +202,7 @@ test.describe('Note Metadata Persistence', () => {
       const noteItems = noteList.locator('[class*="item"], li, [role="listitem"]');
 
       // Click on Zebra note
-      await noteList.getByText(/Zebra/i).click();
+      await noteList.getByRole('button').filter({ hasText: /Zebra/i }).first().click();
       await page.waitForTimeout(500);
 
       // Pin Zebra note
@@ -241,7 +241,7 @@ test.describe('Note Metadata Persistence', () => {
 
         // Go back to the long note
         const noteList = page.getByRole('list');
-        await noteList.getByText(/very long line/i).click();
+        await noteList.getByRole('button').filter({ hasText: /very long line/i }).first().click();
         await page.waitForTimeout(500);
 
         // Word wrap state should be preserved
@@ -266,7 +266,7 @@ test.describe('Note Metadata Persistence', () => {
 
       // Click on the note in the list to select it
       const noteList = page.getByRole('list');
-      await noteList.getByText(/Protected pinned/i).click();
+      await noteList.getByRole('button').filter({ hasText: /Protected pinned/i }).first().click();
       await page.waitForTimeout(500);
 
       // Pin the note
@@ -281,7 +281,7 @@ test.describe('Note Metadata Persistence', () => {
         // Find the pinned note in the list
         const pinnedNoteItem = jp.noteListItems.filter({
           hasText: /Protected pinned/i
-        });
+        }).first();
         await expect(pinnedNoteItem).toBeVisible();
 
         // Hover over the pinned note

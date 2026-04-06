@@ -169,7 +169,7 @@ test.describe('Import/Export', () => {
         await expect(modal).not.toBeVisible({ timeout: 3000 }).catch(() => {});
 
         // Verify imported note appears in list
-        const importedNote = noteList.locator('h3').getByText(/Imported note/i);
+        const importedNote = noteList.locator('[data-testid="note-list-item"] h3').getByText(/Imported note/i).first();
 
         // Note should be visible (wait longer as import may take time)
         await expect(importedNote).toBeVisible({ timeout: 8000 });

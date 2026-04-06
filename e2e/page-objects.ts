@@ -129,7 +129,7 @@ export class JotteryPage {
   }
 
   noteListItemTitle(textPattern: RegExp): Locator {
-    return this.noteList.locator('h3').getByText(textPattern);
+    return this.noteList.locator('[data-testid="note-list-item"] h3').getByText(textPattern).first();
   }
 
   // -- Editor --
@@ -248,6 +248,13 @@ export class JotteryPage {
     const editor = this.editorContent;
     await expect(editor).toBeVisible({ timeout: 5000 });
     await editor.click();
+
+    // Brief pause for the new-note action to settle (note creation + editor switch).
+    // Then select-all + delete to guarantee a clean slate regardless of whether
+    // the app created a fresh note or reused an existing blank one.
+    await this.page.waitForTimeout(300);
+    await this.page.keyboard.press('ControlOrMeta+a');
+    await this.page.keyboard.press('Backspace');
     await editor.pressSequentially(content);
 
     if (tags.length > 0) {
@@ -261,10 +268,13 @@ export class JotteryPage {
       }
     }
 
-    // Wait for auto-save by checking note title appears in list
-    const firstWord = content.split(' ')[0];
+    // Wait for auto-save to flush to the store by checking the note list
+    // contains an item with a unique portion of the content. Using 25+ chars
+    // prevents false-positive matches when notes share the same first word
+    // (e.g., "Foxtrot report about elephants" vs "Foxtrot report about giraffes").
+    const uniqueText = content.slice(0, 25).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     await expect(
-      this.noteList.locator('h3').getByText(new RegExp(firstWord, 'i')).first()
+      this.page.locator('[data-testid="note-list-item"]').filter({ hasText: new RegExp(uniqueText, 'i') }).first()
     ).toBeVisible({ timeout: 5000 });
   }
 

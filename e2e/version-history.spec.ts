@@ -35,7 +35,7 @@ test.describe('Version History', () => {
 
     // Edit the first note by clicking on it in the list
     const noteList = page.getByRole('list');
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).first().click();
     await page.waitForTimeout(500);
 
     const editorAfterSwitch = jp.editorContent;
@@ -45,11 +45,11 @@ test.describe('Version History', () => {
     await page.waitForTimeout(2000); // Wait for auto-save
 
     // Switch back to second note (this should trigger version creation for first note)
-    await noteList.getByText(/Second note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /Second note/i }).first().click();
     await page.waitForTimeout(1000); // Wait for version creation
 
     // Now go back to first note and open version history
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).first().click();
     await page.waitForTimeout(500);
 
     // Open version history
@@ -93,13 +93,13 @@ test.describe('Version History', () => {
 
     // Wait for auto-save by checking note appears in list (state-based wait)
     const noteList = page.getByRole('list');
-    await expect(noteList.getByText(/Note to close/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to close/i).first()).toBeVisible({ timeout: 5000 });
 
     // Edit the note
     await editor.pressSequentially(' - with more content');
 
     // Wait for auto-save by checking updated content appears in list preview
-    await expect(noteList.getByText(/with more content/i)).toBeVisible({ timeout: 5000 });
+    await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/with more content/i).first()).toBeVisible({ timeout: 5000 });
 
     // Close the note by clicking the X button (close icon)
     const closeButton = page.locator('button').filter({ has: page.locator('svg path[d*="M6 18L18 6"]') });
@@ -107,10 +107,10 @@ test.describe('Version History', () => {
       await closeButton.click();
 
       // Wait for note list to be visible (editor closed)
-      await expect(noteList.getByText(/Note to close/i)).toBeVisible({ timeout: 5000 });
+      await expect(noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to close/i).first()).toBeVisible({ timeout: 5000 });
 
       // Re-select the note from the list
-      await noteList.getByText(/Note to close/i).click();
+      await noteList.locator('[data-testid="note-list-item"] h3').getByText(/Note to close/i).first().click();
 
       // Wait for editor to load
       await expect(editor).toBeVisible({ timeout: 3000 });
@@ -150,7 +150,7 @@ test.describe('Version History', () => {
 
     // Go back to first note
     const noteList = page.getByRole('list');
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).first().click();
     await page.waitForTimeout(500);
 
     // Edit the first note
@@ -164,11 +164,11 @@ test.describe('Version History', () => {
 
     // Now switch to second note - this should still create a version
     // even though hasContentChanged would have been incorrectly reset by auto-save
-    await noteList.getByText(/Second note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /Second note/i }).first().click();
     await page.waitForTimeout(1000);
 
     // Go back to first note and check version history
-    await noteList.getByText(/First note/i).click();
+    await noteList.getByRole('button').filter({ hasText: /First note/i }).first().click();
     await page.waitForTimeout(500);
 
     // Open version history

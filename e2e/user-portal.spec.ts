@@ -129,6 +129,68 @@ async function setupApiMocks(page: Page, options: {
   await page.route('**/api/v1/user/logout', async (route: Route) => {
     await route.fulfill({ status: 204 });
   });
+
+  // Mock devices endpoint
+  await page.route('**/api/v1/user/devices', async (route: Route) => {
+    const method = route.request().method();
+    if (method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'device-1',
+            deviceName: 'Test Laptop',
+            lastSyncAt: '2025-01-09T15:00:00Z',
+            createdAt: '2024-06-01T10:00:00Z',
+          },
+        ]),
+      });
+    } else {
+      await route.fulfill({ status: 204 });
+    }
+  });
+
+  // Mock individual device deletion
+  await page.route('**/api/v1/user/devices/*', async (route: Route) => {
+    await route.fulfill({ status: 204 });
+  });
+
+  // Mock inbox token endpoints
+  await page.route('**/api/v1/user/inbox-token/status', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ hasToken: false }),
+    });
+  });
+
+  await page.route('**/api/v1/user/inbox-token', async (route: Route) => {
+    const method = route.request().method();
+    if (method === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ token: 'mock-inbox-token' }),
+      });
+    } else if (method === 'DELETE') {
+      await route.fulfill({ status: 204 });
+    }
+  });
+
+  // Mock delete notes endpoint
+  await page.route('**/api/v1/user/notes', async (route: Route) => {
+    await route.fulfill({ status: 204 });
+  });
+
+  // Mock registration status endpoint
+  await page.route('**/api/v1/user/status*', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'active' }),
+    });
+  });
 }
 
 // Use admin dev server port for user portal tests (5174)
