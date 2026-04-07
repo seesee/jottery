@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [ "main" ]
   push:
+    branches: [ "main" ]
     tags: ['v*']  # Run on release tags
   schedule:
     - cron: '0 0 * * 1'  # Weekly on Mondays
