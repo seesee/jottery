@@ -19,7 +19,7 @@
     "@lezer/highlight": "^1.2.1",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.7",
-    "mathjs": "^14.3.1"
+    "mathjs": "^15.2.0"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
