@@ -19,6 +19,7 @@ electron/dist
 test-results/
 playwright-report/
 .playwright/
+.claude/
 coverage/
 scripts/test-history.db
 

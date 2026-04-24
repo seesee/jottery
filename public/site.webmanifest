@@ -1,7 +1,7 @@
 {
-  "name": "Jottery - Privacy-Focused Notes",
+  "name": "Jottery Notes",
   "short_name": "Jottery",
-  "description": "Secure, encrypted note-taking application with local-first storage",
+  "description": "Simple note-taking application with local-first, encrypted storage",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
