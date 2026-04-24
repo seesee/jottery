@@ -59,6 +59,8 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);

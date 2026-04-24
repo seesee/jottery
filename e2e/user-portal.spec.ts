@@ -183,12 +183,18 @@ async function setupApiMocks(page: Page, options: {
     await route.fulfill({ status: 204 });
   });
 
-  // Mock registration status endpoint
-  await page.route('**/api/v1/user/status*', async (route: Route) => {
+  // Mock registration status endpoint (now POST with {email, password} body).
+  // We mirror the real server's shape: 200 with {status} when "credentials"
+  // look plausible, 401 otherwise.
+  await page.route('**/api/v1/user/status', async (route: Route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fulfill({ status: 405 });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ status: 'active' }),
+      body: JSON.stringify({ status: 'approved' }),
     });
   });
 }

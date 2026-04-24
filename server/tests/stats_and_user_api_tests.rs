@@ -182,6 +182,8 @@ async fn test_admin_stats_requires_authentication() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -240,6 +242,8 @@ async fn test_admin_stats_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -318,6 +322,8 @@ async fn test_user_login_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -389,6 +395,8 @@ async fn test_user_login_wrong_password() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -453,6 +461,8 @@ async fn test_user_login_nonexistent_user() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -516,6 +526,8 @@ async fn test_get_account_info_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -610,6 +622,8 @@ async fn test_get_account_info_requires_authentication() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -670,6 +684,8 @@ async fn test_delete_all_notes_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            auth_rate_limit_period_seconds: 2,
+            auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);

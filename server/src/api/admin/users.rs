@@ -517,14 +517,16 @@ pub struct ChangePasswordRequest {
 
 pub async fn change_password(
     State(state): State<Arc<AppState>>,
-    axum::Extension(user_id): axum::Extension<String>,
+    axum::Extension(session): axum::Extension<crate::models::Session>,
     Json(req): Json<ChangePasswordRequest>,
 ) -> AppResult<StatusCode> {
     use crate::utils::password::{hash_password_with_params, verify_password};
     use crate::db::UserRepository;
 
+    let user_id = &session.user_id;
+
     // Get current user
-    let user = UserRepository::get_by_id(&state.pool, &user_id)
+    let user = UserRepository::get_by_id(&state.pool, user_id)
         .await
         .map_err(|_| crate::error::AppError::Unauthorized)?;
 
@@ -559,16 +561,48 @@ pub async fn change_password(
         crate::error::AppError::InternalServerError
     })?;
 
-    // Update password
+    // Update password + revoke other sessions + deactivate device API keys
+    // atomically. See the matching comment in api::user::change_password for
+    // the rationale.
+    let mut tx = state.pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to start transaction: {}", e);
+        crate::error::AppError::InternalServerError
+    })?;
+
     sqlx::query!(
         r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
         new_password_hash,
         user_id
     )
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
 
-    tracing::info!("Password changed successfully for user: {}", user_id);
+    let other_sessions = sqlx::query!(
+        "DELETE FROM sessions WHERE user_id = ? AND id != ?",
+        user_id,
+        session.id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let deactivated_clients = sqlx::query!(
+        "UPDATE clients SET is_active = 0 WHERE user_id = ? AND is_active = 1",
+        user_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Failed to commit admin password change: {}", e);
+        crate::error::AppError::InternalServerError
+    })?;
+
+    tracing::info!(
+        "Admin password change for user {}: revoked {} sessions, deactivated {} device api keys",
+        user_id,
+        other_sessions.rows_affected(),
+        deactivated_clients.rows_affected(),
+    );
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -614,16 +648,48 @@ pub async fn reset_user_password(
         crate::error::AppError::InternalServerError
     })?;
 
-    // Update password
+    // Update password + revoke ALL sessions + deactivate ALL device API keys
+    // atomically. An admin-triggered reset is explicit suspicion of compromise
+    // (or a user lockout), so unlike the self-change path we don't preserve
+    // any session — the target user must log in fresh.
+    let mut tx = state.pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to start transaction: {}", e);
+        crate::error::AppError::InternalServerError
+    })?;
+
     sqlx::query!(
         r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
         new_password_hash,
         user_id
     )
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
 
-    tracing::info!("Admin reset password for user: {}", user_id);
+    let revoked_sessions = sqlx::query!(
+        "DELETE FROM sessions WHERE user_id = ?",
+        user_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let deactivated_clients = sqlx::query!(
+        "UPDATE clients SET is_active = 0 WHERE user_id = ? AND is_active = 1",
+        user_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Failed to commit admin password reset: {}", e);
+        crate::error::AppError::InternalServerError
+    })?;
+
+    tracing::info!(
+        "Admin reset password for user {}: revoked {} sessions, deactivated {} device api keys",
+        user_id,
+        revoked_sessions.rows_affected(),
+        deactivated_clients.rows_affected(),
+    );
     Ok(StatusCode::NO_CONTENT)
 }
 

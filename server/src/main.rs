@@ -10,6 +10,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::compression::CompressionLayer;
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
+use tower_governor::{governor::GovernorConfigBuilder, key_extractor::SmartIpKeyExtractor, GovernorLayer};
 use axum::http::HeaderValue;
 
 mod api;
@@ -200,27 +201,39 @@ async fn main() {
             api::middleware::auth_middleware,
         ));
 
-    // Auth routes (rate limiting disabled - requires proxy-aware key extractor)
-    // TODO: Re-enable with SmartIpKeyExtractor when running behind reverse proxy
+    // Per-IP rate limiter for auth + registration. SmartIpKeyExtractor walks
+    // X-Forwarded-For → X-Real-IP → peer IP so the limit works whether the
+    // server is behind a reverse proxy or fronts the internet directly.
+    // Configurable via AUTH_RATE_LIMIT_PERIOD_SECONDS / AUTH_RATE_LIMIT_BURST.
+    let governor_conf = std::sync::Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(config.auth_rate_limit_period_seconds)
+            .burst_size(config.auth_rate_limit_burst)
+            .key_extractor(SmartIpKeyExtractor)
+            .finish()
+            .expect("rate limiter config should be valid"),
+    );
+    let auth_rate_limit_layer = GovernorLayer { config: governor_conf };
+
     let auth_routes = Router::new()
         .route("/api/v1/auth/login", post(api::auth::login))
-        .route("/api/v1/user/login", post(api::user::login));
+        .route("/api/v1/user/login", post(api::user::login))
+        .layer(auth_rate_limit_layer.clone());
 
-    // Registration routes (rate limiting disabled - requires proxy-aware key extractor)
     let registration_routes = Router::new()
         .route("/api/v1/auth/register-user", post(api::auth::register_user))
         .route("/api/v1/auth/register-device", post(api::auth::register_device))
-        .route("/api/v1/auth/clone-device", post(api::auth::clone_device));
+        .route("/api/v1/auth/clone-device", post(api::auth::clone_device))
+        .route("/api/v1/user/status", post(api::user::check_status))
+        .layer(auth_rate_limit_layer);
 
     // Build main router
     let app = Router::new()
         // Health check (no auth required)
         .route("/health", get(health_check))
-        // Rate-limited auth and registration routes
+        // Rate-limited auth, registration, and status routes
         .merge(auth_routes)
         .merge(registration_routes)
-        // Status check (no rate limiting needed - it's read-only)
-        .route("/api/v1/user/status", get(api::user::check_status))
         // Merge protected routes
         .merge(sync_routes)
         .merge(sse_routes)

@@ -50,9 +50,7 @@ interface Device {
 }
 
 interface UserStatusResponse {
-  exists: boolean;
-  isApproved: boolean;
-  isActive: boolean;
+  status: 'approved' | 'pending_approval' | 'deactivated';
 }
 
 class ApiError extends Error {
@@ -192,13 +190,16 @@ class UserApiClient {
     return this.request('GET', '/api/v1/user/inbox-token/status');
   }
 
-  // Check user approval status (no auth required)
-  async checkStatus(email: string): Promise<UserStatusResponse> {
-    const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
-      method: 'GET',
+  // Check user approval status. Requires the user's password so the endpoint
+  // can't be used to enumerate account existence. 401 on unknown email OR
+  // wrong password — both paths take the same time on the server.
+  async checkStatus(email: string, password: string): Promise<UserStatusResponse> {
+    const response = await fetch(`${API_BASE}/api/v1/user/status`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ email, password }),
     });
 
     if (!response.ok) {

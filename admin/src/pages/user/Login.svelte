@@ -8,11 +8,13 @@
   let error = $state<string | null>(null);
   let loading = $state(false);
 
-  // Status check state
+  // Status check state. The server endpoint now requires (email, password)
+  // so it can't be used to enumerate accounts; this form takes both.
   let showStatusCheck = $state(false);
   let statusEmail = $state('');
+  let statusPassword = $state('');
   let statusLoading = $state(false);
-  let statusResult = $state<{ exists: boolean; isApproved: boolean; isActive: boolean } | null>(null);
+  let statusResult = $state<{ status: 'approved' | 'pending_approval' | 'deactivated' } | null>(null);
   let statusError = $state<string | null>(null);
 
   async function handleSubmit(e: Event) {
@@ -47,9 +49,15 @@
     statusLoading = true;
 
     try {
-      statusResult = await userApi.checkStatus(statusEmail);
+      statusResult = await userApi.checkStatus(statusEmail, statusPassword);
     } catch (err) {
-      statusError = $_('userPortal.login.errors.statusCheckFailed');
+      // 401 from the server means either the email doesn't exist or the
+      // password is wrong — we deliberately can't tell the user which.
+      if (err instanceof ApiError && err.status === 401) {
+        statusError = $_('userPortal.login.errors.invalidCredentials');
+      } else {
+        statusError = $_('userPortal.login.errors.statusCheckFailed');
+      }
     } finally {
       statusLoading = false;
     }
@@ -135,9 +143,19 @@
               placeholder={$_('userPortal.login.placeholder.email')}
             />
           </div>
+          <div>
+            <input
+              type="password"
+              required
+              bind:value={statusPassword}
+              disabled={statusLoading}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm"
+              placeholder={$_('userPortal.login.placeholder.password')}
+            />
+          </div>
           <button
             type="submit"
-            disabled={statusLoading || !statusEmail}
+            disabled={statusLoading || !statusEmail || !statusPassword}
             class="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
           >
             {statusLoading ? $_('common.loading') : $_('userPortal.login.statusCheck.checkButton')}
@@ -152,19 +170,15 @@
 
         {#if statusResult}
           <div class="mt-3 text-sm">
-            {#if !statusResult.exists}
-              <div class="bg-gray-100 border border-gray-300 text-gray-700 px-3 py-2 rounded">
-                {$_('userPortal.login.statusCheck.notFound')}
-              </div>
-            {:else if statusResult.isApproved && statusResult.isActive}
+            {#if statusResult.status === 'approved'}
               <div class="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded">
                 {$_('userPortal.login.statusCheck.approved')}
               </div>
-            {:else if !statusResult.isApproved}
+            {:else if statusResult.status === 'pending_approval'}
               <div class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-2 rounded">
                 {$_('userPortal.login.statusCheck.pending')}
               </div>
-            {:else if !statusResult.isActive}
+            {:else if statusResult.status === 'deactivated'}
               <div class="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded">
                 {$_('userPortal.login.statusCheck.inactive')}
               </div>
