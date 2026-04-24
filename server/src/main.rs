@@ -28,6 +28,35 @@ pub struct AppState {
     pub config: Config,
     pub sync_broadcast: SyncBroadcast,
     pub sse_tokens: SseTokenStore,
+    /// See `jottery_server::AppState::webauthn` for semantics. This copy
+    /// is kept in sync because main.rs re-declares its own module tree
+    /// via `mod api;` rather than re-exporting through the library.
+    pub webauthn: Option<std::sync::Arc<webauthn_rs::Webauthn>>,
+}
+
+/// Build the WebAuthn instance from config. Returns `Ok(None)` when the
+/// server is deliberately running without passkey support, `Ok(Some(w))`
+/// when it succeeds, and `Err(msg)` when a config was supplied but is
+/// invalid (caller logs and continues with None).
+fn build_webauthn(config: &Config) -> Result<Option<Arc<webauthn_rs::Webauthn>>, String> {
+    use webauthn_rs::prelude::*;
+    if !config.webauthn_enabled() {
+        tracing::info!("Passkey support disabled (set WEBAUTHN_RP_ID/ORIGIN/NAME to enable)");
+        return Ok(None);
+    }
+    let rp_id = config.webauthn_rp_id.as_ref().unwrap();
+    let rp_origin = config.webauthn_rp_origin.as_ref().unwrap();
+    let rp_name = config.webauthn_rp_name.as_ref().unwrap();
+
+    let url = Url::parse(rp_origin).map_err(|e| format!("invalid WEBAUTHN_RP_ORIGIN url: {e}"))?;
+    let builder = WebauthnBuilder::new(rp_id, &url)
+        .map_err(|e| format!("WebauthnBuilder::new failed: {e:?}"))?;
+    let webauthn = builder
+        .rp_name(rp_name)
+        .build()
+        .map_err(|e| format!("Webauthn build failed: {e:?}"))?;
+    tracing::info!("Passkey support enabled (rp_id={})", rp_id);
+    Ok(Some(Arc::new(webauthn)))
 }
 
 /// Build CORS layer based on configuration
@@ -105,12 +134,21 @@ async fn main() {
     // Create SSE token store for short-lived tokens
     let sse_tokens = create_token_store();
 
+    // Build WebAuthn instance if configured. A partial / malformed config
+    // logs and drops back to None rather than panicking — operators may be
+    // running jottery without passkey support, which is fine.
+    let webauthn = build_webauthn(&config).unwrap_or_else(|e| {
+        tracing::error!("Passkey config present but invalid: {}. Passkey endpoints disabled.", e);
+        None
+    });
+
     // Build application state
     let app_state = Arc::new(AppState {
         pool,
         config: config.clone(),
         sync_broadcast,
         sse_tokens,
+        webauthn,
     });
 
     // Build protected sync routes with API key auth middleware
@@ -145,9 +183,24 @@ async fn main() {
             post(api::user::generate_inbox_token).delete(api::user::revoke_inbox_token))
         .route("/api/v1/user/inbox-token/status",
             get(api::user::get_inbox_token_status))
+        .route("/api/v1/user/passkeys/register/begin", post(api::passkeys::begin_registration))
+        .route("/api/v1/user/passkeys/register/complete", post(api::passkeys::complete_registration))
+        .route("/api/v1/user/passkeys", get(api::passkeys::list_passkeys))
+        .route("/api/v1/user/passkeys/:id", delete(api::passkeys::delete_passkey))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             api::middleware::user_auth_middleware,
+        ));
+
+    // Passkey-authentication endpoints accept MFA-pending sessions so a
+    // user who has just presented their password can complete the second
+    // factor. See api::middleware::user_mfa_pending_middleware.
+    let passkey_auth_routes = Router::new()
+        .route("/api/v1/user/passkeys/authenticate/begin", post(api::passkeys::begin_authentication))
+        .route("/api/v1/user/passkeys/authenticate/complete", post(api::passkeys::complete_authentication))
+        .layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            api::middleware::user_mfa_pending_middleware,
         ));
 
     // Build protected admin routes with session auth middleware
@@ -227,6 +280,7 @@ async fn main() {
         .merge(inbox_submit_routes)
         .merge(inbox_manage_routes)
         .merge(user_routes)
+        .merge(passkey_auth_routes)
         .merge(admin_routes)
         // Serve admin dashboard and user portal (same SPA, different paths)
         // Must be after API routes to avoid conflicts

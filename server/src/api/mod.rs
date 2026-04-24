@@ -2,6 +2,7 @@ pub mod admin;
 pub mod auth;
 pub mod extractors;
 pub mod inbox;
+pub mod passkeys;
 pub mod sse;
 pub mod sync;
 pub mod user;
@@ -136,9 +137,59 @@ pub mod middleware {
             return Err(StatusCode::FORBIDDEN);
         }
 
+        // MFA gate: a session created when the user has passkeys enrolled
+        // starts with mfa_verified = 0. It's only accepted on the passkey
+        // authentication endpoints (which use `user_mfa_pending_middleware`
+        // instead of this one). For every other protected endpoint, an
+        // unverified session is rejected.
+        if session.mfa_verified == 0 {
+            tracing::warn!(
+                "Rejected mfa-pending session {} on non-passkey endpoint",
+                session.id,
+            );
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+
         // Add session to request extensions for use in handlers
         request.extensions_mut().insert(session);
 
+        Ok(next.run(request).await)
+    }
+
+    /// Middleware for endpoints that complete a pending MFA step (i.e.
+    /// passkey authenticate begin/complete). Accepts sessions in either
+    /// state — mfa_verified = 0 OR 1 — because:
+    /// - A fresh login creates mfa_verified = 0 and must be able to start
+    ///   the passkey assertion immediately.
+    /// - A session already verified via passkey might re-run the assertion
+    ///   (e.g. for re-authentication on a sensitive action in the future).
+    pub async fn user_mfa_pending_middleware(
+        State(state): State<Arc<AppState>>,
+        headers: HeaderMap,
+        mut request: Request,
+        next: Next,
+    ) -> Result<Response, StatusCode> {
+        let session_token = extract_session_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+
+        let session = SessionRepository::validate_and_get(&state.pool, &session_token)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        let user_active: i64 = sqlx::query_scalar!(
+            r#"SELECT is_active FROM users WHERE id = ?"#,
+            session.user_id
+        )
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        if user_active != 1 {
+            return Err(StatusCode::FORBIDDEN);
+        }
+
+        request.extensions_mut().insert(session);
         Ok(next.run(request).await)
     }
 

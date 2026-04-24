@@ -22,7 +22,11 @@
 
     try {
       await userAuth.login(email, password);
-      // Navigation will be handled by UserApp.svelte watching auth state
+      if (userAuth.mfaPending) {
+        // Stay on this page — the template switches to the passkey prompt
+        // when mfaPending is true. Don't clear password; user may retry.
+      }
+      // Otherwise: UserApp.svelte will pick up isAuthenticated and navigate.
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
@@ -38,6 +42,37 @@
     } finally {
       loading = false;
     }
+  }
+
+  let passkeyLoading = $state(false);
+  let passkeyError = $state<string | null>(null);
+
+  async function handlePasskeyAuth() {
+    passkeyError = null;
+    passkeyLoading = true;
+    try {
+      await userAuth.completeMfa();
+      // UserApp.svelte now sees isAuthenticated and navigates away.
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        passkeyError = $_('userPortal.login.errors.passkeyRejected');
+      } else if (err instanceof DOMException && (err.name === 'NotAllowedError' || err.name === 'AbortError')) {
+        // User cancelled the browser prompt — treat as retriable, no error banner.
+        passkeyError = null;
+      } else {
+        passkeyError = $_('userPortal.login.errors.passkeyFailed');
+      }
+    } finally {
+      passkeyLoading = false;
+    }
+  }
+
+  async function handleCancelMfa() {
+    // User wants to log out of the half-completed login state. Clearing
+    // auth is enough client-side; the server-side mfa-pending session
+    // will expire naturally.
+    userAuth.clearAuth();
+    password = '';
   }
 
   async function handleCheckStatus(e: Event) {
@@ -63,6 +98,37 @@
       <p class="text-gray-600 mt-2">{$_('userPortal.login.subtitle')}</p>
     </div>
 
+    {#if userAuth.mfaPending}
+      <!-- Second-factor step: password accepted, waiting on passkey assertion. -->
+      <div class="space-y-6">
+        <p class="text-sm text-gray-700">
+          {$_('userPortal.login.mfa.prompt')}
+        </p>
+
+        {#if passkeyError}
+          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+            {passkeyError}
+          </div>
+        {/if}
+
+        <button
+          type="button"
+          onclick={handlePasskeyAuth}
+          disabled={passkeyLoading}
+          class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        >
+          {passkeyLoading ? $_('userPortal.login.mfa.verifying') : $_('userPortal.login.mfa.useButton')}
+        </button>
+
+        <button
+          type="button"
+          onclick={handleCancelMfa}
+          class="w-full text-sm text-gray-600 hover:text-gray-800 hover:underline"
+        >
+          {$_('userPortal.login.mfa.cancel')}
+        </button>
+      </div>
+    {:else}
     <form onsubmit={handleSubmit} class="space-y-6">
       {#if error}
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -172,6 +238,7 @@
           </div>
         {/if}
       </div>
+    {/if}
     {/if}
   </div>
 </div>

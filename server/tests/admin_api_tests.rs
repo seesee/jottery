@@ -62,6 +62,9 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+            webauthn_rp_id: None,
+            webauthn_rp_origin: None,
+            webauthn_rp_name: None,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -71,6 +74,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         sync_broadcast,
         sse_tokens,
         config,
+        webauthn: None,
     });
 
     // Build router with admin routes

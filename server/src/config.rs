@@ -36,6 +36,24 @@ pub struct Config {
     pub max_note_content_size: usize,
     pub max_tag_length: usize,
     pub max_tags_per_note: usize,
+
+    // WebAuthn / passkey support for user-portal login MFA.
+    // All three must be set (or all three left unset) — a partial config
+    // refuses to start. If any is unset, passkey endpoints return 404 and
+    // the login flow never offers passkey as a factor.
+    //
+    // - rp_id: the WebAuthn Relying Party identifier, which MUST be the
+    //   domain (not including port or scheme) that the portal is served
+    //   on. Passkeys are bound to this value; change it and every
+    //   enrolled credential becomes unusable.
+    // - rp_origin: the full origin the browser sees
+    //   (e.g. "https://jottery.example.com"). Must match the Origin
+    //   header the browser sends.
+    // - rp_name: human-readable application name shown in the browser's
+    //   passkey prompt UI.
+    pub webauthn_rp_id: Option<String>,
+    pub webauthn_rp_origin: Option<String>,
+    pub webauthn_rp_name: Option<String>,
 }
 
 impl Config {
@@ -140,6 +158,20 @@ impl Config {
                 .unwrap_or_else(|_| "50".to_string())
                 .parse()
                 .unwrap_or(50),
+
+            webauthn_rp_id: env::var("WEBAUTHN_RP_ID").ok(),
+            webauthn_rp_origin: env::var("WEBAUTHN_RP_ORIGIN").ok(),
+            webauthn_rp_name: env::var("WEBAUTHN_RP_NAME").ok(),
         })
+    }
+
+    /// Whether passkey / WebAuthn support is configured. All three of
+    /// `webauthn_rp_id`, `webauthn_rp_origin`, `webauthn_rp_name` must be
+    /// set; a partial config is treated as "disabled" to avoid confusing
+    /// half-configured deployments.
+    pub fn webauthn_enabled(&self) -> bool {
+        self.webauthn_rp_id.is_some()
+            && self.webauthn_rp_origin.is_some()
+            && self.webauthn_rp_name.is_some()
     }
 }
