@@ -4,6 +4,8 @@
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
+  import { keyManager } from './lib/services/keyManager';
+  import { sessionStorageService } from './lib/services/sessionStorageService';
   import { locale, _, waitLocale } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
   import { DEFAULT_SETTINGS } from './lib/types';
@@ -28,6 +30,7 @@
   let initialized = false;
   let loadingNotes = false;
   let loadingProgress = { current: 0, total: 0 };
+  let keyManagerLockUnsubscribe: (() => void) | null = null;
   let showSettings = false;
   let showRecycleBin = false;
   let showInboxPanel = false;
@@ -300,6 +303,15 @@
       // Check lock status
       isLocked.set(checkLocked());
 
+      // Surface every master-key clear in the UI. keyManager.clearMasterKey()
+      // can fire from its own setTimeout, from an ApplicationLockedError catch,
+      // or from autoLockService — without this hook the UI silently stays on
+      // the editor while saves have already started throwing.
+      keyManagerLockUnsubscribe = keyManager.onLock(() => {
+        sessionStorageService.clear();
+        isLocked.set(true);
+      });
+
       // Start version checking (only in production)
       appUpdateService.startChecking();
 
@@ -321,6 +333,10 @@
   onDestroy(() => {
     if (backSpinnerTimeout !== null) {
       clearTimeout(backSpinnerTimeout);
+    }
+    if (keyManagerLockUnsubscribe) {
+      keyManagerLockUnsubscribe();
+      keyManagerLockUnsubscribe = null;
     }
   });
 

@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal } from '../stores/appStore';
+  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
   import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository, syncRepository } from '../services';
+  import { lock } from '../services/initService';
+  import { isApplicationLockedError } from '../errors';
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
@@ -553,6 +555,14 @@
       // selectedNote will automatically update from the derived store
     } catch (error) {
       console.error('Failed to save note:', error);
+      // If the master key was cleared between edit and save (e.g. the
+      // persist-session window elapsed), the repository throws
+      // ApplicationLockedError. Without this branch the editor stays
+      // mounted and subsequent keystrokes silently fail to persist.
+      if (isApplicationLockedError(error)) {
+        lock();
+        isLocked.set(true);
+      }
     }
   }
 

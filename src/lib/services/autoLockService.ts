@@ -1,5 +1,14 @@
 /**
  * Auto-lock service to lock application after inactivity
+ *
+ * Enforces two timeouts:
+ * - autoLockTimeout (idle): set by settings.autoLockTimeout — resets on activity
+ * - persistSessionTimeout (absolute): an upper bound on the sessionStorage-based
+ *   "Persist Session Across Page Refresh" cache. It does NOT reset on activity,
+ *   so an active user can otherwise type past its expiry with a master key that
+ *   has silently become unsynced / no longer eligible for auto-unlock on reload.
+ *   We re-check session validity on every interaction and visibility change so
+ *   the UI locks the moment the window has closed.
  */
 
 import { isLocked } from '../stores/appStore';
@@ -12,21 +21,54 @@ let lastActivityTime: number = Date.now();
 let autoLockTimeout: number = 15 * 60 * 1000; // 15 minutes in milliseconds
 let checkInterval: number | null = null;
 
+// Cached at startAutoLock() so every synchronous activity handler can decide
+// without an async settings read.
+let persistSessionEnabled = false;
+let persistSessionTimeoutMinutes = 30;
+
+const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'] as const;
+
 /**
- * Update last activity timestamp
+ * Whether the absolute persist-session window has elapsed.
+ * Returns false when the feature is off — in that mode the sessionStorage
+ * password isn't relevant, so there's nothing to expire.
  */
-function updateActivity() {
+function isPersistSessionExpired(): boolean {
+  if (!persistSessionEnabled) return false;
+  return !hasValidSession(persistSessionTimeoutMinutes);
+}
+
+/**
+ * Activity handler: either extend the idle window or lock immediately if
+ * the persist-session window has elapsed.
+ */
+function onActivity() {
+  if (isPersistSessionExpired()) {
+    void performLock();
+    return;
+  }
   lastActivityTime = Date.now();
 }
 
 /**
- * Check if should auto-lock
+ * Visibility handler: when the tab regains focus, re-validate before letting
+ * the user keep working.
+ */
+function onVisibilityChange() {
+  if (document.visibilityState !== 'visible') return;
+  if (isPersistSessionExpired()) {
+    void performLock();
+  }
+}
+
+/**
+ * Periodic tick: backstop in case no activity or visibility event arrives.
  */
 async function checkAutoLock() {
   const now = Date.now();
   const timeSinceActivity = now - lastActivityTime;
 
-  if (timeSinceActivity >= autoLockTimeout) {
+  if (timeSinceActivity >= autoLockTimeout || isPersistSessionExpired()) {
     await performLock();
   }
 }
@@ -76,11 +118,28 @@ export function startAutoLock(timeoutMinutes: number = 15): void {
   autoLockTimeout = timeoutMinutes * 60 * 1000;
   lastActivityTime = Date.now();
 
+  // Cache persist-session settings so the activity handler can run synchronously.
+  // Any subsequent changes (toggle in settings, timeout bump) re-enter via
+  // App.svelte's reactive block, which calls startAutoLock() again.
+  settingsRepository
+    .get()
+    .then((settings) => {
+      persistSessionEnabled = !!settings.persistSession;
+      persistSessionTimeoutMinutes = settings.persistSessionTimeout ?? 30;
+    })
+    .catch((error) => {
+      console.warn('[AutoLock] Failed to cache persist-session settings:', error);
+      persistSessionEnabled = false;
+    });
+
   // Set up activity listeners
-  const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-  events.forEach(event => {
-    document.addEventListener(event, updateActivity, { passive: true });
+  ACTIVITY_EVENTS.forEach((event) => {
+    document.addEventListener(event, onActivity, { passive: true });
   });
+
+  // Re-check when the tab comes back into focus — a window can elapse entirely
+  // while the tab is backgrounded and no activity event ever fires.
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   // Check every minute
   checkInterval = window.setInterval(checkAutoLock, 60 * 1000);
@@ -96,10 +155,10 @@ export function stopAutoLock(): void {
   }
 
   // Remove activity listeners (must use same options as when added)
-  const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-  events.forEach(event => {
-    document.removeEventListener(event, updateActivity, { passive: true } as EventListenerOptions);
+  ACTIVITY_EVENTS.forEach((event) => {
+    document.removeEventListener(event, onActivity, { passive: true } as EventListenerOptions);
   });
+  document.removeEventListener('visibilitychange', onVisibilityChange);
 }
 
 /**
