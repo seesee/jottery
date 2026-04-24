@@ -15,6 +15,19 @@ export default defineConfig({
     emptyOutDir: false,
     sourcemap: false,
     cssCodeSplit: false,
+    // Use terser so we can reserve identifier names that collide with
+    // HTML entity names. esbuild (the default) happily mints two-letter
+    // variables such as `lt`, `gt`, `amp` during minification, producing
+    // substrings like `&&lt&&` inside inlined <script> blocks that look
+    // like malformed HTML entity references when the HTML is reviewed
+    // (even though the script-data parsing state runs them correctly at
+    // runtime).
+    minify: 'terser',
+    terserOptions: {
+      mangle: {
+        reserved: ['lt', 'gt', 'amp', 'quot', 'apos'],
+      },
+    },
     rollupOptions: {
       input: resolve(__dirname, `${bundle}.html`),
       output: {
