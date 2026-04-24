@@ -10,6 +10,38 @@ import { test, expect, type Page } from '@playwright/test';
 import { JotteryPage } from './test-utils';
 
 /**
+ * Wait until the app's autosave has flushed typed content to the note list.
+ * The note-list item picks up a snippet of the text once the save completes,
+ * so this is a deterministic stand-in for the previous `waitForTimeout(2000)`
+ * placed after every `editor.pressSequentially(...)`.
+ */
+async function waitForAutosave(page: Page, contentSnippet: string) {
+  const snippet = contentSnippet.slice(0, 25).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await expect(
+    page.locator('[data-testid="note-list-item"]').filter({ hasText: new RegExp(snippet, 'i') }).first()
+  ).toBeVisible({ timeout: 5000 });
+}
+
+/**
+ * Reload the page, re-enter the password, and wait for the app to be ready.
+ * Replaces the seven-line block (reload → waitForSelector → click →
+ * pressSequentially → submit → waitForTimeout(2000)) that every reload-based
+ * test was duplicating.
+ */
+async function reloadAndUnlock(page: Page, jp: JotteryPage, password = 'test-password-123') {
+  await page.reload();
+  await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
+
+  const passwordField = page.locator('#password');
+  await expect(passwordField).toBeVisible({ timeout: 10000 });
+  await passwordField.click();
+  await passwordField.pressSequentially(password, { delay: 10 });
+  await page.locator('button[type="submit"]').click();
+
+  await expect(jp.appLoaded.first()).toBeVisible({ timeout: 30000 });
+}
+
+/**
  * Helper to inject conflict data into IndexedDB for a note
  * This simulates what would happen when sync detects a conflict
  */
@@ -183,7 +215,7 @@ test.describe('Conflict Resolution UI', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My local content');
-    await page.waitForTimeout(2000); // Wait for auto-save
+    await waitForAutosave(page, 'My local content');
 
     // Get the note ID
     const noteId = await getCurrentNoteId(page);
@@ -197,15 +229,7 @@ test.describe('Conflict Resolution UI', () => {
     });
 
     // Reload the app to pick up the conflict
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-
-    // Unlock the app
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // The note list should show a conflict indicator (warning icon or amber coloring)
     // Look for the conflict indicator in the note list item
@@ -226,7 +250,7 @@ test.describe('Conflict Resolution UI', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My local changes to the note');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'My local changes to the note');
 
     const noteId = await getCurrentNoteId(page);
     expect(noteId).not.toBeNull();
@@ -243,19 +267,11 @@ test.describe('Conflict Resolution UI', () => {
     });
 
     // Reload to pick up conflict
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // Select the note from the list
     const noteList = page.getByRole('list');
     await noteList.locator('button, [role="button"], li').first().click();
-    await page.waitForTimeout(500);
 
     // Look for a conflict indicator or button to open the modal
     // Try clicking on a conflict-related button or the note itself
@@ -294,7 +310,7 @@ test.describe('Conflict Resolution UI', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('My local content that I want to keep');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'My local content that I want to keep');
 
     const noteId = await getCurrentNoteId(page);
     expect(noteId).not.toBeNull();
@@ -307,24 +323,16 @@ test.describe('Conflict Resolution UI', () => {
     });
 
     // Reload
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // Select note and try to trigger conflict resolution
     const noteList = page.getByRole('list');
     await noteList.locator('button, [role="button"], li').first().click();
-    await page.waitForTimeout(500);
 
     // If conflict modal opens, click Keep Mine
     const keepMineButton = page.locator('button').filter({ hasText: /Keep Mine|Keep Local/i }).first();
     if (await keepMineButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await keepMineButton.click();
-      await page.waitForTimeout(1000);
 
       // Modal should close
       const modal = jp.dialog;
@@ -352,7 +360,7 @@ test.describe('Conflict Resolution UI', () => {
 
     if (await settingsButton.isVisible()) {
       await settingsButton.click();
-      await page.waitForTimeout(500);
+      await expect(jp.dialog.first()).toBeVisible({ timeout: 5000 });
 
       // Close settings
       const closeButton = page.locator('button').filter({ hasText: /Close|×/i }).first();
@@ -376,7 +384,7 @@ test.describe('Conflict Resolution UI', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Test note without conflict');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'Test note without conflict');
 
     // Verify no conflict indicator appears for normal notes
     const conflictIndicator = page.locator('.text-amber-500 svg, [title*="conflict" i]');
@@ -395,13 +403,13 @@ test.describe('Conflict Resolution UI', () => {
     await jp.newNoteButton.click();
     await editor.click();
     await editor.pressSequentially('First test note');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'First test note');
 
     await jp.newNoteButton.click();
     await editor.click();
     await page.keyboard.press('Control+A');
     await editor.pressSequentially('Second test note');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'Second test note');
 
     // Verify note list shows notes without error
     const noteList = page.getByRole('list');
@@ -418,7 +426,8 @@ test.describe('Conflict Resolution UI', () => {
 
     if (await settingsButton.isVisible()) {
       await settingsButton.click();
-      await page.waitForTimeout(1000);
+      const jp = new JotteryPage(page);
+      await expect(jp.dialog.first()).toBeVisible({ timeout: 5000 });
 
       // Look for sync-related settings
       const syncSettings = page.locator('text=/Sync|sync/i');
@@ -442,7 +451,7 @@ test.describe('Conflict Resolution UI', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Content with hash chain conflict');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'Content with hash chain conflict');
 
     const noteId = await getCurrentNoteId(page);
     expect(noteId).not.toBeNull();
@@ -457,13 +466,7 @@ test.describe('Conflict Resolution UI', () => {
     });
 
     // Reload and unlock
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // The test verifies that conflict data with hash chain is properly stored
     // UI verification would require the modal to be opened
@@ -486,7 +489,7 @@ test.describe('Hash Chain Conflict Detection', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note with legacy conflict');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'Note with legacy conflict');
 
     const noteId = await getCurrentNoteId(page);
     expect(noteId).not.toBeNull();
@@ -500,13 +503,7 @@ test.describe('Hash Chain Conflict Detection', () => {
     });
 
     // Reload and unlock
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // Verify note still exists and can be selected
     const noteList = page.getByRole('list');
@@ -522,7 +519,7 @@ test.describe('Hash Chain Conflict Detection', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('Note to test hash preservation');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'Note to test hash preservation');
 
     const noteId = await getCurrentNoteId(page);
     expect(noteId).not.toBeNull();
@@ -535,17 +532,10 @@ test.describe('Hash Chain Conflict Detection', () => {
     });
 
     // Reload and unlock
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // Clear the conflict (simulating resolution)
     await clearConflictData(page, noteId!);
-    await page.waitForTimeout(500);
 
     // Verify note is still accessible
     const noteList = page.getByRole('list');
@@ -553,16 +543,16 @@ test.describe('Hash Chain Conflict Detection', () => {
 
     // Edit the note to trigger new hash computation
     await noteList.locator('text=/Note to test hash/i').first().click();
-    await page.waitForTimeout(500);
 
     const editorAfter = jp.editorContent;
+    await expect(editorAfter).toBeVisible({ timeout: 5000 });
     await editorAfter.click();
     await page.keyboard.press('End');
     await editorAfter.pressSequentially(' - edited after resolution');
-    await page.waitForTimeout(2000);
 
-    // Note should still be in the list
-    await expect(noteList.locator('text=/edited after resolution/i').first()).toBeVisible({ timeout: 5000 });
+    // Note list picks up the edited text after autosave completes. The
+    // existing 5s timeout on this assertion already covers the save delay.
+    await expect(noteList.locator('text=/edited after resolution/i').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should handle multiple conflicts simultaneously', async ({ page }) => {
@@ -574,17 +564,17 @@ test.describe('Hash Chain Conflict Detection', () => {
     const editor = jp.editorContent;
     await editor.click();
     await editor.pressSequentially('First conflicting note');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'First conflicting note');
 
     const firstNoteId = await getCurrentNoteId(page);
 
     // Create second note
     await jp.newNoteButton.click();
-    await page.waitForTimeout(500);
     const editor2 = jp.editorContent;
+    await expect(editor2).toBeVisible({ timeout: 5000 });
     await editor2.click();
     await editor2.pressSequentially('Second conflicting note');
-    await page.waitForTimeout(2000);
+    await waitForAutosave(page, 'Second conflicting note');
 
     const secondNoteId = await getCurrentNoteId(page);
 
@@ -606,13 +596,7 @@ test.describe('Hash Chain Conflict Detection', () => {
     });
 
     // Reload and unlock
-    await page.reload();
-    await page.waitForSelector('#app', { state: 'attached', timeout: 30000 });
-    const passwordField = page.locator('#password');
-    await passwordField.click();
-    await passwordField.pressSequentially('test-password-123', { delay: 10 });
-    await page.locator('button[type="submit"]').click();
-    await page.waitForTimeout(2000);
+    await reloadAndUnlock(page, jp);
 
     // Both notes should be visible
     const noteList = page.getByRole('list');

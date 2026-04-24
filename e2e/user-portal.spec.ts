@@ -396,9 +396,6 @@ test.describe('User Portal', () => {
     test('should show delete confirmation modal with DELETE input', async ({ page }) => {
       await page.goto('/user');
 
-      // Wait for page to load
-      await page.waitForLoadState('networkidle');
-
       // Navigate to settings tab if present
       const settingsTab = page.locator('button, a').filter({ hasText: /Settings/i }).first();
       if (await settingsTab.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -418,9 +415,6 @@ test.describe('User Portal', () => {
 
     test('should not allow deletion without typing DELETE', async ({ page }) => {
       await page.goto('/user');
-
-      // Wait for page to load
-      await page.waitForLoadState('networkidle');
 
       // Navigate to settings tab if present
       const settingsTab = page.locator('button, a').filter({ hasText: /Settings/i }).first();
