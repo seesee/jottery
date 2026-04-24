@@ -376,6 +376,9 @@ pub async fn login(
             expires_at: expires_at_str.clone(),
             user_agent,
             ip_address,
+            // Admin login does not require passkey MFA in this phase — the
+            // passkey-as-2FA feature lands on the user portal first.
+            mfa_pending: false,
         },
     )
     .await?;

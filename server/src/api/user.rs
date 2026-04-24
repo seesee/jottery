@@ -53,6 +53,13 @@ pub struct LoginResponse {
     pub session_id: String,
     pub expires_at: String,
     pub user: UserInfo,
+    /// True when the user has ≥ 1 passkey enrolled: the returned
+    /// `session_id` is valid only for the passkey authenticate endpoints
+    /// until the assertion completes. Clients unaware of this field fall
+    /// back to treating the session as fully usable and will get 401s on
+    /// protected endpoints, which is the desired fail-safe.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub mfa_required: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -117,7 +124,24 @@ pub async fn login(
     let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 
-    // Create session
+    // Does this user have any passkeys enrolled? If so, the password alone
+    // is not enough — we stage the session as MFA-pending and require a
+    // passkey assertion before protected endpoints will accept the token.
+    // If passkey support isn't configured server-side, we skip the check
+    // entirely (enrolment would have been impossible anyway).
+    let mfa_pending = if state.config.webauthn_enabled() {
+        let count: i64 = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM user_credentials WHERE user_id = ?",
+            user.id
+        )
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+        count > 0
+    } else {
+        false
+    };
+
     let _session = SessionRepository::create(
         &state.pool,
         CreateSessionParams {
@@ -126,6 +150,7 @@ pub async fn login(
             expires_at: expires_at_str.clone(),
             user_agent: None,
             ip_address: None,
+            mfa_pending,
         },
     )
     .await
@@ -134,7 +159,10 @@ pub async fn login(
         AppError::InternalServerError
     })?;
 
-    tracing::info!("User logged in successfully: {}", req.email);
+    tracing::info!(
+        "User logged in: email={} mfa_pending={}",
+        req.email, mfa_pending,
+    );
 
     Ok((
         StatusCode::OK,
@@ -146,6 +174,7 @@ pub async fn login(
                 email: user.email,
                 is_admin: user.is_admin != 0,
             },
+            mfa_required: mfa_pending,
         }),
     ))
 }

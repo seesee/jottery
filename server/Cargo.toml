@@ -50,6 +50,9 @@ comfy-table = "7.1"
 # Rate limiting
 tower_governor = "0.4"
 
+# WebAuthn / passkey support
+webauthn-rs = { version = "0.5", features = ["danger-allow-state-serialisation"] }
+
 # Config & logging
 dotenvy = "0.15"
 tracing = "0.1"

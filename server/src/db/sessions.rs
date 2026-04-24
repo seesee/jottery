@@ -18,10 +18,12 @@ impl SessionRepository {
         // Hash the session token for storage
         let token_hash = hash_sha256(&params.token);
 
+        let mfa_verified: i64 = if params.mfa_pending { 0 } else { 1 };
+
         sqlx::query!(
             r#"
-            INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_used_at, user_agent, ip_address)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_used_at, user_agent, ip_address, mfa_verified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             id,
             params.user_id,
@@ -30,12 +32,24 @@ impl SessionRepository {
             params.expires_at,
             now,
             params.user_agent,
-            params.ip_address
+            params.ip_address,
+            mfa_verified,
         )
         .execute(pool)
         .await?;
 
         Self::get_by_id(pool, &id).await
+    }
+
+    /// Mark a session as MFA-verified (after successful passkey assertion).
+    pub async fn mark_mfa_verified(pool: &SqlitePool, session_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"UPDATE sessions SET mfa_verified = 1 WHERE id = ?"#,
+            session_id
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
     }
 
     /// Get session by ID

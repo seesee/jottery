@@ -17,7 +17,9 @@
     "status": "Status",
     "created": "Created",
     "saving": "Saving...",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "retry": "Retry",
+    "remove": "Remove"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -249,7 +251,15 @@
         "invalidCredentials": "Invalid email or password",
         "accountInactive": "Your account is inactive. Please contact the administrator.",
         "unexpected": "An unexpected error occurred",
-        "statusCheckFailed": "Failed to check status. Please try again."
+        "statusCheckFailed": "Failed to check status. Please try again.",
+        "passkeyRejected": "That passkey was not accepted. Please try again.",
+        "passkeyFailed": "Could not complete passkey authentication. Please try again."
+      },
+      "mfa": {
+        "prompt": "Your account has passkey sign-in enabled. Use your device's passkey to finish signing in.",
+        "useButton": "Use passkey",
+        "verifying": "Verifying...",
+        "cancel": "Use a different account"
       },
       "checkStatus": "Check approval status",
       "statusCheck": {
@@ -334,6 +344,26 @@
       "deleteConfirmLabel": "Type DELETE to confirm:",
       "deleteForever": "Delete Forever",
       "accountDeleted": "Your account has been deleted",
+      "passkeys": {
+        "title": "Passkeys",
+        "description": "Add a passkey to use your device biometrics, PIN, or security key as a second factor when signing in.",
+        "nicknameLabel": "Nickname (optional)",
+        "nicknamePlaceholder": "e.g. MacBook Touch ID",
+        "enrollButton": "Add passkey",
+        "enrolling": "Waiting for device...",
+        "enrolled": "Passkey added",
+        "enrollFailed": "Passkey enrolment failed. Please try again.",
+        "empty": "No passkeys yet — sign-in will only use your password until you add one.",
+        "unnamed": "Unnamed passkey",
+        "addedOn": "Added {date}",
+        "lastUsed": "last used {date}",
+        "deleted": "Passkey removed",
+        "deleteFailed": "Could not remove the passkey. Please try again.",
+        "deleteConfirmTitle": "Remove passkey",
+        "deleteConfirmMessage": "Remove {name}? You will no longer be able to sign in with this passkey.",
+        "browserUnsupported": "This browser does not support passkeys. Use a recent version of Chrome, Safari, Edge, or Firefox.",
+        "loadError": "Could not load your passkeys."
+      },
       "errors": {
         "passwordMismatch": "Passwords do not match",
         "passwordTooShort": "Password must be at least 12 characters",

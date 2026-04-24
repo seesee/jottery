@@ -3,6 +3,7 @@
   import { userAuth } from '../../lib/userAuth.svelte';
   import { toast } from '../../lib/toast.svelte';
   import ConfirmModal from '../../components/ConfirmModal.svelte';
+  import PasskeysSection from '../../components/PasskeysSection.svelte';
   import { _, locale } from 'svelte-i18n';
   import { AVAILABLE_LOCALES } from '../../lib/services/i18nService';
 
@@ -196,6 +197,9 @@
       </button>
     </form>
   </div>
+
+  <!-- Passkeys Section -->
+  <PasskeysSection />
 
   <!-- Danger Zone -->
   <div class="bg-white rounded-lg shadow p-6 border-2 border-red-200">

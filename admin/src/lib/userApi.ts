@@ -15,7 +15,34 @@ interface LoginResponse {
     email: string;
     isAdmin: boolean;
   };
+  /// True when the user has ≥ 1 passkey enrolled — the returned
+  /// sessionId is MFA-pending and only usable against the passkey
+  /// authenticate endpoints until the assertion completes.
+  mfaRequired?: boolean;
 }
+
+interface Passkey {
+  id: string;
+  nickname: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+/// Server-generated PublicKeyCredentialCreationOptions, base64url-encoded
+/// where the WebAuthn spec expects `ArrayBuffer`s. Our helpers decode
+/// these before invoking navigator.credentials.
+interface BeginRegistrationResponse {
+  challengeId: string;
+  publicKey: PublicKeyCredentialCreationOptionsJSON;
+}
+
+interface BeginAuthenticationResponse {
+  challengeId: string;
+  publicKey: PublicKeyCredentialRequestOptionsJSON;
+}
+
+type PublicKeyCredentialCreationOptionsJSON = unknown;
+type PublicKeyCredentialRequestOptionsJSON = unknown;
 
 interface InboxAccountInfo {
   itemCount: number;
@@ -192,6 +219,50 @@ class UserApiClient {
     return this.request('GET', '/api/v1/user/inbox-token/status');
   }
 
+  // -------- Passkeys --------
+
+  async listPasskeys(): Promise<Passkey[]> {
+    return this.request('GET', '/api/v1/user/passkeys');
+  }
+
+  async deletePasskey(id: string): Promise<void> {
+    return this.request('DELETE', `/api/v1/user/passkeys/${encodeURIComponent(id)}`);
+  }
+
+  /// Full passkey enrolment flow. Kept on the API client so the Svelte
+  /// page can stay thin: begin → invoke the browser → complete.
+  /// Returns the newly-created passkey record on success.
+  async registerPasskey(nickname: string | null): Promise<Passkey> {
+    const { startRegistration } = await import('@simplewebauthn/browser');
+    const begin = await this.request<BeginRegistrationResponse>('POST', '/api/v1/user/passkeys/register/begin', {});
+    // The server returns the CreationOptions under `publicKey` in the
+    // JSON shape @simplewebauthn/browser expects directly.
+    const assertion = await startRegistration({ optionsJSON: begin.publicKey as any });
+    return this.request<Passkey>('POST', '/api/v1/user/passkeys/register/complete', {
+      challengeId: begin.challengeId,
+      nickname,
+      response: assertion,
+    });
+  }
+
+  /// Full passkey authentication flow for a session that's just been
+  /// issued in MFA-pending state. On success the current session is
+  /// promoted to fully verified and protected endpoints will start
+  /// accepting it. The caller should re-fetch account info, etc.
+  async completePasskeyAuthentication(): Promise<void> {
+    const { startAuthentication } = await import('@simplewebauthn/browser');
+    const begin = await this.request<BeginAuthenticationResponse>(
+      'POST',
+      '/api/v1/user/passkeys/authenticate/begin',
+      {},
+    );
+    const assertion = await startAuthentication({ optionsJSON: begin.publicKey as any });
+    await this.request('POST', '/api/v1/user/passkeys/authenticate/complete', {
+      challengeId: begin.challengeId,
+      response: assertion,
+    });
+  }
+
   // Check user approval status (no auth required)
   async checkStatus(email: string): Promise<UserStatusResponse> {
     const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
@@ -212,4 +283,4 @@ class UserApiClient {
 
 export const userApi = new UserApiClient();
 export { ApiError };
-export type { LoginResponse, UserAccountInfo, InboxAccountInfo, InboxTokenResponse, UserStatusResponse, Device };
+export type { LoginResponse, UserAccountInfo, InboxAccountInfo, InboxTokenResponse, UserStatusResponse, Device, Passkey };
