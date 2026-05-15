@@ -13,7 +13,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "svelte": "^5.46.4",
+    "svelte": "^5.55.7",
     "svelte-i18n": "^4.0.1"
   },
   "devDependencies": {
