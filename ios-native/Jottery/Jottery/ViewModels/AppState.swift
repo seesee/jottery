@@ -165,36 +165,41 @@ final class AppState {
     func initialise() {
         guard db == nil else { return }  // Already initialised
 
+        do {
+            try initialise(database: DatabaseManager())
+        } catch {
+            // Database init failed — stay on first launch screen
+            isFirstLaunch = true
+        }
+    }
+
+    /// Wire repositories to a specific database. Internal so tests can
+    /// inject a temporary database instead of the app-support default.
+    func initialise(database: DatabaseManager) throws {
         // Wire auto-lock so the timer triggers a full app lock (UI + key wipe)
         keyManager.onAutoLock = { [weak self] in
             self?.lock()
         }
 
-        do {
-            let database = try DatabaseManager()
-            self.db = database
-            let verRepo = VersionRepository(db: database)
-            self.versionRepo = verRepo
-            self.noteRepo = NoteRepository(db: database, versionRepo: verRepo)
-            self.encryptionRepo = EncryptionRepository(db: database)
-            self.settingsRepo = SettingsRepository(db: database)
-            self.syncRepo = SyncRepository(db: database)
-            self.attachmentRepo = AttachmentRepository(db: database)
-            self.savedSearchRepo = SavedSearchRepository(db: database)
+        self.db = database
+        let verRepo = VersionRepository(db: database)
+        self.versionRepo = verRepo
+        self.noteRepo = NoteRepository(db: database, versionRepo: verRepo)
+        self.encryptionRepo = EncryptionRepository(db: database)
+        self.settingsRepo = SettingsRepository(db: database)
+        self.syncRepo = SyncRepository(db: database)
+        self.attachmentRepo = AttachmentRepository(db: database)
+        self.savedSearchRepo = SavedSearchRepository(db: database)
 
-            // Check if vault exists
-            let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
-            isFirstLaunch = !hasVault
+        // Check if vault exists
+        let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
+        isFirstLaunch = !hasVault
 
-            // Load settings
-            if let loaded = try settingsRepo?.get() {
-                settings = loaded
-                sortOrder = loaded.sort
-                keyManager.autoLockTimeout = TimeInterval(loaded.autoLockTimeout * 60)
-            }
-        } catch {
-            // Database init failed — stay on first launch screen
-            isFirstLaunch = true
+        // Load settings
+        if let loaded = try settingsRepo?.get() {
+            settings = loaded
+            sortOrder = loaded.sort
+            keyManager.autoLockTimeout = TimeInterval(loaded.autoLockTimeout * 60)
         }
     }
 
