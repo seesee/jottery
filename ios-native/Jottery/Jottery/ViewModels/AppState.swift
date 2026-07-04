@@ -369,6 +369,7 @@ final class AppState {
         print("[Sync] unlock: calling setupSync()")
         setupSync()
         scheduleSearchWarmUp()
+        importSharedInboxItems()
 
         // Upgrade old vaults: store a verification token if missing
         if metadata.verification == nil {
@@ -655,6 +656,40 @@ final class AppState {
         }
     }
 
+    // MARK: - Shared Inbox (share-extension hand-off)
+
+    /// Convert items staged by the share extension into encrypted notes.
+    /// Safe to call on every unlock/foreground — consumed items are removed.
+    func importSharedInboxItems(from root: URL? = nil) {
+        guard !isLocked, keyManager.masterKey != nil, noteRepo != nil else { return }
+
+        // createNote selects the new note — imports must not steal selection.
+        let previousSelection = selectedNoteId
+        defer { selectedNoteId = previousSelection }
+
+        for item in SharedInboxStore.pendingItems(in: root) {
+            var lines: [String] = []
+            if let text = item.manifest.text, !text.isEmpty {
+                lines.append(text)
+            }
+            lines.append(contentsOf: item.manifest.urls)
+            let content = lines.joined(separator: "\n")
+
+            do {
+                guard let note = try createNote(content: content, tags: ["shared"]) else { continue }
+                for file in item.manifest.files {
+                    let fileURL = item.directory.appendingPathComponent(file.storedName)
+                    let data = try Data(contentsOf: fileURL)
+                    try addAttachment(to: note.id, data: data, filename: file.filename, mimeType: file.mimeType)
+                }
+                SharedInboxStore.remove(item.directory)
+            } catch {
+                // Leave the item staged so a later import can retry.
+                print("[SharedInbox] import failed: \(error)")
+            }
+        }
+    }
+
     // MARK: - Inbox
 
     func loadInboxItems() async throws {
@@ -925,6 +960,7 @@ final class AppState {
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
             keyManager.recordActivity()
+            importSharedInboxItems()
             // Only restart SSE and sync when returning from genuine background
             if wasBackgrounded, syncService != nil {
                 Task {
