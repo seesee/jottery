@@ -586,11 +586,14 @@ final class AppState {
     // MARK: - Attachments
 
     func addAttachment(to noteId: String, url: URL, filename: String, mimeType: String) throws {
-        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
-        guard let note = try noteRepo.get(id: noteId, key: key) else { return }
+        try addAttachment(to: noteId, data: try Data(contentsOf: url), filename: filename, mimeType: mimeType)
+    }
 
-        // Read and encrypt the file data
-        let fileData = try Data(contentsOf: url)
+    func addAttachment(to noteId: String, data fileData: Data, filename: String, mimeType: String) throws {
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        guard try noteRepo.get(id: noteId, key: key) != nil else { return }
+
+        // Encrypt the file data
         let encrypted = try CryptoService.encrypt(fileData, key: key)
         let encryptedJSON = try CryptoService.serializeEncryptedJSON(encrypted)
         let blobData = Data(encryptedJSON.utf8)
@@ -615,22 +618,13 @@ final class AppState {
             data: attachmentId
         )
 
-        // Update note (in-memory copy uses plaintext filename for display)
-        var updated = note
-        updated.attachments.append(AttachmentRef(
-            id: attachmentId,
-            filename: filename,
-            mimeType: mimeType,
-            size: fileData.count,
-            data: attachmentId
-        ))
         // Save with encrypted filename in the raw record
         try noteRepo.addAttachment(noteId: noteId, ref: ref)
 
-        // Update in-memory
-        if let index = notes.firstIndex(where: { $0.id == noteId }) {
-            notes[index] = updated
-        }
+        // Re-fetch so the in-memory copy carries the bumped modifiedAt —
+        // DecryptedNote's Equatable ignores `attachments`, so a stale
+        // modifiedAt would stop SwiftUI re-rendering the editor.
+        refreshNoteFromStore(id: noteId)
     }
 
     func removeAttachment(from noteId: String, attachmentId: String) throws {
@@ -646,9 +640,18 @@ final class AppState {
         // Delete blob
         try? attachmentRepo.deleteBlob(id: ref.data)
 
-        // Update in-memory
-        if let index = notes.firstIndex(where: { $0.id == noteId }) {
-            notes[index].attachments.removeAll { $0.id == attachmentId }
+        refreshNoteFromStore(id: noteId)
+    }
+
+    /// Replace the in-memory copy of a note with the current database state.
+    private func refreshNoteFromStore(id: String) {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        guard let fresh = try? noteRepo.get(id: id, key: key) else { return }
+        if let index = notes.firstIndex(where: { $0.id == id }) {
+            notes[index] = fresh
+        }
+        if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
+            archivedNotes[index] = fresh
         }
     }
 
