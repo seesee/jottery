@@ -211,6 +211,23 @@ struct NoteEditorView: View {
                         } label: {
                             Label(L.editorAddPhoto, systemImage: "photo")
                         }
+
+                        // Runestone only pastes text, so images/PDFs on the
+                        // clipboard are attached from here instead.
+                        if PasteboardService.hasAttachableContent {
+                            Button {
+                                for item in PasteboardService.readItems() {
+                                    try? appState.addAttachment(
+                                        to: note.id,
+                                        data: item.data,
+                                        filename: item.filename,
+                                        mimeType: item.mimeType
+                                    )
+                                }
+                            } label: {
+                                Label(L.editorPasteFromClipboard, systemImage: "doc.on.clipboard")
+                            }
+                        }
                     }
 
                     Divider()
