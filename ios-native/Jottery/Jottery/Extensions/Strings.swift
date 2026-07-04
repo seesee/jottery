@@ -96,6 +96,7 @@ enum L {
     static var editorVersionHistory: String { String(localized: "editor.versionHistory") }
     static var editorAddAttachment: String { String(localized: "editor.addAttachment") }
     static var editorAddPhoto: String { String(localized: "editor.addPhoto") }
+    static var editorPasteFromClipboard: String { String(localized: "editor.pasteFromClipboard") }
     static var editorShowPreview: String { String(localized: "editor.showPreview") }
     static var editorHidePreview: String { String(localized: "editor.hidePreview") }
     static var editorDuplicate: String { String(localized: "editor.duplicate") }

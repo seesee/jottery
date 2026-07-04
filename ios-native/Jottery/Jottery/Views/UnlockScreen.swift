@@ -8,6 +8,7 @@ struct UnlockScreen: View {
     @State private var showBiometricPrompt = false
     @State private var failedAttempts = 0
     @State private var showDeleteConfirm = false
+    @State private var didAutoAttemptBiometric = false
 
     var body: some View {
         VStack(spacing: 32) {
@@ -71,8 +72,12 @@ struct UnlockScreen: View {
         }
         .padding()
         .onAppear {
-            // Attempt biometric unlock automatically
-            if appState.keyManager.isBiometricEnabled {
+            // Attempt biometric unlock automatically — once per lock cycle.
+            // onAppear can fire more than once (Setup→Unlock branch swap,
+            // scene-phase churn from the Face ID sheet itself), which
+            // previously queued a second Face ID prompt.
+            if appState.keyManager.isBiometricEnabled && !didAutoAttemptBiometric {
+                didAutoAttemptBiometric = true
                 biometricUnlock()
             }
         }
@@ -130,6 +135,7 @@ struct UnlockScreen: View {
                 print("[Sync] biometricUnlock: calling setupSync()")
                 appState.setupSync()
                 appState.scheduleSearchWarmUp()
+                appState.importSharedInboxItems()
                 print("[Envelope] Biometric unlock — envelope migration skipped (password unavailable)")
             } else {
                 print("[Sync] biometricUnlock: Face ID failed")

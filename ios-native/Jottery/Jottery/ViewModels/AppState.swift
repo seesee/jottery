@@ -72,6 +72,7 @@ final class AppState {
     @ObservationIgnored var pendingEditorNote: DecryptedNote?
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
+    @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
 
     // Repositories (lazily initialised after DB is ready)
     private(set) var noteRepo: NoteRepository?
@@ -165,36 +166,41 @@ final class AppState {
     func initialise() {
         guard db == nil else { return }  // Already initialised
 
+        do {
+            try initialise(database: DatabaseManager())
+        } catch {
+            // Database init failed — stay on first launch screen
+            isFirstLaunch = true
+        }
+    }
+
+    /// Wire repositories to a specific database. Internal so tests can
+    /// inject a temporary database instead of the app-support default.
+    func initialise(database: DatabaseManager) throws {
         // Wire auto-lock so the timer triggers a full app lock (UI + key wipe)
         keyManager.onAutoLock = { [weak self] in
             self?.lock()
         }
 
-        do {
-            let database = try DatabaseManager()
-            self.db = database
-            let verRepo = VersionRepository(db: database)
-            self.versionRepo = verRepo
-            self.noteRepo = NoteRepository(db: database, versionRepo: verRepo)
-            self.encryptionRepo = EncryptionRepository(db: database)
-            self.settingsRepo = SettingsRepository(db: database)
-            self.syncRepo = SyncRepository(db: database)
-            self.attachmentRepo = AttachmentRepository(db: database)
-            self.savedSearchRepo = SavedSearchRepository(db: database)
+        self.db = database
+        let verRepo = VersionRepository(db: database)
+        self.versionRepo = verRepo
+        self.noteRepo = NoteRepository(db: database, versionRepo: verRepo)
+        self.encryptionRepo = EncryptionRepository(db: database)
+        self.settingsRepo = SettingsRepository(db: database)
+        self.syncRepo = SyncRepository(db: database)
+        self.attachmentRepo = AttachmentRepository(db: database)
+        self.savedSearchRepo = SavedSearchRepository(db: database)
 
-            // Check if vault exists
-            let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
-            isFirstLaunch = !hasVault
+        // Check if vault exists
+        let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
+        isFirstLaunch = !hasVault
 
-            // Load settings
-            if let loaded = try settingsRepo?.get() {
-                settings = loaded
-                sortOrder = loaded.sort
-                keyManager.autoLockTimeout = TimeInterval(loaded.autoLockTimeout * 60)
-            }
-        } catch {
-            // Database init failed — stay on first launch screen
-            isFirstLaunch = true
+        // Load settings
+        if let loaded = try settingsRepo?.get() {
+            settings = loaded
+            sortOrder = loaded.sort
+            keyManager.autoLockTimeout = TimeInterval(loaded.autoLockTimeout * 60)
         }
     }
 
@@ -364,6 +370,7 @@ final class AppState {
         print("[Sync] unlock: calling setupSync()")
         setupSync()
         scheduleSearchWarmUp()
+        importSharedInboxItems()
 
         // Upgrade old vaults: store a verification token if missing
         if metadata.verification == nil {
@@ -467,6 +474,7 @@ final class AppState {
         let note = try noteRepo.create(content: content, tags: tags, key: key)
         notes.insert(note, at: 0)
         selectedNoteId = note.id
+        scheduleAutoSync()
         return note
     }
 
@@ -480,6 +488,10 @@ final class AppState {
             updated.modifiedAt = Date()
             notes[index] = updated
         }
+        // The note list renders filteredNotes — recompute so title/preview/tags
+        // update immediately, and push the change to the server once edits settle.
+        scheduleSearch()
+        scheduleAutoSync()
     }
 
     func duplicateNote(id: String) throws {
@@ -488,6 +500,7 @@ final class AppState {
         let duplicate = try noteRepo.create(content: original.content, tags: original.tags, key: key)
         notes.insert(duplicate, at: 0)
         selectedNoteId = duplicate.id
+        scheduleAutoSync()
     }
 
     func deleteNote(id: String) throws {
@@ -497,12 +510,14 @@ final class AppState {
         if selectedNoteId == id {
             selectedNoteId = nil
         }
+        scheduleAutoSync()
     }
 
     func restoreNote(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.restore(id: id)
         try loadNotes()
+        scheduleAutoSync()
     }
 
     func togglePin(id: String) throws {
@@ -511,6 +526,8 @@ final class AppState {
         if let index = notes.firstIndex(where: { $0.id == id }) {
             notes[index].pinned.toggle()
         }
+        scheduleSearch()
+        scheduleAutoSync()
     }
 
     func archiveNote(id: String) throws {
@@ -519,6 +536,7 @@ final class AppState {
         notes.removeAll { $0.id == id }
         if selectedNoteId == id { selectedNoteId = nil }
         try loadArchivedNotes()
+        scheduleAutoSync()
     }
 
     func unarchiveNote(id: String) throws {
@@ -527,6 +545,7 @@ final class AppState {
         archivedNotes.removeAll { $0.id == id }
         if selectedNoteId == id { selectedNoteId = nil }
         try loadNotes()
+        scheduleAutoSync()
     }
 
     func toggleLock(id: String) throws {
@@ -540,6 +559,8 @@ final class AppState {
             archivedNotes[index].locked.toggle()
             archivedNotes[index].lockedAt = archivedNotes[index].locked ? Date() : nil
         }
+        scheduleSearch()
+        scheduleAutoSync()
     }
 
     func loadArchivedNotes() throws {
@@ -581,11 +602,14 @@ final class AppState {
     // MARK: - Attachments
 
     func addAttachment(to noteId: String, url: URL, filename: String, mimeType: String) throws {
-        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
-        guard let note = try noteRepo.get(id: noteId, key: key) else { return }
+        try addAttachment(to: noteId, data: try Data(contentsOf: url), filename: filename, mimeType: mimeType)
+    }
 
-        // Read and encrypt the file data
-        let fileData = try Data(contentsOf: url)
+    func addAttachment(to noteId: String, data fileData: Data, filename: String, mimeType: String) throws {
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        guard try noteRepo.get(id: noteId, key: key) != nil else { return }
+
+        // Encrypt the file data
         let encrypted = try CryptoService.encrypt(fileData, key: key)
         let encryptedJSON = try CryptoService.serializeEncryptedJSON(encrypted)
         let blobData = Data(encryptedJSON.utf8)
@@ -610,22 +634,13 @@ final class AppState {
             data: attachmentId
         )
 
-        // Update note (in-memory copy uses plaintext filename for display)
-        var updated = note
-        updated.attachments.append(AttachmentRef(
-            id: attachmentId,
-            filename: filename,
-            mimeType: mimeType,
-            size: fileData.count,
-            data: attachmentId
-        ))
         // Save with encrypted filename in the raw record
         try noteRepo.addAttachment(noteId: noteId, ref: ref)
 
-        // Update in-memory
-        if let index = notes.firstIndex(where: { $0.id == noteId }) {
-            notes[index] = updated
-        }
+        // Re-fetch so the in-memory copy carries the bumped modifiedAt —
+        // DecryptedNote's Equatable ignores `attachments`, so a stale
+        // modifiedAt would stop SwiftUI re-rendering the editor.
+        refreshNoteFromStore(id: noteId)
     }
 
     func removeAttachment(from noteId: String, attachmentId: String) throws {
@@ -641,9 +656,54 @@ final class AppState {
         // Delete blob
         try? attachmentRepo.deleteBlob(id: ref.data)
 
-        // Update in-memory
-        if let index = notes.firstIndex(where: { $0.id == noteId }) {
-            notes[index].attachments.removeAll { $0.id == attachmentId }
+        refreshNoteFromStore(id: noteId)
+    }
+
+    /// Replace the in-memory copy of a note with the current database state.
+    private func refreshNoteFromStore(id: String) {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        guard let fresh = try? noteRepo.get(id: id, key: key) else { return }
+        if let index = notes.firstIndex(where: { $0.id == id }) {
+            notes[index] = fresh
+        }
+        if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
+            archivedNotes[index] = fresh
+        }
+        scheduleSearch()
+        scheduleAutoSync()
+    }
+
+    // MARK: - Shared Inbox (share-extension hand-off)
+
+    /// Convert items staged by the share extension into encrypted notes.
+    /// Safe to call on every unlock/foreground — consumed items are removed.
+    func importSharedInboxItems(from root: URL? = nil) {
+        guard !isLocked, keyManager.masterKey != nil, noteRepo != nil else { return }
+
+        // createNote selects the new note — imports must not steal selection.
+        let previousSelection = selectedNoteId
+        defer { selectedNoteId = previousSelection }
+
+        for item in SharedInboxStore.pendingItems(in: root) {
+            var lines: [String] = []
+            if let text = item.manifest.text, !text.isEmpty {
+                lines.append(text)
+            }
+            lines.append(contentsOf: item.manifest.urls)
+            let content = lines.joined(separator: "\n")
+
+            do {
+                guard let note = try createNote(content: content, tags: ["shared"]) else { continue }
+                for file in item.manifest.files {
+                    let fileURL = item.directory.appendingPathComponent(file.storedName)
+                    let data = try Data(contentsOf: fileURL)
+                    try addAttachment(to: note.id, data: data, filename: file.filename, mimeType: file.mimeType)
+                }
+                SharedInboxStore.remove(item.directory)
+            } catch {
+                // Leave the item staged so a later import can retry.
+                print("[SharedInbox] import failed: \(error)")
+            }
         }
     }
 
@@ -710,10 +770,7 @@ final class AppState {
         note.color = version.color
         try noteRepo.update(note, key: key)
 
-        // Update in-memory
-        if let index = notes.firstIndex(where: { $0.id == noteId }) {
-            notes[index] = try noteRepo.get(id: noteId, key: key) ?? notes[index]
-        }
+        refreshNoteFromStore(id: noteId)
     }
 
     // MARK: - Sync
@@ -777,9 +834,27 @@ final class AppState {
         startNetworkMonitor()
     }
 
+    /// Debounced background sync — coalesces rapid local edits into one
+    /// sync cycle a few seconds after changes stop arriving. This runs at
+    /// the state layer so it fires regardless of view lifecycle (e.g. when
+    /// switching notes in the split view, where onDisappear never fires).
+    func scheduleAutoSync(after delay: Duration = .seconds(3)) {
+        guard syncEnabled else { return }
+        autoSyncTask?.cancel()
+        autoSyncTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            await self?.triggerSync()
+        }
+    }
+
     func triggerSync() async {
         guard let syncService else {
             print("[Sync] triggerSync: syncService is nil — aborting")
+            return
+        }
+        guard !isSyncing else {
+            print("[Sync] triggerSync: sync already in progress — skipping")
             return
         }
         print("[Sync] triggerSync: starting sync cycle")
@@ -917,6 +992,7 @@ final class AppState {
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
             keyManager.recordActivity()
+            importSharedInboxItems()
             // Only restart SSE and sync when returning from genuine background
             if wasBackgrounded, syncService != nil {
                 Task {

@@ -85,6 +85,10 @@ struct DecryptedNote: Identifiable, Equatable, Hashable {
     }
 
     static func == (lhs: DecryptedNote, rhs: DecryptedNote) -> Bool {
+        // modifiedAt/version proxy for content changes; attachments are
+        // compared directly because attachment operations can land within
+        // the same millisecond and SwiftUI must still see the change.
         lhs.id == rhs.id && lhs.modifiedAt == rhs.modifiedAt && lhs.version == rhs.version
+            && lhs.attachments == rhs.attachments
     }
 }

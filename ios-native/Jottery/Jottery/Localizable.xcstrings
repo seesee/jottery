@@ -769,6 +769,17 @@
         }
       }
     },
+    "editor.pasteFromClipboard": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste from Clipboard"
+          }
+        }
+      }
+    },
     "editor.pin": {
       "extractionState": "manual",
       "localizations": {
