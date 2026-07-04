@@ -70,11 +70,22 @@ final class KeyManager {
         try KeychainService.storeBiometricKey(keyData)
     }
 
+    /// Guards against overlapping biometric prompts — the keychain read
+    /// below implicitly presents Face ID, so two concurrent calls would
+    /// queue two prompts (seen when UnlockScreen's appear lifecycle
+    /// runs twice on cold launch).
+    private var isBiometricUnlockInFlight = false
+
     /// Attempt to retrieve the master key via biometric authentication.
-    /// Returns `true` if successful.
-    func attemptBiometricUnlock() async -> Bool {
+    /// Returns `true` if successful. `retrieve` is injectable for tests.
+    func attemptBiometricUnlock(
+        retrieve: @Sendable () async throws -> Data = { try await KeychainService.retrieveBiometricKey() }
+    ) async -> Bool {
+        guard !isBiometricUnlockInFlight else { return false }
+        isBiometricUnlockInFlight = true
+        defer { isBiometricUnlockInFlight = false }
         do {
-            let keyData = try await KeychainService.retrieveBiometricKey()
+            let keyData = try await retrieve()
             unlockWithKeyData(keyData)
             return true
         } catch {
