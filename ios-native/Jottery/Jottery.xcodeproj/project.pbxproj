@@ -26,6 +26,7 @@
 
 /* Begin PBXFileReference section */
 		A3000001 /* Jottery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jottery.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E3000001 /* JotteryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JotteryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1000001 /* preview.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = preview.html; path = "../../webview-bundles/dist/preview.html"; sourceTree = "<group>"; };
 		D1000002 /* calc.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = calc.html; path = "../../webview-bundles/dist/calc.html"; sourceTree = "<group>"; };
 		D1000003 /* outliner.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = outliner.html; path = "../../webview-bundles/dist/outliner.html"; sourceTree = "<group>"; };
@@ -35,6 +36,11 @@
 		A6000001 /* Jottery */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Jottery;
+			sourceTree = "<group>";
+		};
+		E6000001 /* JotteryTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JotteryTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -66,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				A6000001 /* Jottery */,
+				E6000001 /* JotteryTests */,
 				D3000001 /* WebViewBundles */,
 				A9000001 /* Products */,
 			);
@@ -75,6 +82,7 @@
 			isa = PBXGroup;
 			children = (
 				A3000001 /* Jottery.app */,
+				E3000001 /* JotteryTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -126,6 +134,27 @@
 			productReference = A3000001 /* Jottery.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E5000001 /* JotteryTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EA000001 /* Build configuration list for PBXNativeTarget "JotteryTests" */;
+			buildPhases = (
+				E7000001 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E8000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E6000001 /* JotteryTests */,
+			);
+			name = JotteryTests;
+			packageProductDependencies = (
+			);
+			productName = JotteryTests;
+			productReference = E3000001 /* JotteryTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -138,6 +167,10 @@
 				TargetAttributes = {
 					A5000001 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					E5000001 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = A5000001;
 					};
 				};
 			};
@@ -162,9 +195,28 @@
 			projectRoot = "";
 			targets = (
 				A5000001 /* Jottery */,
+				E5000001 /* JotteryTests */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXContainerItemProxy section */
+		E9000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AD000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A5000001;
+			remoteInfo = Jottery;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		E8000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A5000001 /* Jottery */;
+			targetProxy = E9000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXResourcesBuildPhase section */
 		AC000001 /* Resources */ = {
@@ -181,6 +233,13 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		AB000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E7000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -376,6 +435,42 @@
 			};
 			name = Release;
 		};
+		EB000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10102;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Jottery.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Jottery";
+			};
+			name = Debug;
+		};
+		EB000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10102;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Jottery.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Jottery";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -393,6 +488,15 @@
 			buildConfigurations = (
 				B0000001 /* Debug */,
 				B1000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EA000001 /* Build configuration list for PBXNativeTarget "JotteryTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EB000001 /* Debug */,
+				EB000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
