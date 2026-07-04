@@ -22,11 +22,13 @@
 		D2000001 /* preview.html in Resources */ = {isa = PBXBuildFile; fileRef = D1000001 /* preview.html */; };
 		D2000002 /* calc.html in Resources */ = {isa = PBXBuildFile; fileRef = D1000002 /* calc.html */; };
 		D2000003 /* outliner.html in Resources */ = {isa = PBXBuildFile; fileRef = D1000003 /* outliner.html */; };
+		F0000001 /* JotteryShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F3000001 /* JotteryShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A3000001 /* Jottery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jottery.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E3000001 /* JotteryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JotteryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3000001 /* JotteryShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = JotteryShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1000001 /* preview.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = preview.html; path = "../../webview-bundles/dist/preview.html"; sourceTree = "<group>"; };
 		D1000002 /* calc.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = calc.html; path = "../../webview-bundles/dist/calc.html"; sourceTree = "<group>"; };
 		D1000003 /* outliner.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = outliner.html; path = "../../webview-bundles/dist/outliner.html"; sourceTree = "<group>"; };
@@ -46,6 +48,11 @@
 		F6000001 /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		F6000002 /* JotteryShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = JotteryShare;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -78,6 +85,7 @@
 			children = (
 				A6000001 /* Jottery */,
 				F6000001 /* Shared */,
+				F6000002 /* JotteryShare */,
 				E6000001 /* JotteryTests */,
 				D3000001 /* WebViewBundles */,
 				A9000001 /* Products */,
@@ -89,6 +97,7 @@
 			children = (
 				A3000001 /* Jottery.app */,
 				E3000001 /* JotteryTests.xctest */,
+				F3000001 /* JotteryShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,10 +122,12 @@
 				AB000001 /* Sources */,
 				A7000001 /* Frameworks */,
 				AC000001 /* Resources */,
+				F1000001 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F8000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A6000001 /* Jottery */,
@@ -162,6 +173,27 @@
 			productReference = E3000001 /* JotteryTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		F5000001 /* JotteryShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA000001 /* Build configuration list for PBXNativeTarget "JotteryShare" */;
+			buildPhases = (
+				F7000001 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F6000002 /* JotteryShare */,
+				F6000001 /* Shared */,
+			);
+			name = JotteryShare;
+			packageProductDependencies = (
+			);
+			productName = JotteryShare;
+			productReference = F3000001 /* JotteryShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -178,6 +210,9 @@
 					E5000001 = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = A5000001;
+					};
+					F5000001 = {
+						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
@@ -203,6 +238,7 @@
 			targets = (
 				A5000001 /* Jottery */,
 				E5000001 /* JotteryTests */,
+				F5000001 /* JotteryShare */,
 			);
 		};
 /* End PBXProject section */
@@ -215,13 +251,39 @@
 			remoteGlobalIDString = A5000001;
 			remoteInfo = Jottery;
 		};
+		F9000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AD000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F5000001;
+			remoteInfo = JotteryShare;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F1000001 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F0000001 /* JotteryShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
 		E8000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = A5000001 /* Jottery */;
 			targetProxy = E9000001 /* PBXContainerItemProxy */;
+		};
+		F8000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F5000001 /* JotteryShare */;
+			targetProxy = F9000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -247,6 +309,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E7000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F7000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -379,6 +448,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 10102;
+				CODE_SIGN_ENTITLEMENTS = Jottery.entitlements;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -414,6 +484,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 10102;
+				CODE_SIGN_ENTITLEMENTS = Jottery.entitlements;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -435,6 +506,60 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FB000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JotteryShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10102;
+				DEVELOPMENT_TEAM = QA72EA3LC2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "JotteryShare-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Jottery;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.JotteryShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FB000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = JotteryShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 10102;
+				DEVELOPMENT_TEAM = QA72EA3LC2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "JotteryShare-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Jottery;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.JotteryShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.0;
@@ -504,6 +629,15 @@
 			buildConfigurations = (
 				EB000001 /* Debug */,
 				EB000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FA000001 /* Build configuration list for PBXNativeTarget "JotteryShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB000001 /* Debug */,
+				FB000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
