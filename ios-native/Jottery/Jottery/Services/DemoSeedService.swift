@@ -134,6 +134,12 @@ enum DemoSeedService {
             // the UI normally triggers that via `.onChange(of: searchQuery)`,
             // which never fires here since we set it before the view renders.
             appState.scheduleSearch()
+            // Setting `searchQuery` alone also doesn't present the search UI —
+            // `NoteListView` only reveals the search field when `searchFocused`
+            // flips true (same mechanism the `com.jottery.search` quick action
+            // uses), so without this the field never becomes visible for the
+            // screenshot even though the query text and filtering are correct.
+            appState.searchFocused = true
         case .sync:
             settings.syncEnabled = true
             settings.syncEndpoint = "https://notes.example.org"
