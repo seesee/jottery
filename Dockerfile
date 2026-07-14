@@ -4,10 +4,17 @@
 FROM node:20-slim AS web-builder
 WORKDIR /app
 
+# Registry fetches are slow under QEMU emulation (arm builds) and intermittently
+# time out; raise npm's fetch timeouts/retries and retry the install once.
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000
+
 # Only copy web client deps first for caching
 COPY package.json package-lock.json ./
 # Use --ignore-scripts to skip Electron postinstall scripts (not needed for Docker builds)
-RUN npm ci --ignore-scripts
+RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of web client source
 COPY src ./src
@@ -28,9 +35,15 @@ RUN npm run build
 FROM node:20-slim AS admin-builder
 WORKDIR /app/admin
 
+# Same npm network hardening as the web-builder stage (see above)
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000
+
 # Copy admin dashboard deps first for caching
 COPY admin/package.json admin/package-lock.json ./
-RUN npm ci
+RUN npm ci || npm ci
 
 # Copy rest of admin dashboard source
 COPY admin/src ./src
