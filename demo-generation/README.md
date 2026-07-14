@@ -291,3 +291,21 @@ public/screenshots/en-GB/
 ```
 
 These files are referenced by `src/lib/components/LandingPage.svelte`.
+
+## App Store Screenshots (iOS)
+
+Marketing-style App Store assets, seeded from the demo pack. Requires Xcode
+(with the iPhone 17 Pro Max and iPad Pro 13-inch simulators), `jq`, and the
+repo's Playwright install.
+
+```bash
+./demo-generation/ios/generate.sh                # capture + compose
+./demo-generation/ios/generate.sh --skip-capture # recompose only
+./demo-generation/ios/capture.sh --device iphone-69 --screen 01-list  # one shot
+```
+
+Screens, launch arguments, and captions live in `demo-generation/ios/screens.json`.
+Raw captures land in `demo-generation/ios/raw/` (gitignored); finished assets in
+`demo-generation/screenshots/appstore/<device>/` at exact App Store Connect
+sizes (iPhone 6.9" 1320×2868, iPad 13" 2064×2752). The app must be built in
+Debug — seeding is compiled out of Release builds.

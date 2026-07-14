@@ -91,6 +91,9 @@ struct ContentView: View {
         .onAppear {
             appState.initialise()
             pickUpPendingShortcut()
+            #if DEBUG
+            DemoSeedService.runIfRequested(appState: appState)
+            #endif
         }
         .onChange(of: scenePhase) { _, newPhase in
             appState.handleScenePhaseChange(newPhase)
@@ -103,6 +106,14 @@ struct ContentView: View {
                 executePendingQuickAction()
             }
         }
+        #if DEBUG
+        .sheet(isPresented: Binding(
+            get: { appState.demoShowSettings },
+            set: { appState.demoShowSettings = $0 }
+        )) {
+            SettingsView()
+        }
+        #endif
     }
 
     /// Move a shortcut captured by the delegates into appState, or execute immediately if unlocked.
