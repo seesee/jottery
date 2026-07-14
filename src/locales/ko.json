@@ -902,7 +902,7 @@
       "serverPasswordHint": "동기화 서버에 로그인할 때 사용하는 비밀번호.",
       "notesPassword": "노트 비밀번호",
       "notesPasswordPlaceholder": "로컬 비밀번호 선택 (최소 8자)",
-      "notesPasswordHint": "이 기기에서 노트를 잠금 해제하는 데 사용됩니다. 서버 비밀번호와 다를 수 있습니다.",
+      "notesPasswordHint": "이 기기에서 노트를 잠금 해제하는 데 사용됩니다. 다른 동기화된 기기의 노트 비밀번호와 일치해야 합니다.",
       "submitButton": "연결 및 동기화",
       "errors": {
         "endpointRequired": "동기화 서버 URL은 필수입니다.",
@@ -910,7 +910,7 @@
         "emailRequired": "이메일 주소는 필수입니다.",
         "serverPasswordRequired": "서버 비밀번호는 필수입니다.",
         "notesPasswordMinLength": "노트 비밀번호는 최소 8자 이상이어야 합니다.",
-        "onboardingFailed": "서버에서 암호화 키를 다운로드하지 못했습니다. 서버 비밀번호가 올바른지, 원본 기기가 동기화되었는지 확인하세요"
+        "onboardingFailed": "서버에서 암호화 키를 다운로드하지 못했습니다. 노트 비밀번호가 다른 기기와 일치하는지, 원본 기기가 동기화되었는지 확인하세요"
       },
       "steps": {
         "initialising": "로컬 암호화 초기화 중…",

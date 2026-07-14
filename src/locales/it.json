@@ -902,7 +902,7 @@
       "serverPasswordHint": "La password che utilizzi per accedere al server di sincronizzazione.",
       "notesPassword": "Password delle note",
       "notesPasswordPlaceholder": "Scegli una password locale (min. 8 caratteri)",
-      "notesPasswordHint": "Utilizzata per sbloccare le tue note su questo dispositivo. Può essere diversa dalla password del server.",
+      "notesPasswordHint": "Utilizzata per sbloccare le tue note su questo dispositivo. Deve corrispondere alla password delle note degli altri dispositivi sincronizzati.",
       "submitButton": "Collega e sincronizza",
       "errors": {
         "endpointRequired": "L'URL del server di sincronizzazione è obbligatorio.",
@@ -910,7 +910,7 @@
         "emailRequired": "L'indirizzo e-mail è obbligatorio.",
         "serverPasswordRequired": "La password del server è obbligatoria.",
         "notesPasswordMinLength": "La password delle note deve contenere almeno 8 caratteri.",
-        "onboardingFailed": "Impossibile scaricare le chiavi di crittografia dal server. Assicurati che la password del server sia corretta e che il dispositivo di origine sia stato sincronizzato"
+        "onboardingFailed": "Impossibile scaricare le chiavi di crittografia dal server. Assicurati che la password delle note corrisponda a quella degli altri dispositivi e che il dispositivo di origine sia stato sincronizzato"
       },
       "steps": {
         "initialising": "Inizializzazione della crittografia locale…",

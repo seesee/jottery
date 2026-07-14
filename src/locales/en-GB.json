@@ -934,7 +934,7 @@
       "serverPasswordHint": "The password you use to sign in to the sync server.",
       "notesPassword": "Notes Password",
       "notesPasswordPlaceholder": "Choose a local password (min 8 characters)",
-      "notesPasswordHint": "Used to unlock your notes on this device. Can differ from the server password.",
+      "notesPasswordHint": "Used to unlock your notes on this device. Must match the notes password on your other synced devices.",
       "submitButton": "Connect & Sync",
       "errors": {
         "endpointRequired": "Sync server URL is required.",
@@ -942,7 +942,7 @@
         "emailRequired": "Email address is required.",
         "serverPasswordRequired": "Server password is required.",
         "notesPasswordMinLength": "Notes password must be at least 8 characters.",
-        "onboardingFailed": "Failed to download encryption keys from server. Ensure your server password is correct and the source device has synced"
+        "onboardingFailed": "Failed to download encryption keys from server. Ensure your notes password matches the one used on your other devices and the source device has synced"
       },
       "steps": {
         "initialising": "Initialising local encryption…",
