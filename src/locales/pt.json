@@ -902,7 +902,7 @@
       "serverPasswordHint": "A palavra-passe que utiliza para iniciar sessão no servidor de sincronização.",
       "notesPassword": "Palavra-passe das notas",
       "notesPasswordPlaceholder": "Escolha uma palavra-passe local (mín. 8 caracteres)",
-      "notesPasswordHint": "Usada para desbloquear as suas notas neste dispositivo. Pode ser diferente da palavra-passe do servidor.",
+      "notesPasswordHint": "Usada para desbloquear as suas notas neste dispositivo. Deve corresponder à palavra-passe das notas dos seus outros dispositivos sincronizados.",
       "submitButton": "Conectar e sincronizar",
       "errors": {
         "endpointRequired": "O URL do servidor de sincronização é obrigatório.",
@@ -910,7 +910,7 @@
         "emailRequired": "O endereço de e-mail é obrigatório.",
         "serverPasswordRequired": "A palavra-passe do servidor é obrigatória.",
         "notesPasswordMinLength": "A palavra-passe das notas deve ter pelo menos 8 caracteres.",
-        "onboardingFailed": "Falha ao transferir as chaves de encriptação do servidor. Certifique-se de que a palavra-passe do servidor está correcta e que o dispositivo de origem foi sincronizado"
+        "onboardingFailed": "Falha ao transferir as chaves de encriptação do servidor. Certifique-se de que a palavra-passe das notas corresponde à dos seus outros dispositivos e que o dispositivo de origem foi sincronizado"
       },
       "steps": {
         "initialising": "A inicializar encriptação local…",

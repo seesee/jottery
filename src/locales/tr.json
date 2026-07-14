@@ -902,7 +902,7 @@
       "serverPasswordHint": "Senkronizasyon sunucusuna giriş yapmak için kullandığınız şifre.",
       "notesPassword": "Not Şifresi",
       "notesPasswordPlaceholder": "Yerel bir şifre seçin (en az 8 karakter)",
-      "notesPasswordHint": "Bu cihazdaki notlarınızın kilidini açmak için kullanılır. Sunucu şifresinden farklı olabilir.",
+      "notesPasswordHint": "Bu cihazdaki notlarınızın kilidini açmak için kullanılır. Diğer senkronize cihazlarınızdaki not şifresiyle aynı olmalıdır.",
       "submitButton": "Bağlan ve Senkronize Et",
       "errors": {
         "endpointRequired": "Senkronizasyon sunucusu URL'si gereklidir.",
@@ -910,7 +910,7 @@
         "emailRequired": "E-posta adresi gereklidir.",
         "serverPasswordRequired": "Sunucu şifresi gereklidir.",
         "notesPasswordMinLength": "Not şifresi en az 8 karakter olmalıdır.",
-        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Sunucu şifrenizin doğru olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
+        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
       },
       "steps": {
         "initialising": "Yerel şifreleme başlatılıyor…",

@@ -902,7 +902,7 @@
       "serverPasswordHint": "您用于登录同步服务器的密码。",
       "notesPassword": "笔记密码",
       "notesPasswordPlaceholder": "选择本地密码（至少8个字符）",
-      "notesPasswordHint": "用于在此设备上解锁笔记。可以与服务器密码不同。",
+      "notesPasswordHint": "用于在此设备上解锁笔记。必须与您其他已同步设备上的笔记密码一致。",
       "submitButton": "连接并同步",
       "errors": {
         "endpointRequired": "同步服务器URL为必填项。",
@@ -910,7 +910,7 @@
         "emailRequired": "电子邮件地址为必填项。",
         "serverPasswordRequired": "服务器密码为必填项。",
         "notesPasswordMinLength": "笔记密码至少需要8个字符。",
-        "onboardingFailed": "从服务器下载加密密钥失败。请确保服务器密码正确，且源设备已完成同步"
+        "onboardingFailed": "从服务器下载加密密钥失败。请确保笔记密码与其他设备上的一致，且源设备已完成同步"
       },
       "steps": {
         "initialising": "正在初始化本地加密…",

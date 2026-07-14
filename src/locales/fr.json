@@ -902,7 +902,7 @@
       "serverPasswordHint": "Le mot de passe que vous utilisez pour vous connecter au serveur de synchronisation.",
       "notesPassword": "Mot de passe des notes",
       "notesPasswordPlaceholder": "Choisissez un mot de passe local (min. 8 caractères)",
-      "notesPasswordHint": "Utilisé pour déverrouiller vos notes sur cet appareil. Peut différer du mot de passe du serveur.",
+      "notesPasswordHint": "Utilisé pour déverrouiller vos notes sur cet appareil. Doit correspondre au mot de passe des notes de vos autres appareils synchronisés.",
       "submitButton": "Connecter et synchroniser",
       "errors": {
         "endpointRequired": "L'URL du serveur de synchronisation est requise.",
@@ -910,7 +910,7 @@
         "emailRequired": "L'adresse e-mail est requise.",
         "serverPasswordRequired": "Le mot de passe du serveur est requis.",
         "notesPasswordMinLength": "Le mot de passe des notes doit comporter au moins 8 caractères.",
-        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe du serveur est correct et que l'appareil source a été synchronisé"
+        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe des notes correspond à celui de vos autres appareils et que l'appareil source a été synchronisé"
       },
       "steps": {
         "initialising": "Initialisation du chiffrement local…",

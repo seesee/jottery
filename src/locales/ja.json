@@ -902,7 +902,7 @@
       "serverPasswordHint": "同期サーバーへのサインインに使用するパスワード。",
       "notesPassword": "ノートパスワード",
       "notesPasswordPlaceholder": "ローカルパスワードを選択（8文字以上）",
-      "notesPasswordHint": "このデバイスでノートのロック解除に使用します。サーバーパスワードとは異なるものにできます。",
+      "notesPasswordHint": "このデバイスでノートのロック解除に使用します。他の同期済みデバイスのノートパスワードと一致している必要があります。",
       "submitButton": "接続して同期",
       "errors": {
         "endpointRequired": "同期サーバーURLは必須です。",
@@ -910,7 +910,7 @@
         "emailRequired": "メールアドレスは必須です。",
         "serverPasswordRequired": "サーバーパスワードは必須です。",
         "notesPasswordMinLength": "ノートパスワードは8文字以上である必要があります。",
-        "onboardingFailed": "サーバーからの暗号化キーのダウンロードに失敗しました。サーバーパスワードが正しいこと、および元のデバイスが同期済みであることを確認してください"
+        "onboardingFailed": "サーバーからの暗号化キーのダウンロードに失敗しました。ノートパスワードが他のデバイスと一致していること、および元のデバイスが同期済みであることを確認してください"
       },
       "steps": {
         "initialising": "ローカル暗号化を初期化中…",

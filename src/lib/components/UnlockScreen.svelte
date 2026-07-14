@@ -343,11 +343,13 @@
       );
 
       // Step 3: Onboard from server — download the shared master key, replace local random key
-      // Use localPassword so the master key is wrapped with the notes password for daily unlock
+      // The server blob is wrapped with the NOTES password (all upload paths —
+      // envelope migration and password change on web and iOS — derive the
+      // wrapping key from it), so the notes password must be used to unwrap.
       connectStep = $_('unlock.connectExisting.steps.onboarding');
       try {
         await onboardFromServer(
-          connectServerPassword,
+          connectNotesPassword,
           connectEndpoint.trim(),
           response.userId,
           response.apiKey,

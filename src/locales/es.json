@@ -902,7 +902,7 @@
       "serverPasswordHint": "La contraseña que utiliza para iniciar sesión en el servidor de sincronización.",
       "notesPassword": "Contraseña de notas",
       "notesPasswordPlaceholder": "Elija una contraseña local (mín. 8 caracteres)",
-      "notesPasswordHint": "Se utiliza para desbloquear sus notas en este dispositivo. Puede diferir de la contraseña del servidor.",
+      "notesPasswordHint": "Se utiliza para desbloquear sus notas en este dispositivo. Debe coincidir con la contraseña de notas de sus otros dispositivos sincronizados.",
       "submitButton": "Conectar y sincronizar",
       "errors": {
         "endpointRequired": "La URL del servidor de sincronización es obligatoria.",
@@ -910,7 +910,7 @@
         "emailRequired": "La dirección de correo electrónico es obligatoria.",
         "serverPasswordRequired": "La contraseña del servidor es obligatoria.",
         "notesPasswordMinLength": "La contraseña de notas debe tener al menos 8 caracteres.",
-        "onboardingFailed": "No se pudieron descargar las claves de cifrado del servidor. Asegúrese de que su contraseña del servidor sea correcta y de que el dispositivo de origen se haya sincronizado"
+        "onboardingFailed": "No se pudieron descargar las claves de cifrado del servidor. Asegúrese de que su contraseña de notas coincida con la de sus otros dispositivos y de que el dispositivo de origen se haya sincronizado"
       },
       "steps": {
         "initialising": "Inicializando cifrado local…",
