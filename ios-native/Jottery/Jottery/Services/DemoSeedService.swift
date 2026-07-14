@@ -108,6 +108,18 @@ enum DemoSeedService {
         calc.tags = ["budget", "travel"]
         try appState.saveNote(calc)
 
+        // Backdate so the list shows a relative date consistent with the
+        // imported demo notes ("5 mo ago") instead of "in 0 sec". `saveNote`
+        // (via `NoteRepository.update`) always stamps `modified_at` with
+        // `Date()`, so patch the raw record directly afterwards — same
+        // approach `ImportService` uses to control timestamps precisely.
+        if var calcRecord = try noteRepo.getRaw(id: calc.id) {
+            let backdated = Date().addingTimeInterval(-60 * 60 * 24 * 60).iso8601
+            calcRecord.createdAt = backdated
+            calcRecord.modifiedAt = backdated
+            try noteRepo.updateRaw(calcRecord)
+        }
+
         try appState.loadNotes()
 
         // `createNote()` above auto-selected the calc note; clear that so
