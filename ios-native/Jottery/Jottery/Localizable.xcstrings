@@ -1946,6 +1946,17 @@
         }
       }
     },
+    "settings.privacyPolicy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        }
+      }
+    },
     "settings.security": {
       "extractionState": "manual",
       "localizations": {
@@ -1964,6 +1975,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sort Order"
+          }
+        }
+      }
+    },
+    "settings.support": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support"
           }
         }
       }

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy — Jottery</title>
+  <meta name="description" content="Privacy policy for the Jottery note-taking applications and the jottery.org sync service.">
+  <style>
+    :root {
+      --bg: #131318;
+      --surface: #1c1c24;
+      --border: #2b2b36;
+      --text: #e8e8ee;
+      --muted: #a0a0ae;
+      --accent: #8b5cf6;
+      --accent-soft: rgba(139, 92, 246, 0.14);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --border: #e4e4ec;
+        --text: #1c1c24;
+        --muted: #5c5c6a;
+        --accent: #6d3ee0;
+        --accent-soft: rgba(109, 62, 224, 0.08);
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: 3rem 1.25rem 5rem;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-bottom: 2.5rem;
+    }
+    .brand a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+    .brand span { color: var(--muted); font-size: 0.9rem; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    .updated { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    .summary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 1.5rem 1.5rem 0.5rem;
+      margin-bottom: 3rem;
+    }
+    .summary h2 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .summary p { margin-bottom: 1rem; }
+    .summary strong { font-weight: 650; }
+    section { margin-bottom: 2.5rem; }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.75rem;
+    }
+    h3 .num {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      margin-right: 0.5rem;
+    }
+    p, li { color: var(--text); margin-bottom: 0.75rem; }
+    ul { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+    li { margin-bottom: 0.4rem; }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+    a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+    code {
+      background: var(--accent-soft);
+      border-radius: 4px;
+      padding: 0.1em 0.35em;
+      font-size: 0.9em;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <nav class="brand" aria-label="Jottery">
+      <a href="/">Jottery</a>
+      <span>Personal notes for web and terminal</span>
+    </nav>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: 14 July 2026</p>
+
+    <div class="summary">
+      <h2>In plain English</h2>
+      <p><strong>Your notes are encrypted on your device</strong> before they are stored or synced, using a password only you know.</p>
+      <p><strong>Nobody else can read them</strong> — not the operator of a sync server, and not the developer. There is no way to recover them without your password.</p>
+      <p><strong>Nothing is tracked.</strong> Jottery contains no analytics, no advertising, no tracking of any kind, and never sells or shares data.</p>
+    </div>
+
+    <section>
+      <h3><span class="num">1.</span>Scope</h3>
+      <p>This policy covers the Jottery applications — the web app, the iOS app, and the terminal client — and the optional sync service, including the instance hosted at <a href="https://jottery.org">jottery.org</a>. Jottery is open-source software; you can inspect everything it does at <a href="https://github.com/seesee/jottery">github.com/seesee/jottery</a>.</p>
+    </section>
+
+    <section>
+      <h3><span class="num">2.</span>What Jottery stores, and where</h3>
+      <p>Your notes, tags, and attachments are stored on your own device: in your browser's local storage for the web app, and in an encrypted database on your phone for the iOS app. All note content is encrypted with AES-256-GCM using a key derived from your notes password. That password never leaves your device and is never sent to any server.</p>
+      <p>Because only you hold the password, <strong>your data cannot be recovered if you lose it</strong>. This is a deliberate design decision, not an oversight.</p>
+    </section>
+
+    <section>
+      <h3><span class="num">3.</span>Optional sync</h3>
+      <p>Sync is entirely optional. Jottery works fully offline without an account.</p>
+      <p>If you enable sync, your notes are encrypted on your device before upload, and the server stores only the encrypted form. The server operator can never read note content, tags, or attachment contents. To operate the service, the server does store:</p>
+      <ul>
+        <li>your email address and a cryptographic hash of your server password (Argon2id — the password itself is never stored);</li>
+        <li>the names of your registered devices and hashed device keys;</li>
+        <li>operational metadata such as timestamps, note identifiers, and the size of encrypted records.</li>
+      </ul>
+      <p>You may sync to jottery.org (accounts require operator approval) or to your own self-hosted server, in which case you — not us — are the data controller for that server.</p>
+    </section>
+
+    <section>
+      <h3><span class="num">4.</span>What Jottery never does</h3>
+      <ul>
+        <li>No analytics or telemetry of any kind.</li>
+        <li>No advertising and no advertising identifiers.</li>
+        <li>No third-party SDKs that receive your data.</li>
+        <li>No selling, renting, or sharing of any data with anyone.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3><span class="num">5.</span>Device permissions (iOS)</h3>
+      <p>Face ID / Touch ID unlocking is performed entirely by the operating system; the app never sees or stores biometric data. Photo attachments use the system photo picker, so the app only ever receives the items you explicitly choose. Nothing accesses your location, contacts, microphone, or camera.</p>
+    </section>
+
+    <section>
+      <h3><span class="num">6.</span>Deleting your data</h3>
+      <p>Local data is deleted by clearing the app's data in your browser, or removing the app from your phone. If you use a sync account, you can ask the operator of your server to delete your account and all stored (encrypted) records — for jottery.org, open an issue or contact the operator via the link below. Because stored content is encrypted, deleted records are unreadable even before deletion.</p>
+    </section>
+
+    <section>
+      <h3><span class="num">7.</span>Changes and contact</h3>
+      <p>Any changes to this policy will be published on this page with an updated date. Questions, concerns, or deletion requests: <a href="https://github.com/seesee/jottery/issues">github.com/seesee/jottery/issues</a>.</p>
+    </section>
+
+    <footer>
+      Jottery — private by design. <a href="/">Back to the app</a>
+    </footer>
+  </main>
+</body>
+</html>
