@@ -1,0 +1,24 @@
+{
+  "devices": [
+    { "key": "iphone-69", "simulator": "iPhone 17 Pro Max", "width": 1320, "height": 2868 },
+    { "key": "ipad-13", "simulator": "iPad Pro 13-inch (M5)", "width": 2064, "height": 2752 }
+  ],
+  "screens": [
+    { "name": "01-list", "args": "-demo-screen list", "theme": "dark",
+      "headline": "Your notes. Nobody else's.", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "02-editor", "args": "-demo-screen note:Welcome", "theme": "dark",
+      "headline": "Markdown, checklists and code", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "03-search", "args": "-demo-screen search:#recipe", "theme": "dark",
+      "headline": "Search by tags, dates and words", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "04-lock", "args": "-demo-screen lock", "theme": "dark",
+      "headline": "Secure notes. Unlocked with a glance.", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "05-sync", "args": "-demo-screen sync", "theme": "dark",
+      "headline": "Sync to a server you control", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "06-list-light", "args": "-demo-screen list", "theme": "light",
+      "headline": "Light, when you want it", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "07-calc", "args": "-demo-screen note:Holiday", "theme": "dark",
+      "headline": "Notes that can count", "devices": ["iphone-69", "ipad-13"] },
+    { "name": "08-split", "args": "-demo-screen note:Lake", "theme": "dark",
+      "headline": "Made for iPad", "devices": ["ipad-13"] }
+  ]
+}

@@ -27,6 +27,8 @@ scripts/test-history.db
 /screenshots/
 demo-generation/screenshots/
 demo-generation/tui-demo/
+demo-generation/ios/raw/
+demo-generation/ios/.derived/
 
 # Xcode user data
 xcuserdata/

@@ -110,6 +110,11 @@ enum DemoSeedService {
 
         try appState.loadNotes()
 
+        // `createNote()` above auto-selected the calc note; clear that so
+        // screens that don't pick their own selection (search, sync, lock)
+        // don't inherit it.
+        appState.selectedNoteId = nil
+
         // 4. Theme
         var settings = appState.settings
         settings.theme = config.theme
@@ -125,6 +130,10 @@ enum DemoSeedService {
             }?.id
         case .search(let query):
             appState.searchQuery = query
+            // Setting `searchQuery` alone doesn't recompute `filteredNotes` —
+            // the UI normally triggers that via `.onChange(of: searchQuery)`,
+            // which never fires here since we set it before the view renders.
+            appState.scheduleSearch()
         case .sync:
             settings.syncEnabled = true
             settings.syncEndpoint = "https://notes.example.org"
