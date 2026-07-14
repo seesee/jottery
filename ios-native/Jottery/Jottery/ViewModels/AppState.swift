@@ -30,6 +30,11 @@ final class AppState {
     var syncEnabled: Bool = false
     var syncStatusMessage: String?
 
+    #if DEBUG
+    /// Demo screenshot mode: presents the settings sheet (see DemoSeedService).
+    var demoShowSettings = false
+    #endif
+
     // MARK: - Quick Actions
 
     var pendingQuickAction: String?

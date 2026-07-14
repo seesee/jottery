@@ -46,4 +46,112 @@ struct DemoSeedConfig: Equatable {
         return DemoSeedConfig(notesPath: path, theme: theme, screen: screen)
     }
 }
+
+enum DemoSeedError: Error {
+    case appNotReady
+}
+
+/// Seeds the app with demo data for App Store screenshot capture.
+/// Runs only in DEBUG builds when launched with `-demo-seed`.
+@MainActor
+enum DemoSeedService {
+    static let demoPassword = "demo-pass-2026"
+
+    static func runIfRequested(appState: AppState) {
+        guard let config = DemoSeedConfig.parse(
+            arguments: ProcessInfo.processInfo.arguments,
+            environment: ProcessInfo.processInfo.environment
+        ) else { return }
+
+        do {
+            try run(config: config, appState: appState)
+            print("[DemoSeed] ✓ Seeded — screen: \(config.screen), theme: \(config.theme)")
+        } catch {
+            print("[DemoSeed] ✗ FAILED: \(error)")
+        }
+    }
+
+    static func run(config: DemoSeedConfig, appState: AppState) throws {
+        // 1. Fresh vault with a known password
+        appState.wipeAllData()
+        try appState.createVault(password: demoPassword)
+
+        // 2. Import the demo pack from the host filesystem
+        guard let noteRepo = appState.noteRepo,
+              let attachmentRepo = appState.attachmentRepo,
+              let key = appState.keyManager.masterKey else {
+            throw DemoSeedError.appNotReady
+        }
+        let rawData = try Data(contentsOf: URL(fileURLWithPath: config.notesPath))
+        // The demo pack follows the documented cross-platform export format
+        // (see CLAUDE.md), which omits `archived`/`locked` — but ImportService's
+        // ExportNote requires them. Backfill the defaults so decoding succeeds.
+        let data = patchedForImport(rawData)
+        let export = try ImportService.parse(data)
+        _ = try ImportService.importNotes(
+            export, strategy: .replace,
+            noteRepo: noteRepo, attachmentRepo: attachmentRepo, key: key
+        )
+
+        // 3. One calc note — the demo pack has none, and frame 7 needs one
+        guard var calc = try appState.createNote() else {
+            throw DemoSeedError.appNotReady
+        }
+        calc.content = """
+        # Holiday budget
+        flights = 420
+        hotel = 380 * 4
+        car_hire = 190
+        total = flights + hotel + car_hire
+        """
+        calc.syntaxLanguage = "calc"
+        calc.tags = ["budget", "travel"]
+        try appState.saveNote(calc)
+
+        try appState.loadNotes()
+
+        // 4. Theme
+        var settings = appState.settings
+        settings.theme = config.theme
+        try appState.updateSettings(settings)
+
+        // 5. Target screen
+        switch config.screen {
+        case .list:
+            appState.selectedNoteId = nil
+        case .note(let fragment):
+            appState.selectedNoteId = appState.notes.first {
+                $0.title.localizedCaseInsensitiveContains(fragment)
+            }?.id
+        case .search(let query):
+            appState.searchQuery = query
+        case .sync:
+            settings.syncEnabled = true
+            settings.syncEndpoint = "https://notes.example.org"
+            try appState.updateSettings(settings)
+            appState.syncEnabled = true
+            appState.lastSyncAt = Date()
+            appState.demoShowSettings = true
+        case .lock:
+            appState.lock()
+        }
+    }
+
+    /// `ImportService`'s `ExportNote` requires `archived`/`locked` keys, but the
+    /// documented cross-platform export format (CLAUDE.md) omits them for notes
+    /// that aren't archived/locked. Backfill `false` for any note missing them
+    /// so the demo pack — generated to that documented format — decodes cleanly.
+    private static func patchedForImport(_ data: Data) -> Data {
+        guard var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var notes = root["notes"] as? [[String: Any]] else {
+            return data
+        }
+        for i in notes.indices {
+            if notes[i]["archived"] == nil { notes[i]["archived"] = false }
+            if notes[i]["locked"] == nil { notes[i]["locked"] = false }
+        }
+        root["notes"] = notes
+        return (try? JSONSerialization.data(withJSONObject: root)) ?? data
+    }
+}
 #endif
