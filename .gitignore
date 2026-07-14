@@ -25,7 +25,8 @@ scripts/test-history.db
 
 # Demo generation intermediates (not public/screenshots/)
 /screenshots/
-demo-generation/screenshots/
+demo-generation/screenshots/*
+!demo-generation/screenshots/appstore/
 demo-generation/tui-demo/
 demo-generation/ios/raw/
 demo-generation/ios/.derived/
