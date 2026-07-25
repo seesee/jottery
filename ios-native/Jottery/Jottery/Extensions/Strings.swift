@@ -201,6 +201,8 @@ enum L {
     static var syncSetupSuccess: String { String(localized: "syncSetup.success") }
     static var syncSetupDone: String { String(localized: "syncSetup.done") }
     static var syncSetupCancel: String { String(localized: "syncSetup.cancel") }
+    static var syncEndpointEmpty: String { String(localized: "syncEndpoint.empty") }
+    static var syncEndpointMalformed: String { String(localized: "syncEndpoint.malformed") }
 
     // MARK: - Tags
 

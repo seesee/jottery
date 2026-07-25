@@ -3028,6 +3028,28 @@
           }
         }
       }
+    },
+    "syncEndpoint.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter your sync server address."
+          }
+        }
+      }
+    },
+    "syncEndpoint.malformed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is not a valid server address. Use a form like https://notes.example.org"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

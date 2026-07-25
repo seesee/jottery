@@ -140,7 +140,7 @@ struct SyncSetupView: View {
 
         Task {
             do {
-                let normalised = normaliseEndpoint(endpoint)
+                let normalised = try SyncEndpoint.normalise(endpoint)
                 let client = SyncClient(endpoint: normalised)
                 let response = try await client.registerDevice(
                     email: email,
@@ -207,7 +207,7 @@ struct SyncSetupView: View {
                     guard !endpoint.isEmpty else {
                         throw SyncSetupError.needsEndpoint
                     }
-                    let normalised = normaliseEndpoint(endpoint)
+                    let normalised = try SyncEndpoint.normalise(endpoint)
                     try KeychainService.storeAPIKey(trimmed)
                     try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
                     appState.settings.syncEnabled = true
@@ -255,7 +255,7 @@ struct SyncSetupView: View {
 
     /// Clone device and store credentials.
     private func handleCredentials(apiKey: String, endpoint: String) async throws {
-        let normalised = normaliseEndpoint(endpoint)
+        let normalised = try SyncEndpoint.normalise(endpoint)
         let client = SyncClient(endpoint: normalised)
         let response = try await client.cloneDevice(
             apiKey: apiKey,
@@ -275,17 +275,6 @@ struct SyncSetupView: View {
         appState.settings.syncEnabled = true
         appState.settings.syncEndpoint = normalised
         registeredApiKey = response.apiKey
-    }
-
-    private func normaliseEndpoint(_ raw: String) -> String {
-        var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
-            url = "https://\(url)"
-        }
-        if url.hasSuffix("/") {
-            url = String(url.dropLast())
-        }
-        return url
     }
 }
 

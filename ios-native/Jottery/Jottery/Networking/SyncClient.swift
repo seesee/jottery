@@ -28,7 +28,7 @@ actor SyncClient {
     // MARK: - Device Registration
 
     func registerDevice(email: String, password: String, deviceName: String) async throws -> RegisterDeviceResponse {
-        let url = apiURL("auth/register-device")
+        let url = try apiURL("auth/register-device")
         let body = RegisterDeviceRequest(
             email: email,
             password: password,
@@ -39,7 +39,7 @@ actor SyncClient {
     }
 
     func cloneDevice(apiKey: String, deviceName: String) async throws -> RegisterDeviceResponse {
-        let url = apiURL("auth/clone-device")
+        let url = try apiURL("auth/clone-device")
         let body = CloneDeviceRequest(
             apiKey: apiKey,
             deviceName: deviceName,
@@ -51,23 +51,23 @@ actor SyncClient {
     // MARK: - Sync Operations
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
-        let url = apiURL("sync/push")
+        let url = try apiURL("sync/push")
         return try await post(url: url, body: request, authenticated: true)
     }
 
     func pull(_ request: SyncPullRequest) async throws -> SyncPullResponse {
-        let url = apiURL("sync/pull")
+        let url = try apiURL("sync/pull")
         return try await post(url: url, body: request, authenticated: true)
     }
 
     func status() async throws -> SyncStatusResponse {
-        let url = apiURL("sync/status")
+        let url = try apiURL("sync/status")
         return try await get(url: url)
     }
 
     /// Get a short-lived SSE token.
     func getSSEToken() async throws -> SSETokenResponse {
-        let url = apiURL("sync/events/token")
+        let url = try apiURL("sync/events/token")
         return try await get(url: url)
     }
 
@@ -80,7 +80,7 @@ actor SyncClient {
 
     /// Fetch the server-stored wrapped master key. Returns nil if no key exists (404).
     func getWrappedKey() async throws -> WrappedKeyResponse? {
-        let url = apiURL("auth/wrapped-key")
+        let url = try apiURL("auth/wrapped-key")
         do {
             let response: WrappedKeyResponse = try await get(url: url)
             return response
@@ -91,31 +91,31 @@ actor SyncClient {
 
     /// Upload a wrapped master key to the server.
     func putWrappedKey(_ request: PutWrappedKeyRequest) async throws {
-        let url = apiURL("auth/wrapped-key")
+        let url = try apiURL("auth/wrapped-key")
         try await put(url: url, body: request)
     }
 
     // MARK: - Inbox
 
     func listInboxItems() async throws -> [InboxItem] {
-        let url = apiURL("inbox")
+        let url = try apiURL("inbox")
         return try await get(url: url)
     }
 
     func deleteInboxItem(id: String) async throws {
-        let url = apiURL("inbox/\(id)")
+        let url = try apiURL("inbox/\(SyncEndpoint.encodePathComponent(id))")
         try await delete(url: url)
     }
 
     func deleteAllInboxItems() async throws {
-        let url = apiURL("inbox")
+        let url = try apiURL("inbox")
         try await delete(url: url)
     }
 
     // MARK: - Private
 
-    private func apiURL(_ path: String) -> URL {
-        URL(string: "\(endpoint)/api/\(apiVersion)/\(path)")!
+    private func apiURL(_ path: String) throws -> URL {
+        try SyncEndpoint.apiURL(endpoint: endpoint, apiVersion: apiVersion, path: path)
     }
 
     private func post<Body: Encodable, Response: Decodable>(
