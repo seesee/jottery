@@ -326,7 +326,7 @@ private struct ConnectToServerView: View {
 
         Task {
             do {
-                let normalised = normaliseEndpoint(endpoint)
+                let normalised = try SyncEndpoint.normalise(endpoint)
                 let client = SyncClient(endpoint: normalised)
                 let response = try await client.registerDevice(
                     email: email,
@@ -430,7 +430,7 @@ private struct ConnectToServerView: View {
 
     /// Handle legacy base64 JSON with salt included.
     private func handleLegacyCredentials(_ creds: LegacyCredentials) async throws {
-        let normalised = normaliseEndpoint(creds.endpoint)
+        let normalised = try SyncEndpoint.normalise(creds.endpoint)
 
         // Extract and store the salt for vault creation
         if let saltData = Data(base64Encoded: creds.salt), saltData.count >= 32 {
@@ -456,7 +456,7 @@ private struct ConnectToServerView: View {
 
     /// Handle base64 JSON credentials without salt.
     private func handlePlainCredentials(_ creds: ImportedCredentials) async throws {
-        let normalised = normaliseEndpoint(creds.endpoint)
+        let normalised = try SyncEndpoint.normalise(creds.endpoint)
 
         let client = SyncClient(endpoint: normalised)
         let response = try await client.cloneDevice(
@@ -476,7 +476,7 @@ private struct ConnectToServerView: View {
 
     /// Handle a raw API key pasted directly.
     private func handleRawApiKey(_ apiKey: String) throws {
-        let normalised = normaliseEndpoint(endpoint)
+        let normalised = try SyncEndpoint.normalise(endpoint)
 
         try KeychainService.storeAPIKey(apiKey)
         try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
@@ -539,7 +539,7 @@ private struct ConnectToServerView: View {
 
                     // Now clone the device to get a fresh API key
                     syncProgress = L.setupProgressRegistering
-                    let normalised = normaliseEndpoint(creds.endpoint)
+                    let normalised = try SyncEndpoint.normalise(creds.endpoint)
                     let client = SyncClient(endpoint: normalised)
                     let response = try await client.cloneDevice(
                         apiKey: creds.apiKey,
@@ -644,17 +644,6 @@ private struct ConnectToServerView: View {
                 }
             }
         }
-    }
-
-    private func normaliseEndpoint(_ raw: String) -> String {
-        var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !url.hasPrefix("http://") && !url.hasPrefix("https://") {
-            url = "https://\(url)"
-        }
-        if url.hasSuffix("/") {
-            url = String(url.dropLast())
-        }
-        return url
     }
 }
 
