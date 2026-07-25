@@ -53,7 +53,25 @@
   <script>
     const params = new URLSearchParams(location.search);
     document.getElementById('headline').textContent = params.get('headline') || '';
-    document.getElementById('shot').src = params.get('img') || '';
+
+    // Allow-list the image URL's scheme before assigning it to .src.
+    // Assigning an attacker-controlled value directly would accept
+    // "javascript:", which executes on load. compose.spec.ts only ever passes
+    // file:// URLs, so this is behaviour-preserving.
+    const rawImg = params.get('img') || '';
+    let safeImg = '';
+    if (rawImg) {
+      try {
+        const parsed = new URL(rawImg, location.href);
+        if (['file:', 'http:', 'https:'].includes(parsed.protocol)) {
+          safeImg = parsed.href;
+        }
+      } catch {
+        // Malformed URL — leave the image unset rather than guessing.
+      }
+    }
+    document.getElementById('shot').src = safeImg;
+
     if (params.get('device') === 'ipad-13') document.body.classList.add('ipad');
   </script>
 </body>
