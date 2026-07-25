@@ -369,10 +369,10 @@ final class AppState {
         // Auto-purge deleted notes older than 30 days
         let purged = (try? noteRepo?.purgeOldDeletedNotes()) ?? 0
         if purged > 0 {
-            print("[Purge] Removed \(purged) deleted note(s) older than 30 days")
+            Log.debug("[Purge] Removed \(purged) deleted note(s) older than 30 days")
         }
 
-        print("[Sync] unlock: calling setupSync()")
+        Log.debug("[Sync] unlock: calling setupSync()")
         setupSync()
         scheduleSearchWarmUp()
         importSharedInboxItems()
@@ -439,7 +439,7 @@ final class AppState {
 
     /// Lock the application.
     func lock() {
-        print("[Sync] lock: clearing syncService, syncEnabled=false")
+        Log.debug("[Sync] lock: clearing syncService, syncEnabled=false")
         // Flush any pending editor save while the key is still available
         if let pending = pendingEditorNote, let noteRepo, let key = keyManager.masterKey {
             try? noteRepo.update(pending, key: key)
@@ -707,7 +707,7 @@ final class AppState {
                 SharedInboxStore.remove(item.directory)
             } catch {
                 // Leave the item staged so a later import can retry.
-                print("[SharedInbox] import failed: \(error)")
+                Log.debug("[SharedInbox] import failed: \(error)")
             }
         }
     }
@@ -784,29 +784,29 @@ final class AppState {
     /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
     func setupSync(apiKey providedKey: String? = nil) {
         guard settings.syncEnabled else {
-            print("[Sync] setupSync: settings.syncEnabled is false — skipping")
+            Log.debug("[Sync] setupSync: settings.syncEnabled is false — skipping")
             return
         }
         guard let endpoint = settings.syncEndpoint else {
-            print("[Sync] setupSync: no syncEndpoint — skipping")
+            Log.debug("[Sync] setupSync: no syncEndpoint — skipping")
             return
         }
         guard let noteRepo, let syncRepo, let versionRepo, let attachmentRepo, let savedSearchRepo else {
-            print("[Sync] setupSync: repos not initialised — skipping")
+            Log.debug("[Sync] setupSync: repos not initialised — skipping")
             return
         }
         guard let key = keyManager.masterKey else {
-            print("[Sync] setupSync: no masterKey — skipping")
+            Log.debug("[Sync] setupSync: no masterKey — skipping")
             return
         }
 
         let apiKey = providedKey ?? KeychainService.retrieveAPIKey()
         guard let apiKey, !apiKey.isEmpty else {
-            print("[Sync] setupSync: no API key in Keychain")
+            Log.debug("[Sync] setupSync: no API key in Keychain")
             syncError = "No API key found. Please re-register the device."
             return
         }
-        print("[Sync] setupSync: OK — endpoint=\(endpoint)")
+        Log.debug("[Sync] setupSync: OK — endpoint=\(endpoint)")
         let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
         self.syncClient = client
         let service = SyncService(
@@ -855,14 +855,14 @@ final class AppState {
 
     func triggerSync() async {
         guard let syncService else {
-            print("[Sync] triggerSync: syncService is nil — aborting")
+            Log.debug("[Sync] triggerSync: syncService is nil — aborting")
             return
         }
         guard !isSyncing else {
-            print("[Sync] triggerSync: sync already in progress — skipping")
+            Log.debug("[Sync] triggerSync: sync already in progress — skipping")
             return
         }
-        print("[Sync] triggerSync: starting sync cycle")
+        Log.debug("[Sync] triggerSync: starting sync cycle")
         isSyncing = true
         syncError = nil
         syncStatusMessage = "Pushing changes…"
@@ -901,7 +901,7 @@ final class AppState {
                 }
             }
         } catch {
-            print("[Sync] triggerSync: ERROR — \(error)")
+            Log.debug("[Sync] triggerSync: ERROR — \(error)")
             syncError = SyncEndpoint.describeSyncFailure(error)
             syncStatusMessage = nil
             isSyncing = false
@@ -1205,7 +1205,7 @@ final class AppState {
                         let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
                         try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
                     } catch {
-                        print("[ChangePassword] Skipping blob \(blobId): \(error)")
+                        Log.debug("[ChangePassword] Skipping blob \(blobId): \(error)")
                     }
                 }
             }
@@ -1228,7 +1228,7 @@ final class AppState {
                         updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
                         try versionRepo.insertOrReplace(updated)
                     } catch {
-                        print("[ChangePassword] Skipping version \(ver.versionKey): \(error)")
+                        Log.debug("[ChangePassword] Skipping version \(ver.versionKey): \(error)")
                     }
                 }
             }
@@ -1320,7 +1320,7 @@ final class AppState {
                 record.needsSync = true
                 try noteRepo.updateRaw(record)
             } catch {
-                print("[ReEncrypt] Skipping note \(note.id): \(error)")
+                Log.debug("[ReEncrypt] Skipping note \(note.id): \(error)")
             }
         }
 
@@ -1338,7 +1338,7 @@ final class AppState {
                     let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
                     try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
                 } catch {
-                    print("[ReEncrypt] Skipping blob \(blobId): \(error)")
+                    Log.debug("[ReEncrypt] Skipping blob \(blobId): \(error)")
                 }
             }
         }
@@ -1362,11 +1362,11 @@ final class AppState {
                         updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
                         try versionRepo.insertOrReplace(updated)
                     } catch {
-                        print("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
+                        Log.debug("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
                     }
                 }
             } catch {
-                print("[ReEncrypt] Skipping versions for note \(noteId): \(error)")
+                Log.debug("[ReEncrypt] Skipping versions for note \(noteId): \(error)")
             }
         }
 
@@ -1384,15 +1384,15 @@ final class AppState {
                             query: try CryptoService.serializeEncryptedJSON(encQuery)
                         )
                     } catch {
-                        print("[ReEncrypt] Skipping saved search \(search.id): \(error)")
+                        Log.debug("[ReEncrypt] Skipping saved search \(search.id): \(error)")
                     }
                 }
             } catch {
-                print("[ReEncrypt] Failed to list saved searches: \(error)")
+                Log.debug("[ReEncrypt] Failed to list saved searches: \(error)")
             }
         }
 
-        print("[ReEncrypt] All data re-encrypted successfully")
+        Log.debug("[ReEncrypt] All data re-encrypted successfully")
     }
 
     // MARK: - Settings

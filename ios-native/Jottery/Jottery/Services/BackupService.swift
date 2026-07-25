@@ -407,7 +407,7 @@ enum BackupService {
                             )
                         }
                     } catch {
-                        print("[Backup] Skipping attachment blob \(att.id): \(error)")
+                        Log.debug("[Backup] Skipping attachment blob \(att.id): \(error)")
                     }
                 }
 
