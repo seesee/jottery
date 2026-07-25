@@ -182,7 +182,7 @@ struct MarkdownPreviewView: UIViewRepresentable {
                         callJS(webView, "bridge.resolveAttachment(\(escapedId), \(escapedUrl))")
                     }
                 } catch {
-                    print("[MarkdownPreview] Failed to resolve attachment \(id): \(error)")
+                    Log.debug("[MarkdownPreview] Failed to resolve attachment \(id): \(error)")
                 }
             }
         }
@@ -205,7 +205,7 @@ func escapeForJS(_ string: String) -> String {
 @MainActor func callJS(_ webView: WKWebView, _ js: String) {
     webView.evaluateJavaScript(js) { _, error in
         if let error {
-            print("[WebView] JS error: \(error.localizedDescription)")
+            Log.debug("[WebView] JS error: \(error.localizedDescription)")
         }
     }
 }

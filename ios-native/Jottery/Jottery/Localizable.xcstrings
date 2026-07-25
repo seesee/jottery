@@ -1825,17 +1825,6 @@
         }
       }
     },
-    "settings.debug": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Debug"
-          }
-        }
-      }
-    },
     "settings.done": {
       "extractionState": "manual",
       "localizations": {
@@ -3069,6 +3058,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your sync server address uses http:// over the internet, which is no longer permitted. Update it to https:// in Settings."
+          }
+        }
+      }
+    },
+    "settings.reset": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
           }
         }
       }

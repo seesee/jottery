@@ -21,7 +21,7 @@ enum EnvelopeService {
         guard let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
               let syncClient = appState.syncClient else {
-            print("[Envelope] Migration skipped — sync not configured")
+            Log.debug("[Envelope] Migration skipped — sync not configured")
             return
         }
 
@@ -30,13 +30,13 @@ enum EnvelopeService {
                   syncMeta.syncEnabled,
                   let userId = syncMeta.userId,
                   !userId.isEmpty else {
-                print("[Envelope] Migration skipped — no userId in sync metadata")
+                Log.debug("[Envelope] Migration skipped — no userId in sync metadata")
                 return
             }
 
             // Check if already migrated
             if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
-                print("[Envelope] Already migrated — skipping")
+                Log.debug("[Envelope] Already migrated — skipping")
                 return
             }
 
@@ -89,9 +89,9 @@ enum EnvelopeService {
                 try encryptionRepo.store(metadata)
             }
 
-            print("[Envelope] Migration complete")
+            Log.debug("[Envelope] Migration complete")
         } catch {
-            print("[Envelope] Migration failed (non-fatal): \(error)")
+            Log.debug("[Envelope] Migration failed (non-fatal): \(error)")
         }
     }
 
@@ -175,7 +175,7 @@ enum EnvelopeService {
         guard let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
               let syncClient = appState.syncClient else {
-            print("[Envelope] Setup skipped — sync not configured")
+            Log.debug("[Envelope] Setup skipped — sync not configured")
             return
         }
 
@@ -184,13 +184,13 @@ enum EnvelopeService {
                   syncMeta.syncEnabled,
                   let userId = syncMeta.userId,
                   !userId.isEmpty else {
-                print("[Envelope] Setup skipped — no userId in sync metadata")
+                Log.debug("[Envelope] Setup skipped — no userId in sync metadata")
                 return
             }
 
             // Already migrated — nothing to do
             if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
-                print("[Envelope] Already migrated — skipping setup")
+                Log.debug("[Envelope] Already migrated — skipping setup")
                 return
             }
 
@@ -199,7 +199,7 @@ enum EnvelopeService {
 
             if serverResponse != nil {
                 // Another device already uploaded — onboard from server
-                print("[Envelope] Server has wrapped key — onboarding from server")
+                Log.debug("[Envelope] Server has wrapped key — onboarding from server")
                 let serverKey = try await onboardFromServer(
                     syncClient: syncClient,
                     encryptionRepo: encryptionRepo,
@@ -211,14 +211,14 @@ enum EnvelopeService {
                 let localKeyData = masterKey.withUnsafeBytes { Data($0) }
                 let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
                 if localKeyData != serverKeyData {
-                    print("[Envelope] Server key differs from local — re-encrypting data")
+                    Log.debug("[Envelope] Server key differs from local — re-encrypting data")
                     try appState.reEncryptAllData(from: masterKey, to: serverKey)
                     appState.keyManager.unlockWithKeyData(serverKeyData)
                     try appState.loadNotes()
                 }
             } else {
                 // No server key — we're the first device, upload ours
-                print("[Envelope] No server key — migrating local key to envelope")
+                Log.debug("[Envelope] No server key — migrating local key to envelope")
                 await tryMigrateToEnvelope(
                     appState: appState,
                     password: password,
@@ -226,7 +226,7 @@ enum EnvelopeService {
                 )
             }
         } catch {
-            print("[Envelope] Setup failed (non-fatal): \(error)")
+            Log.debug("[Envelope] Setup failed (non-fatal): \(error)")
         }
     }
 
@@ -272,7 +272,7 @@ enum EnvelopeService {
             try encryptionRepo.store(metadata)
         }
 
-        print("[Envelope] Local password re-wrap complete")
+        Log.debug("[Envelope] Local password re-wrap complete")
     }
 
     /// Server re-wrap — upload new wrapped key. Non-fatal; server will be
@@ -287,7 +287,7 @@ enum EnvelopeService {
             guard let syncMeta = try syncRepo.getMetadata(),
                   syncMeta.syncEnabled,
                   let userId = syncMeta.userId, !userId.isEmpty else {
-                print("[Envelope] Server re-wrap skipped — no userId")
+                Log.debug("[Envelope] Server re-wrap skipped — no userId")
                 return
             }
 
@@ -301,9 +301,9 @@ enum EnvelopeService {
                 kdfIterations: Int(CryptoService.wrappingIterations)
             )
             try await syncClient.putWrappedKey(putRequest)
-            print("[Envelope] Server re-wrap complete")
+            Log.debug("[Envelope] Server re-wrap complete")
         } catch {
-            print("[Envelope] Server re-wrap failed (non-fatal): \(error)")
+            Log.debug("[Envelope] Server re-wrap failed (non-fatal): \(error)")
         }
     }
 }

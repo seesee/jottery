@@ -132,13 +132,13 @@ struct UnlockScreen: View {
             if success {
                 try? appState.loadNotes()
                 appState.isLocked = false
-                print("[Sync] biometricUnlock: calling setupSync()")
+                Log.debug("[Sync] biometricUnlock: calling setupSync()")
                 appState.setupSync()
                 appState.scheduleSearchWarmUp()
                 appState.importSharedInboxItems()
-                print("[Envelope] Biometric unlock — envelope migration skipped (password unavailable)")
+                Log.debug("[Envelope] Biometric unlock — envelope migration skipped (password unavailable)")
             } else {
-                print("[Sync] biometricUnlock: Face ID failed")
+                Log.debug("[Sync] biometricUnlock: Face ID failed")
             }
         }
     }
