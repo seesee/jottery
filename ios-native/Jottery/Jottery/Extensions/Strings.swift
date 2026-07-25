@@ -46,6 +46,8 @@ enum L {
     static var settingsSyncNow: String { String(localized: "settings.syncNow") }
     static var settingsSyncDisconnect: String { String(localized: "settings.syncDisconnect") }
     static var settingsSyncSetUp: String { String(localized: "settings.syncSetUp") }
+    static var syncDisconnectServerTooOld: String { String(localized: "syncDisconnect.serverTooOld") }
+    static var syncDisconnectStillRegistered: String { String(localized: "syncDisconnect.stillRegistered") }
 
     // MARK: - Common
 

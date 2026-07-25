@@ -11,6 +11,8 @@ struct SettingsView: View {
     @State private var showBackup = false
     @State private var showForceSyncConfirmation = false
     @State private var exportFile: ExportFile?
+    @State private var isDisconnecting = false
+    @State private var disconnectWarning: String?
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
@@ -248,7 +250,14 @@ struct SettingsView: View {
                 .disabled(appState.isSyncing)
 
                 Button(L.settingsSyncDisconnect, role: .destructive) {
-                    disconnectSync()
+                    Task { await disconnectSync() }
+                }
+                .disabled(isDisconnecting)
+
+                if let disconnectWarning {
+                    Text(disconnectWarning)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         } else {
@@ -282,7 +291,29 @@ struct SettingsView: View {
         exportFile = ExportFile(url: tempURL)
     }
 
-    private func disconnectSync() {
+    /// Unlink this device, server-side first and then locally.
+    ///
+    /// The server call is best-effort: it is attempted before the credentials
+    /// are destroyed (they are what authenticates it), but the local disconnect
+    /// always proceeds. A user who is offline, or whose self-hosted server
+    /// predates the endpoint, must still be able to disconnect — they are told
+    /// the device is still registered so they can revoke it from the web UI.
+    private func disconnectSync() async {
+        let client = appState.syncClient
+        isDisconnecting = true
+        defer { isDisconnecting = false }
+
+        if let client {
+            do {
+                try await client.revokeThisDevice()
+            } catch {
+                disconnectWarning = String(
+                    format: L.syncDisconnectStillRegistered,
+                    SyncEndpoint.describeSyncFailure(error)
+                )
+            }
+        }
+
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         try? appState.settingsRepo?.updateSync(enabled: false, endpoint: nil)

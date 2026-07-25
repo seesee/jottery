@@ -1138,3 +1138,33 @@ async fn cleanup_old_deleted_notes(pool: &sqlx::SqlitePool) -> Result<u64, sqlx:
 
     Ok(deleted_count)
 }
+
+/// Revoke the calling device.
+///
+/// Authenticated with the device's own API key, so a client can unlink itself
+/// without the user re-entering their account password. The middleware only
+/// admits active devices, so this is always the soft-revoke path — the device
+/// remains listed for the user (and hard-deletable) in the web UI.
+pub async fn revoke_self(
+    State(state): State<Arc<AppState>>,
+    AuthClient(client_info): AuthClient,
+) -> AppResult<StatusCode> {
+    sqlx::query!(
+        "UPDATE clients SET is_active = 0 WHERE id = ?",
+        client_info.client_id
+    )
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to self-revoke device: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    tracing::info!(
+        "Device {} self-revoked (user {})",
+        client_info.client_id,
+        client_info.user_id
+    );
+
+    Ok(StatusCode::NO_CONTENT)
+}
