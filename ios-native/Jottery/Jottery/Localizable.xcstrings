@@ -3112,6 +3112,138 @@
           }
         }
       }
+    },
+    "deleteAccount.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Account on Server"
+          }
+        }
+      }
+    },
+    "deleteAccount.explanation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This affects only your account on the sync server. Notes already on this device are kept — use Settings → Reset to remove those."
+          }
+        }
+      }
+    },
+    "deleteAccount.credentials": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account Sign-In"
+          }
+        }
+      }
+    },
+    "deleteAccount.mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Action"
+          }
+        }
+      }
+    },
+    "deleteAccount.modeDeactivate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deactivate"
+          }
+        }
+      }
+    },
+    "deleteAccount.modeDelete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete permanently"
+          }
+        }
+      }
+    },
+    "deleteAccount.deactivateHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your account is disabled and stops syncing. Signing up again needs administrator approval."
+          }
+        }
+      }
+    },
+    "deleteAccount.deleteHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your account and everything stored on the server are removed permanently. This cannot be undone."
+          }
+        }
+      }
+    },
+    "deleteAccount.action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Account"
+          }
+        }
+      }
+    },
+    "deleteAccount.confirmTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Are you sure?"
+          }
+        }
+      }
+    },
+    "deleteAccount.wrongCredentials": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incorrect email or password."
+          }
+        }
+      }
+    },
+    "deleteAccount.noServer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync is not configured on this device."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var exportFile: ExportFile?
     @State private var isDisconnecting = false
     @State private var disconnectWarning: String?
+    @State private var showDeleteAccount = false
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
@@ -185,6 +186,11 @@ struct SettingsView: View {
             .sheet(isPresented: $showBackup) {
                 BackupView()
             }
+            .sheet(isPresented: $showDeleteAccount) {
+                DeleteAccountView(onDeleted: {
+                    Task { await disconnectLocallyAfterAccountDeletion() }
+                })
+            }
             .sheet(isPresented: $showSyncSetup) {
                 SyncSetupView(onComplete: { apiKey in
                     // Reload settings from DB after registration
@@ -262,6 +268,10 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                Button(L.deleteAccountTitle, role: .destructive) {
+                    showDeleteAccount = true
+                }
             }
         } else {
             // Sync is not configured — show setup button
@@ -292,6 +302,25 @@ struct SettingsView: View {
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         try? data.write(to: tempURL)
         exportFile = ExportFile(url: tempURL)
+    }
+
+    /// Clear local sync state after the server account has been deleted.
+    ///
+    /// No revoke call: the account is gone, so the device credentials are dead
+    /// already and the request would only fail. Notes stay on the device — the
+    /// user deleted their sync account, not their notes.
+    private func disconnectLocallyAfterAccountDeletion() async {
+        KeychainService.deleteAPIKey()
+        KeychainService.deleteClientId()
+        try? appState.settingsRepo?.updateSync(enabled: false, endpoint: nil)
+
+        settings.syncEnabled = false
+        settings.syncEndpoint = nil
+        appState.settings.syncEnabled = false
+        appState.settings.syncEndpoint = nil
+        appState.syncEnabled = false
+        appState.syncClient = nil
+        appState.syncService = nil
     }
 
     /// Unlink this device, server-side first and then locally.

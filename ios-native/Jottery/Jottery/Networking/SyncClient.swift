@@ -118,6 +118,37 @@ actor SyncClient {
         }
     }
 
+    // MARK: - Account
+
+    /// Exchange account credentials for a session token.
+    ///
+    /// Account-level operations sit behind session auth on the server; a device
+    /// API key is not sufficient. Requiring the account password for something
+    /// irreversible is the right bar anyway — a stolen device key must not be
+    /// able to delete the account.
+    func logIn(email: String, password: String) async throws -> String {
+        let url = try apiURL("user/login")
+        let response: UserLoginResponse = try await post(
+            url: url,
+            body: UserLoginRequest(email: email, password: password),
+            authenticated: false
+        )
+        return response.sessionId
+    }
+
+    /// Delete or deactivate the account this device syncs with.
+    ///
+    /// Uses a session token from `logIn`, not the device API key.
+    func deleteAccount(sessionId: String, mode: AccountDeletionMode) async throws {
+        let url = try apiURL("user/account?mode=\(mode.rawValue)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(sessionId)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
+    }
+
     // MARK: - Inbox
 
     func listInboxItems() async throws -> [InboxItem] {

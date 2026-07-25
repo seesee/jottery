@@ -214,3 +214,24 @@ struct SyncSavedSearch: Codable {
     var deletedAt: String?
     let version: Int
 }
+
+// MARK: - Account Management
+
+struct UserLoginRequest: Codable {
+    let email: String
+    let password: String
+}
+
+struct UserLoginResponse: Codable {
+    let sessionId: String
+    let expiresAt: String
+}
+
+/// How the server should treat the account.
+/// Mirrors the server's `DeleteAccountQuery.mode`.
+enum AccountDeletionMode: String {
+    /// Soft delete — deactivates, re-registration needs admin approval.
+    case deactivate
+    /// Hard delete — removes the account and its data.
+    case delete
+}
