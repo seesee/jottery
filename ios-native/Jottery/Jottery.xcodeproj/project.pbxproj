@@ -209,6 +209,7 @@
 			buildConfigurationList = FA000001 /* Build configuration list for PBXNativeTarget "JotteryShare" */;
 			buildPhases = (
 				F7000001 /* Sources */,
+				F7000002 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -282,6 +283,13 @@
 				D2000001 /* preview.html in Resources */,
 				D2000002 /* calc.html in Resources */,
 				D2000003 /* outliner.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F7000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
