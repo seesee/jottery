@@ -11,10 +11,16 @@ actor SyncClient {
     var endpoint: String
     var apiKey: String?
 
-    init(endpoint: String = "", apiKey: String? = nil) {
+    /// - Parameter configuration: overrides the URLSession configuration. Only
+    ///   used by tests, to install a stub `URLProtocol`.
+    init(
+        endpoint: String = "",
+        apiKey: String? = nil,
+        configuration: URLSessionConfiguration? = nil
+    ) {
         self.endpoint = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
         self.apiKey = apiKey
-        let config = URLSessionConfiguration.default
+        let config = configuration ?? URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
         self.session = URLSession(configuration: config)
@@ -93,6 +99,23 @@ actor SyncClient {
     func putWrappedKey(_ request: PutWrappedKeyRequest) async throws {
         let url = try apiURL("auth/wrapped-key")
         try await put(url: url, body: request)
+    }
+
+    // MARK: - Device
+
+    /// Unlink this device from the server, using its own API key.
+    ///
+    /// Best-effort by design: users self-host, and a server older than this
+    /// endpoint answers 404/405. `deviceRevokeUnsupported` lets the caller tell
+    /// "your server is too old" apart from a genuine failure, so disconnecting
+    /// locally can proceed either way.
+    func revokeThisDevice() async throws {
+        let url = try apiURL("sync/device")
+        do {
+            try await delete(url: url)
+        } catch SyncClientError.httpError(let status, _) where status == 404 || status == 405 {
+            throw SyncClientError.deviceRevokeUnsupported
+        }
     }
 
     // MARK: - Inbox
@@ -193,12 +216,14 @@ enum SyncClientError: LocalizedError {
     case invalidResponse
     case httpError(status: Int, body: String)
     case unauthorized
+    case deviceRevokeUnsupported
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse: return "Invalid server response"
         case .httpError(let status, let body): return "HTTP \(status): \(body)"
         case .unauthorized: return "Unauthorised — check API key"
+        case .deviceRevokeUnsupported: return L.syncDisconnectServerTooOld
         }
     }
 }
