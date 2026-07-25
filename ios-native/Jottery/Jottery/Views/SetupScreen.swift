@@ -632,8 +632,8 @@ private struct ConnectToServerView: View {
                 try? await Task.sleep(for: .seconds(4))
                 appState.syncStatusMessage = nil
             } catch {
-                self.error = error.localizedDescription
-                appState.syncError = error.localizedDescription
+                self.error = SyncEndpoint.describeSyncFailure(error)
+                appState.syncError = SyncEndpoint.describeSyncFailure(error)
                 appState.syncStatusMessage = nil
                 appState.isSyncing = false
                 syncProgress = nil
