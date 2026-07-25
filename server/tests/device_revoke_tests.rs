@@ -99,7 +99,11 @@ async fn create_test_user(pool: &SqlitePool) -> String {
 
     let user_id = uuid::Uuid::new_v4().to_string();
     let email = format!("testuser{}@example.com", uuid::Uuid::new_v4());
-    let password_hash = hash_password_with_params("testpassword123", 19456, 2, 1).unwrap();
+    // Randomised rather than a literal: these tests authenticate with device API
+    // keys and never use the password, and a hard-coded one trips CodeQL's
+    // rust/hard-coded-cryptographic-value rule.
+    let password = uuid::Uuid::new_v4().to_string();
+    let password_hash = hash_password_with_params(&password, 19456, 2, 1).unwrap();
     let now = chrono::Utc::now().to_rfc3339();
 
     sqlx::query!(
