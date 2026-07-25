@@ -203,6 +203,8 @@ enum L {
     static var syncSetupCancel: String { String(localized: "syncSetup.cancel") }
     static var syncEndpointEmpty: String { String(localized: "syncEndpoint.empty") }
     static var syncEndpointMalformed: String { String(localized: "syncEndpoint.malformed") }
+    static var syncEndpointInsecurePublicHost: String { String(localized: "syncEndpoint.insecurePublicHost") }
+    static var syncEndpointInsecureStored: String { String(localized: "syncEndpoint.insecureStored") }
 
     // MARK: - Tags
 

@@ -50,6 +50,14 @@ enum SyncEndpoint {
             throw SyncEndpointError.malformed(raw)
         }
 
+        // ATS only guards connections to public host names. Plain HTTP to an IP
+        // literal, an unqualified name or a .local host is exempt and keeps working;
+        // plain HTTP to a public host is blocked, so reject it here with something
+        // actionable rather than letting the request fail opaquely later.
+        if scheme == "http" && !isATSExempt(host: host) {
+            throw SyncEndpointError.insecurePublicHost(host)
+        }
+
         // Confirm the result can actually build a request URL before we store it.
         // Rethrown against `raw` so the message quotes what the user typed.
         guard (try? apiURL(endpoint: candidate, apiVersion: "v1", path: "sync/status")) != nil else {
@@ -72,6 +80,53 @@ enum SyncEndpoint {
         return url
     }
 
+    /// Whether App Transport Security leaves connections to this host alone.
+    ///
+    /// ATS applies only to public host names. Apple exempts IP literals,
+    /// unqualified (single-label) host names, and the `.local` TLD — which
+    /// between them cover the self-hosted-on-the-LAN cases.
+    static func isATSExempt(host: String) -> Bool {
+        let name = host.lowercased()
+
+        if name.hasSuffix(".local") { return true }
+        if isIPLiteral(name) { return true }
+        // Unqualified: a single label with no dots, e.g. "nas".
+        if !name.contains(".") { return true }
+
+        return false
+    }
+
+    private static func isIPLiteral(_ host: String) -> Bool {
+        // URLComponents.host keeps the brackets on an IPv6 literal ("[fe80::1]"),
+        // so strip them before handing the address to inet_pton.
+        let bare = host.hasPrefix("[") && host.hasSuffix("]")
+            ? String(host.dropFirst().dropLast())
+            : host
+
+        var v4 = in_addr()
+        if bare.withCString({ inet_pton(AF_INET, $0, &v4) }) == 1 { return true }
+
+        var v6 = in6_addr()
+        // Strip any zone identifier ("fe80::1%en0") before parsing.
+        let withoutZone = bare.split(separator: "%", maxSplits: 1).first.map(String.init) ?? bare
+        if withoutZone.withCString({ inet_pton(AF_INET6, $0, &v6) }) == 1 { return true }
+
+        return false
+    }
+
+    /// Message to show for a failed sync.
+    ///
+    /// Endpoints saved before the ATS exception was narrowed may still be plain
+    /// HTTP to a public host. Those now fail with an opaque ATS error, so name the
+    /// real problem instead of surfacing it raw.
+    static func describeSyncFailure(_ error: Error) -> String {
+        if let urlError = error as? URLError,
+           urlError.code == .appTransportSecurityRequiresSecureConnection {
+            return L.syncEndpointInsecureStored
+        }
+        return error.localizedDescription
+    }
+
     /// Percent-encode a value being interpolated into a URL path segment.
     static func encodePathComponent(_ raw: String) -> String {
         var allowed = CharacterSet.urlPathAllowed
@@ -83,6 +138,7 @@ enum SyncEndpoint {
 enum SyncEndpointError: LocalizedError, Equatable {
     case empty
     case malformed(String)
+    case insecurePublicHost(String)
 
     var errorDescription: String? {
         switch self {
@@ -90,6 +146,8 @@ enum SyncEndpointError: LocalizedError, Equatable {
             return L.syncEndpointEmpty
         case .malformed(let raw):
             return String(format: L.syncEndpointMalformed, raw)
+        case .insecurePublicHost(let host):
+            return String(format: L.syncEndpointInsecurePublicHost, host)
         }
     }
 }

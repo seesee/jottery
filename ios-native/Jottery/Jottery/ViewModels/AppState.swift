@@ -902,7 +902,7 @@ final class AppState {
             }
         } catch {
             print("[Sync] triggerSync: ERROR — \(error)")
-            syncError = error.localizedDescription
+            syncError = SyncEndpoint.describeSyncFailure(error)
             syncStatusMessage = nil
             isSyncing = false
         }
@@ -931,7 +931,7 @@ final class AppState {
                 if self?.syncStatusMessage == msg { self?.syncStatusMessage = nil }
             }
         } catch {
-            syncError = error.localizedDescription
+            syncError = SyncEndpoint.describeSyncFailure(error)
             syncStatusMessage = nil
             isSyncing = false
         }

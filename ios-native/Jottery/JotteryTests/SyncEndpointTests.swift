@@ -62,6 +62,41 @@ struct SyncEndpointTests {
         #expect(throws: (any Error).self) { try SyncEndpoint.normalise("notes\u{7F}.example.org") }
     }
 
+    // MARK: - Insecure public hosts (ATS)
+
+    /// ATS does not apply to IP literals, unqualified host names or .local,
+    /// so plain HTTP to those keeps working once NSAllowsArbitraryLoads is gone.
+    @Test func allowsPlainHttpToAtsExemptHosts() throws {
+        #expect(try SyncEndpoint.normalise("http://192.168.1.10:3000") == "http://192.168.1.10:3000")
+        #expect(try SyncEndpoint.normalise("http://10.0.0.5") == "http://10.0.0.5")
+        #expect(try SyncEndpoint.normalise("http://nas:3000") == "http://nas:3000")
+        #expect(try SyncEndpoint.normalise("http://jottery.local:3000") == "http://jottery.local:3000")
+        #expect(try SyncEndpoint.normalise("http://[fe80::1]:3000") == "http://[fe80::1]:3000")
+    }
+
+    /// ATS blocks these, so reject them at setup with an actionable message
+    /// rather than letting the request fail opaquely later.
+    @Test func rejectsPlainHttpToPublicHosts() {
+        #expect(throws: (any Error).self) { try SyncEndpoint.normalise("http://notes.example.org") }
+        #expect(throws: (any Error).self) { try SyncEndpoint.normalise("http://notes.example.org:8080/jottery") }
+    }
+
+    @Test func allowsHttpsToPublicHosts() throws {
+        #expect(try SyncEndpoint.normalise("https://notes.example.org") == "https://notes.example.org")
+        #expect(try SyncEndpoint.normalise("notes.example.org") == "https://notes.example.org")
+    }
+
+    @Test func classifiesAtsExemptHosts() {
+        #expect(SyncEndpoint.isATSExempt(host: "192.168.1.10"))
+        #expect(SyncEndpoint.isATSExempt(host: "10.0.0.5"))
+        #expect(SyncEndpoint.isATSExempt(host: "fe80::1"))
+        #expect(SyncEndpoint.isATSExempt(host: "nas"))
+        #expect(SyncEndpoint.isATSExempt(host: "jottery.local"))
+        #expect(SyncEndpoint.isATSExempt(host: "JOTTERY.LOCAL"))
+        #expect(!SyncEndpoint.isATSExempt(host: "notes.example.org"))
+        #expect(!SyncEndpoint.isATSExempt(host: "example.com"))
+    }
+
     // MARK: - API URL construction
 
     @Test func buildsApiURLFromNormalisedEndpoint() throws {

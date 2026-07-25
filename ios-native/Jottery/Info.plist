@@ -6,9 +6,11 @@
 	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Jottery connects to your own sync server. Allow local network access if that server runs on this network.</string>
 	<key>UIApplicationShortcutItems</key>
 	<array>
 		<dict>

@@ -3050,6 +3050,28 @@
           }
         }
       }
+    },
+    "syncEndpoint.insecurePublicHost": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” would send your data over an unencrypted connection. Use https:// for a server on the internet. Plain http:// is only supported for servers on your local network."
+          }
+        }
+      }
+    },
+    "syncEndpoint.insecureStored": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your sync server address uses http:// over the internet, which is no longer permitted. Update it to https:// in Settings."
+          }
+        }
+      }
     }
   },
   "version": "1.1"
