@@ -44,6 +44,11 @@ android-native/local.properties
 
 # Server runtime database
 jottery.db
+# ...including SQLite sidecars and any dated/branch-suffixed copies kept around
+# during development. Without these, `git add -A` sweeps a multi-hundred-MB dev
+# database into a commit and the push is rejected by GitHub's 100 MB file limit.
+jottery.db-*
+jottery.db.*
 
 # Editor directories and files
 .vscode/*
