@@ -448,7 +448,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Jottery.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10103;
+				CURRENT_PROJECT_VERSION = 10200;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = QA72EA3LC2;
 				ENABLE_PREVIEWS = YES;
@@ -466,7 +466,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -485,7 +485,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Jottery.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10103;
+				CURRENT_PROJECT_VERSION = 10200;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = QA72EA3LC2;
 				ENABLE_PREVIEWS = YES;
@@ -503,7 +503,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -520,9 +520,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10103;
+				CURRENT_PROJECT_VERSION = 10200;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -538,9 +538,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10103;
+				CURRENT_PROJECT_VERSION = 10200;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -556,7 +556,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JotteryShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10103;
+				CURRENT_PROJECT_VERSION = 10200;
 				DEVELOPMENT_TEAM = QA72EA3LC2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "JotteryShare-Info.plist";
@@ -566,7 +566,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.JotteryShare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -583,7 +583,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = JotteryShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10103;
+				CURRENT_PROJECT_VERSION = 10200;
 				DEVELOPMENT_TEAM = QA72EA3LC2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "JotteryShare-Info.plist";
@@ -593,7 +593,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.3;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jottery.ios.JotteryShare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

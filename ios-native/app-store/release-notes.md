@@ -21,14 +21,14 @@ field, so wording survives between submissions instead of being retyped.
 
 ---
 
-## Unreleased (next version after 1.1.3)
+## Unreleased
 
-`MARKETING_VERSION` is still `1.1.3`. Bump it via `./scripts/set-version.sh`
-before submitting, or these notes will attach to a version users already have.
+_Nothing pending._
 
-Draft:
+## 1.2.0 — 2026-07-25
 
 ```text
+• You can now delete your sync account from the app, under Settings → Sync.
 • Disconnecting sync now unlinks the device from your server, instead of only
   clearing it locally.
 • Fixed a crash when a mistyped sync server address was entered during setup.
@@ -42,7 +42,7 @@ Draft:
 
 ### Note on the HTTPS change
 
-The fourth bullet is a genuine behaviour change, not a fix: anyone syncing to a
+The fifth bullet is a genuine behaviour change, not a fix: anyone syncing to a
 public hostname over plain `http://` must switch that server to `https://`.
 Servers reached by IP address, single-word hostname, or `.local` are unaffected,
 which covers the self-hosted-on-a-LAN case. It is called out explicitly so the
@@ -53,8 +53,6 @@ Deliberately omitted, being invisible to users: the release-logging removal, the
 privacy manifests, the renamed Settings section, the retired English (US) option
 (untranslated and identical in practice), and the internal endpoint-validation
 refactor.
-
----
 
 ## Checklist per submission
 
@@ -67,4 +65,6 @@ refactor.
 
 ## Released
 
-_Nothing yet — the first App Store submission is pending._
+Nothing has shipped to the App Store yet. 1.2.0 above is the pending first
+submission — the "What's New" field is not shown to users on a first release,
+so that text becomes relevant from the next update onward.
