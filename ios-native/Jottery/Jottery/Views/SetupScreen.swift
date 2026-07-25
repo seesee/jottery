@@ -594,9 +594,9 @@ private struct ConnectToServerView: View {
                         appState.keyManager.unlockWithKeyData(serverKeyData)
                     } catch EnvelopeError.noWrappedKeyOnServer {
                         // First device — no server key yet; local key is fine
-                        print("[Envelope] No server key — this device is the first")
+                        Log.debug("[Envelope] No server key — this device is the first")
                     } catch {
-                        print("[Envelope] Onboarding failed: \(error)")
+                        Log.debug("[Envelope] Onboarding failed: \(error)")
                     }
                 }
 

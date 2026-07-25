@@ -34,7 +34,7 @@ enum L {
     static var settingsPrivacyPolicy: String { String(localized: "settings.privacyPolicy") }
     static var settingsSupport: String { String(localized: "settings.support") }
     static var settingsLockNow: String { String(localized: "settings.lockNow") }
-    static var settingsDebug: String { String(localized: "settings.debug") }
+    static var settingsReset: String { String(localized: "settings.reset") }
     static var settingsWipeAllData: String { String(localized: "settings.wipeAllData") }
     static var settingsDone: String { String(localized: "settings.done") }
     static var settingsWipeConfirmTitle: String { String(localized: "settings.wipeConfirmTitle") }

@@ -27,7 +27,7 @@ struct NoteRepository: Sendable {
             }
         }
         if failCount > 0 {
-            print("[NoteRepo] \(failCount)/\(records.count) notes failed to decrypt")
+            Log.debug("[NoteRepo] \(failCount)/\(records.count) notes failed to decrypt")
         }
         return decrypted
     }

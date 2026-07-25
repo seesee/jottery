@@ -65,9 +65,9 @@ enum DemoSeedService {
 
         do {
             try run(config: config, appState: appState)
-            print("[DemoSeed] ✓ Seeded — screen: \(config.screen), theme: \(config.theme)")
+            Log.debug("[DemoSeed] ✓ Seeded — screen: \(config.screen), theme: \(config.theme)")
         } catch {
-            print("[DemoSeed] ✗ FAILED: \(error)")
+            Log.debug("[DemoSeed] ✗ FAILED: \(error)")
         }
     }
 

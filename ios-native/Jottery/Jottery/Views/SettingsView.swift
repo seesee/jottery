@@ -133,8 +133,8 @@ struct SettingsView: View {
                     .foregroundStyle(.red)
                 }
 
-                // Debug
-                Section(L.settingsDebug) {
+                // Reset
+                Section(L.settingsReset) {
                     Button(L.settingsWipeAllData, role: .destructive) {
                         showWipeConfirmation = true
                     }

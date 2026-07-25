@@ -50,7 +50,7 @@ actor SSEClient {
                 if Task.isCancelled { return }
                 reconnectAttempts += 1
                 let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
-                print("[SSE] connection error (attempt \(reconnectAttempts)), retrying in \(delay)s")
+                Log.debug("[SSE] connection error (attempt \(reconnectAttempts)), retrying in \(delay)s")
                 try? await Task.sleep(for: .seconds(delay))
             }
         }

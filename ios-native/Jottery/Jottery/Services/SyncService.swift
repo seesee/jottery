@@ -67,7 +67,7 @@ actor SyncService {
 
     func push() async throws {
         let records = try noteRepo.listNeedingSync()
-        print("[Sync] push: \(records.count) records need syncing")
+        Log.debug("[Sync] push: \(records.count) records need syncing")
         guard !records.isEmpty else { return }
 
         var syncNotes: [SyncNote] = []
@@ -187,15 +187,15 @@ actor SyncService {
             savedSearches: syncSavedSearches.isEmpty ? nil : syncSavedSearches
         )
 
-        print("[Sync] push: sending \(syncNotes.count) notes, \(syncDeletions.count) deletions, \(syncSavedSearches.count) saved searches")
+        Log.debug("[Sync] push: sending \(syncNotes.count) notes, \(syncDeletions.count) deletions, \(syncSavedSearches.count) saved searches")
         let response: SyncPushResponse
         do {
             response = try await syncClient.push(request)
         } catch {
-            print("[Sync] push: HTTP error — \(error)")
+            Log.debug("[Sync] push: HTTP error — \(error)")
             throw error
         }
-        print("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
+        Log.debug("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
         let now = Date().iso8601
 
         // Mark accepted notes as synced and create version snapshots
@@ -207,7 +207,7 @@ actor SyncService {
                     try versionRepo.createVersion(from: record, reason: "sync")
                 }
             } catch {
-                print("[Sync] push: failed to mark accepted note \(accepted.id): \(error)")
+                Log.debug("[Sync] push: failed to mark accepted note \(accepted.id): \(error)")
             }
         }
 
@@ -221,7 +221,7 @@ actor SyncService {
             do {
                 try savedSearchRepo.markSynced(id: record.id, syncedAt: now)
             } catch {
-                print("[Sync] push: failed to mark saved search \(record.id) synced: \(error)")
+                Log.debug("[Sync] push: failed to mark saved search \(record.id) synced: \(error)")
             }
         }
 
@@ -313,7 +313,7 @@ actor SyncService {
                         attachmentMetadata[ref.data] = ref
                     }
                 } catch {
-                    print("[Sync] pull: failed to process note \(syncNote.id): \(error)")
+                    Log.debug("[Sync] pull: failed to process note \(syncNote.id): \(error)")
                     knownIds.append(syncNote.id) // still track as known to avoid re-pull loops
                 }
             }
@@ -331,7 +331,7 @@ actor SyncService {
                         data: blobData
                     )
                 } catch {
-                    print("[Sync] pull: failed to store attachment \(syncAttachment.id): \(error)")
+                    Log.debug("[Sync] pull: failed to store attachment \(syncAttachment.id): \(error)")
                 }
             }
 
@@ -341,7 +341,7 @@ actor SyncService {
                     do {
                         try noteRepo.hardDelete(id: deletion.id)
                     } catch {
-                        print("[Sync] pull: failed to delete note \(deletion.id): \(error)")
+                        Log.debug("[Sync] pull: failed to delete note \(deletion.id): \(error)")
                     }
                 }
             }
@@ -370,7 +370,7 @@ actor SyncService {
                     )
                     try versionRepo.insertOrReplace(versionRecord)
                 } catch {
-                    print("[Sync] pull: failed to store version \(syncVersion.versionKey): \(error)")
+                    Log.debug("[Sync] pull: failed to store version \(syncVersion.versionKey): \(error)")
                 }
             }
 
@@ -393,7 +393,7 @@ actor SyncService {
                         )
                         try savedSearchRepo.insertOrReplace(record: record)
                     } catch {
-                        print("[Sync] pull: failed to store saved search \(remote.id): \(error)")
+                        Log.debug("[Sync] pull: failed to store saved search \(remote.id): \(error)")
                     }
                 }
             }
