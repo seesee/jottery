@@ -65,16 +65,25 @@ TO TEST SYNC
    content.
 6. Tap "Unlock & Sync". Notes will download and appear in the list.
 
-Sync can be removed at any time from Settings → Sync → "Disconnect", which
-deletes the stored credentials from the device.
+DISCONNECTING AND ACCOUNT DELETION
+
+Settings → Sync → "Disconnect" unlinks this device from the server — it revokes
+the device's credential server-side and then clears it locally, so the device no
+longer appears as active on the account.
+
+Settings → Sync → "Delete Account on Server" deletes the account itself. It asks
+for the account email and password, because deleting an account is irreversible
+and should not be possible from a device credential alone. Two options are
+offered: deactivate (account disabled, re-registration needs administrator
+approval) or delete permanently. Notes already on the device are kept — removing
+those is Settings → Reset → "Wipe All Data".
 
 ENCRYPTION
 
 All note content, tags and attachments are encrypted on the device before being
-sent anywhere. The server stores ciphertext only. The app uses standard
-platform cryptography (Apple CryptoKit, AES-256-GCM, PBKDF2), so
-ITSAppUsesNonExemptEncryption is set to false under the standard-algorithm
-exemption.
+sent anywhere. The server stores ciphertext only, and cannot decrypt it. The app
+uses Apple's own cryptography APIs — CryptoKit and CommonCrypto — with
+AES-256-GCM and PBKDF2-HMAC-SHA256. No cryptography is implemented from scratch.
 
 PRIVACY
 
@@ -102,7 +111,7 @@ audit (epic `jottery-hp3d`):
 | --- | --- | --- |
 | No account required | 2.1 | Reviewer cannot get past a login wall and marks the app incomplete. |
 | Sync is optional / self-hosted | 2.1 | Reviewer has no server, concludes the headline feature is broken. |
-| App does not create accounts | 5.1.1(v) | Reviewer sees an email/password form and asks where account deletion is. |
+| Disconnect / account deletion | 5.1.1(v) | Reviewer sees an email/password form and asks where account deletion is. |
 | Encryption | 2.1 / export | Explains the `ITSAppUsesNonExemptEncryption=false` declaration. |
 | Privacy | 5.1.1, 5.1.2 | Matches the privacy manifest and the App Privacy answers. |
 | Permissions | 2.3, 5.1.1 | Pre-empts "why does a notepad want my local network?" |
@@ -123,12 +132,47 @@ audit (epic `jottery-hp3d`):
 - [ ] Keep the account alive for the life of the submission, including any
       re-review after an update.
 
-## Known gap
+## Pre-submission blockers
 
-`jottery-hp3d.6` is still open: Settings → Sync → "Disconnect" removes the
-credentials from the device but leaves the device registered on the server. The
-notes above are worded accurately for current behaviour ("deletes the stored
-credentials from the device") and do not claim server-side removal. If a
-reviewer probes account deletion under 5.1.1(v), the defensible position is that
-the app never creates an account — but closing that issue first would be
-stronger.
+Two things must be true before this text is accurate:
+
+1. **`https://jottery.org/privacy` must serve the actual policy.** As of the last
+   check it returned the web app shell (4.8 MB, `<title>Jottery</title>`, no
+   occurrence of "Privacy Policy") — `dist/privacy.html` is not deployed, and
+   `/privacy.html` returns the SPA too, so this needs a rebuild and redeploy of
+   the web assets rather than just a Caddy reload. Verify by content, not status
+   code:
+
+   ```
+   curl -s https://jottery.org/privacy | grep -c "Privacy Policy"   # must be > 0
+   ```
+
+   The in-app Settings → About → Privacy Policy link points here, so a reviewer
+   following it currently lands on the web app. This is the single most likely
+   cause of a rejection under 5.1.1(i).
+
+2. **The server must be running a build that includes `DELETE /api/v1/sync/device`
+   and the account-deletion flow.** Older builds return 404/405; the app handles
+   that gracefully and tells the user the device is still registered, but the
+   review notes above would then overstate what happens.
+
+## Export compliance — decide before uploading
+
+`Info.plist` sets `ITSAppUsesNonExemptEncryption = false`. Confirm which
+exemption that rests on before the first upload; an incorrect declaration is
+caught at upload rather than in review.
+
+The case for exemption: every cryptographic primitive comes from Apple —
+CryptoKit and CommonCrypto — and nothing is implemented from scratch. Apple's
+questionnaire treats use of the platform's own cryptography for an app's own
+data as exempt.
+
+The case against: the app does not merely rely on OS-level encryption such as
+HTTPS or Data Protection; it composes those primitives into its own envelope
+encryption scheme protecting user content. That is further than the narrowest
+reading of "encryption limited to the operating system".
+
+Walk Apple's "Complying with Encryption Export Regulations" questionnaire and
+record the answer here. If it comes out non-exempt, the fallback is mass-market
+self-classification — a one-off ERN plus an annual report — not a blocker, but
+it needs doing before submission rather than after a rejected upload.

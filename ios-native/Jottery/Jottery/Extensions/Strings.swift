@@ -51,6 +51,21 @@ enum L {
     static var syncSetupErrorNeedsEndpoint: String { String(localized: "syncSetupError.needsEndpoint") }
     static var syncSetupErrorWrongPassword: String { String(localized: "syncSetupError.wrongPassword") }
 
+    // MARK: - Delete Account
+
+    static var deleteAccountTitle: String { String(localized: "deleteAccount.title") }
+    static var deleteAccountExplanation: String { String(localized: "deleteAccount.explanation") }
+    static var deleteAccountCredentials: String { String(localized: "deleteAccount.credentials") }
+    static var deleteAccountMode: String { String(localized: "deleteAccount.mode") }
+    static var deleteAccountModeDeactivate: String { String(localized: "deleteAccount.modeDeactivate") }
+    static var deleteAccountModeDelete: String { String(localized: "deleteAccount.modeDelete") }
+    static var deleteAccountDeactivateHint: String { String(localized: "deleteAccount.deactivateHint") }
+    static var deleteAccountDeleteHint: String { String(localized: "deleteAccount.deleteHint") }
+    static var deleteAccountAction: String { String(localized: "deleteAccount.action") }
+    static var deleteAccountConfirmTitle: String { String(localized: "deleteAccount.confirmTitle") }
+    static var deleteAccountWrongCredentials: String { String(localized: "deleteAccount.wrongCredentials") }
+    static var deleteAccountNoServer: String { String(localized: "deleteAccount.noServer") }
+
     // MARK: - Common
 
     static var commonCancel: String { String(localized: "common.cancel") }
