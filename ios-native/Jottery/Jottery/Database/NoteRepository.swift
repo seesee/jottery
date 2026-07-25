@@ -403,9 +403,7 @@ struct NoteRepository: Sendable {
     /// This is needed for content hash computation to match the web client.
     private func encryptTagsToSyncFormat(_ tags: [String], key: SymmetricKey) throws -> [String] {
         try tags.map { tag in
-            let tagJSON = String(data: try JSONEncoder().encode(tag), encoding: .utf8)!
-            let encrypted = try CryptoService.encryptText(tagJSON, key: key)
-            return try CryptoService.serializeEncryptedJSON(encrypted)
+            try CryptoService.encryptTagForSync(tag, key: key)
         }
     }
 

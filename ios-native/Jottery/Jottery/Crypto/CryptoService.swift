@@ -258,6 +258,19 @@ enum CryptoService {
         }
         return json
     }
+
+    /// Encrypt a single tag into the sync wire format.
+    ///
+    /// The tag is JSON-encoded first (which wraps it in quotes) so the result
+    /// matches what the web client produces, then encrypted and serialised.
+    static func encryptTagForSync(_ tag: String, key: SymmetricKey) throws -> String {
+        let encoded = try JSONEncoder().encode(tag)
+        guard let tagJSON = String(data: encoded, encoding: .utf8) else {
+            throw CryptoError.encodingFailed
+        }
+        let encrypted = try encryptText(tagJSON, key: key)
+        return try serializeEncryptedJSON(encrypted)
+    }
 }
 
 // MARK: - Supporting Types

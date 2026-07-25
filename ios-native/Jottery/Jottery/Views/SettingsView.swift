@@ -46,10 +46,13 @@ struct SettingsView: View {
                         Text(L.settingsAutoLockNever).tag(0)
                     }
 
+                    // Only en-GB is translated. Offering en-US changed date and
+                    // number formatting but left the copy in British English,
+                    // which reads as a bug; "System" already covers users who
+                    // want their own regional formats.
                     Picker(L.settingsLanguage, selection: $settings.language) {
                         Text(L.settingsLanguageSystem).tag("system")
                         Text(L.settingsLanguageEnGB).tag("en-GB")
-                        Text(L.settingsLanguageEnUS).tag("en-US")
                     }
                 }
 

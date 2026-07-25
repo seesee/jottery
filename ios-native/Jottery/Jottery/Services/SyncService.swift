@@ -711,10 +711,7 @@ actor SyncService {
             let encBlob = try CryptoService.parseEncryptedJSON(storageTags)
             let plainTags: [String] = try CryptoService.decryptStringArray(encBlob, key: key)
             return try plainTags.map { tag in
-                // JSON-encode the tag string (wraps in quotes), then encrypt
-                let tagJSON = String(data: try JSONEncoder().encode(tag), encoding: .utf8)!
-                let encrypted = try CryptoService.encryptText(tagJSON, key: key)
-                return try CryptoService.serializeEncryptedJSON(encrypted)
+                try CryptoService.encryptTagForSync(tag, key: key)
             }
         } catch {
             // Fallback: wrap as single element (will trigger legacy conversion on web)

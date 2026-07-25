@@ -27,7 +27,6 @@ enum L {
     static var settingsLanguage: String { String(localized: "settings.language") }
     static var settingsLanguageSystem: String { String(localized: "settings.languageSystem") }
     static var settingsLanguageEnGB: String { String(localized: "settings.languageEnGB") }
-    static var settingsLanguageEnUS: String { String(localized: "settings.languageEnUS") }
     static var settingsAbout: String { String(localized: "settings.about") }
     static var settingsNotes: String { String(localized: "settings.notes") }
     static var settingsVersion: String { String(localized: "settings.version") }
@@ -48,6 +47,9 @@ enum L {
     static var settingsSyncSetUp: String { String(localized: "settings.syncSetUp") }
     static var syncDisconnectServerTooOld: String { String(localized: "syncDisconnect.serverTooOld") }
     static var syncDisconnectStillRegistered: String { String(localized: "syncDisconnect.stillRegistered") }
+    static var syncSetupErrorInvalidCredentials: String { String(localized: "syncSetupError.invalidCredentials") }
+    static var syncSetupErrorNeedsEndpoint: String { String(localized: "syncSetupError.needsEndpoint") }
+    static var syncSetupErrorWrongPassword: String { String(localized: "syncSetupError.wrongPassword") }
 
     // MARK: - Common
 
