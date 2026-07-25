@@ -145,9 +145,7 @@ enum ImportService {
 
                 // Compute content hash
                 let syncTags = try exportNote.tags.map { tag -> String in
-                    let tagJSON = String(data: try JSONEncoder().encode(tag), encoding: .utf8)!
-                    let encrypted = try CryptoService.encryptText(tagJSON, key: key)
-                    return try CryptoService.serializeEncryptedJSON(encrypted)
+                    try CryptoService.encryptTagForSync(tag, key: key)
                 }
                 let contentHash = HashChainService.computeContentHash(
                     encryptedContent: contentJSON,

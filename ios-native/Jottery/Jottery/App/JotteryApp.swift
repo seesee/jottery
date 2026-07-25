@@ -29,6 +29,8 @@ struct JotteryApp: App {
 
     private var resolvedLocale: Locale {
         switch appState.settings.language {
+        // "en-US" is no longer offered in Settings, but keep resolving it so
+        // anyone who selected it before the option was removed is unaffected.
         case "en-US": return Locale(identifier: "en_US")
         case "en-GB": return Locale(identifier: "en_GB")
         default: return .current  // "system"

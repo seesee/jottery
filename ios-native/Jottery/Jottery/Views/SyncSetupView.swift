@@ -298,9 +298,9 @@ enum SyncSetupError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidCredentials: return "Invalid credentials data"
-        case .needsEndpoint: return "Server URL is required when importing a raw API key"
-        case .wrongPassword: return "Incorrect password — could not decrypt credentials"
+        case .invalidCredentials: return L.syncSetupErrorInvalidCredentials
+        case .needsEndpoint: return L.syncSetupErrorNeedsEndpoint
+        case .wrongPassword: return L.syncSetupErrorWrongPassword
         }
     }
 }
