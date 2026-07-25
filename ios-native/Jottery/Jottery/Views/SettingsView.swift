@@ -12,6 +12,12 @@ struct SettingsView: View {
     @State private var showForceSyncConfirmation = false
     @State private var exportFile: ExportFile?
 
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        return build.map { "\(version) (\($0))" } ?? version
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -103,8 +109,16 @@ struct SettingsView: View {
                     HStack {
                         Text(L.settingsVersion)
                         Spacer()
-                        Text("1.0.0")
+                        Text(appVersion)
                             .foregroundStyle(.secondary)
+                    }
+
+                    Link(destination: URL(string: "https://jottery.org/privacy")!) {
+                        Label(L.settingsPrivacyPolicy, systemImage: "hand.raised")
+                    }
+
+                    Link(destination: URL(string: "https://github.com/seesee/jottery/issues")!) {
+                        Label(L.settingsSupport, systemImage: "questionmark.circle")
                     }
                 }
 

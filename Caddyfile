@@ -7,6 +7,9 @@
 	reverse_proxy /admin* localhost:3030
 	reverse_proxy /user* localhost:3030
 
+	# Clean URL for the privacy policy (also linked from the iOS app)
+	rewrite /privacy /privacy.html
+
 	# SPA fallback for web UI
 	@notStatic {
 		not path /api*
