@@ -518,3 +518,38 @@ git commit -m "i18n: translate VersionHistoryModal component"
 - Manual trigger available via GitHub Actions UI
 
 **Remember: Commits are cheap. Lost work is expensive. When in doubt, commit.**
+
+### Beads: newly created issues are silently deleted unless you act
+
+**After creating any issue with `bd create`, get it onto `main`'s manifest in the
+same session — otherwise the next `bd sync` deletes it.**
+
+`.beads/config.yaml` sets `sync-branch: beads-sync`, so `bd sync` commits
+`.beads/issues.jsonl` to that branch. But `.beads/issues.jsonl` is *also* tracked
+on `main`, and bd's `git-history-backfill` prunes any issue in the database that
+has no history in the **checked-out branch's** manifest, writing a tombstone to
+`.beads/deletions.jsonl`. An issue created on `main` and synced only to
+`beads-sync` therefore vanishes on the next sync — and a later `bd import`
+silently skips it as "in deletions manifest".
+
+This bit five times in one session (2026-07-25) before the cause was found; the
+issue documenting it was itself deleted twice. `beads-sync` had accumulated 112
+commits since February without ever being merged back.
+
+Either of these prevents it:
+
+```bash
+bd sync --merge                      # merge beads-sync back into main, or
+git add .beads/issues.jsonl && git commit   # commit the manifest yourself
+```
+
+To recover a tombstoned issue: delete its line from `.beads/deletions.jsonl`,
+then `git show beads-sync:.beads/issues.jsonl | bd import`, then commit the
+manifest to `main` so it stays.
+
+**Do not "fix" this by setting `sync-branch: main`.** `bd sync` commits through a
+temporary git worktree, and git refuses to check out a branch already checked out
+elsewhere, so sync fails outright while you are on main:
+`fatal: 'main' is already used by worktree`. Note also that `bd sync` rewrites
+`.beads/config.yaml` and strips comments from it, so notes like this one belong
+here rather than in that file. Tracked in `jottery-anyy`.
