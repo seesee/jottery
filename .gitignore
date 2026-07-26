@@ -11,8 +11,10 @@ node_modules
 dist
 !webview-bundles/dist
 dist-ssr
+# Retired Electron build output. The tooling is gone, but ~900 MB of artifacts
+# from v0.9.27 may still be sitting in a working copy — keep this ignored so
+# `git add -A` cannot sweep them into a commit and blow GitHub's 100 MB limit.
 dist-electron
-electron/dist
 *.local
 
 # Test results

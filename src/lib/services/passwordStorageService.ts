@@ -1,66 +1,25 @@
-import { isElectron } from '../utils/device';
-
 /**
- * Password storage service for "Remember Password" feature
+ * Password storage service for the "Remember Password" feature.
  *
- * Storage backends:
- * - Electron: OS keychain (secure) via keytar
- * - Web: localStorage with base64 encoding (INSECURE, user warned)
+ * Storage backend: localStorage with base64 encoding. This is obfuscation, not
+ * encryption — anything with access to the origin's storage can recover the
+ * password, and the UI warns about that where the feature is offered.
+ *
+ * There was previously an OS-keychain path used when running inside the Electron
+ * desktop build. That build has been retired, so the keychain branch was
+ * unreachable and has been removed rather than left as dead code.
  */
 
 const STORAGE_KEY = 'jottery_stored_password';
-const KEYCHAIN_SERVICE = 'io.jottery.app';
-const KEYCHAIN_ACCOUNT = 'master-password';
-
-// Track if keychain is available (cached after first check)
-let keychainAvailable: boolean | null = null;
 
 /**
- * Check if secure keychain storage is available (Electron with keytar)
- */
-async function isKeychainAvailable(): Promise<boolean> {
-  if (keychainAvailable !== null) {
-    return keychainAvailable;
-  }
-
-  if (!isElectron() || !window.electronAPI?.password) {
-    keychainAvailable = false;
-    return false;
-  }
-
-  try {
-    keychainAvailable = await window.electronAPI.password.isAvailable();
-    return keychainAvailable;
-  } catch {
-    keychainAvailable = false;
-    return false;
-  }
-}
-
-/**
- * Store password securely
- * - Electron: Uses OS keychain (macOS Keychain, Windows Credential Vault, Linux libsecret)
- * - Web: Uses localStorage with base64 encoding (user is warned about insecurity)
+ * Store the password.
+ *
+ * @throws if localStorage is unavailable or full.
  */
 export async function storePassword(password: string): Promise<void> {
-  const useKeychain = await isKeychainAvailable();
-
-  if (useKeychain && window.electronAPI?.password) {
-    try {
-      await window.electronAPI.password.set(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT, password);
-      // Clear any legacy localStorage entry
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    } catch (error) {
-      console.error('Failed to store password in keychain:', error);
-      throw new Error('Failed to store password securely');
-    }
-  }
-
-  // Fallback to localStorage (web)
   try {
-    const encoded = btoa(password);
-    localStorage.setItem(STORAGE_KEY, encoded);
+    localStorage.setItem(STORAGE_KEY, btoa(password));
   } catch (error) {
     console.error('Failed to store password:', error);
     throw new Error('Failed to store password in localStorage');
@@ -68,21 +27,12 @@ export async function storePassword(password: string): Promise<void> {
 }
 
 /**
- * Retrieve stored password
+ * Retrieve the stored password, or null if none is stored.
+ *
+ * A value that fails to decode is treated as corrupt and cleared, so a bad entry
+ * cannot wedge the unlock screen on every load.
  */
 export async function getStoredPassword(): Promise<string | null> {
-  const useKeychain = await isKeychainAvailable();
-
-  if (useKeychain && window.electronAPI?.password) {
-    try {
-      return await window.electronAPI.password.get(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT);
-    } catch (error) {
-      console.error('Failed to retrieve password from keychain:', error);
-      return null;
-    }
-  }
-
-  // Fallback to localStorage (web)
   try {
     const encoded = localStorage.getItem(STORAGE_KEY);
     if (!encoded) return null;
@@ -101,20 +51,9 @@ export async function getStoredPassword(): Promise<string | null> {
 }
 
 /**
- * Remove stored password
+ * Remove the stored password.
  */
 export async function clearStoredPassword(): Promise<void> {
-  const useKeychain = await isKeychainAvailable();
-
-  if (useKeychain && window.electronAPI?.password) {
-    try {
-      await window.electronAPI.password.delete(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT);
-    } catch (error) {
-      console.error('Failed to clear password from keychain:', error);
-    }
-  }
-
-  // Always clear localStorage as well (migration cleanup)
   clearStoredPasswordSync();
 }
 
@@ -130,18 +69,11 @@ function clearStoredPasswordSync(): void {
 }
 
 /**
- * Check if password is currently stored
+ * Check if a password is currently stored
  */
 export async function hasStoredPassword(): Promise<boolean> {
   const password = await getStoredPassword();
   return password !== null;
-}
-
-/**
- * Check if storage is using secure keychain
- */
-export async function isUsingSecureStorage(): Promise<boolean> {
-  return await isKeychainAvailable();
 }
 
 /**
@@ -152,5 +84,4 @@ export const passwordStorageService = {
   get: getStoredPassword,
   clear: clearStoredPassword,
   hasStored: hasStoredPassword,
-  isSecure: isUsingSecureStorage,
 };

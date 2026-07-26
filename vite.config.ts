@@ -33,7 +33,7 @@ function generateVersionFile() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Use relative paths for compatibility with both web server and Electron (file:// protocol)
+  // Use relative paths so the build also works when served from a subpath or file:// URL
   base: './',
   define: {
     '__APP_VERSION__': JSON.stringify(version),
