@@ -3,19 +3,6 @@
  */
 
 /**
- * Check if running inside Electron desktop app
- * @returns true if running in Electron
- */
-export function isElectron(): boolean {
-  if (typeof window === 'undefined') return false;
-  return (
-    typeof window.electronAPI !== 'undefined' ||
-    (typeof navigator !== 'undefined' &&
-      navigator.userAgent.toLowerCase().includes('electron'))
-  );
-}
-
-/**
  * Check if the current device is a mobile device based on screen width
  * @returns true if viewport width is 768px or less
  */
