@@ -1379,5 +1379,30 @@
     "clearRecent": "Rimuovi",
     "tryThese": "Prova Questi",
     "clearAll": "Cancella tutto"
+  },
+  "vaultHealth": {
+    "title": "Stato della cassaforte",
+    "description": "Rileva note che non possono essere decifrate e allegati mancanti su questo dispositivo.",
+    "healthy": "Nessun problema trovato.",
+    "loadToast": "{count} nota/e non decifrabili — controlla Impostazioni → Avanzate",
+    "undecryptableTitle": "Note non decifrabili",
+    "undecryptableHint": "Queste note non possono essere lette con la password attuale. Di solito sono state create con un'altra password. L'eliminazione è permanente e le rimuove dal server di sincronizzazione e da tutti i dispositivi.",
+    "createdAt": "Creata",
+    "modifiedAt": "Modificata",
+    "size": "Dimensione",
+    "errorLabel": "Errore",
+    "delete": "Elimina definitivamente",
+    "deleteConfirmTitle": "Eliminare la nota non decifrabile?",
+    "deleteConfirmMessage": "Questa nota non può essere decifrata e il suo contenuto non può essere recuperato. L'eliminazione la rimuove da questo dispositivo, dal server di sincronizzazione e da tutti gli altri dispositivi. L'operazione è irreversibile.",
+    "deleteFailed": "Eliminazione della nota non riuscita",
+    "missingTitle": "Allegati mancanti",
+    "missingHint": "Questi allegati sono referenziati dalle note ma non sono presenti su questo dispositivo.",
+    "noteLabel": "Nota",
+    "unknownNote": "(nota non decifrabile)",
+    "repair": "Recupera dal server",
+    "repairSuccess": "Allegato ripristinato",
+    "repairFailed": "Recupero non riuscito — verifica la connessione e la versione del server",
+    "rescan": "Nuova scansione",
+    "scanning": "Scansione in corso…"
   }
 }

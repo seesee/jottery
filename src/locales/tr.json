@@ -1379,5 +1379,30 @@
     "clearRecent": "Kaldır",
     "tryThese": "Bunları Deneyin",
     "clearAll": "Tümünü temizle"
+  },
+  "vaultHealth": {
+    "title": "Kasa Durumu",
+    "description": "Şifresi çözülemeyen notları ve bu cihazda eksik olan ekleri tespit eder.",
+    "healthy": "Sorun bulunamadı.",
+    "loadToast": "{count} notun şifresi çözülemedi — Ayarlar → Gelişmiş bölümüne bakın",
+    "undecryptableTitle": "Şifresi çözülemeyen notlar",
+    "undecryptableHint": "Bu notlar mevcut parolanızla okunamıyor. Genellikle farklı bir parolayla oluşturulmuşlardır. Silme kalıcıdır ve notları senkronizasyon sunucusundan ve tüm cihazlardan kaldırır.",
+    "createdAt": "Oluşturulma",
+    "modifiedAt": "Değiştirilme",
+    "size": "Boyut",
+    "errorLabel": "Hata",
+    "delete": "Kalıcı olarak sil",
+    "deleteConfirmTitle": "Şifresi çözülemeyen not silinsin mi?",
+    "deleteConfirmMessage": "Bu notun şifresi çözülemiyor ve içeriği kurtarılamıyor. Silme işlemi notu bu cihazdan, senkronizasyon sunucusundan ve diğer tüm cihazlarınızdan kaldırır. Bu işlem geri alınamaz.",
+    "deleteFailed": "Not silinemedi",
+    "missingTitle": "Eksik ekler",
+    "missingHint": "Bu ekler notlar tarafından referans alınıyor ancak bu cihazda kayıtlı değil.",
+    "noteLabel": "Not",
+    "unknownNote": "(notun şifresi çözülemiyor)",
+    "repair": "Sunucudan kurtar",
+    "repairSuccess": "Ek geri yüklendi",
+    "repairFailed": "Kurtarma başarısız — bağlantıyı ve sunucu sürümünü kontrol edin",
+    "rescan": "Yeniden tara",
+    "scanning": "Taranıyor…"
   }
 }

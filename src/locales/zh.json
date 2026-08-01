@@ -1379,5 +1379,30 @@
     "clearRecent": "移除",
     "tryThese": "试试这些",
     "clearAll": "清除全部"
+  },
+  "vaultHealth": {
+    "title": "保险库状态",
+    "description": "检测无法解密的笔记以及本设备上缺失的附件。",
+    "healthy": "未发现问题。",
+    "loadToast": "{count} 条笔记无法解密 — 请前往 设置 → 高级 查看",
+    "undecryptableTitle": "无法解密的笔记",
+    "undecryptableHint": "这些笔记无法用当前密码读取，通常是用其他密码创建的。删除操作不可恢复，并会从同步服务器和所有设备中移除。",
+    "createdAt": "创建时间",
+    "modifiedAt": "修改时间",
+    "size": "大小",
+    "errorLabel": "错误",
+    "delete": "永久删除",
+    "deleteConfirmTitle": "删除无法解密的笔记？",
+    "deleteConfirmMessage": "此笔记无法解密，内容无法恢复。删除后将从本设备、同步服务器及所有其他设备中移除。此操作无法撤销。",
+    "deleteFailed": "删除笔记失败",
+    "missingTitle": "缺失的附件",
+    "missingHint": "这些附件被笔记引用，但未存储在本设备上。",
+    "noteLabel": "笔记",
+    "unknownNote": "（笔记无法解密）",
+    "repair": "从服务器恢复",
+    "repairSuccess": "附件已恢复",
+    "repairFailed": "恢复失败 — 请检查同步连接和服务器版本",
+    "rescan": "重新扫描",
+    "scanning": "扫描中…"
   }
 }

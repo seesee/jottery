@@ -1379,5 +1379,30 @@
     "clearRecent": "Remover",
     "tryThese": "Experimente Estes",
     "clearAll": "Limpar tudo"
+  },
+  "vaultHealth": {
+    "title": "Estado do cofre",
+    "description": "Detecta notas que não podem ser descriptografadas e anexos ausentes neste dispositivo.",
+    "healthy": "Nenhum problema encontrado.",
+    "loadToast": "{count} nota(s) não puderam ser descriptografadas — veja Configurações → Avançado",
+    "undecryptableTitle": "Notas indescriptografáveis",
+    "undecryptableHint": "Estas notas não podem ser lidas com a sua senha atual. Normalmente foram criadas com outra senha. A exclusão é permanente e as remove do servidor de sincronização e de todos os dispositivos.",
+    "createdAt": "Criada",
+    "modifiedAt": "Modificada",
+    "size": "Tamanho",
+    "errorLabel": "Erro",
+    "delete": "Excluir permanentemente",
+    "deleteConfirmTitle": "Excluir nota indescriptografável?",
+    "deleteConfirmMessage": "Esta nota não pode ser descriptografada e o seu conteúdo não pode ser recuperado. A exclusão a remove deste dispositivo, do servidor de sincronização e de todos os seus outros dispositivos. Isto não pode ser desfeito.",
+    "deleteFailed": "Falha ao excluir a nota",
+    "missingTitle": "Anexos ausentes",
+    "missingHint": "Estes anexos são referenciados por notas, mas não estão armazenados neste dispositivo.",
+    "noteLabel": "Nota",
+    "unknownNote": "(nota não pode ser descriptografada)",
+    "repair": "Recuperar do servidor",
+    "repairSuccess": "Anexo restaurado",
+    "repairFailed": "Falha na recuperação — verifique a conexão e a versão do servidor",
+    "rescan": "Verificar novamente",
+    "scanning": "Verificando…"
   }
 }
