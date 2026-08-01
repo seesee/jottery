@@ -30,6 +30,7 @@
   let initialized = false;
   let loadingNotes = false;
   let loadingProgress = { current: 0, total: 0 };
+  let loadGeneration = 0; // Invalidates background batches from a superseded loadNotes run
   let keyManagerLockUnsubscribe: (() => void) | null = null;
   let showSettings = false;
   let showRecycleBin = false;
@@ -444,23 +445,42 @@
 
   async function loadNotes() {
     if (loadingNotes) return; // Prevent concurrent calls (multiple reactives can trigger this)
+    const generation = ++loadGeneration;
+    const startTime = performance.now();
+    const logPhase = (name: string, detail = '') =>
+      console.log(`[App] loadNotes: ${name} at ${Math.round(performance.now() - startTime)}ms${detail}`);
     try {
       loadingNotes = true;
 
-      // Accumulate all batches before updating UI
-      const allBatches: DecryptedNote[] = [];
       const loadedNoteIds = new Set<string>();
 
       // Get total count for progress reporting
       const totalCount = await noteService.getStats().then(s => s.active);
       loadingProgress = { current: 0, total: totalCount };
+      logPhase('counted active notes', ` (${totalCount})`);
 
-      // Load all notes in batches, accumulating them
+      // Reliable completion signal from the service — never inferred from note
+      // counts, because undecryptable notes are skipped and counts would never match
+      const finishLoading = () => {
+        if (generation !== loadGeneration || $isLocked) return;
+        logPhase('background decryption complete', ` (${loadedNoteIds.size}/${totalCount} notes loaded)`);
+        loadingProgress = { current: 0, total: 0 };
+
+        // Create welcome note for new vaults (skip in test and demo environments).
+        // Check both loaded count AND repository count to avoid injecting the welcome
+        // note when notes exist but decryption partially failed
+        const skipWelcome = window.location.pathname.startsWith('/test') || new URLSearchParams(window.location.search).has('nowelcome');
+        if (loadedNoteIds.size === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !$settings.syncEnabled && !skipWelcome) {
+          createWelcomeNote().catch(error => console.error('Failed to create welcome note:', error));
+        }
+      };
+
+      // Load first batch, then stream the remaining batches straight into the UI
       const firstBatch = await noteService.getAllNotesBatched(
         $settings.sortOrder,
-        200, // First 200 notes
+        200, // First 200 notes render immediately
         (moreBatch) => {
-          // Callback for subsequent batches - just accumulate, don't update UI
+          if (generation !== loadGeneration || $isLocked) return; // Stale run or app locked
           const newNotes = moreBatch.filter(note => {
             if (loadedNoteIds.has(note.id)) {
               return false;
@@ -468,46 +488,29 @@
             loadedNoteIds.add(note.id);
             return true;
           });
+          if (newNotes.length === 0) return;
 
-          allBatches.push(...newNotes);
-          loadingProgress = { current: firstBatch.length + allBatches.length, total: totalCount };
-        }
+          // Index incrementally before appending so the reactive search sees the
+          // new notes. Must NOT use indexNotes() here: it reconciles against the
+          // full array and would remove previously indexed batches
+          newNotes.forEach(note => searchService.updateNote(note));
+          notes.update(current => [...current, ...newNotes]);
+          loadingProgress = { current: loadedNoteIds.size, total: totalCount };
+        },
+        finishLoading
       );
 
-      // Track first batch IDs
       firstBatch.forEach(note => loadedNoteIds.add(note.id));
-      loadingProgress = { current: firstBatch.length, total: totalCount };
+      loadingProgress = { current: loadedNoteIds.size, total: totalCount };
+      searchService.indexNotes(firstBatch);
+      logPhase('first batch decrypted and indexed', ` (${firstBatch.length} notes)`);
 
-      // Wait for all batches to complete by checking if we have all notes
-      // Poll every 50ms until we have all notes or timeout after 10s
-      const pollInterval = 50;
-      const maxWait = 10000;
-      let waited = 0;
-
-      while (firstBatch.length + allBatches.length < totalCount && waited < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-        waited += pollInterval;
-      }
-
-      // Combine all batches
-      const allNotes = [...firstBatch, ...allBatches];
-
-      // Now set notes once and index once
-      notes.set(allNotes);
-      searchService.indexNotes(allNotes);
-      await performSearch();
-
-      // Clear loading state
+      // Render the first batch immediately; clearing loadingNotes first lets the
+      // reactive search block populate filteredNotes as notes arrive
       loadingNotes = false;
-      loadingProgress = { current: 0, total: 0 };
-
-      // Create welcome note for new vaults (skip in test and demo environments)
-      // Check both in-memory array AND repository count to avoid injecting welcome note
-      // when notes exist but decryption partially failed or loading was incomplete
-      const skipWelcome = window.location.pathname.startsWith('/test') || new URLSearchParams(window.location.search).has('nowelcome');
-      if (allNotes.length === 0 && totalCount === 0 && !$settings.welcomeNoteCreated && !$settings.syncEnabled && !skipWelcome) {
-        await createWelcomeNote();
-      }
+      notes.set(firstBatch);
+      await performSearch();
+      logPhase('first batch rendered');
     } catch (error) {
       console.error('Failed to load notes:', error);
       loadingNotes = false;
