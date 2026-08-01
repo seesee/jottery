@@ -1389,6 +1389,9 @@
     "repairSuccess": "Attachment restored",
     "repairFailed": "Repair failed — check sync connection and server version",
     "rescan": "Rescan",
-    "scanning": "Scanning…"
+    "scanning": "Scanning…",
+    "loadToastAction": "Review in Vault Health",
+    "openNote": "Open this note",
+    "repairNotOnServer": "Not on the server either — open the note and remove the attachment"
   }
 }

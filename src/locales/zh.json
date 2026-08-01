@@ -1403,6 +1403,9 @@
     "repairSuccess": "附件已恢复",
     "repairFailed": "恢复失败 — 请检查同步连接和服务器版本",
     "rescan": "重新扫描",
-    "scanning": "扫描中…"
+    "scanning": "扫描中…",
+    "loadToastAction": "在保险库状态中查看",
+    "openNote": "打开此笔记",
+    "repairNotOnServer": "服务器上也不存在 — 请打开笔记并移除该附件"
   }
 }

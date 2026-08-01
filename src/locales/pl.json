@@ -1403,6 +1403,9 @@
     "repairSuccess": "Załącznik przywrócony",
     "repairFailed": "Przywracanie nie powiodło się — sprawdź połączenie i wersję serwera",
     "rescan": "Skanuj ponownie",
-    "scanning": "Skanowanie…"
+    "scanning": "Skanowanie…",
+    "loadToastAction": "Sprawdź w Stanie sejfu",
+    "openNote": "Otwórz tę notatkę",
+    "repairNotOnServer": "Brak także na serwerze — otwórz notatkę i usuń załącznik"
   }
 }

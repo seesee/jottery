@@ -1403,6 +1403,9 @@
     "repairSuccess": "添付ファイルを復元しました",
     "repairFailed": "復元に失敗しました — 同期接続とサーバーのバージョンを確認してください",
     "rescan": "再スキャン",
-    "scanning": "スキャン中…"
+    "scanning": "スキャン中…",
+    "loadToastAction": "保管庫の状態で確認",
+    "openNote": "このノートを開く",
+    "repairNotOnServer": "サーバーにも存在しません — ノートを開いて添付ファイルを削除してください"
   }
 }

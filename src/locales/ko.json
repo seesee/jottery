@@ -1403,6 +1403,9 @@
     "repairSuccess": "첨부 파일 복원됨",
     "repairFailed": "복구 실패 — 동기화 연결과 서버 버전을 확인하세요",
     "rescan": "다시 검사",
-    "scanning": "검사 중…"
+    "scanning": "검사 중…",
+    "loadToastAction": "보관함 상태에서 확인",
+    "openNote": "이 노트 열기",
+    "repairNotOnServer": "서버에도 없습니다 — 노트를 열어 첨부 파일을 제거하세요"
   }
 }

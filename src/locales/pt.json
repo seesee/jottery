@@ -1403,6 +1403,9 @@
     "repairSuccess": "Anexo restaurado",
     "repairFailed": "Falha na recuperação — verifique a conexão e a versão do servidor",
     "rescan": "Verificar novamente",
-    "scanning": "Verificando…"
+    "scanning": "Verificando…",
+    "loadToastAction": "Verificar no Estado do cofre",
+    "openNote": "Abrir esta nota",
+    "repairNotOnServer": "Também não está no servidor — abra a nota e remova o anexo"
   }
 }

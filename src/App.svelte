@@ -36,6 +36,7 @@
   let loadGeneration = 0; // Invalidates background batches from a superseded loadNotes run
   let keyManagerLockUnsubscribe: (() => void) | null = null;
   let showSettings = false;
+  let settingsInitialTab: 'general' | 'advanced' | null = null;
   let showRecycleBin = false;
   let showInboxPanel = false;
   let showShortcutsHelp = false;
@@ -151,6 +152,17 @@
 
   function handleOpenSettings() {
     showSettings = true;
+  }
+
+  function handleOpenVaultHealth() {
+    settingsInitialTab = 'advanced';
+    showSettings = true;
+  }
+
+  function handleOpenNoteFromSettings(noteId: string) {
+    showSettings = false;
+    selectNote(noteId);
+    mobileView = 'editor';
   }
 
   function handleOpenRecycleBin() {
@@ -473,7 +485,10 @@
 
         const failedCount = get(undecryptableNotes).length;
         if (failedCount > 0) {
-          toast.info($_('vaultHealth.loadToast', { values: { count: failedCount } }));
+          toast.info(
+            $_('vaultHealth.loadToast', { values: { count: failedCount } }),
+            { label: $_('vaultHealth.loadToastAction'), onClick: handleOpenVaultHealth }
+          );
         }
 
         // Create welcome note for new vaults (skip in test and demo environments).
@@ -715,7 +730,9 @@
     <!-- Settings Modal -->
     <SettingsModal
       show={showSettings}
-      onClose={() => showSettings = false}
+      initialTab={settingsInitialTab}
+      onClose={() => { showSettings = false; settingsInitialTab = null; }}
+      onOpenNote={handleOpenNoteFromSettings}
       onOpenShortcutsHelp={handleOpenShortcutsHelp}
     />
 

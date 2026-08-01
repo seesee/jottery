@@ -1403,6 +1403,9 @@
     "repairSuccess": "Bijlage hersteld",
     "repairFailed": "Herstel mislukt — controleer de synchronisatieverbinding en serverversie",
     "rescan": "Opnieuw scannen",
-    "scanning": "Bezig met scannen…"
+    "scanning": "Bezig met scannen…",
+    "loadToastAction": "Bekijken in Kluisstatus",
+    "openNote": "Deze notitie openen",
+    "repairNotOnServer": "Ook niet op de server — open de notitie en verwijder de bijlage"
   }
 }

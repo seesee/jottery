@@ -9,12 +9,15 @@
   } from '../../services/vaultHealthService';
   import ConfirmModal from '../ConfirmModal.svelte';
   import { toast } from '../../utils/toast.svelte';
+  import type { RepairResult } from '../../services/vaultHealthService';
+
+  export let onOpenNote: (noteId: string) => void = () => {};
 
   let missing: MissingAttachment[] = [];
   let scanning = false;
   let scanned = false;
   let repairing: Record<string, boolean> = {};
-  let repairResult: Record<string, 'ok' | 'fail'> = {};
+  let repairResult: Record<string, RepairResult> = {};
   let confirmDeleteId: string | null = null;
   let deleting = false;
 
@@ -32,10 +35,10 @@
 
   async function repair(id: string) {
     repairing = { ...repairing, [id]: true };
-    const ok = await repairAttachment(id);
+    const result = await repairAttachment(id);
     repairing = { ...repairing, [id]: false };
-    repairResult = { ...repairResult, [id]: ok ? 'ok' : 'fail' };
-    if (ok) {
+    repairResult = { ...repairResult, [id]: result };
+    if (result === 'repaired') {
       missing = missing.filter(m => m.attachmentId !== id);
     }
   }
@@ -146,10 +149,23 @@
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <p class="truncate">
-                  {$_('vaultHealth.noteLabel')}: {item.noteTitle ?? $_('vaultHealth.unknownNote')}
+                  {$_('vaultHealth.noteLabel')}:
+                  {#if item.noteTitle !== null}
+                    <button
+                      on:click={() => onOpenNote(item.noteId)}
+                      class="underline hover:no-underline text-blue-700 dark:text-blue-300"
+                      title={$_('vaultHealth.openNote')}
+                    >
+                      {item.noteTitle}
+                    </button>
+                  {:else}
+                    {$_('vaultHealth.unknownNote')}
+                  {/if}
                 </p>
                 <p class="font-mono text-xs text-gray-500 dark:text-gray-400 mt-1">{item.attachmentId.slice(0, 8)}…</p>
-                {#if repairResult[item.attachmentId] === 'fail'}
+                {#if repairResult[item.attachmentId] === 'not-on-server'}
+                  <p class="text-xs text-red-700 dark:text-red-300 mt-1">{$_('vaultHealth.repairNotOnServer')}</p>
+                {:else if repairResult[item.attachmentId] === 'failed'}
                   <p class="text-xs text-red-700 dark:text-red-300 mt-1">{$_('vaultHealth.repairFailed')}</p>
                 {/if}
               </div>
