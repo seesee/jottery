@@ -5,6 +5,8 @@ import {
   recordDecryptFailure,
   resetVaultHealth,
   scanMissingAttachments,
+  serverMissingAttachments,
+  reportServerMissingAttachments,
 } from './vaultHealthService';
 import { noteService } from './noteService';
 import { noteRepository } from './noteRepository';
@@ -116,5 +118,33 @@ describe('scanMissingAttachments', () => {
     await noteService.createNote('note', [], { attachments: [attachmentRef('att-ok')] });
     await attachmentRepository.storeBlob('att-ok', new ArrayBuffer(4));
     expect(await scanMissingAttachments()).toEqual([]);
+  });
+});
+
+describe('serverMissingAttachments store', () => {
+  beforeEach(() => resetVaultHealth());
+
+  it('records warnings grouped by note', () => {
+    reportServerMissingAttachments([{ noteId: 'n1', attachmentIds: ['a1', 'a2'] }]);
+    expect(get(serverMissingAttachments)).toEqual([
+      { noteId: 'n1', attachmentIds: ['a1', 'a2'] },
+    ]);
+  });
+
+  it('deduplicates by attachment id across repeated reports', () => {
+    reportServerMissingAttachments([{ noteId: 'n1', attachmentIds: ['a1'] }]);
+    reportServerMissingAttachments([
+      { noteId: 'n1', attachmentIds: ['a1', 'a3'] },
+      { noteId: 'n2', attachmentIds: ['a1'] },
+    ]);
+    expect(get(serverMissingAttachments)).toEqual([
+      { noteId: 'n1', attachmentIds: ['a1', 'a3'] },
+    ]);
+  });
+
+  it('reset clears the store', () => {
+    reportServerMissingAttachments([{ noteId: 'n1', attachmentIds: ['a1'] }]);
+    resetVaultHealth();
+    expect(get(serverMissingAttachments)).toEqual([]);
   });
 });

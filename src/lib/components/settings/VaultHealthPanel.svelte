@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import {
     undecryptableNotes,
+    serverMissingAttachments,
     scanMissingAttachments,
     repairAttachment,
     deleteUndecryptableNote,
@@ -71,7 +72,7 @@
     return `${bytes} B`;
   }
 
-  $: healthy = scanned && !scanning && $undecryptableNotes.length === 0 && missing.length === 0;
+  $: healthy = scanned && !scanning && $undecryptableNotes.length === 0 && missing.length === 0 && $serverMissingAttachments.length === 0;
 
   rescan();
 </script>
@@ -129,6 +130,36 @@
                 {$_('vaultHealth.delete')}
               </button>
             </div>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+
+  {#if $serverMissingAttachments.length > 0}
+    <div class="mb-4" data-testid="vault-health-server-missing">
+      <h5 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+        {$_('vaultHealth.serverMissingTitle')} ({$serverMissingAttachments.reduce((n, w) => n + w.attachmentIds.length, 0)})
+      </h5>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        {$_('vaultHealth.serverMissingHint')}
+      </p>
+      <ul class="space-y-2">
+        {#each $serverMissingAttachments as warning (warning.noteId)}
+          <li class="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-sm">
+            <p class="truncate">
+              {$_('vaultHealth.noteLabel')}:
+              <button
+                on:click={() => onOpenNote(warning.noteId)}
+                class="underline hover:no-underline text-blue-700 dark:text-blue-300"
+                title={$_('vaultHealth.openNote')}
+              >
+                {warning.noteId.slice(0, 8)}…
+              </button>
+            </p>
+            <p class="font-mono text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {warning.attachmentIds.map(id => id.slice(0, 8) + '…').join(', ')}
+            </p>
           </li>
         {/each}
       </ul>
