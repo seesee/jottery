@@ -30,6 +30,37 @@ export interface MissingAttachment {
 
 export const undecryptableNotes = writable<UndecryptableNote[]>([]);
 
+/**
+ * Attachments the sync server reported it has no data for, and which this
+ * device cannot supply either. Grouped per note, deduplicated by attachment
+ * id. Populated from push-response attachmentWarnings.
+ */
+export interface ServerMissingAttachments {
+  noteId: string;
+  attachmentIds: string[];
+}
+
+export const serverMissingAttachments = writable<ServerMissingAttachments[]>([]);
+
+export function reportServerMissingAttachments(warnings: ServerMissingAttachments[]): void {
+  serverMissingAttachments.update(existing => {
+    const known = new Set(existing.flatMap(w => w.attachmentIds));
+    const merged = [...existing];
+    for (const warning of warnings) {
+      const fresh = warning.attachmentIds.filter(id => !known.has(id));
+      if (fresh.length === 0) continue;
+      fresh.forEach(id => known.add(id));
+      const entry = merged.find(w => w.noteId === warning.noteId);
+      if (entry) {
+        entry.attachmentIds = [...entry.attachmentIds, ...fresh];
+      } else {
+        merged.push({ noteId: warning.noteId, attachmentIds: fresh });
+      }
+    }
+    return merged;
+  });
+}
+
 export function recordDecryptFailure(note: Note, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   undecryptableNotes.update(entries => {
@@ -46,6 +77,7 @@ export function recordDecryptFailure(note: Note, error: unknown): void {
 
 export function resetVaultHealth(): void {
   undecryptableNotes.set([]);
+  serverMissingAttachments.set([]);
 }
 
 /**

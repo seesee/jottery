@@ -66,6 +66,7 @@ export type {
   SyncAccepted,
   SyncRejected,
   SyncDeletion,
+  AttachmentWarning,
   SyncStatusResponse,
   AuthRegisterRequest,
   AuthRegisterResponse,

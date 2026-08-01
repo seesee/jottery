@@ -1392,6 +1392,8 @@
     "scanning": "Scanning…",
     "loadToastAction": "Review in Vault Health",
     "openNote": "Open this note",
-    "repairNotOnServer": "Not on the server either — open the note and remove the attachment"
+    "repairNotOnServer": "Not on the server either — open the note and remove the attachment",
+    "serverMissingTitle": "Missing on the server",
+    "serverMissingHint": "The sync server has no copy of these attachments and neither does this device. Open the note and remove the attachment, or sync from a device that still has the file."
   }
 }

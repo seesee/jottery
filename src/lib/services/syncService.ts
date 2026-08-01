@@ -13,6 +13,7 @@ import type {
   SyncRejected,
   SyncAccepted,
 } from '../types';
+import type { AttachmentWarning } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -29,6 +30,7 @@ import { searchService } from './searchService';
 import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
+import { reportServerMissingAttachments } from './vaultHealthService';
 import { isDBAvailable, wasDBTerminated } from './db';
 import { SYNC_PUSH_BATCH_SIZE, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
 import {
@@ -474,6 +476,10 @@ class SyncService {
           if (blob) {
             const base64 = arrayBufferToBase64(blob);
             attachmentMap.set(attachment.id, base64);
+          } else {
+            // Never skip silently: the note still pushes without the blob and
+            // the server warns back if it has no copy either
+            console.warn(`[SyncService] Attachment ${attachment.id} (note ${note.id}) has no local blob — pushing note without it`);
           }
         }
       }
@@ -592,7 +598,7 @@ class SyncService {
     endpoint: string,
     apiKey: string,
     masterKey: CryptoKey
-  ): Promise<{ accepted: number; rejected: number }> {
+  ): Promise<{ accepted: number; rejected: number; warnings: AttachmentWarning[] }> {
     if (totalBatches > 1) {
       console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
     }
@@ -614,6 +620,7 @@ class SyncService {
     const result = await pushToServer(endpoint, apiKey, pushRequest);
     await this.processAcceptedNotes(result.accepted);
     await this.processRejectedNotes(result.rejected);
+    const warnings = result.attachmentWarnings ?? [];
 
     // Update progress
     syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
@@ -632,7 +639,7 @@ class SyncService {
       }
     }
 
-    return { accepted: result.accepted.length, rejected: result.rejected.length };
+    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings };
   }
 
   /**
@@ -660,6 +667,7 @@ class SyncService {
     const totalBatches = Math.ceil(modifiedNotes.length / SYNC_PUSH_BATCH_SIZE);
     let totalAccepted = 0;
     let totalRejected = 0;
+    const allWarnings: AttachmentWarning[] = [];
 
     console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${totalBatches} batch${totalBatches > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
 
@@ -667,17 +675,67 @@ class SyncService {
       const start = batchIndex * SYNC_PUSH_BATCH_SIZE;
       const batchNotes = modifiedNotes.slice(start, start + SYNC_PUSH_BATCH_SIZE);
 
-      const { accepted, rejected } = await this.processPushBatch(
+      const { accepted, rejected, warnings } = await this.processPushBatch(
         batchNotes, batchIndex, totalBatches, endpoint, apiKey, masterKey.key
       );
       totalAccepted += accepted;
       totalRejected += rejected;
+      allWarnings.push(...warnings);
+    }
+
+    if (allWarnings.length > 0) {
+      await this.handleAttachmentWarnings(endpoint, apiKey, allWarnings);
     }
 
     console.log(`[SyncService] Push complete: ${totalAccepted} accepted, ${totalRejected} rejected`);
     await syncRepository.updateMetadata({ lastPushAt: new Date().toISOString() });
 
     return totalAccepted;
+  }
+
+  /**
+   * React to server attachment warnings: re-push blobs this device holds
+   * (once per sync run, no in-run retry — the next regular sync retries
+   * naturally), and surface the rest in vault health. The repair response is
+   * deliberately not fed back into this handler, preventing loops.
+   */
+  private async handleAttachmentWarnings(
+    endpoint: string,
+    apiKey: string,
+    warnings: AttachmentWarning[]
+  ): Promise<void> {
+    const repairAttachments: { id: string; data: string }[] = [];
+    const unhealable: AttachmentWarning[] = [];
+
+    for (const warning of warnings) {
+      const missingHere: string[] = [];
+      for (const attachmentId of warning.attachmentIds) {
+        const blob = await attachmentRepository.getBlob(attachmentId);
+        if (blob) {
+          repairAttachments.push({ id: attachmentId, data: arrayBufferToBase64(blob) });
+          console.warn(`[SyncService] Server is missing attachment ${attachmentId} (note ${warning.noteId}) — re-uploading`);
+        } else {
+          missingHere.push(attachmentId);
+          console.warn(`[SyncService] Server is missing attachment ${attachmentId} (note ${warning.noteId}) and it is not on this device`);
+        }
+      }
+      if (missingHere.length > 0) {
+        unhealable.push({ noteId: warning.noteId, attachmentIds: missingHere });
+      }
+    }
+
+    if (repairAttachments.length > 0) {
+      try {
+        await pushToServer(endpoint, apiKey, { notes: [], attachments: repairAttachments, versions: [] });
+        console.log(`[SyncService] Re-uploaded ${repairAttachments.length} attachment(s) the server was missing`);
+      } catch (error) {
+        console.error('[SyncService] Attachment repair push failed:', error);
+      }
+    }
+
+    if (unhealable.length > 0) {
+      reportServerMissingAttachments(unhealable);
+    }
   }
 
   // ===========================================================================

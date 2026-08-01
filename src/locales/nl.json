@@ -1406,6 +1406,8 @@
     "scanning": "Bezig met scannen…",
     "loadToastAction": "Bekijken in Kluisstatus",
     "openNote": "Deze notitie openen",
-    "repairNotOnServer": "Ook niet op de server — open de notitie en verwijder de bijlage"
+    "repairNotOnServer": "Ook niet op de server — open de notitie en verwijder de bijlage",
+    "serverMissingTitle": "Ontbreekt op de server",
+    "serverMissingHint": "De synchronisatieserver heeft geen kopie van deze bijlagen en dit apparaat ook niet. Open de notitie en verwijder de bijlage, of synchroniseer vanaf een apparaat dat het bestand nog heeft."
   }
 }
