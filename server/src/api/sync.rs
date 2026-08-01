@@ -1111,6 +1111,43 @@ pub async fn delete_note(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Fetch a single attachment blob the client is missing locally (vault health
+/// repair). Ownership is enforced via attachments_meta.note_user_id; unknown
+/// or foreign attachments return 404 so existence is not leaked.
+///
+/// Uses the runtime query API (not the query! macro) so the SQLX_OFFLINE
+/// build cache does not need regenerating.
+pub async fn get_attachment(
+    State(state): State<Arc<AppState>>,
+    AuthClient(client_info): AuthClient,
+    Path(attachment_id): Path<String>,
+) -> AppResult<Json<serde_json::Value>> {
+    let row: Option<(Vec<u8>,)> = sqlx::query_as(
+        "SELECT d.data FROM attachments_data d
+         JOIN attachments_meta m ON m.id = d.id
+         WHERE d.id = ? AND m.note_user_id = ?",
+    )
+    .bind(&attachment_id)
+    .bind(&client_info.user_id)
+    .fetch_optional(&state.pool)
+    .await?;
+
+    match row {
+        Some((data,)) => {
+            tracing::info!(
+                "Serving attachment {} ({} bytes) to user {} (client {})",
+                attachment_id,
+                data.len(),
+                client_info.user_id,
+                client_info.client_id
+            );
+            let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
+            Ok(Json(serde_json::json!({ "id": attachment_id, "data": encoded })))
+        }
+        None => Err(AppError::NotFound("Attachment not found".to_string())),
+    }
+}
+
 /// Delete notes that have been marked as deleted for more than 30 days
 /// This is called automatically during sync operations to prevent deleted notes
 /// from accumulating indefinitely on the server

@@ -74,6 +74,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
     let app = axum::Router::new()
         .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
         .route("/api/v1/sync/pull", axum::routing::post(jottery_server::api::sync::pull))
+        .route("/api/v1/sync/attachments/:id", axum::routing::get(jottery_server::api::sync::get_attachment))
         .layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
             jottery_server::api::middleware::auth_middleware,
@@ -1052,6 +1053,135 @@ async fn test_large_attachment_handling() {
     .expect("Large attachment should be stored");
 
     assert_eq!(stored.data.len(), 1024 * 1024);
+
+    pool.close().await;
+}
+
+// =====================================================================
+// GET /api/v1/sync/attachments/:id — single-attachment fetch (vault health repair)
+// =====================================================================
+
+/// Push a note owned by `api_key` carrying one attachment; returns the attachment id.
+async fn push_note_with_attachment(app: &mut axum::Router, api_key: &str, data: &str) -> String {
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let attachment_id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let attachment_base64 = base64::Engine::encode(
+        &base64::engine::general_purpose::STANDARD,
+        data.as_bytes(),
+    );
+
+    let request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Note with attachment",
+                        "createdAt": now,
+                        "modifiedAt": now,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
+                        "tags": [],
+                        "attachments": [
+                            {
+                                "id": attachment_id,
+                                "filename": "test.txt",
+                                "mimeType": "text/plain",
+                                "size": data.len(),
+                                "data": attachment_id
+                            }
+                        ],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [
+                    { "id": attachment_id, "data": attachment_base64 }
+                ],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let response = ServiceExt::<Request<Body>>::ready(&mut *app)
+        .await
+        .unwrap()
+        .call(request)
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK, "push should succeed");
+    attachment_id
+}
+
+async fn get_attachment_request(app: &mut axum::Router, api_key: &str, id: &str) -> axum::response::Response {
+    let request = Request::builder()
+        .uri(format!("/api/v1/sync/attachments/{}", id))
+        .method("GET")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::empty())
+        .unwrap();
+
+    ServiceExt::<Request<Body>>::ready(&mut *app)
+        .await
+        .unwrap()
+        .call(request)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn test_get_attachment_returns_data_for_owner() {
+    let (mut app, pool) = create_test_app().await;
+    let api_key = create_test_user_and_device(&pool).await;
+
+    let attachment_id = push_note_with_attachment(&mut app, &api_key, "repair me please").await;
+
+    let response = get_attachment_request(&mut app, &api_key, &attachment_id).await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = parse_json_response(response.into_body()).await;
+    assert_eq!(body["id"], attachment_id);
+    let decoded = base64::Engine::decode(
+        &base64::engine::general_purpose::STANDARD,
+        body["data"].as_str().unwrap(),
+    )
+    .unwrap();
+    assert_eq!(decoded, b"repair me please");
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_get_attachment_hidden_from_other_users() {
+    let (mut app, pool) = create_test_app().await;
+    let owner_key = create_test_user_and_device(&pool).await;
+    let other_key = create_test_user_and_device(&pool).await;
+
+    let attachment_id = push_note_with_attachment(&mut app, &owner_key, "private data").await;
+
+    let response = get_attachment_request(&mut app, &other_key, &attachment_id).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_get_attachment_unknown_id_is_404() {
+    let (mut app, pool) = create_test_app().await;
+    let api_key = create_test_user_and_device(&pool).await;
+
+    let response = get_attachment_request(&mut app, &api_key, "does-not-exist").await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     pool.close().await;
 }
