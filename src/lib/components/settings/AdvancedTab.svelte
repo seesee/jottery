@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import BackupSettingsSection from './BackupSettingsSection.svelte';
+  import VaultHealthPanel from './VaultHealthPanel.svelte';
 
   export let selectedArchitecture: string;
   export let onExport: () => void;
@@ -81,6 +82,9 @@
       {$_('settings.advancedTab.clientDescription')}
     </p>
   </div>
+
+  <!-- Vault Health -->
+  <VaultHealthPanel />
 
   <!-- Delete All Data -->
   <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
