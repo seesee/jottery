@@ -130,12 +130,17 @@ class NoteService {
    * @param sortOrder - How to sort notes
    * @param batchSize - Number of notes in first batch (default: 50)
    * @param onProgress - Callback for subsequent batches
+   * @param onComplete - Called once background decryption has finished (or when
+   *   there was nothing left to decrypt). This is the reliable completion signal:
+   *   callers must not infer completion by comparing note counts, because notes
+   *   that fail to decrypt are skipped and would make counts never match.
    * @returns First batch of decrypted notes
    */
   async getAllNotesBatched(
     sortOrder: SortOrder = 'recent',
     batchSize: number = 50,
-    onProgress?: (notes: DecryptedNote[]) => void
+    onProgress?: (notes: DecryptedNote[]) => void,
+    onComplete?: () => void
   ): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
@@ -170,7 +175,11 @@ class NoteService {
         masterKey.key,
         batchSize,
         onProgress
-      );
+      )
+        .catch(error => console.error('[NoteService] Background batch decryption failed:', error))
+        .finally(() => onComplete?.());
+    } else {
+      onComplete?.();
     }
 
     return firstDecrypted;

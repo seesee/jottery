@@ -22,6 +22,10 @@
   export let loadingNotes: boolean = false;
   export let loadingProgress: { current: number; total: number } = { current: 0, total: 0 };
 
+  // Background batches are still streaming in after the first batch has rendered.
+  // Show progress feedback without disabling search.
+  $: backgroundLoading = loadingNotes || loadingProgress.total > 0;
+
   let showDisableRememberPasswordConfirm = false;
   let showMobileMenu = false;
   let showSavedSearches = false;
@@ -468,7 +472,7 @@
             on:keydown={handleSearchKeyDown}
             on:focus={handleSearchFocus}
             on:blur={handleSearchBlur}
-            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
+            placeholder={backgroundLoading ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
             role="combobox"
             aria-autocomplete="list"
@@ -479,7 +483,7 @@
             class="w-full px-3 py-1.5 pr-8 border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
-          {#if loadingNotes}
+          {#if backgroundLoading}
             <div class="absolute right-2 top-1/2 -translate-y-1/2">
               <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
             </div>
@@ -578,7 +582,7 @@
             on:keydown={handleSearchKeyDown}
             on:focus={handleSearchFocus}
             on:blur={handleSearchBlur}
-            placeholder={loadingNotes ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
+            placeholder={backgroundLoading ? $_('header.loadingNotes', { values: { current: loadingProgress.current, total: loadingProgress.total } }) : searchPlaceholder}
             disabled={loadingNotes}
             role="combobox"
             aria-autocomplete="list"
@@ -589,7 +593,7 @@
             class="w-full px-3 py-2 {$searchResultCount.isSearching ? 'pr-28' : 'pr-16'} border rounded-md focus:outline-none focus:ring-2 disabled:opacity-60 disabled:cursor-wait text-sm {$archiveMode ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-gray-900 dark:text-white focus:ring-amber-500' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-blue-500'}"
             style="font-size: {searchFontSize}"
           />
-          {#if loadingNotes}
+          {#if backgroundLoading}
             <div class="absolute right-2 top-1/2 -translate-y-1/2">
               <div class="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600"></div>
             </div>
