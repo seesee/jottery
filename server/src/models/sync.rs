@@ -82,6 +82,20 @@ pub struct SyncPushResponse {
     pub accepted: Vec<SyncAccepted>,
     pub rejected: Vec<SyncRejected>,
     pub errors: Vec<String>,
+    /// Accepted notes referencing attachment data the server does not hold.
+    /// Omitted when empty; clients re-push blobs they have (self-heal) or
+    /// surface the gap to the user.
+    #[serde(rename = "attachmentWarnings", skip_serializing_if = "Option::is_none")]
+    pub attachment_warnings: Option<Vec<AttachmentWarning>>,
+}
+
+/// One accepted note whose attachment references have no stored data.
+#[derive(Debug, Serialize)]
+pub struct AttachmentWarning {
+    #[serde(rename = "noteId")]
+    pub note_id: String,
+    #[serde(rename = "attachmentIds")]
+    pub attachment_ids: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]

@@ -10,6 +10,7 @@ import { syncService } from './syncService';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
+import { serverMissingAttachments, resetVaultHealth } from './vaultHealthService';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
@@ -53,6 +54,7 @@ describe('syncService', () => {
 
     // Reset MSW handlers
     server.resetHandlers();
+    resetVaultHealth();
   });
 
   afterEach(async () => {
@@ -464,6 +466,101 @@ describe('syncService', () => {
       await syncService.syncNow();
 
       expect(capturedBody?.knownAttachmentIds).toEqual(['att-stored']);
+    });
+
+    it('re-pushes held blobs when the server warns about missing attachment data', async () => {
+      // Note with two attachment refs: one blob held locally, one not
+      const note = await noteService.createNote('note with attachments', [], {
+        attachments: [
+          { id: 'att-held', filename: 'a.png', mimeType: 'image/png', size: 5, data: 'att-held' },
+          { id: 'att-ghost', filename: 'b.png', mimeType: 'image/png', size: 5, data: 'att-ghost' },
+        ],
+      });
+      await attachmentRepository.storeBlob('att-held', new TextEncoder().encode('hello').buffer);
+
+      const pushBodies: Array<{ notes: unknown[]; attachments: Array<{ id: string; data: string }> }> = [];
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 0,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, async ({ request }) => {
+          const body = await request.json() as typeof pushBodies[number];
+          pushBodies.push(body);
+          if (pushBodies.length === 1) {
+            return HttpResponse.json({
+              accepted: [{ id: note.id, serverVersion: 1, syncedAt: new Date().toISOString() }],
+              rejected: [],
+              attachmentWarnings: [{ noteId: note.id, attachmentIds: ['att-held', 'att-ghost'] }],
+            } as SyncPushResponse);
+          }
+          // Repair pushes and any later pushes: keep warning to prove no loop
+          return HttpResponse.json({
+            accepted: [],
+            rejected: [],
+            attachmentWarnings: [{ noteId: note.id, attachmentIds: ['att-ghost'] }],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({ notes: [], attachments: [], versions: [] } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      // First push carried the note; exactly one follow-up attachments-only push
+      expect(pushBodies.length).toBe(2);
+      expect(pushBodies[1].notes).toEqual([]);
+      expect(pushBodies[1].attachments.map(a => a.id)).toEqual(['att-held']);
+      // Base64 of 'hello'
+      expect(pushBodies[1].attachments[0].data).toBe('aGVsbG8=');
+
+      // Unhealable attachment recorded for vault health
+      expect(get(serverMissingAttachments)).toEqual([
+        { noteId: note.id, attachmentIds: ['att-ghost'] },
+      ]);
+    });
+
+    it('does not fire a repair push when no warned blob is held locally', async () => {
+      const note = await noteService.createNote('ghost only', [], {
+        attachments: [
+          { id: 'att-ghost2', filename: 'b.png', mimeType: 'image/png', size: 5, data: 'att-ghost2' },
+        ],
+      });
+
+      let pushCount = 0;
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 0,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          pushCount++;
+          return HttpResponse.json({
+            accepted: [{ id: note.id, serverVersion: 1, syncedAt: new Date().toISOString() }],
+            rejected: [],
+            attachmentWarnings: [{ noteId: note.id, attachmentIds: ['att-ghost2'] }],
+          } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
+          return HttpResponse.json({ notes: [], attachments: [], versions: [] } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      expect(pushCount).toBe(1);
+      expect(get(serverMissingAttachments)).toEqual([
+        { noteId: note.id, attachmentIds: ['att-ghost2'] },
+      ]);
     });
 
     it('should include authorization header in pull request', async () => {

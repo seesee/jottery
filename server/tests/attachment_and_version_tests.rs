@@ -1185,3 +1185,173 @@ async fn test_get_attachment_unknown_id_is_404() {
 
     pool.close().await;
 }
+
+// =====================================================================
+// attachmentWarnings — push guard for dangling attachment references
+// =====================================================================
+
+fn dangling_note_body(note_id: &str, attachment_id: &str, content: &str, version: i64) -> String {
+    let now = chrono::Utc::now().to_rfc3339();
+    json!({
+        "notes": [{
+            "id": note_id, "content": content,
+            "createdAt": now, "modifiedAt": now,
+            "deleted": false, "deletedAt": null,
+            "archived": false, "archivedAt": null,
+            "tags": [],
+            "attachments": [{ "id": attachment_id, "filename": "f.png", "mimeType": "image/png", "size": 9, "data": attachment_id }],
+            "pinned": false, "version": version, "wordWrap": null, "syntaxLanguage": null
+        }],
+        "attachments": [],
+        "versions": []
+    })
+    .to_string()
+}
+
+async fn send_push(app: &mut axum::Router, api_key: &str, body: String) -> axum::response::Response {
+    let request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(body))
+        .unwrap();
+    ServiceExt::<Request<Body>>::ready(&mut *app)
+        .await
+        .unwrap()
+        .call(request)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn test_push_warns_when_attachment_data_missing() {
+    let (mut app, pool) = create_test_app().await;
+    let api_key = create_test_user_and_device(&pool).await;
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let attachment_id = uuid::Uuid::new_v4().to_string();
+
+    let response = send_push(&mut app, &api_key, dangling_note_body(&note_id, &attachment_id, "Dangling ref note", 1)).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = parse_json_response(response.into_body()).await;
+
+    let warnings = body["attachmentWarnings"].as_array().expect("attachmentWarnings present");
+    assert_eq!(warnings.len(), 1);
+    assert_eq!(warnings[0]["noteId"], note_id.as_str());
+    assert_eq!(
+        warnings[0]["attachmentIds"].as_array().unwrap(),
+        &vec![serde_json::json!(attachment_id)]
+    );
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_push_no_warning_when_data_present() {
+    let (mut app, pool) = create_test_app().await;
+    let api_key = create_test_user_and_device(&pool).await;
+
+    // push_note_with_attachment includes the blob in the same payload
+    let _attachment_id = push_note_with_attachment(&mut app, &api_key, "blob included").await;
+
+    // Push a second fully-provisioned note and inspect its response directly
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let attachment_id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let blob_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b"present");
+    let body_str = json!({
+        "notes": [{
+            "id": note_id, "content": "Fully provisioned",
+            "createdAt": now, "modifiedAt": now,
+            "deleted": false, "deletedAt": null,
+            "archived": false, "archivedAt": null,
+            "tags": [],
+            "attachments": [{ "id": attachment_id, "filename": "f.png", "mimeType": "image/png", "size": 7, "data": attachment_id }],
+            "pinned": false, "version": 1, "wordWrap": null, "syntaxLanguage": null
+        }],
+        "attachments": [{ "id": attachment_id, "data": blob_b64 }],
+        "versions": []
+    })
+    .to_string();
+
+    let response = send_push(&mut app, &api_key, body_str).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = parse_json_response(response.into_body()).await;
+    assert!(
+        body.get("attachmentWarnings").is_none() || body["attachmentWarnings"].is_null(),
+        "no warnings expected, got: {:?}",
+        body.get("attachmentWarnings")
+    );
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_attachments_only_push_clears_warning() {
+    let (mut app, pool) = create_test_app().await;
+    let api_key = create_test_user_and_device(&pool).await;
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let attachment_id = uuid::Uuid::new_v4().to_string();
+    let first = send_push(&mut app, &api_key, dangling_note_body(&note_id, &attachment_id, "Dangling", 1)).await;
+    assert_eq!(first.status(), StatusCode::OK);
+
+    // Attachments-only repair push
+    let blob_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b"healed");
+    let body_str = json!({
+        "notes": [],
+        "attachments": [{ "id": attachment_id, "data": blob_b64 }],
+        "versions": []
+    })
+    .to_string();
+    let response = send_push(&mut app, &api_key, body_str).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = parse_json_response(response.into_body()).await;
+    assert!(
+        body.get("attachmentWarnings").is_none() || body["attachmentWarnings"].is_null(),
+        "repair push must not warn"
+    );
+
+    // Data now stored
+    let stored: (i64,) = sqlx::query_as("SELECT length(data) FROM attachments_data WHERE id = ?")
+        .bind(&attachment_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(stored.0, 6);
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_attachments_only_push_rejects_foreign_attachment() {
+    let (mut app, pool) = create_test_app().await;
+    let owner_key = create_test_user_and_device(&pool).await;
+    let other_key = create_test_user_and_device(&pool).await;
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let attachment_id = uuid::Uuid::new_v4().to_string();
+    let first = send_push(&mut app, &owner_key, dangling_note_body(&note_id, &attachment_id, "Owner note", 1)).await;
+    assert_eq!(first.status(), StatusCode::OK);
+
+    // Another user tries to supply the blob
+    let blob_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b"attack");
+    let body_str = json!({
+        "notes": [],
+        "attachments": [{ "id": attachment_id, "data": blob_b64 }],
+        "versions": []
+    })
+    .to_string();
+    let response = send_push(&mut app, &other_key, body_str).await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let stored: Option<(i64,)> = sqlx::query_as("SELECT length(data) FROM attachments_data WHERE id = ?")
+        .bind(&attachment_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+    assert!(stored.is_none(), "foreign blob must not be stored");
+
+    pool.close().await;
+}
