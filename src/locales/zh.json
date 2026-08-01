@@ -1406,6 +1406,8 @@
     "scanning": "扫描中…",
     "loadToastAction": "在保险库状态中查看",
     "openNote": "打开此笔记",
-    "repairNotOnServer": "服务器上也不存在 — 请打开笔记并移除该附件"
+    "repairNotOnServer": "服务器上也不存在 — 请打开笔记并移除该附件",
+    "serverMissingTitle": "服务器上缺失",
+    "serverMissingHint": "同步服务器和本设备都没有这些附件的副本。请打开笔记移除附件，或从仍保有该文件的设备进行同步。"
   }
 }

@@ -1406,6 +1406,8 @@
     "scanning": "Scansione in corso…",
     "loadToastAction": "Verifica in Stato della cassaforte",
     "openNote": "Apri questa nota",
-    "repairNotOnServer": "Assente anche dal server — apri la nota e rimuovi l'allegato"
+    "repairNotOnServer": "Assente anche dal server — apri la nota e rimuovi l'allegato",
+    "serverMissingTitle": "Assente sul server",
+    "serverMissingHint": "Il server di sincronizzazione non ha alcuna copia di questi allegati e nemmeno questo dispositivo. Apri la nota e rimuovi l'allegato, oppure sincronizza da un dispositivo che possiede ancora il file."
   }
 }
