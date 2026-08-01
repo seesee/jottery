@@ -36,6 +36,15 @@ struct SyncPushResponse: Codable {
     let accepted: [SyncAccepted]
     let rejected: [SyncRejected]
     var errors: [String]?
+    /// Accepted notes referencing attachment data the server does not hold.
+    /// Absent on older servers; the client re-pushes blobs it has (self-heal).
+    var attachmentWarnings: [AttachmentWarning]?
+}
+
+/// One accepted note whose attachment references have no data on the server.
+struct AttachmentWarning: Codable {
+    let noteId: String
+    let attachmentIds: [String]
 }
 
 struct SyncAccepted: Codable {

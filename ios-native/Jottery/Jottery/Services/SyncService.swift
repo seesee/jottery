@@ -65,6 +65,26 @@ actor SyncService {
 
     // MARK: - Push
 
+    /// Build the attachments-only repair payload for server attachment
+    /// warnings: every warned blob the lookup can supply, deduplicated by id.
+    /// Pure logic split out for testability.
+    static func collectRepairAttachments(
+        for warnings: [AttachmentWarning],
+        blobLookup: (String) -> Data?
+    ) -> [SyncAttachment] {
+        var repairs: [SyncAttachment] = []
+        var seen = Set<String>()
+        for warning in warnings {
+            for attachmentId in warning.attachmentIds {
+                guard seen.insert(attachmentId).inserted else { continue }
+                if let blob = blobLookup(attachmentId) {
+                    repairs.append(SyncAttachment(id: attachmentId, data: blob.base64EncodedString()))
+                }
+            }
+        }
+        return repairs
+    }
+
     func push() async throws {
         let records = try noteRepo.listNeedingSync()
         Log.debug("[Sync] push: \(records.count) records need syncing")
@@ -150,11 +170,19 @@ actor SyncService {
         for note in syncNotes {
             for ref in note.attachments {
                 guard seenAttachmentIds.insert(ref.id).inserted else { continue }
-                if let blobData = try? attachmentRepo.getBlob(id: ref.data) {
-                    syncAttachments.append(SyncAttachment(
-                        id: ref.id,
-                        data: blobData.base64EncodedString()
-                    ))
+                do {
+                    if let blobData = try attachmentRepo.getBlob(id: ref.data) {
+                        syncAttachments.append(SyncAttachment(
+                            id: ref.id,
+                            data: blobData.base64EncodedString()
+                        ))
+                    } else {
+                        // Never skip silently: the note still pushes without the
+                        // blob and the server warns back if it has no copy either
+                        Log.debug("[Sync] push: attachment \(ref.id) (note \(note.id)) has no local blob — pushing note without it")
+                    }
+                } catch {
+                    Log.debug("[Sync] push: attachment \(ref.id) (note \(note.id)) could not be read (\(error)) — pushing note without it")
                 }
             }
         }
@@ -208,6 +236,35 @@ actor SyncService {
                 }
             } catch {
                 Log.debug("[Sync] push: failed to mark accepted note \(accepted.id): \(error)")
+            }
+        }
+
+        // React to server attachment warnings: re-upload blobs this device
+        // holds (one attachments-only push, no in-run retry — the next regular
+        // sync retries naturally); log the ones it cannot heal.
+        if let warnings = response.attachmentWarnings, !warnings.isEmpty {
+            let repairs = Self.collectRepairAttachments(for: warnings) { id in
+                try? attachmentRepo.getBlob(id: id)
+            }
+            for warning in warnings {
+                for attachmentId in warning.attachmentIds where !repairs.contains(where: { $0.id == attachmentId }) {
+                    Log.debug("[Sync] push: server has no data for attachment \(attachmentId) (note \(warning.noteId)) and neither does this device")
+                }
+            }
+            if !repairs.isEmpty {
+                Log.debug("[Sync] push: re-uploading \(repairs.count) attachment(s) the server is missing")
+                let repairRequest = SyncPushRequest(
+                    notes: [],
+                    attachments: repairs,
+                    versions: [],
+                    deletions: nil,
+                    savedSearches: nil
+                )
+                do {
+                    _ = try await syncClient.push(repairRequest)
+                } catch {
+                    Log.debug("[Sync] push: attachment repair push failed — \(error)")
+                }
             }
         }
 
