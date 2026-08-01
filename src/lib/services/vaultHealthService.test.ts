@@ -1,6 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
-import { undecryptableNotes, recordDecryptFailure, resetVaultHealth } from './vaultHealthService';
+import {
+  undecryptableNotes,
+  recordDecryptFailure,
+  resetVaultHealth,
+  scanMissingAttachments,
+} from './vaultHealthService';
+import { noteService } from './noteService';
+import { noteRepository } from './noteRepository';
+import { attachmentRepository } from './attachmentRepository';
+import { keyManager } from './keyManager';
+import { initTestDB, cleanupTestDB } from '../../test/db-utils';
 import type { Note } from '../types';
 
 const makeNote = (id: string): Note => ({
@@ -46,5 +56,65 @@ describe('vaultHealthService failure store', () => {
     recordDecryptFailure(makeNote('n1'), new Error('a'));
     resetVaultHealth();
     expect(get(undecryptableNotes)).toHaveLength(0);
+  });
+});
+
+describe('scanMissingAttachments', () => {
+  beforeEach(async () => {
+    const testDB = await initTestDB();
+    keyManager.setMasterKey({
+      key: testDB.masterKey,
+      keyBytes: new Uint8Array(32),
+      derivedAt: Date.now(),
+    });
+    resetVaultHealth();
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  const attachmentRef = (id: string) => ({
+    id,
+    filename: 'file.png',
+    mimeType: 'image/png',
+    size: 10,
+    data: id,
+  });
+
+  it('reports refs with no stored blob, with title from the owning note', async () => {
+    await noteService.createNote('Shopping list\nmilk', [], {
+      attachments: [attachmentRef('att-present'), attachmentRef('att-missing')],
+    });
+    await attachmentRepository.storeBlob('att-present', new ArrayBuffer(4));
+
+    const missing = await scanMissingAttachments();
+    expect(missing).toHaveLength(1);
+    expect(missing[0].attachmentId).toBe('att-missing');
+    expect(missing[0].noteTitle).toBe('Shopping list');
+  });
+
+  it('uses null title when the owning note cannot be decrypted', async () => {
+    const good = await noteService.createNote('seed', []);
+    const corrupt: Note = {
+      ...good,
+      id: 'corrupt-with-attachment',
+      content: JSON.stringify({ ciphertext: 'AAAAAAAAAAAAAAAAAAAAAAAA', iv: 'AAAAAAAAAAAAAAAA' }),
+      tags: [],
+      attachments: [attachmentRef('att-orphaned')],
+    };
+    await noteRepository.create(corrupt);
+
+    const missing = await scanMissingAttachments();
+    expect(missing).toHaveLength(1);
+    expect(missing[0].attachmentId).toBe('att-orphaned');
+    expect(missing[0].noteTitle).toBeNull();
+  });
+
+  it('returns empty when every referenced blob is stored', async () => {
+    await noteService.createNote('note', [], { attachments: [attachmentRef('att-ok')] });
+    await attachmentRepository.storeBlob('att-ok', new ArrayBuffer(4));
+    expect(await scanMissingAttachments()).toEqual([]);
   });
 });

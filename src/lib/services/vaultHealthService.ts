@@ -42,3 +42,45 @@ export function recordDecryptFailure(note: Note, error: unknown): void {
 export function resetVaultHealth(): void {
   undecryptableNotes.set([]);
 }
+
+/**
+ * Find attachments referenced by notes but absent from local blob storage.
+ * The owning note's title is included where the note decrypts; a note that
+ * cannot be decrypted yields a null title rather than failing the scan.
+ */
+export async function scanMissingAttachments(): Promise<MissingAttachment[]> {
+  // Imported lazily: noteService imports this module for failure reporting,
+  // so a static import here would create a cycle
+  const { noteService } = await import('./noteService');
+
+  const [allNotes, blobIds] = await Promise.all([
+    noteRepository.getAllNonDeleted(),
+    attachmentRepository.listAllIds(),
+  ]);
+  const stored = new Set(blobIds);
+  const missing: MissingAttachment[] = [];
+  const titleCache = new Map<string, string | null>();
+
+  for (const note of allNotes) {
+    for (const ref of note.attachments ?? []) {
+      if (stored.has(ref.id)) continue;
+      if (!titleCache.has(note.id)) {
+        try {
+          const decrypted = await noteService.getNote(note.id);
+          titleCache.set(
+            note.id,
+            decrypted ? getNoteTitle({ content: decrypted.content, tags: decrypted.tags }) : null
+          );
+        } catch {
+          titleCache.set(note.id, null);
+        }
+      }
+      missing.push({
+        attachmentId: ref.id,
+        noteId: note.id,
+        noteTitle: titleCache.get(note.id) ?? null,
+      });
+    }
+  }
+  return missing;
+}
