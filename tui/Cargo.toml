@@ -1,6 +1,6 @@
 [package]
 name = "jottery-tui"
-version = "1.2.0"
+version = "1.2.1"
 edition = "2021"
 authors = ["Jottery Contributors"]
 description = "Terminal User Interface for Jottery - A privacy-focused note-taking app"
