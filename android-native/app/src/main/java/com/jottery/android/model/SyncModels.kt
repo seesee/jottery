@@ -63,6 +63,18 @@ data class SyncPushResponse(
     val accepted: List<SyncAccepted>,
     val rejected: List<SyncRejected>,
     val errors: List<String>? = null,
+    /**
+     * Accepted notes referencing attachment data the server does not hold.
+     * Absent on older servers; the client re-pushes blobs it has (self-heal).
+     */
+    val attachmentWarnings: List<AttachmentWarning>? = null,
+)
+
+/** One accepted note whose attachment references have no data on the server. */
+@Serializable
+data class AttachmentWarning(
+    val noteId: String,
+    val attachmentIds: List<String>,
 )
 
 @Serializable

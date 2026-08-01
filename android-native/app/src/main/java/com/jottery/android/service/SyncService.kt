@@ -34,6 +34,30 @@ class SyncService(
 ) {
     companion object {
         private const val TAG = "SyncService"
+
+        /**
+         * Build the attachments-only repair payload for server attachment
+         * warnings: every warned blob the lookup can supply, deduplicated by
+         * id. Pure logic split out for testability.
+         */
+        fun collectRepairAttachments(
+            warnings: List<AttachmentWarning>,
+            blobLookup: (String) -> ByteArray?,
+        ): List<SyncAttachment> {
+            val repairs = mutableListOf<SyncAttachment>()
+            val seen = mutableSetOf<String>()
+            for (warning in warnings) {
+                for (attachmentId in warning.attachmentIds) {
+                    if (!seen.add(attachmentId)) continue
+                    val blob = blobLookup(attachmentId) ?: continue
+                    repairs.add(SyncAttachment(
+                        id = attachmentId,
+                        data = java.util.Base64.getEncoder().encodeToString(blob),
+                    ))
+                }
+            }
+            return repairs
+        }
     }
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -158,7 +182,13 @@ class SyncService(
                     json.decodeFromString(note.attachments)
                 } catch (_: Exception) { continue }
                 for (ref in refs) {
-                    val blob = attachmentRepo.getBlob(ref.data) ?: continue
+                    val blob = attachmentRepo.getBlob(ref.data)
+                    if (blob == null) {
+                        // Never skip silently: the note still pushes without the
+                        // blob and the server warns back if it has no copy either
+                        Log.w(TAG, "Attachment ${ref.id} (note ${note.id}) has no local blob — pushing note without it")
+                        continue
+                    }
                     syncAttachments.add(SyncAttachment(
                         id = ref.data,
                         data = android.util.Base64.encodeToString(blob, android.util.Base64.NO_WRAP),
@@ -179,6 +209,39 @@ class SyncService(
             )
 
             val response = syncClient.push(request)
+
+            // React to server attachment warnings: re-upload blobs this device
+            // holds (one attachments-only push, no in-run retry), log the rest
+            val warnings = response.attachmentWarnings.orEmpty()
+            if (warnings.isNotEmpty()) {
+                // getBlob is a suspend function, so gather held blobs first and
+                // hand the pure helper a plain lookup
+                val heldBlobs = mutableMapOf<String, ByteArray>()
+                for (warning in warnings) {
+                    for (attachmentId in warning.attachmentIds) {
+                        if (attachmentId !in heldBlobs) {
+                            attachmentRepo.getBlob(attachmentId)?.let { heldBlobs[attachmentId] = it }
+                        }
+                    }
+                }
+                val repairs = collectRepairAttachments(warnings) { id -> heldBlobs[id] }
+                val healableIds = repairs.map { it.id }.toSet()
+                for (warning in warnings) {
+                    for (attachmentId in warning.attachmentIds) {
+                        if (attachmentId !in healableIds) {
+                            Log.w(TAG, "Server has no data for attachment $attachmentId (note ${warning.noteId}) and neither does this device")
+                        }
+                    }
+                }
+                if (repairs.isNotEmpty()) {
+                    Log.w(TAG, "Re-uploading ${repairs.size} attachment(s) the server is missing")
+                    try {
+                        syncClient.push(SyncPushRequest(notes = emptyList(), attachments = repairs, versions = emptyList(), deletions = emptyList()))
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Attachment repair push failed: ${e.message}")
+                    }
+                }
+            }
 
             // Process accepted
             val now = DateUtils.nowISO8601()
