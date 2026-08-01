@@ -1,0 +1,113 @@
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import { get } from 'svelte/store';
+
+vi.mock('./syncClient', () => ({
+  fetchAttachment: vi.fn(),
+}));
+vi.mock('./syncRepository', () => ({
+  syncRepository: { getMetadata: vi.fn() },
+}));
+vi.mock('./keyManager', () => ({
+  keyManager: { getMasterKey: vi.fn() },
+}));
+vi.mock('./crypto', () => ({
+  cryptoService: { decryptText: vi.fn() },
+}));
+vi.mock('./attachmentRepository', () => ({
+  attachmentRepository: { storeBlob: vi.fn(), listAllIds: vi.fn() },
+}));
+vi.mock('./noteService', () => ({
+  noteService: { permanentlyDeleteNote: vi.fn() },
+}));
+vi.mock('./noteRepository', () => ({
+  noteRepository: { getAllNonDeleted: vi.fn() },
+}));
+
+import {
+  repairAttachment,
+  deleteUndecryptableNote,
+  undecryptableNotes,
+  recordDecryptFailure,
+  resetVaultHealth,
+} from './vaultHealthService';
+import { fetchAttachment } from './syncClient';
+import { syncRepository } from './syncRepository';
+import { keyManager } from './keyManager';
+import { cryptoService } from './crypto';
+import { attachmentRepository } from './attachmentRepository';
+import { noteService } from './noteService';
+import type { Note } from '../types';
+
+const goodMetadata = {
+  syncEnabled: true,
+  syncEndpoint: 'https://example.org',
+  apiKey: JSON.stringify({ ciphertext: 'enc', iv: 'iv' }),
+};
+
+describe('repairAttachment', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (syncRepository.getMetadata as Mock).mockResolvedValue(goodMetadata);
+    (keyManager.getMasterKey as Mock).mockReturnValue({ key: {} });
+    (cryptoService.decryptText as Mock).mockResolvedValue('plain-api-key');
+  });
+
+  it('fetches the blob and stores it locally', async () => {
+    // 'aGVsbG8=' is base64 for 'hello'
+    (fetchAttachment as Mock).mockResolvedValue({ id: 'att1', data: 'aGVsbG8=' });
+
+    const ok = await repairAttachment('att1');
+
+    expect(ok).toBe(true);
+    expect(fetchAttachment).toHaveBeenCalledWith('https://example.org', 'plain-api-key', 'att1');
+    const [storedId, storedBuffer] = (attachmentRepository.storeBlob as Mock).mock.calls[0];
+    expect(storedId).toBe('att1');
+    expect(new TextDecoder().decode(storedBuffer)).toBe('hello');
+  });
+
+  it('returns false when the fetch fails', async () => {
+    (fetchAttachment as Mock).mockRejectedValue(new Error('404'));
+    expect(await repairAttachment('att1')).toBe(false);
+    expect(attachmentRepository.storeBlob).not.toHaveBeenCalled();
+  });
+
+  it('returns false when sync is not configured', async () => {
+    (syncRepository.getMetadata as Mock).mockResolvedValue(null);
+    expect(await repairAttachment('att1')).toBe(false);
+    expect(fetchAttachment).not.toHaveBeenCalled();
+  });
+
+  it('returns false when the app is locked', async () => {
+    (keyManager.getMasterKey as Mock).mockReturnValue(null);
+    expect(await repairAttachment('att1')).toBe(false);
+    expect(fetchAttachment).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteUndecryptableNote', () => {
+  const note = {
+    id: 'bad-note',
+    createdAt: 'c',
+    modifiedAt: 'm',
+    content: 'x',
+  } as unknown as Note;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetVaultHealth();
+    recordDecryptFailure(note, new Error('nope'));
+  });
+
+  it('permanently deletes and prunes the store entry', async () => {
+    (noteService.permanentlyDeleteNote as Mock).mockResolvedValue(undefined);
+    await deleteUndecryptableNote('bad-note');
+    expect(noteService.permanentlyDeleteNote).toHaveBeenCalledWith('bad-note');
+    expect(get(undecryptableNotes)).toHaveLength(0);
+  });
+
+  it('keeps the entry when deletion fails', async () => {
+    (noteService.permanentlyDeleteNote as Mock).mockRejectedValue(new Error('boom'));
+    await expect(deleteUndecryptableNote('bad-note')).rejects.toThrow('boom');
+    expect(get(undecryptableNotes)).toHaveLength(1);
+  });
+});
