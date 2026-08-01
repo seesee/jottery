@@ -292,23 +292,40 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             }
         }
 
-        // Fetch binary data for all attachments that need to be pushed
+        // Fetch binary data for all attachments that need to be pushed.
+        // A missing blob no longer aborts the whole push: the note syncs
+        // without it, the server responds with an attachmentWarnings entry,
+        // and any device still holding the blob heals the gap.
         let attachment_repo = AttachmentRepository::new(db.connection());
-        let sync_attachments: Result<Vec<SyncAttachment>> = attachment_ids_to_push.iter().map(|att_id| {
-            // Get encrypted binary data from database
-            let (_filename, _mime_type, _size, encrypted_data) = attachment_repo
-                .get(att_id, key)?
-                .context(format!("Attachment {} not found", att_id))?;
-
-            // Re-encrypt and base64 encode for transmission
-            let encrypted_blob = app.crypto.encrypt_binary(&encrypted_data, key)?;
-            let base64_data = general_purpose::STANDARD.encode(serde_json::to_vec(&encrypted_blob)?);
-
-            Ok(SyncAttachment {
-                id: att_id.clone(),
-                data: base64_data,
+        let sync_attachments: Vec<SyncAttachment> = attachment_ids_to_push
+            .iter()
+            .filter_map(|att_id| {
+                let encrypted_data = match attachment_repo.get(att_id, key) {
+                    Ok(Some((_filename, _mime_type, _size, data))) => data,
+                    Ok(None) => {
+                        tracing::warn!(
+                            "Attachment {} has no local blob — pushing note without it",
+                            att_id
+                        );
+                        return None;
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "Attachment {} could not be read ({}) — pushing note without it",
+                            att_id,
+                            e
+                        );
+                        return None;
+                    }
+                };
+                let encrypted_blob = app.crypto.encrypt_binary(&encrypted_data, key).ok()?;
+                let payload = serde_json::to_vec(&encrypted_blob).ok()?;
+                Some(SyncAttachment {
+                    id: att_id.clone(),
+                    data: general_purpose::STANDARD.encode(payload),
+                })
             })
-        }).collect();
+            .collect();
 
         // Collect pending deletions (from emptying trash)
         let pending_deletions = note_repo.get_pending_deletions()?;
@@ -322,7 +339,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
 
         let push_request = SyncPushRequest {
             notes: sync_notes,
-            attachments: sync_attachments?,
+            attachments: sync_attachments,
             versions: sync_versions,
             deletions: sync_deletions,
         };
@@ -402,6 +419,63 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             // Store conflict in sync metadata
             if let Err(e) = sync_repo.set_conflict(&rejected.id, &conflict_data) {
                 app.debug_log(&format!("Failed to store conflict for note {}: {}", rejected.id, e));
+            }
+        }
+
+        // React to server attachment warnings: re-push blobs this device
+        // holds (one attachments-only push, no in-run retry), log the rest.
+        if !push_response.attachment_warnings.is_empty() {
+            let mut repair_attachments: Vec<SyncAttachment> = Vec::new();
+            for warning in &push_response.attachment_warnings {
+                for att_id in &warning.attachment_ids {
+                    match attachment_repo.get(att_id, key) {
+                        Ok(Some((_f, _m, _s, encrypted_data))) => {
+                            match app.crypto.encrypt_binary(&encrypted_data, key)
+                                .and_then(|blob| serde_json::to_vec(&blob).map_err(Into::into))
+                            {
+                                Ok(payload) => {
+                                    tracing::warn!(
+                                        "Server is missing attachment {} (note {}) — re-uploading",
+                                        att_id, warning.note_id
+                                    );
+                                    repair_attachments.push(SyncAttachment {
+                                        id: att_id.clone(),
+                                        data: general_purpose::STANDARD.encode(payload),
+                                    });
+                                }
+                                Err(e) => tracing::warn!(
+                                    "Could not prepare attachment {} for repair: {}", att_id, e
+                                ),
+                            }
+                        }
+                        _ => tracing::warn!(
+                            "Server has no data for attachment {} (note {}) and neither does this device",
+                            att_id, warning.note_id
+                        ),
+                    }
+                }
+            }
+            if !repair_attachments.is_empty() {
+                let repair_request = SyncPushRequest {
+                    notes: Vec::new(),
+                    attachments: repair_attachments,
+                    versions: Vec::new(),
+                    deletions: Vec::new(),
+                };
+                match client
+                    .post(&push_url)
+                    .header("Authorization", format!("Bearer {}", api_key))
+                    .json(&repair_request)
+                    .send()
+                {
+                    Ok(resp) if resp.status().is_success() => {
+                        app.debug_log("[Sync] Re-uploaded attachments the server was missing");
+                    }
+                    Ok(resp) => tracing::warn!(
+                        "Attachment repair push failed with status {}", resp.status()
+                    ),
+                    Err(e) => tracing::warn!("Attachment repair push failed: {}", e),
+                }
             }
         }
 
