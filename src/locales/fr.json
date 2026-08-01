@@ -1406,6 +1406,8 @@
     "scanning": "Analyse en cours…",
     "loadToastAction": "Voir dans État du coffre",
     "openNote": "Ouvrir cette note",
-    "repairNotOnServer": "Absente du serveur également — ouvrez la note et supprimez la pièce jointe"
+    "repairNotOnServer": "Absente du serveur également — ouvrez la note et supprimez la pièce jointe",
+    "serverMissingTitle": "Absent du serveur",
+    "serverMissingHint": "Le serveur de synchronisation n'a aucune copie de ces pièces jointes, ni cet appareil. Ouvrez la note et supprimez la pièce jointe, ou synchronisez depuis un appareil qui possède encore le fichier."
   }
 }

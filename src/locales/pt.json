@@ -1406,6 +1406,8 @@
     "scanning": "Verificando…",
     "loadToastAction": "Verificar no Estado do cofre",
     "openNote": "Abrir esta nota",
-    "repairNotOnServer": "Também não está no servidor — abra a nota e remova o anexo"
+    "repairNotOnServer": "Também não está no servidor — abra a nota e remova o anexo",
+    "serverMissingTitle": "Ausente no servidor",
+    "serverMissingHint": "O servidor de sincronização não tem cópia destes anexos e este dispositivo também não. Abra a nota e remova o anexo, ou sincronize a partir de um dispositivo que ainda tenha o ficheiro."
   }
 }

@@ -1406,6 +1406,8 @@
     "scanning": "Skanowanie…",
     "loadToastAction": "Sprawdź w Stanie sejfu",
     "openNote": "Otwórz tę notatkę",
-    "repairNotOnServer": "Brak także na serwerze — otwórz notatkę i usuń załącznik"
+    "repairNotOnServer": "Brak także na serwerze — otwórz notatkę i usuń załącznik",
+    "serverMissingTitle": "Brak na serwerze",
+    "serverMissingHint": "Serwer synchronizacji nie ma kopii tych załączników, to urządzenie również nie. Otwórz notatkę i usuń załącznik lub zsynchronizuj z urządzenia, które nadal ma ten plik."
   }
 }

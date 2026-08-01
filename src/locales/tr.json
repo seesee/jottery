@@ -1406,6 +1406,8 @@
     "scanning": "Taranıyor…",
     "loadToastAction": "Kasa Durumunda incele",
     "openNote": "Bu notu aç",
-    "repairNotOnServer": "Sunucuda da yok — notu açın ve eki kaldırın"
+    "repairNotOnServer": "Sunucuda da yok — notu açın ve eki kaldırın",
+    "serverMissingTitle": "Sunucuda eksik",
+    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin."
   }
 }

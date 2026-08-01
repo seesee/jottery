@@ -1406,6 +1406,8 @@
     "scanning": "검사 중…",
     "loadToastAction": "보관함 상태에서 확인",
     "openNote": "이 노트 열기",
-    "repairNotOnServer": "서버에도 없습니다 — 노트를 열어 첨부 파일을 제거하세요"
+    "repairNotOnServer": "서버에도 없습니다 — 노트를 열어 첨부 파일을 제거하세요",
+    "serverMissingTitle": "서버에 없음",
+    "serverMissingHint": "동기화 서버에도 이 기기에도 이 첨부 파일의 사본이 없습니다. 노트를 열어 첨부 파일을 제거하거나, 파일이 남아 있는 기기에서 동기화하세요."
   }
 }

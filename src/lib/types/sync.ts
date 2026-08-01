@@ -109,6 +109,13 @@ export interface SyncPushResponse {
   accepted: SyncAccepted[];
   rejected: SyncRejected[];
   errors?: string[]; // Optional, for backward compatibility
+  attachmentWarnings?: AttachmentWarning[]; // Accepted notes referencing attachment data the server lacks
+}
+
+// One accepted note whose attachment references have no data on the server
+export interface AttachmentWarning {
+  noteId: string;
+  attachmentIds: string[];
 }
 
 // Accepted note info

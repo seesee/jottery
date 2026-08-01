@@ -1406,6 +1406,8 @@
     "scanning": "Analizando…",
     "loadToastAction": "Revisar en Estado de la bóveda",
     "openNote": "Abrir esta nota",
-    "repairNotOnServer": "Tampoco está en el servidor — abre la nota y elimina el adjunto"
+    "repairNotOnServer": "Tampoco está en el servidor — abre la nota y elimina el adjunto",
+    "serverMissingTitle": "Ausente en el servidor",
+    "serverMissingHint": "El servidor de sincronización no tiene copia de estos adjuntos y este dispositivo tampoco. Abre la nota y elimina el adjunto, o sincroniza desde un dispositivo que aún tenga el archivo."
   }
 }

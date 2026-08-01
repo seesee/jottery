@@ -1406,6 +1406,8 @@
     "scanning": "Prüfung läuft…",
     "loadToastAction": "Im Tresor-Zustand prüfen",
     "openNote": "Diese Notiz öffnen",
-    "repairNotOnServer": "Auch nicht auf dem Server — Notiz öffnen und den Anhang entfernen"
+    "repairNotOnServer": "Auch nicht auf dem Server — Notiz öffnen und den Anhang entfernen",
+    "serverMissingTitle": "Auf dem Server fehlend",
+    "serverMissingHint": "Der Sync-Server hat keine Kopie dieser Anhänge und dieses Gerät auch nicht. Öffnen Sie die Notiz und entfernen Sie den Anhang, oder synchronisieren Sie von einem Gerät, das die Datei noch hat."
   }
 }

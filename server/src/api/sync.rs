@@ -512,6 +512,27 @@ pub async fn push(
     // Store attachment data (binary blobs)
     // Handle FK errors gracefully - attachment metadata may not exist if note was rejected
     for attachment in push_req.attachments {
+        // Ownership guard: only store data for attachments whose metadata
+        // belongs to the authenticated user. SQLite FK enforcement cannot be
+        // relied on here, and without this check one user could overwrite
+        // another user's attachment data by id.
+        let owned: Option<(String,)> = sqlx::query_as(
+            "SELECT id FROM attachments_meta WHERE id = ? AND note_user_id = ?",
+        )
+        .bind(&attachment.id)
+        .bind(&client_info.user_id)
+        .fetch_optional(&state.pool)
+        .await?;
+        if owned.is_none() {
+            tracing::warn!(
+                "Skipping attachment data {} from client {}: no matching metadata for user {}",
+                attachment.id,
+                client_info.client_id,
+                client_info.user_id
+            );
+            continue;
+        }
+
         // Decode base64
         let data = match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
             Ok(d) => d,
@@ -662,10 +683,65 @@ pub async fn push(
         );
     }
 
+    // Warn about accepted notes whose attachment references have no stored
+    // data (payload omitted the blob and the server never received it).
+    // Clients holding the blob react with an attachments-only repair push.
+    // This must never fail the push: on query error, log and omit the field.
+    let attachment_warnings: Option<Vec<crate::models::AttachmentWarning>> = if accepted.is_empty() {
+        None
+    } else {
+        let mut qb: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT m.note_id, m.id FROM attachments_meta m \
+             LEFT JOIN attachments_data d ON d.id = m.id \
+             WHERE d.id IS NULL AND m.note_user_id = ",
+        );
+        qb.push_bind(&client_info.user_id);
+        qb.push(" AND m.note_id IN (");
+        let mut sep = qb.separated(", ");
+        for a in &accepted {
+            sep.push_bind(a.id.as_str());
+        }
+        sep.push_unseparated(") ORDER BY m.note_id, m.id");
+
+        match qb
+            .build_query_as::<(String, String)>()
+            .fetch_all(&state.pool)
+            .await
+        {
+            Ok(rows) if !rows.is_empty() => {
+                let mut by_note: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+                for (note_id, att_id) in rows {
+                    tracing::warn!(
+                        "Note {} (user {}) references attachment {} with no stored data",
+                        note_id,
+                        client_info.user_id,
+                        att_id
+                    );
+                    by_note.entry(note_id).or_default().push(att_id);
+                }
+                Some(
+                    by_note
+                        .into_iter()
+                        .map(|(note_id, attachment_ids)| crate::models::AttachmentWarning {
+                            note_id,
+                            attachment_ids,
+                        })
+                        .collect(),
+                )
+            }
+            Ok(_) => None,
+            Err(e) => {
+                tracing::error!("Attachment warning query failed (push still succeeds): {}", e);
+                None
+            }
+        }
+    };
+
     Ok(Json(SyncPushResponse {
         accepted,
         rejected,
         errors,
+        attachment_warnings,
     }))
 }
 
