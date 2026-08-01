@@ -153,6 +153,18 @@ pub struct SyncPushResponse {
     pub accepted: Vec<SyncAccepted>,
     pub rejected: Vec<SyncRejected>,
     pub errors: Vec<String>,
+    /// Accepted notes referencing attachment data the server does not hold.
+    /// Absent on older servers; clients re-push blobs they have (self-heal).
+    #[serde(rename = "attachmentWarnings", default)]
+    pub attachment_warnings: Vec<AttachmentWarning>,
+}
+
+/// One accepted note whose attachment references have no data on the server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttachmentWarning {
+    pub note_id: String,
+    pub attachment_ids: Vec<String>,
 }
 
 /// Accepted note info
@@ -349,6 +361,23 @@ pub struct AuthRegisterResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn push_response_decodes_with_and_without_attachment_warnings() {
+        let with: SyncPushResponse = serde_json::from_str(
+            r#"{"accepted":[],"rejected":[],"errors":[],"attachmentWarnings":[{"noteId":"n1","attachmentIds":["a1"]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(with.attachment_warnings.len(), 1);
+        assert_eq!(with.attachment_warnings[0].note_id, "n1");
+        assert_eq!(with.attachment_warnings[0].attachment_ids, vec!["a1"]);
+
+        let without: SyncPushResponse = serde_json::from_str(
+            r#"{"accepted":[],"rejected":[],"errors":[]}"#,
+        )
+        .unwrap();
+        assert!(without.attachment_warnings.is_empty());
+    }
 
     #[test]
     fn test_sync_metadata_defaults() {
