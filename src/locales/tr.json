@@ -1403,6 +1403,9 @@
     "repairSuccess": "Ek geri yüklendi",
     "repairFailed": "Kurtarma başarısız — bağlantıyı ve sunucu sürümünü kontrol edin",
     "rescan": "Yeniden tara",
-    "scanning": "Taranıyor…"
+    "scanning": "Taranıyor…",
+    "loadToastAction": "Kasa Durumunda incele",
+    "openNote": "Bu notu aç",
+    "repairNotOnServer": "Sunucuda da yok — notu açın ve eki kaldırın"
   }
 }

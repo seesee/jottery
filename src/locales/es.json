@@ -1403,6 +1403,9 @@
     "repairSuccess": "Adjunto restaurado",
     "repairFailed": "Recuperación fallida — comprueba la conexión y la versión del servidor",
     "rescan": "Volver a analizar",
-    "scanning": "Analizando…"
+    "scanning": "Analizando…",
+    "loadToastAction": "Revisar en Estado de la bóveda",
+    "openNote": "Abrir esta nota",
+    "repairNotOnServer": "Tampoco está en el servidor — abre la nota y elimina el adjunto"
   }
 }

@@ -34,7 +34,17 @@
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-2">
           <span class="text-lg font-bold">{getIcon(item.type)}</span>
-          <p class="text-sm whitespace-pre-line">{item.message}</p>
+          <div>
+            <p class="text-sm whitespace-pre-line">{item.message}</p>
+            {#if item.action}
+              <button
+                onclick={() => { item.action?.onClick(); toast.remove(item.id); }}
+                class="mt-1 text-sm font-medium underline hover:no-underline"
+              >
+                {item.action.label}
+              </button>
+            {/if}
+          </div>
         </div>
         <button
           onclick={() => toast.remove(item.id)}

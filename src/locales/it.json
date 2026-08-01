@@ -1403,6 +1403,9 @@
     "repairSuccess": "Allegato ripristinato",
     "repairFailed": "Recupero non riuscito — verifica la connessione e la versione del server",
     "rescan": "Nuova scansione",
-    "scanning": "Scansione in corso…"
+    "scanning": "Scansione in corso…",
+    "loadToastAction": "Verifica in Stato della cassaforte",
+    "openNote": "Apri questa nota",
+    "repairNotOnServer": "Assente anche dal server — apri la nota e rimuovi l'allegato"
   }
 }

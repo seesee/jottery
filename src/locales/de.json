@@ -1403,6 +1403,9 @@
     "repairSuccess": "Anhang wiederhergestellt",
     "repairFailed": "Wiederherstellung fehlgeschlagen — Sync-Verbindung und Serverversion prüfen",
     "rescan": "Erneut prüfen",
-    "scanning": "Prüfung läuft…"
+    "scanning": "Prüfung läuft…",
+    "loadToastAction": "Im Tresor-Zustand prüfen",
+    "openNote": "Diese Notiz öffnen",
+    "repairNotOnServer": "Auch nicht auf dem Server — Notiz öffnen und den Anhang entfernen"
   }
 }

@@ -20,6 +20,8 @@
 
   export let show = false;
   export let onClose: () => void = () => {};
+  export let initialTab: 'general' | 'advanced' | null = null;
+  export let onOpenNote: (noteId: string) => void = () => {};
   export let onOpenShortcutsHelp: () => void = () => {};
 
   let theme: Theme = $settings.theme;
@@ -116,6 +118,11 @@
   // Tab state
   type Tab = 'general' | 'editor' | 'colors' | 'keyboard' | 'sync' | 'advanced' | 'about';
   let currentTab: Tab = 'general';
+
+  // Jump to a requested tab when the modal opens (e.g. vault health toast)
+  $: if (show && initialTab) {
+    currentTab = initialTab;
+  }
 
   // Tabs configuration (reactive to pick up translations)
   $: settingsTabs = [
@@ -1222,6 +1229,7 @@
         <!-- ADVANCED TAB -->
         {#if currentTab === 'advanced'}
           <AdvancedTab
+            {onOpenNote}
             bind:selectedArchitecture
             onExport={handleExport}
             onImport={handleImport}

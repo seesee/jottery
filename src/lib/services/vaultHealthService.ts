@@ -10,7 +10,7 @@ import { attachmentRepository } from './attachmentRepository';
 import { syncRepository } from './syncRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
-import { fetchAttachment } from './syncClient';
+import { fetchAttachment, SyncApiError } from './syncClient';
 import { base64ToArrayBuffer } from '../utils/base64';
 import { getNoteTitle } from '../utils/noteTitle';
 
@@ -90,26 +90,33 @@ export async function scanMissingAttachments(): Promise<MissingAttachment[]> {
   return missing;
 }
 
+export type RepairResult = 'repaired' | 'not-on-server' | 'failed';
+
 /**
  * Re-fetch a missing attachment blob from the sync server and store it
- * locally. Returns false (rather than throwing) when sync is not configured,
- * the app is locked, or the fetch fails — callers surface this inline.
+ * locally. Never throws — callers surface the result inline:
+ * - 'repaired': blob fetched and stored
+ * - 'not-on-server': the server has no data for this attachment either
+ *   (e.g. a client pushed the reference but the upload never completed);
+ *   the remedy is to open the note and remove the dead reference
+ * - 'failed': sync unconfigured, app locked, or a transport error
  */
-export async function repairAttachment(attachmentId: string): Promise<boolean> {
+export async function repairAttachment(attachmentId: string): Promise<RepairResult> {
   try {
     const metadata = await syncRepository.getMetadata();
-    if (!metadata?.syncEnabled || !metadata.apiKey || !metadata.syncEndpoint) return false;
+    if (!metadata?.syncEnabled || !metadata.apiKey || !metadata.syncEndpoint) return 'failed';
 
     const masterKey = keyManager.getMasterKey();
-    if (!masterKey) return false;
+    if (!masterKey) return 'failed';
 
     const apiKey = await cryptoService.decryptText(JSON.parse(metadata.apiKey), masterKey.key);
     const result = await fetchAttachment(metadata.syncEndpoint, apiKey, attachmentId);
     await attachmentRepository.storeBlob(result.id, base64ToArrayBuffer(result.data));
-    return true;
+    return 'repaired';
   } catch (error) {
     console.error(`[VaultHealth] Failed to repair attachment ${attachmentId}:`, error);
-    return false;
+    if (error instanceof SyncApiError && error.status === 404) return 'not-on-server';
+    return 'failed';
   }
 }
 

@@ -1,8 +1,14 @@
 // Toast notification store
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: number;
   message: string;
   type: 'success' | 'error' | 'info';
+  action?: ToastAction;
 }
 
 class ToastStore {
@@ -13,26 +19,26 @@ class ToastStore {
     return this.toasts;
   }
 
-  show(message: string, type: Toast['type'] = 'info') {
+  show(message: string, type: Toast['type'] = 'info', action?: ToastAction) {
     const id = this.nextId++;
-    this.toasts = [...this.toasts, { id, message, type }];
+    this.toasts = [...this.toasts, { id, message, type, action }];
 
-    // Auto-remove after 5 seconds
+    // Auto-remove after 5 seconds (actionable toasts linger longer)
     setTimeout(() => {
       this.remove(id);
-    }, 5000);
+    }, action ? 10000 : 5000);
   }
 
-  success(message: string) {
-    this.show(message, 'success');
+  success(message: string, action?: ToastAction) {
+    this.show(message, 'success', action);
   }
 
-  error(message: string) {
-    this.show(message, 'error');
+  error(message: string, action?: ToastAction) {
+    this.show(message, 'error', action);
   }
 
-  info(message: string) {
-    this.show(message, 'info');
+  info(message: string, action?: ToastAction) {
+    this.show(message, 'info', action);
   }
 
   remove(id: number) {
@@ -41,4 +47,4 @@ class ToastStore {
 }
 
 export const toast = new ToastStore();
-export type { Toast };
+export type { Toast, ToastAction };

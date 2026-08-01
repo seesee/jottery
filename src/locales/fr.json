@@ -1403,6 +1403,9 @@
     "repairSuccess": "Pièce jointe restaurée",
     "repairFailed": "Échec de la récupération — vérifiez la connexion et la version du serveur",
     "rescan": "Analyser à nouveau",
-    "scanning": "Analyse en cours…"
+    "scanning": "Analyse en cours…",
+    "loadToastAction": "Voir dans État du coffre",
+    "openNote": "Ouvrir cette note",
+    "repairNotOnServer": "Absente du serveur également — ouvrez la note et supprimez la pièce jointe"
   }
 }

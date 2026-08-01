@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { get } from 'svelte/store';
 
-vi.mock('./syncClient', () => ({
-  fetchAttachment: vi.fn(),
-}));
+vi.mock('./syncClient', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./syncClient')>();
+  return { ...actual, fetchAttachment: vi.fn() };
+});
 vi.mock('./syncRepository', () => ({
   syncRepository: { getMetadata: vi.fn() },
 }));
@@ -30,7 +31,7 @@ import {
   recordDecryptFailure,
   resetVaultHealth,
 } from './vaultHealthService';
-import { fetchAttachment } from './syncClient';
+import { fetchAttachment, SyncApiError } from './syncClient';
 import { syncRepository } from './syncRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
@@ -52,34 +53,40 @@ describe('repairAttachment', () => {
     (cryptoService.decryptText as Mock).mockResolvedValue('plain-api-key');
   });
 
-  it('fetches the blob and stores it locally', async () => {
+  it('fetches the blob, stores it locally, and reports repaired', async () => {
     // 'aGVsbG8=' is base64 for 'hello'
     (fetchAttachment as Mock).mockResolvedValue({ id: 'att1', data: 'aGVsbG8=' });
 
-    const ok = await repairAttachment('att1');
+    const result = await repairAttachment('att1');
 
-    expect(ok).toBe(true);
+    expect(result).toBe('repaired');
     expect(fetchAttachment).toHaveBeenCalledWith('https://example.org', 'plain-api-key', 'att1');
     const [storedId, storedBuffer] = (attachmentRepository.storeBlob as Mock).mock.calls[0];
     expect(storedId).toBe('att1');
     expect(new TextDecoder().decode(storedBuffer)).toBe('hello');
   });
 
-  it('returns false when the fetch fails', async () => {
-    (fetchAttachment as Mock).mockRejectedValue(new Error('404'));
-    expect(await repairAttachment('att1')).toBe(false);
+  it('reports not-on-server when the server returns 404', async () => {
+    (fetchAttachment as Mock).mockRejectedValue(new SyncApiError('Attachment fetch failed', 404, 'Attachment not found'));
+    expect(await repairAttachment('att1')).toBe('not-on-server');
     expect(attachmentRepository.storeBlob).not.toHaveBeenCalled();
   });
 
-  it('returns false when sync is not configured', async () => {
+  it('reports failed on other fetch errors', async () => {
+    (fetchAttachment as Mock).mockRejectedValue(new Error('network down'));
+    expect(await repairAttachment('att1')).toBe('failed');
+    expect(attachmentRepository.storeBlob).not.toHaveBeenCalled();
+  });
+
+  it('reports failed when sync is not configured', async () => {
     (syncRepository.getMetadata as Mock).mockResolvedValue(null);
-    expect(await repairAttachment('att1')).toBe(false);
+    expect(await repairAttachment('att1')).toBe('failed');
     expect(fetchAttachment).not.toHaveBeenCalled();
   });
 
-  it('returns false when the app is locked', async () => {
+  it('reports failed when the app is locked', async () => {
     (keyManager.getMasterKey as Mock).mockReturnValue(null);
-    expect(await repairAttachment('att1')).toBe(false);
+    expect(await repairAttachment('att1')).toBe('failed');
     expect(fetchAttachment).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@
   import VaultHealthPanel from './VaultHealthPanel.svelte';
 
   export let selectedArchitecture: string;
+  export let onOpenNote: (noteId: string) => void = () => {};
   export let onExport: () => void;
   export let onImport: () => void;
   export let onDownload: () => void;
@@ -84,7 +85,7 @@
   </div>
 
   <!-- Vault Health -->
-  <VaultHealthPanel />
+  <VaultHealthPanel {onOpenNote} />
 
   <!-- Delete All Data -->
   <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
