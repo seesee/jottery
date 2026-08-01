@@ -1379,5 +1379,30 @@
     "clearRecent": "Verwijderen",
     "tryThese": "Probeer Deze",
     "clearAll": "Alles wissen"
+  },
+  "vaultHealth": {
+    "title": "Kluisstatus",
+    "description": "Detecteert notities die niet ontsleuteld kunnen worden en bijlagen die op dit apparaat ontbreken.",
+    "healthy": "Geen problemen gevonden.",
+    "loadToast": "{count} notitie(s) konden niet worden ontsleuteld — zie Instellingen → Geavanceerd",
+    "undecryptableTitle": "Niet-ontsleutelbare notities",
+    "undecryptableHint": "Deze notities kunnen niet met je huidige wachtwoord worden gelezen. Meestal zijn ze met een ander wachtwoord aangemaakt. Verwijderen is definitief en verwijdert ze van de synchronisatieserver en alle apparaten.",
+    "createdAt": "Aangemaakt",
+    "modifiedAt": "Gewijzigd",
+    "size": "Grootte",
+    "errorLabel": "Fout",
+    "delete": "Definitief verwijderen",
+    "deleteConfirmTitle": "Niet-ontsleutelbare notitie verwijderen?",
+    "deleteConfirmMessage": "Deze notitie kan niet worden ontsleuteld en de inhoud kan niet worden hersteld. Verwijderen haalt haar weg van dit apparaat, de synchronisatieserver en al je andere apparaten. Dit kan niet ongedaan worden gemaakt.",
+    "deleteFailed": "Notitie verwijderen mislukt",
+    "missingTitle": "Ontbrekende bijlagen",
+    "missingHint": "Deze bijlagen worden door notities gerefereerd maar zijn niet op dit apparaat opgeslagen.",
+    "noteLabel": "Notitie",
+    "unknownNote": "(notitie kan niet worden ontsleuteld)",
+    "repair": "Herstellen vanaf server",
+    "repairSuccess": "Bijlage hersteld",
+    "repairFailed": "Herstel mislukt — controleer de synchronisatieverbinding en serverversie",
+    "rescan": "Opnieuw scannen",
+    "scanning": "Bezig met scannen…"
   }
 }

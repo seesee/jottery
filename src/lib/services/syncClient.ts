@@ -188,3 +188,34 @@ export async function getServerStatus(
 
   return await response.json();
 }
+
+/**
+ * Fetch a single attachment blob from the server (vault health repair).
+ * Returns the attachment id and its base64-encoded data.
+ */
+export async function fetchAttachment(
+  endpoint: string,
+  apiKey: string,
+  attachmentId: string
+): Promise<{ id: string; data: string }> {
+  endpoint = normalizeEndpoint(endpoint);
+
+  const url = `${endpoint}/api/${API_VERSION}/sync/attachments/${encodeURIComponent(attachmentId)}`;
+  const response = await fetchWithTimeout(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  }, 30000); // Attachments can be large; allow 30 seconds
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new SyncApiError(
+      `Attachment fetch failed: ${response.statusText} - ${errorText}`,
+      response.status,
+      errorText
+    );
+  }
+
+  return await response.json();
+}

@@ -1365,5 +1365,30 @@
     "lockNote": "Lock/Unlock Note",
     "setColor": "Set Note Category",
     "archiveNote": "Archive Note"
+  },
+  "vaultHealth": {
+    "title": "Vault Health",
+    "description": "Detects notes that cannot be decrypted and attachments that are missing from this device.",
+    "healthy": "No problems found.",
+    "loadToast": "{count} note(s) could not be decrypted — review in Settings → Advanced",
+    "undecryptableTitle": "Undecryptable notes",
+    "undecryptableHint": "These notes cannot be read with your current password. This usually means they were created with a different password. Deleting is permanent and removes them from the sync server and all devices.",
+    "createdAt": "Created",
+    "modifiedAt": "Modified",
+    "size": "Size",
+    "errorLabel": "Error",
+    "delete": "Delete permanently",
+    "deleteConfirmTitle": "Delete undecryptable note?",
+    "deleteConfirmMessage": "This note cannot be decrypted and its content cannot be recovered. Deleting removes it from this device, the sync server, and all your other devices. This cannot be undone.",
+    "deleteFailed": "Failed to delete note",
+    "missingTitle": "Missing attachments",
+    "missingHint": "These attachments are referenced by notes but not stored on this device.",
+    "noteLabel": "Note",
+    "unknownNote": "(note cannot be decrypted)",
+    "repair": "Repair from server",
+    "repairSuccess": "Attachment restored",
+    "repairFailed": "Repair failed — check sync connection and server version",
+    "rescan": "Rescan",
+    "scanning": "Scanning…"
   }
 }

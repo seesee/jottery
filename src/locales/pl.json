@@ -1379,5 +1379,30 @@
     "clearRecent": "Usuń",
     "tryThese": "Wypróbuj Te",
     "clearAll": "Wyczyść wszystko"
+  },
+  "vaultHealth": {
+    "title": "Stan sejfu",
+    "description": "Wykrywa notatki, których nie można odszyfrować, oraz załączniki brakujące na tym urządzeniu.",
+    "healthy": "Nie znaleziono problemów.",
+    "loadToast": "{count} notatek nie udało się odszyfrować — sprawdź Ustawienia → Zaawansowane",
+    "undecryptableTitle": "Nieodszyfrowywalne notatki",
+    "undecryptableHint": "Tych notatek nie można odczytać obecnym hasłem. Zazwyczaj zostały utworzone z innym hasłem. Usunięcie jest trwałe i usuwa je z serwera synchronizacji oraz wszystkich urządzeń.",
+    "createdAt": "Utworzono",
+    "modifiedAt": "Zmodyfikowano",
+    "size": "Rozmiar",
+    "errorLabel": "Błąd",
+    "delete": "Usuń trwale",
+    "deleteConfirmTitle": "Usunąć nieodszyfrowywalną notatkę?",
+    "deleteConfirmMessage": "Tej notatki nie można odszyfrować, a jej treści nie da się odzyskać. Usunięcie usuwa ją z tego urządzenia, serwera synchronizacji i wszystkich pozostałych urządzeń. Tej operacji nie można cofnąć.",
+    "deleteFailed": "Nie udało się usunąć notatki",
+    "missingTitle": "Brakujące załączniki",
+    "missingHint": "Te załączniki są przywoływane przez notatki, ale nie są zapisane na tym urządzeniu.",
+    "noteLabel": "Notatka",
+    "unknownNote": "(notatki nie można odszyfrować)",
+    "repair": "Przywróć z serwera",
+    "repairSuccess": "Załącznik przywrócony",
+    "repairFailed": "Przywracanie nie powiodło się — sprawdź połączenie i wersję serwera",
+    "rescan": "Skanuj ponownie",
+    "scanning": "Skanowanie…"
   }
 }

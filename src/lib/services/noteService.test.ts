@@ -4,9 +4,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { get } from 'svelte/store';
 import { noteService } from './noteService';
 import { noteRepository } from './noteRepository';
 import { keyManager } from './keyManager';
+import { undecryptableNotes, resetVaultHealth } from './vaultHealthService';
+import type { Note } from '../types';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
 
 describe('noteService', () => {
@@ -233,6 +236,34 @@ describe('noteService', () => {
 
       const updatedNote = await noteRepository.getById(note.id);
       expect(updatedNote?.needsSync).toBe(true);
+    });
+  });
+
+  describe('decrypt failure reporting', () => {
+    it('records undecryptable notes in vaultHealthService during batched load', async () => {
+      resetVaultHealth();
+      const good = await noteService.createNote('readable note', []);
+
+      // Insert a note whose ciphertext cannot be decrypted with the vault key
+      const corrupt: Note = {
+        ...good,
+        id: 'corrupt-note-id',
+        content: JSON.stringify({
+          ciphertext: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+          iv: 'AAAAAAAAAAAAAAAA',
+        }),
+        tags: [],
+      };
+      await noteRepository.create(corrupt);
+
+      const firstBatch = await noteService.getAllNotesBatched('recent', 200);
+
+      expect(firstBatch.map(n => n.id)).toContain(good.id);
+      expect(firstBatch.map(n => n.id)).not.toContain('corrupt-note-id');
+      const failures = get(undecryptableNotes);
+      expect(failures).toHaveLength(1);
+      expect(failures[0].id).toBe('corrupt-note-id');
+      expect(failures[0].error).toBeTruthy();
     });
   });
 });

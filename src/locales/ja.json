@@ -1379,5 +1379,30 @@
     "clearRecent": "削除",
     "tryThese": "おすすめ",
     "clearAll": "すべてクリア"
+  },
+  "vaultHealth": {
+    "title": "保管庫の状態",
+    "description": "復号できないノートや、この端末にない添付ファイルを検出します。",
+    "healthy": "問題は見つかりませんでした。",
+    "loadToast": "{count}件のノートを復号できませんでした — 設定→詳細を確認してください",
+    "undecryptableTitle": "復号できないノート",
+    "undecryptableHint": "これらのノートは現在のパスワードでは読めません。通常、別のパスワードで作成されたものです。削除は取り消せず、同期サーバーとすべての端末から削除されます。",
+    "createdAt": "作成日時",
+    "modifiedAt": "更新日時",
+    "size": "サイズ",
+    "errorLabel": "エラー",
+    "delete": "完全に削除",
+    "deleteConfirmTitle": "復号できないノートを削除しますか？",
+    "deleteConfirmMessage": "このノートは復号できず、内容を復元できません。削除すると、この端末、同期サーバー、他のすべての端末から削除されます。この操作は取り消せません。",
+    "deleteFailed": "ノートを削除できませんでした",
+    "missingTitle": "見つからない添付ファイル",
+    "missingHint": "これらの添付ファイルはノートから参照されていますが、この端末には保存されていません。",
+    "noteLabel": "ノート",
+    "unknownNote": "（ノートを復号できません）",
+    "repair": "サーバーから復元",
+    "repairSuccess": "添付ファイルを復元しました",
+    "repairFailed": "復元に失敗しました — 同期接続とサーバーのバージョンを確認してください",
+    "rescan": "再スキャン",
+    "scanning": "スキャン中…"
   }
 }

@@ -5,6 +5,9 @@
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
   import { keyManager } from './lib/services/keyManager';
+  import { resetVaultHealth, undecryptableNotes } from './lib/services/vaultHealthService';
+  import { toast } from './lib/utils/toast.svelte';
+  import { get } from 'svelte/store';
   import { sessionStorageService } from './lib/services/sessionStorageService';
   import { locale, _, waitLocale } from 'svelte-i18n';
   import type { DecryptedNote } from './lib/types';
@@ -387,6 +390,7 @@
     stopAutoLock();
     syncService.disableAutoSync();
     syncService.disconnectFromSyncEvents();
+    resetVaultHealth();
     if (wasUnlocked) {
       wasUnlocked = false;
     }
@@ -451,6 +455,7 @@
       console.log(`[App] loadNotes: ${name} at ${Math.round(performance.now() - startTime)}ms${detail}`);
     try {
       loadingNotes = true;
+      resetVaultHealth();
 
       const loadedNoteIds = new Set<string>();
 
@@ -465,6 +470,11 @@
         if (generation !== loadGeneration || $isLocked) return;
         logPhase('background decryption complete', ` (${loadedNoteIds.size}/${totalCount} notes loaded)`);
         loadingProgress = { current: 0, total: 0 };
+
+        const failedCount = get(undecryptableNotes).length;
+        if (failedCount > 0) {
+          toast.info($_('vaultHealth.loadToast', { values: { count: failedCount } }));
+        }
 
         // Create welcome note for new vaults (skip in test and demo environments).
         // Check both loaded count AND repository count to avoid injecting the welcome

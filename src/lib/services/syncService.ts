@@ -684,17 +684,14 @@ class SyncService {
   // Pull Helper Methods
   // ===========================================================================
 
-  /** Collect all known attachment IDs from local notes */
-  private getKnownAttachmentIds(allNotes: Note[]): string[] {
-    const ids: string[] = [];
-    for (const note of allNotes) {
-      for (const attachment of note.attachments) {
-        if (!ids.includes(attachment.id)) {
-          ids.push(attachment.id);
-        }
-      }
-    }
-    return ids;
+  /**
+   * Attachment blobs actually present locally. The server re-sends any
+   * attachment of a pulled note that is not in this list, so sourcing it from
+   * stored blobs (rather than note references) lets locally missing
+   * attachments self-heal when their note is next pulled.
+   */
+  private async getKnownAttachmentIds(): Promise<string[]> {
+    return attachmentRepository.listAllIds();
   }
 
   /** Process a single remote note during pull (handles conflicts) */
@@ -937,11 +934,15 @@ class SyncService {
     let totalDeletions = 0;
     let totalCount = 0;
 
+    // Computed once per pull, not per page
+    const knownNoteIds = allNotes.map(n => n.id);
+    const knownAttachmentIds = await this.getKnownAttachmentIds();
+
     while (hasMore) {
       const pullRequest: SyncPullRequest = {
         lastSyncAt: metadata?.lastSyncAt,
-        knownNoteIds: allNotes.map(n => n.id),
-        knownAttachmentIds: this.getKnownAttachmentIds(allNotes),
+        knownNoteIds,
+        knownAttachmentIds,
         limit: SYNC_PULL_BATCH_SIZE,
         offset,
       };

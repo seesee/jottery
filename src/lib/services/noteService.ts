@@ -9,6 +9,7 @@ import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { versionRepository } from './versionRepository';
 import { cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
+import { recordDecryptFailure } from './vaultHealthService';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
 import { backupSchedulerService } from './backupSchedulerService';
@@ -113,13 +114,14 @@ class NoteService {
       notes.map(note => this.decryptNote(note, masterKey.key))
     );
     const decrypted: DecryptedNote[] = [];
-    for (const result of results) {
+    results.forEach((result, i) => {
       if (result.status === 'fulfilled') {
         decrypted.push(result.value);
       } else {
         console.error('[NoteService] Skipping undecryptable note:', result.reason);
+        recordDecryptFailure(notes[i], result.reason);
       }
-    }
+    });
 
     return this.sortNotes(decrypted, sortOrder);
   }
@@ -159,13 +161,14 @@ class NoteService {
       firstBatch.map(note => this.decryptNote(note, masterKey.key))
     );
     const firstDecrypted: DecryptedNote[] = [];
-    for (const result of firstResults) {
+    firstResults.forEach((result, i) => {
       if (result.status === 'fulfilled') {
         firstDecrypted.push(result.value);
       } else {
         console.error('[NoteService] Skipping undecryptable note:', result.reason);
+        recordDecryptFailure(firstBatch[i], result.reason);
       }
-    }
+    });
 
     // Decrypt remaining batches in background
     if (sortedNotes.length > batchSize && onProgress) {
@@ -205,13 +208,14 @@ class NoteService {
         batch.map(note => this.decryptNote(note, key))
       );
       const decrypted: DecryptedNote[] = [];
-      for (const result of results) {
+      results.forEach((result, j) => {
         if (result.status === 'fulfilled') {
           decrypted.push(result.value);
         } else {
           console.error(`[NoteService] Skipping undecryptable note in batch ${i + 1}/${totalBatches}:`, result.reason);
+          recordDecryptFailure(batch[j], result.reason);
         }
-      }
+      });
 
       if (decrypted.length > 0) {
         onProgress(decrypted);

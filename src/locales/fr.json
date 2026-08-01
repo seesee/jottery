@@ -1379,5 +1379,30 @@
     "clearRecent": "Supprimer",
     "tryThese": "Essayez ceux-ci",
     "clearAll": "Tout effacer"
+  },
+  "vaultHealth": {
+    "title": "État du coffre",
+    "description": "Détecte les notes impossibles à déchiffrer et les pièces jointes absentes de cet appareil.",
+    "healthy": "Aucun problème détecté.",
+    "loadToast": "{count} note(s) n'ont pas pu être déchiffrées — voir Paramètres → Avancé",
+    "undecryptableTitle": "Notes indéchiffrables",
+    "undecryptableHint": "Ces notes ne peuvent pas être lues avec votre mot de passe actuel. Elles ont probablement été créées avec un autre mot de passe. La suppression est définitive et les retire du serveur de synchronisation et de tous les appareils.",
+    "createdAt": "Créée",
+    "modifiedAt": "Modifiée",
+    "size": "Taille",
+    "errorLabel": "Erreur",
+    "delete": "Supprimer définitivement",
+    "deleteConfirmTitle": "Supprimer la note indéchiffrable ?",
+    "deleteConfirmMessage": "Cette note ne peut pas être déchiffrée et son contenu ne peut pas être récupéré. La suppression la retire de cet appareil, du serveur de synchronisation et de tous vos autres appareils. Cette action est irréversible.",
+    "deleteFailed": "Échec de la suppression de la note",
+    "missingTitle": "Pièces jointes manquantes",
+    "missingHint": "Ces pièces jointes sont référencées par des notes mais absentes de cet appareil.",
+    "noteLabel": "Note",
+    "unknownNote": "(note indéchiffrable)",
+    "repair": "Récupérer depuis le serveur",
+    "repairSuccess": "Pièce jointe restaurée",
+    "repairFailed": "Échec de la récupération — vérifiez la connexion et la version du serveur",
+    "rescan": "Analyser à nouveau",
+    "scanning": "Analyse en cours…"
   }
 }

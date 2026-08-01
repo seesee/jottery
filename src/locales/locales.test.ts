@@ -210,6 +210,7 @@ describe('Translation Quality', () => {
     'Description', // Same in French
     'note', // Same in French
     'notes', // Same in French
+    'Note', // Same in French (vaultHealth.noteLabel)
     '{total} notes', // Same in French ("notes" is French)
     'Error', // Same in Spanish
     'Tags:', // Same in Portuguese/Dutch

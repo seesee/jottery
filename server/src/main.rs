@@ -118,6 +118,7 @@ async fn main() {
         .route("/api/v1/sync/status", get(api::sync::get_status))
         .route("/api/v1/sync/push", post(api::sync::push))
         .route("/api/v1/sync/pull", post(api::sync::pull))
+        .route("/api/v1/sync/attachments/:id", get(api::sync::get_attachment))
         .route("/api/v1/sync/notes/:id", delete(api::sync::delete_note))
         .route("/api/v1/sync/device", delete(api::sync::revoke_self))
         .route("/api/v1/auth/wrapped-key", get(api::auth::get_wrapped_key).put(api::auth::put_wrapped_key))

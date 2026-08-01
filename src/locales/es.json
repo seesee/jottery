@@ -1379,5 +1379,30 @@
     "clearRecent": "Eliminar",
     "tryThese": "Prueba estos",
     "clearAll": "Borrar todo"
+  },
+  "vaultHealth": {
+    "title": "Estado de la bóveda",
+    "description": "Detecta notas que no se pueden descifrar y adjuntos que faltan en este dispositivo.",
+    "healthy": "No se encontraron problemas.",
+    "loadToast": "{count} nota(s) no se pudieron descifrar — revisa Ajustes → Avanzado",
+    "undecryptableTitle": "Notas indescifrables",
+    "undecryptableHint": "Estas notas no se pueden leer con tu contraseña actual. Normalmente se crearon con otra contraseña. Eliminarlas es permanente y las quita del servidor de sincronización y de todos los dispositivos.",
+    "createdAt": "Creada",
+    "modifiedAt": "Modificada",
+    "size": "Tamaño",
+    "errorLabel": "Error",
+    "delete": "Eliminar permanentemente",
+    "deleteConfirmTitle": "¿Eliminar nota indescifrable?",
+    "deleteConfirmMessage": "Esta nota no se puede descifrar y su contenido no se puede recuperar. Eliminarla la quita de este dispositivo, del servidor de sincronización y de todos tus dispositivos. No se puede deshacer.",
+    "deleteFailed": "No se pudo eliminar la nota",
+    "missingTitle": "Adjuntos faltantes",
+    "missingHint": "Estos adjuntos son referenciados por notas pero no están almacenados en este dispositivo.",
+    "noteLabel": "Nota",
+    "unknownNote": "(nota indescifrable)",
+    "repair": "Recuperar del servidor",
+    "repairSuccess": "Adjunto restaurado",
+    "repairFailed": "Recuperación fallida — comprueba la conexión y la versión del servidor",
+    "rescan": "Volver a analizar",
+    "scanning": "Analizando…"
   }
 }

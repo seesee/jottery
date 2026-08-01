@@ -1379,5 +1379,30 @@
     "clearRecent": "제거",
     "tryThese": "이런 검색을 시도해 보세요",
     "clearAll": "모두 지우기"
+  },
+  "vaultHealth": {
+    "title": "보관함 상태",
+    "description": "복호화할 수 없는 노트와 이 기기에 없는 첨부 파일을 감지합니다.",
+    "healthy": "문제가 발견되지 않았습니다.",
+    "loadToast": "{count}개의 노트를 복호화하지 못했습니다 — 설정 → 고급에서 확인하세요",
+    "undecryptableTitle": "복호화할 수 없는 노트",
+    "undecryptableHint": "이 노트들은 현재 비밀번호로 읽을 수 없습니다. 보통 다른 비밀번호로 만들어진 경우입니다. 삭제는 영구적이며 동기화 서버와 모든 기기에서 제거됩니다.",
+    "createdAt": "생성",
+    "modifiedAt": "수정",
+    "size": "크기",
+    "errorLabel": "오류",
+    "delete": "영구 삭제",
+    "deleteConfirmTitle": "복호화할 수 없는 노트를 삭제할까요?",
+    "deleteConfirmMessage": "이 노트는 복호화할 수 없으며 내용을 복구할 수 없습니다. 삭제하면 이 기기, 동기화 서버, 다른 모든 기기에서 제거됩니다. 되돌릴 수 없습니다.",
+    "deleteFailed": "노트를 삭제하지 못했습니다",
+    "missingTitle": "누락된 첨부 파일",
+    "missingHint": "이 첨부 파일들은 노트에서 참조되지만 이 기기에 저장되어 있지 않습니다.",
+    "noteLabel": "노트",
+    "unknownNote": "(노트를 복호화할 수 없음)",
+    "repair": "서버에서 복구",
+    "repairSuccess": "첨부 파일 복원됨",
+    "repairFailed": "복구 실패 — 동기화 연결과 서버 버전을 확인하세요",
+    "rescan": "다시 검사",
+    "scanning": "검사 중…"
   }
 }
