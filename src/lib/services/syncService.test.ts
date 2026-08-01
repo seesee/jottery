@@ -9,6 +9,7 @@ import { get } from 'svelte/store';
 import { syncService } from './syncService';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
+import { attachmentRepository } from './attachmentRepository';
 import { settingsRepository } from './settingsRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
@@ -423,6 +424,46 @@ describe('syncService', () => {
       expect(decryptedNote).toBeDefined();
       expect(decryptedNote!.content).toBe('Remote content');
       // Note: Tags are decrypted separately by noteService - the sync stores them encrypted
+    });
+
+    it('reports locally stored blobs (not note references) as known attachment IDs', async () => {
+      // A note referencing two attachments, only one of which has a stored blob:
+      // the pull request must claim knowledge of the stored blob only, so the
+      // server re-sends the missing one when this note is next pulled
+      await noteService.createNote('note with attachments', [], {
+        attachments: [
+          { id: 'att-stored', filename: 'a.png', mimeType: 'image/png', size: 4, data: 'att-stored' },
+          { id: 'att-gone', filename: 'b.png', mimeType: 'image/png', size: 4, data: 'att-gone' },
+        ],
+      });
+      await attachmentRepository.storeBlob('att-stored', new ArrayBuffer(4));
+
+      let capturedBody: { knownAttachmentIds?: string[] } | undefined;
+      server.use(
+        http.get(`${TEST_ENDPOINT}/api/v1/sync/status`, () => {
+          return HttpResponse.json({
+            serverTime: new Date().toISOString(),
+            version: '1.0.0',
+            pendingNotes: 0,
+            totalNotes: 0,
+          });
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/push`, () => {
+          return HttpResponse.json({ accepted: [], rejected: [] } as SyncPushResponse);
+        }),
+        http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, async ({ request }) => {
+          capturedBody = await request.json() as { knownAttachmentIds?: string[] };
+          return HttpResponse.json({
+            notes: [],
+            attachments: [],
+            versions: [],
+          } as SyncPullResponse);
+        })
+      );
+
+      await syncService.syncNow();
+
+      expect(capturedBody?.knownAttachmentIds).toEqual(['att-stored']);
     });
 
     it('should include authorization header in pull request', async () => {
