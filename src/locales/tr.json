@@ -1072,7 +1072,10 @@
     "menu": "Menü",
     "loadingNotes": "{current}/{total} not yükleniyor...",
     "creatingNote": "Not oluşturuluyor...",
-    "addContentFirst": "Önce mevcut nota içerik ekleyin"
+    "addContentFirst": "Önce mevcut nota içerik ekleyin",
+    "lastSynced": "Son senkronizasyon: {time}",
+    "neverSynced": "Henüz senkronize edilmedi",
+    "syncDisabled": "Senkronizasyon etkin değil"
   },
   "confirm": {
     "deleteDatabase": {

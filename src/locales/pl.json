@@ -1072,7 +1072,10 @@
     "menu": "Menu",
     "loadingNotes": "Ładowanie {current}/{total} notatek...",
     "creatingNote": "Tworzenie notatki...",
-    "addContentFirst": "Najpierw dodaj treść do bieżącej notatki"
+    "addContentFirst": "Najpierw dodaj treść do bieżącej notatki",
+    "lastSynced": "Ostatnia synchronizacja: {time}",
+    "neverSynced": "Jeszcze nie zsynchronizowano",
+    "syncDisabled": "Synchronizacja nie jest włączona"
   },
   "confirm": {
     "deleteDatabase": {

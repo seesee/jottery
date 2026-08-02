@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode } from './lib/stores/appStore';
+  import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode, isSyncing } from './lib/stores/appStore';
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
@@ -296,6 +296,7 @@
           noteService,
           versionRepository,
           syncService,
+          isSyncing,
         };
       }
 

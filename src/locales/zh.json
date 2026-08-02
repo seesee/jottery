@@ -1072,7 +1072,10 @@
     "menu": "菜单",
     "loadingNotes": "正在加载 {current}/{total} 条笔记...",
     "creatingNote": "正在创建笔记...",
-    "addContentFirst": "请先在当前笔记中添加内容"
+    "addContentFirst": "请先在当前笔记中添加内容",
+    "lastSynced": "上次同步：{time}",
+    "neverSynced": "尚未同步",
+    "syncDisabled": "未启用同步"
   },
   "confirm": {
     "deleteDatabase": {

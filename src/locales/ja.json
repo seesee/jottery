@@ -1072,7 +1072,10 @@
     "menu": "メニュー",
     "loadingNotes": "{total}件中{current}件のノートを読み込み中...",
     "creatingNote": "ノートを作成中...",
-    "addContentFirst": "最初に現在のノートに内容を追加してください"
+    "addContentFirst": "最初に現在のノートに内容を追加してください",
+    "lastSynced": "最終同期: {time}",
+    "neverSynced": "まだ同期されていません",
+    "syncDisabled": "同期が有効になっていません"
   },
   "confirm": {
     "deleteDatabase": {

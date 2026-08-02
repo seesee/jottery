@@ -1072,7 +1072,10 @@
     "menu": "Menu",
     "loadingNotes": "Chargement de {current}/{total} notes...",
     "creatingNote": "Création de la note...",
-    "addContentFirst": "Ajoutez d'abord du contenu à la note actuelle"
+    "addContentFirst": "Ajoutez d'abord du contenu à la note actuelle",
+    "lastSynced": "Dernière synchronisation : {time}",
+    "neverSynced": "Pas encore synchronisé",
+    "syncDisabled": "La synchronisation n'est pas activée"
   },
   "confirm": {
     "deleteDatabase": {
