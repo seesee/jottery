@@ -1072,7 +1072,10 @@
     "menu": "Меню",
     "loadingNotes": "Загрузка {current}/{total} заметок...",
     "creatingNote": "Создание заметки...",
-    "addContentFirst": "Сначала добавьте содержимое в текущую заметку"
+    "addContentFirst": "Сначала добавьте содержимое в текущую заметку",
+    "lastSynced": "Последняя синхронизация: {time}",
+    "neverSynced": "Ещё не синхронизировано",
+    "syncDisabled": "Синхронизация не включена"
   },
   "confirm": {
     "deleteDatabase": {

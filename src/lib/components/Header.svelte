@@ -73,6 +73,34 @@
     ? Math.round(($syncProgress.completed / $syncProgress.total) * 100)
     : 0;
 
+  // Wordmark sync indicator state
+  let showWordmarkTooltip = false;
+  let lastSyncedAt: string | null = null;
+
+  $: wordmarkSyncing = $isSyncing && $settings.syncEnabled;
+
+  $: wordmarkStatusText = wordmarkSyncing
+    ? (showSyncPercentage
+        ? $_('sync.syncProgress', { values: { percentage: syncPercentage } })
+        : $_('sync.syncing'))
+    : !$settings.syncEnabled
+      ? $_('header.syncDisabled')
+      : lastSyncedAt
+        ? $_('header.lastSynced', { values: { time: new Date(lastSyncedAt).toLocaleString() } })
+        : $_('header.neverSynced');
+
+  async function openWordmarkTooltip() {
+    // Refresh the last-synced timestamp each time the tooltip opens so it is
+    // never stale (sync metadata lives in IndexedDB, not a store)
+    try {
+      const metadata = await syncRepository.getMetadata();
+      lastSyncedAt = metadata?.lastSyncAt ?? null;
+    } catch {
+      lastSyncedAt = null;
+    }
+    showWordmarkTooltip = true;
+  }
+
   // Check if remember password is enabled
   $: rememberPasswordEnabled = $settings.rememberPassword || false;
 
@@ -362,41 +390,6 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-      {:else if $isSyncing && $settings.syncEnabled}
-        <!-- Sync indicator in back button space -->
-        <div
-          class="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-blue-600 dark:text-blue-400"
-          title={$_('sync.syncing')}
-          role="status"
-          aria-live="polite"
-          aria-label={showSyncPercentage ? $_('sync.syncProgress', { values: { percentage: syncPercentage } }) : $_('sync.syncing')}
-        >
-          {#if showSyncPercentage}
-            <!-- Percentage indicator for >= 5 items -->
-            <div class="relative w-6 h-6" aria-hidden="true">
-              <svg class="w-6 h-6 transform -rotate-90" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"></circle>
-                <circle
-                  cx="12" cy="12" r="10"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  fill="none"
-                  stroke-dasharray="62.83"
-                  stroke-dashoffset={62.83 * (1 - syncPercentage / 100)}
-                  stroke-linecap="round"
-                  class="transition-all duration-300"
-                ></circle>
-              </svg>
-              <span class="absolute inset-0 flex items-center justify-center text-[8px] font-bold">{syncPercentage}</span>
-            </div>
-          {:else}
-            <!-- Spinner for < 5 items -->
-            <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          {/if}
-        </div>
       {:else}
         <!-- Greyed-out placeholder to prevent layout shift -->
         <div class="min-h-11 min-w-11 p-2.5 opacity-30">
@@ -418,43 +411,35 @@
       </button>
     {/if}
 
-    <!-- Brand with sync indicator (desktop only - mobile shows in back button space) -->
-    <div class="flex items-center gap-2">
-      <h1 class="text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white">{$_('app.name')}</h1>
-      {#if !forceMobileLayout && $isSyncing && $settings.syncEnabled}
+    <!-- Brand wordmark: letters colour-cycle while syncing; hover/focus shows
+         sync status and app version (replaces the old inline sync indicator,
+         which pushed toolbar items sideways) -->
+    <div class="relative">
+      <button
+        type="button"
+        class="jottery-wordmark bg-transparent border-0 p-0 cursor-default text-lg {forceMobileLayout ? '' : 'tablet:text-xl'} font-bold text-gray-900 dark:text-white"
+        class:syncing={wordmarkSyncing}
+        on:mouseenter={openWordmarkTooltip}
+        on:mouseleave={() => showWordmarkTooltip = false}
+        on:focus={openWordmarkTooltip}
+        on:blur={() => showWordmarkTooltip = false}
+        on:click={openWordmarkTooltip}
+        aria-label={wordmarkStatusText}
+      >
+        {#each Array.from($_('app.name')) as letter, i}
+          <span class="wordmark-letter" style="--i: {i}" aria-hidden="true">{letter}</span>
+        {/each}
+      </button>
+      <!-- Screen readers get sync state changes without the animation -->
+      <span class="sr-only" role="status" aria-live="polite">{wordmarkSyncing ? $_('sync.syncing') : ''}</span>
+      {#if showWordmarkTooltip}
         <div
-          class="flex items-center gap-1 text-blue-600 dark:text-blue-400"
-          title={$_('sync.syncing')}
-          role="status"
-          aria-live="polite"
-          aria-label={showSyncPercentage ? $_('sync.syncProgress', { values: { percentage: syncPercentage } }) : $_('sync.syncing')}
+          class="absolute left-0 top-full mt-1 z-50 whitespace-nowrap rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 shadow-lg"
+          data-testid="wordmark-tooltip"
+          role="tooltip"
         >
-          {#if showSyncPercentage}
-            <!-- Percentage indicator for >= 5 items -->
-            <div class="relative w-4 h-4" aria-hidden="true">
-              <svg class="w-4 h-4 transform -rotate-90" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"></circle>
-                <circle
-                  cx="12" cy="12" r="10"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  fill="none"
-                  stroke-dasharray="62.83"
-                  stroke-dashoffset={62.83 * (1 - syncPercentage / 100)}
-                  stroke-linecap="round"
-                  class="transition-all duration-300"
-                ></circle>
-              </svg>
-            </div>
-            <span class="text-xs" aria-hidden="true">{syncPercentage}%</span>
-          {:else}
-            <!-- Spinner for < 5 items -->
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="text-xs" aria-hidden="true">{$_('sync.syncing')}</span>
-          {/if}
+          <p class="font-medium">{wordmarkStatusText}</p>
+          <p class="text-gray-500 dark:text-gray-400 mt-0.5">{$_('app.name')} v{__APP_VERSION__}</p>
         </div>
       {/if}
     </div>
@@ -806,3 +791,34 @@
   onClose={closeSavedSearches}
   onApply={handleApplySavedSearch}
 />
+
+<style>
+  .jottery-wordmark {
+    /* Letters need their own boxes for the staggered colour wave */
+    display: inline-flex;
+  }
+
+  .wordmark-letter {
+    transition: color 0.3s ease;
+  }
+
+  .jottery-wordmark.syncing .wordmark-letter {
+    animation: wordmark-sync-cycle 1.6s linear infinite;
+    animation-delay: calc(var(--i) * 0.15s);
+  }
+
+  @keyframes wordmark-sync-cycle {
+    0%, 100% { color: inherit; }
+    25% { color: #2563eb; }  /* blue-600 */
+    50% { color: #7c3aed; }  /* violet-600 */
+    75% { color: #0d9488; }  /* teal-600 */
+  }
+
+  /* Reduced motion: no colour wave — a static accent colour signals syncing */
+  @media (prefers-reduced-motion: reduce) {
+    .jottery-wordmark.syncing .wordmark-letter {
+      animation: none;
+      color: #2563eb;
+    }
+  }
+</style>

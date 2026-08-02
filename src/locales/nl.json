@@ -1072,7 +1072,10 @@
     "menu": "Menu",
     "loadingNotes": "{current}/{total} notities laden...",
     "creatingNote": "Notitie maken...",
-    "addContentFirst": "Voeg eerst inhoud toe aan huidige notitie"
+    "addContentFirst": "Voeg eerst inhoud toe aan huidige notitie",
+    "lastSynced": "Laatst gesynchroniseerd: {time}",
+    "neverSynced": "Nog niet gesynchroniseerd",
+    "syncDisabled": "Synchronisatie is niet ingeschakeld"
   },
   "confirm": {
     "deleteDatabase": {

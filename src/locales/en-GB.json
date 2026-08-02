@@ -1200,7 +1200,10 @@
     "menu": "Menu",
     "loadingNotes": "Loading {current}/{total} notes...",
     "creatingNote": "Creating note...",
-    "addContentFirst": "Add content to current note first"
+    "addContentFirst": "Add content to current note first",
+    "lastSynced": "Last synced: {time}",
+    "neverSynced": "Not synced yet",
+    "syncDisabled": "Sync is not enabled"
   },
   "confirm": {
     "deleteDatabase": {

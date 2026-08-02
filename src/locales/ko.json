@@ -1072,7 +1072,10 @@
     "menu": "메뉴",
     "loadingNotes": "{current}/{total}개 노트 로딩 중...",
     "creatingNote": "노트 만드는 중...",
-    "addContentFirst": "먼저 현재 노트에 내용을 추가하세요"
+    "addContentFirst": "먼저 현재 노트에 내용을 추가하세요",
+    "lastSynced": "마지막 동기화: {time}",
+    "neverSynced": "아직 동기화되지 않음",
+    "syncDisabled": "동기화가 활성화되어 있지 않습니다"
   },
   "confirm": {
     "deleteDatabase": {
