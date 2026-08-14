@@ -25,6 +25,32 @@ field, so wording survives between submissions instead of being retyped.
 
 _Nothing pending._
 
+## 1.2.4 — 2026-08-02
+
+The pending first App Store submission. No iOS-visible changes over 1.2.3 (the
+version bump aligned the estate for a web-only change), and the "What's New"
+field is not shown on a first release — so there is nothing to paste. If a
+future update ever needs to summarise "since 1.2.0", combine the 1.2.3 and
+1.2.0 bullets.
+
+## 1.2.3 — 2026-08-01
+
+```text
+• Sync now repairs missing attachments automatically: if an attachment
+  previously failed to reach your server, your device re-sends it on the next
+  sync, and attachments the server cannot supply no longer hold up syncing.
+```
+
+## 1.2.2 — 2026-08-01
+
+No iOS-visible changes (vault health tooling for the web client, plus server
+support it relies on). Nothing to paste.
+
+## 1.2.1 — 2026-08-01
+
+No iOS-visible changes (web fixes and dependency security updates). Nothing to
+paste.
+
 ## 1.2.0 — 2026-07-25
 
 ```text
@@ -65,6 +91,6 @@ refactor.
 
 ## Released
 
-Nothing has shipped to the App Store yet. 1.2.0 above is the pending first
+Nothing has shipped to the App Store yet. 1.2.4 above is the pending first
 submission — the "What's New" field is not shown to users on a first release,
-so that text becomes relevant from the next update onward.
+so this file's text becomes relevant from the next update onward.

@@ -157,7 +157,8 @@ enum DemoSeedService {
             settings.syncEndpoint = "https://notes.example.org"
             try appState.updateSettings(settings)
             appState.syncEnabled = true
-            appState.lastSyncAt = Date()
+            // Backdated so the frame shows "5 min ago" rather than "in 0 sec"
+            appState.lastSyncAt = Date().addingTimeInterval(-300)
             appState.demoShowSettings = true
         case .lock:
             appState.lock()
