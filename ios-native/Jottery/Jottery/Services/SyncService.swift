@@ -628,7 +628,7 @@ actor SyncService {
         switch strategy {
         case .keepLocal:
             // Keep local content, rebase hash chain onto server's so next push is a fast-forward
-            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             var updated = record
             updated.needsSync = true
             updated.version = conflict.serverVersion + 1
@@ -651,11 +651,13 @@ actor SyncService {
             }
             mergedChain = Array(mergedChain.prefix(CryptoService.maxHashChainLength))
             updated.hashChain = String(data: (try? JSONEncoder().encode(mergedChain)) ?? Data("[]".utf8), encoding: .utf8)
-            try noteRepo.updateRaw(updated)
+            // insertOrReplace (upsert) rather than updateRaw: the record may have
+            // just been recreated in-memory above and doesn't exist in the DB yet.
+            try noteRepo.insertOrReplace(updated)
 
         case .keepServer:
             // Apply server version (same as the old auto-accept behaviour)
-            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             var updated = record
             updated.content = conflict.serverEncryptedContent
             updated.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
@@ -671,12 +673,14 @@ actor SyncService {
             }
             updated.needsSync = false
             updated.syncedAt = now
-            try noteRepo.updateRaw(updated)
+            // insertOrReplace (upsert) rather than updateRaw: the record may have
+            // just been recreated in-memory above and doesn't exist in the DB yet.
+            try noteRepo.insertOrReplace(updated)
             try versionRepo.createVersion(from: updated, reason: "sync-conflict-resolved")
 
         case .keepBoth:
             // Accept server version for the existing note
-            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             var serverRecord = record
             serverRecord.content = conflict.serverEncryptedContent
             serverRecord.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
@@ -692,7 +696,9 @@ actor SyncService {
             }
             serverRecord.needsSync = false
             serverRecord.syncedAt = now
-            try noteRepo.updateRaw(serverRecord)
+            // insertOrReplace (upsert) rather than updateRaw: the record may have
+            // just been recreated in-memory above and doesn't exist in the DB yet.
+            try noteRepo.insertOrReplace(serverRecord)
 
             // Create a duplicate note with the local content
             let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
@@ -711,10 +717,37 @@ actor SyncService {
         pendingConflicts.remove(at: conflictIndex)
     }
 
+    /// Fetch the note row backing a conflict, or recreate it from the conflict's
+    /// local snapshot if it has vanished (e.g. a remote deletion raced the
+    /// conflict). Every resolution strategy needs a starting record to mutate;
+    /// without this fallback a missing row silently discarded the user's choice
+    /// while still clearing the conflict.
+    private func recreateRecordIfMissing(noteId: String, conflict: ConflictInfo) throws -> NoteRecord {
+        if let existing = try noteRepo.getRaw(id: noteId) {
+            return existing
+        }
+        let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
+        let encTags = try CryptoService.encryptStringArray(conflict.localTags, key: key)
+        var recreated = NoteRecord.new(
+            encryptedContent: try CryptoService.serializeEncryptedJSON(encContent),
+            encryptedTags: try CryptoService.serializeEncryptedJSON(encTags)
+        )
+        recreated.id = noteId
+        recreated.modifiedAt = conflict.localModifiedAt
+        return recreated
+    }
+
     /// Clear all pending conflicts (used when locking the app).
     func clearConflicts() {
         pendingConflicts.removeAll()
     }
+
+    #if DEBUG
+    /// Test-only hook: inject a conflict without running an actual sync cycle.
+    func addPendingConflictForTesting(_ conflict: ConflictInfo) {
+        pendingConflicts.append(conflict)
+    }
+    #endif
 
     // MARK: - Decryption Helpers
 
