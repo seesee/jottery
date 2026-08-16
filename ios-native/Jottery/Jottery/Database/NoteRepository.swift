@@ -265,6 +265,20 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Hard-delete only when the note has no unsynced local changes.
+    /// A remote deletion must never destroy an edit the server has not seen —
+    /// the surviving note re-pushes and is resurrected server-side.
+    /// Returns true if the row was deleted.
+    func hardDeleteIfSynced(id: String) throws -> Bool {
+        try db.dbPool.write { db in
+            try db.execute(
+                sql: "DELETE FROM notes WHERE id = ? AND needs_sync = 0",
+                arguments: [id]
+            )
+            return db.changesCount > 0
+        }
+    }
+
     /// Archive a note.
     func archive(id: String) throws {
         let now = Date().iso8601

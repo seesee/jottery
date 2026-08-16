@@ -396,7 +396,10 @@ actor SyncService {
             if let deletions = response.deletions {
                 for deletion in deletions {
                     do {
-                        try noteRepo.hardDelete(id: deletion.id)
+                        let deleted = try noteRepo.hardDeleteIfSynced(id: deletion.id)
+                        if !deleted {
+                            Log.debug("[Sync] pull: kept note \(deletion.id) — local unsynced edit outranks remote deletion")
+                        }
                     } catch {
                         Log.debug("[Sync] pull: failed to delete note \(deletion.id): \(error)")
                     }
