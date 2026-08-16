@@ -9,6 +9,7 @@ struct ConflictInfo: Identifiable, Sendable {
     let localContent: String
     let localTags: [String]
     let localModifiedAt: String
+    let localAttachments: [AttachmentRef]
 
     let serverContent: String
     let serverTags: [String]

@@ -130,6 +130,9 @@ struct UnlockScreen: View {
         Task {
             let success = await appState.keyManager.attemptBiometricUnlock()
             if success {
+                // Retry any edit that failed to flush at lock time now that
+                // the key is available again.
+                appState.flushPendingEditorNote()
                 try? appState.loadNotes()
                 appState.isLocked = false
                 Log.debug("[Sync] biometricUnlock: calling setupSync()")
