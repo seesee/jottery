@@ -265,6 +265,23 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Hard-delete only when the note has no unsynced local changes.
+    /// A remote deletion must never destroy an edit the server has not seen —
+    /// the surviving note stays local with `needs_sync = 1`. Note: the server
+    /// currently ignores pushes for tombstoned notes, so resurrection needs
+    /// server-side support (tracked in jottery-tqwh); until then the edit is
+    /// preserved on this device only.
+    /// Returns true if the row was deleted.
+    func hardDeleteIfSynced(id: String) throws -> Bool {
+        try db.dbPool.write { db in
+            try db.execute(
+                sql: "DELETE FROM notes WHERE id = ? AND needs_sync = 0",
+                arguments: [id]
+            )
+            return db.changesCount > 0
+        }
+    }
+
     /// Archive a note.
     func archive(id: String) throws {
         let now = Date().iso8601
@@ -320,18 +337,30 @@ struct NoteRepository: Sendable {
     }
 
     /// Mark note as synced, optionally updating version from server.
-    func markSynced(id: String, syncedAt: String, serverVersion: Int? = nil) throws {
-        if let serverVersion {
-            try db.dbPool.write { db in
+    ///
+    /// `synced_at`/`version` always update. `needs_sync` is cleared only when
+    /// `ifModifiedAt` is nil (unconditional, for legacy callers) or matches the
+    /// row's current `modified_at` — i.e. the note hasn't been edited again
+    /// since the snapshot that was actually pushed. This stops an edit made
+    /// during the push round-trip from being clobbered back to "synced" when
+    /// the server never saw it.
+    func markSynced(id: String, syncedAt: String, serverVersion: Int? = nil, ifModifiedAt: String? = nil) throws {
+        try db.dbPool.write { db in
+            if let serverVersion {
                 try db.execute(sql: """
-                    UPDATE notes SET needs_sync = 0, synced_at = ?, version = ? WHERE id = ?
+                    UPDATE notes SET synced_at = ?, version = ? WHERE id = ?
                 """, arguments: [syncedAt, serverVersion, id])
-            }
-        } else {
-            try db.dbPool.write { db in
+            } else {
                 try db.execute(sql: """
-                    UPDATE notes SET needs_sync = 0, synced_at = ? WHERE id = ?
+                    UPDATE notes SET synced_at = ? WHERE id = ?
                 """, arguments: [syncedAt, id])
+            }
+            if let ifModifiedAt {
+                try db.execute(sql: """
+                    UPDATE notes SET needs_sync = 0 WHERE id = ? AND modified_at = ?
+                """, arguments: [id, ifModifiedAt])
+            } else {
+                try db.execute(sql: "UPDATE notes SET needs_sync = 0 WHERE id = ?", arguments: [id])
             }
         }
     }

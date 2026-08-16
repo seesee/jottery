@@ -226,10 +226,19 @@ actor SyncService {
         Log.debug("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
         let now = Date().iso8601
 
-        // Mark accepted notes as synced and create version snapshots
+        // Mark accepted notes as synced and create version snapshots. Guard
+        // against clobbering an edit made while the push was in flight: only
+        // clear needs_sync if modified_at still matches the snapshot that was
+        // actually pushed (records, captured at the top of this method).
+        let pushedModifiedAtById = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.modifiedAt) })
         for accepted in response.accepted {
             do {
-                try noteRepo.markSynced(id: accepted.id, syncedAt: accepted.syncedAt ?? now, serverVersion: accepted.serverVersion)
+                try noteRepo.markSynced(
+                    id: accepted.id,
+                    syncedAt: accepted.syncedAt ?? now,
+                    serverVersion: accepted.serverVersion,
+                    ifModifiedAt: pushedModifiedAtById[accepted.id]
+                )
                 // Create a version snapshot of the accepted state
                 if let record = try noteRepo.getRaw(id: accepted.id) {
                     try versionRepo.createVersion(from: record, reason: "sync")
@@ -300,6 +309,7 @@ actor SyncService {
                     localContent: localContent,
                     localTags: localTags,
                     localModifiedAt: record.modifiedAt,
+                    localAttachments: Self.decodeAttachments(record.attachments),
                     serverContent: serverContent,
                     serverTags: serverTags,
                     serverModifiedAt: rejected.serverModifiedAt,
@@ -396,7 +406,10 @@ actor SyncService {
             if let deletions = response.deletions {
                 for deletion in deletions {
                     do {
-                        try noteRepo.hardDelete(id: deletion.id)
+                        let deleted = try noteRepo.hardDeleteIfSynced(id: deletion.id)
+                        if !deleted {
+                            Log.debug("[Sync] pull: kept note \(deletion.id) — local unsynced edit outranks remote deletion")
+                        }
                     } catch {
                         Log.debug("[Sync] pull: failed to delete note \(deletion.id): \(error)")
                     }
@@ -522,6 +535,7 @@ actor SyncService {
             localContent: localContent,
             localTags: localTags,
             localModifiedAt: localRecord.modifiedAt,
+            localAttachments: Self.decodeAttachments(localRecord.attachments),
             serverContent: serverContent,
             serverTags: serverTags,
             serverModifiedAt: syncNote.modifiedAt,
@@ -625,7 +639,7 @@ actor SyncService {
         switch strategy {
         case .keepLocal:
             // Keep local content, rebase hash chain onto server's so next push is a fast-forward
-            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             var updated = record
             updated.needsSync = true
             updated.version = conflict.serverVersion + 1
@@ -648,14 +662,17 @@ actor SyncService {
             }
             mergedChain = Array(mergedChain.prefix(CryptoService.maxHashChainLength))
             updated.hashChain = String(data: (try? JSONEncoder().encode(mergedChain)) ?? Data("[]".utf8), encoding: .utf8)
-            try noteRepo.updateRaw(updated)
+            // insertOrReplace (upsert) rather than updateRaw: the record may have
+            // just been recreated in-memory above and doesn't exist in the DB yet.
+            try noteRepo.insertOrReplace(updated)
 
         case .keepServer:
             // Apply server version (same as the old auto-accept behaviour)
-            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             var updated = record
             updated.content = conflict.serverEncryptedContent
             updated.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
+            updated.attachments = Self.encodeAttachments(conflict.serverAttachments)
             updated.version = conflict.serverVersion
             updated.pinned = conflict.serverPinned
             updated.syntaxLanguage = conflict.serverSyntaxLanguage ?? updated.syntaxLanguage
@@ -668,15 +685,18 @@ actor SyncService {
             }
             updated.needsSync = false
             updated.syncedAt = now
-            try noteRepo.updateRaw(updated)
+            // insertOrReplace (upsert) rather than updateRaw: the record may have
+            // just been recreated in-memory above and doesn't exist in the DB yet.
+            try noteRepo.insertOrReplace(updated)
             try versionRepo.createVersion(from: updated, reason: "sync-conflict-resolved")
 
         case .keepBoth:
             // Accept server version for the existing note
-            guard let record = try noteRepo.getRaw(id: noteId) else { break }
+            let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             var serverRecord = record
             serverRecord.content = conflict.serverEncryptedContent
             serverRecord.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
+            serverRecord.attachments = Self.encodeAttachments(conflict.serverAttachments)
             serverRecord.version = conflict.serverVersion
             serverRecord.pinned = conflict.serverPinned
             serverRecord.syntaxLanguage = conflict.serverSyntaxLanguage ?? serverRecord.syntaxLanguage
@@ -689,7 +709,9 @@ actor SyncService {
             }
             serverRecord.needsSync = false
             serverRecord.syncedAt = now
-            try noteRepo.updateRaw(serverRecord)
+            // insertOrReplace (upsert) rather than updateRaw: the record may have
+            // just been recreated in-memory above and doesn't exist in the DB yet.
+            try noteRepo.insertOrReplace(serverRecord)
 
             // Create a duplicate note with the local content
             let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
@@ -702,16 +724,49 @@ actor SyncService {
             duplicate.wordWrap = record.wordWrap
             duplicate.showPreview = record.showPreview
             duplicate.color = record.color
+            // Copy attachment blobs under new ids rather than sharing them with
+            // the original — see copyAttachments' doc comment for why sharing
+            // ids is unsafe (single-attachment removal deletes by explicit id).
+            let duplicateAttachments = try copyAttachments(conflict.localAttachments)
+            duplicate.attachments = Self.encodeAttachments(duplicateAttachments)
             try noteRepo.insertOrReplace(duplicate)
         }
 
         pendingConflicts.remove(at: conflictIndex)
     }
 
+    /// Fetch the note row backing a conflict, or recreate it from the conflict's
+    /// local snapshot if it has vanished (e.g. a remote deletion raced the
+    /// conflict). Every resolution strategy needs a starting record to mutate;
+    /// without this fallback a missing row silently discarded the user's choice
+    /// while still clearing the conflict.
+    private func recreateRecordIfMissing(noteId: String, conflict: ConflictInfo) throws -> NoteRecord {
+        if let existing = try noteRepo.getRaw(id: noteId) {
+            return existing
+        }
+        let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
+        let encTags = try CryptoService.encryptStringArray(conflict.localTags, key: key)
+        var recreated = NoteRecord.new(
+            encryptedContent: try CryptoService.serializeEncryptedJSON(encContent),
+            encryptedTags: try CryptoService.serializeEncryptedJSON(encTags)
+        )
+        recreated.id = noteId
+        recreated.modifiedAt = conflict.localModifiedAt
+        recreated.attachments = Self.encodeAttachments(conflict.localAttachments)
+        return recreated
+    }
+
     /// Clear all pending conflicts (used when locking the app).
     func clearConflicts() {
         pendingConflicts.removeAll()
     }
+
+    #if DEBUG
+    /// Test-only hook: inject a conflict without running an actual sync cycle.
+    func addPendingConflictForTesting(_ conflict: ConflictInfo) {
+        pendingConflicts.append(conflict)
+    }
+    #endif
 
     // MARK: - Decryption Helpers
 
@@ -809,6 +864,59 @@ actor SyncService {
         }
     }
 
+    // MARK: - Attachment Ref Encoding
+
+    /// Decode a `NoteRecord.attachments` JSON string into refs. Mirrors the
+    /// inline pattern used elsewhere in this file (e.g. push's SyncNote
+    /// construction) so conflict-creation sites share one implementation.
+    private static func decodeAttachments(_ json: String) -> [AttachmentRef] {
+        guard let data = json.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+    }
+
+    /// Encode attachment refs back into the JSON string stored on `NoteRecord.attachments`.
+    private static func encodeAttachments(_ refs: [AttachmentRef]) -> String {
+        let data = (try? JSONEncoder().encode(refs)) ?? Data("[]".utf8)
+        return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
+    /// Copy each attachment's blob under a freshly generated id and return refs
+    /// pointing at the copies, leaving the originals untouched.
+    ///
+    /// Blob-sharing investigation (see task-5-report.md): `AttachmentRepository`
+    /// has no cascade delete when a note is hard-deleted (`NoteRepository.hardDelete`
+    /// only issues `DELETE FROM notes`), but `AppState.removeAttachment` — the
+    /// normal single-attachment-removal path — deletes the blob by explicit id
+    /// (`attachmentRepo.deleteBlob(id: ref.data)`) after stripping the ref from
+    /// just one note. If a "Keep Both" duplicate shared blob ids with the
+    /// original, removing an attachment from either note would delete a blob the
+    /// other note's ref still points at. Copying under new ids avoids that.
+    private func copyAttachments(_ refs: [AttachmentRef]) throws -> [AttachmentRef] {
+        var copied: [AttachmentRef] = []
+        copied.reserveCapacity(refs.count)
+        for ref in refs {
+            let newId = CryptoService.generateUUID()
+            if let blobData = try attachmentRepo.getBlob(id: ref.data) {
+                try attachmentRepo.storeBlob(
+                    id: newId,
+                    filename: ref.filename,
+                    mimeType: ref.mimeType,
+                    size: ref.size,
+                    data: blobData
+                )
+            }
+            copied.append(AttachmentRef(
+                id: newId,
+                filename: ref.filename,
+                mimeType: ref.mimeType,
+                size: ref.size,
+                data: newId,
+                thumbnailData: ref.thumbnailData
+            ))
+        }
+        return copied
+    }
+
     // MARK: - Force Full Sync
 
     /// Run a full sync with no incremental state — re-downloads all notes from the server.
@@ -860,7 +968,10 @@ actor SyncService {
 
                 if let deletions = response.deletions {
                     for deletion in deletions {
-                        try noteRepo.hardDelete(id: deletion.id)
+                        let deleted = try noteRepo.hardDeleteIfSynced(id: deletion.id)
+                        if !deleted {
+                            Log.debug("[Sync] forceFullSync: kept note \(deletion.id) — local unsynced edit outranks remote deletion")
+                        }
                     }
                 }
 
