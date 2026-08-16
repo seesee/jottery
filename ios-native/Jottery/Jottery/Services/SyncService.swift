@@ -226,10 +226,19 @@ actor SyncService {
         Log.debug("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
         let now = Date().iso8601
 
-        // Mark accepted notes as synced and create version snapshots
+        // Mark accepted notes as synced and create version snapshots. Guard
+        // against clobbering an edit made while the push was in flight: only
+        // clear needs_sync if modified_at still matches the snapshot that was
+        // actually pushed (records, captured at the top of this method).
+        let pushedModifiedAtById = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.modifiedAt) })
         for accepted in response.accepted {
             do {
-                try noteRepo.markSynced(id: accepted.id, syncedAt: accepted.syncedAt ?? now, serverVersion: accepted.serverVersion)
+                try noteRepo.markSynced(
+                    id: accepted.id,
+                    syncedAt: accepted.syncedAt ?? now,
+                    serverVersion: accepted.serverVersion,
+                    ifModifiedAt: pushedModifiedAtById[accepted.id]
+                )
                 // Create a version snapshot of the accepted state
                 if let record = try noteRepo.getRaw(id: accepted.id) {
                     try versionRepo.createVersion(from: record, reason: "sync")
