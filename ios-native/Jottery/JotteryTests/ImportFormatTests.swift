@@ -70,6 +70,42 @@ struct ImportFormatTests {
         #expect(raw.pinned == true)
     }
 
+    @Test func parsesAndImportsNoteMissingTagsKey() throws {
+        let (noteRepo, attachmentRepo, key) = try makeServices()
+        let noteWithoutTags = """
+        {
+          "version": "1.0",
+          "exportDate": "2026-01-21T10:00:00Z",
+          "notes": [
+            {
+              "id": "test-no-tags-12345678-1234-1234-1234-123456789012",
+              "createdAt": "2026-01-21T10:00:00Z",
+              "modifiedAt": "2026-01-21T10:00:00Z",
+              "content": "Note without tags key",
+              "attachments": [],
+              "pinned": false
+            }
+          ]
+        }
+        """
+        let data = Data(noteWithoutTags.utf8)
+
+        let export = try ImportService.parse(data)
+        let note = try #require(export.notes.first)
+        #expect(note.tags == [])
+
+        let result = try ImportService.importNotes(
+            export, strategy: .replace, noteRepo: noteRepo, attachmentRepo: attachmentRepo, key: key
+        )
+        #expect(result.imported == 1)
+        #expect(result.errors.isEmpty)
+
+        let raw = try #require(try noteRepo.getRaw(id: "test-no-tags-12345678-1234-1234-1234-123456789012"))
+        // Tags should be empty when the key is missing
+        let decrypted = try #require(try noteRepo.get(id: "test-no-tags-12345678-1234-1234-1234-123456789012", key: key))
+        #expect(decrypted.tags == [])
+    }
+
     @Test func fullFeaturedNoteRoundTripsExportThenImportUnchanged() throws {
         let (noteRepo, attachmentRepo, key) = try makeServices()
 

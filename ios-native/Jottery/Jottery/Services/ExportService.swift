@@ -72,6 +72,7 @@ enum ExportService {
             createdAt = try container.decode(String.self, forKey: .createdAt)
             modifiedAt = try container.decode(String.self, forKey: .modifiedAt)
             content = try container.decode(String.self, forKey: .content)
+            // Deliberately lenient — the documented format requires tags, but a missing key on one note must not abort the whole import.
             tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
             attachments = try container.decodeIfPresent([ExportAttachment].self, forKey: .attachments) ?? []
             pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
