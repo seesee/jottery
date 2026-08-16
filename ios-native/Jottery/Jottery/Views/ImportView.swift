@@ -137,7 +137,7 @@ struct ImportView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(importResult != nil ? L.versionHistoryDone : L.commonCancel) {
                         if importResult != nil {
-                            try? appState.loadNotes()
+                            Task { try? await appState.loadNotes() }
                         }
                         dismiss()
                     }

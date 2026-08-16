@@ -82,7 +82,7 @@ struct ChangePasswordView: View {
             defer { isProcessing = false }
 
             do {
-                try appState.changePassword(
+                try await appState.changePassword(
                     currentPassword: currentPassword,
                     newPassword: newPassword
                 )

@@ -105,7 +105,7 @@ struct UnlockScreen: View {
 
         Task {
             do {
-                try appState.unlock(password: password)
+                try await appState.unlock(password: password)
                 password = ""
                 isUnlocking = false
 
@@ -133,7 +133,7 @@ struct UnlockScreen: View {
                 // Retry any edit that failed to flush at lock time now that
                 // the key is available again.
                 appState.flushPendingEditorNote()
-                try? appState.loadNotes()
+                try? await appState.loadNotes()
                 appState.isLocked = false
                 Log.debug("[Sync] biometricUnlock: calling setupSync()")
                 appState.setupSync()

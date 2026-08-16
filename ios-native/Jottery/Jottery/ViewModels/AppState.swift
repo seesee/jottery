@@ -214,7 +214,7 @@ final class AppState {
     /// Create a new vault with the given password.
     /// When importing from another device, pass the existing `salt` and `iterations`
     /// so the same password derives the same encryption key.
-    func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) throws {
+    func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) async throws {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
         if existingSalt != nil {
@@ -284,7 +284,7 @@ final class AppState {
         isLocked = false
 
         // Load notes (should be empty for new vault)
-        try loadNotes()
+        try await loadNotes()
     }
 
     // MARK: - Unlock
@@ -292,7 +292,7 @@ final class AppState {
     /// Attempt to unlock with the given password.
     /// Returns true if successful.
     @discardableResult
-    func unlock(password: String) throws -> Bool {
+    func unlock(password: String) async throws -> Bool {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
         guard let metadata = try encryptionRepo.get() else {
@@ -367,7 +367,7 @@ final class AppState {
         // is available again.
         flushPendingEditorNote()
 
-        try loadNotes()
+        try await loadNotes()
         isLocked = false
 
         // Auto-purge deleted notes older than 30 days
@@ -489,11 +489,18 @@ final class AppState {
 
     // MARK: - Notes CRUD
 
-    func loadNotes() throws {
+    func loadNotes() async throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
-        notes = try noteRepo.listActive(key: key)
-        archivedNotes = try noteRepo.listArchived(key: key)
-        savedSearches = (try? savedSearchRepo?.listAll(key: key)) ?? []
+        let savedSearchRepo = self.savedSearchRepo
+        // Decrypting the whole vault is O(notes) — never on the main thread (jottery-bzar).
+        let (active, archived, searches) = try await Task.detached(priority: .userInitiated) {
+            (try noteRepo.listActive(key: key),
+             try noteRepo.listArchived(key: key),
+             (try? savedSearchRepo?.listAll(key: key)) ?? [])
+        }.value
+        notes = active
+        archivedNotes = archived
+        savedSearches = searches
         scheduleSearch()
     }
 
@@ -548,10 +555,10 @@ final class AppState {
         scheduleAutoSync()
     }
 
-    func restoreNote(id: String) throws {
+    func restoreNote(id: String) async throws {
         guard let noteRepo else { return }
         try noteRepo.restore(id: id)
-        try loadNotes()
+        try await loadNotes()
         scheduleAutoSync()
     }
 
@@ -574,12 +581,12 @@ final class AppState {
         scheduleAutoSync()
     }
 
-    func unarchiveNote(id: String) throws {
+    func unarchiveNote(id: String) async throws {
         guard let noteRepo else { return }
         try noteRepo.unarchive(id: id)
         archivedNotes.removeAll { $0.id == id }
         if selectedNoteId == id { selectedNoteId = nil }
-        try loadNotes()
+        try await loadNotes()
         scheduleAutoSync()
     }
 
@@ -628,7 +635,7 @@ final class AppState {
         guard let syncService else { return }
         try await syncService.resolveConflict(noteId: noteId, strategy: strategy)
         pendingConflicts = await syncService.pendingConflicts
-        try? loadNotes()
+        try? await loadNotes()
         // Sync immediately so keepLocal pushes the resolved note and keepBoth
         // pushes the duplicate — no manual refresh needed.
         await triggerSync()
@@ -810,6 +817,16 @@ final class AppState {
 
     // MARK: - Sync
 
+    /// Reload notes after a background sync completes and stamp the sync
+    /// timestamp. `SyncService`'s post-sync handler runs off the MainActor
+    /// (it's an actor-isolated closure), so this MainActor-isolated method
+    /// is the single hop point — avoids re-entering `MainActor.run` for the
+    /// `await loadNotes()` call, which its synchronous closure can't contain.
+    private func handlePostSyncCompletion() async {
+        try? await loadNotes()
+        lastSyncAt = Date()
+    }
+
     /// Set up the sync client. Pass `apiKey` directly after registration
     /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
     func setupSync(apiKey providedKey: String? = nil) {
@@ -855,11 +872,7 @@ final class AppState {
         // Wire the post-sync handler, start SSE, and run the initial sync
         Task { [weak self] in
             await service.setPostSyncHandler { [weak self] in
-                await MainActor.run {
-                    guard let self else { return }
-                    try? self.loadNotes()
-                    self.lastSyncAt = Date()
-                }
+                await self?.handlePostSyncCompletion()
             }
             await service.startSSE()
             await self?.triggerSync()
@@ -905,7 +918,7 @@ final class AppState {
             syncStatusMessage = "Finishing…"
             try await syncService.finalise()
             let previousCount = notes.count
-            try? loadNotes()
+            try? await loadNotes()
             isSyncing = false
             lastSyncAt = Date()
 
@@ -947,7 +960,7 @@ final class AppState {
 
         do {
             try await syncService.forceFullSync()
-            try? loadNotes()
+            try? await loadNotes()
             isSyncing = false
             lastSyncAt = Date()
             pendingConflicts = await syncService.pendingConflicts
@@ -1100,7 +1113,7 @@ final class AppState {
 
     /// Change the vault password. With envelope encryption, only re-wraps the master key (fast).
     /// For legacy vaults, re-encrypts all notes, attachments, versions, and the verification token.
-    func changePassword(currentPassword: String, newPassword: String) throws {
+    func changePassword(currentPassword: String, newPassword: String) async throws {
         guard let encryptionRepo, let noteRepo, let versionRepo else {
             throw AppStateError.notInitialised
         }
@@ -1297,7 +1310,7 @@ final class AppState {
             }
 
             // Reload notes with new key
-            try loadNotes()
+            try await loadNotes()
 
             // Try envelope migration after legacy password change
             if settings.syncEnabled {

@@ -91,7 +91,7 @@ struct RecycleBinView: View {
     }
 
     private func restoreNote(id: String) {
-        try? appState.restoreNote(id: id)
+        Task { try? await appState.restoreNote(id: id) }
         deletedNotes.removeAll { $0.id == id }
     }
 

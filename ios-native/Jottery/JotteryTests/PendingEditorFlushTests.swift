@@ -68,7 +68,7 @@ struct PendingEditorFlushTests {
 
     /// End-to-end regression: a lock-time flush failure must not lose the
     /// edit — the next successful password unlock retries it automatically.
-    @Test func unlockRetriesPendingEditorFlushAfterLockTimeFailure() throws {
+    @Test func unlockRetriesPendingEditorFlushAfterLockTimeFailure() async throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("jottery-pending-flush-unlock-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -76,7 +76,7 @@ struct PendingEditorFlushTests {
         try state.initialise(database: DatabaseManager(path: dir.appendingPathComponent("test.db").path))
 
         let password = "correct horse battery staple"
-        try state.createVault(password: password)
+        try await state.createVault(password: password)
 
         var note = try #require(try state.createNote(content: "original title"))
         note.content = "edited while key vanished"
@@ -90,7 +90,7 @@ struct PendingEditorFlushTests {
         #expect(state.pendingEditorNote?.content == "edited while key vanished")
 
         // A real, successful unlock should retry the flush before loading notes.
-        try state.unlock(password: password)
+        try await state.unlock(password: password)
 
         #expect(state.pendingEditorNote == nil)
         #expect(state.notes.first(where: { $0.id == note.id })?.content == "edited while key vanished")

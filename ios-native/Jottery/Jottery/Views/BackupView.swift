@@ -193,7 +193,7 @@ struct BackupView: View {
                     currentKey: key
                 )
                 restoredCount = count
-                try? appState.loadNotes()
+                try? await appState.loadNotes()
                 showRestoreSuccess = true
             } catch BackupError.wrongPassword {
                 errorMessage = BackupError.wrongPassword.localizedDescription

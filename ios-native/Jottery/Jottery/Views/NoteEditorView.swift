@@ -237,7 +237,7 @@ struct NoteEditorView: View {
                     // Archive toggle
                     if note.archived {
                         Button {
-                            try? appState.unarchiveNote(id: note.id)
+                            Task { try? await appState.unarchiveNote(id: note.id) }
                         } label: {
                             Label(L.editorUnarchive, systemImage: "tray.and.arrow.up")
                         }

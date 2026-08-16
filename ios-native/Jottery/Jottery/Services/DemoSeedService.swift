@@ -63,18 +63,23 @@ enum DemoSeedService {
             environment: ProcessInfo.processInfo.environment
         ) else { return }
 
-        do {
-            try run(config: config, appState: appState)
-            Log.debug("[DemoSeed] ✓ Seeded — screen: \(config.screen), theme: \(config.theme)")
-        } catch {
-            Log.debug("[DemoSeed] ✗ FAILED: \(error)")
+        // run() is async now that loadNotes() decrypts off-main (jottery-bzar);
+        // the capture pipeline's ~6s settle before each screenshot absorbs the
+        // extra hop back onto the MainActor here.
+        Task {
+            do {
+                try await run(config: config, appState: appState)
+                Log.debug("[DemoSeed] ✓ Seeded — screen: \(config.screen), theme: \(config.theme)")
+            } catch {
+                Log.debug("[DemoSeed] ✗ FAILED: \(error)")
+            }
         }
     }
 
-    static func run(config: DemoSeedConfig, appState: AppState) throws {
+    static func run(config: DemoSeedConfig, appState: AppState) async throws {
         // 1. Fresh vault with a known password
         appState.wipeAllData()
-        try appState.createVault(password: demoPassword)
+        try await appState.createVault(password: demoPassword)
 
         // 2. Import the demo pack from the host filesystem
         guard let noteRepo = appState.noteRepo,
@@ -120,7 +125,7 @@ enum DemoSeedService {
             try noteRepo.updateRaw(calcRecord)
         }
 
-        try appState.loadNotes()
+        try await appState.loadNotes()
 
         // `createNote()` above auto-selected the calc note; clear that so
         // screens that don't pick their own selection (search, sync, lock)
