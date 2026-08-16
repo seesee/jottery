@@ -95,6 +95,7 @@ struct ContentView: View {
             pickUpPendingShortcut()
             #if DEBUG
             DemoSeedService.runIfRequested(appState: appState)
+            runDemoUnlockIfRequested()
             #endif
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -136,6 +137,30 @@ struct ContentView: View {
         appState.pendingQuickAction = nil
         handleQuickAction(action)
     }
+
+    #if DEBUG
+    /// Perf-measurement harness: drives `AppState.unlock(password:)` directly
+    /// with the demo password, since UI tests can't type into `SecureField`.
+    /// Only fires when a vault already exists (i.e. after a prior `-demo-seed`
+    /// launch locked the app) and logs stage timings via `Log.debug` inside
+    /// `unlock()` itself. Temporary measurement tool for the unlock-performance
+    /// work — see `.superpowers/sdd/task-2-report.md`.
+    private func runDemoUnlockIfRequested() {
+        guard ProcessInfo.processInfo.arguments.contains("-demo-unlock") else { return }
+        guard !appState.isFirstLaunch else {
+            Log.debug("[DemoUnlock] no vault present — skipping")
+            return
+        }
+        Task {
+            do {
+                try await appState.unlock(password: DemoSeedService.demoPassword)
+                Log.debug("[DemoUnlock] ✓ unlocked")
+            } catch {
+                Log.debug("[DemoUnlock] ✗ FAILED: \(error)")
+            }
+        }
+    }
+    #endif
 
     private func handleQuickAction(_ action: String) {
         switch action {

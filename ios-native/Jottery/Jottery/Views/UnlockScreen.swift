@@ -62,10 +62,16 @@ struct UnlockScreen: View {
                 Button {
                     biometricUnlock()
                 } label: {
-                    Label(L.unlockFaceId, systemImage: "faceid")
-                        .font(.title3)
+                    if isUnlocking {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label(L.unlockFaceId, systemImage: "faceid")
+                            .font(.title3)
+                    }
                 }
                 .buttonStyle(.plain)
+                .disabled(isUnlocking)
             }
 
             Spacer()
@@ -127,6 +133,8 @@ struct UnlockScreen: View {
     }
 
     private func biometricUnlock() {
+        isUnlocking = true
+
         Task {
             let success = await appState.keyManager.attemptBiometricUnlock()
             if success {
@@ -143,6 +151,7 @@ struct UnlockScreen: View {
             } else {
                 Log.debug("[Sync] biometricUnlock: Face ID failed")
             }
+            isUnlocking = false
         }
     }
 }

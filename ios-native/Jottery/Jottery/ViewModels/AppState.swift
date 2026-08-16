@@ -291,6 +291,13 @@ final class AppState {
 
     /// Attempt to unlock with the given password.
     /// Returns true if successful.
+    ///
+    /// Ordering (preserved from PR #98): derive → verify → set key (on the
+    /// MainActor) → flush pending editor note → `loadNotes()` → `isLocked = false`.
+    /// Key derivation (PBKDF2, ~600k iterations) and the verification-token
+    /// decrypt are the expensive steps, so both run inside `Task.detached` —
+    /// `keyManager` is MainActor-bound and is only touched after the detached
+    /// work hands back plain `Data`.
     @discardableResult
     func unlock(password: String) async throws -> Bool {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
@@ -299,75 +306,127 @@ final class AppState {
             throw AppStateError.noVault
         }
 
-        let key: SymmetricKey
+        #if DEBUG
+        let unlockStart = CFAbsoluteTimeGetCurrent()
+        #endif
+
+        let masterKeyData: Data
 
         if metadata.envelopeVersion != nil {
-            // Envelope unlock path — derive device key, unwrap master key
+            // Envelope unlock path — derive device key, unwrap master key, and
+            // verify, all off the main thread; only the resulting key bytes
+            // cross back to the MainActor.
             guard let deviceSaltB64 = metadata.deviceSalt,
                   let deviceSalt = Data(base64Encoded: deviceSaltB64),
                   let wrappedJSON = metadata.localWrappedMaster else {
                 throw AppStateError.invalidSalt
             }
+            let verificationJSON = metadata.verification
 
-            let deviceKey = CryptoService.deriveKey(
-                password: password,
-                salt: deviceSalt,
-                iterations: CryptoService.defaultIterations
-            )
-
-            let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
-            let masterKeyData: Data
             do {
-                masterKeyData = try CryptoService.unwrapMasterKey(wrapped, with: deviceKey)
+                masterKeyData = try await Task.detached(priority: .userInitiated) {
+                    #if DEBUG
+                    let deriveStart = CFAbsoluteTimeGetCurrent()
+                    #endif
+                    let deviceKey = CryptoService.deriveKey(
+                        password: password,
+                        salt: deviceSalt,
+                        iterations: CryptoService.defaultIterations
+                    )
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] derive: %.1fms", (CFAbsoluteTimeGetCurrent() - deriveStart) * 1000))
+                    let verifyStart = CFAbsoluteTimeGetCurrent()
+                    #endif
+
+                    let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
+                    let unwrapped: Data
+                    do {
+                        unwrapped = try CryptoService.unwrapMasterKey(wrapped, with: deviceKey)
+                    } catch {
+                        throw AppStateError.wrongPassword
+                    }
+
+                    if let verificationJSON {
+                        let candidateKey = SymmetricKey(data: unwrapped)
+                        guard AppState.verifyWithToken(verificationJSON, key: candidateKey) else {
+                            throw AppStateError.wrongPassword
+                        }
+                    }
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] verify: %.1fms", (CFAbsoluteTimeGetCurrent() - verifyStart) * 1000))
+                    #endif
+
+                    return unwrapped
+                }.value
             } catch {
-                keyManager.lock()
-                isLocked = true
-                throw AppStateError.wrongPassword
-            }
-
-            key = SymmetricKey(data: masterKeyData)
-            keyManager.unlockWithKeyData(masterKeyData)
-
-            // Verify with token if available
-            if let verificationJSON = metadata.verification {
-                guard verifyWithToken(verificationJSON, key: key) else {
+                if let appError = error as? AppStateError, case .wrongPassword = appError {
                     keyManager.lock()
                     isLocked = true
-                    throw AppStateError.wrongPassword
                 }
+                throw error
             }
+
+            keyManager.unlockWithKeyData(masterKeyData)
         } else {
-            // Legacy unlock path — derive key directly from password + salt
+            // Legacy unlock path — derive key directly from password + salt,
+            // then verify, both off the main thread.
             guard let saltData = metadata.saltData else {
                 throw AppStateError.invalidSalt
             }
+            let iterations = UInt32(metadata.iterations)
+            let verificationJSON = metadata.verification
+            let db = self.db
 
-            key = keyManager.unlock(
-                password: password,
-                salt: saltData,
-                iterations: UInt32(metadata.iterations)
-            )
+            do {
+                masterKeyData = try await Task.detached(priority: .userInitiated) {
+                    #if DEBUG
+                    let deriveStart = CFAbsoluteTimeGetCurrent()
+                    #endif
+                    let key = CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations)
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] derive: %.1fms", (CFAbsoluteTimeGetCurrent() - deriveStart) * 1000))
+                    let verifyStart = CFAbsoluteTimeGetCurrent()
+                    #endif
 
-            // Verify password
-            let verified: Bool
-            if let verificationJSON = metadata.verification {
-                verified = verifyWithToken(verificationJSON, key: key)
-            } else {
-                verified = verifyByDecryptingNote(key: key)
-            }
+                    let verified: Bool
+                    if let verificationJSON {
+                        verified = AppState.verifyWithToken(verificationJSON, key: key)
+                    } else {
+                        verified = AppState.verifyByDecryptingNote(key: key, db: db)
+                    }
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] verify: %.1fms", (CFAbsoluteTimeGetCurrent() - verifyStart) * 1000))
+                    #endif
 
-            guard verified else {
+                    guard verified else {
+                        throw AppStateError.wrongPassword
+                    }
+
+                    return key.withUnsafeBytes { Data($0) }
+                }.value
+            } catch {
                 keyManager.lock()
                 isLocked = true
-                throw AppStateError.wrongPassword
+                throw error
             }
+
+            keyManager.unlockWithKeyData(masterKeyData)
         }
+
+        let key = SymmetricKey(data: masterKeyData)
 
         // Retry any edit that failed to flush at lock time now that the key
         // is available again.
         flushPendingEditorNote()
 
+        #if DEBUG
+        let loadStart = CFAbsoluteTimeGetCurrent()
+        #endif
         try await loadNotes()
+        #if DEBUG
+        Log.debug(String(format: "[Unlock] loadNotes: %.1fms", (CFAbsoluteTimeGetCurrent() - loadStart) * 1000))
+        Log.debug(String(format: "[Unlock] total: %.1fms", (CFAbsoluteTimeGetCurrent() - unlockStart) * 1000))
+        #endif
         isLocked = false
 
         // Auto-purge deleted notes older than 30 days
@@ -401,7 +460,9 @@ final class AppState {
     }
 
     /// Verify the key by decrypting the stored verification token.
-    private func verifyWithToken(_ json: String, key: SymmetricKey) -> Bool {
+    /// `static` (and takes no `self`) so it can run inside `Task.detached`
+    /// without capturing the MainActor-isolated `AppState` instance.
+    nonisolated private static func verifyWithToken(_ json: String, key: SymmetricKey) -> Bool {
         do {
             let encrypted = try CryptoService.parseEncryptedJSON(json)
             let plaintext = try CryptoService.decryptText(encrypted, key: key)
@@ -413,7 +474,9 @@ final class AppState {
 
     /// Verify the key by decrypting one note from the database.
     /// Returns true if decryption succeeds, or if there are no notes to test against.
-    private func verifyByDecryptingNote(key: SymmetricKey) -> Bool {
+    /// `static` with an explicit `db` parameter for the same reason as
+    /// `verifyWithToken` above — safe to call from a detached task.
+    nonisolated private static func verifyByDecryptingNote(key: SymmetricKey, db: DatabaseManager?) -> Bool {
         guard let db else { return false }
         do {
             let record = try db.dbPool.read { database in
@@ -1146,7 +1209,7 @@ final class AppState {
             // Verify with token as extra check
             if let verificationJSON = metadata.verification {
                 let masterKey = SymmetricKey(data: masterKeyData)
-                guard verifyWithToken(verificationJSON, key: masterKey) else {
+                guard AppState.verifyWithToken(verificationJSON, key: masterKey) else {
                     throw AppStateError.wrongPassword
                 }
             }
@@ -1188,11 +1251,11 @@ final class AppState {
                 iterations: UInt32(metadata.iterations)
             )
             if let verificationJSON = metadata.verification {
-                guard verifyWithToken(verificationJSON, key: currentKey) else {
+                guard AppState.verifyWithToken(verificationJSON, key: currentKey) else {
                     throw AppStateError.wrongPassword
                 }
             } else {
-                guard verifyByDecryptingNote(key: currentKey) else {
+                guard AppState.verifyByDecryptingNote(key: currentKey, db: db) else {
                     throw AppStateError.wrongPassword
                 }
             }
