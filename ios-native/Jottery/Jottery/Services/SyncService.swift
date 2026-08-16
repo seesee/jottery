@@ -863,7 +863,10 @@ actor SyncService {
 
                 if let deletions = response.deletions {
                     for deletion in deletions {
-                        try noteRepo.hardDelete(id: deletion.id)
+                        let deleted = try noteRepo.hardDeleteIfSynced(id: deletion.id)
+                        if !deleted {
+                            Log.debug("[Sync] forceFullSync: kept note \(deletion.id) — local unsynced edit outranks remote deletion")
+                        }
                     }
                 }
 
