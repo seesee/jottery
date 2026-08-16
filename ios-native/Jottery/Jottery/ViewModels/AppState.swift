@@ -564,6 +564,71 @@ final class AppState {
         notes = active
         archivedNotes = archived
         savedSearches = searches
+        Log.debug("[Sync] loadNotes: decrypted \(active.count + archived.count) record(s) — full reload")
+        scheduleSearch()
+    }
+
+    /// Above this many changed ids, an incremental refresh isn't worth it —
+    /// treat the change set as ambiguous/oversized and fall back to a full
+    /// reload instead of decrypting them one by one.
+    private static let maxIncrementalChangeCount = 100
+
+    /// Refresh only the notes a sync cycle touched (`SyncChanges`) instead of
+    /// decrypting and republishing the whole vault via `loadNotes()`. Falls
+    /// back to a full reload when: the caller marks the change set ambiguous
+    /// (`fullReloadRequired`), it's larger than `maxIncrementalChangeCount`
+    /// ids, or a decrypt for one of the changed ids fails outright — a stale
+    /// row is worse than one extra full reload, so any doubt goes to
+    /// `loadNotes()`, which is always correct.
+    func applySyncChanges(_ changes: SyncChanges) async {
+        let totalIds = changes.updatedIds.count + changes.deletedIds.count
+        guard !changes.fullReloadRequired, totalIds <= Self.maxIncrementalChangeCount else {
+            try? await loadNotes()
+            return
+        }
+        guard totalIds > 0 else { return }
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+
+        let ids = changes.updatedIds
+        // Decrypt just the changed records off the main thread, batched into
+        // one detached task — mirrors loadNotes()'s off-main decrypt (jottery-bzar).
+        let refreshed: [DecryptedNote]? = await Task.detached(priority: .userInitiated) {
+            var result: [DecryptedNote] = []
+            result.reserveCapacity(ids.count)
+            for id in ids {
+                guard let note = try? noteRepo.get(id: id, key: key) else { return nil }
+                result.append(note)
+            }
+            return result
+        }.value
+
+        guard let refreshed else {
+            // A decrypt failure for a changed id — don't risk leaving a
+            // stale row, fall back to a full reload.
+            try? await loadNotes()
+            return
+        }
+
+        Log.debug("[Sync] applySyncChanges: refreshed \(refreshed.count) record(s), removed \(changes.deletedIds.count) — incremental")
+
+        for note in refreshed {
+            notes.removeAll { $0.id == note.id }
+            archivedNotes.removeAll { $0.id == note.id }
+            // Soft-deleted (or hard-deleted-but-still-listed) notes belong in
+            // neither list — matches loadNotes()'s listActive/listArchived filters.
+            guard !note.deleted else { continue }
+            if note.archived {
+                archivedNotes.insert(note, at: 0)
+            } else {
+                notes.insert(note, at: 0)
+            }
+        }
+
+        for id in changes.deletedIds {
+            notes.removeAll { $0.id == id }
+            archivedNotes.removeAll { $0.id == id }
+        }
+
         scheduleSearch()
     }
 
@@ -880,13 +945,15 @@ final class AppState {
 
     // MARK: - Sync
 
-    /// Reload notes after a background sync completes and stamp the sync
-    /// timestamp. `SyncService`'s post-sync handler runs off the MainActor
-    /// (it's an actor-isolated closure), so this MainActor-isolated method
-    /// is the single hop point — avoids re-entering `MainActor.run` for the
-    /// `await loadNotes()` call, which its synchronous closure can't contain.
-    private func handlePostSyncCompletion() async {
-        try? await loadNotes()
+    /// Refresh notes after a background (SSE-triggered) sync completes and
+    /// stamp the sync timestamp. `SyncService`'s post-sync handler runs off
+    /// the MainActor (it's an actor-isolated closure), so this
+    /// MainActor-isolated method is the single hop point — avoids
+    /// re-entering `MainActor.run` for the `await applySyncChanges()` call,
+    /// which its synchronous closure can't contain. Incremental per
+    /// `SyncChanges` — see `applySyncChanges(_:)`.
+    private func handlePostSyncCompletion(_ changes: SyncChanges) async {
+        await applySyncChanges(changes)
         lastSyncAt = Date()
     }
 
@@ -934,8 +1001,8 @@ final class AppState {
 
         // Wire the post-sync handler, start SSE, and run the initial sync
         Task { [weak self] in
-            await service.setPostSyncHandler { [weak self] in
-                await self?.handlePostSyncCompletion()
+            await service.setPostSyncHandler { [weak self] changes in
+                await self?.handlePostSyncCompletion(changes)
             }
             await service.startSSE()
             await self?.triggerSync()
@@ -975,13 +1042,13 @@ final class AppState {
 
         do {
             syncStatusMessage = "Pushing…"
-            try await syncService.push()
+            var changes = try await syncService.push()
             syncStatusMessage = "Pulling…"
-            try await syncService.pull()
+            changes.merge(try await syncService.pull())
             syncStatusMessage = "Finishing…"
             try await syncService.finalise()
             let previousCount = notes.count
-            try? await loadNotes()
+            await applySyncChanges(changes)
             isSyncing = false
             lastSyncAt = Date()
 
