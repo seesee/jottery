@@ -363,6 +363,10 @@ final class AppState {
             }
         }
 
+        // Retry any edit that failed to flush at lock time now that the key
+        // is available again.
+        flushPendingEditorNote()
+
         try loadNotes()
         isLocked = false
 
@@ -437,14 +441,33 @@ final class AppState {
         try encryptionRepo.store(metadata)
     }
 
+    /// Flush the in-flight editor state. Returns true when persisted (or
+    /// when there was nothing pending).
+    ///
+    /// Kept in memory on failure — the plaintext of the user's own unsaved
+    /// edit is a smaller risk than silently destroying it at lock time; the
+    /// retry happens on the next successful unlock.
+    @discardableResult
+    internal func flushPendingEditorNote() -> Bool {
+        guard let pending = pendingEditorNote else { return true }
+        guard let noteRepo, let key = keyManager.masterKey else { return false }
+        do {
+            try noteRepo.update(pending, key: key)
+            pendingEditorNote = nil
+            return true
+        } catch {
+            Log.debug("[Lock] failed to flush pending edit: \(error)")
+            return false
+        }
+    }
+
     /// Lock the application.
     func lock() {
         Log.debug("[Sync] lock: clearing syncService, syncEnabled=false")
-        // Flush any pending editor save while the key is still available
-        if let pending = pendingEditorNote, let noteRepo, let key = keyManager.masterKey {
-            try? noteRepo.update(pending, key: key)
-            pendingEditorNote = nil
-        }
+        // Flush any pending editor save while the key is still available.
+        // On failure the pending note is retained in memory and retried on
+        // the next successful unlock (see flushPendingEditorNote).
+        flushPendingEditorNote()
 
         // Stop SSE, network monitor, and release sync objects
         stopNetworkMonitor()
