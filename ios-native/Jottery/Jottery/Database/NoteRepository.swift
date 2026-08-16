@@ -267,7 +267,10 @@ struct NoteRepository: Sendable {
 
     /// Hard-delete only when the note has no unsynced local changes.
     /// A remote deletion must never destroy an edit the server has not seen —
-    /// the surviving note re-pushes and is resurrected server-side.
+    /// the surviving note stays local with `needs_sync = 1`. Note: the server
+    /// currently ignores pushes for tombstoned notes, so resurrection needs
+    /// server-side support (tracked in jottery-tqwh); until then the edit is
+    /// preserved on this device only.
     /// Returns true if the row was deleted.
     func hardDeleteIfSynced(id: String) throws -> Bool {
         try db.dbPool.write { db in
