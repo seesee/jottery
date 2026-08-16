@@ -497,6 +497,13 @@ final class AppState {
         scheduleSearch()
     }
 
+    /// Resolve a note id for the detail pane, whichever list it lives in.
+    /// Archived notes are absent from `notes` (archiveNote removes them), so a
+    /// lookup limited to `notes` made archived rows unopenable (jottery-1rqp).
+    func displayedNote(id: String) -> DecryptedNote? {
+        notes.first(where: { $0.id == id }) ?? archivedNotes.first(where: { $0.id == id })
+    }
+
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
         guard let noteRepo, let key = keyManager.masterKey else { return nil }
         let note = try noteRepo.create(content: content, tags: tags, key: key)

@@ -48,44 +48,36 @@ struct NoteEditorView: View {
             }
 
             // Editor or Markdown Preview
-            if showPreview && syntaxLanguage != "calc" && syntaxLanguage != "outliner" {
-                MarkdownPreviewView(
-                    content: content,
-                    fontSize: appState.editorFontSize,
-                    attachments: note.attachments,
-                    attachmentRepo: appState.attachmentRepo,
-                    encryptionKey: appState.keyManager.masterKey
-                )
-            } else if syntaxLanguage == "calc" {
-                WebCalcEditorView(content: $content, fontSize: appState.editorFontSize)
-                    .onChange(of: content) { _, _ in
-                        scheduleSave()
-                    }
-                    .onChange(of: tags) { _, _ in
-                        scheduleSave()
-                    }
-            } else if syntaxLanguage == "outliner" {
-                WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize)
-                    .onChange(of: content) { _, _ in
-                        scheduleSave()
-                    }
-                    .onChange(of: tags) { _, _ in
-                        scheduleSave()
-                    }
-            } else {
-                RunestoneEditorView(
-                    text: $content,
-                    syntaxLanguage: syntaxLanguage,
-                    wordWrap: wordWrap,
-                    isEditable: !isReadOnly,
-                    fontSize: appState.editorFontSize
-                )
-                .onChange(of: content) { _, _ in
-                    scheduleSave()
+            Group {
+                if showPreview && syntaxLanguage != "calc" && syntaxLanguage != "outliner" {
+                    MarkdownPreviewView(
+                        content: content,
+                        fontSize: appState.editorFontSize,
+                        attachments: note.attachments,
+                        attachmentRepo: appState.attachmentRepo,
+                        encryptionKey: appState.keyManager.masterKey
+                    )
+                } else if syntaxLanguage == "calc" {
+                    WebCalcEditorView(content: $content, fontSize: appState.editorFontSize)
+                } else if syntaxLanguage == "outliner" {
+                    WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize)
+                } else {
+                    RunestoneEditorView(
+                        text: $content,
+                        syntaxLanguage: syntaxLanguage,
+                        wordWrap: wordWrap,
+                        isEditable: !isReadOnly,
+                        fontSize: appState.editorFontSize
+                    )
                 }
-                .onChange(of: tags) { _, _ in
-                    scheduleSave()
-                }
+            }
+            // Attached once here (not per-branch) so tag/content edits made while in
+            // preview mode — which has no editor of its own — still trigger a save.
+            .onChange(of: content) { _, _ in
+                scheduleSave()
+            }
+            .onChange(of: tags) { _, _ in
+                scheduleSave()
             }
 
             // Attachments
@@ -293,7 +285,12 @@ struct NoteEditorView: View {
                 }
             }
         }
-        .onChange(of: note.id) { _, _ in
+        .onChange(of: note.id) { oldId, _ in
+            // `note` already reflects the incoming note by the time this closure
+            // runs, so the outgoing note's pending edits must be flushed using the
+            // pre-reset @State values (still present below) against the outgoing
+            // note's own stored record — not against `note`/`hasChanges`.
+            flushOutgoingNote(id: oldId)
             // Reset state when switching notes
             content = note.content
             tags = note.tags
@@ -366,6 +363,37 @@ struct NoteEditorView: View {
         updated.color = color
         updated.showPreview = showPreview
         appState.pendingEditorNote = updated
+    }
+
+    /// Flushes unsaved edits for the note being navigated *away from*, using the
+    /// still-current (pre-reset) @State values, before `.onChange(of: note.id)`
+    /// reseeds state for the incoming note. Cannot reuse `hasChanges`/`saveImmediately`
+    /// because those compare against `note`, which already refers to the incoming
+    /// note by the time this runs.
+    private func flushOutgoingNote(id: String) {
+        saveTask?.cancel()
+        saveTask = nil
+        guard let outgoing = appState.displayedNote(id: id) else { return }
+        guard !outgoing.locked && !outgoing.archived else { return }
+
+        let changed = content != outgoing.content ||
+            tags != outgoing.tags ||
+            syntaxLanguage != outgoing.syntaxLanguage ||
+            wordWrap != outgoing.wordWrap ||
+            color != outgoing.color ||
+            showPreview != outgoing.showPreview
+        guard changed else { return }
+
+        var updated = outgoing
+        updated.content = content
+        updated.tags = tags
+        updated.syntaxLanguage = syntaxLanguage
+        updated.wordWrap = wordWrap
+        updated.color = color
+        updated.showPreview = showPreview
+        try? appState.saveNote(updated)
+        appState.pendingEditorNote = nil
+        didSaveDuringSession = true
     }
 
     private func saveImmediately() {

@@ -166,7 +166,7 @@ struct MainView: View {
             if let noteId = appState.selectedNoteId {
                 if let conflict = appState.pendingConflicts.first(where: { $0.id == noteId }) {
                     ConflictDetailView(conflict: conflict)
-                } else if let note = appState.notes.first(where: { $0.id == noteId }) {
+                } else if let note = appState.displayedNote(id: noteId) {
                     NoteEditorView(note: note)
                 } else {
                     ContentUnavailableView(
