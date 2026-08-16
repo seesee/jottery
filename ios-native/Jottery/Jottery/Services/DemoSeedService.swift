@@ -89,10 +89,10 @@ enum DemoSeedService {
         }
         let rawData = try Data(contentsOf: URL(fileURLWithPath: config.notesPath))
         // The demo pack follows the documented cross-platform export format
-        // (see CLAUDE.md), which omits `archived`/`locked` — but ImportService's
-        // ExportNote requires them. Backfill the defaults so decoding succeeds.
-        let data = patchedForImport(rawData)
-        let export = try ImportService.parse(data)
+        // (see CLAUDE.md), which omits fields like `archived`/`locked` for
+        // notes that don't need them. ExportNote.init(from:) defaults every
+        // genuinely-optional field, so this decodes directly.
+        let export = try ImportService.parse(rawData)
         _ = try ImportService.importNotes(
             export, strategy: .replace,
             noteRepo: noteRepo, attachmentRepo: attachmentRepo, key: key
@@ -168,23 +168,6 @@ enum DemoSeedService {
         case .lock:
             appState.lock()
         }
-    }
-
-    /// `ImportService`'s `ExportNote` requires `archived`/`locked` keys, but the
-    /// documented cross-platform export format (CLAUDE.md) omits them for notes
-    /// that aren't archived/locked. Backfill `false` for any note missing them
-    /// so the demo pack — generated to that documented format — decodes cleanly.
-    private static func patchedForImport(_ data: Data) -> Data {
-        guard var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              var notes = root["notes"] as? [[String: Any]] else {
-            return data
-        }
-        for i in notes.indices {
-            if notes[i]["archived"] == nil { notes[i]["archived"] = false }
-            if notes[i]["locked"] == nil { notes[i]["locked"] = false }
-        }
-        root["notes"] = notes
-        return (try? JSONSerialization.data(withJSONObject: root)) ?? data
     }
 }
 #endif
