@@ -309,6 +309,7 @@ actor SyncService {
                     localContent: localContent,
                     localTags: localTags,
                     localModifiedAt: record.modifiedAt,
+                    localAttachments: Self.decodeAttachments(record.attachments),
                     serverContent: serverContent,
                     serverTags: serverTags,
                     serverModifiedAt: rejected.serverModifiedAt,
@@ -534,6 +535,7 @@ actor SyncService {
             localContent: localContent,
             localTags: localTags,
             localModifiedAt: localRecord.modifiedAt,
+            localAttachments: Self.decodeAttachments(localRecord.attachments),
             serverContent: serverContent,
             serverTags: serverTags,
             serverModifiedAt: syncNote.modifiedAt,
@@ -670,6 +672,7 @@ actor SyncService {
             var updated = record
             updated.content = conflict.serverEncryptedContent
             updated.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
+            updated.attachments = Self.encodeAttachments(conflict.serverAttachments)
             updated.version = conflict.serverVersion
             updated.pinned = conflict.serverPinned
             updated.syntaxLanguage = conflict.serverSyntaxLanguage ?? updated.syntaxLanguage
@@ -693,6 +696,7 @@ actor SyncService {
             var serverRecord = record
             serverRecord.content = conflict.serverEncryptedContent
             serverRecord.tags = Self.syncTagsToStorageTags(conflict.serverEncryptedTags, key: key)
+            serverRecord.attachments = Self.encodeAttachments(conflict.serverAttachments)
             serverRecord.version = conflict.serverVersion
             serverRecord.pinned = conflict.serverPinned
             serverRecord.syntaxLanguage = conflict.serverSyntaxLanguage ?? serverRecord.syntaxLanguage
@@ -720,6 +724,11 @@ actor SyncService {
             duplicate.wordWrap = record.wordWrap
             duplicate.showPreview = record.showPreview
             duplicate.color = record.color
+            // Copy attachment blobs under new ids rather than sharing them with
+            // the original — see copyAttachments' doc comment for why sharing
+            // ids is unsafe (single-attachment removal deletes by explicit id).
+            let duplicateAttachments = try copyAttachments(conflict.localAttachments)
+            duplicate.attachments = Self.encodeAttachments(duplicateAttachments)
             try noteRepo.insertOrReplace(duplicate)
         }
 
@@ -743,6 +752,7 @@ actor SyncService {
         )
         recreated.id = noteId
         recreated.modifiedAt = conflict.localModifiedAt
+        recreated.attachments = Self.encodeAttachments(conflict.localAttachments)
         return recreated
     }
 
@@ -852,6 +862,59 @@ actor SyncService {
             // Fallback: return first tag as-is (best effort)
             return syncTags.first ?? "{}"
         }
+    }
+
+    // MARK: - Attachment Ref Encoding
+
+    /// Decode a `NoteRecord.attachments` JSON string into refs. Mirrors the
+    /// inline pattern used elsewhere in this file (e.g. push's SyncNote
+    /// construction) so conflict-creation sites share one implementation.
+    private static func decodeAttachments(_ json: String) -> [AttachmentRef] {
+        guard let data = json.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([AttachmentRef].self, from: data)) ?? []
+    }
+
+    /// Encode attachment refs back into the JSON string stored on `NoteRecord.attachments`.
+    private static func encodeAttachments(_ refs: [AttachmentRef]) -> String {
+        let data = (try? JSONEncoder().encode(refs)) ?? Data("[]".utf8)
+        return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
+    /// Copy each attachment's blob under a freshly generated id and return refs
+    /// pointing at the copies, leaving the originals untouched.
+    ///
+    /// Blob-sharing investigation (see task-5-report.md): `AttachmentRepository`
+    /// has no cascade delete when a note is hard-deleted (`NoteRepository.hardDelete`
+    /// only issues `DELETE FROM notes`), but `AppState.removeAttachment` — the
+    /// normal single-attachment-removal path — deletes the blob by explicit id
+    /// (`attachmentRepo.deleteBlob(id: ref.data)`) after stripping the ref from
+    /// just one note. If a "Keep Both" duplicate shared blob ids with the
+    /// original, removing an attachment from either note would delete a blob the
+    /// other note's ref still points at. Copying under new ids avoids that.
+    private func copyAttachments(_ refs: [AttachmentRef]) throws -> [AttachmentRef] {
+        var copied: [AttachmentRef] = []
+        copied.reserveCapacity(refs.count)
+        for ref in refs {
+            let newId = CryptoService.generateUUID()
+            if let blobData = try attachmentRepo.getBlob(id: ref.data) {
+                try attachmentRepo.storeBlob(
+                    id: newId,
+                    filename: ref.filename,
+                    mimeType: ref.mimeType,
+                    size: ref.size,
+                    data: blobData
+                )
+            }
+            copied.append(AttachmentRef(
+                id: newId,
+                filename: ref.filename,
+                mimeType: ref.mimeType,
+                size: ref.size,
+                data: newId,
+                thumbnailData: ref.thumbnailData
+            ))
+        }
+        return copied
     }
 
     // MARK: - Force Full Sync

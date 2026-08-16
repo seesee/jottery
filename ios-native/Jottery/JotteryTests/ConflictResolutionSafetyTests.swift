@@ -53,6 +53,7 @@ struct ConflictResolutionSafetyTests {
             localContent: localContent,
             localTags: [],
             localModifiedAt: now,
+            localAttachments: [],
             serverContent: serverContent,
             serverTags: [],
             serverModifiedAt: now,
