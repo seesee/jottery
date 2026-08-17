@@ -291,6 +291,12 @@ final class AppState {
     /// Create a new vault with the given password.
     /// When importing from another device, pass the existing `salt` and `iterations`
     /// so the same password derives the same encryption key.
+    ///
+    /// Key derivation (PBKDF2, ~600k iterations) and the dependent
+    /// wrap/verification-token encrypt run inside `Task.detached`, mirroring
+    /// `unlock(password:)` — only plain `Data`/`String` values cross back to
+    /// the MainActor, where `keyManager` (MainActor-bound) is updated and the
+    /// resulting metadata is persisted.
     func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) async throws {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
@@ -299,39 +305,52 @@ final class AppState {
             let salt = existingSalt!
             let iterations = existingIterations ?? CryptoService.defaultIterations
 
-            let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)
+            let (keyData, verificationJSON) = try await Task.detached(priority: .userInitiated) {
+                let key = CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
 
-            let verificationEncrypted = try CryptoService.encryptText(
-                EncryptionMetadata.verificationPlaintext, key: key
-            )
-            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+                let verificationEncrypted = try CryptoService.encryptText(
+                    EncryptionMetadata.verificationPlaintext, key: key
+                )
+                let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+                let keyData = key.withUnsafeBytes { Data($0) }
+                return (keyData, verificationJSON)
+            }.value
 
             let metadata = EncryptionMetadata.new(
                 salt: salt, iterations: iterations, verification: verificationJSON
             )
             try encryptionRepo.store(metadata)
+
+            keyManager.unlockWithKeyData(keyData)
         } else {
             // New vault — use envelope encryption from the start
             let masterKeyData = CryptoService.generateMasterKey()
-            let masterKey = SymmetricKey(data: masterKeyData)
 
-            // Generate device salt and derive device key
+            // Generate device salt; the expensive device-key derivation plus
+            // the dependent wrap/verification-encrypt steps run off-main.
             let deviceSalt = CryptoService.generateSalt()
-            let deviceKey = CryptoService.deriveKey(
-                password: password,
-                salt: deviceSalt,
-                iterations: CryptoService.defaultIterations
-            )
 
-            // Wrap master key locally
-            let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
-            let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
+            let (localBlob, verificationJSON) = try await Task.detached(priority: .userInitiated) {
+                let deviceKey = CryptoService.deriveKey(
+                    password: password,
+                    salt: deviceSalt,
+                    iterations: CryptoService.defaultIterations
+                )
 
-            // Create verification token encrypted with the master key
-            let verificationEncrypted = try CryptoService.encryptText(
-                EncryptionMetadata.verificationPlaintext, key: masterKey
-            )
-            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+                // Wrap master key locally
+                let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
+                let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
+
+                // Create verification token encrypted with the master key
+                let masterKey = SymmetricKey(data: masterKeyData)
+                let verificationEncrypted = try CryptoService.encryptText(
+                    EncryptionMetadata.verificationPlaintext, key: masterKey
+                )
+                let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+                return (localBlob, verificationJSON)
+            }.value
 
             // Store initial metadata (needed before saveEnvelope which does UPDATE)
             let initialMetadata = EncryptionMetadata.new(
