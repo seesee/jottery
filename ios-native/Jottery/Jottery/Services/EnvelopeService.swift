@@ -214,7 +214,7 @@ enum EnvelopeService {
                     Log.debug("[Envelope] Server key differs from local — re-encrypting data")
                     try appState.reEncryptAllData(from: masterKey, to: serverKey)
                     appState.keyManager.unlockWithKeyData(serverKeyData)
-                    try appState.loadNotes()
+                    try await appState.loadNotes()
                 }
             } else {
                 // No server key — we're the first device, upload ours

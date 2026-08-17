@@ -214,7 +214,7 @@ final class AppState {
     /// Create a new vault with the given password.
     /// When importing from another device, pass the existing `salt` and `iterations`
     /// so the same password derives the same encryption key.
-    func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) throws {
+    func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) async throws {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
         if existingSalt != nil {
@@ -284,90 +284,149 @@ final class AppState {
         isLocked = false
 
         // Load notes (should be empty for new vault)
-        try loadNotes()
+        try await loadNotes()
     }
 
     // MARK: - Unlock
 
     /// Attempt to unlock with the given password.
     /// Returns true if successful.
+    ///
+    /// Ordering (preserved from PR #98): derive → verify → set key (on the
+    /// MainActor) → flush pending editor note → `loadNotes()` → `isLocked = false`.
+    /// Key derivation (PBKDF2, ~600k iterations) and the verification-token
+    /// decrypt are the expensive steps, so both run inside `Task.detached` —
+    /// `keyManager` is MainActor-bound and is only touched after the detached
+    /// work hands back plain `Data`.
     @discardableResult
-    func unlock(password: String) throws -> Bool {
+    func unlock(password: String) async throws -> Bool {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
         guard let metadata = try encryptionRepo.get() else {
             throw AppStateError.noVault
         }
 
-        let key: SymmetricKey
+        #if DEBUG
+        let unlockStart = CFAbsoluteTimeGetCurrent()
+        #endif
+
+        let masterKeyData: Data
 
         if metadata.envelopeVersion != nil {
-            // Envelope unlock path — derive device key, unwrap master key
+            // Envelope unlock path — derive device key, unwrap master key, and
+            // verify, all off the main thread; only the resulting key bytes
+            // cross back to the MainActor.
             guard let deviceSaltB64 = metadata.deviceSalt,
                   let deviceSalt = Data(base64Encoded: deviceSaltB64),
                   let wrappedJSON = metadata.localWrappedMaster else {
                 throw AppStateError.invalidSalt
             }
+            let verificationJSON = metadata.verification
 
-            let deviceKey = CryptoService.deriveKey(
-                password: password,
-                salt: deviceSalt,
-                iterations: CryptoService.defaultIterations
-            )
-
-            let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
-            let masterKeyData: Data
             do {
-                masterKeyData = try CryptoService.unwrapMasterKey(wrapped, with: deviceKey)
+                masterKeyData = try await Task.detached(priority: .userInitiated) {
+                    #if DEBUG
+                    let deriveStart = CFAbsoluteTimeGetCurrent()
+                    #endif
+                    let deviceKey = CryptoService.deriveKey(
+                        password: password,
+                        salt: deviceSalt,
+                        iterations: CryptoService.defaultIterations
+                    )
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] derive: %.1fms", (CFAbsoluteTimeGetCurrent() - deriveStart) * 1000))
+                    let verifyStart = CFAbsoluteTimeGetCurrent()
+                    #endif
+
+                    let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
+                    let unwrapped: Data
+                    do {
+                        unwrapped = try CryptoService.unwrapMasterKey(wrapped, with: deviceKey)
+                    } catch {
+                        throw AppStateError.wrongPassword
+                    }
+
+                    if let verificationJSON {
+                        let candidateKey = SymmetricKey(data: unwrapped)
+                        guard AppState.verifyWithToken(verificationJSON, key: candidateKey) else {
+                            throw AppStateError.wrongPassword
+                        }
+                    }
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] verify: %.1fms", (CFAbsoluteTimeGetCurrent() - verifyStart) * 1000))
+                    #endif
+
+                    return unwrapped
+                }.value
             } catch {
-                keyManager.lock()
-                isLocked = true
-                throw AppStateError.wrongPassword
-            }
-
-            key = SymmetricKey(data: masterKeyData)
-            keyManager.unlockWithKeyData(masterKeyData)
-
-            // Verify with token if available
-            if let verificationJSON = metadata.verification {
-                guard verifyWithToken(verificationJSON, key: key) else {
+                if let appError = error as? AppStateError, case .wrongPassword = appError {
                     keyManager.lock()
                     isLocked = true
-                    throw AppStateError.wrongPassword
                 }
+                throw error
             }
+
+            keyManager.unlockWithKeyData(masterKeyData)
         } else {
-            // Legacy unlock path — derive key directly from password + salt
+            // Legacy unlock path — derive key directly from password + salt,
+            // then verify, both off the main thread.
             guard let saltData = metadata.saltData else {
                 throw AppStateError.invalidSalt
             }
+            let iterations = UInt32(metadata.iterations)
+            let verificationJSON = metadata.verification
+            let db = self.db
 
-            key = keyManager.unlock(
-                password: password,
-                salt: saltData,
-                iterations: UInt32(metadata.iterations)
-            )
+            do {
+                masterKeyData = try await Task.detached(priority: .userInitiated) {
+                    #if DEBUG
+                    let deriveStart = CFAbsoluteTimeGetCurrent()
+                    #endif
+                    let key = CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations)
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] derive: %.1fms", (CFAbsoluteTimeGetCurrent() - deriveStart) * 1000))
+                    let verifyStart = CFAbsoluteTimeGetCurrent()
+                    #endif
 
-            // Verify password
-            let verified: Bool
-            if let verificationJSON = metadata.verification {
-                verified = verifyWithToken(verificationJSON, key: key)
-            } else {
-                verified = verifyByDecryptingNote(key: key)
-            }
+                    let verified: Bool
+                    if let verificationJSON {
+                        verified = AppState.verifyWithToken(verificationJSON, key: key)
+                    } else {
+                        verified = AppState.verifyByDecryptingNote(key: key, db: db)
+                    }
+                    #if DEBUG
+                    Log.debug(String(format: "[Unlock] verify: %.1fms", (CFAbsoluteTimeGetCurrent() - verifyStart) * 1000))
+                    #endif
 
-            guard verified else {
+                    guard verified else {
+                        throw AppStateError.wrongPassword
+                    }
+
+                    return key.withUnsafeBytes { Data($0) }
+                }.value
+            } catch {
                 keyManager.lock()
                 isLocked = true
-                throw AppStateError.wrongPassword
+                throw error
             }
+
+            keyManager.unlockWithKeyData(masterKeyData)
         }
+
+        let key = SymmetricKey(data: masterKeyData)
 
         // Retry any edit that failed to flush at lock time now that the key
         // is available again.
         flushPendingEditorNote()
 
-        try loadNotes()
+        #if DEBUG
+        let loadStart = CFAbsoluteTimeGetCurrent()
+        #endif
+        try await loadNotes()
+        #if DEBUG
+        Log.debug(String(format: "[Unlock] loadNotes: %.1fms", (CFAbsoluteTimeGetCurrent() - loadStart) * 1000))
+        Log.debug(String(format: "[Unlock] total: %.1fms", (CFAbsoluteTimeGetCurrent() - unlockStart) * 1000))
+        #endif
         isLocked = false
 
         // Auto-purge deleted notes older than 30 days
@@ -401,7 +460,9 @@ final class AppState {
     }
 
     /// Verify the key by decrypting the stored verification token.
-    private func verifyWithToken(_ json: String, key: SymmetricKey) -> Bool {
+    /// `static` (and takes no `self`) so it can run inside `Task.detached`
+    /// without capturing the MainActor-isolated `AppState` instance.
+    nonisolated private static func verifyWithToken(_ json: String, key: SymmetricKey) -> Bool {
         do {
             let encrypted = try CryptoService.parseEncryptedJSON(json)
             let plaintext = try CryptoService.decryptText(encrypted, key: key)
@@ -413,7 +474,9 @@ final class AppState {
 
     /// Verify the key by decrypting one note from the database.
     /// Returns true if decryption succeeds, or if there are no notes to test against.
-    private func verifyByDecryptingNote(key: SymmetricKey) -> Bool {
+    /// `static` with an explicit `db` parameter for the same reason as
+    /// `verifyWithToken` above — safe to call from a detached task.
+    nonisolated private static func verifyByDecryptingNote(key: SymmetricKey, db: DatabaseManager?) -> Bool {
         guard let db else { return false }
         do {
             let record = try db.dbPool.read { database in
@@ -489,11 +552,83 @@ final class AppState {
 
     // MARK: - Notes CRUD
 
-    func loadNotes() throws {
+    func loadNotes() async throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
-        notes = try noteRepo.listActive(key: key)
-        archivedNotes = try noteRepo.listArchived(key: key)
-        savedSearches = (try? savedSearchRepo?.listAll(key: key)) ?? []
+        let savedSearchRepo = self.savedSearchRepo
+        // Decrypting the whole vault is O(notes) — never on the main thread (jottery-bzar).
+        let (active, archived, searches) = try await Task.detached(priority: .userInitiated) {
+            (try noteRepo.listActive(key: key),
+             try noteRepo.listArchived(key: key),
+             (try? savedSearchRepo?.listAll(key: key)) ?? [])
+        }.value
+        notes = active
+        archivedNotes = archived
+        savedSearches = searches
+        Log.debug("[Sync] loadNotes: decrypted \(active.count + archived.count) record(s) — full reload")
+        scheduleSearch()
+    }
+
+    /// Above this many changed ids, an incremental refresh isn't worth it —
+    /// treat the change set as ambiguous/oversized and fall back to a full
+    /// reload instead of decrypting them one by one.
+    private static let maxIncrementalChangeCount = 100
+
+    /// Refresh only the notes a sync cycle touched (`SyncChanges`) instead of
+    /// decrypting and republishing the whole vault via `loadNotes()`. Falls
+    /// back to a full reload when: the caller marks the change set ambiguous
+    /// (`fullReloadRequired`), it's larger than `maxIncrementalChangeCount`
+    /// ids, or a decrypt for one of the changed ids fails outright — a stale
+    /// row is worse than one extra full reload, so any doubt goes to
+    /// `loadNotes()`, which is always correct.
+    func applySyncChanges(_ changes: SyncChanges) async {
+        let totalIds = changes.updatedIds.count + changes.deletedIds.count
+        guard !changes.fullReloadRequired, totalIds <= Self.maxIncrementalChangeCount else {
+            try? await loadNotes()
+            return
+        }
+        guard totalIds > 0 else { return }
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+
+        let ids = changes.updatedIds
+        // Decrypt just the changed records off the main thread, batched into
+        // one detached task — mirrors loadNotes()'s off-main decrypt (jottery-bzar).
+        let refreshed: [DecryptedNote]? = await Task.detached(priority: .userInitiated) {
+            var result: [DecryptedNote] = []
+            result.reserveCapacity(ids.count)
+            for id in ids {
+                guard let note = try? noteRepo.get(id: id, key: key) else { return nil }
+                result.append(note)
+            }
+            return result
+        }.value
+
+        guard let refreshed else {
+            // A decrypt failure for a changed id — don't risk leaving a
+            // stale row, fall back to a full reload.
+            try? await loadNotes()
+            return
+        }
+
+        Log.debug("[Sync] applySyncChanges: refreshed \(refreshed.count) record(s), removed \(changes.deletedIds.count) — incremental")
+
+        for note in refreshed {
+            notes.removeAll { $0.id == note.id }
+            archivedNotes.removeAll { $0.id == note.id }
+            // Soft-deleted (or hard-deleted-but-still-listed) notes belong in
+            // neither list — matches loadNotes()'s listActive/listArchived filters.
+            guard !note.deleted else { continue }
+            if note.archived {
+                archivedNotes.insert(note, at: 0)
+            } else {
+                notes.insert(note, at: 0)
+            }
+        }
+
+        for id in changes.deletedIds {
+            notes.removeAll { $0.id == id }
+            archivedNotes.removeAll { $0.id == id }
+        }
+
         scheduleSearch()
     }
 
@@ -548,10 +683,10 @@ final class AppState {
         scheduleAutoSync()
     }
 
-    func restoreNote(id: String) throws {
+    func restoreNote(id: String) async throws {
         guard let noteRepo else { return }
         try noteRepo.restore(id: id)
-        try loadNotes()
+        try await loadNotes()
         scheduleAutoSync()
     }
 
@@ -574,12 +709,12 @@ final class AppState {
         scheduleAutoSync()
     }
 
-    func unarchiveNote(id: String) throws {
+    func unarchiveNote(id: String) async throws {
         guard let noteRepo else { return }
         try noteRepo.unarchive(id: id)
         archivedNotes.removeAll { $0.id == id }
         if selectedNoteId == id { selectedNoteId = nil }
-        try loadNotes()
+        try await loadNotes()
         scheduleAutoSync()
     }
 
@@ -628,7 +763,7 @@ final class AppState {
         guard let syncService else { return }
         try await syncService.resolveConflict(noteId: noteId, strategy: strategy)
         pendingConflicts = await syncService.pendingConflicts
-        try? loadNotes()
+        try? await loadNotes()
         // Sync immediately so keepLocal pushes the resolved note and keepBoth
         // pushes the duplicate — no manual refresh needed.
         await triggerSync()
@@ -810,6 +945,18 @@ final class AppState {
 
     // MARK: - Sync
 
+    /// Refresh notes after a background (SSE-triggered) sync completes and
+    /// stamp the sync timestamp. `SyncService`'s post-sync handler runs off
+    /// the MainActor (it's an actor-isolated closure), so this
+    /// MainActor-isolated method is the single hop point — avoids
+    /// re-entering `MainActor.run` for the `await applySyncChanges()` call,
+    /// which its synchronous closure can't contain. Incremental per
+    /// `SyncChanges` — see `applySyncChanges(_:)`.
+    private func handlePostSyncCompletion(_ changes: SyncChanges) async {
+        await applySyncChanges(changes)
+        lastSyncAt = Date()
+    }
+
     /// Set up the sync client. Pass `apiKey` directly after registration
     /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
     func setupSync(apiKey providedKey: String? = nil) {
@@ -854,12 +1001,8 @@ final class AppState {
 
         // Wire the post-sync handler, start SSE, and run the initial sync
         Task { [weak self] in
-            await service.setPostSyncHandler { [weak self] in
-                await MainActor.run {
-                    guard let self else { return }
-                    try? self.loadNotes()
-                    self.lastSyncAt = Date()
-                }
+            await service.setPostSyncHandler { [weak self] changes in
+                await self?.handlePostSyncCompletion(changes)
             }
             await service.startSSE()
             await self?.triggerSync()
@@ -899,13 +1042,13 @@ final class AppState {
 
         do {
             syncStatusMessage = "Pushing…"
-            try await syncService.push()
+            var changes = try await syncService.push()
             syncStatusMessage = "Pulling…"
-            try await syncService.pull()
+            changes.merge(try await syncService.pull())
             syncStatusMessage = "Finishing…"
             try await syncService.finalise()
             let previousCount = notes.count
-            try? loadNotes()
+            await applySyncChanges(changes)
             isSyncing = false
             lastSyncAt = Date()
 
@@ -947,7 +1090,7 @@ final class AppState {
 
         do {
             try await syncService.forceFullSync()
-            try? loadNotes()
+            try? await loadNotes()
             isSyncing = false
             lastSyncAt = Date()
             pendingConflicts = await syncService.pendingConflicts
@@ -1100,7 +1243,7 @@ final class AppState {
 
     /// Change the vault password. With envelope encryption, only re-wraps the master key (fast).
     /// For legacy vaults, re-encrypts all notes, attachments, versions, and the verification token.
-    func changePassword(currentPassword: String, newPassword: String) throws {
+    func changePassword(currentPassword: String, newPassword: String) async throws {
         guard let encryptionRepo, let noteRepo, let versionRepo else {
             throw AppStateError.notInitialised
         }
@@ -1133,7 +1276,7 @@ final class AppState {
             // Verify with token as extra check
             if let verificationJSON = metadata.verification {
                 let masterKey = SymmetricKey(data: masterKeyData)
-                guard verifyWithToken(verificationJSON, key: masterKey) else {
+                guard AppState.verifyWithToken(verificationJSON, key: masterKey) else {
                     throw AppStateError.wrongPassword
                 }
             }
@@ -1175,11 +1318,11 @@ final class AppState {
                 iterations: UInt32(metadata.iterations)
             )
             if let verificationJSON = metadata.verification {
-                guard verifyWithToken(verificationJSON, key: currentKey) else {
+                guard AppState.verifyWithToken(verificationJSON, key: currentKey) else {
                     throw AppStateError.wrongPassword
                 }
             } else {
-                guard verifyByDecryptingNote(key: currentKey) else {
+                guard AppState.verifyByDecryptingNote(key: currentKey, db: db) else {
                     throw AppStateError.wrongPassword
                 }
             }
@@ -1297,7 +1440,7 @@ final class AppState {
             }
 
             // Reload notes with new key
-            try loadNotes()
+            try await loadNotes()
 
             // Try envelope migration after legacy password change
             if settings.syncEnabled {

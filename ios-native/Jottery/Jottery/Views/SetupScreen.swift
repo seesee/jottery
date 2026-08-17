@@ -98,7 +98,7 @@ private struct NewVaultView: View {
 
         Task {
             do {
-                try appState.createVault(password: password)
+                try await appState.createVault(password: password)
                 isCreating = false
             } catch {
                 self.error = error.localizedDescription
@@ -557,7 +557,7 @@ private struct ConnectToServerView: View {
                 }
 
                 syncProgress = L.setupProgressCreatingVault
-                try appState.createVault(
+                try await appState.createVault(
                     password: encryptionPassword,
                     existingSalt: importedSalt,
                     existingIterations: importedIterations
@@ -620,7 +620,7 @@ private struct ConnectToServerView: View {
 
                 appState.syncStatusMessage = L.setupProgressFinishing
                 try await syncService.finalise()
-                try appState.loadNotes()
+                try await appState.loadNotes()
                 appState.lastSyncAt = Date()
                 appState.isSyncing = false
 

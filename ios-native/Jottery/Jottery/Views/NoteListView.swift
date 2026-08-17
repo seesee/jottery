@@ -260,7 +260,7 @@ struct NoteListView: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if appState.showArchive {
                         Button {
-                            try? appState.unarchiveNote(id: note.id)
+                            Task { try? await appState.unarchiveNote(id: note.id) }
                         } label: {
                             Label(L.noteListUnarchive, systemImage: "tray.and.arrow.up")
                         }

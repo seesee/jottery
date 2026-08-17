@@ -17,7 +17,7 @@ actor SyncService {
     private(set) var lastSyncAt: String?
     private(set) var lastError: String?
     private(set) var pendingConflicts: [ConflictInfo] = []
-    private var postSyncHandler: (@Sendable () async -> Void)?
+    private var postSyncHandler: (@Sendable (SyncChanges) async -> Void)?
 
     init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey) {
         self.syncClient = syncClient
@@ -31,25 +31,29 @@ actor SyncService {
     }
 
     /// Set a handler called after SSE-triggered syncs complete.
-    func setPostSyncHandler(_ handler: @escaping @Sendable () async -> Void) {
+    func setPostSyncHandler(_ handler: @escaping @Sendable (SyncChanges) async -> Void) {
         postSyncHandler = handler
     }
 
     // MARK: - Full Sync
 
-    /// Run a full push-then-pull sync cycle.
-    func sync() async throws {
-        guard !isSyncing else { return }
+    /// Run a full push-then-pull sync cycle. Returns the combined set of note
+    /// ids the cycle touched so callers can refresh incrementally instead of
+    /// reloading the whole vault.
+    @discardableResult
+    func sync() async throws -> SyncChanges {
+        guard !isSyncing else { return .none }
         isSyncing = true
         lastError = nil
 
         defer { isSyncing = false }
 
         do {
-            try await push()
-            try await pull()
+            var changes = try await push()
+            changes.merge(try await pull())
             try await finalise()
-            await postSyncHandler?()
+            await postSyncHandler?(changes)
+            return changes
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -85,10 +89,16 @@ actor SyncService {
         return repairs
     }
 
-    func push() async throws {
+    /// Push locally-changed notes/attachments/versions/deletions/saved
+    /// searches to the server. Returns the set of note ids this push wrote
+    /// to locally (accepted notes get `markSynced` — new `syncedAt`/version —
+    /// even though content is unchanged) so callers can refresh incrementally.
+    @discardableResult
+    func push() async throws -> SyncChanges {
+        var changes = SyncChanges()
         let records = try noteRepo.listNeedingSync()
         Log.debug("[Sync] push: \(records.count) records need syncing")
-        guard !records.isEmpty else { return }
+        guard !records.isEmpty else { return changes }
 
         var syncNotes: [SyncNote] = []
         for record in records {
@@ -239,6 +249,7 @@ actor SyncService {
                     serverVersion: accepted.serverVersion,
                     ifModifiedAt: pushedModifiedAtById[accepted.id]
                 )
+                changes.updatedIds.insert(accepted.id)
                 // Create a version snapshot of the accepted state
                 if let record = try noteRepo.getRaw(id: accepted.id) {
                     try versionRepo.createVersion(from: record, reason: "sync")
@@ -252,6 +263,10 @@ actor SyncService {
         // holds (one attachments-only push, no in-run retry — the next regular
         // sync retries naturally); log the ones it cannot heal.
         if let warnings = response.attachmentWarnings, !warnings.isEmpty {
+            // Attachment healing can touch note records in ways this method
+            // doesn't individually track — be conservative and let the
+            // caller fall back to a full reload.
+            changes.fullReloadRequired = true
             let repairs = Self.collectRepairAttachments(for: warnings) { id in
                 try? attachmentRepo.getBlob(id: id)
             }
@@ -330,11 +345,19 @@ actor SyncService {
         }
 
         try syncRepo.updateLastPush(at: now)
+        return changes
     }
 
     // MARK: - Pull
 
-    func pull() async throws {
+    /// Pull remote changes and apply them locally. Returns the set of note
+    /// ids this pull wrote or removed, plus `fullReloadRequired` for any
+    /// write this method can't attribute to a specific id (decrypt/DB
+    /// failures, saved-search changes) — the conservative, always-correct
+    /// fallback for `AppState.applySyncChanges`.
+    @discardableResult
+    func pull() async throws -> SyncChanges {
+        var changes = SyncChanges()
         let metadata = try syncRepo.getMetadata()
         let lastSyncAt = metadata?.lastSyncAt
 
@@ -373,7 +396,7 @@ actor SyncService {
             var attachmentMetadata: [String: AttachmentRef] = [:]
             for syncNote in response.notes {
                 do {
-                    try processNote(syncNote, syncedAt: now)
+                    try processNote(syncNote, syncedAt: now, changes: &changes)
                     knownIds.append(syncNote.id)
                     // Index attachment refs by their blob ID (ref.data)
                     for ref in syncNote.attachments {
@@ -382,6 +405,9 @@ actor SyncService {
                 } catch {
                     Log.debug("[Sync] pull: failed to process note \(syncNote.id): \(error)")
                     knownIds.append(syncNote.id) // still track as known to avoid re-pull loops
+                    // Unclear whether processNote wrote before throwing —
+                    // don't risk a stale row, fall back to a full reload.
+                    changes.fullReloadRequired = true
                 }
             }
 
@@ -407,11 +433,17 @@ actor SyncService {
                 for deletion in deletions {
                     do {
                         let deleted = try noteRepo.hardDeleteIfSynced(id: deletion.id)
-                        if !deleted {
+                        if deleted {
+                            changes.deletedIds.insert(deletion.id)
+                        } else {
+                            // Kept, not deleted — local unsynced edit outranked the
+                            // remote deletion, so this id must NOT be reported as
+                            // removed (the in-memory row is still current/correct).
                             Log.debug("[Sync] pull: kept note \(deletion.id) — local unsynced edit outranks remote deletion")
                         }
                     } catch {
                         Log.debug("[Sync] pull: failed to delete note \(deletion.id): \(error)")
+                        changes.fullReloadRequired = true
                     }
                 }
             }
@@ -444,8 +476,12 @@ actor SyncService {
                 }
             }
 
-            // Process pulled saved searches
-            if let savedSearches = response.savedSearches {
+            // Process pulled saved searches. AppState.applySyncChanges only
+            // refreshes the notes/archivedNotes lists, not `savedSearches` —
+            // any saved-search change this pull carries needs the full
+            // loadNotes() fallback to actually reach the UI.
+            if let savedSearches = response.savedSearches, !savedSearches.isEmpty {
+                changes.fullReloadRequired = true
                 for remote in savedSearches {
                     do {
                         let record = SavedSearchRepository.SavedSearchRecord(
@@ -479,6 +515,7 @@ actor SyncService {
         }
 
         try syncRepo.updateLastPull(at: Date().iso8601)
+        return changes
     }
 
     /// Build a NoteRecord from a SyncNote for local storage.
@@ -554,7 +591,11 @@ actor SyncService {
     }
 
     /// Process a single note from a pull response with hash-chain conflict detection.
-    private func processNote(_ syncNote: SyncNote, syncedAt: String) throws {
+    /// Every branch that writes a record inserts `syncNote.id` into
+    /// `changes.updatedIds` — the conflict-detection branches (which only
+    /// append to `pendingConflicts`) deliberately don't, since `resolveConflict`
+    /// triggers its own full reload once the user resolves them.
+    private func processNote(_ syncNote: SyncNote, syncedAt: String, changes: inout SyncChanges) throws {
         // Skip notes with pending conflicts from push — preserve local version
         if pendingConflicts.contains(where: { $0.id == syncNote.id }) {
             return
@@ -565,6 +606,7 @@ actor SyncService {
             // New note from server — no conflict
             let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
             try noteRepo.insertOrReplace(record)
+            changes.updatedIds.insert(syncNote.id)
             return
         }
 
@@ -574,6 +616,7 @@ actor SyncService {
             if localHash == syncNote.parentHash {
                 let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
                 try noteRepo.insertOrReplace(record)
+                changes.updatedIds.insert(syncNote.id)
                 return
             }
 
@@ -607,12 +650,14 @@ actor SyncService {
             if remoteChain.contains(localHash) {
                 let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
                 try noteRepo.insertOrReplace(record)
+                changes.updatedIds.insert(syncNote.id)
                 return
             }
 
             // No clear relationship and local is synced — accept remote
             let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
             try noteRepo.insertOrReplace(record)
+            changes.updatedIds.insert(syncNote.id)
             return
         }
 
@@ -626,6 +671,7 @@ actor SyncService {
         // Server is newer or local is synced — accept remote
         let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
         try noteRepo.insertOrReplace(record)
+        changes.updatedIds.insert(syncNote.id)
     }
 
     // MARK: - Conflict Resolution
@@ -919,7 +965,10 @@ actor SyncService {
 
     // MARK: - Force Full Sync
 
-    /// Run a full sync with no incremental state — re-downloads all notes from the server.
+    /// Run a full sync with no incremental state — re-downloads all notes from
+    /// the server. Callers always fall back to a full reload after this (it's
+    /// the "force-resync" case from the incremental-refresh contract), so
+    /// this discards the per-note change tracking `pull()` does.
     func forceFullSync() async throws {
         guard !isSyncing else { return }
         isSyncing = true
@@ -933,6 +982,7 @@ actor SyncService {
             // Pull everything: no lastSyncAt, no knownNoteIds
             var offset = 0
             var hasMore = true
+            var discardedChanges = SyncChanges()
 
             while hasMore {
                 let request = SyncPullRequest(
@@ -948,7 +998,7 @@ actor SyncService {
 
                 var attachmentMetadata: [String: AttachmentRef] = [:]
                 for syncNote in response.notes {
-                    try processNote(syncNote, syncedAt: now)
+                    try processNote(syncNote, syncedAt: now, changes: &discardedChanges)
                     for ref in syncNote.attachments {
                         attachmentMetadata[ref.data] = ref
                     }
@@ -1023,7 +1073,9 @@ actor SyncService {
             }
 
             try await finalise()
-            await postSyncHandler?()
+            // A force-resync always re-downloads everything — always signal
+            // the full-reload fallback rather than the discarded per-note ids.
+            await postSyncHandler?(.fullReload)
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -1037,7 +1089,7 @@ actor SyncService {
         // Wire up the callback BEFORE starting so no early events are missed
         let syncService = self
         await sseClient.setOnSyncEvent {
-            try? await syncService.sync()
+            _ = try? await syncService.sync()
         }
         await sseClient.start()
     }

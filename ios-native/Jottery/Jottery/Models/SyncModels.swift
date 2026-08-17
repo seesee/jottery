@@ -244,3 +244,30 @@ enum AccountDeletionMode: String {
     /// Hard delete — removes the account and its data.
     case delete
 }
+
+// MARK: - Incremental Sync Refresh
+
+/// The set of note ids a sync cycle touched, so `AppState` can refresh only
+/// those rows instead of decrypting the whole vault. `updatedIds` covers
+/// notes that were inserted or replaced (new from server, fast-forwarded,
+/// auto-accepted, or marked synced after push); `deletedIds` covers notes
+/// hard-deleted locally in response to a server deletion. When a write can't
+/// be attributed to a specific id — or the change set is large — the caller
+/// should fall back to a full reload via `fullReloadRequired`.
+struct SyncChanges: Sendable {
+    var updatedIds: Set<String> = []
+    var deletedIds: Set<String> = []
+    var fullReloadRequired: Bool = false
+
+    /// No changes, no reload needed — the default/no-op value.
+    static let none = SyncChanges()
+
+    /// Ambiguous or oversized change set — always safe, just not incremental.
+    static let fullReload = SyncChanges(fullReloadRequired: true)
+
+    mutating func merge(_ other: SyncChanges) {
+        updatedIds.formUnion(other.updatedIds)
+        deletedIds.formUnion(other.deletedIds)
+        fullReloadRequired = fullReloadRequired || other.fullReloadRequired
+    }
+}

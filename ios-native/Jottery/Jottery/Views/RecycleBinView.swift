@@ -91,8 +91,14 @@ struct RecycleBinView: View {
     }
 
     private func restoreNote(id: String) {
-        try? appState.restoreNote(id: id)
-        deletedNotes.removeAll { $0.id == id }
+        Task {
+            do {
+                try await appState.restoreNote(id: id)
+                deletedNotes.removeAll { $0.id == id }
+            } catch {
+                // Restore failed — leave the note in the recycle bin list.
+            }
+        }
     }
 
     private func permanentlyDelete(id: String) {
