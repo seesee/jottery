@@ -35,12 +35,23 @@ private final class ForceFullSyncStubURLProtocol: URLProtocol, @unchecked Sendab
 ///    calling `push()`/`pull()` directly. The old code bypassed that guard,
 ///    so an SSE-triggered `sync()` and a UI-triggered `triggerSync()` could
 ///    interleave across actor suspension points.
-/// 2. `AppState` gains a monotonically increasing `loadEpoch`. `loadNotes()`
-///    bumps it before its detached decrypt; `applySyncChanges(_:)` captures
-///    it but never bumps it, and both drop their publication if a newer full
-///    reload has started in the meantime. Exercised through the
-///    `publishIfCurrent(epoch:_:)` seam directly — deterministic — rather
-///    than by racing real `Task`s against `loadNotes()`.
+/// 2. `AppState` gains a monotonically increasing ticket counter shared by
+///    *both* `loadNotes()` (full reload) and `applySyncChanges(_:)`
+///    (incremental) — each draws its own ticket at the start, before any
+///    await, and publishes only if its ticket is newer than the last
+///    published one (`publishIfNewest(ticket:_:)`). Publish order, not
+///    operation kind, decides which refresh wins when two race — fixing a
+///    gap in the old epoch scheme, where only full reloads bumped the
+///    counter, so a full reload that *started* before a concurrent
+///    incremental could still publish *after* it and clobber the
+///    incremental's fresher rows. A dropped publication (of either kind)
+///    schedules exactly one follow-up full reload via
+///    `retryFullReloadIfNeeded()`, guarded by `isRetryReloadPending` so
+///    concurrent drops don't cascade. Exercised through the
+///    `publishIfNewest(ticket:_:)` seam directly, plus deterministic
+///    ticket-prediction sequences through the real
+///    `loadNotes()`/`applySyncChanges()` entry points — rather than by
+///    racing real `Task`s, which is inherently timing-dependent and flaky.
 /// 3. `AppState.unlock(password:)` gains an internal re-entrancy guard: two
 ///    concurrent calls must have exactly one real effect.
 /// 4. `SyncService.forceFullSync()` no longer double-fires a reload via its
@@ -101,51 +112,85 @@ struct SyncOrchestrationTests {
         #expect(state.isSyncing == false)
     }
 
-    // MARK: - jottery-t94v: load-epoch guard
+    // MARK: - jottery-t94v: publish-ordering guard
 
-    @Test func publishIfCurrentAppliesWhenEpochMatches() throws {
+    @Test func publishIfNewestAppliesWhenTicketIsNewer() throws {
         let state = try makeUnlockedState()
-        let epoch = state.loadEpoch
 
         var ran = false
-        let applied = state.publishIfCurrent(epoch: epoch) { ran = true }
+        // A fresh state has never published — any positive ticket is newer.
+        let applied = state.publishIfNewest(ticket: 1) { ran = true }
 
         #expect(applied == true)
         #expect(ran == true)
     }
 
-    @Test func publishIfCurrentSkipsWhenEpochIsStale() throws {
+    @Test func publishIfNewestSkipsWhenTicketIsNotNewer() throws {
         let state = try makeUnlockedState()
-        let currentEpoch = state.loadEpoch
+        var firstRan = false
+        #expect(state.publishIfNewest(ticket: 5) { firstRan = true } == true)
+        #expect(firstRan == true)
 
-        var ran = false
-        // A caller that captured an epoch before a newer full reload bumped
-        // `loadEpoch` must have its publication skipped.
-        let applied = state.publishIfCurrent(epoch: currentEpoch - 1) { ran = true }
+        // Equal ticket: a caller whose ticket ties the last published one
+        // must not publish — `>` not `>=`, so ties always lose.
+        var tieRan = false
+        #expect(state.publishIfNewest(ticket: 5) { tieRan = true } == false)
+        #expect(tieRan == false)
 
-        #expect(applied == false)
-        #expect(ran == false)
+        // Older ticket: a caller that started before the last publish.
+        var staleRan = false
+        #expect(state.publishIfNewest(ticket: 4) { staleRan = true } == false)
+        #expect(staleRan == false)
     }
 
-    @Test func loadNotesBumpsLoadEpoch() async throws {
+    /// The bug this seam fixes: the old epoch scheme only bumped on full
+    /// reloads, so a full reload that *started* before a concurrent
+    /// incremental could still publish *after* it and clobber the
+    /// incremental's fresher rows with an older snapshot. Simulates that
+    /// ordering directly at the seam — deterministic, no real races — by
+    /// publishing the "incremental" (ticket 2) first and then attempting to
+    /// publish the "full reload" (ticket 1, i.e. it started earlier).
+    @Test func olderTicketFullReloadIsDroppedAfterNewerTicketIncrementalPublished() throws {
         let state = try makeUnlockedState()
-        let epochBefore = state.loadEpoch
 
-        try await state.loadNotes()
-        #expect(state.loadEpoch == epochBefore + 1)
+        var incrementalRan = false
+        #expect(state.publishIfNewest(ticket: 2) { incrementalRan = true } == true)
+        #expect(incrementalRan == true)
 
-        try await state.loadNotes()
-        #expect(state.loadEpoch == epochBefore + 2)
+        var fullReloadRan = false
+        let fullReloadPublished = state.publishIfNewest(ticket: 1) { fullReloadRan = true }
+
+        #expect(fullReloadPublished == false)
+        #expect(fullReloadRan == false)
     }
 
-    @Test func applySyncChangesDoesNotBumpLoadEpoch() async throws {
+    /// Sequential, non-racing calls are the common case and must be
+    /// unaffected by the ordering change: each call draws a strictly newer
+    /// ticket than the last, so each one publishes in turn. A note created
+    /// between the two calls must show up after the second, which would
+    /// only fail to happen if the second call's ticket were somehow not
+    /// newer than the first's.
+    @Test func sequentialLoadNotesCallsEachPublish() async throws {
+        let state = try makeUnlockedState()
+        let noteRepo = try #require(state.noteRepo)
+        let key = try #require(state.keyManager.masterKey)
+
+        try await state.loadNotes()
+        #expect(state.notes.isEmpty)
+
+        _ = try noteRepo.create(content: "second load", tags: [], key: key)
+        try await state.loadNotes()
+
+        #expect(state.notes.contains { $0.content == "second load" })
+    }
+
+    @Test func applySyncChangesPublishesNormallyWhenUnraced() async throws {
         let state = try makeUnlockedState()
         let noteRepo = try #require(state.noteRepo)
         let key = try #require(state.keyManager.masterKey)
 
         let note = try noteRepo.create(content: "original", tags: [], key: key)
         try await state.loadNotes()
-        let epochAfterLoad = state.loadEpoch
 
         var updated = note
         updated.content = "updated by server"
@@ -153,24 +198,89 @@ struct SyncOrchestrationTests {
 
         await state.applySyncChanges(SyncChanges(updatedIds: [note.id]))
 
-        // The incremental apply must not itself advance the generation —
-        // only full reloads (loadNotes()) do that.
-        #expect(state.loadEpoch == epochAfterLoad)
         #expect(state.notes.first(where: { $0.id == note.id })?.content == "updated by server")
     }
 
-    @Test func applySyncChangesFullReloadFallbackBumpsLoadEpoch() async throws {
+    @Test func applySyncChangesFullReloadFallbackPublishes() async throws {
         let state = try makeUnlockedState()
         let noteRepo = try #require(state.noteRepo)
         let key = try #require(state.keyManager.masterKey)
-        _ = try noteRepo.create(content: "note", tags: [], key: key)
+        let note = try noteRepo.create(content: "note", tags: [], key: key)
         try await state.loadNotes()
-        let epochAfterLoad = state.loadEpoch
 
-        // .fullReload routes through loadNotes() internally, which does bump.
+        // .fullReload routes through loadNotes() internally.
         await state.applySyncChanges(.fullReload)
 
-        #expect(state.loadEpoch == epochAfterLoad + 1)
+        #expect(state.notes.contains { $0.id == note.id })
+    }
+
+    /// End-to-end version of `olderTicketFullReloadIsDroppedAfterNewerTicketIncrementalPublished`,
+    /// driven through the real `loadNotes()` entry point instead of the
+    /// seam, to also exercise the automatic retry. Ticket values drawn by
+    /// `nextLoadTicket()` are deterministic (one per real
+    /// `loadNotes()`/`applySyncChanges()` call, in call order), so after one
+    /// priming `loadNotes()` call the next ticket it will draw is
+    /// predictable — letting a manual `publishIfNewest` call simulate "a
+    /// newer refresh already published" without racing real `Task`s.
+    @Test func olderTicketLoadNotesIsDroppedThenRetryReloadConverges() async throws {
+        let state = try makeUnlockedState()
+        let noteRepo = try #require(state.noteRepo)
+        let key = try #require(state.keyManager.masterKey)
+
+        try await state.loadNotes()
+        // One real load has happened, so loadNotes() below will draw ticket 2.
+
+        let note = try noteRepo.create(content: "from db", tags: [], key: key)
+
+        // Simulate a newer refresh (ticket 2) publishing first — exactly the
+        // ticket the loadNotes() call below is about to draw for itself, so
+        // its own publish attempt is guaranteed to be dropped.
+        var raceWinnerRan = false
+        #expect(state.publishIfNewest(ticket: 2) { raceWinnerRan = true } == true)
+        #expect(raceWinnerRan == true)
+
+        // Dropped (ticket 2 == last published 2); the automatic retry draws
+        // ticket 3, which is newer, and converges to the real DB state.
+        try await state.loadNotes()
+
+        #expect(state.notes.contains { $0.id == note.id })
+    }
+
+    /// Same shape as the loadNotes() case above, but for a dropped
+    /// *incremental*: an incremental only covers the ids it was told about,
+    /// so if the refresh that beat it wasn't itself a full reload, ids
+    /// outside its scope could stay stale forever without the retry
+    /// fallback. `noteB` here is never mentioned in the `SyncChanges` passed
+    /// to `applySyncChanges` — only the follow-up full reload picks it up.
+    @Test func olderTicketApplySyncChangesIsDroppedThenRetryReloadConverges() async throws {
+        let state = try makeUnlockedState()
+        let noteRepo = try #require(state.noteRepo)
+        let key = try #require(state.keyManager.masterKey)
+
+        let noteA = try noteRepo.create(content: "original", tags: [], key: key)
+        try await state.loadNotes()
+        // One real load has happened, so applySyncChanges() below will draw
+        // ticket 2.
+
+        var updatedA = noteA
+        updatedA.content = "updated by server"
+        try noteRepo.update(updatedA, key: key)
+
+        // Out-of-band row that lands in the DB but is never passed to
+        // applySyncChanges() below — only a full reload would pick it up.
+        let noteB = try noteRepo.create(content: "out of band", tags: [], key: key)
+
+        var raceWinnerRan = false
+        #expect(state.publishIfNewest(ticket: 2) { raceWinnerRan = true } == true)
+        #expect(raceWinnerRan == true)
+
+        await state.applySyncChanges(SyncChanges(updatedIds: [noteA.id]))
+
+        // Dropped (ticket 2 == last published 2); the automatic retry draws
+        // ticket 3, converging on both the server-side edit to noteA and
+        // the out-of-band noteB that this incremental never asked about.
+        #expect(state.notes.first(where: { $0.id == noteA.id })?.content == "updated by server")
+        #expect(state.notes.contains { $0.id == noteB.id })
     }
 
     // MARK: - jottery-t94v: unlock re-entrancy guard

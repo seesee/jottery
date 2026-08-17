@@ -85,13 +85,45 @@ final class AppState {
     /// entry) must have exactly one real effect (jottery-t94v).
     @ObservationIgnored private var isUnlocking = false
 
-    /// Monotonically increasing generation counter for full reloads. Bumped
-    /// by `loadNotes()` before its detached decrypt starts; `applySyncChanges`
-    /// captures it (but never bumps it) so a full reload that starts partway
-    /// through an in-flight incremental refresh always wins — the stale
-    /// incremental result is dropped instead of clobbering fresher state
-    /// (jottery-t94v). See `publishIfCurrent(epoch:_:)`.
-    @ObservationIgnored private(set) var loadEpoch = 0
+    /// Monotonically increasing ticket source shared by every refresh
+    /// operation — both full reloads (`loadNotes()`) and incremental applies
+    /// (`applySyncChanges(_:)`). Each refresh draws its own ticket from this
+    /// counter at the very start, on the main actor, before any `await` —
+    /// so ticket order always matches start order, regardless of which kind
+    /// of refresh it is (jottery-t94v).
+    @ObservationIgnored private var loadTicketCounter = 0
+
+    /// The ticket of the most recently *published* refresh. A refresh may
+    /// only publish if its ticket is newer than this — see
+    /// `publishIfNewest(ticket:_:)`. Using `>` rather than `==` (the old
+    /// epoch scheme) means a full reload and an incremental refresh that
+    /// started around the same time are compared by start order instead of
+    /// by kind: whichever started later wins, whether it's the full reload
+    /// or the incremental. The old epoch scheme only bumped on full
+    /// reloads, so a full reload that started *before* a concurrent
+    /// incremental could still publish *after* it and clobber the
+    /// incremental's fresher rows with its own older snapshot.
+    @ObservationIgnored private var lastPublishedTicket = 0
+
+    /// A dropped publication can lose data: the refresh that beat it may not
+    /// have covered every id the dropped one touched. A dropped *full*
+    /// reload obviously needs a retry (its own ids may be stale again). A
+    /// dropped *incremental* also needs one — the refresh that beat it only
+    /// covers all ids for certain if that refresh was itself a full reload;
+    /// if it was a later-starting incremental, it may not have touched the
+    /// ids the dropped one did. So any dropped publication, full or
+    /// incremental, schedules exactly one follow-up full reload. This flag
+    /// stops multiple drops in quick succession from each queuing their own
+    /// retry (jottery-t94v).
+    @ObservationIgnored private var isRetryReloadPending = false
+
+    /// Draws the next ticket for a refresh operation. Must be called on the
+    /// main actor before any `await` in the caller, so it captures start
+    /// order.
+    private func nextLoadTicket() -> Int {
+        loadTicketCounter += 1
+        return loadTicketCounter
+    }
 
     // Repositories (lazily initialised after DB is ready)
     private(set) var noteRepo: NoteRepository?
@@ -579,11 +611,10 @@ final class AppState {
 
     func loadNotes() async throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
-        // Bump the load epoch before the detached decrypt starts — this is a
-        // full reload, so it supersedes any in-flight incremental refresh
-        // and any earlier, still-running loadNotes() (jottery-t94v).
-        loadEpoch += 1
-        let epoch = loadEpoch
+        // Draw a ticket before the detached decrypt starts — on the main
+        // actor, before any await — so it reflects this call's start order
+        // relative to any other in-flight refresh (jottery-t94v).
+        let ticket = nextLoadTicket()
         let savedSearchRepo = self.savedSearchRepo
         // Decrypting the whole vault is O(notes) — never on the main thread (jottery-bzar).
         let (active, archived, searches) = try await Task.detached(priority: .userInitiated) {
@@ -592,31 +623,48 @@ final class AppState {
              (try? savedSearchRepo?.listAll(key: key)) ?? [])
         }.value
 
-        let published = publishIfCurrent(epoch: epoch) {
+        let published = publishIfNewest(ticket: ticket) {
             notes = active
             archivedNotes = archived
             savedSearches = searches
         }
         guard published else {
-            Log.debug("[Sync] loadNotes: superseded by a newer load (epoch \(epoch) != \(loadEpoch)) — discarding")
+            Log.debug("[Sync] loadNotes: superseded by a newer refresh (ticket \(ticket) <= \(lastPublishedTicket)) — discarding")
+            await retryFullReloadIfNeeded()
             return
         }
         Log.debug("[Sync] loadNotes: decrypted \(active.count + archived.count) record(s) — full reload")
         scheduleSearch()
     }
 
-    /// Test seam for the load-epoch guard (jottery-t94v): runs `publish` only
-    /// if `epoch` still matches the current `loadEpoch`, i.e. no newer full
-    /// reload has started since the caller captured `epoch` before its
-    /// detached work. `loadNotes()` and `applySyncChanges(_:)` both funnel
-    /// their publication through this single choke point. Exercised directly
-    /// in tests — deterministic — rather than by racing real `Task`s against
-    /// `loadNotes()`, which is inherently timing-dependent and flaky.
+    /// Test seam for the publish-ordering guard (jottery-t94v): runs
+    /// `publish` only if `ticket` is newer than the last published ticket,
+    /// i.e. no other refresh that started later has published since the
+    /// caller drew `ticket` before its detached work. `loadNotes()` and
+    /// `applySyncChanges(_:)` both funnel their publication through this
+    /// single choke point, and both draw tickets from the same counter, so
+    /// this compares start order across full reloads and incremental
+    /// applies alike rather than favouring one kind over the other.
+    /// Exercised directly in tests — deterministic — rather than by racing
+    /// real `Task`s against `loadNotes()`, which is inherently
+    /// timing-dependent and flaky.
     @discardableResult
-    func publishIfCurrent(epoch: Int, _ publish: () -> Void) -> Bool {
-        guard epoch == loadEpoch else { return false }
+    func publishIfNewest(ticket: Int, _ publish: () -> Void) -> Bool {
+        guard ticket > lastPublishedTicket else { return false }
         publish()
+        lastPublishedTicket = ticket
         return true
+    }
+
+    /// Runs after any dropped publication (full or incremental) to guarantee
+    /// convergence — see the `isRetryReloadPending` doc comment for why both
+    /// kinds need this, not just full reloads. Coalesces concurrent drops
+    /// into a single follow-up `loadNotes()`.
+    private func retryFullReloadIfNeeded() async {
+        guard !isRetryReloadPending else { return }
+        isRetryReloadPending = true
+        defer { isRetryReloadPending = false }
+        try? await loadNotes()
     }
 
     /// Above this many changed ids, an incremental refresh isn't worth it —
@@ -640,12 +688,11 @@ final class AppState {
         guard totalIds > 0 else { return }
         guard let noteRepo, let key = keyManager.masterKey else { return }
 
-        // Capture (but never bump) the epoch — this is an incremental apply,
-        // not a full reload. If a full reload starts and bumps the epoch
-        // while the decrypt below is in flight, that full reload's result is
-        // the fresher one; this apply must be dropped rather than clobber it
-        // (jottery-t94v).
-        let epoch = loadEpoch
+        // Draw a ticket before the detached decrypt starts — on the main
+        // actor, before any await — exactly like loadNotes(). Both kinds of
+        // refresh share the same counter, so whichever started later wins
+        // the publish race, regardless of kind (jottery-t94v).
+        let ticket = nextLoadTicket()
 
         let ids = changes.updatedIds
         // Decrypt just the changed records off the main thread, batched into
@@ -668,7 +715,7 @@ final class AppState {
         }
 
         let deletedIds = changes.deletedIds
-        let applied = publishIfCurrent(epoch: epoch) {
+        let applied = publishIfNewest(ticket: ticket) {
             for note in refreshed {
                 notes.removeAll { $0.id == note.id }
                 archivedNotes.removeAll { $0.id == note.id }
@@ -689,7 +736,8 @@ final class AppState {
         }
 
         guard applied else {
-            Log.debug("[Sync] applySyncChanges: superseded by a newer full reload (epoch \(epoch) != \(loadEpoch)) — discarding")
+            Log.debug("[Sync] applySyncChanges: superseded by a newer refresh (ticket \(ticket) <= \(lastPublishedTicket)) — discarding, retrying with a full reload")
+            await retryFullReloadIfNeeded()
             return
         }
 
