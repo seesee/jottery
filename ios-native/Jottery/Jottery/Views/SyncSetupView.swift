@@ -12,6 +12,7 @@ struct SyncSetupView: View {
     @State private var endpoint = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var notesPassword = ""
     @State private var deviceName = ""
     @State private var importData = ""
     @State private var error: String?
@@ -83,6 +84,12 @@ struct SyncSetupView: View {
 
             TextField(L.syncSetupDeviceName, text: $deviceName)
 
+            Text(L.syncSetupNotesPasswordHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            SecureField(L.syncSetupNotesPassword, text: $notesPassword)
+
             Button(action: registerDevice) {
                 if isWorking {
                     ProgressView()
@@ -90,7 +97,7 @@ struct SyncSetupView: View {
                     Text(L.syncSetupRegisterAction)
                 }
             }
-            .disabled(endpoint.isEmpty || email.isEmpty || password.isEmpty || deviceName.isEmpty || isWorking || success)
+            .disabled(endpoint.isEmpty || email.isEmpty || password.isEmpty || deviceName.isEmpty || notesPassword.isEmpty || isWorking || success)
         }
     }
 
@@ -140,6 +147,17 @@ struct SyncSetupView: View {
 
         Task {
             do {
+                // Verify the notes (vault) password against the local vault
+                // BEFORE registering — this is the password that ends up
+                // wrapping the envelope master key, and getting it wrong
+                // would silently upload a key other devices can't unwrap
+                // (jottery-md6b). Registration must not proceed on failure.
+                guard await appState.verifyVaultPassword(notesPassword) else {
+                    self.error = SyncSetupError.wrongVaultPassword.localizedDescription
+                    isWorking = false
+                    return
+                }
+
                 let normalised = try SyncEndpoint.normalise(endpoint)
                 let client = SyncClient(endpoint: normalised)
                 let response = try await client.registerDevice(
@@ -165,13 +183,20 @@ struct SyncSetupView: View {
 
                 // Attempt envelope setup before declaring success.
                 // If another device already uploaded a wrapped key, we onboard
-                // from that key; otherwise we upload ours.
+                // from that key; otherwise we upload ours. Wrapped with the
+                // vault password, verified above — never the server password.
                 if let masterKey = appState.keyManager.masterKey {
-                    await EnvelopeService.tryEnvelopeSetup(
+                    let envelopeOK = await EnvelopeService.tryEnvelopeSetup(
                         appState: appState,
-                        password: password,
+                        password: notesPassword,
                         masterKey: masterKey
                     )
+                    if !envelopeOK {
+                        // Non-fatal: sync itself is set up, but other devices
+                        // can't onboard until the key upload succeeds. It
+                        // retries automatically on the next unlock.
+                        self.error = L.syncSetupEnvelopeUploadFailed
+                    }
                 }
 
                 success = true
@@ -295,12 +320,14 @@ enum SyncSetupError: LocalizedError {
     case invalidCredentials
     case needsEndpoint
     case wrongPassword
+    case wrongVaultPassword
 
     var errorDescription: String? {
         switch self {
         case .invalidCredentials: return L.syncSetupErrorInvalidCredentials
         case .needsEndpoint: return L.syncSetupErrorNeedsEndpoint
         case .wrongPassword: return L.syncSetupErrorWrongPassword
+        case .wrongVaultPassword: return L.syncSetupErrorWrongVaultPassword
         }
     }
 }

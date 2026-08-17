@@ -50,6 +50,7 @@ enum L {
     static var syncSetupErrorInvalidCredentials: String { String(localized: "syncSetupError.invalidCredentials") }
     static var syncSetupErrorNeedsEndpoint: String { String(localized: "syncSetupError.needsEndpoint") }
     static var syncSetupErrorWrongPassword: String { String(localized: "syncSetupError.wrongPassword") }
+    static var syncSetupErrorWrongVaultPassword: String { String(localized: "syncSetupError.wrongVaultPassword") }
 
     // MARK: - Delete Account
 
@@ -212,6 +213,9 @@ enum L {
     static var syncSetupEmail: String { String(localized: "syncSetup.email") }
     static var syncSetupServerPassword: String { String(localized: "syncSetup.serverPassword") }
     static var syncSetupDeviceName: String { String(localized: "syncSetup.deviceName") }
+    static var syncSetupNotesPassword: String { String(localized: "syncSetup.notesPassword") }
+    static var syncSetupNotesPasswordHint: String { String(localized: "syncSetup.notesPasswordHint") }
+    static var syncSetupEnvelopeUploadFailed: String { String(localized: "syncSetup.envelopeUploadFailed") }
     static var syncSetupRegisterAction: String { String(localized: "syncSetup.registerAction") }
     static var syncSetupImportCredentials: String { String(localized: "syncSetup.importCredentials") }
     static var syncSetupImportHint: String { String(localized: "syncSetup.importHint") }

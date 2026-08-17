@@ -12,17 +12,23 @@ enum EnvelopeService {
 
     /// Attempt to migrate from legacy (direct PBKDF2) to envelope encryption.
     /// Non-fatal: failures are logged and the legacy path continues to work.
+    /// Returns `true` on success or when there was nothing to do, `false`
+    /// only when the attempt itself failed — callers that need to surface
+    /// the failure to a user (e.g. `SyncSetupView`) can check the result;
+    /// background/migration callers may discard it and keep the existing
+    /// silent-retry-on-next-unlock behaviour.
+    @discardableResult
     @MainActor
     static func tryMigrateToEnvelope(
         appState: AppState,
         password: String,
         masterKey: SymmetricKey
-    ) async {
+    ) async -> Bool {
         guard let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
               let syncClient = appState.syncClient else {
             Log.debug("[Envelope] Migration skipped — sync not configured")
-            return
+            return true
         }
 
         do {
@@ -31,13 +37,13 @@ enum EnvelopeService {
                   let userId = syncMeta.userId,
                   !userId.isEmpty else {
                 Log.debug("[Envelope] Migration skipped — no userId in sync metadata")
-                return
+                return true
             }
 
             // Check if already migrated
             if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
                 Log.debug("[Envelope] Already migrated — skipping")
-                return
+                return true
             }
 
             let masterKeyData = masterKey.withUnsafeBytes { Data($0) }
@@ -90,8 +96,10 @@ enum EnvelopeService {
             }
 
             Log.debug("[Envelope] Migration complete")
+            return true
         } catch {
             Log.debug("[Envelope] Migration failed (non-fatal): \(error)")
+            return false
         }
     }
 
@@ -166,17 +174,25 @@ enum EnvelopeService {
     /// have already uploaded one). If found, onboards from the server key and
     /// re-encrypts local data if the master key differs. If no server key exists,
     /// falls through to `tryMigrateToEnvelope` to upload ours.
+    ///
+    /// Non-fatal, same as `tryMigrateToEnvelope`: returns `true` on success
+    /// or when nothing was needed, `false` only when the attempt failed.
+    /// A `false` result is safe to ignore — the envelope key stays
+    /// unmigrated locally, so the next successful `unlock(password:)`
+    /// retries automatically (see the `metadata.envelopeVersion == nil`
+    /// check there). Callers that want to tell the user surface it instead.
+    @discardableResult
     @MainActor
     static func tryEnvelopeSetup(
         appState: AppState,
         password: String,
         masterKey: SymmetricKey
-    ) async {
+    ) async -> Bool {
         guard let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
               let syncClient = appState.syncClient else {
             Log.debug("[Envelope] Setup skipped — sync not configured")
-            return
+            return true
         }
 
         do {
@@ -185,13 +201,13 @@ enum EnvelopeService {
                   let userId = syncMeta.userId,
                   !userId.isEmpty else {
                 Log.debug("[Envelope] Setup skipped — no userId in sync metadata")
-                return
+                return true
             }
 
             // Already migrated — nothing to do
             if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
                 Log.debug("[Envelope] Already migrated — skipping setup")
-                return
+                return true
             }
 
             // Check server for an existing wrapped key from another device
@@ -216,10 +232,11 @@ enum EnvelopeService {
                     appState.keyManager.unlockWithKeyData(serverKeyData)
                     try await appState.loadNotes()
                 }
+                return true
             } else {
                 // No server key — we're the first device, upload ours
                 Log.debug("[Envelope] No server key — migrating local key to envelope")
-                await tryMigrateToEnvelope(
+                return await tryMigrateToEnvelope(
                     appState: appState,
                     password: password,
                     masterKey: masterKey
@@ -227,6 +244,7 @@ enum EnvelopeService {
             }
         } catch {
             Log.debug("[Envelope] Setup failed (non-fatal): \(error)")
+            return false
         }
     }
 

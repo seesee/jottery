@@ -516,6 +516,59 @@ final class AppState {
         return true
     }
 
+    /// Verify a candidate vault (notes) password against the currently
+    /// stored vault metadata, without any side effects — no key is loaded
+    /// into `keyManager`, `isLocked` is untouched, `loadNotes()` isn't
+    /// called. Mirrors the derive → verify half of `unlock(password:)` for
+    /// both the envelope and legacy metadata shapes.
+    ///
+    /// Used before wrapping the envelope master key with a password (e.g.
+    /// `SyncSetupView`'s "Notes password" field) — getting that wrong
+    /// silently uploads a key wrapped with the wrong secret, which every
+    /// other device fails to onboard from (jottery-md6b). Key derivation
+    /// (PBKDF2, ~600k iterations) runs off the main thread via
+    /// `Task.detached`, matching `unlock(password:)`.
+    func verifyVaultPassword(_ password: String) async -> Bool {
+        guard let encryptionRepo, let metadata = try? encryptionRepo.get() else { return false }
+
+        if metadata.envelopeVersion != nil {
+            guard let deviceSaltB64 = metadata.deviceSalt,
+                  let deviceSalt = Data(base64Encoded: deviceSaltB64),
+                  let wrappedJSON = metadata.localWrappedMaster else {
+                return false
+            }
+            let verificationJSON = metadata.verification
+
+            return await Task.detached(priority: .userInitiated) {
+                let deviceKey = CryptoService.deriveKey(
+                    password: password,
+                    salt: deviceSalt,
+                    iterations: CryptoService.defaultIterations
+                )
+                guard let wrapped = try? CryptoService.parseEncryptedJSON(wrappedJSON),
+                      let unwrapped = try? CryptoService.unwrapMasterKey(wrapped, with: deviceKey) else {
+                    return false
+                }
+                guard let verificationJSON else { return true }
+                let candidateKey = SymmetricKey(data: unwrapped)
+                return AppState.verifyWithToken(verificationJSON, key: candidateKey)
+            }.value
+        } else {
+            guard let saltData = metadata.saltData else { return false }
+            let iterations = UInt32(metadata.iterations)
+            let verificationJSON = metadata.verification
+            let db = self.db
+
+            return await Task.detached(priority: .userInitiated) {
+                let key = CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations)
+                if let verificationJSON {
+                    return AppState.verifyWithToken(verificationJSON, key: key)
+                }
+                return AppState.verifyByDecryptingNote(key: key, db: db)
+            }.value
+        }
+    }
+
     /// Verify the key by decrypting the stored verification token.
     /// `static` (and takes no `self`) so it can run inside `Task.detached`
     /// without capturing the MainActor-isolated `AppState` instance.
