@@ -79,6 +79,20 @@ final class AppState {
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
 
+    /// Re-entrancy guard for `unlock(password:)` — checked-and-set at entry,
+    /// cleared on every exit (including throw) via `defer`. Two concurrent
+    /// unlock attempts (e.g. a biometric prompt racing a manual password
+    /// entry) must have exactly one real effect (jottery-t94v).
+    @ObservationIgnored private var isUnlocking = false
+
+    /// Monotonically increasing generation counter for full reloads. Bumped
+    /// by `loadNotes()` before its detached decrypt starts; `applySyncChanges`
+    /// captures it (but never bumps it) so a full reload that starts partway
+    /// through an in-flight incremental refresh always wins — the stale
+    /// incremental result is dropped instead of clobbering fresher state
+    /// (jottery-t94v). See `publishIfCurrent(epoch:_:)`.
+    @ObservationIgnored private(set) var loadEpoch = 0
+
     // Repositories (lazily initialised after DB is ready)
     private(set) var noteRepo: NoteRepository?
     private(set) var encryptionRepo: EncryptionRepository?
@@ -300,6 +314,17 @@ final class AppState {
     /// work hands back plain `Data`.
     @discardableResult
     func unlock(password: String) async throws -> Bool {
+        // Re-entrancy guard: the check-and-set below runs synchronously (no
+        // `await` yet), so on MainActor exactly one concurrent caller wins —
+        // the other returns false immediately rather than racing a second
+        // derive/verify/loadNotes cycle against the first (jottery-t94v).
+        guard !isUnlocking else {
+            Log.debug("[Unlock] already in progress — ignoring re-entrant call")
+            return false
+        }
+        isUnlocking = true
+        defer { isUnlocking = false }
+
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
         guard let metadata = try encryptionRepo.get() else {
@@ -554,6 +579,11 @@ final class AppState {
 
     func loadNotes() async throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
+        // Bump the load epoch before the detached decrypt starts — this is a
+        // full reload, so it supersedes any in-flight incremental refresh
+        // and any earlier, still-running loadNotes() (jottery-t94v).
+        loadEpoch += 1
+        let epoch = loadEpoch
         let savedSearchRepo = self.savedSearchRepo
         // Decrypting the whole vault is O(notes) — never on the main thread (jottery-bzar).
         let (active, archived, searches) = try await Task.detached(priority: .userInitiated) {
@@ -561,11 +591,32 @@ final class AppState {
              try noteRepo.listArchived(key: key),
              (try? savedSearchRepo?.listAll(key: key)) ?? [])
         }.value
-        notes = active
-        archivedNotes = archived
-        savedSearches = searches
+
+        let published = publishIfCurrent(epoch: epoch) {
+            notes = active
+            archivedNotes = archived
+            savedSearches = searches
+        }
+        guard published else {
+            Log.debug("[Sync] loadNotes: superseded by a newer load (epoch \(epoch) != \(loadEpoch)) — discarding")
+            return
+        }
         Log.debug("[Sync] loadNotes: decrypted \(active.count + archived.count) record(s) — full reload")
         scheduleSearch()
+    }
+
+    /// Test seam for the load-epoch guard (jottery-t94v): runs `publish` only
+    /// if `epoch` still matches the current `loadEpoch`, i.e. no newer full
+    /// reload has started since the caller captured `epoch` before its
+    /// detached work. `loadNotes()` and `applySyncChanges(_:)` both funnel
+    /// their publication through this single choke point. Exercised directly
+    /// in tests — deterministic — rather than by racing real `Task`s against
+    /// `loadNotes()`, which is inherently timing-dependent and flaky.
+    @discardableResult
+    func publishIfCurrent(epoch: Int, _ publish: () -> Void) -> Bool {
+        guard epoch == loadEpoch else { return false }
+        publish()
+        return true
     }
 
     /// Above this many changed ids, an incremental refresh isn't worth it —
@@ -589,6 +640,13 @@ final class AppState {
         guard totalIds > 0 else { return }
         guard let noteRepo, let key = keyManager.masterKey else { return }
 
+        // Capture (but never bump) the epoch — this is an incremental apply,
+        // not a full reload. If a full reload starts and bumps the epoch
+        // while the decrypt below is in flight, that full reload's result is
+        // the fresher one; this apply must be dropped rather than clobber it
+        // (jottery-t94v).
+        let epoch = loadEpoch
+
         let ids = changes.updatedIds
         // Decrypt just the changed records off the main thread, batched into
         // one detached task — mirrors loadNotes()'s off-main decrypt (jottery-bzar).
@@ -609,26 +667,33 @@ final class AppState {
             return
         }
 
-        Log.debug("[Sync] applySyncChanges: refreshed \(refreshed.count) record(s), removed \(changes.deletedIds.count) — incremental")
+        let deletedIds = changes.deletedIds
+        let applied = publishIfCurrent(epoch: epoch) {
+            for note in refreshed {
+                notes.removeAll { $0.id == note.id }
+                archivedNotes.removeAll { $0.id == note.id }
+                // Soft-deleted (or hard-deleted-but-still-listed) notes belong in
+                // neither list — matches loadNotes()'s listActive/listArchived filters.
+                guard !note.deleted else { continue }
+                if note.archived {
+                    archivedNotes.insert(note, at: 0)
+                } else {
+                    notes.insert(note, at: 0)
+                }
+            }
 
-        for note in refreshed {
-            notes.removeAll { $0.id == note.id }
-            archivedNotes.removeAll { $0.id == note.id }
-            // Soft-deleted (or hard-deleted-but-still-listed) notes belong in
-            // neither list — matches loadNotes()'s listActive/listArchived filters.
-            guard !note.deleted else { continue }
-            if note.archived {
-                archivedNotes.insert(note, at: 0)
-            } else {
-                notes.insert(note, at: 0)
+            for id in deletedIds {
+                notes.removeAll { $0.id == id }
+                archivedNotes.removeAll { $0.id == id }
             }
         }
 
-        for id in changes.deletedIds {
-            notes.removeAll { $0.id == id }
-            archivedNotes.removeAll { $0.id == id }
+        guard applied else {
+            Log.debug("[Sync] applySyncChanges: superseded by a newer full reload (epoch \(epoch) != \(loadEpoch)) — discarding")
+            return
         }
 
+        Log.debug("[Sync] applySyncChanges: refreshed \(refreshed.count) record(s), removed \(changes.deletedIds.count) — incremental")
         scheduleSearch()
     }
 
@@ -1038,17 +1103,32 @@ final class AppState {
         Log.debug("[Sync] triggerSync: starting sync cycle")
         isSyncing = true
         syncError = nil
-        syncStatusMessage = "Pushing changes…"
+        syncStatusMessage = "Syncing…"
+
+        // Captured before the single sync() call below — see the mapping
+        // note there for why this still yields the correct "N new notes"
+        // diff even though applySyncChanges no longer runs inline here.
+        let previousCount = notes.count
 
         do {
-            syncStatusMessage = "Pushing…"
-            var changes = try await syncService.push()
-            syncStatusMessage = "Pulling…"
-            changes.merge(try await syncService.pull())
-            syncStatusMessage = "Finishing…"
-            try await syncService.finalise()
-            let previousCount = notes.count
-            await applySyncChanges(changes)
+            // Single entry point (jottery-dggw): route through the actor's
+            // sync() instead of calling push()/pull()/finalise() directly.
+            // sync() holds SyncService's own `isSyncing` guard, so a
+            // concurrent SSE-triggered sync() (SyncService.startSSE()'s
+            // onSyncEvent also calls sync()) now correctly serialises
+            // against this UI-triggered cycle instead of racing it — the
+            // previous code bypassed that guard by calling push()/pull()
+            // directly, so the two paths could interleave across actor
+            // suspension points.
+            //
+            // sync() already awaits the wired postSyncHandler
+            // (AppState.setupSync() → handlePostSyncCompletion →
+            // applySyncChanges + lastSyncAt) before returning, so by the
+            // time we resume here `notes`/`archivedNotes` already reflect
+            // this cycle's changes — this method must NOT call
+            // applySyncChanges again itself, or every sync would decrypt
+            // the same changed rows twice.
+            _ = try await syncService.sync()
             isSyncing = false
             lastSyncAt = Date()
 
@@ -1090,7 +1170,17 @@ final class AppState {
 
         do {
             try await syncService.forceFullSync()
-            try? await loadNotes()
+            // Single reload (jottery-vn6f): SyncService.forceFullSync() used
+            // to *also* fire the wired postSyncHandler with `.fullReload`,
+            // which drove its own loadNotes() via handlePostSyncCompletion →
+            // applySyncChanges(.fullReload) — a second, redundant decrypt of
+            // the whole vault on every force-resync. That postSyncHandler
+            // call has been removed from SyncService.forceFullSync() (its
+            // only caller is this method), leaving this the single reload.
+            // Kept as `try` (not `try?`, unlike the removed handler-driven
+            // path, which always swallowed errors) so a decrypt failure here
+            // surfaces via `syncError` below instead of silently vanishing.
+            try await loadNotes()
             isSyncing = false
             lastSyncAt = Date()
             pendingConflicts = await syncService.pendingConflicts

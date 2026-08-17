@@ -1073,9 +1073,14 @@ actor SyncService {
             }
 
             try await finalise()
-            // A force-resync always re-downloads everything — always signal
-            // the full-reload fallback rather than the discarded per-note ids.
-            await postSyncHandler?(.fullReload)
+            // Single reload (jottery-vn6f): forceFullSync()'s only caller,
+            // AppState.forceFullSync(), always performs its own explicit
+            // full reload right after this method returns. Firing
+            // postSyncHandler(.fullReload) here as well used to trigger a
+            // *second* one via handlePostSyncCompletion →
+            // applySyncChanges(.fullReload) — redundant, and its errors were
+            // silently swallowed (`try?`) unlike the caller's reload. Do not
+            // reinstate this call without also removing the caller's reload.
         } catch {
             lastError = error.localizedDescription
             throw error
