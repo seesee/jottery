@@ -509,22 +509,25 @@ private struct ConnectToServerView: View {
                     // The jottery:v1: format doesn't include the iteration count.
                     // Try common values — vault creation uses 600k, but the web
                     // app's credential import path hardcodes 100k for imported vaults.
+                    // Each candidate is a PBKDF2 derive (~600k/100k iterations), so
+                    // the whole loop runs off the main thread — mirrors
+                    // AppState.unlock(password:)'s Task.detached pattern: only
+                    // plain values (String?, UInt32) cross back to the MainActor.
                     let iterationCandidates: [UInt32] = [600_000, 100_000]
-                    var decryptedJSON: String?
-                    var matchedIterations: UInt32 = CryptoService.defaultIterations
-
-                    for candidate in iterationCandidates {
-                        let key = CryptoService.deriveKey(
-                            password: encryptionPassword,
-                            salt: salt,
-                            iterations: candidate
-                        )
-                        if let json = try? CryptoService.decryptText(encrypted, key: key) {
-                            decryptedJSON = json
-                            matchedIterations = candidate
-                            break
+                    let password = encryptionPassword
+                    let (decryptedJSON, matchedIterations): (String?, UInt32) = await Task.detached(priority: .userInitiated) {
+                        for candidate in iterationCandidates {
+                            let key = CryptoService.deriveKey(
+                                password: password,
+                                salt: salt,
+                                iterations: candidate
+                            )
+                            if let json = try? CryptoService.decryptText(encrypted, key: key) {
+                                return (json, candidate)
+                            }
                         }
-                    }
+                        return (nil, CryptoService.defaultIterations)
+                    }.value
 
                     guard let json = decryptedJSON else {
                         throw SyncSetupError.wrongPassword

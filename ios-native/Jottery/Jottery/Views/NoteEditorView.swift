@@ -89,7 +89,11 @@ struct NoteEditorView: View {
                     attachmentRepo: attachmentRepo,
                     encryptionKey: key,
                     onDelete: isReadOnly ? nil : { attachmentId in
-                        try? appState.removeAttachment(from: note.id, attachmentId: attachmentId)
+                        do {
+                            try appState.removeAttachment(from: note.id, attachmentId: attachmentId)
+                        } catch {
+                            appState.reportError(L.errorCouldntRemoveAttachment)
+                        }
                     }
                 )
             }
@@ -114,7 +118,12 @@ struct NoteEditorView: View {
                 Menu {
                     // Pin toggle
                     Button {
-                        try? appState.togglePin(id: note.id)
+                        let wasPinned = note.pinned
+                        do {
+                            try appState.togglePin(id: note.id)
+                        } catch {
+                            appState.reportError(wasPinned ? L.errorCouldntUnpinNote : L.errorCouldntPinNote)
+                        }
                     } label: {
                         Label(note.pinned ? L.editorUnpin : L.editorPin, systemImage: note.pinned ? "pin.slash" : "pin")
                     }
@@ -129,6 +138,7 @@ struct NoteEditorView: View {
                             systemImage: wordWrap ? "arrow.right.to.line" : "text.word.spacing"
                         )
                     }
+                    .disabled(isReadOnly)
 
                     // Reset text size
                     if appState.editorFontScale != 1.0 {
@@ -150,6 +160,7 @@ struct NoteEditorView: View {
                             systemImage: showPreview ? "eye.slash" : "eye"
                         )
                     }
+                    .disabled(isReadOnly)
 
                     // Language picker
                     Menu {
@@ -168,6 +179,7 @@ struct NoteEditorView: View {
                     } label: {
                         Label(L.editorLanguage(syntaxLanguage.capitalized), systemImage: "chevron.left.forwardslash.chevron.right")
                     }
+                    .disabled(isReadOnly)
 
                     // Colour picker
                     Menu {
@@ -189,6 +201,7 @@ struct NoteEditorView: View {
                     } label: {
                         Label(L.editorCategory, systemImage: "paintbrush")
                     }
+                    .disabled(isReadOnly)
 
                     // Add attachment
                     if !isReadOnly {
@@ -208,13 +221,21 @@ struct NoteEditorView: View {
                         // clipboard are attached from here instead.
                         if PasteboardService.hasAttachableContent {
                             Button {
+                                var failureCount = 0
                                 for item in PasteboardService.readItems() {
-                                    try? appState.addAttachment(
-                                        to: note.id,
-                                        data: item.data,
-                                        filename: item.filename,
-                                        mimeType: item.mimeType
-                                    )
+                                    do {
+                                        try appState.addAttachment(
+                                            to: note.id,
+                                            data: item.data,
+                                            filename: item.filename,
+                                            mimeType: item.mimeType
+                                        )
+                                    } catch {
+                                        failureCount += 1
+                                    }
+                                }
+                                if failureCount > 0 {
+                                    appState.reportError(L.errorCouldntAddAttachment)
                                 }
                             } label: {
                                 Label(L.editorPasteFromClipboard, systemImage: "doc.on.clipboard")
@@ -226,7 +247,12 @@ struct NoteEditorView: View {
 
                     // Lock toggle
                     Button {
-                        try? appState.toggleLock(id: note.id)
+                        let wasLocked = note.locked
+                        do {
+                            try appState.toggleLock(id: note.id)
+                        } catch {
+                            appState.reportError(wasLocked ? L.errorCouldntUnlockNote : L.errorCouldntLockNote)
+                        }
                     } label: {
                         Label(
                             note.locked ? L.editorUnlock : L.editorLock,
@@ -237,13 +263,23 @@ struct NoteEditorView: View {
                     // Archive toggle
                     if note.archived {
                         Button {
-                            Task { try? await appState.unarchiveNote(id: note.id) }
+                            Task {
+                                do {
+                                    try await appState.unarchiveNote(id: note.id)
+                                } catch {
+                                    appState.reportError(L.errorCouldntUnarchiveNote)
+                                }
+                            }
                         } label: {
                             Label(L.editorUnarchive, systemImage: "tray.and.arrow.up")
                         }
                     } else {
                         Button {
-                            try? appState.archiveNote(id: note.id)
+                            do {
+                                try appState.archiveNote(id: note.id)
+                            } catch {
+                                appState.reportError(L.errorCouldntArchiveNote)
+                            }
                         } label: {
                             Label(L.editorArchive, systemImage: "archivebox")
                         }
@@ -267,7 +303,11 @@ struct NoteEditorView: View {
 
                     // Duplicate
                     Button {
-                        try? appState.duplicateNote(id: note.id)
+                        do {
+                            try appState.duplicateNote(id: note.id)
+                        } catch {
+                            appState.reportError(L.errorCouldntDuplicateNote)
+                        }
                     } label: {
                         Label(L.editorDuplicate, systemImage: "doc.on.doc")
                     }
@@ -276,7 +316,11 @@ struct NoteEditorView: View {
 
                     // Delete
                     Button(role: .destructive) {
-                        try? appState.deleteNote(id: note.id)
+                        do {
+                            try appState.deleteNote(id: note.id)
+                        } catch {
+                            appState.reportError(L.errorCouldntDeleteNote)
+                        }
                     } label: {
                         Label(L.editorDelete, systemImage: "trash")
                     }
@@ -315,7 +359,11 @@ struct NoteEditorView: View {
         }
         .sheet(isPresented: $showPhotoPicker) {
             PhotoPickerView { url, filename, mimeType in
-                try? appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+                do {
+                    try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+                } catch {
+                    appState.reportError(L.errorCouldntAddAttachment)
+                }
             }
         }
         .onDisappear {
@@ -332,6 +380,10 @@ struct NoteEditorView: View {
 
     /// Debounced save — waits 1 second of inactivity before saving.
     private func scheduleSave() {
+        // Defence in depth: toolbar controls that mutate note state are
+        // disabled while read-only, but nothing should ever schedule (or
+        // stage a pending) save for a locked/archived note.
+        guard !isReadOnly else { return }
         appState.keyManager.recordActivity()
         // Keep AppState updated with current editor state so lock()
         // can flush pending changes before wiping the encryption key.
@@ -370,11 +422,28 @@ struct NoteEditorView: View {
     /// reseeds state for the incoming note. Cannot reuse `hasChanges`/`saveImmediately`
     /// because those compare against `note`, which already refers to the incoming
     /// note by the time this runs.
+    ///
+    /// Every early return below clears `appState.pendingEditorNote` when it
+    /// still refers to the outgoing note (matched by id). That pending
+    /// snapshot was staged by an earlier `scheduleSave()` while the note was
+    /// still editable; if left behind it would be replayed verbatim by
+    /// `AppState.flushPendingEditorNote()` on the next `lock()` —
+    /// `noteRepo.update` there doesn't check `locked`/`archived`, so a stale
+    /// pending note would silently overwrite a note that has since become
+    /// read-only (or is gone, or was already unchanged). Only the successful
+    /// save path at the bottom needs no extra clearing — it already nils
+    /// `pendingEditorNote` unconditionally.
     private func flushOutgoingNote(id: String) {
         saveTask?.cancel()
         saveTask = nil
-        guard let outgoing = appState.displayedNote(id: id) else { return }
-        guard !outgoing.locked && !outgoing.archived else { return }
+        guard let outgoing = appState.displayedNote(id: id) else {
+            clearStalePendingNote(id: id)
+            return
+        }
+        guard !outgoing.locked && !outgoing.archived else {
+            clearStalePendingNote(id: id)
+            return
+        }
 
         let changed = content != outgoing.content ||
             tags != outgoing.tags ||
@@ -382,7 +451,10 @@ struct NoteEditorView: View {
             wordWrap != outgoing.wordWrap ||
             color != outgoing.color ||
             showPreview != outgoing.showPreview
-        guard changed else { return }
+        guard changed else {
+            clearStalePendingNote(id: id)
+            return
+        }
 
         var updated = outgoing
         updated.content = content
@@ -393,11 +465,30 @@ struct NoteEditorView: View {
         updated.showPreview = showPreview
         try? appState.saveNote(updated)
         appState.pendingEditorNote = nil
-        didSaveDuringSession = true
+        // Note: `didSaveDuringSession` is deliberately not set here — the
+        // caller (`.onChange(of: note.id)`) resets it to false for the
+        // incoming note immediately after this call returns, so any
+        // assignment here would be dead (jottery-a3sb review residual).
+    }
+
+    /// Clears `appState.pendingEditorNote` only if it still refers to the
+    /// given note id — never clobbers a pending snapshot staged for a
+    /// different (e.g. newly-selected) note.
+    private func clearStalePendingNote(id: String) {
+        if appState.pendingEditorNote?.id == id {
+            appState.pendingEditorNote = nil
+        }
     }
 
     private func saveImmediately() {
         saveTask?.cancel()
+        // Defence in depth: never persist edits to a note that is currently
+        // locked/archived, and drop any stale pending snapshot for it so a
+        // later lock() can't replay it either.
+        guard !isReadOnly else {
+            clearStalePendingNote(id: note.id)
+            return
+        }
         guard hasChanges else { return }
         var updated = note
         updated.content = content
@@ -424,7 +515,11 @@ struct NoteEditorView: View {
 
         let filename = url.lastPathComponent
         let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-        try? appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+        do {
+            try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+        } catch {
+            appState.reportError(L.errorCouldntAddAttachment)
+        }
     }
 }
 

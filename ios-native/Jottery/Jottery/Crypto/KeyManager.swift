@@ -28,17 +28,6 @@ final class KeyManager {
 
     // MARK: - Unlock
 
-    /// Derive the master key from a password and store it in memory.
-    /// Returns `true` if derivation succeeds.
-    func unlock(password: String, salt: Data, iterations: UInt32) -> SymmetricKey {
-        let key = CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
-        masterKey = key
-        isUnlocked = true
-        lastActivityDate = Date()
-        startAutoLockTimer()
-        return key
-    }
-
     /// Restore the master key from raw bytes (biometric unlock path).
     func unlockWithKeyData(_ keyData: Data) {
         masterKey = SymmetricKey(data: keyData)

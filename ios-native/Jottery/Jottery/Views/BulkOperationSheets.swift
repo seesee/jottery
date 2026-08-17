@@ -49,14 +49,22 @@ struct BulkAddTagsSheet: View {
         guard !newTags.isEmpty else { return }
 
         let allNotes = appState.notes + appState.archivedNotes
+        var failureCount = 0
         for id in noteIds {
             guard var note = allNotes.first(where: { $0.id == id }) else { continue }
             let existingSet = Set(note.tags)
             let tagsToAdd = newTags.filter { !existingSet.contains($0) }
             if !tagsToAdd.isEmpty {
                 note.tags.append(contentsOf: tagsToAdd)
-                try? appState.saveNote(note)
+                do {
+                    try appState.saveNote(note)
+                } catch {
+                    failureCount += 1
+                }
             }
+        }
+        if failureCount > 0 {
+            appState.reportError(L.errorCouldntAddTags(failureCount))
         }
     }
 }
@@ -124,13 +132,21 @@ struct BulkRemoveTagsSheet: View {
 
     private func removeTags() {
         let allNotes = appState.notes + appState.archivedNotes
+        var failureCount = 0
         for id in noteIds {
             guard var note = allNotes.first(where: { $0.id == id }) else { continue }
             let before = note.tags.count
             note.tags.removeAll { selectedTags.contains($0) }
             if note.tags.count != before {
-                try? appState.saveNote(note)
+                do {
+                    try appState.saveNote(note)
+                } catch {
+                    failureCount += 1
+                }
             }
+        }
+        if failureCount > 0 {
+            appState.reportError(L.errorCouldntRemoveTags(failureCount))
         }
     }
 }
@@ -188,12 +204,20 @@ struct BulkSetColorSheet: View {
 
     private func applyColor(_ color: String?) {
         let allNotes = appState.notes + appState.archivedNotes
+        var failureCount = 0
         for id in noteIds {
             guard var note = allNotes.first(where: { $0.id == id }) else { continue }
             if note.color != color {
                 note.color = color
-                try? appState.saveNote(note)
+                do {
+                    try appState.saveNote(note)
+                } catch {
+                    failureCount += 1
+                }
             }
+        }
+        if failureCount > 0 {
+            appState.reportError(L.errorCouldntSetColor(failureCount))
         }
     }
 }

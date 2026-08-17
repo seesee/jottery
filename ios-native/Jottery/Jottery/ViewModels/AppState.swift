@@ -15,8 +15,12 @@ final class AppState {
 
     // MARK: - Notes
 
-    var notes: [DecryptedNote] = []
-    var archivedNotes: [DecryptedNote] = []
+    var notes: [DecryptedNote] = [] {
+        didSet { rebuildAllTags() }
+    }
+    var archivedNotes: [DecryptedNote] = [] {
+        didSet { rebuildAllTags() }
+    }
     var showArchive: Bool = false
     var selectedNoteId: String?
     var searchQuery: String = ""
@@ -29,6 +33,13 @@ final class AppState {
     var syncError: String?
     var syncEnabled: Bool = false
     var syncStatusMessage: String?
+
+    // MARK: - User-Facing Errors
+
+    /// A transient, localised error message surfaced to the user via a
+    /// toast (see `ToastView`), e.g. "Couldn't delete note." Set by
+    /// `reportError(_:duration:)`, which also schedules it to auto-clear.
+    var userErrorMessage: String?
 
     #if DEBUG
     /// Demo screenshot mode: presents the settings sheet (see DemoSeedService).
@@ -78,6 +89,7 @@ final class AppState {
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
+    @ObservationIgnored private var userErrorClearTask: Task<Void, Never>?
 
     /// Re-entrancy guard for `unlock(password:)` — checked-and-set at entry,
     /// cleared on every exit (including throw) via `defer`. Two concurrent
@@ -202,9 +214,28 @@ final class AppState {
     }
 
     /// All unique tags across all notes, sorted alphabetically.
-    var allTags: [String] {
+    ///
+    /// Memoised (jottery-fxmq): `TagInputView` reads this on every keystroke,
+    /// and it used to `flatMap` both note arrays on every access — O(notes)
+    /// per character typed. Rebuilding is now driven by `didSet` on
+    /// `notes`/`archivedNotes` instead: those are the only two properties
+    /// `allTags` derives from, and Swift fires `didSet` for *every* mutation
+    /// of a stored array property — full reassignment (`notes = active`),
+    /// `insert`/`removeAll`, and in-place element writes (`notes[i] = x`)
+    /// alike. That means every current and future publication site (loadNotes,
+    /// applySyncChanges, saveNote, createNote, delete/archive/restore/
+    /// unarchive, importSharedInboxItems) invalidates `allTags` for free,
+    /// without each one needing its own call to a rebuild function — the
+    /// fewest-touch-points option versus threading an explicit
+    /// `rebuildAllTags()` call (or invalidation-flag set) through every one
+    /// of those call sites individually. A plain read is then an O(1)
+    /// stored-property access, so per-keystroke cost is back to a lookup,
+    /// not a rebuild.
+    private(set) var allTags: [String] = []
+
+    private func rebuildAllTags() {
         let tagSets = notes.flatMap(\.tags) + archivedNotes.flatMap(\.tags)
-        return Array(Set(tagSets)).sorted()
+        allTags = Array(Set(tagSets)).sorted()
     }
 
     var selectedNote: DecryptedNote? {
@@ -260,6 +291,12 @@ final class AppState {
     /// Create a new vault with the given password.
     /// When importing from another device, pass the existing `salt` and `iterations`
     /// so the same password derives the same encryption key.
+    ///
+    /// Key derivation (PBKDF2, ~600k iterations) and the dependent
+    /// wrap/verification-token encrypt run inside `Task.detached`, mirroring
+    /// `unlock(password:)` — only plain `Data`/`String` values cross back to
+    /// the MainActor, where `keyManager` (MainActor-bound) is updated and the
+    /// resulting metadata is persisted.
     func createVault(password: String, existingSalt: Data? = nil, existingIterations: UInt32? = nil) async throws {
         guard let encryptionRepo else { throw AppStateError.notInitialised }
 
@@ -268,39 +305,52 @@ final class AppState {
             let salt = existingSalt!
             let iterations = existingIterations ?? CryptoService.defaultIterations
 
-            let key = keyManager.unlock(password: password, salt: salt, iterations: iterations)
+            let (keyData, verificationJSON) = try await Task.detached(priority: .userInitiated) {
+                let key = CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
 
-            let verificationEncrypted = try CryptoService.encryptText(
-                EncryptionMetadata.verificationPlaintext, key: key
-            )
-            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+                let verificationEncrypted = try CryptoService.encryptText(
+                    EncryptionMetadata.verificationPlaintext, key: key
+                )
+                let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+                let keyData = key.withUnsafeBytes { Data($0) }
+                return (keyData, verificationJSON)
+            }.value
 
             let metadata = EncryptionMetadata.new(
                 salt: salt, iterations: iterations, verification: verificationJSON
             )
             try encryptionRepo.store(metadata)
+
+            keyManager.unlockWithKeyData(keyData)
         } else {
             // New vault — use envelope encryption from the start
             let masterKeyData = CryptoService.generateMasterKey()
-            let masterKey = SymmetricKey(data: masterKeyData)
 
-            // Generate device salt and derive device key
+            // Generate device salt; the expensive device-key derivation plus
+            // the dependent wrap/verification-encrypt steps run off-main.
             let deviceSalt = CryptoService.generateSalt()
-            let deviceKey = CryptoService.deriveKey(
-                password: password,
-                salt: deviceSalt,
-                iterations: CryptoService.defaultIterations
-            )
 
-            // Wrap master key locally
-            let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
-            let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
+            let (localBlob, verificationJSON) = try await Task.detached(priority: .userInitiated) {
+                let deviceKey = CryptoService.deriveKey(
+                    password: password,
+                    salt: deviceSalt,
+                    iterations: CryptoService.defaultIterations
+                )
 
-            // Create verification token encrypted with the master key
-            let verificationEncrypted = try CryptoService.encryptText(
-                EncryptionMetadata.verificationPlaintext, key: masterKey
-            )
-            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+                // Wrap master key locally
+                let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
+                let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
+
+                // Create verification token encrypted with the master key
+                let masterKey = SymmetricKey(data: masterKeyData)
+                let verificationEncrypted = try CryptoService.encryptText(
+                    EncryptionMetadata.verificationPlaintext, key: masterKey
+                )
+                let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
+
+                return (localBlob, verificationJSON)
+            }.value
 
             // Store initial metadata (needed before saveEnvelope which does UPDATE)
             let initialMetadata = EncryptionMetadata.new(
@@ -658,6 +708,27 @@ final class AppState {
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
+    }
+
+    // MARK: - User-Facing Errors
+
+    /// Publish a localised, user-facing error message (e.g. "Couldn't
+    /// delete note") and schedule it to auto-clear after `duration`.
+    /// Overwriting with a newer message cancels any earlier clear-timer, so
+    /// a slow-to-fire old timer can never wipe out a message that replaced
+    /// it (mirrors the `syncStatusMessage` auto-clear pattern used by
+    /// `triggerSync()`/`forceFullSync()`). `duration` defaults to 4s but is
+    /// overridable — tests pass a short duration instead of a fake clock.
+    func reportError(_ message: String, duration: Duration = .seconds(4)) {
+        userErrorMessage = message
+        userErrorClearTask?.cancel()
+        userErrorClearTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled else { return }
+            if self?.userErrorMessage == message {
+                self?.userErrorMessage = nil
+            }
+        }
     }
 
     // MARK: - Notes CRUD

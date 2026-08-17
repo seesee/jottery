@@ -163,17 +163,30 @@ struct MarkdownPreviewView: UIViewRepresentable {
             guard let repo = attachmentRepo, let key = encryptionKey else { return }
             guard let ref = findAttachment(id: id) else { return }
 
+            // Capture plain, Sendable values up front so the fetch + decrypt
+            // can run inside `Task.detached`, off the main thread — matches
+            // the pattern in `AppState.loadNotes` and
+            // `AttachmentListView.decryptToTempFile`.
+            let blobId = ref.data
+            let mimeType = ref.mimeType
+
             Task {
                 do {
-                    // Fetch the encrypted blob from the database
-                    guard let blobData = try repo.getBlob(id: ref.data) else { return }
-                    guard let blobString = String(data: blobData, encoding: .utf8) else { return }
+                    let dataUrl = try await Task.detached(priority: .userInitiated) {
+                        // Fetch the encrypted blob from the database
+                        guard let blobData = try repo.getBlob(id: blobId) else {
+                            throw AttachmentResolveError.silent
+                        }
+                        guard let blobString = String(data: blobData, encoding: .utf8) else {
+                            throw AttachmentResolveError.silent
+                        }
 
-                    let encrypted = try CryptoService.parseEncryptedJSON(blobString)
-                    let decryptedData = try CryptoService.decrypt(encrypted, key: key)
+                        let encrypted = try CryptoService.parseEncryptedJSON(blobString)
+                        let decryptedData = try CryptoService.decrypt(encrypted, key: key)
 
-                    let base64 = decryptedData.base64EncodedString()
-                    let dataUrl = "data:\(ref.mimeType);base64,\(base64)"
+                        let base64 = decryptedData.base64EncodedString()
+                        return "data:\(mimeType);base64,\(base64)"
+                    }.value
 
                     await MainActor.run {
                         guard let webView else { return }
@@ -181,12 +194,22 @@ struct MarkdownPreviewView: UIViewRepresentable {
                         let escapedUrl = escapeForJS(dataUrl)
                         callJS(webView, "bridge.resolveAttachment(\(escapedId), \(escapedUrl))")
                     }
+                } catch AttachmentResolveError.silent {
+                    // Matches original behaviour: missing blob / invalid
+                    // encoding fails quietly (no log, no JS call).
                 } catch {
                     Log.debug("[MarkdownPreview] Failed to resolve attachment \(id): \(error)")
                 }
             }
         }
     }
+}
+
+/// Signals a deliberately-quiet failure in `resolveAttachment` (missing blob
+/// or non-UTF8 blob) so it's distinguishable from a genuine decrypt error,
+/// which is logged.
+private enum AttachmentResolveError: Error {
+    case silent
 }
 
 // MARK: - JS Helpers
