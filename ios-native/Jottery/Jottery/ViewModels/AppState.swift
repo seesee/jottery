@@ -961,23 +961,39 @@ final class AppState {
     /// Convert items staged by the share extension into encrypted notes.
     /// Safe to call on every unlock/foreground — consumed items are removed.
     func importSharedInboxItems(from root: URL? = nil) {
-        guard !isLocked, keyManager.masterKey != nil, noteRepo != nil else { return }
+        guard !isLocked, let key = keyManager.masterKey, let noteRepo else { return }
 
         // createNote selects the new note — imports must not steal selection.
         let previousSelection = selectedNoteId
         defer { selectedNoteId = previousSelection }
 
         for item in SharedInboxStore.pendingItems(in: root) {
-            var lines: [String] = []
-            if let text = item.manifest.text, !text.isEmpty {
-                lines.append(text)
-            }
-            lines.append(contentsOf: item.manifest.urls)
-            let content = lines.joined(separator: "\n")
-
             do {
-                guard let note = try createNote(content: content, tags: ["shared"]) else { continue }
-                for file in item.manifest.files {
+                let note: DecryptedNote
+                if let resumeId = item.manifest.importedNoteId,
+                   let resumed = try? noteRepo.get(id: resumeId, key: key) {
+                    // A previous pass already created the note but failed
+                    // before finishing (e.g. an attachment threw) — resume
+                    // onto it instead of creating a duplicate.
+                    note = resumed
+                } else {
+                    var lines: [String] = []
+                    if let text = item.manifest.text, !text.isEmpty {
+                        lines.append(text)
+                    }
+                    lines.append(contentsOf: item.manifest.urls)
+                    let content = lines.joined(separator: "\n")
+
+                    guard let created = try createNote(content: content, tags: ["shared"]) else { continue }
+                    // Persist the note id before touching attachments — if
+                    // anything below throws, a retry must resume onto this
+                    // note rather than creating a duplicate.
+                    try SharedInboxStore.markImported(item.directory, noteId: created.id)
+                    note = created
+                }
+
+                let alreadyAttached = Set(note.attachments.map { $0.filename })
+                for file in item.manifest.files where !alreadyAttached.contains(file.filename) {
                     let fileURL = item.directory.appendingPathComponent(file.storedName)
                     let data = try Data(contentsOf: fileURL)
                     try addAttachment(to: note.id, data: data, filename: file.filename, mimeType: file.mimeType)
