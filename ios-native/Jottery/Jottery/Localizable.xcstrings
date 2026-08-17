@@ -2580,6 +2580,17 @@
         }
       }
     },
+    "syncSetup.envelopeUploadFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync is enabled, but uploading your notes key failed. Other devices won't be able to set up sync until this succeeds — it will retry automatically the next time you unlock the app."
+          }
+        }
+      }
+    },
     "syncSetup.import": {
       "extractionState": "manual",
       "localizations": {
@@ -2631,6 +2642,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Method"
+          }
+        }
+      }
+    },
+    "syncSetup.notesPassword": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes password"
+          }
+        }
+      }
+    },
+    "syncSetup.notesPasswordHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The password that unlocks your notes — used to protect your encryption key on the server."
           }
         }
       }
@@ -3109,6 +3142,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Incorrect password — could not decrypt credentials"
+          }
+        }
+      }
+    },
+    "syncSetupError.wrongVaultPassword": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incorrect notes password"
           }
         }
       }

@@ -26,6 +26,63 @@ enum ExportService {
         let syntaxLanguage: String?
         let showPreview: Bool?
         let color: String?
+
+        init(
+            id: String,
+            createdAt: String,
+            modifiedAt: String,
+            content: String,
+            tags: [String],
+            attachments: [ExportAttachment],
+            pinned: Bool,
+            archived: Bool,
+            locked: Bool,
+            wordWrap: Bool?,
+            syntaxLanguage: String?,
+            showPreview: Bool?,
+            color: String?
+        ) {
+            self.id = id
+            self.createdAt = createdAt
+            self.modifiedAt = modifiedAt
+            self.content = content
+            self.tags = tags
+            self.attachments = attachments
+            self.pinned = pinned
+            self.archived = archived
+            self.locked = locked
+            self.wordWrap = wordWrap
+            self.syntaxLanguage = syntaxLanguage
+            self.showPreview = showPreview
+            self.color = color
+        }
+
+        /// The documented cross-platform export format (CLAUDE.md) omits keys
+        /// whose value is the default for a note — `archived`, `locked`,
+        /// `pinned`, `color`, `syntaxLanguage`, `wordWrap`, `showPreview` and
+        /// even `attachments` may all be absent (see demo-generation's
+        /// jottery-demo-notes-*.json for real examples). A plain synthesized
+        /// decode would throw `keyNotFound` on the first missing key and abort
+        /// the entire import, so default every genuinely-optional field here.
+        /// Export writing is unaffected — `exportAll` always populates every
+        /// field via the memberwise initializer above.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            createdAt = try container.decode(String.self, forKey: .createdAt)
+            modifiedAt = try container.decode(String.self, forKey: .modifiedAt)
+            content = try container.decode(String.self, forKey: .content)
+            // Deliberately lenient — the documented format requires tags, but a missing key on one note must not abort the whole import.
+            tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+            attachments = try container.decodeIfPresent([ExportAttachment].self, forKey: .attachments) ?? []
+            pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
+            archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+            locked = try container.decodeIfPresent(Bool.self, forKey: .locked) ?? false
+            wordWrap = try container.decodeIfPresent(Bool.self, forKey: .wordWrap)
+            syntaxLanguage = try container.decodeIfPresent(String.self, forKey: .syntaxLanguage)
+            showPreview = try container.decodeIfPresent(Bool.self, forKey: .showPreview)
+            color = try container.decodeIfPresent(String.self, forKey: .color)
+        }
     }
 
     struct ExportAttachment: Codable {

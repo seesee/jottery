@@ -89,19 +89,32 @@ actor SyncService {
         return repairs
     }
 
-    /// Push locally-changed notes/attachments/versions/deletions/saved
-    /// searches to the server. Returns the set of note ids this push wrote
-    /// to locally (accepted notes get `markSynced` — new `syncedAt`/version —
-    /// even though content is unchanged) so callers can refresh incrementally.
-    @discardableResult
-    func push() async throws -> SyncChanges {
-        var changes = SyncChanges()
-        let records = try noteRepo.listNeedingSync()
-        Log.debug("[Sync] push: \(records.count) records need syncing")
-        guard !records.isEmpty else { return changes }
+    /// Notes per push request. Large pending batches (e.g. after being
+    /// offline for days) are split into sequential chunks of this size —
+    /// each chunk's acceptances are durably marked (`markSynced`) before the
+    /// next chunk is sent, so a connection that drops mid-batch only loses
+    /// the unsent tail instead of the whole push (jottery-l9dt).
+    static let pushChunkSize = 50
 
-        var syncNotes: [SyncNote] = []
-        for record in records {
+    /// Pure chunking arithmetic, split out for testability: split `records`
+    /// into consecutive groups of at most `size`, preserving order.
+    static func chunked(_ records: [NoteRecord], size: Int) -> [[NoteRecord]] {
+        guard !records.isEmpty else { return [] }
+        guard size > 0 else { return [records] }
+        var chunks: [[NoteRecord]] = []
+        var start = 0
+        while start < records.count {
+            let end = Swift.min(start + size, records.count)
+            chunks.append(Array(records[start..<end]))
+            start = end
+        }
+        return chunks
+    }
+
+    /// Build sync-format notes for a batch of records (the full push set or
+    /// a single chunk of it).
+    private func buildSyncNotes(for records: [NoteRecord]) -> [SyncNote] {
+        records.map { record in
             // Decrypt tags from single blob, then encrypt each tag individually
             // for the sync format (web expects individually encrypted tags).
             let tagsArray: [String] = Self.storageTagsToSyncTags(record.tags, key: key)
@@ -120,7 +133,7 @@ actor SyncService {
                 hashChain = nil
             }
 
-            syncNotes.append(SyncNote(
+            return SyncNote(
                 id: record.id,
                 createdAt: record.createdAt,
                 modifiedAt: record.modifiedAt,
@@ -142,10 +155,12 @@ actor SyncService {
                 contentHash: record.contentHash,
                 parentHash: record.parentHash,
                 hashChain: hashChain
-            ))
+            )
         }
+    }
 
-        // Gather version snapshots for pushed notes
+    /// Gather version snapshots for a batch of records.
+    private func buildSyncVersions(for records: [NoteRecord]) throws -> [SyncNoteVersion] {
         var syncVersions: [SyncNoteVersion] = []
         for record in records {
             let versions = try versionRepo.getVersions(noteId: record.id)
@@ -171,13 +186,17 @@ actor SyncService {
                 ))
             }
         }
+        return syncVersions
+    }
 
-        // Gather attachment blobs for pushed notes.
-        // Use ref.id as the SyncAttachment ID — the server's attachments_data.id
-        // is a FK to attachments_meta.id, so they must match.
+    /// Gather attachment blobs for a batch of sync notes (ride along with
+    /// their note, deduplicated within the batch).
+    /// Use ref.id as the SyncAttachment ID — the server's attachments_data.id
+    /// is a FK to attachments_meta.id, so they must match.
+    private func buildSyncAttachments(for notes: [SyncNote]) -> [SyncAttachment] {
         var syncAttachments: [SyncAttachment] = []
         var seenAttachmentIds = Set<String>()
-        for note in syncNotes {
+        for note in notes {
             for ref in note.attachments {
                 guard seenAttachmentIds.insert(ref.id).inserted else { continue }
                 do {
@@ -196,6 +215,36 @@ actor SyncService {
                 }
             }
         }
+        return syncAttachments
+    }
+
+    /// Push locally-changed notes/attachments/versions/deletions/saved
+    /// searches to the server. Returns the set of note ids this push wrote
+    /// to locally (accepted notes get `markSynced` — new `syncedAt`/version —
+    /// even though content is unchanged) so callers can refresh incrementally.
+    ///
+    /// Sends `listNeedingSync()` in sequential chunks of `pushChunkSize`
+    /// notes (attachments/versions ride with their note). Each chunk's
+    /// response is fully processed — `markSynced`, version snapshots,
+    /// attachment-warning healing, conflict queuing — before the next chunk
+    /// is sent, so a mid-batch network failure leaves already-accepted
+    /// chunks durably marked instead of losing the whole push. A failed
+    /// chunk throws and aborts the remaining chunks; `changes` accumulates
+    /// across every chunk that did complete. Pending deletions and saved
+    /// searches ride with the last chunk, mirroring the pre-chunking
+    /// behaviour of sending them once per push.
+    @discardableResult
+    func push() async throws -> SyncChanges {
+        var changes = SyncChanges()
+        let records = try noteRepo.listNeedingSync()
+        Log.debug("[Sync] push: \(records.count) records need syncing")
+        guard !records.isEmpty else { return changes }
+
+        // Guard against clobbering an edit made while the push was in
+        // flight: markSynced only clears needs_sync if modified_at still
+        // matches the snapshot that was actually pushed (captured here,
+        // before any chunk is sent).
+        let pushedModifiedAtById = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.modifiedAt) })
 
         // Get pending deletions
         let deletions = try syncRepo.getPendingDeletions()
@@ -217,134 +266,143 @@ actor SyncService {
             )
         }
 
-        let request = SyncPushRequest(
-            notes: syncNotes,
-            attachments: syncAttachments,
-            versions: syncVersions,
-            deletions: syncDeletions.isEmpty ? nil : syncDeletions,
-            savedSearches: syncSavedSearches.isEmpty ? nil : syncSavedSearches
-        )
+        let chunks = Self.chunked(records, size: Self.pushChunkSize)
+        var lastPushAt = Date().iso8601
 
-        Log.debug("[Sync] push: sending \(syncNotes.count) notes, \(syncDeletions.count) deletions, \(syncSavedSearches.count) saved searches")
-        let response: SyncPushResponse
-        do {
-            response = try await syncClient.push(request)
-        } catch {
-            Log.debug("[Sync] push: HTTP error — \(error)")
-            throw error
-        }
-        Log.debug("[Sync] push: accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
-        let now = Date().iso8601
+        for (index, chunk) in chunks.enumerated() {
+            let isLastChunk = index == chunks.count - 1
+            let syncNotes = buildSyncNotes(for: chunk)
+            let syncVersions = try buildSyncVersions(for: chunk)
+            let syncAttachments = buildSyncAttachments(for: syncNotes)
 
-        // Mark accepted notes as synced and create version snapshots. Guard
-        // against clobbering an edit made while the push was in flight: only
-        // clear needs_sync if modified_at still matches the snapshot that was
-        // actually pushed (records, captured at the top of this method).
-        let pushedModifiedAtById = Dictionary(uniqueKeysWithValues: records.map { ($0.id, $0.modifiedAt) })
-        for accepted in response.accepted {
+            let request = SyncPushRequest(
+                notes: syncNotes,
+                attachments: syncAttachments,
+                versions: syncVersions,
+                deletions: isLastChunk && !syncDeletions.isEmpty ? syncDeletions : nil,
+                savedSearches: isLastChunk && !syncSavedSearches.isEmpty ? syncSavedSearches : nil
+            )
+
+            Log.debug("[Sync] push: sending chunk \(index + 1)/\(chunks.count) — \(syncNotes.count) notes\(isLastChunk ? ", \(syncDeletions.count) deletions, \(syncSavedSearches.count) saved searches" : "")")
+            let response: SyncPushResponse
             do {
-                try noteRepo.markSynced(
-                    id: accepted.id,
-                    syncedAt: accepted.syncedAt ?? now,
-                    serverVersion: accepted.serverVersion,
-                    ifModifiedAt: pushedModifiedAtById[accepted.id]
-                )
-                changes.updatedIds.insert(accepted.id)
-                // Create a version snapshot of the accepted state
-                if let record = try noteRepo.getRaw(id: accepted.id) {
-                    try versionRepo.createVersion(from: record, reason: "sync")
-                }
+                response = try await syncClient.push(request)
             } catch {
-                Log.debug("[Sync] push: failed to mark accepted note \(accepted.id): \(error)")
+                Log.debug("[Sync] push: HTTP error on chunk \(index + 1)/\(chunks.count) — \(error)")
+                throw error
             }
-        }
+            Log.debug("[Sync] push: chunk \(index + 1)/\(chunks.count) accepted=\(response.accepted.count), rejected=\(response.rejected.count), errors=\(response.errors ?? [])")
+            let now = Date().iso8601
+            lastPushAt = now
 
-        // React to server attachment warnings: re-upload blobs this device
-        // holds (one attachments-only push, no in-run retry — the next regular
-        // sync retries naturally); log the ones it cannot heal.
-        if let warnings = response.attachmentWarnings, !warnings.isEmpty {
-            // Attachment healing can touch note records in ways this method
-            // doesn't individually track — be conservative and let the
-            // caller fall back to a full reload.
-            changes.fullReloadRequired = true
-            let repairs = Self.collectRepairAttachments(for: warnings) { id in
-                try? attachmentRepo.getBlob(id: id)
-            }
-            for warning in warnings {
-                for attachmentId in warning.attachmentIds where !repairs.contains(where: { $0.id == attachmentId }) {
-                    Log.debug("[Sync] push: server has no data for attachment \(attachmentId) (note \(warning.noteId)) and neither does this device")
-                }
-            }
-            if !repairs.isEmpty {
-                Log.debug("[Sync] push: re-uploading \(repairs.count) attachment(s) the server is missing")
-                let repairRequest = SyncPushRequest(
-                    notes: [],
-                    attachments: repairs,
-                    versions: [],
-                    deletions: nil,
-                    savedSearches: nil
-                )
+            // Mark accepted notes as synced and create version snapshots.
+            for accepted in response.accepted {
                 do {
-                    _ = try await syncClient.push(repairRequest)
+                    try noteRepo.markSynced(
+                        id: accepted.id,
+                        syncedAt: accepted.syncedAt ?? now,
+                        serverVersion: accepted.serverVersion,
+                        ifModifiedAt: pushedModifiedAtById[accepted.id]
+                    )
+                    changes.updatedIds.insert(accepted.id)
+                    // Create a version snapshot of the accepted state
+                    if let record = try noteRepo.getRaw(id: accepted.id) {
+                        try versionRepo.createVersion(from: record, reason: "sync")
+                    }
                 } catch {
-                    Log.debug("[Sync] push: attachment repair push failed — \(error)")
+                    Log.debug("[Sync] push: failed to mark accepted note \(accepted.id): \(error)")
+                }
+            }
+
+            // React to server attachment warnings: re-upload blobs this device
+            // holds (one attachments-only push, no in-run retry — the next regular
+            // sync retries naturally); log the ones it cannot heal.
+            if let warnings = response.attachmentWarnings, !warnings.isEmpty {
+                // Attachment healing can touch note records in ways this method
+                // doesn't individually track — be conservative and let the
+                // caller fall back to a full reload.
+                changes.fullReloadRequired = true
+                let repairs = Self.collectRepairAttachments(for: warnings) { id in
+                    try? attachmentRepo.getBlob(id: id)
+                }
+                for warning in warnings {
+                    for attachmentId in warning.attachmentIds where !repairs.contains(where: { $0.id == attachmentId }) {
+                        Log.debug("[Sync] push: server has no data for attachment \(attachmentId) (note \(warning.noteId)) and neither does this device")
+                    }
+                }
+                if !repairs.isEmpty {
+                    Log.debug("[Sync] push: re-uploading \(repairs.count) attachment(s) the server is missing")
+                    let repairRequest = SyncPushRequest(
+                        notes: [],
+                        attachments: repairs,
+                        versions: [],
+                        deletions: nil,
+                        savedSearches: nil
+                    )
+                    do {
+                        _ = try await syncClient.push(repairRequest)
+                    } catch {
+                        Log.debug("[Sync] push: attachment repair push failed — \(error)")
+                    }
+                }
+            }
+
+            if isLastChunk {
+                // Clear successful deletions
+                let acceptedIds = Set(response.accepted.map(\.id))
+                let clearedDeletionIds = deletions.filter { acceptedIds.contains($0.id) }.map(\.id)
+                try syncRepo.clearDeletions(ids: clearedDeletionIds)
+
+                // Mark pushed saved searches as synced
+                for record in savedSearchRecords {
+                    do {
+                        try savedSearchRepo.markSynced(id: record.id, syncedAt: now)
+                    } catch {
+                        Log.debug("[Sync] push: failed to mark saved search \(record.id) synced: \(error)")
+                    }
+                }
+            }
+
+            // Handle rejected (conflicts) — queue for user resolution
+            for rejected in response.rejected {
+                if let record = try noteRepo.getRaw(id: rejected.id) {
+                    // Decrypt local content for display
+                    let (localContent, localTags) = Self.decryptNoteForDisplay(
+                        content: record.content, tags: record.tags, key: key
+                    )
+
+                    // Decrypt server content for display (tags are in sync format)
+                    let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+                        content: rejected.serverContent, syncTags: rejected.serverTags, key: key
+                    )
+
+                    let conflict = ConflictInfo(
+                        id: rejected.id,
+                        localContent: localContent,
+                        localTags: localTags,
+                        localModifiedAt: record.modifiedAt,
+                        localAttachments: Self.decodeAttachments(record.attachments),
+                        serverContent: serverContent,
+                        serverTags: serverTags,
+                        serverModifiedAt: rejected.serverModifiedAt,
+                        serverEncryptedContent: rejected.serverContent,
+                        serverEncryptedTags: rejected.serverTags,
+                        serverVersion: rejected.serverVersion,
+                        serverAttachments: rejected.serverAttachments,
+                        serverPinned: rejected.serverPinned,
+                        serverSyntaxLanguage: rejected.serverSyntaxLanguage,
+                        serverWordWrap: rejected.serverWordWrap,
+                        serverShowPreview: rejected.serverShowPreview,
+                        serverContentHash: rejected.serverContentHash,
+                        serverParentHash: rejected.serverParentHash,
+                        serverHashChain: rejected.serverHashChain
+                    )
+                    pendingConflicts.append(conflict)
                 }
             }
         }
 
-        // Clear successful deletions
-        let acceptedIds = Set(response.accepted.map(\.id))
-        let clearedDeletionIds = deletions.filter { acceptedIds.contains($0.id) }.map(\.id)
-        try syncRepo.clearDeletions(ids: clearedDeletionIds)
-
-        // Mark pushed saved searches as synced
-        for record in savedSearchRecords {
-            do {
-                try savedSearchRepo.markSynced(id: record.id, syncedAt: now)
-            } catch {
-                Log.debug("[Sync] push: failed to mark saved search \(record.id) synced: \(error)")
-            }
-        }
-
-        // Handle rejected (conflicts) — queue for user resolution
-        for rejected in response.rejected {
-            if let record = try noteRepo.getRaw(id: rejected.id) {
-                // Decrypt local content for display
-                let (localContent, localTags) = Self.decryptNoteForDisplay(
-                    content: record.content, tags: record.tags, key: key
-                )
-
-                // Decrypt server content for display (tags are in sync format)
-                let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
-                    content: rejected.serverContent, syncTags: rejected.serverTags, key: key
-                )
-
-                let conflict = ConflictInfo(
-                    id: rejected.id,
-                    localContent: localContent,
-                    localTags: localTags,
-                    localModifiedAt: record.modifiedAt,
-                    localAttachments: Self.decodeAttachments(record.attachments),
-                    serverContent: serverContent,
-                    serverTags: serverTags,
-                    serverModifiedAt: rejected.serverModifiedAt,
-                    serverEncryptedContent: rejected.serverContent,
-                    serverEncryptedTags: rejected.serverTags,
-                    serverVersion: rejected.serverVersion,
-                    serverAttachments: rejected.serverAttachments,
-                    serverPinned: rejected.serverPinned,
-                    serverSyntaxLanguage: rejected.serverSyntaxLanguage,
-                    serverWordWrap: rejected.serverWordWrap,
-                    serverShowPreview: rejected.serverShowPreview,
-                    serverContentHash: rejected.serverContentHash,
-                    serverParentHash: rejected.serverParentHash,
-                    serverHashChain: rejected.serverHashChain
-                )
-                pendingConflicts.append(conflict)
-            }
-        }
-
-        try syncRepo.updateLastPush(at: now)
+        try syncRepo.updateLastPush(at: lastPushAt)
         return changes
     }
 
@@ -1073,9 +1131,14 @@ actor SyncService {
             }
 
             try await finalise()
-            // A force-resync always re-downloads everything — always signal
-            // the full-reload fallback rather than the discarded per-note ids.
-            await postSyncHandler?(.fullReload)
+            // Single reload (jottery-vn6f): forceFullSync()'s only caller,
+            // AppState.forceFullSync(), always performs its own explicit
+            // full reload right after this method returns. Firing
+            // postSyncHandler(.fullReload) here as well used to trigger a
+            // *second* one via handlePostSyncCompletion →
+            // applySyncChanges(.fullReload) — redundant, and its errors were
+            // silently swallowed (`try?`) unlike the caller's reload. Do not
+            // reinstate this call without also removing the caller's reload.
         } catch {
             lastError = error.localizedDescription
             throw error

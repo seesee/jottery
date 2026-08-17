@@ -15,6 +15,14 @@ enum SharedInboxStore {
         var text: String?
         var urls: [String]
         var files: [File]
+        /// Set once `AppState.importSharedInboxItems` successfully calls
+        /// `createNote` for this item. Lets a retry after a partial failure
+        /// (e.g. an attachment write throwing) resume onto the same note
+        /// instead of creating a duplicate. Absent in manifests written
+        /// before this field existed — the share extension never sets it,
+        /// and `Codable` decodes missing optional keys as `nil`, so old
+        /// staged items keep working unchanged.
+        var importedNoteId: String? = nil
 
         struct File: Codable {
             var storedName: String   // on-disk name inside the item directory
@@ -82,5 +90,24 @@ enum SharedInboxStore {
     /// Delete a staged item after import (or on user rejection).
     static func remove(_ directory: URL) {
         try? FileManager.default.removeItem(at: directory)
+    }
+
+    /// Record the note id created for a staged item. Called immediately
+    /// after `createNote` succeeds, before any attachments are processed,
+    /// so a later retry (see `pendingItems`) can detect the resumable note
+    /// via `Manifest.importedNoteId` instead of creating a duplicate.
+    static func markImported(_ directory: URL, noteId: String) throws {
+        let manifestURL = directory.appendingPathComponent("manifest.json")
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var manifest = try decoder.decode(Manifest.self, from: try Data(contentsOf: manifestURL))
+        manifest.importedNoteId = noteId
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try (try encoder.encode(manifest)).write(
+            to: manifestURL,
+            options: [.atomic, .completeFileProtection]
+        )
     }
 }

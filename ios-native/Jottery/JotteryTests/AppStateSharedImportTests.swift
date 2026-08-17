@@ -71,4 +71,36 @@ struct AppStateSharedImportTests {
         #expect(state.selectedNoteId == existing.id)
         #expect(state.notes.count == 2)
     }
+
+    /// A partial failure (note created, then an attachment throws because its
+    /// staged file is unreadable) must not duplicate the note when the item
+    /// is retried on a later import pass.
+    @Test func retryAfterPartialFailureDoesNotDuplicateNote() throws {
+        let state = try makeUnlockedState()
+        let root = try makeRoot()
+        try SharedInboxStore.write(
+            text: "Partial failure item",
+            urls: [],
+            files: [(data: Data([0x89, 0x50, 0x4E, 0x47]), filename: "photo.png", mimeType: "image/png")],
+            in: root
+        )
+
+        // Sabotage the staged attachment so addAttachment throws mid-import,
+        // simulating a crash/failure after the note was already created.
+        let item = try #require(SharedInboxStore.pendingItems(in: root).first)
+        let fileURL = item.directory.appendingPathComponent(item.manifest.files[0].storedName)
+        try FileManager.default.removeItem(at: fileURL)
+
+        state.importSharedInboxItems(from: root)
+        #expect(state.notes.count == 1)
+        #expect(SharedInboxStore.pendingItems(in: root).count == 1)  // left staged for retry
+
+        // Retry: must resume onto the same note, not create a duplicate.
+        state.importSharedInboxItems(from: root)
+        #expect(state.notes.count == 1)
+        let note = try #require(state.notes.first)
+        #expect(note.content.contains("Partial failure item"))
+        #expect(note.attachments.isEmpty)
+        #expect(SharedInboxStore.pendingItems(in: root).count == 1)  // still staged — attachment still missing
+    }
 }
