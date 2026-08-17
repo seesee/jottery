@@ -394,6 +394,9 @@ enum L {
     // MARK: - Errors (Toasts)
 
     static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
+    static func errorCouldntAddTags(_ count: Int) -> String {
+        String(format: String(localized: "error.couldntAddTags"), count)
+    }
     static var errorCouldntArchiveNote: String { String(localized: "error.couldntArchiveNote") }
     static func errorCouldntArchiveNotes(_ count: Int) -> String {
         String(format: String(localized: "error.couldntArchiveNotes"), count)
@@ -408,7 +411,13 @@ enum L {
     static var errorCouldntLockNote: String { String(localized: "error.couldntLockNote") }
     static var errorCouldntPinNote: String { String(localized: "error.couldntPinNote") }
     static var errorCouldntRemoveAttachment: String { String(localized: "error.couldntRemoveAttachment") }
+    static func errorCouldntRemoveTags(_ count: Int) -> String {
+        String(format: String(localized: "error.couldntRemoveTags"), count)
+    }
     static var errorCouldntRestoreNote: String { String(localized: "error.couldntRestoreNote") }
+    static func errorCouldntSetColor(_ count: Int) -> String {
+        String(format: String(localized: "error.couldntSetColor"), count)
+    }
     static var errorCouldntUnarchiveNote: String { String(localized: "error.couldntUnarchiveNote") }
     static var errorCouldntUnlockNote: String { String(localized: "error.couldntUnlockNote") }
     static var errorCouldntUnpinNote: String { String(localized: "error.couldntUnpinNote") }
