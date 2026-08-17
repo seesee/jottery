@@ -842,6 +842,171 @@
         }
       }
     },
+    "error.couldntAddAttachment": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't add attachment"
+          }
+        }
+      }
+    },
+    "error.couldntArchiveNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't archive note"
+          }
+        }
+      }
+    },
+    "error.couldntArchiveNotes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't archive %lld notes"
+          }
+        }
+      }
+    },
+    "error.couldntDeleteNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't delete note"
+          }
+        }
+      }
+    },
+    "error.couldntDeleteNoteForever": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't permanently delete note"
+          }
+        }
+      }
+    },
+    "error.couldntDeleteNotes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't delete %lld notes"
+          }
+        }
+      }
+    },
+    "error.couldntDuplicateNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't duplicate note"
+          }
+        }
+      }
+    },
+    "error.couldntEmptyRecycleBin": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't empty recycle bin"
+          }
+        }
+      }
+    },
+    "error.couldntLockNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't lock note"
+          }
+        }
+      }
+    },
+    "error.couldntPinNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't pin note"
+          }
+        }
+      }
+    },
+    "error.couldntRemoveAttachment": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't remove attachment"
+          }
+        }
+      }
+    },
+    "error.couldntRestoreNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't restore note"
+          }
+        }
+      }
+    },
+    "error.couldntUnarchiveNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't unarchive note"
+          }
+        }
+      }
+    },
+    "error.couldntUnlockNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't unlock note"
+          }
+        }
+      }
+    },
+    "error.couldntUnpinNote": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't unpin note"
+          }
+        }
+      }
+    },
     "forceSync.action": {
       "extractionState": "manual",
       "localizations": {

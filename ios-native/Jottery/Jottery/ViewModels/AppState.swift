@@ -30,6 +30,13 @@ final class AppState {
     var syncEnabled: Bool = false
     var syncStatusMessage: String?
 
+    // MARK: - User-Facing Errors
+
+    /// A transient, localised error message surfaced to the user via a
+    /// toast (see `ToastView`), e.g. "Couldn't delete note." Set by
+    /// `reportError(_:duration:)`, which also schedules it to auto-clear.
+    var userErrorMessage: String?
+
     #if DEBUG
     /// Demo screenshot mode: presents the settings sheet (see DemoSeedService).
     var demoShowSettings = false
@@ -78,6 +85,7 @@ final class AppState {
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
+    @ObservationIgnored private var userErrorClearTask: Task<Void, Never>?
 
     /// Re-entrancy guard for `unlock(password:)` — checked-and-set at entry,
     /// cleared on every exit (including throw) via `defer`. Two concurrent
@@ -658,6 +666,27 @@ final class AppState {
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
+    }
+
+    // MARK: - User-Facing Errors
+
+    /// Publish a localised, user-facing error message (e.g. "Couldn't
+    /// delete note") and schedule it to auto-clear after `duration`.
+    /// Overwriting with a newer message cancels any earlier clear-timer, so
+    /// a slow-to-fire old timer can never wipe out a message that replaced
+    /// it (mirrors the `syncStatusMessage` auto-clear pattern used by
+    /// `triggerSync()`/`forceFullSync()`). `duration` defaults to 4s but is
+    /// overridable — tests pass a short duration instead of a fake clock.
+    func reportError(_ message: String, duration: Duration = .seconds(4)) {
+        userErrorMessage = message
+        userErrorClearTask?.cancel()
+        userErrorClearTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled else { return }
+            if self?.userErrorMessage == message {
+                self?.userErrorMessage = nil
+            }
+        }
     }
 
     // MARK: - Notes CRUD

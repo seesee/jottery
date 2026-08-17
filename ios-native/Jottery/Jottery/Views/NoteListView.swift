@@ -163,8 +163,16 @@ struct NoteListView: View {
         }
         .alert(L.bulkDeleteConfirmTitle, isPresented: $showBulkDeleteConfirm) {
             Button(L.bulkDeleteConfirmAction, role: .destructive) {
+                var failureCount = 0
                 for id in selectedIds {
-                    try? appState.deleteNote(id: id)
+                    do {
+                        try appState.deleteNote(id: id)
+                    } catch {
+                        failureCount += 1
+                    }
+                }
+                if failureCount > 0 {
+                    appState.reportError(L.errorCouldntDeleteNotes(failureCount))
                 }
                 isSelectMode = false
                 selectedIds.removeAll()
@@ -260,14 +268,24 @@ struct NoteListView: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if appState.showArchive {
                         Button {
-                            Task { try? await appState.unarchiveNote(id: note.id) }
+                            Task {
+                                do {
+                                    try await appState.unarchiveNote(id: note.id)
+                                } catch {
+                                    appState.reportError(L.errorCouldntUnarchiveNote)
+                                }
+                            }
                         } label: {
                             Label(L.noteListUnarchive, systemImage: "tray.and.arrow.up")
                         }
                         .tint(.blue)
                     } else {
                         Button(role: .destructive) {
-                            try? appState.deleteNote(id: note.id)
+                            do {
+                                try appState.deleteNote(id: note.id)
+                            } catch {
+                                appState.reportError(L.errorCouldntDeleteNote)
+                            }
                         } label: {
                             Label(L.noteListDelete, systemImage: "trash")
                         }
@@ -278,7 +296,12 @@ struct NoteListView: View {
                         // No pin action in archive mode
                     } else {
                         Button {
-                            try? appState.togglePin(id: note.id)
+                            let wasPinned = note.pinned
+                            do {
+                                try appState.togglePin(id: note.id)
+                            } catch {
+                                appState.reportError(wasPinned ? L.errorCouldntUnpinNote : L.errorCouldntPinNote)
+                            }
                         } label: {
                             Label(
                                 note.pinned ? L.noteListUnpin : L.noteListPin,
@@ -288,7 +311,11 @@ struct NoteListView: View {
                         .tint(.orange)
 
                         Button {
-                            try? appState.archiveNote(id: note.id)
+                            do {
+                                try appState.archiveNote(id: note.id)
+                            } catch {
+                                appState.reportError(L.errorCouldntArchiveNote)
+                            }
                         } label: {
                             Label(L.noteListArchive, systemImage: "archivebox")
                         }
@@ -353,8 +380,16 @@ struct NoteListView: View {
 
                     if !appState.showArchive {
                         Button {
+                            var failureCount = 0
                             for id in selectedIds {
-                                try? appState.archiveNote(id: id)
+                                do {
+                                    try appState.archiveNote(id: id)
+                                } catch {
+                                    failureCount += 1
+                                }
+                            }
+                            if failureCount > 0 {
+                                appState.reportError(L.errorCouldntArchiveNotes(failureCount))
                             }
                             isSelectMode = false
                             selectedIds.removeAll()

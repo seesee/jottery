@@ -228,5 +228,8 @@ struct MainView: View {
         .onChange(of: appState.selectedNoteId) { _, _ in
             appState.keyManager.recordActivity()
         }
+        .overlay {
+            ToastView()
+        }
     }
 }

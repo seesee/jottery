@@ -89,7 +89,11 @@ struct NoteEditorView: View {
                     attachmentRepo: attachmentRepo,
                     encryptionKey: key,
                     onDelete: isReadOnly ? nil : { attachmentId in
-                        try? appState.removeAttachment(from: note.id, attachmentId: attachmentId)
+                        do {
+                            try appState.removeAttachment(from: note.id, attachmentId: attachmentId)
+                        } catch {
+                            appState.reportError(L.errorCouldntRemoveAttachment)
+                        }
                     }
                 )
             }
@@ -114,7 +118,12 @@ struct NoteEditorView: View {
                 Menu {
                     // Pin toggle
                     Button {
-                        try? appState.togglePin(id: note.id)
+                        let wasPinned = note.pinned
+                        do {
+                            try appState.togglePin(id: note.id)
+                        } catch {
+                            appState.reportError(wasPinned ? L.errorCouldntUnpinNote : L.errorCouldntPinNote)
+                        }
                     } label: {
                         Label(note.pinned ? L.editorUnpin : L.editorPin, systemImage: note.pinned ? "pin.slash" : "pin")
                     }
@@ -208,13 +217,21 @@ struct NoteEditorView: View {
                         // clipboard are attached from here instead.
                         if PasteboardService.hasAttachableContent {
                             Button {
+                                var failureCount = 0
                                 for item in PasteboardService.readItems() {
-                                    try? appState.addAttachment(
-                                        to: note.id,
-                                        data: item.data,
-                                        filename: item.filename,
-                                        mimeType: item.mimeType
-                                    )
+                                    do {
+                                        try appState.addAttachment(
+                                            to: note.id,
+                                            data: item.data,
+                                            filename: item.filename,
+                                            mimeType: item.mimeType
+                                        )
+                                    } catch {
+                                        failureCount += 1
+                                    }
+                                }
+                                if failureCount > 0 {
+                                    appState.reportError(L.errorCouldntAddAttachment)
                                 }
                             } label: {
                                 Label(L.editorPasteFromClipboard, systemImage: "doc.on.clipboard")
@@ -226,7 +243,12 @@ struct NoteEditorView: View {
 
                     // Lock toggle
                     Button {
-                        try? appState.toggleLock(id: note.id)
+                        let wasLocked = note.locked
+                        do {
+                            try appState.toggleLock(id: note.id)
+                        } catch {
+                            appState.reportError(wasLocked ? L.errorCouldntUnlockNote : L.errorCouldntLockNote)
+                        }
                     } label: {
                         Label(
                             note.locked ? L.editorUnlock : L.editorLock,
@@ -237,13 +259,23 @@ struct NoteEditorView: View {
                     // Archive toggle
                     if note.archived {
                         Button {
-                            Task { try? await appState.unarchiveNote(id: note.id) }
+                            Task {
+                                do {
+                                    try await appState.unarchiveNote(id: note.id)
+                                } catch {
+                                    appState.reportError(L.errorCouldntUnarchiveNote)
+                                }
+                            }
                         } label: {
                             Label(L.editorUnarchive, systemImage: "tray.and.arrow.up")
                         }
                     } else {
                         Button {
-                            try? appState.archiveNote(id: note.id)
+                            do {
+                                try appState.archiveNote(id: note.id)
+                            } catch {
+                                appState.reportError(L.errorCouldntArchiveNote)
+                            }
                         } label: {
                             Label(L.editorArchive, systemImage: "archivebox")
                         }
@@ -267,7 +299,11 @@ struct NoteEditorView: View {
 
                     // Duplicate
                     Button {
-                        try? appState.duplicateNote(id: note.id)
+                        do {
+                            try appState.duplicateNote(id: note.id)
+                        } catch {
+                            appState.reportError(L.errorCouldntDuplicateNote)
+                        }
                     } label: {
                         Label(L.editorDuplicate, systemImage: "doc.on.doc")
                     }
@@ -276,7 +312,11 @@ struct NoteEditorView: View {
 
                     // Delete
                     Button(role: .destructive) {
-                        try? appState.deleteNote(id: note.id)
+                        do {
+                            try appState.deleteNote(id: note.id)
+                        } catch {
+                            appState.reportError(L.errorCouldntDeleteNote)
+                        }
                     } label: {
                         Label(L.editorDelete, systemImage: "trash")
                     }
@@ -315,7 +355,11 @@ struct NoteEditorView: View {
         }
         .sheet(isPresented: $showPhotoPicker) {
             PhotoPickerView { url, filename, mimeType in
-                try? appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+                do {
+                    try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+                } catch {
+                    appState.reportError(L.errorCouldntAddAttachment)
+                }
             }
         }
         .onDisappear {
@@ -424,7 +468,11 @@ struct NoteEditorView: View {
 
         let filename = url.lastPathComponent
         let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-        try? appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+        do {
+            try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
+        } catch {
+            appState.reportError(L.errorCouldntAddAttachment)
+        }
     }
 }
 

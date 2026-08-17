@@ -80,6 +80,14 @@ struct RecycleBinView: View {
                 loadDeletedNotes()
             }
         }
+        // RecycleBinView is presented as a `.sheet` from NoteListView, which
+        // sits in its own presentation layer above MainView — the toast
+        // mounted there (see ToastView's doc comment) wouldn't be visible
+        // here, so this view mounts its own copy bound to the same
+        // `appState.userErrorMessage`.
+        .overlay {
+            ToastView()
+        }
     }
 
     // MARK: - Actions
@@ -97,19 +105,32 @@ struct RecycleBinView: View {
                 deletedNotes.removeAll { $0.id == id }
             } catch {
                 // Restore failed — leave the note in the recycle bin list.
+                appState.reportError(L.errorCouldntRestoreNote)
             }
         }
     }
 
     private func permanentlyDelete(id: String) {
-        try? appState.noteRepo?.hardDelete(id: id)
-        deletedNotes.removeAll { $0.id == id }
+        do {
+            try appState.noteRepo?.hardDelete(id: id)
+            deletedNotes.removeAll { $0.id == id }
+        } catch {
+            appState.reportError(L.errorCouldntDeleteNoteForever)
+        }
     }
 
     private func emptyBin() {
+        var failureCount = 0
         for note in deletedNotes {
-            try? appState.noteRepo?.hardDelete(id: note.id)
+            do {
+                try appState.noteRepo?.hardDelete(id: note.id)
+            } catch {
+                failureCount += 1
+            }
         }
         deletedNotes.removeAll()
+        if failureCount > 0 {
+            appState.reportError(L.errorCouldntEmptyRecycleBin)
+        }
     }
 }

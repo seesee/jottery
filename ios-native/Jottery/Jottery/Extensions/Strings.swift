@@ -390,4 +390,26 @@ enum L {
     static var sortOldestModified: String { String(localized: "sort.oldestModified") }
     static var sortAlphabetical: String { String(localized: "sort.alphabetical") }
     static var sortDateCreated: String { String(localized: "sort.dateCreated") }
+
+    // MARK: - Errors (Toasts)
+
+    static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
+    static var errorCouldntArchiveNote: String { String(localized: "error.couldntArchiveNote") }
+    static func errorCouldntArchiveNotes(_ count: Int) -> String {
+        String(format: String(localized: "error.couldntArchiveNotes"), count)
+    }
+    static var errorCouldntDeleteNote: String { String(localized: "error.couldntDeleteNote") }
+    static var errorCouldntDeleteNoteForever: String { String(localized: "error.couldntDeleteNoteForever") }
+    static func errorCouldntDeleteNotes(_ count: Int) -> String {
+        String(format: String(localized: "error.couldntDeleteNotes"), count)
+    }
+    static var errorCouldntDuplicateNote: String { String(localized: "error.couldntDuplicateNote") }
+    static var errorCouldntEmptyRecycleBin: String { String(localized: "error.couldntEmptyRecycleBin") }
+    static var errorCouldntLockNote: String { String(localized: "error.couldntLockNote") }
+    static var errorCouldntPinNote: String { String(localized: "error.couldntPinNote") }
+    static var errorCouldntRemoveAttachment: String { String(localized: "error.couldntRemoveAttachment") }
+    static var errorCouldntRestoreNote: String { String(localized: "error.couldntRestoreNote") }
+    static var errorCouldntUnarchiveNote: String { String(localized: "error.couldntUnarchiveNote") }
+    static var errorCouldntUnlockNote: String { String(localized: "error.couldntUnlockNote") }
+    static var errorCouldntUnpinNote: String { String(localized: "error.couldntUnpinNote") }
 }
